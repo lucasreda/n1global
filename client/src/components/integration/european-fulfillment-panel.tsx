@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, Package, Send, Eye, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Package, Send, Eye, AlertCircle, Settings } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
 const createLeadSchema = z.object({
@@ -34,6 +34,7 @@ type CreateLeadForm = z.infer<typeof createLeadSchema>;
 
 export function EuropeanFulfillmentPanel() {
   const [activeTab, setActiveTab] = useState("test");
+  const [showCredentialsForm, setShowCredentialsForm] = useState(false);
   const { toast } = useToast();
 
   // Test connection query
@@ -96,6 +97,13 @@ export function EuropeanFulfillmentPanel() {
     },
   });
 
+  // Credentials form schema
+  const credentialsSchema = z.object({
+    email: z.string().email("Email inválido"),
+    password: z.string().min(1, "Senha é obrigatória"),
+    apiUrl: z.string().url("URL inválida").optional(),
+  });
+
   const form = useForm<CreateLeadForm>({
     resolver: zodResolver(createLeadSchema),
     defaultValues: {
@@ -110,6 +118,38 @@ export function EuropeanFulfillmentPanel() {
       total: "",
       paymentType: "COD",
       items: JSON.stringify([{ sku: "RS-8050", quantity: "1", total: "149.90" }]),
+    },
+  });
+
+  const credentialsForm = useForm<z.infer<typeof credentialsSchema>>({
+    resolver: zodResolver(credentialsSchema),
+    defaultValues: {
+      email: "tester@exemple.com",
+      password: "password",
+      apiUrl: "https://api-test.ecomfulfilment.eu/",
+    },
+  });
+
+  // Update credentials mutation
+  const updateCredentialsMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await authenticatedApiRequest("POST", "/api/integrations/european-fulfillment/credentials", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Credenciais atualizadas!",
+        description: data.testResult.connected ? "Conexão estabelecida com sucesso" : "Conexão falhou, mas credenciais salvas",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/european-fulfillment/test"] });
+      setShowCredentialsForm(false);
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao atualizar credenciais",
+        description: "Não foi possível salvar as credenciais. Tente novamente.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -155,10 +195,21 @@ export function EuropeanFulfillmentPanel() {
 
             <TabsContent value="test" className="space-y-4">
               <div className="glassmorphism-light rounded-lg p-4">
-                <h3 className="text-white font-medium mb-4 flex items-center space-x-2">
-                  <AlertCircle className="text-blue-400" size={18} />
-                  <span>Status da Conexão</span>
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-white font-medium flex items-center space-x-2">
+                    <AlertCircle className="text-blue-400" size={18} />
+                    <span>Status da Conexão</span>
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCredentialsForm(!showCredentialsForm)}
+                    className="text-blue-400 border-blue-400/30 hover:bg-blue-400/10"
+                  >
+                    <Settings size={16} className="mr-2" />
+                    Configurar API
+                  </Button>
+                </div>
                 
                 {testLoading ? (
                   <div className="flex items-center space-x-2 text-gray-300">
@@ -166,30 +217,119 @@ export function EuropeanFulfillmentPanel() {
                     <span>Testando conexão...</span>
                   </div>
                 ) : connectionTest ? (
-                  <div className="flex items-center space-x-2">
-                    {connectionTest.connected ? (
-                      <CheckCircle className="text-green-400" size={18} />
-                    ) : (
-                      <XCircle className="text-red-400" size={18} />
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      {connectionTest.connected ? (
+                        <CheckCircle className="text-green-400" size={18} />
+                      ) : (
+                        <XCircle className="text-red-400" size={18} />
+                      )}
+                      <span className={connectionTest.connected ? "text-green-400" : "text-red-400"}>
+                        {connectionTest.message}
+                      </span>
+                    </div>
+                    
+                    {connectionTest.details && (
+                      <div className="glassmorphism rounded-lg p-3">
+                        <p className="text-gray-300 text-sm">{connectionTest.details}</p>
+                      </div>
                     )}
-                    <span className={connectionTest.connected ? "text-green-400" : "text-red-400"}>
-                      {connectionTest.message}
-                    </span>
                   </div>
                 ) : null}
 
-                {connectionTest?.connected && (
-                  <div className="mt-4 grid grid-cols-2 gap-4">
-                    <div className="glassmorphism rounded-lg p-3">
-                      <h4 className="text-white text-sm font-medium">API URL</h4>
-                      <p className="text-gray-300 text-xs">api-test.ecomfulfilment.eu</p>
-                    </div>
-                    <div className="glassmorphism rounded-lg p-3">
-                      <h4 className="text-white text-sm font-medium">Países Disponíveis</h4>
-                      <p className="text-gray-300 text-xs">{countries?.length || 0} países</p>
-                    </div>
+                {showCredentialsForm && (
+                  <div className="mt-4 glassmorphism rounded-lg p-4">
+                    <h4 className="text-white font-medium mb-3">Configurar Credenciais da API</h4>
+                    <Form {...credentialsForm}>
+                      <form onSubmit={credentialsForm.handleSubmit((data) => updateCredentialsMutation.mutate(data))} className="space-y-3">
+                        <FormField
+                          control={credentialsForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-200">Email</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  className="glassmorphism border-gray-600/30 text-white"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={credentialsForm.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-200">Senha</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="password"
+                                  className="glassmorphism border-gray-600/30 text-white"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={credentialsForm.control}
+                          name="apiUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-200">API URL (Opcional)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  className="glassmorphism border-gray-600/30 text-white"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex space-x-2">
+                          <Button
+                            type="submit"
+                            className="gradient-blue"
+                            disabled={updateCredentialsMutation.isPending}
+                          >
+                            {updateCredentialsMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 animate-spin" size={16} />
+                                Salvando...
+                              </>
+                            ) : (
+                              "Salvar e Testar"
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowCredentialsForm(false)}
+                            className="border-gray-600/30"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
                   </div>
                 )}
+
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div className="glassmorphism rounded-lg p-3">
+                    <h4 className="text-white text-sm font-medium">API URL</h4>
+                    <p className="text-gray-300 text-xs">api-test.ecomfulfilment.eu</p>
+                  </div>
+                  <div className="glassmorphism rounded-lg p-3">
+                    <h4 className="text-white text-sm font-medium">Países Disponíveis</h4>
+                    <p className="text-gray-300 text-xs">{countries?.length || 0} países</p>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 

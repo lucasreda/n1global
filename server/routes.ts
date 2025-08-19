@@ -198,13 +198,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test connection
   app.get("/api/integrations/european-fulfillment/test", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const isConnected = await europeanFulfillmentService.testConnection();
-      res.json({ 
-        connected: isConnected,
-        message: isConnected ? "Conexão bem-sucedida" : "Falha na conexão"
+      const result = await europeanFulfillmentService.testConnection();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ 
+        connected: false,
+        message: "Erro ao testar conexão",
+        details: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
+  // Update credentials
+  app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { email, password, apiUrl } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email e senha são obrigatórios" });
+      }
+      
+      europeanFulfillmentService.updateCredentials(email, password, apiUrl);
+      
+      // Test the new credentials
+      const testResult = await europeanFulfillmentService.testConnection();
+      
+      res.json({
+        message: "Credenciais atualizadas",
+        testResult
       });
     } catch (error) {
-      res.status(500).json({ message: "Erro ao testar conexão" });
+      res.status(500).json({ message: "Erro ao atualizar credenciais" });
     }
   });
 

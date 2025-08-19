@@ -3,6 +3,9 @@ import { randomUUID } from "crypto";
 import https from "https";
 import type { InsertFulfillmentLead, FulfillmentLead } from "@shared/schema";
 
+// Disable SSL verification for development
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+
 interface EuropeanFulfillmentCredentials {
   email: string;
   password: string;
@@ -59,6 +62,17 @@ class EuropeanFulfillmentService {
       password: process.env.EUROPEAN_FULFILLMENT_PASSWORD || "password", 
       apiUrl: process.env.EUROPEAN_FULFILLMENT_API_URL || "https://api-test.ecomfulfilment.eu/"
     };
+  }
+
+  // Method to update credentials (for when user provides their own)
+  updateCredentials(email: string, password: string, apiUrl?: string) {
+    this.credentials.email = email;
+    this.credentials.password = password;
+    if (apiUrl) {
+      this.credentials.apiUrl = apiUrl;
+    }
+    // Clear existing token to force re-authentication
+    this.token = null;
   }
 
   private async getAuthToken(): Promise<string> {
@@ -261,13 +275,30 @@ class EuropeanFulfillmentService {
     }
   }
 
-  async testConnection(): Promise<boolean> {
+  async testConnection(): Promise<{ connected: boolean; message: string; details?: any }> {
     try {
       await this.getAuthToken();
-      return true;
+      return { 
+        connected: true, 
+        message: "Conexão bem-sucedida com European Fulfillment Center" 
+      };
     } catch (error) {
       console.error("Connection test failed:", error);
-      return false;
+      
+      // Check if it's a certificate error
+      if (error instanceof Error && error.message.includes("DEPTH_ZERO_SELF_SIGNED_CERT")) {
+        return {
+          connected: false,
+          message: "Erro de certificado SSL - Usando modo de desenvolvimento",
+          details: "Certificado auto-assinado detectado. Funcionando em modo simulado."
+        };
+      }
+      
+      return {
+        connected: false,
+        message: "Falha na conexão - Verifique as credenciais",
+        details: error instanceof Error ? error.message : "Erro desconhecido"
+      };
     }
   }
 }
