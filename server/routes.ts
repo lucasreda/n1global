@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, loginSchema, insertOrderSchema, updateOrderSchema, insertFulfillmentLeadSchema, insertProductSchema } from "@shared/schema";
@@ -115,81 +116,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard routes - with real API integration and date filtering
+  // Dashboard routes - with optimized API integration and caching
   app.get("/api/dashboard/metrics", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const date = req.query.date as string;
       const days = req.query.days as string;
       
-      // Get real data from European Fulfillment API
-      let apiMetrics: any = null;
-      try {
-        // Get all pages for accurate dashboard metrics
-        let allLeads: any[] = [];
-        let currentPage = 1;
-        let hasMorePages = true;
+      // Create cache key for metrics
+      const metricsCacheKey = `metrics:${days || 'all'}:${date || 'today'}`;
+      
+      // Check cache first
+      let apiMetrics = apiCache.get(metricsCacheKey);
+      
+      if (!apiMetrics) {
+        console.log("🔄 Cache miss - fetching metrics from API");
         
-        while (hasMorePages && currentPage <= 63) {
-          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
-          allLeads = allLeads.concat(pageLeads);
+        // Get optimized data from European Fulfillment API (only first 3 pages for metrics)
+        try {
+          let allLeads: any[] = [];
+          const maxPages = 3; // Even fewer pages for dashboard metrics
           
-          if (pageLeads.length < 15) {
-            hasMorePages = false;
-          } else {
-            currentPage++;
+          for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
+            const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+            allLeads = allLeads.concat(pageLeads);
+            
+            if (pageLeads.length < 15) break;
           }
           
-          if (currentPage > 63) hasMorePages = false;
-        }
+          let orders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
         
-        let orders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
-        
-        // Apply date filter if specified
-        if (days && days !== "all") {
-          const daysNum = parseInt(days);
-          const cutoffDate = new Date();
-          cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+          // Apply date filter if specified
+          if (days && days !== "all") {
+            const daysNum = parseInt(days);
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+            
+            orders = orders.filter(order => {
+              const orderDate = new Date(order.createdAt);
+              return orderDate >= cutoffDate;
+            });
+          }
           
-          orders = orders.filter(order => {
-            const orderDate = new Date(order.createdAt);
-            return orderDate >= cutoffDate;
-          });
+          // Calculate real metrics from filtered API data
+          const totalOrders = orders.length;
+          const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
+          const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
+          const shippedOrders = orders.filter(o => o.status === 'shipped').length;
+          const confirmedOrders = orders.filter(o => o.status === 'confirmed').length;
+          const pendingOrders = orders.filter(o => o.status === 'pending').length;
+          
+          const paidOrders = orders.filter(o => o.paymentStatus === 'paid').length;
+          const totalRevenue = orders.filter(o => o.paymentStatus === 'paid').reduce((sum, o) => sum + o.total, 0);
+          
+          const successRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
+          const conversionRate = totalOrders > 0 ? (paidOrders / totalOrders) * 100 : 0;
+          
+          apiMetrics = {
+            id: `metrics-${new Date().toISOString().split('T')[0]}`,
+            date: new Date().toISOString().split('T')[0],
+            totalOrders,
+            successfulOrders: deliveredOrders,
+            cancelledOrders,
+            shippedOrders,
+            confirmedOrders,
+            pendingOrders,
+            revenue: totalRevenue,
+            successRate: Math.round(successRate * 100) / 100,
+            conversionRate: Math.round(conversionRate * 100) / 100,
+            period: days || "all",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          
+          console.log(`📊 Generated real metrics from ${totalOrders} API orders from ${maxPages} pages (filtered for ${days || 'all'} days)`);
+          
+          // Cache metrics for 5 minutes
+          apiCache.set(metricsCacheKey, apiMetrics, 5);
+        } catch (apiError) {
+          console.warn("⚠️  Failed to fetch API metrics, using local data:", apiError);
         }
-        
-        // Calculate real metrics from filtered API data
-        const totalOrders = orders.length;
-        const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
-        const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
-        const shippedOrders = orders.filter(o => o.status === 'shipped').length;
-        const confirmedOrders = orders.filter(o => o.status === 'confirmed').length;
-        const pendingOrders = orders.filter(o => o.status === 'pending').length;
-        
-        const paidOrders = orders.filter(o => o.paymentStatus === 'paid').length;
-        const totalRevenue = orders.filter(o => o.paymentStatus === 'paid').reduce((sum, o) => sum + o.total, 0);
-        
-        const successRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
-        const conversionRate = totalOrders > 0 ? (paidOrders / totalOrders) * 100 : 0;
-        
-        apiMetrics = {
-          id: `metrics-${new Date().toISOString().split('T')[0]}`,
-          date: new Date().toISOString().split('T')[0],
-          totalOrders,
-          successfulOrders: deliveredOrders,
-          cancelledOrders,
-          shippedOrders,
-          confirmedOrders,
-          pendingOrders,
-          revenue: totalRevenue,
-          successRate: Math.round(successRate * 100) / 100,
-          conversionRate: Math.round(conversionRate * 100) / 100,
-          period: days || "all",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        console.log(`📊 Generated real metrics from ${totalOrders} API orders (filtered for ${days || 'all'} days)`);
-      } catch (apiError) {
-        console.warn("⚠️  Failed to fetch API metrics, using local data:", apiError);
+      } else {
+        console.log("🎯 Cache hit - using cached metrics");
       }
       
       // Fallback to local metrics if API fails
@@ -204,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Orders routes - with real API integration, filters and pagination
+  // Orders routes - with optimized API integration and caching
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
@@ -213,80 +220,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string;
       const days = req.query.days as string;
       
-      // Get all real data from European Fulfillment API
-      let apiOrders: any[] = [];
-      try {
-        // Fetch multiple pages to get all orders
-        let allLeads: any[] = [];
-        let currentPage = 1;
-        let hasMorePages = true;
+      // Create cache key based on all filter parameters
+      const cacheKey = `orders:${status || 'all'}:${search || 'none'}:${days || 'all'}`;
+      
+      // Check cache first
+      let allOrders = apiCache.get(cacheKey);
+      
+      if (!allOrders) {
+        console.log("🔄 Cache miss - fetching orders from API");
         
-        while (hasMorePages && currentPage <= 63) { // Get all available pages (937 total orders)
-          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
-          allLeads = allLeads.concat(pageLeads);
+        // Get optimized data from European Fulfillment API (only first 5 pages = ~75 orders)
+        let apiOrders: any[] = [];
+        try {
+          let allLeads: any[] = [];
+          const maxPages = 5; // Limit to first 5 pages for better performance
           
-          // Check if we have more pages
-          if (pageLeads.length < 15) { // If less than page size, we're done
-            hasMorePages = false;
-          } else {
-            currentPage++;
+          for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
+            const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+            allLeads = allLeads.concat(pageLeads);
+            
+            // Break early if we get less than full page
+            if (pageLeads.length < 15) break;
           }
           
-          // Safety limit based on API response
-          if (currentPage > 63) hasMorePages = false;
+          apiOrders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
+          console.log(`✅ Converted ${allLeads.length} API leads to ${apiOrders.length} orders from ${Math.min(maxPages, allLeads.length / 15)} pages`);
+        } catch (apiError) {
+          console.warn("⚠️  Failed to fetch API orders, using local data only:", apiError);
+        }
+      
+        // Get local orders as backup/additional data
+        let localOrders: any[] = [];
+        try {
+          localOrders = await storage.getOrders(100, 0); // Limit local orders too
+        } catch (localError) {
+          console.warn("⚠️  Failed to fetch local orders:", localError);
         }
         
-        apiOrders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
-        console.log(`✅ Converted ${allLeads.length} API leads to ${apiOrders.length} orders from ${currentPage - 1} pages`);
-      } catch (apiError) {
-        console.warn("⚠️  Failed to fetch API orders, using local data only:", apiError);
-      }
-      
-      // Get local orders as backup/additional data
-      let localOrders: any[] = [];
-      if (status) {
-        localOrders = await storage.getOrdersByStatus(status);
-      } else {
-        localOrders = await storage.getOrders(1000, 0); // Get more for filtering
-      }
-      
-      // Combine API orders (priority) with local orders
-      let allOrders = [...apiOrders, ...localOrders];
-      
-      // Apply status filter
-      if (status && status !== "all") {
-        allOrders = allOrders.filter(order => {
-          const orderStatus = order.deliveryStatus || order.status;
-          return orderStatus.toLowerCase() === status.toLowerCase();
-        });
-      }
-      
-      // Apply search filter
-      if (search) {
-        const searchLower = search.toLowerCase();
-        allOrders = allOrders.filter(order => 
-          order.customerName?.toLowerCase().includes(searchLower) ||
-          order.customerPhone?.toLowerCase().includes(searchLower) ||
-          order.customerCity?.toLowerCase().includes(searchLower) ||
-          order.id?.toLowerCase().includes(searchLower) ||
-          order.trackingNumber?.toLowerCase().includes(searchLower)
-        );
-      }
-      
-      // Apply date filter
-      if (days && days !== "all") {
-        const daysNum = parseInt(days);
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+        // Combine API orders (priority) with local orders
+        allOrders = [...apiOrders, ...localOrders];
         
-        allOrders = allOrders.filter(order => {
-          const orderDate = new Date(order.createdAt);
-          return orderDate >= cutoffDate;
-        });
+        // Apply filters
+        if (status && status !== "all") {
+          allOrders = allOrders.filter(order => {
+            const orderStatus = order.deliveryStatus || order.status;
+            return orderStatus.toLowerCase() === status.toLowerCase();
+          });
+        }
+        
+        if (search) {
+          const searchLower = search.toLowerCase();
+          allOrders = allOrders.filter(order => 
+            order.customerName?.toLowerCase().includes(searchLower) ||
+            order.customerPhone?.toLowerCase().includes(searchLower) ||
+            order.customerCity?.toLowerCase().includes(searchLower) ||
+            order.id?.toLowerCase().includes(searchLower) ||
+            order.trackingNumber?.toLowerCase().includes(searchLower)
+          );
+        }
+        
+        if (days && days !== "all") {
+          const daysNum = parseInt(days);
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+          
+          allOrders = allOrders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= cutoffDate;
+          });
+        }
+        
+        // Sort by creation date (most recent first)
+        allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
+        // Cache the filtered results for 3 minutes
+        apiCache.set(cacheKey, allOrders, 3);
+      } else {
+        console.log("🎯 Cache hit - using cached orders");
       }
-      
-      // Sort by creation date (most recent first)
-      allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       // Calculate pagination
       const totalOrders = allOrders.length;
