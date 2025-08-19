@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -5,22 +6,27 @@ import { ChartsSection } from "@/components/dashboard/charts-section";
 import { RecentOrders } from "@/components/dashboard/recent-orders";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Filter } from "lucide-react";
 
 export default function Dashboard() {
-  // Fetch dashboard metrics
+  const [dateFilter, setDateFilter] = useState("7");
+
+  // Fetch dashboard metrics with date filter
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ["/api/dashboard/metrics"],
+    queryKey: ["/api/dashboard/metrics", dateFilter],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/dashboard/metrics");
+      const response = await authenticatedApiRequest("GET", `/api/dashboard/metrics?days=${dateFilter}`);
       return response.json();
     },
   });
 
-  // Fetch recent orders
+  // Fetch recent orders with date filter
   const { data: orders, isLoading: ordersLoading } = useQuery({
-    queryKey: ["/api/orders"],
+    queryKey: ["/api/orders", dateFilter],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/orders?limit=10");
+      const response = await authenticatedApiRequest("GET", `/api/orders?limit=10&days=${dateFilter}`);
       return response.json();
     },
   });
@@ -118,6 +124,39 @@ export default function Dashboard() {
           </div>
         } 
       />
+
+      {/* Date Filter */}
+      <div className="glassmorphism rounded-2xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Calendar className="text-blue-400" size={20} />
+            <span className="text-white font-medium">Período:</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-48 glassmorphism-light border-gray-600 text-white">
+                <SelectValue placeholder="Selecionar período" />
+              </SelectTrigger>
+              <SelectContent className="glassmorphism border-gray-600">
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 3 meses</SelectItem>
+                <SelectItem value="365">Último ano</SelectItem>
+                <SelectItem value="all">Todos os períodos</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="glassmorphism-light text-gray-300 hover:bg-white/20"
+              data-testid="button-refresh-data"
+            >
+              <Filter size={16} className="mr-2" />
+              Atualizar
+            </Button>
+          </div>
+        </div>
+      </div>
       
       <StatsCards metrics={metrics} isLoading={metricsLoading} />
       

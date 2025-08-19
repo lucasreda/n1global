@@ -115,18 +115,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard routes - with real API integration
+  // Dashboard routes - with real API integration and date filtering
   app.get("/api/dashboard/metrics", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const date = req.query.date as string;
+      const days = req.query.days as string;
       
       // Get real data from European Fulfillment API
       let apiMetrics: any = null;
       try {
         const leads = await europeanFulfillmentService.getLeadsList("ITALY");
-        const orders = europeanFulfillmentService.convertLeadsToOrders(leads);
+        let orders = europeanFulfillmentService.convertLeadsToOrders(leads);
         
-        // Calculate real metrics from API data
+        // Apply date filter if specified
+        if (days && days !== "all") {
+          const daysNum = parseInt(days);
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+          
+          orders = orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            return orderDate >= cutoffDate;
+          });
+        }
+        
+        // Calculate real metrics from filtered API data
         const totalOrders = orders.length;
         const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
         const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
@@ -152,11 +165,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           revenue: totalRevenue,
           successRate: Math.round(successRate * 100) / 100,
           conversionRate: Math.round(conversionRate * 100) / 100,
+          period: days || "all",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
         
-        console.log(`📊 Generated real metrics from ${totalOrders} API orders`);
+        console.log(`📊 Generated real metrics from ${totalOrders} API orders (filtered for ${days || 'all'} days)`);
       } catch (apiError) {
         console.warn("⚠️  Failed to fetch API metrics, using local data:", apiError);
       }
@@ -173,12 +187,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Orders routes - with real API integration
+  // Orders routes - with real API integration, filters and pagination
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string;
+      const search = req.query.search as string;
+      const days = req.query.days as string;
       
       // Get real data from European Fulfillment API
       let apiOrders: any[] = [];
@@ -195,21 +211,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status) {
         localOrders = await storage.getOrdersByStatus(status);
       } else {
-        localOrders = await storage.getOrders(limit, offset);
+        localOrders = await storage.getOrders(1000, 0); // Get more for filtering
       }
       
       // Combine API orders (priority) with local orders
       let allOrders = [...apiOrders, ...localOrders];
       
-      // Apply status filter if specified
-      if (status) {
-        allOrders = allOrders.filter(order => order.status === status);
+      // Apply status filter
+      if (status && status !== "all") {
+        allOrders = allOrders.filter(order => {
+          const orderStatus = order.deliveryStatus || order.status;
+          return orderStatus.toLowerCase() === status.toLowerCase();
+        });
       }
       
-      // Apply pagination
+      // Apply search filter
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allOrders = allOrders.filter(order => 
+          order.customerName?.toLowerCase().includes(searchLower) ||
+          order.customerPhone?.toLowerCase().includes(searchLower) ||
+          order.customerCity?.toLowerCase().includes(searchLower) ||
+          order.id?.toLowerCase().includes(searchLower) ||
+          order.trackingNumber?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Apply date filter
+      if (days && days !== "all") {
+        const daysNum = parseInt(days);
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+        
+        allOrders = allOrders.filter(order => {
+          const orderDate = new Date(order.createdAt);
+          return orderDate >= cutoffDate;
+        });
+      }
+      
+      // Sort by creation date (most recent first)
+      allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // Calculate pagination
+      const totalOrders = allOrders.length;
+      const totalPages = Math.ceil(totalOrders / limit);
       const paginatedOrders = allOrders.slice(offset, offset + limit);
       
-      res.json(paginatedOrders);
+      // Return paginated response
+      res.json({
+        data: paginatedOrders,
+        total: totalOrders,
+        totalPages,
+        currentPage: Math.floor(offset / limit) + 1,
+        hasNext: offset + limit < totalOrders,
+        hasPrev: offset > 0
+      });
     } catch (error) {
       console.error("Error fetching orders:", error);
       res.status(500).json({ message: "Erro ao buscar pedidos" });
