@@ -135,12 +135,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           let allLeads: any[] = [];
           
-          // Increase pages based on date range to get enough historical data
-          let maxPages = 5; // Default for "all" or recent data
-          if (days === "90") maxPages = 20; // 3 months = more pages needed
-          else if (days === "30") maxPages = 10; // 1 month 
-          else if (days === "7") maxPages = 5; // 1 week
-          else if (days === "1") maxPages = 2; // Today
+          // Calculate optimal pages based on expected data volume
+          let maxPages = 10; // Default for recent data
+          if (days === "90") maxPages = 50; // 3 months = fetch more comprehensive data
+          else if (days === "30") maxPages = 30; // 1 month = fetch substantial data for accuracy
+          else if (days === "7") maxPages = 10; // 1 week
+          else if (days === "1") maxPages = 3; // Today
+          else if (!days || days === "all") maxPages = 63; // All data - fetch everything
           
           console.log(`📊 Fetching ${maxPages} pages for ${days || 'all'} days filter`);
           
@@ -201,13 +202,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`📊 Filtered to ${orders.length} orders for ${daysNum} days period`);
           }
           
-          // Calculate real metrics from filtered API data
+          // Calculate real metrics from filtered API data with enhanced status mapping
           const totalOrders = orders.length;
-          const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
-          const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
-          const shippedOrders = orders.filter(o => o.status === 'shipped').length;
-          const confirmedOrders = orders.filter(o => o.status === 'confirmed').length;
-          const pendingOrders = orders.filter(o => o.status === 'pending').length;
+          
+          // Enhanced status counting based on real API data patterns
+          const deliveredOrders = orders.filter(o => {
+            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
+            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
+            return deliveryStatus.includes('delivered') || 
+                   deliveryStatus.includes('consegnato') ||
+                   deliveryStatus === 'delivered' ||
+                   confirmationStatus === 'delivered';
+          }).length;
+          
+          const cancelledOrders = orders.filter(o => {
+            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
+            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
+            return confirmationStatus.includes('cancelled') ||
+                   confirmationStatus.includes('duplicated') ||
+                   confirmationStatus.includes('out of area') ||
+                   confirmationStatus.includes('rejected') ||
+                   deliveryStatus.includes('cancelled') ||
+                   deliveryStatus.includes('incident') ||
+                   o.status === 'cancelled';
+          }).length;
+          
+          const shippedOrders = orders.filter(o => {
+            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
+            return deliveryStatus.includes('in delivery') ||
+                   deliveryStatus.includes('shipped') ||
+                   deliveryStatus.includes('in transit') ||
+                   deliveryStatus === 'spedito' ||
+                   o.status === 'shipped';
+          }).length;
+          
+          const confirmedOrders = orders.filter(o => {
+            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
+            return confirmationStatus.includes('confirmed') || 
+                   confirmationStatus === 'new order' ||
+                   o.status === 'confirmed';
+          }).length;
+          
+          const pendingOrders = orders.filter(o => {
+            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
+            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
+            return (!confirmationStatus || confirmationStatus === '') && 
+                   (!deliveryStatus || deliveryStatus === 'unpacked') ||
+                   o.status === 'pending';
+          }).length;
           
           const paidOrders = orders.filter(o => o.paymentStatus === 'paid').length;
           const totalRevenue = orders.filter(o => o.paymentStatus === 'paid').reduce((sum, o) => sum + o.total, 0);
@@ -233,6 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           
           console.log(`📊 Generated real metrics from ${totalOrders} API orders from ${maxPages} pages (filtered for ${days || 'all'} days)`);
+          console.log(`📈 Status breakdown: Delivered: ${deliveredOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Confirmed: ${confirmedOrders}, Pending: ${pendingOrders}`);
           
           // Cache metrics for 5 minutes
           apiCache.set(metricsCacheKey, apiMetrics, 5);

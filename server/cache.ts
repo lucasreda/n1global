@@ -15,6 +15,7 @@ class ApiCache {
       ttl: ttlMinutes * 60 * 1000
     };
     this.cache.set(key, item);
+    console.log(`💾 Cached ${Array.isArray(data) ? data.length : 'object'} items for: ${key} (TTL: ${ttlMinutes}min)`);
   }
 
   get(key: string): any | null {
@@ -24,9 +25,11 @@ class ApiCache {
     const now = Date.now();
     if (now - item.timestamp > item.ttl) {
       this.cache.delete(key);
+      console.log(`🗑️  Cache expired for: ${key}`);
       return null;
     }
 
+    console.log(`✅ Cache hit for: ${key} - ${Array.isArray(item.data) ? item.data.length : 'object'} items`);
     return item.data;
   }
 
