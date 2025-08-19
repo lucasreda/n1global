@@ -124,8 +124,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get real data from European Fulfillment API
       let apiMetrics: any = null;
       try {
-        const leads = await europeanFulfillmentService.getLeadsList("ITALY");
-        let orders = europeanFulfillmentService.convertLeadsToOrders(leads);
+        // Get first few pages for dashboard metrics
+        let allLeads: any[] = [];
+        for (let page = 1; page <= 5; page++) { // Get first 5 pages for metrics
+          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", page);
+          allLeads = allLeads.concat(pageLeads);
+          if (pageLeads.length < 15) break; // Stop if we get less than full page
+        }
+        
+        let orders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
         
         // Apply date filter if specified
         if (days && days !== "all") {
@@ -196,12 +203,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string;
       const days = req.query.days as string;
       
-      // Get real data from European Fulfillment API
+      // Get all real data from European Fulfillment API
       let apiOrders: any[] = [];
       try {
-        const leads = await europeanFulfillmentService.getLeadsList("ITALY");
-        apiOrders = europeanFulfillmentService.convertLeadsToOrders(leads);
-        console.log(`✅ Converted ${leads.length} API leads to ${apiOrders.length} orders from Italy`);
+        // Fetch multiple pages to get all orders
+        let allLeads: any[] = [];
+        let currentPage = 1;
+        let hasMorePages = true;
+        
+        while (hasMorePages && currentPage <= 10) { // Limit to first 10 pages for now (150 orders)
+          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+          allLeads = allLeads.concat(pageLeads);
+          
+          // Check if we have more pages (simplified check)
+          if (pageLeads.length < 15) { // If less than page size, we're done
+            hasMorePages = false;
+          } else {
+            currentPage++;
+          }
+          
+          // Limit to prevent excessive API calls
+          if (currentPage > 10) hasMorePages = false;
+        }
+        
+        apiOrders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
+        console.log(`✅ Converted ${allLeads.length} API leads to ${apiOrders.length} orders from ${Math.min(currentPage - 1, 10)} pages`);
       } catch (apiError) {
         console.warn("⚠️  Failed to fetch API orders, using local data only:", apiError);
       }

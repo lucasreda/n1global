@@ -89,9 +89,14 @@ export default function Orders() {
     }
   };
 
-  const formatAmount = (amount: number | undefined) => {
-    if (!amount || isNaN(amount)) return '€ 0,00';
-    return `€ ${amount.toFixed(2).replace('.', ',')}`;
+  const formatAmount = (amount: any) => {
+    if (!amount) return '€ 0,00';
+    
+    // Convert string to number if needed
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    
+    if (isNaN(numAmount)) return '€ 0,00';
+    return `€ ${numAmount.toFixed(2).replace('.', ',')}`;
   };
 
   return (
@@ -210,7 +215,7 @@ export default function Orders() {
                           {order.customerPhone || order.phone || '-'}
                         </td>
                         <td className="py-4 px-4 text-sm text-white font-semibold">
-                          {formatAmount(order.total || order.amount)}
+                          {formatAmount(order.total || order.amount || order.lead_value)}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-200">
                           {order.customerCity || order.city || '-'}

@@ -411,16 +411,20 @@ class EuropeanFulfillmentService {
     }
   }
 
-  async getLeadsList(country?: string): Promise<any[]> {
+  async getLeadsList(country?: string, page: number = 1): Promise<any[]> {
     if (this.simulationMode) {
       const mockLeads = this.getMockLeadsList();
       return country ? mockLeads.filter(lead => lead.country === country) : mockLeads;
     }
 
     try {
-      const endpoint = country ? `api/leads?country=${encodeURIComponent(country)}` : "api/leads";
+      let endpoint = `api/leads?page=${page}`;
+      if (country) {
+        endpoint += `&country=${encodeURIComponent(country)}`;
+      }
+      
       const response = await this.makeAuthenticatedRequest(endpoint);
-      console.log("Leads API response:", response);
+      console.log(`Leads API response for page ${page}:`, response);
       
       // Handle paginated response format
       if (response.data && Array.isArray(response.data)) {
@@ -440,7 +444,7 @@ class EuropeanFulfillmentService {
       console.warn("Unexpected leads response format:", response);
       return [];
     } catch (error) {
-      console.error("Error getting leads list:", error);
+      console.error(`Error getting leads list for page ${page}:`, error);
       return [];
     }
   }
