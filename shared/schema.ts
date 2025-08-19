@@ -36,6 +36,52 @@ export const dashboardMetrics = pgTable("dashboard_metrics", {
   successRate: decimal("success_rate", { precision: 5, scale: 2 }).notNull().default("0"),
 });
 
+// European Fulfillment Center Integration Tables
+export const shippingProviders = pgTable("shipping_providers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  apiUrl: text("api_url").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const fulfillmentLeads = pgTable("fulfillment_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadNumber: text("lead_number").notNull().unique(),
+  orderId: varchar("order_id").references(() => orders.id),
+  providerId: varchar("provider_id").references(() => shippingProviders.id),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  province: text("province").notNull(),
+  zipcode: text("zipcode").notNull(),
+  country: text("country").notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paymentType: text("payment_type").notNull(), // cod, prepaid
+  status: text("status").notNull().default("pending"), // pending, sent, delivered, cancelled
+  items: text("items").notNull(), // JSON string with SKU and quantities
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const products = pgTable("products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sku: text("sku").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  stock: integer("stock").notNull().default(0),
+  lowStock: integer("low_stock").notNull().default(10),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  productUrl: text("product_url"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Auth schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -62,6 +108,25 @@ export const updateOrderSchema = createInsertSchema(orders).omit({
   createdAt: true,
 }).partial();
 
+// Integration schemas
+export const insertFulfillmentLeadSchema = createInsertSchema(fulfillmentLeads).omit({
+  id: true,
+  leadNumber: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShippingProviderSchema = createInsertSchema(shippingProviders).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -70,3 +135,8 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type UpdateOrder = z.infer<typeof updateOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 export type DashboardMetrics = typeof dashboardMetrics.$inferSelect;
+export type InsertFulfillmentLead = z.infer<typeof insertFulfillmentLeadSchema>;
+export type FulfillmentLead = typeof fulfillmentLeads.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;
+export type ShippingProvider = typeof shippingProviders.$inferSelect;

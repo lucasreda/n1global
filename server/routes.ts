@@ -1,18 +1,19 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, updateOrderSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, updateOrderSchema, insertFulfillmentLeadSchema, insertProductSchema } from "@shared/schema";
+import { europeanFulfillmentService } from "./fulfillment-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
-interface AuthRequest extends Express.Request {
+interface AuthRequest extends Request {
   user?: any;
 }
 
 // Middleware to verify JWT token
-const authenticateToken = (req: AuthRequest, res: any, next: any) => {
+const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -96,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/auth/me", authenticateToken, async (req: AuthRequest, res) => {
+  app.get("/api/auth/me", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const user = await storage.getUser(req.user.id);
       if (!user) {
@@ -115,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes
-  app.get("/api/dashboard/metrics", authenticateToken, async (req: AuthRequest, res) => {
+  app.get("/api/dashboard/metrics", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const date = req.query.date as string;
       const metrics = await storage.getDashboardMetrics(date);
@@ -126,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Orders routes
-  app.get("/api/orders", authenticateToken, async (req: AuthRequest, res) => {
+  app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
@@ -145,7 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res) => {
+  app.get("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const order = await storage.getOrder(req.params.id);
       if (!order) {
@@ -157,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/orders", authenticateToken, async (req: AuthRequest, res) => {
+  app.post("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
@@ -167,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/orders/:id", authenticateToken, async (req: AuthRequest, res) => {
+  app.patch("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const updates = updateOrderSchema.parse(req.body);
       const order = await storage.updateOrder(req.params.id, updates);
@@ -180,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/orders/:id", authenticateToken, async (req: AuthRequest, res) => {
+  app.delete("/api/orders/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const deleted = await storage.deleteOrder(req.params.id);
       if (!deleted) {
@@ -189,6 +190,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Pedido removido com sucesso" });
     } catch (error) {
       res.status(500).json({ message: "Erro ao remover pedido" });
+    }
+  });
+
+  // European Fulfillment Center Integration Routes
+  
+  // Test connection
+  app.get("/api/integrations/european-fulfillment/test", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const isConnected = await europeanFulfillmentService.testConnection();
+      res.json({ 
+        connected: isConnected,
+        message: isConnected ? "Conexão bem-sucedida" : "Falha na conexão"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao testar conexão" });
+    }
+  });
+
+  // Get countries
+  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const countries = await europeanFulfillmentService.getCountries();
+      res.json(countries);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar países" });
+    }
+  });
+
+  // Fulfillment leads routes
+  app.get("/api/fulfillment-leads", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const leads = await storage.getFulfillmentLeads();
+      res.json(leads);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar leads de fulfillment" });
+    }
+  });
+
+  app.get("/api/fulfillment-leads/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const lead = await storage.getFulfillmentLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ message: "Lead não encontrado" });
+      }
+      res.json(lead);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar lead" });
+    }
+  });
+
+  app.post("/api/fulfillment-leads", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const leadData = insertFulfillmentLeadSchema.parse(req.body);
+      
+      // Create lead locally first
+      const localLead = await storage.createFulfillmentLead(leadData);
+      
+      // Try to send to European Fulfillment Center
+      const result = await europeanFulfillmentService.createLead(leadData);
+      
+      if (result.success && result.lead_number) {
+        // Update local lead with remote lead number
+        await storage.updateFulfillmentLead(localLead.id, {
+          leadNumber: result.lead_number,
+          status: "sent"
+        });
+      }
+      
+      res.status(201).json({
+        ...localLead,
+        fulfillmentResponse: result
+      });
+    } catch (error) {
+      res.status(400).json({ message: "Dados inválidos" });
+    }
+  });
+
+  app.get("/api/fulfillment-leads/:id/status", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const lead = await storage.getFulfillmentLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ message: "Lead não encontrado" });
+      }
+
+      // Get status from European Fulfillment Center
+      const status = await europeanFulfillmentService.getLeadStatus(lead.leadNumber);
+      
+      if (status) {
+        // Update local status
+        await storage.updateFulfillmentLead(lead.id, {
+          status: status.status
+        });
+      }
+
+      res.json(status || { status: lead.status });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar status do lead" });
+    }
+  });
+
+  // Products routes
+  app.get("/api/products", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const products = await storage.getProducts();
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar produtos" });
+    }
+  });
+
+  app.get("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const product = await storage.getProduct(req.params.id);
+      if (!product) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      res.json(product);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar produto" });
+    }
+  });
+
+  app.post("/api/products", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
+      res.status(201).json(product);
+    } catch (error) {
+      res.status(400).json({ message: "Dados inválidos" });
+    }
+  });
+
+  app.patch("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const updates = req.body;
+      const product = await storage.updateProduct(req.params.id, updates);
+      if (!product) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      res.json(product);
+    } catch (error) {
+      res.status(400).json({ message: "Dados inválidos" });
+    }
+  });
+
+  // Shipping providers routes
+  app.get("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const providers = await storage.getShippingProviders();
+      res.json(providers);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar provedores de envio" });
     }
   });
 

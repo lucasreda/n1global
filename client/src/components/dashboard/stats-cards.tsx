@@ -70,13 +70,13 @@ export function StatsCards({ totalOrders, paidOrders, refusedOrders, successRate
             </div>
             <span 
               className={`text-xs font-medium px-2 py-1 rounded-full ${
-                parseFloat(stat.growth) >= 0 
+                parseFloat(stat.growth.toString()) >= 0 
                   ? "text-green-400 bg-green-400/20" 
                   : "text-red-400 bg-red-400/20"
               }`}
               data-testid={`growth-${stat.testId}`}
             >
-              {parseFloat(stat.growth) >= 0 ? "+" : ""}{stat.growth}%
+              {parseFloat(stat.growth.toString()) >= 0 ? "+" : ""}{stat.growth}%
             </span>
           </div>
           <h3 className="text-2xl font-bold text-white mb-1" data-testid={`value-${stat.testId}`}>

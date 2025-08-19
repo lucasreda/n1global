@@ -1,21 +1,63 @@
+import { useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { Settings, CheckCircle, AlertCircle } from "lucide-react";
+import { EuropeanFulfillmentPanel } from "@/components/integration/european-fulfillment-panel";
+import { Settings, CheckCircle, AlertCircle, Package, Truck, Globe } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Integrations() {
+  const [openDialog, setOpenDialog] = useState<string | null>(null);
+
   const integrations = [
     {
-      name: "Correios",
-      status: "connected",
-      description: "Integração ativa com rastreamento automático",
-      icon: "📦",
+      id: "european-fulfillment",
+      name: "European Fulfillment Center",
+      status: "active",
+      description: "Centro de fulfillment para Europa com API completa",
+      icon: Package,
+      color: "blue",
+      hasPanel: true,
     },
     {
+      id: "correios",
+      name: "Correios",
+      status: "pending",
+      description: "Integração com rastreamento automático",
+      icon: Truck,
+      color: "green",
+      hasPanel: false,
+    },
+    {
+      id: "jadlog",
       name: "Jadlog",
       status: "pending",
       description: "Aguardando configuração das credenciais",
-      icon: "🚚",
+      icon: Globe,
+      color: "yellow",
+      hasPanel: false,
     },
   ];
+
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case "active":
+        return { text: "Ativo", color: "text-green-400", bgColor: "bg-green-500/20" };
+      case "connected":
+        return { text: "Conectado", color: "text-green-400", bgColor: "bg-green-500/20" };
+      case "pending":
+        return { text: "Pendente", color: "text-yellow-400", bgColor: "bg-yellow-500/20" };
+      default:
+        return { text: "Inativo", color: "text-gray-400", bgColor: "bg-gray-500/20" };
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    return status === "active" || status === "connected" ? (
+      <CheckCircle className="text-green-400" size={20} />
+    ) : (
+      <AlertCircle className="text-yellow-400" size={20} />
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -25,51 +67,94 @@ export default function Integrations() {
       />
       
       <div className="glassmorphism rounded-2xl p-6">
-        <h3 className="text-xl font-semibold text-white mb-6">Transportadoras Disponíveis</h3>
+        <h3 className="text-xl font-semibold text-white mb-6">Provedores de Fulfillment</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {integrations.map((integration) => (
-            <div key={integration.name} className="glassmorphism-light rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{integration.icon}</span>
-                  <div>
-                    <h4 className="text-white font-medium">{integration.name}</h4>
-                    <p className="text-gray-400 text-sm">{integration.description}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {integrations.map((integration) => {
+            const statusInfo = getStatusInfo(integration.status);
+            const IconComponent = integration.icon;
+            
+            return (
+              <div key={integration.id} className="glassmorphism-light rounded-xl p-6" data-testid={`integration-${integration.id}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-lg bg-${integration.color}-500/20 flex items-center justify-center`}>
+                      <IconComponent className={`text-${integration.color}-400`} size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-medium">{integration.name}</h4>
+                      <p className="text-gray-400 text-sm">{integration.description}</p>
+                    </div>
                   </div>
+                  
+                  {getStatusIcon(integration.status)}
                 </div>
                 
-                {integration.status === "connected" ? (
-                  <CheckCircle className="text-green-400" size={20} />
-                ) : (
-                  <AlertCircle className="text-yellow-400" size={20} />
-                )}
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
+                    {statusInfo.text}
+                  </span>
+                  
+                  {integration.hasPanel ? (
+                    <Dialog open={openDialog === integration.id} onOpenChange={(open) => setOpenDialog(open ? integration.id : null)}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                          data-testid={`button-configure-${integration.id}`}
+                        >
+                          <Settings size={16} className="mr-2" />
+                          Configurar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="text-white flex items-center space-x-2">
+                            <IconComponent className={`text-${integration.color}-400`} size={20} />
+                            <span>{integration.name}</span>
+                          </DialogTitle>
+                        </DialogHeader>
+                        {integration.id === "european-fulfillment" && <EuropeanFulfillmentPanel />}
+                      </DialogContent>
+                    </Dialog>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-400 cursor-not-allowed"
+                      disabled
+                      data-testid={`button-configure-${integration.id}`}
+                    >
+                      <Settings size={16} className="mr-2" />
+                      Em Breve
+                    </Button>
+                  )}
+                </div>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  integration.status === "connected" 
-                    ? "bg-green-500/20 text-green-400" 
-                    : "bg-yellow-500/20 text-yellow-400"
-                }`}>
-                  {integration.status === "connected" ? "Conectado" : "Pendente"}
-                </span>
-                
-                <button className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors">
-                  <Settings size={16} />
-                  <span className="text-sm">Configurar</span>
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         
         <div className="mt-8 p-4 glassmorphism-light rounded-xl">
-          <h4 className="text-white font-medium mb-2">Configurações Futuras</h4>
-          <p className="text-gray-400 text-sm">
-            As integrações com as transportadoras serão implementadas nas próximas versões. 
-            Isso incluirá rastreamento automático, cálculo de frete e notificações de status.
-          </p>
+          <h4 className="text-white font-medium mb-2 flex items-center space-x-2">
+            <Package className="text-blue-400" size={18} />
+            <span>Status das Integrações</span>
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">1</div>
+              <div className="text-sm text-gray-400">Ativas</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-400">2</div>
+              <div className="text-sm text-gray-400">Pendentes</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-400">3</div>
+              <div className="text-sm text-gray-400">Total</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
