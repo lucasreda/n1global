@@ -532,10 +532,10 @@ class EuropeanFulfillmentService {
           price: parseFloat(lead.lead_value || '0')
         }]),
         
-        // Metadata
+        // Metadata with proper date handling
         notes: `REF: ${lead.n_lead} | Market: ${lead.market || 'N/A'} | Tracking: ${lead.tracking_number || 'N/A'} | Confirmação: ${lead.status_confirmation} | Entrega: ${lead.status_livrison}`,
-        createdAt: lead.created_at || new Date().toISOString(),
-        updatedAt: lead.updated_at || new Date().toISOString(),
+        createdAt: lead.created_at || lead.date_created || new Date().toISOString(),
+        updatedAt: lead.updated_at || lead.date_updated || new Date().toISOString(),
         
         // Raw API data for debugging
         apiData: lead

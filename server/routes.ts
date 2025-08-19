@@ -204,22 +204,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
               cutoffDate = new Date(now.getTime() - (daysNum * 24 * 60 * 60 * 1000));
             }
             
-            console.log(`🗓️  Filtering for ${daysNum} days: from ${cutoffDate.toISOString()} to ${now.toISOString()}`);
+            console.log(`🗓️  Date range filter: ${cutoffDate.toISOString()} to ${now.toISOString()} (${daysNum} days)`);
+            console.log(`📝 Before filter: ${orders.length} total orders`);
+            
+            const originalCount = orders.length;
+            
+            // Debug: Check first few order dates
+            console.log(`🔍 Sample order dates from API:`);
+            orders.slice(0, 5).forEach((order: any, idx: number) => {
+              console.log(`  Order ${idx + 1}: ${order.id} - createdAt: ${order.createdAt} - Raw API: ${order.apiData?.created_at || 'N/A'}`);
+            });
             
             orders = orders.filter((order: any) => {
               const orderDate = new Date(order.createdAt);
-              const isInRange = orderDate >= cutoffDate && orderDate <= now;
               
-              if (daysNum === 1) {
-                // For today, also check if it's the same day
-                const isSameDay = orderDate.toDateString() === now.toDateString();
-                return isSameDay;
+              // Validate date
+              if (isNaN(orderDate.getTime())) {
+                console.log(`⚠️  Invalid date for order ${order.id}: ${order.createdAt}`);
+                return false;
               }
               
-              return isInRange;
+              if (daysNum === 1) {
+                // For today, check if it's the same day
+                const isSameDay = orderDate.toDateString() === now.toDateString();
+                if (isSameDay) {
+                  console.log(`✅ Today match: ${order.id} - ${orderDate.toISOString()}`);
+                }
+                return isSameDay;
+              } else {
+                // For other periods, check if within range
+                const isInRange = orderDate >= cutoffDate && orderDate <= now;
+                if (isInRange && Math.random() < 0.02) { // Log 2% of matches for debugging
+                  console.log(`✅ Date match: ${order.id} - ${orderDate.toISOString()}`);
+                } else if (!isInRange && Math.random() < 0.001) { // Log 0.1% of non-matches for debugging
+                  console.log(`❌ Date not in range: ${order.id} - ${orderDate.toISOString()}`);
+                }
+                return isInRange;
+              }
             });
             
-            console.log(`📊 Filtered to ${orders.length} orders for ${daysNum} days period (target: 611+ for 30 days)`);
+            console.log(`📊 After date filter: ${orders.length} orders (filtered out ${originalCount - orders.length} orders)`);
+            console.log(`🎯 Filter result for ${daysNum} days: ${orders.length} orders match the date criteria`);
           }
           
           // Calculate real metrics from filtered API data with enhanced status mapping
