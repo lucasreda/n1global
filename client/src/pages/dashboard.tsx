@@ -88,8 +88,8 @@ export default function Dashboard() {
     return (
       <div className="space-y-6">
         <DashboardHeader 
-          title="Dashboard COD" 
-          subtitle="Controle financeiro completo dos seus pedidos" 
+          title="Dashboard COD - Itália" 
+          subtitle="Carregando dados da European Fulfillment Center..." 
         />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
@@ -108,16 +108,18 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <DashboardHeader 
-        title="Dashboard COD" 
-        subtitle="Controle financeiro completo dos seus pedidos" 
+        title="Dashboard COD - Itália" 
+        subtitle={
+          <div className="flex items-center space-x-2">
+            <span>Dados reais da European Fulfillment Center</span>
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-400/20 text-green-400 border border-green-400/30">
+              API REAL
+            </span>
+          </div>
+        } 
       />
       
-      <StatsCards
-        totalOrders={metrics?.totalOrders || 0}
-        paidOrders={metrics?.paidOrders || 0}
-        refusedOrders={metrics?.refusedOrders || 0}
-        successRate={metrics?.successRate || "0"}
-      />
+      <StatsCards metrics={metrics} isLoading={metricsLoading} />
       
       <ChartsSection 
         revenueData={revenueData}

@@ -6,10 +6,18 @@ import { cn } from "@/lib/utils";
 interface Order {
   id: string;
   customerName: string;
-  amount: string;
+  customerPhone: string;
+  customerCity: string;
+  total: number;
+  leadValue: string;
   status: string;
-  shippingProvider: string;
-  createdAt: Date;
+  paymentStatus: string;
+  deliveryStatus: string;
+  market: string;
+  refS: string;
+  refNumber: string;
+  trackingNumber: string;
+  createdAt: string;
 }
 
 interface RecentOrdersProps {
@@ -19,38 +27,40 @@ interface RecentOrdersProps {
 }
 
 export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersProps) {
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "paid":
+  const getDeliveryStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "delivered":
         return "bg-green-500/20 text-green-400 hover:bg-green-500/30";
-      case "processing":
+      case "in transit":
+        return "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30";
+      case "shipped":
+        return "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30";
+      case "preparing":
         return "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30";
-      case "refused":
+      case "cancelled":
         return "bg-red-500/20 text-red-400 hover:bg-red-500/30";
       default:
         return "bg-gray-500/20 text-gray-400 hover:bg-gray-500/30";
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getPaymentStatusVariant = (status: string) => {
     switch (status) {
       case "paid":
-        return "Pago";
-      case "processing":
-        return "Processando";
-      case "refused":
-        return "Recusado";
+        return "bg-green-500/20 text-green-400 hover:bg-green-500/30";
+      case "no paid":
+        return "bg-red-500/20 text-red-400 hover:bg-red-500/30";
       default:
-        return status;
+        return "bg-gray-500/20 text-gray-400 hover:bg-gray-500/30";
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('pt-BR');
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const formatAmount = (amount: string) => {
-    return `R$ ${parseFloat(amount).toFixed(2).replace('.', ',')}`;
+  const formatAmount = (amount: number) => {
+    return `€ ${amount.toFixed(2).replace('.', ',')}`;
   };
 
   return (
@@ -82,19 +92,22 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
         <table className="w-full" data-testid="table-orders">
           <thead>
             <tr className="border-b border-gray-600/30">
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">ID</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Cliente</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Valor</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Status</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Transportadora</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Data</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Market</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">REF.S / REF</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Tracking Number</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Name</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Phone</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Lead Value</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">City</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Delivery</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Payment</th>
               <th className="text-center py-3 px-4 text-sm font-medium text-gray-300">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-600/30">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-gray-400">
+                <td colSpan={10} className="py-8 text-center text-gray-400">
                   Nenhum pedido encontrado
                 </td>
               </tr>
@@ -105,31 +118,56 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
                   className="hover:bg-white/5 transition-colors"
                   data-testid={`row-order-${order.id}`}
                 >
-                  <td className="py-4 px-4 text-sm text-white font-mono" data-testid={`id-${order.id}`}>
-                    #{order.id.slice(-6)}
+                  <td className="py-4 px-4 text-sm text-white" data-testid={`market-${order.id}`}>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
+                        <span className="text-xs font-bold text-blue-400">📦</span>
+                      </div>
+                      <span className="text-gray-300">{order.market || '-'}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-sm text-white font-mono" data-testid={`ref-${order.id}`}>
+                    <div className="space-y-1">
+                      <div className="text-blue-400">{order.refS || order.id}</div>
+                      <div className="text-gray-400 text-xs">{order.refNumber || order.id}</div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-sm text-blue-400 font-mono" data-testid={`tracking-${order.id}`}>
+                    {order.trackingNumber || '-'}
                   </td>
                   <td className="py-4 px-4 text-sm text-gray-200" data-testid={`customer-${order.id}`}>
                     {order.customerName}
                   </td>
+                  <td className="py-4 px-4 text-sm text-gray-300 font-mono" data-testid={`phone-${order.id}`}>
+                    {order.customerPhone}
+                  </td>
                   <td className="py-4 px-4 text-sm text-white font-semibold" data-testid={`amount-${order.id}`}>
-                    {formatAmount(order.amount)}
+                    {formatAmount(order.total)}
+                  </td>
+                  <td className="py-4 px-4 text-sm text-gray-200" data-testid={`city-${order.id}`}>
+                    {order.customerCity}
                   </td>
                   <td className="py-4 px-4">
                     <Badge 
                       className={cn(
                         "px-2 py-1 rounded-full text-xs font-medium border-0",
-                        getStatusVariant(order.status)
+                        getDeliveryStatusVariant(order.deliveryStatus || order.status)
                       )}
-                      data-testid={`status-${order.id}`}
+                      data-testid={`delivery-status-${order.id}`}
                     >
-                      {getStatusLabel(order.status)}
+                      {order.deliveryStatus || order.status}
                     </Badge>
                   </td>
-                  <td className="py-4 px-4 text-sm text-gray-200 capitalize" data-testid={`provider-${order.id}`}>
-                    {order.shippingProvider}
-                  </td>
-                  <td className="py-4 px-4 text-sm text-gray-300" data-testid={`date-${order.id}`}>
-                    {formatDate(order.createdAt)}
+                  <td className="py-4 px-4">
+                    <Badge 
+                      className={cn(
+                        "px-2 py-1 rounded-full text-xs font-medium border-0",
+                        getPaymentStatusVariant(order.paymentStatus)
+                      )}
+                      data-testid={`payment-status-${order.id}`}
+                    >
+                      {order.paymentStatus}
+                    </Badge>
                   </td>
                   <td className="py-4 px-4 text-center">
                     <div className="flex items-center justify-center space-x-2">

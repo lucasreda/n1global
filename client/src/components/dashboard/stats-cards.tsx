@@ -1,13 +1,30 @@
 import { ShoppingCart, CheckCircle, XCircle, Percent } from "lucide-react";
 
 interface StatsCardsProps {
-  totalOrders: number;
-  paidOrders: number;
-  refusedOrders: number;
-  successRate: string;
+  metrics: any;
+  isLoading: boolean;
 }
 
-export function StatsCards({ totalOrders, paidOrders, refusedOrders, successRate }: StatsCardsProps) {
+export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="glassmorphism rounded-2xl p-6 h-32 animate-pulse">
+            <div className="w-12 h-12 bg-gray-600/50 rounded-xl mb-4"></div>
+            <div className="w-3/4 h-4 bg-gray-600/50 rounded mb-2"></div>
+            <div className="w-1/2 h-6 bg-gray-600/50 rounded"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const totalOrders = metrics?.totalOrders || 0;
+  const deliveredOrders = metrics?.successfulOrders || 0;
+  const cancelledOrders = metrics?.cancelledOrders || 0;
+  const revenue = metrics?.revenue || 0;
+
   const calculateGrowth = (current: number, previous: number = current * 0.9) => {
     if (previous === 0) return 0;
     return ((current - previous) / previous * 100).toFixed(1);
@@ -25,34 +42,34 @@ export function StatsCards({ totalOrders, paidOrders, refusedOrders, successRate
       testId: "card-total-orders"
     },
     {
-      title: "Pedidos Pagos", 
-      value: paidOrders.toLocaleString(),
+      title: "Pedidos Entregues", 
+      value: deliveredOrders.toLocaleString(),
       icon: CheckCircle,
       iconBg: "bg-green-600/20",
       iconColor: "text-green-400",
       hoverBg: "group-hover:bg-green-600/30",
-      growth: calculateGrowth(paidOrders),
-      testId: "card-paid-orders"
+      growth: calculateGrowth(deliveredOrders),
+      testId: "card-delivered-orders"
     },
     {
-      title: "Pedidos Recusados",
-      value: refusedOrders.toLocaleString(),
+      title: "Pedidos Cancelados",
+      value: cancelledOrders.toLocaleString(),
       icon: XCircle,
       iconBg: "bg-red-600/20",
       iconColor: "text-red-400",
       hoverBg: "group-hover:bg-red-600/30",
-      growth: calculateGrowth(refusedOrders, refusedOrders * 1.1), // Show negative growth for refused orders
-      testId: "card-refused-orders"
+      growth: calculateGrowth(cancelledOrders, cancelledOrders * 1.1),
+      testId: "card-cancelled-orders"
     },
     {
-      title: "Taxa de Aprovação",
-      value: `${successRate}%`,
+      title: "Receita Total",
+      value: `€ ${revenue.toFixed(2)}`,
       icon: Percent,
       iconBg: "bg-purple-600/20",
       iconColor: "text-purple-400",
       hoverBg: "group-hover:bg-purple-600/30",
-      growth: calculateGrowth(parseFloat(successRate)),
-      testId: "card-success-rate"
+      growth: calculateGrowth(revenue),
+      testId: "card-revenue"
     },
   ];
 

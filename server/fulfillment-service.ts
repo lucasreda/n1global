@@ -445,10 +445,10 @@ class EuropeanFulfillmentService {
     }
   }
 
-  // Convert API leads to dashboard orders format
+  // Convert API leads to dashboard orders format with all transportadora fields
   convertLeadsToOrders(leads: any[]): any[] {
     return leads.map((lead, index) => {
-      // Map lead statuses to order statuses
+      // Map lead statuses to order statuses based on real API data
       const getOrderStatus = (confirmation: string, delivery: string) => {
         if (confirmation === 'cancelled' || confirmation === 'refused') return 'cancelled';
         if (confirmation === 'duplicated') return 'cancelled';
@@ -458,11 +458,23 @@ class EuropeanFulfillmentService {
         return 'pending';
       };
 
-      const getPaymentStatus = (method: string, status: string) => {
+      const getPaymentStatus = (method: string, deliveryStatus: string) => {
         if (method === 'COD') {
-          return status === 'delivered' ? 'paid' : 'pending';
+          return deliveryStatus === 'delivered' ? 'paid' : 'no paid';
         }
         return 'paid'; // prepaid orders
+      };
+
+      const getDeliveryStatusDisplay = (status: string) => {
+        const statusMap: { [key: string]: string } = {
+          'in transit': 'in transit',
+          'shipped': 'shipped', 
+          'delivered': 'delivered',
+          'unpacked': 'preparing',
+          'pending': 'pending',
+          'cancelled': 'cancelled'
+        };
+        return statusMap[status] || status;
       };
 
       const status = getOrderStatus(lead.status_confirmation, lead.status_livrison);
@@ -470,6 +482,8 @@ class EuropeanFulfillmentService {
 
       return {
         id: lead.n_lead || `api-${index}`,
+        
+        // Customer details from API
         customerId: `customer-${lead.phone?.replace(/\D/g, '') || index}`,
         customerName: lead.name || 'Cliente não informado',
         customerEmail: lead.email || '',
@@ -477,20 +491,40 @@ class EuropeanFulfillmentService {
         customerAddress: lead.address || '',
         customerCity: lead.city || '',
         customerState: lead.province || '',
-        customerCountry: 'Italy', // API is Italy-focused
+        customerCountry: 'Italy',
         customerZip: lead.zipcode || '',
+        
+        // Order status from API
         status: status,
         paymentStatus: paymentStatus,
         paymentMethod: lead.method_payment === 'COD' ? 'cod' : 'prepaid',
+        
+        // Financial data
         total: parseFloat(lead.lead_value || '0'),
+        leadValue: lead.lead_value,
+        
+        // Transportadora specific fields matching the interface
+        market: lead.market || '',
+        refS: lead.ref_s || lead.refs || '',
+        refNumber: lead.ref || lead.n_lead,
+        trackingNumber: lead.tracking_number || lead.tracking || '',
+        deliveryStatus: getDeliveryStatusDisplay(lead.status_livrison || ''),
+        confirmationStatus: lead.status_confirmation || '',
+        
+        // Product details
         items: JSON.stringify([{
-          name: 'Produto',
-          quantity: 1,
+          name: lead.product_name || 'Produto',
+          quantity: parseInt(lead.quantity || '1'),
           price: parseFloat(lead.lead_value || '0')
         }]),
-        notes: `Lead: ${lead.n_lead} | Confirmação: ${lead.status_confirmation} | Entrega: ${lead.status_livrison}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        
+        // Metadata
+        notes: `REF: ${lead.n_lead} | Market: ${lead.market || 'N/A'} | Tracking: ${lead.tracking_number || 'N/A'} | Confirmação: ${lead.status_confirmation} | Entrega: ${lead.status_livrison}`,
+        createdAt: lead.created_at || new Date().toISOString(),
+        updatedAt: lead.updated_at || new Date().toISOString(),
+        
+        // Raw API data for debugging
+        apiData: lead
       };
     });
   }
