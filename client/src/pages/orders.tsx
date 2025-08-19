@@ -89,7 +89,8 @@ export default function Orders() {
     }
   };
 
-  const formatAmount = (amount: number) => {
+  const formatAmount = (amount: number | undefined) => {
+    if (!amount || isNaN(amount)) return '€ 0,00';
     return `€ ${amount.toFixed(2).replace('.', ',')}`;
   };
 
@@ -190,29 +191,29 @@ export default function Orders() {
                             <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
                               <span className="text-xs font-bold text-blue-400">📦</span>
                             </div>
-                            <span className="text-gray-300">{order.market || '-'}</span>
+                            <span className="text-gray-300">{order.market || 'E-commerce'}</span>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-sm text-white font-mono">
                           <div className="space-y-1">
-                            <div className="text-blue-400">{order.refS || order.id}</div>
-                            <div className="text-gray-400 text-xs">{order.refNumber || order.id}</div>
+                            <div className="text-blue-400">{order.refS || order.n_lead || order.id}</div>
+                            <div className="text-gray-400 text-xs">{order.refNumber || order.n_lead || order.id}</div>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-sm text-blue-400 font-mono">
                           {order.trackingNumber || '-'}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-200">
-                          {order.customerName}
+                          {order.customerName || order.name || '-'}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-300 font-mono">
-                          {order.customerPhone}
+                          {order.customerPhone || order.phone || '-'}
                         </td>
                         <td className="py-4 px-4 text-sm text-white font-semibold">
-                          {formatAmount(order.total)}
+                          {formatAmount(order.total || order.amount)}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-200">
-                          {order.customerCity}
+                          {order.customerCity || order.city || '-'}
                         </td>
                         <td className="py-4 px-4">
                           <Badge 
@@ -231,7 +232,7 @@ export default function Orders() {
                               getPaymentStatusVariant(order.paymentStatus)
                             )}
                           >
-                            {order.paymentStatus}
+                            {order.paymentStatus || order.method_payment || 'COD'}
                           </Badge>
                         </td>
                         <td className="py-4 px-4 text-center">
