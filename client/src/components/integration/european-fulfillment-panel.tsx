@@ -230,8 +230,17 @@ export function EuropeanFulfillmentPanel() {
                     </div>
                     
                     {connectionTest.details && (
-                      <div className="glassmorphism rounded-lg p-3">
+                      <div className={`glassmorphism rounded-lg p-3 ${
+                        connectionTest.details.includes("simulado") 
+                          ? "border-l-4 border-yellow-400" 
+                          : ""
+                      }`}>
                         <p className="text-gray-300 text-sm">{connectionTest.details}</p>
+                        {connectionTest.details.includes("simulado") && (
+                          <p className="text-yellow-400 text-xs mt-2">
+                            ⚠️ As funcionalidades estão disponíveis para teste local
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
