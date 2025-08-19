@@ -131,10 +131,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!apiMetrics) {
         console.log("🔄 Cache miss - fetching metrics from API");
         
-        // Get optimized data from European Fulfillment API (only first 3 pages for metrics)
+        // Get more comprehensive data for dashboard metrics with proper date filtering
         try {
           let allLeads: any[] = [];
-          const maxPages = 3; // Even fewer pages for dashboard metrics
+          
+          // Increase pages based on date range to get enough historical data
+          let maxPages = 3; // Default for "all" or recent data
+          if (days === "90") maxPages = 15; // 3 months = more pages needed
+          else if (days === "30") maxPages = 8; // 1 month 
+          else if (days === "7") maxPages = 3; // 1 week
+          
+          console.log(`📊 Fetching ${maxPages} pages for ${days || 'all'} days filter`);
+          
+          // Calculate date range for API filtering
+          let dateFilter: { from?: string, to?: string } | undefined;
+          if (days && days !== "all") {
+            const daysNum = parseInt(days);
+            const toDate = new Date();
+            const fromDate = new Date();
+            fromDate.setDate(fromDate.getDate() - daysNum);
+            
+            dateFilter = {
+              from: fromDate.toISOString().split('T')[0],
+              to: toDate.toISOString().split('T')[0]
+            };
+            
+            console.log(`📅 Date filter: ${dateFilter.from} to ${dateFilter.to} (${daysNum} days)`);
+          }
           
           for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
             const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
@@ -151,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysNum);
             
-            orders = orders.filter(order => {
+            orders = orders.filter((order: any) => {
               const orderDate = new Date(order.createdAt);
               return orderDate >= cutoffDate;
             });
@@ -235,6 +258,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let allLeads: any[] = [];
           const maxPages = 5; // Limit to first 5 pages for better performance
           
+          // Calculate date range for API filtering  
+          let dateFilter: { from?: string, to?: string } | undefined;
+          if (days && days !== "all") {
+            const daysNum = parseInt(days);
+            const toDate = new Date();
+            const fromDate = new Date();
+            fromDate.setDate(fromDate.getDate() - daysNum);
+            
+            dateFilter = {
+              from: fromDate.toISOString().split('T')[0],
+              to: toDate.toISOString().split('T')[0]
+            };
+          }
+          
           for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
             const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
             allLeads = allLeads.concat(pageLeads);
@@ -262,7 +299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Apply filters
         if (status && status !== "all") {
-          allOrders = allOrders.filter(order => {
+          allOrders = allOrders.filter((order: any) => {
             const orderStatus = order.deliveryStatus || order.status;
             return orderStatus.toLowerCase() === status.toLowerCase();
           });
@@ -270,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (search) {
           const searchLower = search.toLowerCase();
-          allOrders = allOrders.filter(order => 
+          allOrders = allOrders.filter((order: any) => 
             order.customerName?.toLowerCase().includes(searchLower) ||
             order.customerPhone?.toLowerCase().includes(searchLower) ||
             order.customerCity?.toLowerCase().includes(searchLower) ||
@@ -284,14 +321,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const cutoffDate = new Date();
           cutoffDate.setDate(cutoffDate.getDate() - daysNum);
           
-          allOrders = allOrders.filter(order => {
+          allOrders = allOrders.filter((order: any) => {
             const orderDate = new Date(order.createdAt);
             return orderDate >= cutoffDate;
           });
         }
         
         // Sort by creation date (most recent first)
-        allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        allOrders.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         
         // Cache the filtered results for 3 minutes
         apiCache.set(cacheKey, allOrders, 3);
