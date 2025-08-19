@@ -135,15 +135,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           let allLeads: any[] = [];
           
-          // Calculate optimal pages based on expected data volume
-          let maxPages = 10; // Default for recent data
-          if (days === "90") maxPages = 50; // 3 months = fetch more comprehensive data
-          else if (days === "30") maxPages = 30; // 1 month = fetch substantial data for accuracy
-          else if (days === "7") maxPages = 10; // 1 week
-          else if (days === "1") maxPages = 3; // Today
+          // Calculate optimal pages based on expected high data volume (611+ orders for 30 days)
+          let maxPages = 15; // Default for recent data
+          if (days === "90") maxPages = 63; // 3 months = fetch all data
+          else if (days === "30") maxPages = 45; // 1 month = fetch enough for 611+ orders
+          else if (days === "7") maxPages = 15; // 1 week
+          else if (days === "1") maxPages = 5; // Today
           else if (!days || days === "all") maxPages = 63; // All data - fetch everything
           
-          console.log(`📊 Fetching ${maxPages} pages for ${days || 'all'} days filter`);
+          console.log(`📊 Fetching ${maxPages} pages for ${days || 'all'} days filter (targeting 611+ orders for 30 days)`);
+          
+          console.log(`🎯 High-volume mode: will fetch comprehensive data to ensure complete metrics`);
           
           // Calculate date range for API filtering
           let dateFilter: { from?: string, to?: string } | undefined;
@@ -158,17 +160,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: toDate.toISOString().split('T')[0]
             };
             
-            console.log(`📅 Date filter: ${dateFilter.from} to ${dateFilter.to} (${daysNum} days)`);
+            console.log(`📅 Date filter: ${dateFilter.from} to ${dateFilter.to} (${daysNum} days) - expecting 611+ orders for 30 days`);
           }
           
+          // Fetch all necessary pages to get complete data
+          let totalFetched = 0;
           for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
-            const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+            console.log(`📄 Fetching page ${currentPage}/${maxPages}...`);
+            const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage, dateFilter?.from, dateFilter?.to);
             allLeads = allLeads.concat(pageLeads);
+            totalFetched += pageLeads.length;
             
-            if (pageLeads.length < 15) break;
+            console.log(`📊 Page ${currentPage}: ${pageLeads.length} leads (total: ${totalFetched})`);
+            
+            // For 30-day filter, ensure we get enough data - don't break early until we have substantial data
+            const minRequiredData = days === "30" ? 600 : (days === "7" ? 150 : 50);
+            
+            // Only break if we get less than 15 items AND we have enough data or reached max pages
+            if (pageLeads.length < 15 && (totalFetched >= minRequiredData || currentPage >= maxPages)) {
+              console.log(`🏁 Early break at page ${currentPage} - total fetched: ${totalFetched}, min required: ${minRequiredData}`);
+              break;
+            }
           }
+          
+          console.log(`📊 Total leads fetched: ${allLeads.length} from API (${Math.ceil(totalFetched / 15)} pages)`);
+          console.log(`🇮🇹 Converting to dashboard format for Italy`);
           
           let orders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
+          
+          console.log(`🔄 Converted ${orders.length} leads to orders format`);
         
           // Apply date filter if specified with proper timezone handling
           if (days && days !== "all") {
@@ -199,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return isInRange;
             });
             
-            console.log(`📊 Filtered to ${orders.length} orders for ${daysNum} days period`);
+            console.log(`📊 Filtered to ${orders.length} orders for ${daysNum} days period (target: 611+ for 30 days)`);
           }
           
           // Calculate real metrics from filtered API data with enhanced status mapping

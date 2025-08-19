@@ -411,7 +411,7 @@ class EuropeanFulfillmentService {
     }
   }
 
-  async getLeadsList(country?: string, page: number = 1): Promise<any[]> {
+  async getLeadsList(country?: string, page: number = 1, dateFrom?: string, dateTo?: string): Promise<any[]> {
     if (this.simulationMode) {
       const mockLeads = this.getMockLeadsList();
       return country ? mockLeads.filter(lead => lead.country === country) : mockLeads;
@@ -423,6 +423,16 @@ class EuropeanFulfillmentService {
         endpoint += `&country=${encodeURIComponent(country)}`;
       }
       
+      // Add date filtering if supported by API  
+      if (dateFrom) {
+        endpoint += `&date_from=${encodeURIComponent(dateFrom)}`;
+      }
+      
+      if (dateTo) {
+        endpoint += `&date_to=${encodeURIComponent(dateTo)}`;
+      }
+      
+      console.log(`🔍 API Request: ${endpoint}`);
       const response = await this.makeAuthenticatedRequest(endpoint);
       console.log(`Leads API response for page ${page}:`, response);
       
