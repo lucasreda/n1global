@@ -411,6 +411,52 @@ class EuropeanFulfillmentService {
     }
   }
 
+  async getLeadsListWithDateFilter(country?: string, dateFrom?: string, dateTo?: string): Promise<any[]> {
+    if (this.simulationMode) {
+      const mockLeads = this.getMockLeadsList();
+      return country ? mockLeads.filter(lead => lead.country === country) : mockLeads;
+    }
+
+    try {
+      // Try various analytics endpoints with date filter
+      if (dateFrom && dateTo) {
+        console.log(`🎯 Trying analytics endpoints with date filter: ${dateFrom} - ${dateTo}`);
+        const dateRange = `${dateFrom} - ${dateTo}`;
+        
+        const analyticsEndpoints = [
+          `api/analytics/shipping?date=${encodeURIComponent(dateRange)}`,
+          `api/reports/orders?from=${dateFrom}&to=${dateTo}&country=ITALY`,
+          `api/leads/analytics?date_from=${dateFrom}&date_to=${dateTo}&country=ITALY`,
+          `api/dashboard/orders?from=${dateFrom}&to=${dateTo}&country=ITALY`
+        ];
+        
+        for (const endpoint of analyticsEndpoints) {
+          try {
+            console.log(`🔍 Testing endpoint: ${endpoint}`);
+            const response = await this.makeAuthenticatedRequest(endpoint);
+            console.log(`📊 Response from ${endpoint}:`, response);
+            
+            if (response && (Array.isArray(response.data) || Array.isArray(response))) {
+              const data = Array.isArray(response.data) ? response.data : response;
+              console.log(`✅ Found ${data.length} orders from analytics endpoint`);
+              return data;
+            }
+          } catch (endpointError) {
+            console.log(`⚠️  Endpoint ${endpoint} failed:`, endpointError.message);
+          }
+        }
+        
+        console.log(`⚠️  All analytics endpoints failed, falling back to leads pagination`);
+      }
+      
+      // Fallback to pagination method
+      return await this.getLeadsList(country, 1, dateFrom, dateTo);
+    } catch (error) {
+      console.error(`Error getting leads with date filter:`, error);
+      return [];
+    }
+  }
+
   async getLeadsList(country?: string, page: number = 1, dateFrom?: string, dateTo?: string): Promise<any[]> {
     if (this.simulationMode) {
       const mockLeads = this.getMockLeadsList();

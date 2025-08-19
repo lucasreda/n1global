@@ -147,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`🎯 High-volume mode: will fetch comprehensive data to ensure complete metrics`);
           
-          // Calculate date range for API filtering
+          // Calculate date range for API filtering  
           let dateFilter: { from?: string, to?: string } | undefined;
           if (days && days !== "all") {
             const daysNum = parseInt(days);
@@ -160,26 +160,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               to: toDate.toISOString().split('T')[0]
             };
             
-            console.log(`📅 Date filter: ${dateFilter.from} to ${dateFilter.to} (${daysNum} days) - expecting 611+ orders for 30 days`);
+            console.log(`📅 Date filter: ${dateFilter.from} to ${dateFilter.to} (${daysNum} days) - trying analytics endpoint first`);
           }
           
-          // Fetch all necessary pages to get complete data
-          let totalFetched = 0;
-          for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
-            console.log(`📄 Fetching page ${currentPage}/${maxPages}...`);
-            const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage, dateFilter?.from, dateFilter?.to);
-            allLeads = allLeads.concat(pageLeads);
-            totalFetched += pageLeads.length;
+          // Try analytics endpoint first for date-filtered requests
+          if (dateFilter?.from && dateFilter?.to) {
+            console.log(`🎯 Attempting analytics endpoint for precise date filtering`);
+            allLeads = await europeanFulfillmentService.getLeadsListWithDateFilter("ITALY", dateFilter.from, dateFilter.to);
             
-            console.log(`📊 Page ${currentPage}: ${pageLeads.length} leads (total: ${totalFetched})`);
-            
-            // For 30-day filter, ensure we get enough data - don't break early until we have substantial data
-            const minRequiredData = days === "30" ? 600 : (days === "7" ? 150 : 50);
-            
-            // Only break if we get less than 15 items AND we have enough data or reached max pages
-            if (pageLeads.length < 15 && (totalFetched >= minRequiredData || currentPage >= maxPages)) {
-              console.log(`🏁 Early break at page ${currentPage} - total fetched: ${totalFetched}, min required: ${minRequiredData}`);
-              break;
+            if (allLeads.length > 0) {
+              console.log(`✅ Analytics endpoint returned ${allLeads.length} leads for date range`);
+            } else {
+              console.log(`⚠️  Analytics endpoint returned no data, falling back to pagination`);
+            }
+          }
+          
+          // Fallback to pagination if analytics didn't work or no date filter
+          if (allLeads.length === 0) {
+            let totalFetched = 0;
+            for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
+              console.log(`📄 Fetching page ${currentPage}/${maxPages}...`);
+              const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage, dateFilter?.from, dateFilter?.to);
+              allLeads = allLeads.concat(pageLeads);
+              totalFetched += pageLeads.length;
+              
+              console.log(`📊 Page ${currentPage}: ${pageLeads.length} leads (total: ${totalFetched})`);
+              
+              // For 30-day filter, ensure we get enough data - don't break early until we have substantial data
+              const minRequiredData = days === "30" ? 600 : (days === "7" ? 150 : 50);
+              
+              // Only break if we get less than 15 items AND we have enough data or reached max pages
+              if (pageLeads.length < 15 && (totalFetched >= minRequiredData || currentPage >= maxPages)) {
+                console.log(`🏁 Early break at page ${currentPage} - total fetched: ${totalFetched}, min required: ${minRequiredData}`);
+                break;
+              }
             }
           }
           
