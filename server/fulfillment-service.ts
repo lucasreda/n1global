@@ -61,7 +61,7 @@ class EuropeanFulfillmentService {
     this.credentials = {
       email: process.env.EUROPEAN_FULFILLMENT_EMAIL || "tester@exemple.com",
       password: process.env.EUROPEAN_FULFILLMENT_PASSWORD || "password", 
-      apiUrl: process.env.EUROPEAN_FULFILLMENT_API_URL || "https://api-test.ecomfulfilment.eu/"
+      apiUrl: process.env.EUROPEAN_FULFILLMENT_API_URL || "https://api.ecomfulfilment.eu/"
     };
     console.log("European Fulfillment Service initialized with email:", this.credentials.email);
   }
