@@ -355,7 +355,7 @@ class EuropeanFulfillmentService {
       const response = await this.makeAuthenticatedRequest("api/stores");
       console.log("Stores API response:", response);
       
-      // Handle different response formats
+      // Handle different response formats based on API documentation
       if (Array.isArray(response)) {
         return response;
       }
@@ -368,10 +368,46 @@ class EuropeanFulfillmentService {
         return response.data;
       }
       
+      // If no stores found or response is empty, return empty array with note
+      console.warn("No stores found in API response. User may need to create stores first.");
       return [];
     } catch (error) {
       console.error("Error getting stores:", error);
+      
+      // Check if it's an authentication error
+      if (error instanceof Error && error.message.includes("401")) {
+        console.log("Authentication error - token may have expired");
+      }
+      
       return [];
+    }
+  }
+
+  // Method to create a new store
+  async createStore(storeData: { name: string; link: string }): Promise<any> {
+    if (this.simulationMode) {
+      return {
+        success: true,
+        message: "Store criada com sucesso (modo simulado)",
+        store: { id: Date.now(), ...storeData }
+      };
+    }
+
+    try {
+      const response = await this.makeAuthenticatedRequest("api/stores/store", "POST", storeData);
+      console.log("Store creation response:", response);
+      
+      return {
+        success: true,
+        message: "Store criada com sucesso",
+        store: response
+      };
+    } catch (error) {
+      console.error("Error creating store:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Erro ao criar store"
+      };
     }
   }
 

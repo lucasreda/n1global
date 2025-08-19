@@ -252,6 +252,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create store
+  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { name, link } = req.body;
+      
+      if (!name || !link) {
+        return res.status(400).json({ message: "Nome e link da loja são obrigatórios" });
+      }
+      
+      const result = await europeanFulfillmentService.createStore({ name, link });
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao criar loja" });
+    }
+  });
+
   // Get leads list
   app.get("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

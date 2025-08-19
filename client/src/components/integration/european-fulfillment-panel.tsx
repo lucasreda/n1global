@@ -410,7 +410,12 @@ export function EuropeanFulfillmentPanel() {
                   <div className="text-center py-8">
                     <Package className="mx-auto text-gray-500 mb-4" size={48} />
                     <p className="text-gray-400">Nenhuma loja encontrada</p>
-                    <p className="text-gray-500 text-sm mt-2">Configure sua integração para ver as lojas cadastradas</p>
+                    <p className="text-gray-500 text-sm mt-2">
+                      A conta ainda não possui lojas cadastradas na European Fulfillment Center.
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      Use a API para criar lojas através do endpoint: POST api/stores/store
+                    </p>
                   </div>
                 )}
               </div>
