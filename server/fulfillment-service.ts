@@ -113,10 +113,8 @@ class EuropeanFulfillmentService {
       const data = await response.json() as any;
       console.log("✅ Authentication response keys:", Object.keys(data));
       
-      // Check for different possible token field names
-      const tokenField = data.access_token || data.token || data.jwt_token;
-      
-      if (!tokenField) {
+      // European Fulfillment uses 'token' field
+      if (!data.token) {
         console.error("❌ No token found in response:", data);
         throw new Error("No token received from authentication");
       }
@@ -126,12 +124,12 @@ class EuropeanFulfillmentService {
       expiresAt.setHours(expiresAt.getHours() + 7); // 7 hours to be safe
 
       this.token = {
-        token: tokenField,
+        token: data.token,
         expiresAt
       };
 
       console.log("🎉 Authentication successful! Token cached until:", expiresAt);
-      return tokenField;
+      return data.token;
     } catch (error) {
       console.error("💥 European Fulfillment authentication error:", error);
       throw new Error("Failed to authenticate with European Fulfillment Center");
@@ -170,7 +168,6 @@ class EuropeanFulfillmentService {
 
   async createLead(leadData: InsertFulfillmentLead): Promise<LeadResponse> {
     if (this.simulationMode) {
-      // Simulation mode - return mock success response
       const mockLeadNumber = this.generateMockLeadNumber();
       return {
         success: true,
@@ -187,6 +184,7 @@ class EuropeanFulfillmentService {
     try {
       const items = JSON.parse(leadData.items) as LeadItem[];
       
+      // Format data according to API documentation
       const createLeadRequest: CreateLeadRequest = {
         name_costumer: leadData.customerName,
         mobile: leadData.customerPhone,
@@ -202,19 +200,28 @@ class EuropeanFulfillmentService {
         items: items
       };
 
+      console.log("Creating lead with data:", createLeadRequest);
       const response = await this.makeAuthenticatedRequest("api/leads/store", "POST", createLeadRequest);
+      console.log("Lead creation response:", response);
+      
+      // Handle different response formats
+      const leadNumber = response.lead_number || response.leadNumber || response.data?.lead_number;
+      
+      if (!leadNumber) {
+        throw new Error("No lead number received from API");
+      }
       
       return {
         success: true,
-        message: "Lead created successfully",
-        lead_number: response.lead_number,
+        message: "Lead criado com sucesso na European Fulfillment Center",
+        lead_number: leadNumber,
         data: response
       };
     } catch (error) {
       console.error("Error creating lead:", error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Unknown error occurred"
+        message: error instanceof Error ? error.message : "Erro desconhecido ao criar lead"
       };
     }
   }
@@ -306,10 +313,26 @@ class EuropeanFulfillmentService {
 
     try {
       const response = await this.makeAuthenticatedRequest("api/countries");
-      return response.countries || [];
+      console.log("Countries API response:", response);
+      
+      // Handle different response formats
+      if (Array.isArray(response)) {
+        return response.map(country => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+      }
+      
+      if (response.countries && Array.isArray(response.countries)) {
+        return response.countries.map(country => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+      }
+      
+      if (response.data && Array.isArray(response.data)) {
+        return response.data.map(country => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+      }
+      
+      console.warn("Unexpected countries response format:", response);
+      return this.getMockCountries();
     } catch (error) {
       console.error("Error getting countries:", error);
-      return this.getMockCountries(); // Fallback to mock data
+      return this.getMockCountries();
     }
   }
 
@@ -320,33 +343,59 @@ class EuropeanFulfillmentService {
     }
 
     try {
-      const endpoint = country ? `api/leads?country=${country}` : "api/leads";
+      const endpoint = country ? `api/leads?country=${encodeURIComponent(country)}` : "api/leads";
       const response = await this.makeAuthenticatedRequest(endpoint);
-      return response.leads || [];
+      console.log("Leads API response:", response);
+      
+      // Handle different response formats
+      if (Array.isArray(response)) {
+        return response;
+      }
+      
+      if (response.leads && Array.isArray(response.leads)) {
+        return response.leads;
+      }
+      
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      console.warn("Unexpected leads response format:", response);
+      return [];
     } catch (error) {
       console.error("Error getting leads list:", error);
-      return this.getMockLeadsList(); // Fallback to mock data
+      return [];
     }
   }
 
   async testConnection(): Promise<{ connected: boolean; message: string; details?: any }> {
     try {
-      await this.getAuthToken();
+      const token = await this.getAuthToken();
       this.simulationMode = false;
-      return { 
-        connected: true, 
-        message: "Conexão bem-sucedida com European Fulfillment Center" 
-      };
+      
+      // Test with a simple API call to verify connection
+      try {
+        await this.makeAuthenticatedRequest("api/countries");
+        return { 
+          connected: true, 
+          message: "Conexão estabelecida com sucesso",
+          details: `Token ativo até ${this.token?.expiresAt?.toLocaleTimeString('pt-BR')}`
+        };
+      } catch (apiError) {
+        return {
+          connected: true,
+          message: "Autenticação OK, mas API com problemas",
+          details: "Token válido, mas alguns endpoints podem estar indisponíveis"
+        };
+      }
     } catch (error) {
       console.error("Connection test failed:", error);
-      
-      // Enable simulation mode when connection fails
       this.simulationMode = true;
       
       return {
         connected: false,
-        message: "Modo simulado ativo - Credenciais incorretas",
-        details: "API externa indisponível. Usando modo simulado para desenvolvimento local."
+        message: "Falha na autenticação",
+        details: "Verifique suas credenciais e tente novamente"
       };
     }
   }
