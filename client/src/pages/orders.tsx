@@ -12,11 +12,12 @@ import { cn } from "@/lib/utils";
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("7");
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize] = useState(15);
 
   const { data: ordersResponse, isLoading } = useQuery({
-    queryKey: ["/api/orders", currentPage, statusFilter, searchTerm],
+    queryKey: ["/api/orders", currentPage, statusFilter, searchTerm, dateFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         limit: pageSize.toString(),
@@ -25,6 +26,7 @@ export default function Orders() {
       
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (searchTerm) params.append("search", searchTerm);
+      if (dateFilter !== "all") params.append("days", dateFilter);
       
       const response = await authenticatedApiRequest("GET", `/api/orders?${params}`);
       return response.json();
@@ -141,8 +143,23 @@ export default function Orders() {
               </SelectContent>
             </Select>
           </div>
-          <div className="text-sm text-gray-300">
-            {totalOrders} pedidos encontrados
+          <div className="flex items-center space-x-4">
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-48 glassmorphism-light border-gray-600 text-white">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent className="glassmorphism border-gray-600">
+                <SelectItem value="1">Hoje</SelectItem>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 3 meses</SelectItem>
+                <SelectItem value="365">Último ano</SelectItem>
+                <SelectItem value="all">Todos os períodos</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-gray-300">
+              {totalOrders} pedidos encontrados
+            </div>
           </div>
         </div>
       </div>

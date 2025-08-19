@@ -141,6 +141,7 @@ export default function Dashboard() {
                 <SelectValue placeholder="Selecionar período" />
               </SelectTrigger>
               <SelectContent className="glassmorphism border-gray-600">
+                <SelectItem value="1">Hoje</SelectItem>
                 <SelectItem value="7">Últimos 7 dias</SelectItem>
                 <SelectItem value="30">Últimos 30 dias</SelectItem>
                 <SelectItem value="90">Últimos 3 meses</SelectItem>

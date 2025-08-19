@@ -136,10 +136,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let allLeads: any[] = [];
           
           // Increase pages based on date range to get enough historical data
-          let maxPages = 3; // Default for "all" or recent data
-          if (days === "90") maxPages = 15; // 3 months = more pages needed
-          else if (days === "30") maxPages = 8; // 1 month 
-          else if (days === "7") maxPages = 3; // 1 week
+          let maxPages = 5; // Default for "all" or recent data
+          if (days === "90") maxPages = 20; // 3 months = more pages needed
+          else if (days === "30") maxPages = 10; // 1 month 
+          else if (days === "7") maxPages = 5; // 1 week
+          else if (days === "1") maxPages = 2; // Today
           
           console.log(`📊 Fetching ${maxPages} pages for ${days || 'all'} days filter`);
           
@@ -168,16 +169,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           let orders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
         
-          // Apply date filter if specified
+          // Apply date filter if specified with proper timezone handling
           if (days && days !== "all") {
             const daysNum = parseInt(days);
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+            const now = new Date();
+            let cutoffDate: Date;
+            
+            if (daysNum === 1) {
+              // For "today", start from beginning of today
+              cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            } else {
+              // For other periods, go back N days from now
+              cutoffDate = new Date(now.getTime() - (daysNum * 24 * 60 * 60 * 1000));
+            }
+            
+            console.log(`🗓️  Filtering for ${daysNum} days: from ${cutoffDate.toISOString()} to ${now.toISOString()}`);
             
             orders = orders.filter((order: any) => {
               const orderDate = new Date(order.createdAt);
-              return orderDate >= cutoffDate;
+              const isInRange = orderDate >= cutoffDate && orderDate <= now;
+              
+              if (daysNum === 1) {
+                // For today, also check if it's the same day
+                const isSameDay = orderDate.toDateString() === now.toDateString();
+                return isSameDay;
+              }
+              
+              return isInRange;
             });
+            
+            console.log(`📊 Filtered to ${orders.length} orders for ${daysNum} days period`);
           }
           
           // Calculate real metrics from filtered API data
@@ -318,12 +339,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (days && days !== "all") {
           const daysNum = parseInt(days);
-          const cutoffDate = new Date();
-          cutoffDate.setDate(cutoffDate.getDate() - daysNum);
+          const now = new Date();
+          let cutoffDate: Date;
+          
+          if (daysNum === 1) {
+            // For "today", start from beginning of today
+            cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          } else {
+            // For other periods, go back N days from now
+            cutoffDate = new Date(now.getTime() - (daysNum * 24 * 60 * 60 * 1000));
+          }
           
           allOrders = allOrders.filter((order: any) => {
             const orderDate = new Date(order.createdAt);
-            return orderDate >= cutoffDate;
+            
+            if (daysNum === 1) {
+              // For today, check if it's the same day
+              return orderDate.toDateString() === now.toDateString();
+            }
+            
+            return orderDate >= cutoffDate && orderDate <= now;
           });
         }
         
