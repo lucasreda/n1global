@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(222, 84%, 4.9%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --ring: hsl(224, 71.4%, 4.1%);
+  --radius: 0.75rem;
+  --chart-1: hsl(12, 76%, 61%);
+  --chart-2: hsl(173, 58%, 39%);
+  --chart-3: hsl(197, 37%, 24%);
+  --chart-4: hsl(43, 74%, 66%);
+  --chart-5: hsl(27, 87%, 67%);
+  
+  /* Custom glassmorphism colors */
+  --glassmorphism-bg: hsla(217, 32%, 17%, 0.4);
+  --glassmorphism-light-bg: hsla(217, 32%, 17%, 0.2);
+  --glassmorphism-border: hsla(210, 40%, 98%, 0.1);
+  --glassmorphism-border-light: hsla(210, 40%, 98%, 0.08);
+  
+  /* Dark theme gradients */
+  --gradient-dark-primary: linear-gradient(135deg, hsl(222, 84%, 4.9%) 0%, hsl(217, 32%, 17%) 50%, hsl(222, 84%, 4.9%) 100%);
+  --gradient-blue: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(224, 76%, 48%) 100%);
+  --gradient-success: linear-gradient(135deg, hsl(142, 76%, 36%) 0%, hsl(142, 69%, 58%) 100%);
+  --gradient-chart: linear-gradient(135deg, hsla(217, 91%, 60%, 0.3) 0%, hsla(173, 58%, 39%, 0.3) 100%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(217, 91%, 60%);
+  --primary-foreground: hsl(222, 84%, 4.9%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --ring: hsl(224, 71.4%, 4.1%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background: var(--gradient-dark-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glassmorphism {
+    background: var(--glassmorphism-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glassmorphism-border);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+  }
+  
+  .glassmorphism-light {
+    background: var(--glassmorphism-light-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glassmorphism-border-light);
+    box-shadow: 0 4px 16px rgba(31, 38, 135, 0.25);
+  }
+  
+  .chart-gradient {
+    background: var(--gradient-chart);
+  }
+  
+  .gradient-blue {
+    background: var(--gradient-blue);
+  }
+  
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+}
