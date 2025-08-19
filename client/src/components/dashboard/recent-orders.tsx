@@ -28,6 +28,8 @@ interface RecentOrdersProps {
 
 export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersProps) {
   const getDeliveryStatusVariant = (status: string) => {
+    if (!status) return "bg-gray-500/20 text-gray-400 hover:bg-gray-500/30";
+    
     switch (status.toLowerCase()) {
       case "delivered":
         return "bg-green-500/20 text-green-400 hover:bg-green-500/30";
@@ -45,6 +47,8 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
   };
 
   const getPaymentStatusVariant = (status: string) => {
+    if (!status) return "bg-gray-500/20 text-gray-400 hover:bg-gray-500/30";
+    
     switch (status) {
       case "paid":
         return "bg-green-500/20 text-green-400 hover:bg-green-500/30";
@@ -112,7 +116,7 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
                 </td>
               </tr>
             ) : (
-              orders.map((order) => (
+              orders.map((order: any) => (
                 <tr 
                   key={order.id} 
                   className="hover:bg-white/5 transition-colors"
@@ -142,7 +146,7 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
                     {order.customerPhone}
                   </td>
                   <td className="py-4 px-4 text-sm text-white font-semibold" data-testid={`amount-${order.id}`}>
-                    {formatAmount(order.total)}
+                    {formatAmount(order.total || 0)}
                   </td>
                   <td className="py-4 px-4 text-sm text-gray-200" data-testid={`city-${order.id}`}>
                     {order.customerCity}

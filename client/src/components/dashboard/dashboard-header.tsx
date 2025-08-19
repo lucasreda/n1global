@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 interface DashboardHeaderProps {
   title: string;
-  subtitle: string;
+  subtitle: string | React.ReactNode;
 }
 
 export function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
@@ -24,9 +24,9 @@ export function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
           <h2 className="text-2xl font-bold text-white mb-2" data-testid="text-page-title">
             {title}
           </h2>
-          <p className="text-gray-300" data-testid="text-page-subtitle">
+          <div className="text-gray-300" data-testid="text-page-subtitle">
             {subtitle}
-          </p>
+          </div>
         </div>
         <div className="flex items-center space-x-4">
           <div className="glassmorphism-light rounded-xl px-4 py-2 flex items-center space-x-2">

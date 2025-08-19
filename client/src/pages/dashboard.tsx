@@ -23,13 +23,16 @@ export default function Dashboard() {
   });
 
   // Fetch recent orders with date filter
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  const { data: ordersResponse, isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/orders", dateFilter],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", `/api/orders?limit=10&days=${dateFilter}`);
       return response.json();
     },
   });
+
+  // Extract orders from response
+  const orders = Array.isArray(ordersResponse) ? ordersResponse : ordersResponse?.data || [];
 
   // Generate mock revenue data for charts
   const revenueData = [
