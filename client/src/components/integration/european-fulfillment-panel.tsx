@@ -46,11 +46,31 @@ export function EuropeanFulfillmentPanel() {
     },
   });
 
-  // Get countries
+  // Get countries (filtered to Italy)
   const { data: countries } = useQuery({
     queryKey: ["/api/integrations/european-fulfillment/countries"],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/countries");
+      return response.json();
+    },
+    enabled: connectionTest?.connected,
+  });
+
+  // Get stores
+  const { data: stores, isLoading: storesLoading } = useQuery({
+    queryKey: ["/api/integrations/european-fulfillment/stores"],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/stores");
+      return response.json();
+    },
+    enabled: connectionTest?.connected,
+  });
+
+  // Get leads from API (Italy specific)
+  const { data: apiLeads, isLoading: apiLeadsLoading } = useQuery({
+    queryKey: ["/api/integrations/european-fulfillment/leads", "ITALY"],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/leads?country=ITALY");
       return response.json();
     },
     enabled: connectionTest?.connected,
@@ -186,8 +206,9 @@ export function EuropeanFulfillmentPanel() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="glassmorphism-light grid w-full grid-cols-4">
+            <TabsList className="glassmorphism-light grid w-full grid-cols-5">
               <TabsTrigger value="test" data-testid="tab-connection-test">Status</TabsTrigger>
+              <TabsTrigger value="stores" data-testid="tab-stores">Lojas</TabsTrigger>
               <TabsTrigger value="leads" data-testid="tab-leads">Leads</TabsTrigger>
               <TabsTrigger value="create" data-testid="tab-create-lead">Criar Lead</TabsTrigger>
               <TabsTrigger value="products" data-testid="tab-products">Produtos</TabsTrigger>
@@ -332,50 +353,157 @@ export function EuropeanFulfillmentPanel() {
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <div className="glassmorphism rounded-lg p-3">
                     <h4 className="text-white text-sm font-medium">API URL</h4>
-                    <p className="text-gray-300 text-xs">api-test.ecomfulfilment.eu</p>
+                    <p className="text-gray-300 text-xs">api.ecomfulfilment.eu</p>
                   </div>
                   <div className="glassmorphism rounded-lg p-3">
-                    <h4 className="text-white text-sm font-medium">Países Disponíveis</h4>
-                    <p className="text-gray-300 text-xs">{countries?.length || 0} países</p>
+                    <h4 className="text-white text-sm font-medium">Foco Regional</h4>
+                    <p className="text-gray-300 text-xs">Itália (ITALY)</p>
+                  </div>
+                  <div className="glassmorphism rounded-lg p-3">
+                    <h4 className="text-white text-sm font-medium">Lojas Ativas</h4>
+                    <p className="text-gray-300 text-xs">{stores?.length || 0} lojas</p>
                   </div>
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="leads" className="space-y-4">
+            <TabsContent value="stores" className="space-y-4">
               <div className="glassmorphism-light rounded-lg p-4">
-                <h3 className="text-white font-medium mb-4">Leads de Fulfillment</h3>
+                <h3 className="text-white font-medium mb-4 flex items-center space-x-2">
+                  <Package className="text-blue-400" size={18} />
+                  <span>Lojas Cadastradas</span>
+                </h3>
                 
-                {leadsLoading ? (
+                {storesLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="animate-spin text-blue-400" size={24} />
                   </div>
-                ) : leads && leads.length > 0 ? (
+                ) : stores && stores.length > 0 ? (
                   <div className="space-y-3">
-                    {leads.map((lead: any) => (
-                      <div key={lead.id} className="glassmorphism rounded-lg p-4" data-testid={`lead-${lead.id}`}>
+                    {stores.map((store: any, index: number) => (
+                      <div key={store.id || index} className="glassmorphism rounded-lg p-4" data-testid={`store-${store.id || index}`}>
                         <div className="flex items-center justify-between mb-2">
                           <div>
-                            <h4 className="text-white font-medium">{lead.customerName}</h4>
-                            <p className="text-gray-400 text-sm">Lead: {lead.leadNumber}</p>
+                            <h4 className="text-white font-medium">{store.name || store.store_name || `Loja ${index + 1}`}</h4>
+                            {store.link && (
+                              <p className="text-blue-400 text-sm hover:underline cursor-pointer" onClick={() => window.open(store.link, '_blank')}>
+                                {store.link}
+                              </p>
+                            )}
                           </div>
-                          {getStatusBadge(lead.status)}
+                          <Badge variant="outline" className="text-green-400 border-green-400">Ativa</Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="text-gray-400">País:</span>
-                            <span className="text-white ml-2">{lead.country}</span>
+                            <span className="text-gray-400">ID:</span>
+                            <span className="text-white ml-2">{store.id || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="text-gray-400">Total:</span>
-                            <span className="text-white ml-2">€{lead.total}</span>
+                            <span className="text-gray-400">Foco:</span>
+                            <span className="text-white ml-2">Itália</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-400 text-center py-8">Nenhum lead encontrado</p>
+                  <div className="text-center py-8">
+                    <Package className="mx-auto text-gray-500 mb-4" size={48} />
+                    <p className="text-gray-400">Nenhuma loja encontrada</p>
+                    <p className="text-gray-500 text-sm mt-2">Configure sua integração para ver as lojas cadastradas</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="leads" className="space-y-4">
+              <div className="glassmorphism-light rounded-lg p-4">
+                <h3 className="text-white font-medium mb-4 flex items-center space-x-2">
+                  <Eye className="text-blue-400" size={18} />
+                  <span>Leads da Itália</span>
+                  <Badge variant="outline" className="text-blue-400 border-blue-400 ml-2">Dados Reais</Badge>
+                </h3>
+                
+                {(leadsLoading || apiLeadsLoading) ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="animate-spin text-blue-400" size={24} />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* API Leads from European Fulfillment */}
+                    {apiLeads && apiLeads.length > 0 && (
+                      <div>
+                        <h4 className="text-white text-sm font-medium mb-3 flex items-center space-x-2">
+                          <Package className="text-green-400" size={16} />
+                          <span>Leads da API European Fulfillment</span>
+                        </h4>
+                        <div className="space-y-3">
+                          {apiLeads.map((lead: any, index: number) => (
+                            <div key={lead.id || index} className="glassmorphism rounded-lg p-4 border-l-4 border-green-400" data-testid={`api-lead-${lead.id || index}`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <h5 className="text-white font-medium">{lead.name || lead.customer_name || `Lead ${index + 1}`}</h5>
+                                  <p className="text-gray-400 text-sm">Lead: {lead.lead_number || lead.leadNumber || 'N/A'}</p>
+                                </div>
+                                <Badge variant="outline" className="text-green-400 border-green-400">API Real</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="text-gray-400">País:</span>
+                                  <span className="text-white ml-2">{lead.country || 'ITALY'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Total:</span>
+                                  <span className="text-white ml-2">€{lead.total || 'N/A'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Local Leads */}
+                    {leads && leads.length > 0 && (
+                      <div>
+                        <h4 className="text-white text-sm font-medium mb-3 flex items-center space-x-2">
+                          <Package className="text-blue-400" size={16} />
+                          <span>Leads Locais</span>
+                        </h4>
+                        <div className="space-y-3">
+                          {leads.map((lead: any) => (
+                            <div key={lead.id} className="glassmorphism rounded-lg p-4" data-testid={`lead-${lead.id}`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <h5 className="text-white font-medium">{lead.customerName}</h5>
+                                  <p className="text-gray-400 text-sm">Lead: {lead.leadNumber}</p>
+                                </div>
+                                {getStatusBadge(lead.status)}
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="text-gray-400">País:</span>
+                                  <span className="text-white ml-2">{lead.country}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400">Total:</span>
+                                  <span className="text-white ml-2">€{lead.total}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(!apiLeads || apiLeads.length === 0) && (!leads || leads.length === 0) && (
+                      <div className="text-center py-8">
+                        <Eye className="mx-auto text-gray-500 mb-4" size={48} />
+                        <p className="text-gray-400">Nenhum lead encontrado para a Itália</p>
+                        <p className="text-gray-500 text-sm mt-2">Crie leads usando a aba "Criar Lead" ou aguarde dados da API</p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </TabsContent>

@@ -242,6 +242,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get stores
+  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const stores = await europeanFulfillmentService.getStores();
+      res.json(stores);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar lojas" });
+    }
+  });
+
+  // Get leads list
+  app.get("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Default to Italy if no country specified
+      const country = (req.query.country as string) || "ITALY";
+      const leads = await europeanFulfillmentService.getLeadsList(country);
+      res.json(leads);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar leads" });
+    }
+  });
+
+  // Create lead
+  app.post("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const leadData = insertFulfillmentLeadSchema.parse(req.body);
+      const result = await europeanFulfillmentService.createLead(leadData);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao criar lead" });
+    }
+  });
+
   // Fulfillment leads routes
   app.get("/api/fulfillment-leads", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

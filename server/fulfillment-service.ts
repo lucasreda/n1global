@@ -308,31 +308,70 @@ class EuropeanFulfillmentService {
 
   async getCountries(): Promise<string[]> {
     if (this.simulationMode) {
-      return this.getMockCountries();
+      return ["ITALY"]; // Focus on Italy for now
     }
 
     try {
       const response = await this.makeAuthenticatedRequest("api/countries");
       console.log("Countries API response:", response);
       
+      let countries: string[] = [];
+      
       // Handle different response formats
       if (Array.isArray(response)) {
-        return response.map(country => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+        countries = response.map((country: any) => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+      } else if (response.countries && Array.isArray(response.countries)) {
+        countries = response.countries.map((country: any) => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+      } else if (response.data && Array.isArray(response.data)) {
+        countries = response.data.map((country: any) => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+      } else {
+        console.warn("Unexpected countries response format:", response);
+        return ["ITALY"];
       }
       
-      if (response.countries && Array.isArray(response.countries)) {
-        return response.countries.map(country => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+      // Filter to show only Italy for now
+      const italyCountries = countries.filter(country => 
+        country.toUpperCase().includes('ITALY') || 
+        country.toUpperCase().includes('ITALIA')
+      );
+      
+      return italyCountries.length > 0 ? italyCountries : ["ITALY"];
+    } catch (error) {
+      console.error("Error getting countries:", error);
+      return ["ITALY"];
+    }
+  }
+
+  // New method to get stores from API
+  async getStores(): Promise<any[]> {
+    if (this.simulationMode) {
+      return [
+        { id: 1, name: "Store Italy Demo", link: "https://store-italy.com" },
+        { id: 2, name: "Milano Shop", link: "https://milano-shop.it" }
+      ];
+    }
+
+    try {
+      const response = await this.makeAuthenticatedRequest("api/stores");
+      console.log("Stores API response:", response);
+      
+      // Handle different response formats
+      if (Array.isArray(response)) {
+        return response;
+      }
+      
+      if (response.stores && Array.isArray(response.stores)) {
+        return response.stores;
       }
       
       if (response.data && Array.isArray(response.data)) {
-        return response.data.map(country => typeof country === 'string' ? country : country.name || country.country).filter(Boolean);
+        return response.data;
       }
       
-      console.warn("Unexpected countries response format:", response);
-      return this.getMockCountries();
+      return [];
     } catch (error) {
-      console.error("Error getting countries:", error);
-      return this.getMockCountries();
+      console.error("Error getting stores:", error);
+      return [];
     }
   }
 
