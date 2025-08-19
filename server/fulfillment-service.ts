@@ -63,6 +63,7 @@ class EuropeanFulfillmentService {
       password: process.env.EUROPEAN_FULFILLMENT_PASSWORD || "password", 
       apiUrl: process.env.EUROPEAN_FULFILLMENT_API_URL || "https://api-test.ecomfulfilment.eu/"
     };
+    console.log("European Fulfillment Service initialized with email:", this.credentials.email);
   }
 
   // Method to update credentials (for when user provides their own)
@@ -82,27 +83,41 @@ class EuropeanFulfillmentService {
       return this.token.token;
     }
 
+    const loginUrl = `${this.credentials.apiUrl}api/login?email=${encodeURIComponent(this.credentials.email)}&password=${encodeURIComponent(this.credentials.password)}`;
+    console.log("🔐 Attempting authentication with:", {
+      url: loginUrl,
+      email: this.credentials.email,
+      hasPassword: !!this.credentials.password
+    });
+
     try {
-      const response = await fetch(
-        `${this.credentials.apiUrl}api/login?email=${this.credentials.email}&password=${this.credentials.password}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          agent: new https.Agent({
-            rejectUnauthorized: false // Allow self-signed certificates in development
-          })
-        }
-      );
+      const response = await fetch(loginUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        agent: new https.Agent({
+          rejectUnauthorized: false // Allow self-signed certificates in development
+        })
+      });
+
+      console.log("📡 Response status:", response.status);
+      console.log("📡 Response headers:", Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error("❌ Authentication failed:", errorText);
+        throw new Error(`Authentication failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json() as any;
+      console.log("✅ Authentication response keys:", Object.keys(data));
       
-      if (!data.token) {
+      // Check for different possible token field names
+      const tokenField = data.access_token || data.token || data.jwt_token;
+      
+      if (!tokenField) {
+        console.error("❌ No token found in response:", data);
         throw new Error("No token received from authentication");
       }
 
@@ -111,13 +126,14 @@ class EuropeanFulfillmentService {
       expiresAt.setHours(expiresAt.getHours() + 7); // 7 hours to be safe
 
       this.token = {
-        token: data.token,
+        token: tokenField,
         expiresAt
       };
 
-      return data.token;
+      console.log("🎉 Authentication successful! Token cached until:", expiresAt);
+      return tokenField;
     } catch (error) {
-      console.error("European Fulfillment authentication error:", error);
+      console.error("💥 European Fulfillment authentication error:", error);
       throw new Error("Failed to authenticate with European Fulfillment Center");
     }
   }
