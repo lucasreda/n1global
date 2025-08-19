@@ -115,33 +115,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard routes
+  // Dashboard routes - with real API integration
   app.get("/api/dashboard/metrics", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const date = req.query.date as string;
-      const metrics = await storage.getDashboardMetrics(date);
-      res.json(metrics);
+      
+      // Get real data from European Fulfillment API
+      let apiMetrics: any = null;
+      try {
+        const leads = await europeanFulfillmentService.getLeadsList("ITALY");
+        const orders = europeanFulfillmentService.convertLeadsToOrders(leads);
+        
+        // Calculate real metrics from API data
+        const totalOrders = orders.length;
+        const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
+        const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
+        const shippedOrders = orders.filter(o => o.status === 'shipped').length;
+        const confirmedOrders = orders.filter(o => o.status === 'confirmed').length;
+        const pendingOrders = orders.filter(o => o.status === 'pending').length;
+        
+        const paidOrders = orders.filter(o => o.paymentStatus === 'paid').length;
+        const totalRevenue = orders.filter(o => o.paymentStatus === 'paid').reduce((sum, o) => sum + o.total, 0);
+        
+        const successRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
+        const conversionRate = totalOrders > 0 ? (paidOrders / totalOrders) * 100 : 0;
+        
+        apiMetrics = {
+          id: `metrics-${new Date().toISOString().split('T')[0]}`,
+          date: new Date().toISOString().split('T')[0],
+          totalOrders,
+          successfulOrders: deliveredOrders,
+          cancelledOrders,
+          shippedOrders,
+          confirmedOrders,
+          pendingOrders,
+          revenue: totalRevenue,
+          successRate: Math.round(successRate * 100) / 100,
+          conversionRate: Math.round(conversionRate * 100) / 100,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        console.log(`📊 Generated real metrics from ${totalOrders} API orders`);
+      } catch (apiError) {
+        console.warn("⚠️  Failed to fetch API metrics, using local data:", apiError);
+      }
+      
+      // Fallback to local metrics if API fails
+      if (!apiMetrics) {
+        apiMetrics = await storage.getDashboardMetrics(date);
+      }
+      
+      res.json(apiMetrics);
     } catch (error) {
+      console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: "Erro ao buscar métricas" });
     }
   });
 
-  // Orders routes
+  // Orders routes - with real API integration
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string;
       
-      let orders;
-      if (status) {
-        orders = await storage.getOrdersByStatus(status);
-      } else {
-        orders = await storage.getOrders(limit, offset);
+      // Get real data from European Fulfillment API
+      let apiOrders: any[] = [];
+      try {
+        const leads = await europeanFulfillmentService.getLeadsList("ITALY");
+        apiOrders = europeanFulfillmentService.convertLeadsToOrders(leads);
+        console.log(`✅ Converted ${leads.length} API leads to ${apiOrders.length} orders from Italy`);
+      } catch (apiError) {
+        console.warn("⚠️  Failed to fetch API orders, using local data only:", apiError);
       }
       
-      res.json(orders);
+      // Get local orders as backup/additional data
+      let localOrders: any[] = [];
+      if (status) {
+        localOrders = await storage.getOrdersByStatus(status);
+      } else {
+        localOrders = await storage.getOrders(limit, offset);
+      }
+      
+      // Combine API orders (priority) with local orders
+      let allOrders = [...apiOrders, ...localOrders];
+      
+      // Apply status filter if specified
+      if (status) {
+        allOrders = allOrders.filter(order => order.status === status);
+      }
+      
+      // Apply pagination
+      const paginatedOrders = allOrders.slice(offset, offset + limit);
+      
+      res.json(paginatedOrders);
     } catch (error) {
+      console.error("Error fetching orders:", error);
       res.status(500).json({ message: "Erro ao buscar pedidos" });
     }
   });

@@ -35,29 +35,41 @@ export default function Dashboard() {
     { name: "Jun", value: 5500 },
   ];
 
-  // Calculate distribution data from metrics
+  // Calculate distribution data from real API metrics
   const getDistributionData = () => {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
     return [
       {
-        name: "Pagos",
-        value: metrics.paidOrders || 0,
-        percentage: total > 0 ? ((metrics.paidOrders || 0) / total * 100).toFixed(1) : "0",
+        name: "Entregues",
+        value: metrics.successfulOrders || 0,
+        percentage: total > 0 ? ((metrics.successfulOrders || 0) / total * 100).toFixed(1) : "0",
         color: "#10B981"
       },
       {
-        name: "Processando",
-        value: metrics.processingOrders || 0,
-        percentage: total > 0 ? ((metrics.processingOrders || 0) / total * 100).toFixed(1) : "0",
+        name: "Enviados",
+        value: metrics.shippedOrders || 0,
+        percentage: total > 0 ? ((metrics.shippedOrders || 0) / total * 100).toFixed(1) : "0",
+        color: "#3B82F6"
+      },
+      {
+        name: "Confirmados",
+        value: metrics.confirmedOrders || 0,
+        percentage: total > 0 ? ((metrics.confirmedOrders || 0) / total * 100).toFixed(1) : "0",
         color: "#F59E0B"
       },
       {
-        name: "Recusados",
-        value: metrics.refusedOrders || 0,
-        percentage: total > 0 ? ((metrics.refusedOrders || 0) / total * 100).toFixed(1) : "0",
+        name: "Cancelados",
+        value: metrics.cancelledOrders || 0,
+        percentage: total > 0 ? ((metrics.cancelledOrders || 0) / total * 100).toFixed(1) : "0",
         color: "#EF4444"
+      },
+      {
+        name: "Pendentes",
+        value: metrics.pendingOrders || 0,
+        percentage: total > 0 ? ((metrics.pendingOrders || 0) / total * 100).toFixed(1) : "0",
+        color: "#6B7280"
       }
     ];
   };

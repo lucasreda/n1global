@@ -422,17 +422,19 @@ class EuropeanFulfillmentService {
       const response = await this.makeAuthenticatedRequest(endpoint);
       console.log("Leads API response:", response);
       
-      // Handle different response formats
+      // Handle paginated response format
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      
+      // Handle direct array response
       if (Array.isArray(response)) {
         return response;
       }
       
+      // Handle leads property
       if (response.leads && Array.isArray(response.leads)) {
         return response.leads;
-      }
-      
-      if (response.data && Array.isArray(response.data)) {
-        return response.data;
       }
       
       console.warn("Unexpected leads response format:", response);
@@ -441,6 +443,56 @@ class EuropeanFulfillmentService {
       console.error("Error getting leads list:", error);
       return [];
     }
+  }
+
+  // Convert API leads to dashboard orders format
+  convertLeadsToOrders(leads: any[]): any[] {
+    return leads.map((lead, index) => {
+      // Map lead statuses to order statuses
+      const getOrderStatus = (confirmation: string, delivery: string) => {
+        if (confirmation === 'cancelled' || confirmation === 'refused') return 'cancelled';
+        if (confirmation === 'duplicated') return 'cancelled';
+        if (delivery === 'delivered') return 'delivered';
+        if (delivery === 'shipped' || delivery === 'in transit') return 'shipped';
+        if (confirmation === 'confirmed') return 'confirmed';
+        return 'pending';
+      };
+
+      const getPaymentStatus = (method: string, status: string) => {
+        if (method === 'COD') {
+          return status === 'delivered' ? 'paid' : 'pending';
+        }
+        return 'paid'; // prepaid orders
+      };
+
+      const status = getOrderStatus(lead.status_confirmation, lead.status_livrison);
+      const paymentStatus = getPaymentStatus(lead.method_payment, lead.status_livrison);
+
+      return {
+        id: lead.n_lead || `api-${index}`,
+        customerId: `customer-${lead.phone?.replace(/\D/g, '') || index}`,
+        customerName: lead.name || 'Cliente não informado',
+        customerEmail: lead.email || '',
+        customerPhone: lead.phone || '',
+        customerAddress: lead.address || '',
+        customerCity: lead.city || '',
+        customerState: lead.province || '',
+        customerCountry: 'Italy', // API is Italy-focused
+        customerZip: lead.zipcode || '',
+        status: status,
+        paymentStatus: paymentStatus,
+        paymentMethod: lead.method_payment === 'COD' ? 'cod' : 'prepaid',
+        total: parseFloat(lead.lead_value || '0'),
+        items: JSON.stringify([{
+          name: 'Produto',
+          quantity: 1,
+          price: parseFloat(lead.lead_value || '0')
+        }]),
+        notes: `Lead: ${lead.n_lead} | Confirmação: ${lead.status_confirmation} | Entrega: ${lead.status_livrison}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    });
   }
 
   async testConnection(): Promise<{ connected: boolean; message: string; details?: any }> {
