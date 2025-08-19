@@ -29,11 +29,14 @@ Preferred communication style: Simple, everyday language.
 - **API Design**: RESTful endpoints with structured error handling and logging middleware
 
 ### Database Design
-- **ORM**: Drizzle ORM with PostgreSQL dialect
+- **ORM**: Drizzle ORM with PostgreSQL dialect  
 - **Schema Structure**:
   - `users`: User accounts with role-based permissions (admin/user)
   - `orders`: COD orders with customer info, amounts, status tracking, and shipping details
   - `dashboard_metrics`: Aggregated daily metrics for performance tracking
+  - `fulfillment_leads`: European Fulfillment Center leads with customer and shipping data
+  - `products`: Product catalog with SKU, pricing, and inventory management
+  - `shipping_providers`: Configuration for fulfillment providers
 - **Key Features**: UUID primary keys, automatic timestamps, decimal precision for financial data
 
 ### Authentication & Authorization
@@ -50,10 +53,12 @@ Preferred communication style: Simple, everyday language.
 - **Responsive Design**: Mobile-first approach with adaptive layouts
 
 ### Shipping Integration Architecture
-- **Providers**: Correios and Jadlog shipping integrations
-- **Tracking**: Automatic tracking code management
-- **Status Updates**: Real-time order status synchronization
-- **Scalability**: Plugin-based architecture for adding new providers
+- **Active Providers**: European Fulfillment Center with complete API integration
+- **Planned Providers**: Correios and Jadlog shipping integrations
+- **Features**: Lead creation, status tracking, product management, country selection
+- **Authentication**: JWT-based API authentication with token caching
+- **Error Handling**: SSL certificate handling for development environment
+- **UI Components**: Full dashboard with tabs for testing, leads, creation, and products
 
 ## External Dependencies
 
@@ -63,6 +68,7 @@ Preferred communication style: Simple, everyday language.
 - **@tanstack/react-query**: Server state management and caching
 - **react-hook-form & @hookform/resolvers**: Form handling with validation
 - **zod & drizzle-zod**: Schema validation and type safety
+- **node-fetch**: HTTP client for European Fulfillment Center API integration
 
 ### UI and Styling
 - **@radix-ui/react-\***: Accessible component primitives (30+ components)

@@ -1,5 +1,6 @@
 import fetch, { Response } from "node-fetch";
 import { randomUUID } from "crypto";
+import https from "https";
 import type { InsertFulfillmentLead, FulfillmentLead } from "@shared/schema";
 
 interface EuropeanFulfillmentCredentials {
@@ -74,6 +75,9 @@ class EuropeanFulfillmentService {
           headers: {
             "Content-Type": "application/json",
           },
+          agent: new https.Agent({
+            rejectUnauthorized: false // Allow self-signed certificates in development
+          })
         }
       );
 
@@ -114,6 +118,9 @@ class EuropeanFulfillmentService {
     const requestOptions: any = {
       method,
       headers,
+      agent: new https.Agent({
+        rejectUnauthorized: false // Allow self-signed certificates in development
+      })
     };
 
     if (body && (method === "POST" || method === "PATCH" || method === "PUT")) {
