@@ -441,8 +441,8 @@ class EuropeanFulfillmentService {
               console.log(`✅ Found ${data.length} orders from analytics endpoint`);
               return data;
             }
-          } catch (endpointError) {
-            console.log(`⚠️  Endpoint ${endpoint} failed:`, endpointError.message);
+          } catch (endpointError: any) {
+            console.log(`⚠️  Endpoint ${endpoint} failed:`, endpointError?.message || endpointError);
           }
         }
         
