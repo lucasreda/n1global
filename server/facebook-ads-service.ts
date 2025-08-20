@@ -146,7 +146,12 @@ export class FacebookAdsService {
 
           // Calcular valor em BRL para o total consolidado
           let amountSpentBRL = originalAmount;
-          if (originalCurrency !== 'BRL') {
+          
+          // Para contas BRL, o valor já está em BRL - não converter
+          if (baseCurrency === 'BRL') {
+            amountSpentBRL = originalAmount;
+          } else if (originalCurrency !== 'BRL') {
+            // Para outras contas, converter da moeda da API para BRL
             amountSpentBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
           }
 
