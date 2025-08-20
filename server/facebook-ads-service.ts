@@ -183,7 +183,7 @@ export class FacebookAdsService {
     // Ensure account ID has the 'act_' prefix for Facebook API
     const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
     
-    const url = `${this.baseUrl}/${formattedAccountId}/campaigns?access_token=${accessToken}&fields=id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time,start_time,stop_time,insights.date_preset(lifetime){spend,impressions,clicks,cpm,cpc,ctr}`;
+    const url = `${this.baseUrl}/${formattedAccountId}/campaigns?access_token=${accessToken}&fields=id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time,start_time,stop_time,insights.date_preset(last_30d){spend,impressions,clicks,cpm,cpc,ctr}`;
     
     console.log(`Buscando campanhas da API do Facebook para conta: ${formattedAccountId}`);
     
