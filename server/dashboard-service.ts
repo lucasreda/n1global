@@ -246,8 +246,7 @@ export class DashboardService {
     
     const productCostMap = Object.fromEntries(
       allProducts.map(p => [p.sku, {
-        costPrice: Number(p.costPrice || 0),
-        shippingCost: Number(p.shippingCost || 0)
+        costPrice: Number(p.costPrice || 0)
       }])
     );
     
@@ -263,7 +262,7 @@ export class DashboardService {
           const productCostInfo = productCostMap[sku];
           
           if (productCostInfo) {
-            const itemCost = (productCostInfo.costPrice + productCostInfo.shippingCost) * quantity;
+            const itemCost = productCostInfo.costPrice * quantity;
             totalProductCosts += itemCost;
             totalQuantity += quantity;
           }
