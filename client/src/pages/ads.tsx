@@ -226,8 +226,8 @@ export default function Ads() {
   // Campanhas selecionadas da conta filtrada (para exibir no contador)
   const filteredSelectedCampaigns = filteredCampaigns.filter(c => c.isSelected) || [];
   
-  // Gasto total de TODAS as campanhas selecionadas (de todas as contas)
-  const totalSpent = allSelectedCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
+  // Gasto total de TODAS as campanhas selecionadas (sempre em BRL para consolidação)
+  const totalSpent = allSelectedCampaigns.reduce((sum, c) => sum + parseFloat((c as any).amountSpentBRL || c.amountSpent || "0"), 0);
 
   if (accountsLoading) {
     return (
@@ -506,9 +506,9 @@ export default function Ads() {
                               <span className="text-gray-400">Gasto: </span>
                               <div className="flex flex-col">
                                 <span className="text-white font-medium">{formatCurrency(campaign.amountSpent, (campaign as any).baseCurrency || 'BRL')}</span>
-                                {(campaign as any).baseCurrency !== 'BRL' && formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency) && (
+                                {(campaign as any).facebookCurrency && (campaign as any).baseCurrency !== (campaign as any).facebookCurrency && formatOriginalCurrency((campaign as any).facebookAmountSpent, (campaign as any).facebookCurrency) && (
                                   <span className="text-gray-500 text-xs">
-                                    {formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency)}
+                                    {formatOriginalCurrency((campaign as any).facebookAmountSpent, (campaign as any).facebookCurrency)}
                                   </span>
                                 )}
                               </div>

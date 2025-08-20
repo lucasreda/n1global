@@ -144,6 +144,12 @@ export class FacebookAdsService {
             convertedAmount = await currencyService.convertFromBRL(brlValue, baseCurrency);
           }
 
+          // Calcular valor em BRL para o total consolidado
+          let amountSpentBRL = originalAmount;
+          if (originalCurrency !== 'BRL') {
+            amountSpentBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
+          }
+
           // Usar dados ao vivo da API mas manter configurações locais (isSelected)
           campaignsWithLiveData.push({
             ...liveCampaign,
@@ -152,9 +158,12 @@ export class FacebookAdsService {
             accountId: account.accountId, // Adicionar ID da conta
             accountName: account.name, // Adicionar nome da conta
             baseCurrency: baseCurrency, // Moeda base configurada
-            amountSpent: convertedAmount.toFixed(2), // Valor convertido para moeda base
-            originalAmountSpent: liveCampaign.amountSpent, // Valor original
-            originalCurrency: originalCurrency, // Moeda original do Facebook
+            amountSpent: convertedAmount.toFixed(2), // Valor na moeda configurada pelo usuário
+            amountSpentBRL: amountSpentBRL.toFixed(2), // Valor em BRL para total consolidado
+            originalAmountSpent: convertedAmount.toFixed(2), // Valor na moeda configurada (para exibir como "original")
+            originalCurrency: baseCurrency, // Moeda configurada pelo usuário
+            facebookAmountSpent: liveCampaign.amountSpent, // Valor real da API do Facebook
+            facebookCurrency: originalCurrency, // Moeda real da API do Facebook
             lastSync: new Date()
           });
         }
