@@ -44,6 +44,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const revenue = metrics?.totalRevenue || 0;
   const productCosts = metrics?.totalProductCosts || 0;
   const marketingCosts = metrics?.marketingCosts || 0;
+  const marketingCostsBRL = metrics?.marketingCostsBRL || 0;
+  const marketingCostsEUR = metrics?.marketingCostsEUR || 0;
   const deliveryRate = metrics?.deliveryRate || 0;
   const totalProfit = metrics?.totalProfit || 0;
   const profitMargin = metrics?.profitMargin || 0;
@@ -126,13 +128,14 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       testId: "card-product-costs"
     },
     {
-      title: "Custo Marketing (20%)",
-      value: `€ ${marketingCosts.toFixed(2)}`,
+      title: "Custo Marketing",
+      value: `R$ ${marketingCostsBRL.toFixed(2)}`,
+      subtitle: marketingCostsEUR > 0 ? `€ ${marketingCostsEUR.toFixed(2)}` : undefined,
       icon: TrendingUp,
       iconBg: "bg-pink-600/20",
       iconColor: "text-pink-400",
       hoverBg: "group-hover:bg-pink-600/30",
-      growth: calculateGrowth(marketingCosts),
+      growth: calculateGrowth(marketingCostsBRL),
       testId: "card-marketing-costs"
     },
     {
@@ -218,8 +221,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const quaternaryMetrics = [
     {
       title: "Custos Marketing",
-      value: `€${marketingCosts.toLocaleString('pt-PT')}`,
-      subtitle: "20% receita",
+      value: `R$ ${marketingCostsBRL.toLocaleString('pt-BR')}`,
+      subtitle: marketingCostsEUR > 0 ? `€ ${marketingCostsEUR.toFixed(2)}` : "Sem campanhas selecionadas",
       icon: Target,
       color: "purple",
       size: "small"
@@ -338,9 +341,11 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
             <Target className="text-purple-400 w-5 h-5" />
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">€{marketingCosts.toLocaleString('pt-PT')}</h5>
+          <h5 className="text-lg font-bold text-white mb-1">R$ {marketingCostsBRL.toLocaleString('pt-BR')}</h5>
           <p className="text-gray-400 text-xs">Custos Marketing</p>
-          <p className="text-xs text-purple-400 mt-1 opacity-80">20% receita</p>
+          <p className="text-xs text-purple-400 mt-1 opacity-80">
+            {marketingCostsEUR > 0 ? `€ ${marketingCostsEUR.toFixed(2)}` : "Sem campanhas"}
+          </p>
         </div>
         
         <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-indigo-500/10 hover:border-indigo-400/25">

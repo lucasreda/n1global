@@ -38,6 +38,12 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **Ads Management Page**: New dedicated page for Facebook Ads management with campaign selection interface, real-time metrics display, and intelligent cost tracking for dashboard integration.
 
+✅ **Period-Based Marketing Costs**: Marketing costs in dashboard now reflect actual spend from selected Facebook campaigns for the chosen time period (1d, 7d, 30d, 90d) instead of fixed percentages.
+
+✅ **Multi-Currency Marketing Display**: Marketing costs show primary values in BRL with secondary EUR values, using real-time conversion rates for accurate financial tracking and consolidated reporting.
+
+✅ **Campaign Selection Persistence**: Selected Facebook campaigns remain selected after synchronization operations, preserving user preferences across automatic and manual sync processes.
+
 ## System Architecture
 
 ### Frontend Architecture

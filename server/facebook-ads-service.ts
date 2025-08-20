@@ -237,7 +237,7 @@ export class FacebookAdsService {
           .where(eq(facebookAdAccounts.id, account.id));
           
       } catch (error) {
-        const errorMsg = `Conta ${account.name}: ${error.message}`;
+        const errorMsg = `Conta ${account.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
         console.error(`Failed to sync campaigns for account ${account.accountId}:`, error);
         errors.push(errorMsg);
       }
@@ -336,6 +336,32 @@ export class FacebookAdsService {
     return campaigns.reduce((total, campaign) => {
       return total + parseFloat(campaign.amountSpent || "0");
     }, 0);
+  }
+
+  async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
+    const campaigns = await this.getCampaignsWithLiveData(period);
+    const selectedCampaigns = campaigns.filter((c: any) => c.isSelected);
+    
+    let totalBRL = 0;
+    let totalEUR = 0;
+    
+    for (const campaign of selectedCampaigns) {
+      // Usar sempre o valor em BRL que já foi convertido
+      totalBRL += parseFloat(campaign.amountSpentBRL || campaign.amountSpent || "0");
+      
+      // Para EUR, converter de BRL para EUR usando a API de conversão
+      const eurValue = await currencyService.convertFromBRL(
+        parseFloat(campaign.amountSpentBRL || campaign.amountSpent || "0"), 
+        'EUR'
+      );
+      totalEUR += eurValue;
+    }
+    
+    return {
+      totalBRL: Math.round(totalBRL * 100) / 100, // Arredondar para 2 casas decimais
+      totalEUR: Math.round(totalEUR * 100) / 100,
+      campaigns: selectedCampaigns
+    };
   }
 
   private async validateBusinessManager(businessId: string, accessToken: string): Promise<void> {

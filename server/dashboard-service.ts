@@ -1,8 +1,11 @@
 import { db } from "./db";
 import { orders, dashboardMetrics, products, type InsertDashboardMetrics } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, sum, avg } from "drizzle-orm";
+import { FacebookAdsService } from "./facebook-ads-service";
+import { currencyService } from "./currency-service";
 
 export class DashboardService {
+  private facebookAdsService = new FacebookAdsService();
   
   async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' = '30d', provider?: string) {
     console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
@@ -149,8 +152,8 @@ export class DashboardService {
     const productCosts = await this.calculateProductCosts(period, provider);
     const totalProductCosts = productCosts.totalProductCosts;
     
-    // Calculate marketing costs from selected Facebook campaigns
-    const marketingCosts = await this.getMarketingCosts();
+    // Calculate marketing costs from selected Facebook campaigns based on period
+    const marketingCosts = await this.getMarketingCosts(period);
     
     // Calculate confirmed orders (total - unpacked)
     const unpackedOrders = statusCounts
@@ -166,11 +169,12 @@ export class DashboardService {
     const deliveryRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
     
     // Calculate profit (revenue - product costs - marketing costs)
-    const totalProfit = totalRevenue - totalProductCosts - marketingCosts;
+    const marketingCostsBRL = marketingCosts.fallbackValue;
+    const totalProfit = totalRevenue - totalProductCosts - marketingCostsBRL;
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     
     // Calculate ROI (return on investment)
-    const totalCosts = totalProductCosts + marketingCosts;
+    const totalCosts = totalProductCosts + marketingCostsBRL;
     const roi = totalCosts > 0 ? ((totalRevenue - totalCosts) / totalCosts) * 100 : 0;
     
     console.log(`🔍 Debug: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
@@ -186,7 +190,9 @@ export class DashboardService {
       pendingOrders,
       totalRevenue,
       totalProductCosts,
-      marketingCosts,
+      marketingCosts: marketingCostsBRL, // Main value for calculations in BRL
+      marketingCostsBRL: marketingCosts.totalBRL, // Explicit BRL value
+      marketingCostsEUR: marketingCosts.totalEUR, // EUR value for display
       deliveryRate,
       totalProfit,
       profitMargin,
@@ -318,13 +324,39 @@ export class DashboardService {
     };
   }
 
-  private async getMarketingCosts(): Promise<number> {
+  private async getMarketingCosts(period: string = '30d'): Promise<{ totalBRL: number; totalEUR: number; fallbackValue: number }> {
     try {
-      const { facebookAdsService } = await import("./facebook-ads-service");
-      return await facebookAdsService.getSelectedCampaignsSpend();
+      // Convert dashboard period to Facebook period format
+      const fbPeriod = this.convertPeriodToFacebookFormat(period);
+      const marketingData = await this.facebookAdsService.getMarketingCostsByPeriod(fbPeriod);
+      
+      return {
+        totalBRL: marketingData.totalBRL,
+        totalEUR: marketingData.totalEUR,
+        fallbackValue: marketingData.totalBRL // Use BRL as main value for calculations
+      };
     } catch (error) {
       console.warn("Failed to fetch Facebook Ads costs, using fallback:", error);
-      return 0; // Return 0 instead of percentage if Facebook integration fails
+      return {
+        totalBRL: 0,
+        totalEUR: 0,
+        fallbackValue: 0
+      };
+    }
+  }
+
+  private convertPeriodToFacebookFormat(period: string): string {
+    switch (period) {
+      case '1d':
+        return 'today';
+      case '7d':
+        return 'last_7d';
+      case '30d':
+        return 'last_30d';
+      case '90d':
+        return 'this_quarter';
+      default:
+        return 'last_30d';
     }
   }
   
