@@ -250,12 +250,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const whereConditions = [];
       const params = [];
       
-      // Date filter
+      // Date filter - use order_date if available, fallback to created_at
       if (days && days !== "all") {
         const daysNum = parseInt(days);
         const dateFrom = new Date();
         dateFrom.setDate(dateFrom.getDate() - daysNum);
-        whereConditions.push(`created_at >= $${params.length + 1}`);
+        whereConditions.push(`(order_date >= $${params.length + 1} OR (order_date IS NULL AND created_at >= $${params.length + 1}))`);
         params.push(dateFrom.toISOString());
       }
       
