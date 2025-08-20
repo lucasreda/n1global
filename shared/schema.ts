@@ -233,3 +233,64 @@ export type InsertProduct = z.infer<typeof insertProductSchema>;
 
 export type ShippingProvider = typeof shippingProviders.$inferSelect;
 export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema>;
+
+// Facebook Ads Campaigns table
+export const facebookCampaigns = pgTable("facebook_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  objective: varchar("objective", { length: 100 }),
+  dailyBudget: decimal("daily_budget", { precision: 10, scale: 2 }),
+  lifetimeBudget: decimal("lifetime_budget", { precision: 10, scale: 2 }),
+  amountSpent: decimal("amount_spent", { precision: 10, scale: 2 }).default("0"),
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  cpm: decimal("cpm", { precision: 10, scale: 2 }).default("0"),
+  cpc: decimal("cpc", { precision: 10, scale: 2 }).default("0"),
+  ctr: decimal("ctr", { precision: 10, scale: 4 }).default("0"),
+  isSelected: boolean("is_selected").default(false),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  lastSync: timestamp("last_sync").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Facebook Ads Account Settings
+export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: varchar("account_id", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  accessToken: text("access_token"),
+  appId: varchar("app_id", { length: 255 }),
+  appSecret: text("app_secret"),
+  isActive: boolean("is_active").default(true),
+  currency: varchar("currency", { length: 10 }).default("EUR"),
+  timezone: varchar("timezone", { length: 50 }).default("Europe/Rome"),
+  lastSync: timestamp("last_sync"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Schema validations
+export const insertFacebookCampaignSchema = createInsertSchema(facebookCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+export const insertFacebookAdAccountSchema = createInsertSchema(facebookAdAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+// Types
+export type FacebookCampaign = typeof facebookCampaigns.$inferSelect;
+export type InsertFacebookCampaign = z.infer<typeof insertFacebookCampaignSchema>;
+
+export type FacebookAdAccount = typeof facebookAdAccounts.$inferSelect;
+export type InsertFacebookAdAccount = z.infer<typeof insertFacebookAdAccountSchema>;

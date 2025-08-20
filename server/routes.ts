@@ -235,6 +235,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Facebook Ads routes
+  app.get("/api/facebook/accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const accounts = await facebookAdsService.getAdAccounts();
+      res.json(accounts);
+    } catch (error) {
+      console.error("Facebook accounts error:", error);
+      res.status(500).json({ message: "Erro ao buscar contas do Facebook" });
+    }
+  });
+
+  app.post("/api/facebook/accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { insertFacebookAdAccountSchema } = await import("@shared/schema");
+      const validatedData = insertFacebookAdAccountSchema.parse(req.body);
+      
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const account = await facebookAdsService.addAdAccount(validatedData);
+      
+      res.json(account);
+    } catch (error) {
+      console.error("Add Facebook account error:", error);
+      res.status(500).json({ message: "Erro ao adicionar conta do Facebook" });
+    }
+  });
+
+  app.get("/api/facebook/campaigns", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const campaigns = await facebookAdsService.getCampaigns();
+      res.json(campaigns);
+    } catch (error) {
+      console.error("Facebook campaigns error:", error);
+      res.status(500).json({ message: "Erro ao buscar campanhas do Facebook" });
+    }
+  });
+
+  app.post("/api/facebook/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const result = await facebookAdsService.syncCampaigns();
+      res.json(result);
+    } catch (error) {
+      console.error("Facebook sync error:", error);
+      res.status(500).json({ message: "Erro ao sincronizar campanhas do Facebook" });
+    }
+  });
+
+  app.patch("/api/facebook/campaigns/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { isSelected } = req.body;
+      
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const campaign = await facebookAdsService.updateCampaignSelection(id, isSelected);
+      
+      res.json(campaign);
+    } catch (error) {
+      console.error("Update campaign error:", error);
+      res.status(500).json({ message: "Erro ao atualizar campanha" });
+    }
+  });
+
   // Orders routes - fetch from database with filters and pagination
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

@@ -149,8 +149,8 @@ export class DashboardService {
     const productCosts = await this.calculateProductCosts(period, provider);
     const totalProductCosts = productCosts.totalProductCosts;
     
-    // Calculate marketing costs (fixed 20% of revenue)
-    const marketingCosts = totalRevenue * 0.20;
+    // Calculate marketing costs from selected Facebook campaigns
+    const marketingCosts = await this.getMarketingCosts();
     
     // Calculate confirmed orders (total - unpacked)
     const unpackedOrders = statusCounts
@@ -316,6 +316,16 @@ export class DashboardService {
       totalProductCosts: Number(totalProductCosts.toFixed(2)),
       totalQuantity: Math.ceil(totalQuantity)
     };
+  }
+
+  private async getMarketingCosts(): Promise<number> {
+    try {
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      return await facebookAdsService.getSelectedCampaignsSpend();
+    } catch (error) {
+      console.warn("Failed to fetch Facebook Ads costs, using fallback:", error);
+      return 0; // Return 0 instead of percentage if Facebook integration fails
+    }
   }
   
   private getDateRange(period: string) {

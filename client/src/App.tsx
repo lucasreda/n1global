@@ -13,6 +13,7 @@ import Analytics from "@/pages/analytics";
 import Integrations from "@/pages/integrations";
 import Products from "@/pages/products";
 import Settings from "@/pages/settings";
+import Ads from "@/pages/ads";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/orders" component={Orders} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/integrations" component={Integrations} />
+      <Route path="/ads" component={Ads} />
       <Route path="/products" component={Products} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

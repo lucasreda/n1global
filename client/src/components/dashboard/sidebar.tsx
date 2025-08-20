@@ -7,7 +7,8 @@ import {
   Settings, 
   LogOut,
   TrendingUp,
-  ShoppingCart
+  ShoppingCart,
+  Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Pedidos", href: "/orders", icon: Package },
   { name: "Produtos", href: "/products", icon: ShoppingCart },
   { name: "Análises", href: "/analytics", icon: BarChart3 },
+  { name: "Anúncios", href: "/ads", icon: Target },
   { name: "Integrações", href: "/integrations", icon: Plug },
   { name: "Configurações", href: "/settings", icon: Settings },
 ];
