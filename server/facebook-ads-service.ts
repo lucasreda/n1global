@@ -129,20 +129,19 @@ export class FacebookAdsService {
 
           // Converter valores para a moeda base configurada da conta
           const baseCurrency = account.baseCurrency || 'BRL';
-          const originalCurrency = account.currency || 'EUR';
+          const originalCurrency = account.currency || 'EUR'; // Moeda retornada pela API do Facebook
           const originalAmount = parseFloat(liveCampaign.amountSpent || "0");
           
           let convertedAmount = originalAmount;
           
-          // Se a moeda base for diferente da moeda original, fazer conversão
-          if (baseCurrency !== originalCurrency) {
-            if (baseCurrency === 'BRL') {
-              convertedAmount = await currencyService.convertToBRL(originalAmount, originalCurrency);
-            } else {
-              // Para outras moedas, converter primeiro para BRL e depois para a moeda desejada
-              const brlValue = await currencyService.convertToBRL(originalAmount, originalCurrency);
-              convertedAmount = await currencyService.convertFromBRL(brlValue, baseCurrency);
-            }
+          // Para contas configuradas como BRL, assumir que os valores já estão em BRL
+          if (baseCurrency === 'BRL') {
+            // Não fazer conversão - os valores já são considerados em BRL
+            convertedAmount = originalAmount;
+          } else {
+            // Para outras moedas base (USD, EUR), converter de EUR para a moeda desejada
+            const brlValue = await currencyService.convertToBRL(originalAmount, originalCurrency);
+            convertedAmount = await currencyService.convertFromBRL(brlValue, baseCurrency);
           }
 
           // Usar dados ao vivo da API mas manter configurações locais (isSelected)
