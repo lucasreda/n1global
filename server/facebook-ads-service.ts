@@ -339,7 +339,7 @@ export class FacebookAdsService {
   }
 
   async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
-    const campaigns = await this.getCampaignsWithLiveData(period);
+    const campaigns = await this.getCampaigns(period);
     const selectedCampaigns = campaigns.filter((c: any) => c.isSelected);
     
     let totalBRL = 0;
