@@ -207,13 +207,15 @@ export class FacebookAdsService {
             .limit(1);
 
           if (existing.length > 0) {
-            // Update existing campaign
+            // Update existing campaign - preserve isSelected state
+            const { isSelected: _, ...updateData } = campaignData; // Remove isSelected from API data
             await db
               .update(facebookCampaigns)
               .set({
-                ...campaignData,
+                ...updateData,
                 updatedAt: new Date(),
                 lastSync: new Date()
+                // isSelected is NOT updated here - preserving user selection
               })
               .where(eq(facebookCampaigns.campaignId, campaignData.campaignId));
           } else {
@@ -299,7 +301,7 @@ export class FacebookAdsService {
       cpm: campaign.insights?.data?.[0]?.cpm || "0.00",
       cpc: campaign.insights?.data?.[0]?.cpc || "0.00",
       ctr: campaign.insights?.data?.[0]?.ctr || "0.00",
-      isSelected: false,
+      isSelected: false, // Default for new campaigns only
       startTime: campaign.start_time ? new Date(campaign.start_time) : null,
       endTime: campaign.stop_time ? new Date(campaign.stop_time) : null,
     })) || [];
