@@ -506,6 +506,7 @@ export default function Ads() {
                               <span className="text-gray-400">Gasto: </span>
                               <div className="flex flex-col">
                                 <span className="text-white font-medium">{formatCurrency(campaign.amountSpent, (campaign as any).baseCurrency || 'BRL')}</span>
+                                {console.log('Campaign data:', {name: campaign.name, amountSpent: campaign.amountSpent, baseCurrency: (campaign as any).baseCurrency, originalAmount: campaign.originalAmountSpent, originalCurrency: campaign.originalCurrency})}
                                 {campaign.originalCurrency && (campaign as any).baseCurrency !== campaign.originalCurrency && formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency) && (
                                   <span className="text-gray-500 text-xs">
                                     {formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency)}
