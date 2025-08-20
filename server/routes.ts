@@ -917,7 +917,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (autoSync) {
         try {
           const { facebookAdsService } = await import("./facebook-ads-service");
-          await facebookAdsService.autoSyncIfNeeded();
+          if (facebookAdsService.autoSyncIfNeeded) {
+            await facebookAdsService.autoSyncIfNeeded();
+          }
         } catch (error) {
           console.error('Facebook auto-sync failed:', error);
         }
