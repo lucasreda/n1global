@@ -259,6 +259,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test CurrencyAPI endpoint
+  app.get("/api/test-currency", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { CurrencyService } = await import("./currency-service");
+      const currencyService = CurrencyService.getInstance();
+      currencyService.clearCache(); // Forçar nova requisição
+      const rates = await currencyService.getExchangeRates();
+      res.json({ rates, message: "Taxas obtidas com sucesso da CurrencyAPI" });
+    } catch (error) {
+      console.error("Erro ao testar CurrencyAPI:", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Facebook Ads routes
   app.get("/api/facebook/business-managers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

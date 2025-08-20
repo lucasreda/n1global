@@ -9,6 +9,12 @@ export class CurrencyService {
   private cachedRates: ExchangeRates = {};
   private lastUpdate: Date | null = null;
   private readonly CACHE_DURATION = 15 * 60 * 1000; // 15 minutos
+  
+  // Método para limpar cache e forçar atualização
+  public clearCache(): void {
+    this.cachedRates = {};
+    this.lastUpdate = null;
+  }
 
   static getInstance(): CurrencyService {
     if (!CurrencyService.instance) {
@@ -19,8 +25,13 @@ export class CurrencyService {
 
   private async fetchExchangeRates(): Promise<ExchangeRates> {
     try {
-      // Usando API gratuita exchangerate.host (sem necessidade de API key)
-      const response = await fetch('https://api.exchangerate.host/latest?base=BRL');
+      const apiKey = process.env.CURRENCY_API_KEY;
+      if (!apiKey) {
+        throw new Error('CURRENCY_API_KEY not found');
+      }
+
+      // Usando CurrencyAPI com USD como base (padrão) e incluindo BRL
+      const response = await fetch(`https://api.currencyapi.com/v3/latest?apikey=${apiKey}&currencies=USD,EUR,GBP,BRL`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -28,22 +39,27 @@ export class CurrencyService {
       
       const data = await response.json() as any;
       
-      if (!data.success) {
-        throw new Error('Failed to fetch exchange rates');
+      if (!data.data) {
+        throw new Error('Invalid response format from CurrencyAPI');
       }
 
-      // Converter para taxa de BRL como base (inverter as taxas)
-      const rates: ExchangeRates = {};
-      for (const [currency, rate] of Object.entries(data.rates as Record<string, number>)) {
-        rates[currency] = 1 / rate; // Inverter para ter BRL como base
-      }
+      // Converter resposta da CurrencyAPI para nosso formato (com BRL como base)
+      const usdToBrl = data.data.BRL?.value || 5.2; // Taxa USD -> BRL
+      const rates: ExchangeRates = { 'BRL': 1 };
       
-      // BRL sempre 1
-      rates['BRL'] = 1;
+      for (const [currency, info] of Object.entries(data.data as Record<string, any>)) {
+        if (currency === 'BRL') continue; // Já definimos BRL = 1
+        
+        // Converter de USD para BRL: (USD -> currency) -> (BRL -> currency)
+        // Se 1 USD = X currency e 1 USD = Y BRL, então 1 BRL = X/Y currency
+        // Para obter quantos BRL valem 1 unidade da moeda: Y/X
+        const currencyRate = info.value; // USD para a moeda
+        rates[currency] = usdToBrl / currencyRate; // BRL para a moeda
+      }
       
       return rates;
     } catch (error) {
-      console.error('Erro ao buscar taxas de câmbio:', error);
+      console.error('Erro ao buscar taxas de câmbio da CurrencyAPI:', error);
       
       // Fallback com taxas aproximadas (atualizadas manualmente)
       return {
