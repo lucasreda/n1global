@@ -148,23 +148,89 @@
     animation: glow 2s ease-in-out infinite;
   }
 
+  /* Enhanced card styles */
+  .metric-hero {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.1) 50%, rgba(5, 150, 105, 0.15) 100%);
+    border: 2px solid rgba(34, 197, 94, 0.25);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37), 0 0 0 1px rgba(34, 197, 94, 0.1);
+  }
+
+  .metric-hero:hover {
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.5), 0 0 30px rgba(34, 197, 94, 0.3);
+  }
+
+  .metric-large {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .metric-large:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .metric-medium {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .metric-medium:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .metric-small {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .metric-small:hover {
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
   /* Responsive adjustments */
   @media (max-width: 640px) {
-    .stats-card {
-      padding: 1rem;
-    }
-    
-    .profit-hero-card {
-      padding: 1.5rem;
-    }
-    
-    .profit-hero-card h2 {
-      font-size: 2.25rem !important;
-    }
-
     .glassmorphism {
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
+      padding: 1rem;
+    }
+    
+    .metric-hero {
+      padding: 1.5rem;
+    }
+    
+    .metric-large {
+      padding: 1.25rem;
+    }
+    
+    .metric-medium {
+      padding: 1rem;
+    }
+    
+    .metric-small {
+      padding: 0.75rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .glassmorphism {
+      border-radius: 12px;
+    }
+    
+    .metric-hero h1 {
+      font-size: 2rem !important;
+    }
+    
+    .metric-large h3 {
+      font-size: 1.5rem !important;
+    }
+    
+    .metric-medium h4 {
+      font-size: 1.25rem !important;
+    }
+    
+    .metric-small h5 {
+      font-size: 1rem !important;
     }
   }
 }

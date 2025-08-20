@@ -24,6 +24,8 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **Interface Simplification**: Removed complete synchronization button from dashboard, keeping only intelligent sync and quick sync options to prevent unnecessary full API scans and optimize performance.
 
+✅ **Intelligent Dashboard Hierarchy**: Redesigned dashboard with smart data prioritization featuring 4 distinct card sizes (hero, large, medium, small) and intelligent visual hierarchy that emphasizes profit, revenue, and delivery rate as primary metrics while organizing secondary metrics by importance.
+
 ✅ **Product Cost Configuration System**: Created comprehensive product management with detailed cost breakdown (product cost, shipping, handling, marketing, operational) and automatic profit margin calculations for enhanced financial analytics.
 
 ✅ **SKU-Based Product Mapping**: Implemented correct product-order relationship using SKUs that match actual order values (NT-MAIN-70 for €70 orders, NT-BUNDLE-130 for €130 orders, etc.) with all 937 orders now properly linked to corresponding products.
