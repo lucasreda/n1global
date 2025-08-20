@@ -7,7 +7,7 @@ import { currencyService } from "./currency-service";
 export class DashboardService {
   private facebookAdsService = new FacebookAdsService();
   
-  async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' = '30d', provider?: string) {
+  async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' | 'current_month' = 'current_month', provider?: string) {
     console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
     
     // Check cache first
@@ -394,6 +394,8 @@ export class DashboardService {
         return 'last_30d';
       case '90d':
         return 'this_quarter';
+      case 'current_month':
+        return 'this_month';
       default:
         return 'last_30d';
     }
@@ -422,6 +424,10 @@ export class DashboardService {
       case '90d':
         // 90 dias: todos os dados (simulando 3 meses)
         from = new Date('2020-01-01');
+        break;
+      case 'current_month':
+        // Este mês: do primeiro dia do mês atual até hoje
+        from = new Date(now.getFullYear(), now.getMonth(), 1); // Primeiro dia do mês
         break;
       default:
         // Default: todos os dados

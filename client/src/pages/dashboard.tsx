@@ -11,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Filter } from "lucide-react";
 
 export default function Dashboard() {
-  const [dateFilter, setDateFilter] = useState("7");
+  const [dateFilter, setDateFilter] = useState("current_month");
 
   // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics", dateFilter],
     queryFn: async () => {
-      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : '30d';
+      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
       const response = await authenticatedApiRequest("GET", `/api/dashboard/metrics?period=${period}`);
       return response.json();
     },
@@ -27,7 +27,7 @@ export default function Dashboard() {
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
     queryKey: ["/api/dashboard/revenue-chart", dateFilter],
     queryFn: async () => {
-      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : '30d';
+      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
       const response = await authenticatedApiRequest("GET", `/api/dashboard/revenue-chart?period=${period}`);
       return response.json();
     },
@@ -96,6 +96,7 @@ export default function Dashboard() {
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent className="glassmorphism border-gray-600">
+              <SelectItem value="current_month">Este Mês</SelectItem>
               <SelectItem value="1">Hoje</SelectItem>
               <SelectItem value="7">7 dias</SelectItem>
               <SelectItem value="30">30 dias</SelectItem>
