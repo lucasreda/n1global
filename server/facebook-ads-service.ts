@@ -345,13 +345,11 @@ export class FacebookAdsService {
   }
 
   async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
-    // Buscar TODAS as campanhas selecionadas, independente do período
-    const selectedCampaigns = await db
-      .select()
-      .from(facebookCampaigns)
-      .where(eq(facebookCampaigns.isSelected, true));
+    // Buscar campanhas selecionadas com dados ao vivo para o período específico
+    const campaignsWithLiveData = await this.getCampaignsWithLiveData(period);
+    const selectedCampaigns = campaignsWithLiveData.filter(c => c.isSelected);
     
-    console.log(`💰 Calculando custos de marketing para ${selectedCampaigns.length} campanhas selecionadas`);
+    console.log(`💰 Calculando custos de marketing para ${selectedCampaigns.length} campanhas selecionadas (período: ${period})`);
     
     let totalBRL = 0;
     let totalEUR = 0;
@@ -364,24 +362,11 @@ export class FacebookAdsService {
           .from(facebookAdAccounts)
           .where(eq(facebookAdAccounts.accountId, campaign.accountId || ""));
         
-        const originalAmount = parseFloat(campaign.amountSpent || "0");
+        // Usar o valor ao vivo filtrado por período (já convertido para BRL)
+        const amountInBRL = parseFloat(campaign.amountSpentBRL || "0");
         const baseCurrency = (account?.baseCurrency) || "BRL";
         
-        console.log(`💰 Campanha: ${campaign.name}, Valor: ${originalAmount} BRL, Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
-        
-        let amountInBRL = 0;
-        
-        // Para contas configuradas como BRL, os valores já estão em BRL
-        // Para contas USD, os valores na tabela já foram convertidos para BRL
-        if (baseCurrency === "BRL") {
-          // Conta configurada em BRL - valores já estão em BRL
-          amountInBRL = originalAmount;
-          console.log(`💰 Conta BRL - valor já em BRL: ${originalAmount} BRL`);
-        } else {
-          // Para contas USD, os valores na tabela já foram convertidos para BRL
-          amountInBRL = originalAmount;
-          console.log(`💰 Conta ${baseCurrency} - valor já convertido para BRL: ${originalAmount} BRL`);
-        }
+        console.log(`💰 Campanha: ${campaign.name}, Valor: ${amountInBRL} BRL (período: ${period}), Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
         
         totalBRL += amountInBRL;
         
