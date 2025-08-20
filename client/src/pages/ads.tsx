@@ -237,18 +237,6 @@ export default function Ads() {
         </div>
         <div className="flex items-center space-x-3">
           <select
-            value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5"
-          >
-            <option value="all">Todas as contas</option>
-            {adAccounts?.map((account) => (
-              <option key={account.id} value={account.accountId}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-          <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5"
@@ -445,9 +433,23 @@ export default function Ads() {
               <Facebook className="w-5 h-5 text-blue-500" />
               <span>Campanhas {selectedAccountId !== "all" && `- ${adAccounts?.find(acc => acc.accountId === selectedAccountId)?.name}`}</span>
             </CardTitle>
-            <CardDescription className="text-sm text-gray-400">
+            <CardDescription className="text-sm text-gray-400 mb-3">
               Selecione campanhas para incluir no dashboard
             </CardDescription>
+            <div className="mb-4">
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-2 w-full"
+              >
+                <option value="all">Todas as contas</option>
+                {adAccounts?.map((account) => (
+                  <option key={account.id} value={account.accountId}>
+                    📘 {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
