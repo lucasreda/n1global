@@ -227,13 +227,13 @@ export class DashboardService {
         limitMultiplier = 1;
     }
     
-    // Get all orders for the period
-    const ordersInPeriod = await db
+    // Get only delivered orders for the period (for cost calculation)
+    const deliveredOrders = await db
       .select({
         products: orders.products
       })
       .from(orders)
-      .where(and(...whereConditions));
+      .where(and(...whereConditions, eq(orders.status, 'delivered')));
     
     // Get all products with their costs
     const allProducts = await db
@@ -254,8 +254,8 @@ export class DashboardService {
     let totalProductCosts = 0;
     let totalQuantity = 0;
     
-    // Calculate costs based on actual quantities in orders
-    ordersInPeriod.forEach(order => {
+    // Calculate costs based on actual quantities in delivered orders only
+    deliveredOrders.forEach(order => {
       if (order.products && Array.isArray(order.products)) {
         order.products.forEach((product: any) => {
           const sku = product.sku;
