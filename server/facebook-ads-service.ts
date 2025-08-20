@@ -345,9 +345,11 @@ export class FacebookAdsService {
   }
 
   async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
-    // Buscar campanhas selecionadas com dados ao vivo para o período específico
-    const campaignsWithLiveData = await this.getCampaignsWithLiveData(period);
-    const selectedCampaigns = campaignsWithLiveData.filter(c => c.isSelected);
+    // Buscar campanhas selecionadas e seus dados ao vivo para o período específico
+    const selectedCampaigns = await db
+      .select()
+      .from(facebookCampaigns)
+      .where(eq(facebookCampaigns.isSelected, true));
     
     console.log(`💰 Calculando custos de marketing para ${selectedCampaigns.length} campanhas selecionadas (período: ${period})`);
     
@@ -362,16 +364,42 @@ export class FacebookAdsService {
           .from(facebookAdAccounts)
           .where(eq(facebookAdAccounts.accountId, campaign.accountId || ""));
         
-        // Usar o valor ao vivo filtrado por período (já convertido para BRL)
-        const amountInBRL = parseFloat(campaign.amountSpentBRL || "0");
-        const baseCurrency = (account?.baseCurrency) || "BRL";
+        if (!account?.accessToken) {
+          console.warn(`Account ${campaign.accountId} has no access token, skipping campaign ${campaign.name}`);
+          continue;
+        }
         
-        console.log(`💰 Campanha: ${campaign.name}, Valor: ${amountInBRL} BRL (período: ${period}), Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
+        // Buscar dados ao vivo da campanha para o período específico
+        let liveAmount = 0;
+        try {
+          const liveCampaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken, period);
+          const liveCampaign = liveCampaigns.find(c => c.campaignId === campaign.campaignId);
+          
+          if (liveCampaign) {
+            const originalAmount = parseFloat(liveCampaign.amountSpent || "0");
+            const baseCurrency = account.baseCurrency || "BRL";
+            
+            // Para contas BRL, valor já está em BRL. Para USD, converter para BRL
+            if (baseCurrency === "BRL") {
+              liveAmount = originalAmount;
+            } else {
+              // Converter de EUR (moeda da API) para BRL
+              liveAmount = await currencyService.convertToBRL(originalAmount, "EUR");
+            }
+            
+            console.log(`💰 Campanha: ${campaign.name}, Valor: ${liveAmount} BRL (período: ${period}), Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch live data for campaign ${campaign.name}, using stored data:`, error);
+          // Fallback para dados armazenados
+          liveAmount = parseFloat(campaign.amountSpent || "0");
+          console.log(`💰 Campanha: ${campaign.name}, Valor: ${liveAmount} BRL (dados armazenados), Account ID: ${campaign.accountId}`);
+        }
         
-        totalBRL += amountInBRL;
+        totalBRL += liveAmount;
         
         // Para EUR, converter de BRL para EUR
-        const eurValue = await currencyService.convertFromBRL(amountInBRL, 'EUR');
+        const eurValue = await currencyService.convertFromBRL(liveAmount, 'EUR');
         totalEUR += eurValue;
       } catch (error) {
         console.error(`💰 Erro ao processar campanha ${campaign.name}:`, error);
