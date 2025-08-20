@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
 import Integrations from "@/pages/integrations";
+import Products from "@/pages/products";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/orders" component={Orders} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/integrations" component={Integrations} />
+      <Route path="/products" component={Products} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>

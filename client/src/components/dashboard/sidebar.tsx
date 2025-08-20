@@ -6,7 +6,8 @@ import {
   Plug, 
   Settings, 
   LogOut,
-  TrendingUp
+  TrendingUp,
+  ShoppingCart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Pedidos", href: "/orders", icon: Package },
+  { name: "Produtos", href: "/products", icon: ShoppingCart },
   { name: "Análises", href: "/analytics", icon: BarChart3 },
   { name: "Integrações", href: "/integrations", icon: Plug },
   { name: "Configurações", href: "/settings", icon: Settings },

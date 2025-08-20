@@ -138,6 +138,17 @@ export const products = pgTable("products", {
   productUrl: text("product_url"),
   isActive: boolean("is_active").notNull().default(true),
   
+  // Cost Configuration for Financial Analytics
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }), // Product purchase/manufacturing cost
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }), // Average shipping cost
+  handlingFee: decimal("handling_fee", { precision: 10, scale: 2 }), // Processing/handling fee
+  marketingCost: decimal("marketing_cost", { precision: 10, scale: 2 }), // Marketing attribution cost
+  operationalCost: decimal("operational_cost", { precision: 10, scale: 2 }), // Operational overhead
+  
+  // Calculated fields for dashboard analytics
+  profitMargin: decimal("profit_margin", { precision: 5, scale: 2 }), // Calculated profit margin %
+  lastCostUpdate: timestamp("last_cost_update"), // When costs were last updated
+  
   // Provider mapping
   providers: jsonb("providers"), // Maps provider -> provider_product_id
   
