@@ -128,19 +128,19 @@ export class DashboardService {
     let pendingOrders = 0;
     let returnedOrders = 0;
     let confirmedOrders = 0;
-    let totalRevenue = 0;
+    let totalRevenue = 0; // Only revenue from delivered orders
     
     statusCounts.forEach(row => {
       const orderCount = row.count;
       const revenue = row.totalRevenue;
       
       totalOrders += orderCount;
-      totalRevenue += revenue;
       
       // Map real status values from European Fulfillment to dashboard categories
       switch (row.status) {
         case 'delivered':
           deliveredOrders += orderCount;
+          totalRevenue += revenue; // Only count revenue from delivered orders
           break;
         case 'returned':
           returnedOrders += orderCount;
