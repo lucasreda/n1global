@@ -1,0 +1,11 @@
+Debug info:
+Current card configuration shows:
+- title: "Receita Paga" 
+- subtitle: `€ ${revenue.toFixed(2)}`
+- testId: "card-paid-revenue"
+
+But user sees:
+- "Receita Total"
+- "705 pedidos"
+
+This suggests there's a cache issue or another component rendering this card.

@@ -67,6 +67,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     {
       title: "Total de Pedidos",
       value: totalOrders.toLocaleString(),
+      subtitle: `Todos os status`,
       icon: ShoppingCart,
       iconBg: "bg-blue-600/20",
       iconColor: "text-blue-400",
@@ -183,9 +184,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
 
   const secondaryMetrics = [
     {
-      title: "Receita Total",
+      title: "Receita Paga",
       value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR')}`,
-      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')} • ${totalOrders} pedidos`,
+      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')}`,
       icon: BarChart3,
       color: "blue",
       size: "large"
