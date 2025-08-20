@@ -272,7 +272,58 @@ export const facebookBusinessManagers = pgTable("facebook_business_managers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Facebook Ads Account Settings
+// Ad Accounts - Unified table for Facebook and Google Ads
+export const adAccounts = pgTable("ad_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
+  accountId: varchar("account_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  businessManagerId: varchar("business_manager_id", { length: 255 }), // For Facebook
+  managerId: varchar("manager_id", { length: 255 }), // For Google Ads (Customer ID)
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"), // For Google OAuth
+  appId: varchar("app_id", { length: 255 }), // For Facebook
+  appSecret: text("app_secret"), // For Facebook
+  clientId: varchar("client_id", { length: 255 }), // For Google
+  clientSecret: text("client_secret"), // For Google
+  isActive: boolean("is_active").default(true),
+  currency: varchar("currency", { length: 10 }).default("EUR"), // Currency returned by API
+  baseCurrency: varchar("base_currency", { length: 10 }).default("BRL"), // User configured currency
+  timezone: varchar("timezone", { length: 50 }).default("Europe/Rome"),
+  lastSync: timestamp("last_sync"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Campaigns - Unified table for Facebook and Google Ads
+export const campaigns = pgTable("campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
+  campaignId: varchar("campaign_id", { length: 255 }).notNull(),
+  accountId: varchar("account_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  objective: varchar("objective", { length: 100 }), // For Facebook
+  campaignType: varchar("campaign_type", { length: 100 }), // For Google
+  dailyBudget: decimal("daily_budget", { precision: 10, scale: 2 }),
+  lifetimeBudget: decimal("lifetime_budget", { precision: 10, scale: 2 }),
+  amountSpent: decimal("amount_spent", { precision: 10, scale: 2 }).default("0"), // Valor em BRL
+  originalAmountSpent: decimal("original_amount_spent", { precision: 10, scale: 2 }), // Valor original
+  originalCurrency: varchar("original_currency", { length: 10 }).default("USD"), // Moeda original
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  cpm: decimal("cpm", { precision: 10, scale: 2 }).default("0"),
+  cpc: decimal("cpc", { precision: 10, scale: 2 }).default("0"),
+  ctr: decimal("ctr", { precision: 10, scale: 4 }).default("0"),
+  isSelected: boolean("is_selected").default(false),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  lastSync: timestamp("last_sync").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Facebook Ads Account Settings (Legacy - kept for backward compatibility)
 export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   accountId: varchar("account_id", { length: 255 }).notNull().unique(),
@@ -305,6 +356,20 @@ export const insertFacebookCampaignSchema = createInsertSchema(facebookCampaigns
   lastSync: true,
 });
 
+export const insertAdAccountSchema = createInsertSchema(adAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+export const insertCampaignSchema = createInsertSchema(campaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
 export const insertFacebookAdAccountSchema = createInsertSchema(facebookAdAccounts).omit({
   id: true,
   createdAt: true,
@@ -315,6 +380,12 @@ export const insertFacebookAdAccountSchema = createInsertSchema(facebookAdAccoun
 // Types
 export type FacebookBusinessManager = typeof facebookBusinessManagers.$inferSelect;
 export type InsertFacebookBusinessManager = z.infer<typeof insertFacebookBusinessManagerSchema>;
+
+export type AdAccount = typeof adAccounts.$inferSelect;
+export type InsertAdAccount = z.infer<typeof insertAdAccountSchema>;
+
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 
 export type FacebookCampaign = typeof facebookCampaigns.$inferSelect;
 export type InsertFacebookCampaign = z.infer<typeof insertFacebookCampaignSchema>;

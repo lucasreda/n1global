@@ -19,17 +19,21 @@ import {
   AlertCircle,
   CheckCircle2,
   Plus,
-  Target
+  Target,
+  Globe
 } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
-interface FacebookCampaign {
+interface Campaign {
   id: string;
   campaignId: string;
+  network: 'facebook' | 'google';
   name: string;
   status: string;
-  objective: string;
+  objective?: string; // Facebook
+  campaignType?: string; // Google
   dailyBudget: string;
   lifetimeBudget: string;
   amountSpent: string; // Valor em BRL
@@ -56,19 +60,36 @@ interface FacebookBusinessManager {
   lastSync: string;
 }
 
-interface FacebookAdAccount {
+interface AdAccount {
   id: string;
+  network: 'facebook' | 'google';
   accountId: string;
   name: string;
   businessManagerId?: string;
+  managerId?: string; // For Google Ads
   isActive: boolean;
   currency: string;
+  baseCurrency: string;
   timezone: string;
   lastSync: string;
 }
 
+// Network Icon Component
+const NetworkIcon = ({ network, size = 16 }: { network: 'facebook' | 'google'; size?: number }) => {
+  switch (network) {
+    case 'facebook':
+      return <Facebook size={size} className="text-blue-600" />;
+    case 'google':
+      return <SiGoogle size={size} className="text-red-500" />;
+    default:
+      return <Globe size={size} className="text-gray-500" />;
+  }
+};
+
 export default function Ads() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [networkSelectOpen, setNetworkSelectOpen] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState<'facebook' | 'google'>('facebook');
   const [bmDialogOpen, setBmDialogOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
@@ -98,21 +119,21 @@ export default function Ads() {
     refetchInterval: 60000, // Refetch every minute
   });
 
-  // Fetch Facebook Ad Accounts
+  // Fetch Ad Accounts (Facebook + Google)
   const { data: adAccounts, isLoading: accountsLoading } = useQuery({
-    queryKey: ["/api/facebook/accounts"],
+    queryKey: ["/api/ad-accounts"],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/facebook/accounts");
-      return response.json() as Promise<FacebookAdAccount[]>;
+      const response = await authenticatedApiRequest("GET", "/api/ad-accounts");
+      return response.json() as Promise<AdAccount[]>;
     },
   });
 
-  // Fetch Facebook Campaigns (com sincronização automática se necessário)
+  // Fetch Campaigns (Facebook + Google)
   const { data: campaigns, isLoading: campaignsLoading } = useQuery({
-    queryKey: ["/api/facebook/campaigns", selectedPeriod],
+    queryKey: ["/api/campaigns", selectedPeriod],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", `/api/facebook/campaigns?period=${selectedPeriod}&autoSync=true`);
-      return response.json() as Promise<FacebookCampaign[]>;
+      const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true`);
+      return response.json() as Promise<Campaign[]>;
     },
     enabled: (adAccounts?.length || 0) > 0,
   });
@@ -120,16 +141,20 @@ export default function Ads() {
   // Add new ad account
   const addAccountMutation = useMutation({
     mutationFn: async (accountData: any) => {
-      const response = await authenticatedApiRequest("POST", "/api/facebook/accounts", accountData);
+      const response = await authenticatedApiRequest("POST", "/api/ad-accounts", {
+        ...accountData,
+        network: selectedNetwork
+      });
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Conta adicionada",
-        description: "Conta do Facebook Ads configurada com sucesso",
+        description: `Conta do ${selectedNetwork === 'facebook' ? 'Facebook Ads' : 'Google Ads'} configurada com sucesso`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/facebook/accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ad-accounts"] });
       setDialogOpen(false);
+      setNetworkSelectOpen(false);
       setNewAccount({
         accountId: "",
         name: "",
@@ -173,13 +198,13 @@ export default function Ads() {
   // Toggle campaign selection
   const toggleCampaignMutation = useMutation({
     mutationFn: async ({ campaignId, isSelected }: { campaignId: string; isSelected: boolean }) => {
-      const response = await authenticatedApiRequest("PATCH", `/api/facebook/campaigns/${campaignId}`, {
+      const response = await authenticatedApiRequest("PATCH", `/api/campaigns/${campaignId}`, {
         isSelected: !isSelected
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns", selectedPeriod] });
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod] });
       toast({
         title: "Campanha atualizada",
         description: "Seleção da campanha alterada",
@@ -261,8 +286,8 @@ export default function Ads() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Facebook Ads</h1>
-          <p className="text-sm text-gray-400">Campanhas e custos de marketing</p>
+          <h1 className="text-xl font-bold text-white">Anúncios</h1>
+          <p className="text-sm text-gray-400">Campanhas Facebook Ads e Google Ads</p>
         </div>
         <div className="flex items-center space-x-3">
           <select
@@ -294,7 +319,8 @@ export default function Ads() {
               Sync
             </Button>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          {/* Network Selection Dialog */}
+          <Dialog open={networkSelectOpen} onOpenChange={setNetworkSelectOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8" data-testid="button-add-account">
                 <Plus className="w-3 h-3 mr-2" />
@@ -303,20 +329,63 @@ export default function Ads() {
             </DialogTrigger>
             <DialogContent className="glassmorphism border-gray-700 max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Configurar Conta Facebook Ads</DialogTitle>
+                <DialogTitle className="text-white">Selecionar Rede de Anúncios</DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Adicione suas credenciais reais do Facebook para sincronizar campanhas
+                  Escolha a plataforma de anúncios que deseja configurar
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4 py-6">
+                <Button
+                  onClick={() => {
+                    setSelectedNetwork('facebook');
+                    setNetworkSelectOpen(false);
+                    setDialogOpen(true);
+                  }}
+                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-blue-600 hover:bg-blue-700 border border-blue-500"
+                >
+                  <Facebook size={24} />
+                  <span className="text-sm font-medium">Facebook Ads</span>
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedNetwork('google');
+                    setNetworkSelectOpen(false);
+                    setDialogOpen(true);
+                  }}
+                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-red-600 hover:bg-red-700 border border-red-500"
+                >
+                  <SiGoogle size={24} />
+                  <span className="text-sm font-medium">Google Ads</span>
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Account Configuration Dialog */}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent className="glassmorphism border-gray-700 max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-white flex items-center">
+                  <NetworkIcon network={selectedNetwork} size={20} />
+                  <span className="ml-2">
+                    Configurar {selectedNetwork === 'facebook' ? 'Facebook Ads' : 'Google Ads'}
+                  </span>
+                </DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Adicione suas credenciais reais do {selectedNetwork === 'facebook' ? 'Facebook' : 'Google'} para sincronizar campanhas
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-1">
-                  <Label htmlFor="accountId" className="text-sm text-gray-300">ID da Conta</Label>
+                  <Label htmlFor="accountId" className="text-sm text-gray-300">
+                    {selectedNetwork === 'facebook' ? 'ID da Conta Facebook' : 'Customer ID Google Ads'}
+                  </Label>
                   <Input
                     id="accountId"
                     value={newAccount.accountId}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, accountId: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="1234567890 (sem act_)"
+                    placeholder={selectedNetwork === 'facebook' ? '1234567890 (sem act_)' : '123-456-7890'}
                     required
                   />
                 </div>
@@ -333,41 +402,71 @@ export default function Ads() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Facebook</Label>
-                  <Input
-                    id="accessToken"
-                    value={newAccount.accessToken}
-                    onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
-                    className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="EAAxxxxxx... (token real do Facebook)"
-                    type="password"
-                    required
-                  />
-                </div>
+                {selectedNetwork === 'facebook' ? (
+                  <>
+                    <div className="space-y-1">
+                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Facebook</Label>
+                      <Input
+                        id="accessToken"
+                        value={newAccount.accessToken}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
+                        className="bg-gray-800 border-gray-600 text-white h-9"
+                        placeholder="EAAxxxxxx... (token real do Facebook)"
+                        type="password"
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="appId" className="text-sm text-gray-300">App ID</Label>
-                  <Input
-                    id="appId"
-                    value={newAccount.appId}
-                    onChange={(e) => setNewAccount(prev => ({ ...prev, appId: e.target.value }))}
-                    className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="ID da aplicação Facebook"
-                  />
-                </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="appId" className="text-sm text-gray-300">App ID</Label>
+                      <Input
+                        id="appId"
+                        value={newAccount.appId}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, appId: e.target.value }))}
+                        className="bg-gray-800 border-gray-600 text-white h-9"
+                        placeholder="ID da aplicação Facebook"
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="appSecret" className="text-sm text-gray-300">App Secret</Label>
-                  <Input
-                    id="appSecret"
-                    value={newAccount.appSecret}
-                    onChange={(e) => setNewAccount(prev => ({ ...prev, appSecret: e.target.value }))}
-                    className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="Chave secreta da aplicação"
-                    type="password"
-                  />
-                </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="appSecret" className="text-sm text-gray-300">App Secret</Label>
+                      <Input
+                        id="appSecret"
+                        value={newAccount.appSecret}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, appSecret: e.target.value }))}
+                        className="bg-gray-800 border-gray-600 text-white h-9"
+                        placeholder="Chave secreta da aplicação"
+                        type="password"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-1">
+                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Google Ads</Label>
+                      <Input
+                        id="accessToken"
+                        value={newAccount.accessToken}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
+                        className="bg-gray-800 border-gray-600 text-white h-9"
+                        placeholder="Token OAuth2 do Google Ads"
+                        type="password"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="managerId" className="text-sm text-gray-300">Manager Account ID (opcional)</Label>
+                      <Input
+                        id="managerId"
+                        value={newAccount.businessManagerId}
+                        onChange={(e) => setNewAccount(prev => ({ ...prev, businessManagerId: e.target.value }))}
+                        className="bg-gray-800 border-gray-600 text-white h-9"
+                        placeholder="ID da conta gerenciadora Google Ads"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
               <DialogFooter>
                 <Button 
@@ -481,7 +580,7 @@ export default function Ads() {
                 <option value="all">Todas as contas</option>
                 {adAccounts?.map((account) => (
                   <option key={account.id} value={account.accountId}>
-                    📘 {account.name}
+                    {account.network === 'facebook' ? '📘' : '🔍'} {account.name}
                   </option>
                 ))}
               </select>
@@ -515,6 +614,7 @@ export default function Ads() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2 mb-1">
+                            <NetworkIcon network={campaign.network as 'facebook' | 'google'} size={16} />
                             <h4 className="text-sm font-medium text-white truncate">{campaign.name}</h4>
                             {getStatusBadge(campaign.status)}
                           </div>

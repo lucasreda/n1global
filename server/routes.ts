@@ -843,6 +843,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unified Ad Networks Routes (Facebook + Google)
+  
+  // Get all ad accounts (Facebook + Google)
+  app.get("/api/ad-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { adAccounts } = await import("@shared/schema");
+      const { db } = await import("./db");
+      
+      const accounts = await db.select().from(adAccounts);
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error fetching ad accounts:", error);
+      res.status(500).json({ message: "Erro ao buscar contas de anúncios" });
+    }
+  });
+
+  // Add new ad account (Facebook or Google)
+  app.post("/api/ad-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { insertAdAccountSchema, adAccounts } = await import("@shared/schema");
+      const { db } = await import("./db");
+      
+      const accountData = insertAdAccountSchema.parse(req.body);
+      
+      // Validate network type
+      if (!['facebook', 'google'].includes(accountData.network)) {
+        return res.status(400).json({ message: "Rede inválida. Use 'facebook' ou 'google'" });
+      }
+      
+      // Test connection based on network
+      if (accountData.network === 'facebook') {
+        const { facebookAdsService } = await import("./facebook-ads-service");
+        const isValid = await facebookAdsService.authenticate(
+          accountData.accessToken || '',
+          accountData.accountId
+        );
+        if (!isValid) {
+          return res.status(400).json({ message: "Credenciais do Facebook inválidas" });
+        }
+      } else if (accountData.network === 'google') {
+        const { googleAdsService } = await import("./google-ads-service");
+        const isValid = await googleAdsService.authenticate(
+          accountData.accessToken || '',
+          accountData.accountId
+        );
+        if (!isValid) {
+          return res.status(400).json({ message: "Credenciais do Google Ads inválidas" });
+        }
+      }
+
+      const [newAccount] = await db
+        .insert(adAccounts)
+        .values(accountData)
+        .returning();
+        
+      res.status(201).json(newAccount);
+    } catch (error) {
+      console.error("Error adding ad account:", error);
+      res.status(500).json({ message: "Erro ao adicionar conta de anúncios" });
+    }
+  });
+
+  // Get unified campaigns (Facebook + Google)
+  app.get("/api/campaigns", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { campaigns } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const period = req.query.period as string || 'last_30d';
+      const autoSync = req.query.autoSync === 'true';
+      
+      // Auto-sync Facebook Ads if needed
+      if (autoSync) {
+        try {
+          const { facebookAdsService } = await import("./facebook-ads-service");
+          await facebookAdsService.autoSyncIfNeeded();
+        } catch (error) {
+          console.error('Facebook auto-sync failed:', error);
+        }
+      }
+      
+      const allCampaigns = await db.select().from(campaigns);
+      
+      // Add account name to campaigns
+      const { adAccounts } = await import("@shared/schema");
+      const accounts = await db.select().from(adAccounts);
+      
+      const campaignsWithAccountInfo = allCampaigns.map(campaign => ({
+        ...campaign,
+        accountName: accounts.find(acc => acc.accountId === campaign.accountId)?.name || 'Conta Desconhecida'
+      }));
+      
+      res.json(campaignsWithAccountInfo);
+    } catch (error) {
+      console.error("Error fetching campaigns:", error);
+      res.status(500).json({ message: "Erro ao buscar campanhas" });
+    }
+  });
+
+  // Update campaign selection (Facebook + Google)
+  app.patch("/api/campaigns/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { isSelected } = req.body;
+      const { campaigns } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      
+      const [updatedCampaign] = await db
+        .update(campaigns)
+        .set({ isSelected })
+        .where(eq(campaigns.id, id))
+        .returning();
+        
+      if (!updatedCampaign) {
+        return res.status(404).json({ message: "Campanha não encontrada" });
+      }
+      
+      res.json(updatedCampaign);
+    } catch (error) {
+      console.error("Error updating campaign:", error);
+      res.status(500).json({ message: "Erro ao atualizar campanha" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
