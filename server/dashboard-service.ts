@@ -31,6 +31,7 @@ export class DashboardService {
         totalProfitBRL,
         totalProfit,
         totalProductCosts: productCosts.totalProductCosts,
+        totalProductCostsBRL: productCosts.totalProductCostsBRL, // Add BRL product costs
         marketingCosts: marketingCosts.fallbackValue,
         marketingCostsBRL: marketingCosts.totalBRL,
         marketingCostsEUR: marketingCosts.totalEUR,
@@ -359,11 +360,7 @@ export class DashboardService {
     totalQuantity = totalQuantity * limitMultiplier;
     
     // Convert product costs from EUR to BRL using the currency API
-    const convertedCosts = await this.currencyService.convertMultiCurrency([
-      { amount: totalProductCosts, fromCurrency: 'EUR', toCurrency: 'BRL' }
-    ]);
-    
-    const totalProductCostsBRL = convertedCosts.length > 0 ? convertedCosts[0].convertedAmount : totalProductCosts;
+    const totalProductCostsBRL = await currencyService.convertToBRL(totalProductCosts, 'EUR');
     
     return {
       totalProductCosts: Number(totalProductCosts.toFixed(2)), // Keep EUR for reference
