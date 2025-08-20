@@ -8,14 +8,30 @@ interface StatsCardsProps {
 export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {[...Array(10)].map((_, i) => (
-          <div key={i} className="glassmorphism rounded-2xl p-6 h-32 animate-pulse">
-            <div className="w-12 h-12 bg-gray-600/50 rounded-xl mb-4"></div>
-            <div className="w-3/4 h-4 bg-gray-600/50 rounded mb-2"></div>
-            <div className="w-1/2 h-6 bg-gray-600/50 rounded"></div>
+      <div className="space-y-8">
+        {/* Profit Card Loading */}
+        <div className="glassmorphism rounded-3xl p-8 animate-pulse">
+          <div className="flex items-center justify-between mb-6">
+            <div className="w-16 h-16 bg-gray-600/50 rounded-2xl"></div>
+            <div className="w-24 h-6 bg-gray-600/50 rounded-full"></div>
           </div>
-        ))}
+          <div className="w-40 h-8 bg-gray-600/50 rounded mb-2"></div>
+          <div className="w-24 h-5 bg-gray-600/50 rounded"></div>
+        </div>
+        
+        {/* Main Cards Loading */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(9)].map((_, i) => (
+            <div key={i} className="glassmorphism rounded-2xl p-6 animate-pulse">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gray-600/50 rounded-xl"></div>
+                <div className="w-16 h-4 bg-gray-600/50 rounded"></div>
+              </div>
+              <div className="w-20 h-7 bg-gray-600/50 rounded mb-2"></div>
+              <div className="w-24 h-4 bg-gray-600/50 rounded"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -142,63 +158,93 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Profit Card - Special Highlight */}
-      <div className="glassmorphism rounded-2xl p-6 bg-gradient-to-r from-green-400/10 via-green-300/10 to-emerald-400/10 border border-green-300/20 hover:bg-gradient-to-r hover:from-green-400/15 hover:via-green-300/15 hover:to-emerald-400/15 transition-all duration-300 group">
-        <div className="flex items-center justify-between mb-4">
-          <div className="w-12 h-12 bg-green-400/20 rounded-xl flex items-center justify-center group-hover:bg-green-400/30 transition-all">
-            <DollarSign className="text-green-400 w-6 h-6" />
+    <div className="space-y-8 animate-fade-in">
+      {/* Hero Profit Card */}
+      <div className="glassmorphism rounded-3xl p-4 sm:p-6 md:p-8 bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-green-600/10 border-2 border-green-400/20 hover:border-green-400/30 transition-all duration-500 group relative overflow-hidden profit-card-glow">
+        <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        <div className="relative z-10">
+          <div className="flex flex-col sm:flex-row items-start justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/30 to-emerald-600/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <DollarSign className="text-green-400 w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-green-400 mb-1" data-testid="value-card-profit">
+                  €{totalProfit.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+                </h2>
+                <p className="text-sm sm:text-base lg:text-lg text-gray-300" data-testid="label-card-profit">
+                  Lucro Total
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
+                profitMargin >= 0 ? "text-green-400 bg-green-400/20" : "text-red-400 bg-red-400/20"
+              }`}>
+                {profitMargin >= 0 ? "+" : ""}{profitMargin.toFixed(1)}% margem
+              </div>
+            </div>
           </div>
-          <div className="text-right">
-            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-              profitMargin >= 0 ? "text-green-400 bg-green-400/20" : "text-red-400 bg-red-400/20"
-            }`}>
-              {profitMargin >= 0 ? "+" : ""}{profitMargin.toFixed(1)}% margem
-            </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-green-400/20">
+            <div className="text-center md:text-left">
+              <p className="text-sm text-gray-400 mb-1">Receita Total</p>
+              <p className="text-xl font-semibold text-gray-200">€{revenue.toLocaleString('pt-PT')}</p>
+            </div>
+            <div className="text-center md:text-left">
+              <p className="text-sm text-gray-400 mb-1">Custos Totais</p>
+              <p className="text-xl font-semibold text-gray-200">€{(productCosts + marketingCosts).toLocaleString('pt-PT')}</p>
+            </div>
+            <div className="text-center md:text-left">
+              <p className="text-sm text-gray-400 mb-1">ROI</p>
+              <p className="text-xl font-semibold text-green-400">{roi.toFixed(1)}%</p>
+            </div>
           </div>
         </div>
-        <h3 className="text-2xl font-bold text-green-400 mb-1" data-testid="value-card-profit">
-          € {totalProfit.toFixed(2)}
-        </h3>
-        <p className="text-gray-300 text-sm" data-testid="label-card-profit">
-          Lucro Total
-        </p>
-        <p className="text-xs text-gray-400 mt-1">
-          Receita - Custos de Produtos - Marketing
-        </p>
       </div>
 
-      {/* Other Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {stats.map((stat) => (
-        <div
-          key={stat.title}
-          className="glassmorphism rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
-          data-testid={stat.testId}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center ${stat.hoverBg} transition-all`}>
-              <stat.icon className={`${stat.iconColor}`} size={20} />
-            </div>
-            <span 
-              className={`text-xs font-medium px-2 py-1 rounded-full ${
-                parseFloat(stat.growth.toString()) >= 0 
-                  ? "text-green-400 bg-green-400/20" 
-                  : "text-red-400 bg-red-400/20"
-              }`}
-              data-testid={`growth-${stat.testId}`}
+      {/* Main Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          const isPositiveGrowth = parseFloat(stat.growth.toString()) >= 0;
+          
+          return (
+            <div
+              key={index}
+              className="glassmorphism rounded-2xl p-4 sm:p-6 hover:scale-[1.02] hover:shadow-2xl transition-all duration-300 group cursor-pointer border border-white/5 hover:border-white/10 card-hover-effect"
+              data-testid={stat.testId}
             >
-              {parseFloat(stat.growth.toString()) >= 0 ? "+" : ""}{stat.growth}%
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold text-white mb-1" data-testid={`value-${stat.testId}`}>
-            {stat.value}
-          </h3>
-          <p className="text-gray-300 text-sm" data-testid={`label-${stat.testId}`}>
-            {stat.title}
-          </p>
-        </div>
-        ))}
+              <div className="flex items-center justify-between mb-6">
+                <div className={`w-14 h-14 ${stat.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className={`${stat.iconColor} w-7 h-7`} />
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full transition-all duration-300 ${
+                    isPositiveGrowth 
+                      ? "text-green-400 bg-green-400/15 group-hover:bg-green-400/25" 
+                      : "text-red-400 bg-red-400/15 group-hover:bg-red-400/25"
+                  }`}>
+                    {isPositiveGrowth ? "+" : ""}{stat.growth}%
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-white group-hover:text-gray-100 transition-colors duration-300" data-testid={`value-${stat.testId}`}>
+                  {stat.value}
+                </h3>
+                <p className="text-gray-400 text-sm font-medium group-hover:text-gray-300 transition-colors duration-300" data-testid={`label-${stat.testId}`}>
+                  {stat.title}
+                </p>
+              </div>
+              
+              {/* Subtle bottom border accent */}
+              <div className={`mt-4 h-1 rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-300 ${
+                stat.iconBg.replace('/20', '/40')
+              }`}></div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
