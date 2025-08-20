@@ -158,10 +158,10 @@ export class FacebookAdsService {
             accountId: account.accountId, // Adicionar ID da conta
             accountName: account.name, // Adicionar nome da conta
             baseCurrency: baseCurrency, // Moeda base configurada
-            amountSpent: convertedAmount.toFixed(2), // Valor na moeda configurada pelo usuário
+            amountSpent: amountSpentBRL.toFixed(2), // SEMPRE em BRL (valor principal)
             amountSpentBRL: amountSpentBRL.toFixed(2), // Valor em BRL para total consolidado
-            originalAmountSpent: liveCampaign.amountSpent, // Valor original da API do Facebook
-            originalCurrency: originalCurrency, // Moeda original da API do Facebook
+            originalAmountSpent: convertedAmount.toFixed(2), // Valor na moeda configurada da conta
+            originalCurrency: baseCurrency, // Moeda configurada da conta
             facebookAmountSpent: liveCampaign.amountSpent, // Valor real da API do Facebook
             facebookCurrency: originalCurrency, // Moeda real da API do Facebook
             lastSync: new Date()
