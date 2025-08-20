@@ -170,7 +170,7 @@ export class DashboardService {
       }
     });
     
-    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const averageOrderValue = deliveredOrders > 0 ? totalRevenue / deliveredOrders : 0;
     
     // Calculate product costs based on order quantities
     const productCosts = await this.calculateProductCosts(period, provider);
