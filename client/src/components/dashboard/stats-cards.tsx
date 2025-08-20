@@ -21,9 +21,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   }
 
   const totalOrders = metrics?.totalOrders || 0;
-  const deliveredOrders = metrics?.successfulOrders || 0;
+  const deliveredOrders = metrics?.deliveredOrders || 0;
   const cancelledOrders = metrics?.cancelledOrders || 0;
-  const revenue = metrics?.revenue || 0;
+  const revenue = metrics?.totalRevenue || 0;
 
   const calculateGrowth = (current: number, previous: number = current * 0.9) => {
     if (previous === 0) return 0;
