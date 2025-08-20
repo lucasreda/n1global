@@ -92,6 +92,53 @@ export class FacebookAdsService {
     return campaigns;
   }
 
+  async getCampaignsWithPeriod(datePeriod: string = "last_30d"): Promise<any[]> {
+    // Buscar contas ativas
+    const accounts = await db.select().from(facebookAdAccounts).where(eq(facebookAdAccounts.isActive, true));
+    
+    if (accounts.length === 0) {
+      return [];
+    }
+
+    const campaignsWithLiveData: any[] = [];
+
+    for (const account of accounts) {
+      if (!account.accessToken) {
+        continue;
+      }
+
+      try {
+        console.log(`Buscando campanhas ao vivo para período: ${datePeriod}`);
+        // Buscar campanhas da API do Facebook com o período específico
+        const liveCampaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken, datePeriod);
+        
+        // Para cada campanha da API, verificar se existe no banco e manter configurações locais
+        for (const liveCampaign of liveCampaigns) {
+          const existing = await db
+            .select()
+            .from(facebookCampaigns)
+            .where(eq(facebookCampaigns.campaignId, liveCampaign.campaignId))
+            .limit(1);
+
+          // Usar dados ao vivo da API mas manter configurações locais (isSelected)
+          campaignsWithLiveData.push({
+            ...liveCampaign,
+            id: existing[0]?.id || liveCampaign.campaignId,
+            isSelected: existing[0]?.isSelected || false,
+            lastSync: new Date()
+          });
+        }
+      } catch (error) {
+        console.error(`Erro ao buscar campanhas ao vivo para conta ${account.name}:`, error);
+        // Em caso de erro, usar dados do banco como fallback
+        const storedCampaigns = await db.select().from(facebookCampaigns);
+        campaignsWithLiveData.push(...storedCampaigns);
+      }
+    }
+
+    return campaignsWithLiveData;
+  }
+
   async syncCampaigns(datePeriod: string = "last_30d"): Promise<{ synced: number; errors?: string[] }> {
     const accounts = await db.select().from(facebookAdAccounts).where(eq(facebookAdAccounts.isActive, true));
     

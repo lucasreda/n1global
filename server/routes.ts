@@ -290,8 +290,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/facebook/campaigns", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      const { period } = req.query;
       const { facebookAdsService } = await import("./facebook-ads-service");
-      const campaigns = await facebookAdsService.getCampaigns();
+      const campaigns = await facebookAdsService.getCampaignsWithPeriod(period as string || "last_30d");
       res.json(campaigns);
     } catch (error) {
       console.error("Facebook campaigns error:", error);
