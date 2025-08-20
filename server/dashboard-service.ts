@@ -143,6 +143,20 @@ export class DashboardService {
     const productCosts = await this.calculateProductCosts(period, provider);
     const totalProductCosts = productCosts.totalProductCosts;
     
+    // Calculate marketing costs (fixed 20% of revenue)
+    const marketingCosts = totalRevenue * 0.20;
+    
+    // Calculate delivery percentage
+    const deliveryRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
+    
+    // Calculate profit (revenue - product costs - marketing costs)
+    const totalProfit = totalRevenue - totalProductCosts - marketingCosts;
+    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+    
+    // Calculate ROI (return on investment)
+    const totalCosts = totalProductCosts + marketingCosts;
+    const roi = totalCosts > 0 ? ((totalRevenue - totalCosts) / totalCosts) * 100 : 0;
+    
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
     
     return {
@@ -153,6 +167,11 @@ export class DashboardService {
       pendingOrders,
       totalRevenue,
       totalProductCosts,
+      marketingCosts,
+      deliveryRate,
+      totalProfit,
+      profitMargin,
+      roi,
       averageOrderValue,
       period,
       provider: provider || null,
