@@ -15,9 +15,14 @@ export class DashboardService {
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
-      // Add BRL conversions to cached data
+      // Recalculate dynamic values (costs and BRL conversions)
       const totalRevenueBRL = await currencyService.convertToBRL(Number(cached.totalRevenue || 0), 'EUR');
-      const totalProfit = Number(cached.totalRevenue || 0) - (cached.totalProductCosts || 0) - (cached.marketingCosts || 0);
+      
+      // Calculate costs dynamically
+      const productCosts = await this.calculateProductCosts(period, provider);
+      const marketingCosts = await this.getMarketingCosts(period);
+      
+      const totalProfit = Number(cached.totalRevenue || 0) - productCosts.totalProductCosts - marketingCosts.fallbackValue;
       const totalProfitBRL = await currencyService.convertToBRL(totalProfit, 'EUR');
       
       return {
@@ -25,8 +30,13 @@ export class DashboardService {
         totalRevenueBRL,
         totalProfitBRL,
         totalProfit,
-        marketingCostsBRL: cached.marketingCosts || 0,
-        marketingCostsEUR: 0, // Will be calculated if needed
+        totalProductCosts: productCosts.totalProductCosts,
+        marketingCosts: marketingCosts.fallbackValue,
+        marketingCostsBRL: marketingCosts.totalBRL,
+        marketingCostsEUR: marketingCosts.totalEUR,
+        profitMargin: Number(cached.totalRevenue || 0) > 0 ? (totalProfit / Number(cached.totalRevenue || 0)) * 100 : 0,
+        roi: (productCosts.totalProductCosts + marketingCosts.fallbackValue) > 0 ? 
+          ((Number(cached.totalRevenue || 0) - productCosts.totalProductCosts - marketingCosts.fallbackValue) / (productCosts.totalProductCosts + marketingCosts.fallbackValue)) * 100 : 0
       };
     }
     

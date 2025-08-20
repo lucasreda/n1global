@@ -164,6 +164,15 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const totalProfitBRL = metrics?.totalProfitBRL || 0;
   const totalRevenueEUR = revenue; // mantém o valor EUR original  
   const totalRevenueBRL = metrics?.totalRevenueBRL || 0;
+  
+  // Debug logs
+  console.log('📊 Debug Frontend Values:', {
+    totalProfitBRL,
+    totalRevenueBRL,
+    totalRevenueEUR: revenue,
+    totalProfit,
+    allMetrics: metrics
+  });
 
   // Definir dados por prioridade e tamanho
   const primaryMetrics = [
