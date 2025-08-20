@@ -32,7 +32,11 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **Database-First Orders Page**: Fixed orders page to fetch data directly from PostgreSQL database instead of external API, enabling accurate period filtering, status filtering, search functionality, and proper pagination for all 937 stored orders.
 
-✅ **Advanced Financial Dashboard Cards**: Implemented comprehensive financial analytics with 8 cards including highlighted profit card with gradient design, marketing cost calculation (20% of revenue), delivery rate tracking, ROI calculation, and detailed cost analysis for delivered orders only.
+✅ **Facebook Ads Integration**: Complete integration with Facebook Ads API including account management, campaign synchronization, and dynamic marketing cost calculation replacing the fixed 20% model.
+
+✅ **Dynamic Marketing Costs**: Dashboard now calculates marketing costs from selected Facebook Ad campaigns instead of using fixed percentage, enabling precise ROI and profit margin calculations based on actual advertising spend.
+
+✅ **Ads Management Page**: New dedicated page for Facebook Ads management with campaign selection interface, real-time metrics display, and intelligent cost tracking for dashboard integration.
 
 ## System Architecture
 

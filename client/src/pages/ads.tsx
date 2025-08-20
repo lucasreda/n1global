@@ -243,6 +243,9 @@ export default function Ads() {
                     placeholder="act_1234567890"
                   />
                 </div>
+                <div className="col-span-4 text-sm text-gray-400 mt-2">
+                  <strong>Dica:</strong> Para testar, você pode usar dados temporários. A validação será feita quando sincronizar as campanhas.
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="name" className="text-right text-gray-300">Nome</Label>
                   <Input
