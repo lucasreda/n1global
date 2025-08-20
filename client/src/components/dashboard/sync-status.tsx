@@ -149,58 +149,40 @@ export function SyncStatus() {
         {/* Manual Sync Controls */}
         <div className="space-y-3 pt-2">
           <div className="text-sm text-gray-400">
-            Sincronização automática a cada 5 minutos para novos pedidos
+            Sincronização inteligente automática a cada 5 minutos - adapta baseado no volume de atividade
           </div>
           
-          <div className="grid grid-cols-1 gap-2">
+          <div className="flex space-x-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleManualSync("full")}
+              onClick={() => handleManualSync("intelligent")}
               disabled={isManualSyncing || syncStats?.isRunning}
-              className="glassmorphism-light text-gray-200 border-orange-600 hover:bg-orange-500/10"
-              data-testid="button-full-initial-sync"
+              className="glassmorphism-light text-gray-200 border-blue-600 hover:bg-blue-500/10 flex-1"
+              data-testid="button-intelligent-sync"
             >
               {isManualSyncing ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Database className="h-4 w-4 mr-2" />
+                <Activity className="h-4 w-4 mr-2" />
               )}
-              Sincronização Completa (Todos os ~950 Leads)
+              Sync Inteligente
             </Button>
-            
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleManualSync("incremental", 2)}
-                disabled={isManualSyncing || syncStats?.isRunning}
-                className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
-                data-testid="button-quick-sync"
-              >
-                {isManualSyncing ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4 mr-2" />
-                )}
-                Sync Rápido
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleManualSync("incremental", 5)}
-                disabled={isManualSyncing || syncStats?.isRunning}
-                className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
-                data-testid="button-incremental-sync"
-              >
-                {isManualSyncing ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                Sync Incremental
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleManualSync("incremental", 2)}
+              disabled={isManualSyncing || syncStats?.isRunning}
+              className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
+              data-testid="button-quick-sync"
+            >
+              {isManualSyncing ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-2" />
+              )}
+              Sync Rápido
+            </Button>
           </div>
         </div>
       </CardContent>
