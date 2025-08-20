@@ -494,7 +494,7 @@ export class FacebookAdsService {
     
     const campaignRecord: InsertFacebookCampaign = {
       campaignId: campaignData.id,
-      accountId: campaignData.accountId || "",
+      accountId: (campaignData as any).accountId || "",
       name: campaignData.name,
       status: campaignData.status,
       objective: campaignData.objective || null,
