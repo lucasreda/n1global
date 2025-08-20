@@ -14,7 +14,20 @@ export class DashboardService {
     const cached = await this.getCachedMetrics(period, provider);
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
-      return cached;
+      
+      // Add BRL conversions to cached data
+      const totalRevenueBRL = await currencyService.convertToBRL(Number(cached.totalRevenue || 0), 'EUR');
+      const totalProfit = Number(cached.totalRevenue || 0) - (cached.totalProductCosts || 0) - (cached.marketingCosts || 0);
+      const totalProfitBRL = await currencyService.convertToBRL(totalProfit, 'EUR');
+      
+      return {
+        ...cached,
+        totalRevenueBRL,
+        totalProfitBRL,
+        totalProfit,
+        marketingCostsBRL: cached.marketingCosts || 0,
+        marketingCostsEUR: 0, // Will be calculated if needed
+      };
     }
     
     // Calculate fresh metrics
