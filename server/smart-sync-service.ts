@@ -12,12 +12,199 @@ interface SyncOptions {
 export class SmartSyncService {
   private isRunning = false;
   private lastSyncTime: Date | null = null;
+  private syncHistory: Array<{ timestamp: Date; newLeads: number; updates: number }> = [];
   
   // Status que indicam pedidos finalizados (mas ainda precisam ser monitorados para mudanças)
   private finalStatuses = ['delivered', 'cancelled', 'refused', 'returned'];
   
   // Status que precisam monitoramento frequente
   private activeStatuses = ['new order', 'confirmed', 'packed', 'shipped', 'in transit', 'in delivery', 'incident'];
+  
+  // Configurações inteligentes baseadas em volume
+  private adaptiveConfig = {
+    lowVolumeThreshold: 5,    // Menos de 5 mudanças/hora = baixo volume
+    mediumVolumeThreshold: 50, // Menos de 50 mudanças/hora = médio volume
+    maxPagesLowVolume: 3,     // 3 páginas = ~45 leads para baixo volume
+    maxPagesMediumVolume: 8,  // 8 páginas = ~120 leads para médio volume
+    maxPagesHighVolume: 20,   // 20 páginas = ~300 leads para alto volume
+  };
+
+  /**
+   * Analisa o histórico de sincronizações para determinar o volume de atividade
+   */
+  private analyzeVolumePattern(): 'low' | 'medium' | 'high' {
+    if (this.syncHistory.length < 3) return 'medium'; // Default para início
+    
+    const recentSyncs = this.syncHistory.slice(-6); // Últimas 6 sincronizações (30 min)
+    const totalChanges = recentSyncs.reduce((sum, sync) => sum + sync.newLeads + sync.updates, 0);
+    const avgChangesPerHour = totalChanges / (recentSyncs.length * 5 / 60); // 5 min intervals
+    
+    console.log(`📊 Volume detectado: ${avgChangesPerHour.toFixed(1)} mudanças/hora`);
+    
+    if (avgChangesPerHour < this.adaptiveConfig.lowVolumeThreshold) return 'low';
+    if (avgChangesPerHour < this.adaptiveConfig.mediumVolumeThreshold) return 'medium';
+    return 'high';
+  }
+  
+  /**
+   * Determina quantas páginas sincronizar baseado no volume detectado
+   */
+  private getOptimalSyncPages(volume: 'low' | 'medium' | 'high'): number {
+    switch (volume) {
+      case 'low': return this.adaptiveConfig.maxPagesLowVolume;
+      case 'medium': return this.adaptiveConfig.maxPagesMediumVolume;
+      case 'high': return this.adaptiveConfig.maxPagesHighVolume;
+    }
+  }
+  
+  /**
+   * Sincronização inteligente que adapta baseado no volume de atividade
+   */
+  async startIntelligentSync(): Promise<{
+    success: boolean;
+    newLeads: number;
+    updatedLeads: number;
+    totalProcessed: number;
+    duration: number;
+    volume: string;
+    pagesScanned: number;
+    message: string;
+  }> {
+    if (this.isRunning) {
+      return {
+        success: false,
+        newLeads: 0,
+        updatedLeads: 0,
+        totalProcessed: 0,
+        duration: 0,
+        volume: 'unknown',
+        pagesScanned: 0,
+        message: "Sincronização já está em execução"
+      };
+    }
+
+    const startTime = Date.now();
+    this.isRunning = true;
+
+    try {
+      // Analisa o padrão de volume para determinar estratégia
+      const volumePattern = this.analyzeVolumePattern();
+      const maxPages = this.getOptimalSyncPages(volumePattern);
+      
+      console.log(`🧠 Sincronização inteligente: Volume ${volumePattern}, ${maxPages} páginas`);
+
+      let newLeads = 0;
+      let updatedLeads = 0;
+      let totalProcessed = 0;
+      let currentPage = 1;
+      let pagesScanned = 0;
+
+      // Sincronizar apenas as páginas necessárias baseado no volume
+      while (currentPage <= maxPages) {
+        try {
+          console.log(`📄 Escaneando página ${currentPage}/${maxPages}...`);
+          
+          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+          
+          if (!pageLeads || pageLeads.length === 0) {
+            console.log(`📄 Página ${currentPage} vazia, finalizando...`);
+            break;
+          }
+
+          pagesScanned++;
+
+          // Processar cada lead da página
+          for (const apiLead of pageLeads) {
+            try {
+              // Verificar se o lead já existe
+              const [existingLead] = await db
+                .select()
+                .from(orders)
+                .where(eq(orders.id, apiLead.n_lead))
+                .limit(1);
+
+              if (!existingLead) {
+                // Lead novo - inserir
+                await db.insert(orders).values({
+                  id: apiLead.n_lead,
+                  customerName: apiLead.name,
+                  customerPhone: apiLead.phone,
+                  customerCity: apiLead.city,
+                  customerCountry: "IT",
+                  total: apiLead.lead_value,
+                  status: apiLead.status_livrison || "new order",
+                  paymentMethod: apiLead.method_payment || "COD",
+                  provider: "european_fulfillment",
+                });
+
+                newLeads++;
+              } else {
+                // Lead existente - atualizar status se mudou
+                if (existingLead.status !== (apiLead.status_livrison || "new order")) {
+                  await db
+                    .update(orders)
+                    .set({
+                      status: apiLead.status_livrison || "new order",
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(orders.id, apiLead.n_lead));
+                  
+                  updatedLeads++;
+                }
+              }
+              
+              totalProcessed++;
+            } catch (error) {
+              console.warn(`⚠️  Erro ao processar lead ${apiLead.n_lead}:`, error);
+            }
+          }
+
+          currentPage++;
+          
+          // Pausa adaptativa baseada no volume
+          const pauseMs = volumePattern === 'high' ? 50 : volumePattern === 'medium' ? 100 : 200;
+          await new Promise(resolve => setTimeout(resolve, pauseMs));
+
+        } catch (error) {
+          console.warn(`⚠️  Erro ao buscar página ${currentPage}:`, error);
+          break;
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      
+      // Registrar no histórico para análise futura
+      this.syncHistory.push({
+        timestamp: new Date(),
+        newLeads,
+        updates: updatedLeads
+      });
+      
+      // Manter apenas os últimos 20 registros
+      if (this.syncHistory.length > 20) {
+        this.syncHistory = this.syncHistory.slice(-20);
+      }
+
+      this.lastSyncTime = new Date();
+      
+      const message = `Sincronização inteligente (${volumePattern}): ${newLeads} novos, ${updatedLeads} atualizados em ${pagesScanned} páginas`;
+      console.log(`✅ ${message} (${duration}ms)`);
+
+      return {
+        success: true,
+        newLeads,
+        updatedLeads,
+        totalProcessed,
+        duration,
+        volume: volumePattern,
+        pagesScanned,
+        message
+      };
+
+    } finally {
+      this.isRunning = false;
+    }
+  }
 
   async startFullInitialSync(): Promise<{
     success: boolean;
@@ -331,15 +518,18 @@ export class SmartSyncService {
   }
 
   async scheduleAutoSync(): Promise<void> {
-    // Sincronização automática a cada 5 minutos para pedidos ativos
+    // Sincronização inteligente automática a cada 5 minutos
     setInterval(async () => {
       if (!this.isRunning) {
-        console.log("🔄 Executando sincronização automática...");
-        await this.startIncrementalSync({ maxPages: 2 });
+        console.log("🧠 Executando sincronização inteligente automática...");
+        const result = await this.startIntelligentSync();
+        if (result.success) {
+          console.log(`🎯 Sync automático (${result.volume}): ${result.newLeads} novos, ${result.updatedLeads} atualizados em ${result.pagesScanned} páginas`);
+        }
       }
     }, 5 * 60 * 1000); // 5 minutos
 
-    console.log("⏰ Sincronização automática agendada para cada 5 minutos");
+    console.log("⏰ Sincronização inteligente automática agendada para cada 5 minutos");
   }
 
   getLastSyncTime(): Date | null {
@@ -356,6 +546,8 @@ export class SmartSyncService {
     finalizedLeads: number;
     lastSync: Date | null;
     isRunning: boolean;
+    syncHistory: Array<{ timestamp: Date; newLeads: number; updates: number }>;
+    currentVolume: 'low' | 'medium' | 'high';
   }> {
     const allLeads = await db.select().from(orders);
     const totalCount = allLeads.length;
@@ -367,7 +559,9 @@ export class SmartSyncService {
       activeLeads: activeCount,
       finalizedLeads: finalizedCount,
       lastSync: this.lastSyncTime,
-      isRunning: this.isRunning
+      isRunning: this.isRunning,
+      syncHistory: this.syncHistory.slice(-10), // Últimas 10 sincronizações
+      currentVolume: this.analyzeVolumePattern()
     };
   }
 }
