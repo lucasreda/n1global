@@ -255,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const daysNum = parseInt(days);
         const dateFrom = new Date();
         dateFrom.setDate(dateFrom.getDate() - daysNum);
-        whereConditions.push(`(order_date >= $${params.length + 1} OR (order_date IS NULL AND created_at >= $${params.length + 1}))`);
+        whereConditions.push(`COALESCE(order_date, created_at) >= $${params.length + 1}`);
         params.push(dateFrom.toISOString());
       }
       
