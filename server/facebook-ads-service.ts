@@ -79,9 +79,15 @@ export class FacebookAdsService {
       console.warn(`Account validation failed for ${accountData.accountId}, proceeding anyway:`, error);
     }
     
+    // Limpar businessManagerId se estiver vazio para evitar violações de FK
+    const cleanedData = {
+      ...accountData,
+      businessManagerId: accountData.businessManagerId || null
+    };
+    
     const [account] = await db
       .insert(facebookAdAccounts)
-      .values(accountData)
+      .values(cleanedData)
       .returning();
     
     return account;

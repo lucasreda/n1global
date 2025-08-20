@@ -274,7 +274,7 @@ export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   accountId: varchar("account_id", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
-  businessManagerId: varchar("business_manager_id", { length: 255 }).references(() => facebookBusinessManagers.id),
+  businessManagerId: varchar("business_manager_id", { length: 255 }), // Removida a FK constraint
   accessToken: text("access_token"),
   appId: varchar("app_id", { length: 255 }),
   appSecret: text("app_secret"),
