@@ -115,9 +115,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       testId: "card-confirmed-orders"
     },
     {
-      title: "Receita Total",
+      title: "Receita Paga",
       value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      subtitle: `€ ${revenue.toFixed(2)}`,
+      subtitle: `€ ${revenue.toFixed(2)} • ${deliveredOrders} pedidos`,
       icon: Percent,
       iconBg: "bg-purple-600/20",
       iconColor: "text-purple-400",

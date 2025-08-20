@@ -50,6 +50,10 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **Corrected Ticket Médio Calculation**: Fixed average order value calculation to use revenue divided by delivered orders only (paid orders) instead of total orders, providing accurate per-order revenue metrics.
 
+✅ **Enhanced Status Distribution Chart**: Redesigned dashboard status distribution with professional donut chart, real-time data from all order statuses (delivered, confirmed, shipped, pending, returned, cancelled), individual cards with descriptions and progress bars, and intelligent filtering to show only active statuses.
+
+✅ **Revenue Clarity Enhancement**: Updated revenue display to clearly show "Receita Paga" (Paid Revenue) with subtitle indicating it's only from delivered orders, ensuring users understand the metric represents only completed/paid transactions.
+
 ## System Architecture
 
 ### Frontend Architecture

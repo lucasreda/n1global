@@ -129,7 +129,7 @@ export class DashboardService {
     let pendingOrders = 0;
     let returnedOrders = 0;
     let confirmedOrders = 0;
-    let totalRevenue = 0; // Only revenue from delivered orders
+    let totalRevenue = 0; // Only revenue from delivered/paid orders
     
     statusCounts.forEach(row => {
       const orderCount = row.count;
@@ -141,7 +141,7 @@ export class DashboardService {
       switch (row.status) {
         case 'delivered':
           deliveredOrders += orderCount;
-          totalRevenue += revenue; // Only count revenue from delivered orders
+          totalRevenue += revenue; // Only count revenue from delivered/paid orders
           break;
         case 'returned':
           returnedOrders += orderCount;
