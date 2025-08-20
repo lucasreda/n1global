@@ -51,6 +51,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const totalProfit = metrics?.totalProfit || 0;
   const profitMargin = metrics?.profitMargin || 0;
   const roi = metrics?.roi || 0;
+  const averageOrderValue = metrics?.averageOrderValue || 0;
 
   // Calcular valores em BRL
   const totalProfitBRL = metrics?.totalProfitBRL || 0;
@@ -396,7 +397,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="w-10 h-10 bg-pink-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
             <BarChart3 className="text-pink-400 w-5 h-5" />
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">€{(revenue / totalOrders).toFixed(0)}</h5>
+          <h5 className="text-lg font-bold text-white mb-1">€{averageOrderValue.toFixed(0)}</h5>
           <p className="text-gray-400 text-xs">Ticket Médio</p>
           <p className="text-xs text-pink-400 mt-1 opacity-80">Por pedido</p>
         </div>
