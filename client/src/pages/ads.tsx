@@ -201,14 +201,20 @@ export default function Ads() {
     return `${parseFloat(value || "0").toFixed(2)}%`;
   };
 
-  // Filtrar campanhas por conta selecionada
+  // Filtrar campanhas por conta selecionada para exibição
   const filteredCampaigns = campaigns?.filter(campaign => {
     if (selectedAccountId === "all") return true;
     return campaign.accountId === selectedAccountId;
   }) || [];
 
-  const selectedCampaigns = filteredCampaigns.filter(c => c.isSelected) || [];
-  const totalSpent = selectedCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
+  // Campanhas selecionadas de TODAS as contas (não filtradas)
+  const allSelectedCampaigns = campaigns?.filter(c => c.isSelected) || [];
+  
+  // Campanhas selecionadas da conta filtrada (para exibir no contador)
+  const filteredSelectedCampaigns = filteredCampaigns.filter(c => c.isSelected) || [];
+  
+  // Gasto total de TODAS as campanhas selecionadas (de todas as contas)
+  const totalSpent = allSelectedCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
 
   if (accountsLoading) {
     return (
@@ -358,7 +364,7 @@ export default function Ads() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-400">{selectedCampaigns.length}</div>
+            <div className="text-2xl font-bold text-blue-400">{filteredSelectedCampaigns.length}</div>
             <p className="text-gray-400 text-sm">de {filteredCampaigns.length} {selectedAccountId === "all" ? "total" : "da conta"}</p>
           </CardContent>
         </Card>
@@ -372,7 +378,7 @@ export default function Ads() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString())}</div>
-            <p className="text-gray-400 text-sm">campanhas selecionadas</p>
+            <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
           </CardContent>
         </Card>
 
