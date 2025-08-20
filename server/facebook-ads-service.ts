@@ -160,8 +160,8 @@ export class FacebookAdsService {
             baseCurrency: baseCurrency, // Moeda base configurada
             amountSpent: convertedAmount.toFixed(2), // Valor na moeda configurada pelo usuário
             amountSpentBRL: amountSpentBRL.toFixed(2), // Valor em BRL para total consolidado
-            originalAmountSpent: convertedAmount.toFixed(2), // Valor na moeda configurada (para exibir como "original")
-            originalCurrency: baseCurrency, // Moeda configurada pelo usuário
+            originalAmountSpent: liveCampaign.amountSpent, // Valor original da API do Facebook
+            originalCurrency: originalCurrency, // Moeda original da API do Facebook
             facebookAmountSpent: liveCampaign.amountSpent, // Valor real da API do Facebook
             facebookCurrency: originalCurrency, // Moeda real da API do Facebook
             lastSync: new Date()
