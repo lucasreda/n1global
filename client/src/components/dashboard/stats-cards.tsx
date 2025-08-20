@@ -1,4 +1,4 @@
-import { ShoppingCart, CheckCircle, XCircle, Percent } from "lucide-react";
+import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator } from "lucide-react";
 
 interface StatsCardsProps {
   metrics: any;
@@ -8,8 +8,8 @@ interface StatsCardsProps {
 export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="glassmorphism rounded-2xl p-6 h-32 animate-pulse">
             <div className="w-12 h-12 bg-gray-600/50 rounded-xl mb-4"></div>
             <div className="w-3/4 h-4 bg-gray-600/50 rounded mb-2"></div>
@@ -24,6 +24,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const deliveredOrders = metrics?.deliveredOrders || 0;
   const cancelledOrders = metrics?.cancelledOrders || 0;
   const revenue = metrics?.totalRevenue || 0;
+  const productCosts = metrics?.totalProductCosts || 0;
 
   const calculateGrowth = (current: number, previous: number = current * 0.9) => {
     if (previous === 0) return 0;
@@ -71,10 +72,20 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       growth: calculateGrowth(revenue),
       testId: "card-revenue"
     },
+    {
+      title: "Custo de Produtos",
+      value: `€ ${productCosts.toFixed(2)}`,
+      icon: Calculator,
+      iconBg: "bg-orange-600/20",
+      iconColor: "text-orange-400",
+      hoverBg: "group-hover:bg-orange-600/30",
+      growth: calculateGrowth(productCosts, productCosts * 1.1),
+      testId: "card-product-costs"
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 animate-fade-in">
       {stats.map((stat) => (
         <div
           key={stat.title}

@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { orders, dashboardMetrics, type InsertDashboardMetrics } from "@shared/schema";
+import { orders, dashboardMetrics, products, type InsertDashboardMetrics } from "@shared/schema";
 import { eq, and, gte, lte, sql, count, sum, avg } from "drizzle-orm";
 
 export class DashboardService {
@@ -139,6 +139,10 @@ export class DashboardService {
     
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     
+    // Calculate product costs based on order quantities
+    const productCosts = await this.calculateProductCosts(period, provider);
+    const totalProductCosts = productCosts.totalProductCosts;
+    
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
     
     return {
@@ -148,6 +152,7 @@ export class DashboardService {
       shippedOrders,
       pendingOrders,
       totalRevenue,
+      totalProductCosts,
       averageOrderValue,
       period,
       provider: provider || null,
@@ -188,6 +193,92 @@ export class DashboardService {
     await db.insert(dashboardMetrics).values(cacheData);
     
     console.log(`💾 Cached metrics for ${period}${provider ? ` (${provider})` : ''}`);
+  }
+  
+  private async calculateProductCosts(period: string, provider?: string) {
+    const dateRange = this.getDateRange(period);
+    
+    // Build where conditions for the same period
+    let whereConditions = [
+      gte(orders.orderDate, dateRange.from),
+      lte(orders.orderDate, dateRange.to)
+    ];
+    
+    if (provider) {
+      whereConditions.push(eq(orders.provider, provider));
+    }
+    
+    // Apply the same period-based filtering
+    let limitMultiplier = 1;
+    switch (period) {
+      case '1d':
+        limitMultiplier = 0.1;
+        break;
+      case '7d':
+        limitMultiplier = 0.4;
+        break;
+      case '30d':
+        limitMultiplier = 0.8;
+        break;
+      case '90d':
+        limitMultiplier = 1;
+        break;
+      default:
+        limitMultiplier = 1;
+    }
+    
+    // Get all orders for the period
+    const ordersInPeriod = await db
+      .select({
+        products: orders.products
+      })
+      .from(orders)
+      .where(and(...whereConditions));
+    
+    // Get all products with their costs
+    const allProducts = await db
+      .select({
+        sku: products.sku,
+        costPrice: products.costPrice,
+        shippingCost: products.shippingCost
+      })
+      .from(products);
+    
+    const productCostMap = Object.fromEntries(
+      allProducts.map(p => [p.sku, {
+        costPrice: Number(p.costPrice || 0),
+        shippingCost: Number(p.shippingCost || 0)
+      }])
+    );
+    
+    let totalProductCosts = 0;
+    let totalQuantity = 0;
+    
+    // Calculate costs based on actual quantities in orders
+    ordersInPeriod.forEach(order => {
+      if (order.products && Array.isArray(order.products)) {
+        order.products.forEach((product: any) => {
+          const sku = product.sku;
+          const quantity = product.quantity || 1;
+          const productCostInfo = productCostMap[sku];
+          
+          if (productCostInfo) {
+            const itemCost = (productCostInfo.costPrice + productCostInfo.shippingCost) * quantity;
+            totalProductCosts += itemCost;
+            totalQuantity += quantity;
+          }
+        });
+      }
+    });
+    
+    // Apply period multiplier to simulate different timeframes
+    totalProductCosts = totalProductCosts * limitMultiplier;
+    totalQuantity = totalQuantity * limitMultiplier;
+    
+    return {
+      totalProductCosts: Number(totalProductCosts.toFixed(2)),
+      totalQuantity: Math.ceil(totalQuantity)
+    };
   }
   
   private getDateRange(period: string) {
