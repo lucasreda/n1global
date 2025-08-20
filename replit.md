@@ -44,6 +44,12 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **Campaign Selection Persistence**: Selected Facebook campaigns remain selected after synchronization operations, preserving user preferences across automatic and manual sync processes.
 
+✅ **Automatic Shipping Sync System**: Implemented intelligent 30-minute interval automatic synchronization for shipping data similar to Facebook Ads system. Dashboard automatically checks for sync necessity on page load and executes smart sync if last update was over 30 minutes ago.
+
+✅ **Smart Sync Integration**: Auto-sync system uses SmartSyncService with intelligent volume-based synchronization, optimizing API calls while maintaining data accuracy. Manual sync button remains available for immediate updates.
+
+✅ **Corrected Ticket Médio Calculation**: Fixed average order value calculation to use revenue divided by delivered orders only (paid orders) instead of total orders, providing accurate per-order revenue metrics.
+
 ## System Architecture
 
 ### Frontend Architecture
