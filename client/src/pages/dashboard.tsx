@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { SyncStatus } from "@/components/dashboard/sync-status";
@@ -72,10 +71,6 @@ export default function Dashboard() {
   if (metricsLoading) {
     return (
       <div className="space-y-6">
-        <DashboardHeader 
-          title="Dashboard COD - Itália" 
-          subtitle="Carregando dados da European Fulfillment Center..." 
-        />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-32 glassmorphism" />
@@ -92,49 +87,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <DashboardHeader 
-        title="Dashboard COD - Itália" 
-        subtitle={
-          <div className="flex items-center space-x-2">
-            <span>Dados reais da European Fulfillment Center</span>
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-400/20 text-green-400 border border-green-400/30">
-              API REAL
-            </span>
-          </div>
-        } 
-      />
-
-      {/* Date Filter */}
-      <div className="glassmorphism rounded-2xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Calendar className="text-blue-400" size={20} />
-            <span className="text-white font-medium">Período:</span>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-48 glassmorphism-light border-gray-600 text-white">
-                <SelectValue placeholder="Selecionar período" />
-              </SelectTrigger>
-              <SelectContent className="glassmorphism border-gray-600">
-                <SelectItem value="1">Hoje</SelectItem>
-                <SelectItem value="7">Últimos 7 dias</SelectItem>
-                <SelectItem value="30">Últimos 30 dias</SelectItem>
-                <SelectItem value="90">Últimos 3 meses</SelectItem>
-                <SelectItem value="365">Último ano</SelectItem>
-                <SelectItem value="all">Todos os períodos</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="glassmorphism-light text-gray-300 hover:bg-white/20"
-              data-testid="button-refresh-data"
-            >
-              <Filter size={16} className="mr-2" />
-              Atualizar
-            </Button>
-          </div>
+      {/* Compact Date Filter */}
+      <div className="flex justify-end">
+        <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2">
+          <Calendar className="text-gray-400" size={16} />
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-36 bg-transparent border-0 text-gray-300 text-sm h-auto p-0">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent className="glassmorphism border-gray-600">
+              <SelectItem value="1">Hoje</SelectItem>
+              <SelectItem value="7">7 dias</SelectItem>
+              <SelectItem value="30">30 dias</SelectItem>
+              <SelectItem value="90">3 meses</SelectItem>
+              <SelectItem value="365">1 ano</SelectItem>
+              <SelectItem value="all">Tudo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       
