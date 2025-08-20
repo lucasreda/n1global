@@ -120,7 +120,7 @@ export class DashboardService {
           returnedOrders += orderCount;
           break;
         case 'unpacked':
-          confirmedOrders += orderCount;
+          // unpacked orders are NOT confirmed - they reduce the confirmed count
           break;
         case 'cancelled':
         case 'canceled':
@@ -152,6 +152,16 @@ export class DashboardService {
     // Calculate marketing costs (fixed 20% of revenue)
     const marketingCosts = totalRevenue * 0.20;
     
+    // Calculate confirmed orders (total - unpacked)
+    const unpackedOrders = statusCounts
+      .filter(row => row.status === 'unpacked')
+      .reduce((sum, row) => sum + row.count, 0);
+    
+    // Override confirmedOrders calculation: total orders - unpacked orders
+    confirmedOrders = totalOrders - unpackedOrders;
+    
+    console.log(`🔍 Debug: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
+    
     // Calculate delivery percentage
     const deliveryRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
     
@@ -163,6 +173,7 @@ export class DashboardService {
     const totalCosts = totalProductCosts + marketingCosts;
     const roi = totalCosts > 0 ? ((totalRevenue - totalCosts) / totalCosts) * 100 : 0;
     
+    console.log(`🔍 Debug: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
     
     return {
