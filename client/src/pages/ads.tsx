@@ -42,6 +42,8 @@ interface FacebookCampaign {
   startTime: string;
   endTime: string;
   lastSync: string;
+  accountId?: string;
+  accountName?: string;
 }
 
 interface FacebookBusinessManager {
@@ -67,6 +69,7 @@ export default function Ads() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bmDialogOpen, setBmDialogOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
   const [newAccount, setNewAccount] = useState({
     accountId: "",
     name: "",
@@ -198,7 +201,13 @@ export default function Ads() {
     return `${parseFloat(value || "0").toFixed(2)}%`;
   };
 
-  const selectedCampaigns = campaigns?.filter(c => c.isSelected) || [];
+  // Filtrar campanhas por conta selecionada
+  const filteredCampaigns = campaigns?.filter(campaign => {
+    if (selectedAccountId === "all") return true;
+    return campaign.accountId === selectedAccountId;
+  }) || [];
+
+  const selectedCampaigns = filteredCampaigns.filter(c => c.isSelected) || [];
   const totalSpent = selectedCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
 
   if (accountsLoading) {
@@ -227,6 +236,18 @@ export default function Ads() {
           <p className="text-sm text-gray-400">Campanhas e custos de marketing</p>
         </div>
         <div className="flex items-center space-x-3">
+          <select
+            value={selectedAccountId}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
+            className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5"
+          >
+            <option value="all">Todas as contas</option>
+            {adAccounts?.map((account) => (
+              <option key={account.id} value={account.accountId}>
+                {account.name}
+              </option>
+            ))}
+          </select>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -350,7 +371,7 @@ export default function Ads() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-400">{selectedCampaigns.length}</div>
-            <p className="text-gray-400 text-sm">de {campaigns?.length || 0} total</p>
+            <p className="text-gray-400 text-sm">de {filteredCampaigns.length} {selectedAccountId === "all" ? "total" : "da conta"}</p>
           </CardContent>
         </Card>
 
@@ -379,6 +400,22 @@ export default function Ads() {
             <p className="text-gray-400 text-sm">
               {adAccounts?.filter(a => a.isActive).length || 0} ativas
             </p>
+            {adAccounts && adAccounts.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {adAccounts.slice(0, 3).map((account) => (
+                  <div key={account.id} className="flex items-center space-x-2 text-xs">
+                    <Facebook className="w-3 h-3 text-blue-400" />
+                    <span className="text-gray-300 truncate">{account.name}</span>
+                    <span className="text-green-400">●</span>
+                  </div>
+                ))}
+                {adAccounts.length > 3 && (
+                  <div className="text-xs text-gray-400">
+                    +{adAccounts.length - 3} mais contas
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -401,10 +438,13 @@ export default function Ads() {
       )}
 
       {/* Campaigns List */}
-      {campaigns?.length ? (
+      {filteredCampaigns?.length ? (
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-white">Campanhas</CardTitle>
+            <CardTitle className="text-lg text-white flex items-center space-x-2">
+              <Facebook className="w-5 h-5 text-blue-500" />
+              <span>Campanhas {selectedAccountId !== "all" && `- ${adAccounts?.find(acc => acc.accountId === selectedAccountId)?.name}`}</span>
+            </CardTitle>
             <CardDescription className="text-sm text-gray-400">
               Selecione campanhas para incluir no dashboard
             </CardDescription>
@@ -416,7 +456,7 @@ export default function Ads() {
                   <Skeleton key={i} className="h-16 glassmorphism-light" />
                 ))
               ) : (
-                campaigns.map((campaign) => (
+                filteredCampaigns.map((campaign) => (
                   <div
                     key={campaign.id}
                     className={`glassmorphism-light rounded-lg p-3 border transition-all duration-200 ${
@@ -472,6 +512,26 @@ export default function Ads() {
           <CardContent className="text-center py-12">
             <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">Nenhuma campanha encontrada</h3>
+            <p className="text-gray-400 mb-6">
+              Sincronize suas campanhas do Facebook Ads para começar
+            </p>
+            <Button 
+              onClick={() => syncCampaignsMutation.mutate()}
+              disabled={syncCampaignsMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
+              Sincronizar Campanhas
+            </Button>
+          </CardContent>
+        </Card>
+      ) : adAccounts?.length ? (
+        <Card className="glassmorphism border-gray-700">
+          <CardContent className="text-center py-12">
+            <Facebook className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {selectedAccountId === "all" ? "Nenhuma campanha encontrada" : "Nenhuma campanha na conta selecionada"}
+            </h3>
             <p className="text-gray-400 mb-6">
               Sincronize suas campanhas do Facebook Ads para começar
             </p>

@@ -131,6 +131,8 @@ export class FacebookAdsService {
             ...liveCampaign,
             id: existing[0]?.id || liveCampaign.campaignId,
             isSelected: existing[0]?.isSelected || false,
+            accountId: account.accountId, // Adicionar ID da conta
+            accountName: account.name, // Adicionar nome da conta
             lastSync: new Date()
           });
         }
