@@ -367,16 +367,22 @@ export class FacebookAdsService {
         
         let amountInBRL = 0;
         
-        // A configuração baseCurrency da conta indica em que moeda queremos os valores finais
-        // Mas o originalCurrency indica a moeda real dos dados da API do Facebook
-        // SEMPRE converter da moeda original (API) para BRL, independente da configuração da conta
+        // Para contas configuradas como BRL, os valores da API já vêm convertidos para BRL
+        // Para outras contas, converter da moeda original para BRL
         
-        if (originalCurrency === "BRL") {
+        if (baseCurrency === "BRL") {
+          // Conta configurada em BRL - valores já estão em BRL
           amountInBRL = originalAmount;
-          console.log(`💰 Valor já em BRL: ${originalAmount} BRL`);
+          console.log(`💰 Conta BRL - valor já em BRL: ${originalAmount} BRL`);
         } else {
-          amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
-          console.log(`💰 Convertendo ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL (conta: ${baseCurrency})`);
+          // Conta em outra moeda - converter para BRL
+          if (originalCurrency === "BRL") {
+            amountInBRL = originalAmount;
+            console.log(`💰 Valor já em BRL: ${originalAmount} BRL`);
+          } else {
+            amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
+            console.log(`💰 Convertendo ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL (conta: ${baseCurrency})`);
+          }
         }
         
         totalBRL += amountInBRL;
@@ -490,6 +496,7 @@ export class FacebookAdsService {
     
     const campaignRecord: InsertFacebookCampaign = {
       campaignId: campaignData.id,
+      accountId: campaignData.accountId || "",
       name: campaignData.name,
       status: campaignData.status,
       objective: campaignData.objective || null,
