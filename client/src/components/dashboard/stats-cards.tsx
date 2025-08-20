@@ -43,6 +43,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const confirmedOrders = metrics?.confirmedOrders || 0;
   const revenue = metrics?.totalRevenue || 0;
   const productCosts = metrics?.totalProductCosts || 0;
+  const productCostsBRL = metrics?.totalProductCostsBRL || 0;
   const marketingCosts = metrics?.marketingCosts || 0;
   const marketingCostsBRL = metrics?.marketingCostsBRL || 0;
   const marketingCostsEUR = metrics?.marketingCostsEUR || 0;
@@ -125,12 +126,13 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     },
     {
       title: "Custo de Produtos",
-      value: `€ ${productCosts.toFixed(2)}`,
+      value: `R$ ${productCostsBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      subtitle: `€ ${productCosts.toFixed(2)}`,
       icon: Calculator,
       iconBg: "bg-orange-600/20",
       iconColor: "text-orange-400",
       hoverBg: "group-hover:bg-orange-600/30",
-      growth: calculateGrowth(productCosts, productCosts * 1.1),
+      growth: calculateGrowth(productCostsBRL, productCostsBRL * 1.1),
       testId: "card-product-costs"
     },
     {
@@ -358,9 +360,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="w-10 h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
             <Calculator className="text-indigo-400 w-5 h-5" />
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">€{productCosts.toLocaleString('pt-PT')}</h5>
+          <h5 className="text-lg font-bold text-white mb-1">R$ {productCostsBRL.toLocaleString('pt-BR')}</h5>
           <p className="text-gray-400 text-xs">Custos Produtos</p>
-          <p className="text-xs text-indigo-400 mt-1 opacity-80">Entregues apenas</p>
+          <p className="text-xs text-indigo-400 mt-1 opacity-80">€ {productCosts.toFixed(2)}</p>
         </div>
         
         <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-red-500/10 hover:border-red-400/25">

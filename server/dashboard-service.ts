@@ -173,7 +173,8 @@ export class DashboardService {
     
     // Calculate product costs based on order quantities
     const productCosts = await this.calculateProductCosts(period, provider);
-    const totalProductCosts = productCosts.totalProductCosts;
+    const totalProductCosts = productCosts.totalProductCosts; // EUR value
+    const totalProductCostsBRL = productCosts.totalProductCostsBRL; // BRL value
     
     // Calculate marketing costs from selected Facebook campaigns based on period
     const marketingCosts = await this.getMarketingCosts(period);
@@ -191,18 +192,17 @@ export class DashboardService {
     // Calculate delivery percentage
     const deliveryRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
     
-    // Calculate profit (revenue - product costs - marketing costs)
-    const marketingCostsBRL = marketingCosts.fallbackValue;
-    const totalProfit = totalRevenue - totalProductCosts - marketingCostsBRL;
-    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-    
-    // Convert values to BRL for display
+    // Convert revenue to BRL for consistent calculations
     const totalRevenueBRL = await currencyService.convertToBRL(totalRevenue, 'EUR');
-    const totalProfitBRL = await currencyService.convertToBRL(totalProfit, 'EUR');
     
-    // Calculate ROI (return on investment)
-    const totalCosts = totalProductCosts + marketingCostsBRL;
-    const roi = totalCosts > 0 ? ((totalRevenue - totalCosts) / totalCosts) * 100 : 0;
+    // Calculate profit using BRL values (revenue BRL - product costs BRL - marketing costs BRL)
+    const marketingCostsBRL = marketingCosts.totalBRL;
+    const totalProfitBRL = totalRevenueBRL - totalProductCostsBRL - marketingCostsBRL;
+    const profitMargin = totalRevenueBRL > 0 ? (totalProfitBRL / totalRevenueBRL) * 100 : 0;
+    
+    // Calculate ROI (return on investment) in BRL
+    const totalCostsBRL = totalProductCostsBRL + marketingCostsBRL;
+    const roi = totalCostsBRL > 0 ? ((totalRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
     console.log(`🔍 Debug: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
@@ -217,13 +217,14 @@ export class DashboardService {
       pendingOrders,
       totalRevenue,
       totalRevenueBRL, // Added BRL value for display
-      totalProductCosts,
+      totalProductCosts, // EUR value for reference
+      totalProductCostsBRL, // BRL value for display and calculations
       marketingCosts: marketingCostsBRL, // Main value for calculations in BRL
       marketingCostsBRL: marketingCosts.totalBRL, // Explicit BRL value
       marketingCostsEUR: marketingCosts.totalEUR, // EUR value for display
       deliveryRate,
-      totalProfit,
-      totalProfitBRL, // Added BRL value for display
+      totalProfit: totalProfitBRL, // Now calculated in BRL
+      totalProfitBRL, // BRL value for display
       profitMargin,
       roi,
       averageOrderValue,
@@ -357,8 +358,16 @@ export class DashboardService {
     totalProductCosts = totalProductCosts * limitMultiplier;
     totalQuantity = totalQuantity * limitMultiplier;
     
+    // Convert product costs from EUR to BRL using the currency API
+    const convertedCosts = await this.currencyService.convertMultiCurrency([
+      { amount: totalProductCosts, fromCurrency: 'EUR', toCurrency: 'BRL' }
+    ]);
+    
+    const totalProductCostsBRL = convertedCosts.length > 0 ? convertedCosts[0].convertedAmount : totalProductCosts;
+    
     return {
-      totalProductCosts: Number(totalProductCosts.toFixed(2)),
+      totalProductCosts: Number(totalProductCosts.toFixed(2)), // Keep EUR for reference
+      totalProductCostsBRL: Number(totalProductCostsBRL.toFixed(2)), // Add BRL conversion
       totalQuantity: Math.ceil(totalQuantity)
     };
   }
