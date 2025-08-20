@@ -51,6 +51,11 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const profitMargin = metrics?.profitMargin || 0;
   const roi = metrics?.roi || 0;
 
+  // Calcular valores em BRL
+  const totalProfitBRL = metrics?.totalProfitBRL || 0;
+  const totalRevenueEUR = revenue; // mantém o valor EUR original  
+  const totalRevenueBRL = metrics?.totalRevenueBRL || 0;
+
   const calculateGrowth = (current: number, previous: number = current * 0.9) => {
     if (previous === 0) return 0;
     return ((current - previous) / previous * 100).toFixed(1);
@@ -109,12 +114,13 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     },
     {
       title: "Receita Total",
-      value: `€ ${revenue.toFixed(2)}`,
+      value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      subtitle: `€ ${revenue.toFixed(2)}`,
       icon: Percent,
       iconBg: "bg-purple-600/20",
       iconColor: "text-purple-400",
       hoverBg: "group-hover:bg-purple-600/30",
-      growth: calculateGrowth(revenue),
+      growth: calculateGrowth(totalRevenueBRL),
       testId: "card-revenue"
     },
     {
@@ -159,11 +165,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       testId: "card-roi"
     },
   ];
-
-  // Calcular valores em BRL
-  const totalProfitBRL = metrics?.totalProfitBRL || 0;
-  const totalRevenueEUR = revenue; // mantém o valor EUR original  
-  const totalRevenueBRL = metrics?.totalRevenueBRL || 0;
 
   // Definir dados por prioridade e tamanho
   const primaryMetrics = [
@@ -260,7 +261,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <DollarSign className="text-green-400 w-8 h-8" />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-green-400 mb-2" data-testid="value-card-profit">
-            €{totalProfit.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
+            R$ {totalProfitBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </h1>
           <p className="text-lg text-gray-300 mb-4" data-testid="label-card-profit">Lucro Total</p>
           <div className="flex justify-center items-center space-x-4 text-sm">
@@ -284,7 +285,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               Principal
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-white mb-1">€{revenue.toLocaleString('pt-PT')}</h3>
+          <h3 className="text-2xl font-bold text-white mb-1">R$ {totalRevenueBRL.toLocaleString('pt-BR')}</h3>
           <p className="text-gray-300 text-sm font-medium">Receita Total</p>
           <p className="text-xs text-blue-400 mt-2">{totalOrders} pedidos</p>
         </div>
