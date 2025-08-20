@@ -238,6 +238,16 @@ export class DashboardService {
     
     console.log(`💾 Cached metrics for ${period}${provider ? ` (${provider})` : ''}`);
   }
+
+  async invalidateCache() {
+    try {
+      // Invalida todo o cache do dashboard deletando entradas antigas
+      await db.delete(dashboardMetrics);
+      console.log('🗑️ Dashboard cache invalidated - will recalculate on next request');
+    } catch (error) {
+      console.warn('Cache invalidation failed:', error);
+    }
+  }
   
   private async calculateProductCosts(period: string, provider?: string) {
     const dateRange = this.getDateRange(period);
@@ -488,26 +498,7 @@ export class DashboardService {
     }));
   }
   
-  async invalidateCache(period?: string, provider?: string) {
-    let conditions = [];
-    
-    if (period) {
-      conditions.push(eq(dashboardMetrics.period, period));
-    }
-    
-    if (provider) {
-      conditions.push(eq(dashboardMetrics.provider, provider));
-    }
-    
-    if (conditions.length === 0) {
-      // Clear all cache
-      await db.delete(dashboardMetrics);
-    } else {
-      await db.delete(dashboardMetrics).where(and(...conditions));
-    }
-    
-    console.log(`🗑️ Cleared dashboard metrics cache`);
-  }
+
 }
 
 export const dashboardService = new DashboardService();

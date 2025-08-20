@@ -317,7 +317,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertFacebookAdAccountSchema.parse(req.body);
       
       const { facebookAdsService } = await import("./facebook-ads-service");
+      const { DashboardService } = await import("./dashboard-service");
+      const dashboardService = new DashboardService();
+      
       const account = await facebookAdsService.addAdAccount(validatedData);
+      
+      // Invalida cache do dashboard para refletir nova conta
+      await dashboardService.invalidateCache();
+      console.log('🔄 Dashboard cache invalidated after adding Facebook account');
       
       res.json(account);
     } catch (error) {
@@ -387,7 +394,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { campaignId } = req.params;
       const { isSelected } = req.body;
       const { facebookAdsService } = await import("./facebook-ads-service");
+      const { DashboardService } = await import("./dashboard-service");
+      const dashboardService = new DashboardService();
+      
       await facebookAdsService.updateCampaignSelection(campaignId, isSelected);
+      
+      // Invalida cache do dashboard para refletir mudança na seleção
+      await dashboardService.invalidateCache();
+      console.log('🔄 Dashboard cache invalidated after campaign selection change');
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Facebook campaign update error:", error);
@@ -400,10 +415,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { period } = req.body;
       const { facebookAdsService } = await import("./facebook-ads-service");
       const { syncManager } = await import("./sync-manager");
+      const { DashboardService } = await import("./dashboard-service");
+      const dashboardService = new DashboardService();
       
       console.log('🔄 Iniciando sincronização manual');
       const result = await facebookAdsService.syncCampaigns(period || "last_30d");
       syncManager.updateLastSyncTime();
+      
+      // Invalida cache do dashboard após sincronização
+      await dashboardService.invalidateCache();
+      console.log('🔄 Dashboard cache invalidated after sync');
       console.log('✅ Sincronização manual concluída');
       
       res.json(result);
