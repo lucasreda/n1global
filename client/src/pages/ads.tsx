@@ -402,6 +402,23 @@ export default function Ads() {
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <Label htmlFor="currency" className="text-sm text-gray-300">Moeda da Conta</Label>
+                  <select
+                    id="currency"
+                    value={newAccount.baseCurrency || 'BRL'}
+                    onChange={(e) => setNewAccount(prev => ({ ...prev, baseCurrency: e.target.value }))}
+                    className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-2 h-9 w-full"
+                  >
+                    <option value="BRL">BRL - Real Brasileiro</option>
+                    <option value="USD">USD - Dólar Americano</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - Libra Esterlina</option>
+                    <option value="CAD">CAD - Dólar Canadense</option>
+                    <option value="AUD">AUD - Dólar Australiano</option>
+                  </select>
+                </div>
+
                 {selectedNetwork === 'facebook' ? (
                   <>
                     <div className="space-y-1">
