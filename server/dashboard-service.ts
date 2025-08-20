@@ -45,10 +45,10 @@ export class DashboardService {
     const dateRange = this.getDateRange(period);
     console.log(`📅 Calculating metrics from ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
     
-    // Base query conditions
+    // Base query conditions - use createdAt since orderDate might be null
     let whereConditions = [
-      gte(orders.orderDate, dateRange.from),
-      lte(orders.orderDate, dateRange.to)
+      gte(orders.createdAt, dateRange.from),
+      lte(orders.createdAt, dateRange.to)
     ];
     
     if (provider) {

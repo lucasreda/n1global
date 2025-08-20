@@ -116,28 +116,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sync routes - for importing data from providers
+  // Smart Sync routes - for intelligent incremental synchronization
   app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { provider = 'european_fulfillment', type = 'full_sync' } = req.body;
+      const { forceFullSync = false, maxPages = 3 } = req.body;
+      const { smartSyncService } = await import("./smart-sync-service");
       
-      console.log(`🔄 Starting sync for provider: ${provider}, type: ${type}`);
-      
-      const { syncService } = await import("./sync-service");
-      const jobId = await syncService.startSync(provider, type);
-      
-      res.json({ 
-        success: true, 
-        jobId,
-        message: `Sync job started for ${provider}` 
+      const result = await smartSyncService.startIncrementalSync({ 
+        forceFullSync, 
+        maxPages 
       });
+      
+      res.json(result);
     } catch (error) {
-      console.error("Sync start error:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to start sync job",
-        error: error.message 
-      });
+      console.error("Smart sync error:", error);
+      res.status(500).json({ message: "Failed to start smart sync" });
+    }
+  });
+
+  app.get("/api/sync/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { smartSyncService } = await import("./smart-sync-service");
+      const stats = await smartSyncService.getSyncStats();
+      
+      res.json(stats);
+    } catch (error) {
+      console.error("Sync stats error:", error);
+      res.status(500).json({ message: "Failed to get sync stats" });
     }
   });
   
