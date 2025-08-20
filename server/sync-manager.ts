@@ -109,8 +109,9 @@ export class SyncManager {
 
     try {
       console.log('🔄 Iniciando sincronização automática da transportadora...');
-      const { smartSyncService } = await import("./smart-sync-service");
-      await smartSyncService.performSmartSync();
+      const { SmartSyncService } = await import("./smart-sync-service");
+      const smartSyncService = new SmartSyncService();
+      await smartSyncService.startIntelligentSync();
       
       this.updateLastShippingSyncTime();
       console.log('✅ Sincronização automática da transportadora concluída');
