@@ -232,61 +232,68 @@ export default function Ads() {
                   Adicione suas credenciais do Facebook Ads para importar campanhas
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="accountId" className="text-right text-gray-300">ID da Conta</Label>
+              <div className="space-y-6 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="accountId" className="text-gray-300">ID da Conta</Label>
                   <Input
                     id="accountId"
                     value={newAccount.accountId}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, accountId: e.target.value }))}
-                    className="col-span-3 bg-gray-800 border-gray-600 text-white"
+                    className="bg-gray-800 border-gray-600 text-white"
                     placeholder="act_1234567890"
                   />
                 </div>
-                <div className="col-span-4 text-sm text-gray-400 mt-2">
-                  <strong>Dica:</strong> Para testar, você pode usar dados temporários. A validação será feita quando sincronizar as campanhas.
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right text-gray-300">Nome</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-gray-300">Nome da Conta</Label>
                   <Input
                     id="name"
                     value={newAccount.name}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
-                    className="col-span-3 bg-gray-800 border-gray-600 text-white"
+                    className="bg-gray-800 border-gray-600 text-white"
                     placeholder="Minha Conta de Anúncios"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="accessToken" className="text-right text-gray-300">Access Token</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accessToken" className="text-gray-300">Access Token</Label>
                   <Input
                     id="accessToken"
                     value={newAccount.accessToken}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
-                    className="col-span-3 bg-gray-800 border-gray-600 text-white"
+                    className="bg-gray-800 border-gray-600 text-white"
                     placeholder="EAAxxxxxxxxxxxx..."
                     type="password"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="appId" className="text-right text-gray-300">App ID</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="appId" className="text-gray-300">App ID</Label>
                   <Input
                     id="appId"
                     value={newAccount.appId}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, appId: e.target.value }))}
-                    className="col-span-3 bg-gray-800 border-gray-600 text-white"
+                    className="bg-gray-800 border-gray-600 text-white"
                     placeholder="1234567890123456"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="appSecret" className="text-right text-gray-300">App Secret</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="appSecret" className="text-gray-300">App Secret</Label>
                   <Input
                     id="appSecret"
                     value={newAccount.appSecret}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, appSecret: e.target.value }))}
-                    className="col-span-3 bg-gray-800 border-gray-600 text-white"
+                    className="bg-gray-800 border-gray-600 text-white"
                     placeholder="abcdef1234567890abcdef1234567890"
                     type="password"
                   />
+                </div>
+
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <p className="text-sm text-blue-300">
+                    <strong>Dica:</strong> Para testar, você pode usar dados temporários. A validação será feita quando sincronizar as campanhas.
+                  </p>
                 </div>
               </div>
               <DialogFooter>
