@@ -83,18 +83,28 @@ export class DashboardService {
       totalOrders += orderCount;
       totalRevenue += revenue;
       
+      // Map real status values from European Fulfillment to dashboard categories
       switch (row.status) {
         case 'delivered':
           deliveredOrders += orderCount;
           break;
         case 'cancelled':
+        case 'canceled':
+        case 'rejected':
+        case 'returned':
           cancelledOrders += orderCount;
           break;
         case 'shipped':
+        case 'in transit':
+        case 'in delivery':
           shippedOrders += orderCount;
           break;
         case 'confirmed':
         case 'pending':
+        case 'new order':
+        case 'item packed':
+        case 'unpacked':
+        case 'incident':
         default:
           pendingOrders += orderCount;
           break;
@@ -103,7 +113,7 @@ export class DashboardService {
     
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     
-    console.log(`📈 Calculated metrics: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Cancelled: ${cancelledOrders}, Revenue: €${totalRevenue}`);
+    console.log(`📈 Calculated metrics: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
     
     return {
       totalOrders,
@@ -162,19 +172,24 @@ export class DashboardService {
     
     switch (period) {
       case '1d':
-        from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0); // Start of today
+        // Para 1 dia: apenas hoje
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
         break;
       case '7d':
+        // Para 7 dias: desde 7 dias atrás
         from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case '30d':
+        // Para 30 dias: desde 30 dias atrás  
         from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       case '90d':
+        // Para 90 dias: desde 90 dias atrás
         from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
         break;
       default:
-        from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        // Default: todos os dados (muito atrás no tempo)
+        from = new Date('2020-01-01');
     }
     
     return { from, to };
