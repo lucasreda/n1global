@@ -28,6 +28,8 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **SKU-Based Product Mapping**: Implemented correct product-order relationship using SKUs that match actual order values (NT-MAIN-70 for €70 orders, NT-BUNDLE-130 for €130 orders, etc.) with all 937 orders now properly linked to corresponding products.
 
+✅ **Database-First Orders Page**: Fixed orders page to fetch data directly from PostgreSQL database instead of external API, enabling accurate period filtering, status filtering, search functionality, and proper pagination for all 937 stored orders.
+
 ## System Architecture
 
 ### Frontend Architecture

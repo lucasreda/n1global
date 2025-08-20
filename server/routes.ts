@@ -235,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Orders routes - with optimized API integration and caching
+  // Orders routes - fetch from database with filters and pagination
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
@@ -244,130 +244,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string;
       const days = req.query.days as string;
       
-      // Create cache key based on all filter parameters
-      const cacheKey = `orders:${status || 'all'}:${search || 'none'}:${days || 'all'}`;
+      console.log(`📋 Fetching orders from database: limit=${limit}, offset=${offset}, status=${status || 'all'}, search=${search || 'none'}, days=${days || 'all'}`);
       
-      // Check cache first
-      let allOrders = apiCache.get(cacheKey);
+      // Build WHERE clause components
+      const whereConditions = [];
+      const params = [];
       
-      if (!allOrders) {
-        console.log("🔄 Cache miss - fetching orders from API");
-        
-        // Get optimized data from European Fulfillment API (only first 5 pages = ~75 orders)
-        let apiOrders: any[] = [];
-        try {
-          let allLeads: any[] = [];
-          const maxPages = 5; // Limit to first 5 pages for better performance
-          
-          // Calculate date range for API filtering  
-          let dateFilter: { from?: string, to?: string } | undefined;
-          if (days && days !== "all") {
-            const daysNum = parseInt(days);
-            const toDate = new Date();
-            const fromDate = new Date();
-            fromDate.setDate(fromDate.getDate() - daysNum);
-            
-            dateFilter = {
-              from: fromDate.toISOString().split('T')[0],
-              to: toDate.toISOString().split('T')[0]
-            };
-          }
-          
-          for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
-            const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
-            allLeads = allLeads.concat(pageLeads);
-            
-            // Break early if we get less than full page
-            if (pageLeads.length < 15) break;
-          }
-          
-          apiOrders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
-          console.log(`✅ Converted ${allLeads.length} API leads to ${apiOrders.length} orders from ${Math.min(maxPages, allLeads.length / 15)} pages`);
-        } catch (apiError) {
-          console.warn("⚠️  Failed to fetch API orders, using local data only:", apiError);
-        }
-      
-        // Get local orders as backup/additional data
-        let localOrders: any[] = [];
-        try {
-          localOrders = await storage.getOrders(100, 0); // Limit local orders too
-        } catch (localError) {
-          console.warn("⚠️  Failed to fetch local orders:", localError);
-        }
-        
-        // Combine API orders (priority) with local orders
-        allOrders = [...apiOrders, ...localOrders];
-        
-        // Apply filters
-        if (status && status !== "all") {
-          allOrders = allOrders.filter((order: any) => {
-            const orderStatus = order.deliveryStatus || order.status;
-            return orderStatus.toLowerCase() === status.toLowerCase();
-          });
-        }
-        
-        if (search) {
-          const searchLower = search.toLowerCase();
-          allOrders = allOrders.filter((order: any) => 
-            order.customerName?.toLowerCase().includes(searchLower) ||
-            order.customerPhone?.toLowerCase().includes(searchLower) ||
-            order.customerCity?.toLowerCase().includes(searchLower) ||
-            order.id?.toLowerCase().includes(searchLower) ||
-            order.trackingNumber?.toLowerCase().includes(searchLower)
-          );
-        }
-        
-        if (days && days !== "all") {
-          const daysNum = parseInt(days);
-          const now = new Date();
-          let cutoffDate: Date;
-          
-          if (daysNum === 1) {
-            // For "today", start from beginning of today
-            cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          } else {
-            // For other periods, go back N days from now
-            cutoffDate = new Date(now.getTime() - (daysNum * 24 * 60 * 60 * 1000));
-          }
-          
-          allOrders = allOrders.filter((order: any) => {
-            const orderDate = new Date(order.createdAt);
-            
-            if (daysNum === 1) {
-              // For today, check if it's the same day
-              return orderDate.toDateString() === now.toDateString();
-            }
-            
-            return orderDate >= cutoffDate && orderDate <= now;
-          });
-        }
-        
-        // Sort by creation date (most recent first)
-        allOrders.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        
-        // Cache the filtered results for 3 minutes
-        apiCache.set(cacheKey, allOrders, 3);
-      } else {
-        console.log("🎯 Cache hit - using cached orders");
+      // Date filter
+      if (days && days !== "all") {
+        const daysNum = parseInt(days);
+        const dateFrom = new Date();
+        dateFrom.setDate(dateFrom.getDate() - daysNum);
+        whereConditions.push(`created_at >= $${params.length + 1}`);
+        params.push(dateFrom.toISOString());
       }
       
-      // Calculate pagination
-      const totalOrders = allOrders.length;
-      const totalPages = Math.ceil(totalOrders / limit);
-      const paginatedOrders = allOrders.slice(offset, offset + limit);
+      // Status filter
+      if (status && status !== "all") {
+        whereConditions.push(`status = $${params.length + 1}`);
+        params.push(status);
+      }
       
-      // Return paginated response
-      res.json({
-        data: paginatedOrders,
-        total: totalOrders,
+      // Search filter
+      if (search) {
+        whereConditions.push(`(customer_name ILIKE $${params.length + 1} OR customer_phone ILIKE $${params.length + 1} OR customer_city ILIKE $${params.length + 1} OR id ILIKE $${params.length + 1})`);
+        params.push(`%${search}%`);
+      }
+
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      
+      // Execute queries using raw SQL
+      const { pool } = await import("./db");
+      
+      const [ordersResult, countResult] = await Promise.all([
+        pool.query(`
+          SELECT * FROM orders 
+          ${whereClause}
+          ORDER BY created_at DESC 
+          LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `, [...params, limit, offset]),
+        
+        pool.query(`
+          SELECT COUNT(*) as count FROM orders 
+          ${whereClause}
+        `, params)
+      ]);
+
+      const ordersData = ordersResult.rows;
+      const totalCount = parseInt(countResult.rows[0].count);
+
+      const currentPage = Math.floor(offset / limit) + 1;
+      const totalPages = Math.ceil(totalCount / limit);
+      const hasNext = currentPage < totalPages;
+      const hasPrev = currentPage > 1;
+
+      console.log(`📋 Found ${ordersData.length} orders (page ${currentPage}/${totalPages}, total: ${totalCount})`);
+
+      const responseData = {
+        data: ordersData.map(order => ({
+          ...order,
+          // Format for frontend compatibility
+          customerId: order.customer_id,
+          customerName: order.customer_name,
+          customerEmail: order.customer_email,
+          customerPhone: order.customer_phone,
+          customerAddress: order.customer_address,
+          customerCity: order.customer_city,
+          customerState: order.customer_state,
+          customerCountry: order.customer_country,
+          customerZip: order.customer_zip,
+          paymentStatus: order.payment_status,
+          paymentMethod: order.payment_method,
+          trackingNumber: order.tracking_number,
+          providerOrderId: order.provider_order_id,
+          leadValue: order.total?.toString(),
+          items: JSON.stringify([{
+            name: order.products?.[0]?.name || "Produto",
+            quantity: 1,
+            price: Number(order.total || 0)
+          }])
+        })),
+        total: totalCount,
         totalPages,
-        currentPage: Math.floor(offset / limit) + 1,
-        hasNext: offset + limit < totalOrders,
-        hasPrev: offset > 0
-      });
+        currentPage,
+        hasNext,
+        hasPrev
+      };
+
+      res.json(responseData);
     } catch (error) {
-      console.error("Error fetching orders:", error);
-      res.status(500).json({ message: "Erro ao buscar pedidos" });
+      console.error("Orders fetch error:", error);
+      res.status(500).json({ 
+        message: "Erro ao buscar pedidos",
+        error: error.message 
+      });
     }
   });
 
