@@ -328,8 +328,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/facebook/campaigns", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { period } = req.query;
+      const { period, autoSync } = req.query;
       const { facebookAdsService } = await import("./facebook-ads-service");
+      const { syncManager } = await import("./sync-manager");
+      
+      // Verificar se deve fazer sincronização automática
+      if (autoSync === 'true' && syncManager.shouldAutoSync()) {
+        console.log('🔄 Iniciando sincronização automática (30min interval)');
+        try {
+          await facebookAdsService.syncCampaigns(period as string || "last_30d");
+          syncManager.updateLastSyncTime();
+          console.log('✅ Sincronização automática concluída');
+        } catch (syncError) {
+          console.error('❌ Erro na sincronização automática:', syncError);
+        }
+      }
+      
       const campaigns = await facebookAdsService.getCampaignsWithPeriod(period as string || "last_30d");
       res.json(campaigns);
     } catch (error) {
@@ -338,11 +352,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Nova rota para obter informações de sincronização
+  app.get("/api/facebook/sync-info", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { syncManager } = await import("./sync-manager");
+      const syncInfo = syncManager.getSyncInfo();
+      res.json(syncInfo);
+    } catch (error) {
+      console.error("Sync info error:", error);
+      res.status(500).json({ message: "Erro ao buscar informações de sincronização" });
+    }
+  });
+
   app.post("/api/facebook/sync-period", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { period } = req.body;
       const { facebookAdsService } = await import("./facebook-ads-service");
+      const { syncManager } = await import("./sync-manager");
+      
+      console.log('🔄 Iniciando sincronização por período');
       const result = await facebookAdsService.syncCampaigns(period || "last_30d");
+      syncManager.updateLastSyncTime();
+      console.log('✅ Sincronização por período concluída');
+      
       res.json(result);
     } catch (error) {
       console.error("Facebook sync period error:", error);
@@ -365,8 +397,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/facebook/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      const { period } = req.body;
       const { facebookAdsService } = await import("./facebook-ads-service");
-      const result = await facebookAdsService.syncCampaigns();
+      const { syncManager } = await import("./sync-manager");
+      
+      console.log('🔄 Iniciando sincronização manual');
+      const result = await facebookAdsService.syncCampaigns(period || "last_30d");
+      syncManager.updateLastSyncTime();
+      console.log('✅ Sincronização manual concluída');
+      
       res.json(result);
     } catch (error) {
       console.error("Facebook sync error:", error);

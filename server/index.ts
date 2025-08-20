@@ -43,9 +43,8 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
   
-  // Start smart sync service
-  const { smartSyncService } = await import("./smart-sync-service");
-  await smartSyncService.scheduleAutoSync();
+  // Sistema de sincronização sob demanda configurado
+  console.log('🔄 Sistema de sincronização sob demanda configurado (30min de intervalo)');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

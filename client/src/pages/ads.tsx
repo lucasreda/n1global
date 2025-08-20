@@ -88,6 +88,16 @@ export default function Ads() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch sync info
+  const { data: syncInfo } = useQuery({
+    queryKey: ["/api/facebook/sync-info"],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest("GET", "/api/facebook/sync-info");
+      return response.json() as Promise<{ lastSync: string | null; canAutoSync: boolean; nextAutoSync: string | null }>;
+    },
+    refetchInterval: 60000, // Refetch every minute
+  });
+
   // Fetch Facebook Ad Accounts
   const { data: adAccounts, isLoading: accountsLoading } = useQuery({
     queryKey: ["/api/facebook/accounts"],
@@ -97,11 +107,11 @@ export default function Ads() {
     },
   });
 
-  // Fetch Facebook Campaigns
+  // Fetch Facebook Campaigns (com sincronização automática se necessário)
   const { data: campaigns, isLoading: campaignsLoading } = useQuery({
     queryKey: ["/api/facebook/campaigns", selectedPeriod],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", `/api/facebook/campaigns?period=${selectedPeriod}`);
+      const response = await authenticatedApiRequest("GET", `/api/facebook/campaigns?period=${selectedPeriod}&autoSync=true`);
       return response.json() as Promise<FacebookCampaign[]>;
     },
     enabled: (adAccounts?.length || 0) > 0,
@@ -268,15 +278,22 @@ export default function Ads() {
             <option value="last_month">Mês passado</option>
             <option value="this_quarter">Este trimestre</option>
           </select>
-          <Button
-            onClick={() => syncCampaignsMutation.mutate()}
-            disabled={syncCampaignsMutation.isPending || !adAccounts?.length}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8"
-            data-testid="button-sync-campaigns"
-          >
-            <RefreshCw className={`w-3 h-3 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-            Sync
-          </Button>
+          <div className="flex items-center space-x-2">
+            {syncInfo?.lastSync && (
+              <span className="text-xs text-gray-400">
+                Último sync: {new Date(syncInfo.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            <Button
+              onClick={() => syncCampaignsMutation.mutate()}
+              disabled={syncCampaignsMutation.isPending || !adAccounts?.length}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8"
+              data-testid="button-sync-campaigns"
+            >
+              <RefreshCw className={`w-3 h-3 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
+              Sync
+            </Button>
+          </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8" data-testid="button-add-account">
