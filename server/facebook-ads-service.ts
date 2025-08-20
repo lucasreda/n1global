@@ -95,14 +95,8 @@ export class FacebookAdsService {
   async syncCampaigns(): Promise<{ synced: number; errors?: string[] }> {
     const accounts = await db.select().from(facebookAdAccounts).where(eq(facebookAdAccounts.isActive, true));
     
-    // Always create demo campaigns for now since we don't have real API access
-    console.log("Creating demo campaigns for testing...");
-    await this.createDemoCampaigns();
-    return { synced: 3 };
-    
     if (accounts.length === 0) {
-      await this.createDemoCampaigns();
-      return { synced: 3 };
+      throw new Error("Nenhuma conta do Facebook Ads configurada. Adicione uma conta primeiro.");
     }
     
     let syncedCount = 0;
@@ -115,10 +109,36 @@ export class FacebookAdsService {
       }
       
       try {
-        const campaigns = await this.fetchCampaignsFromFacebook(account.accountId, account.accessToken);
+        console.log(`Sincronizando campanhas para conta: ${account.name} (${account.accountId})`);
+        const campaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken);
         
         for (const campaignData of campaigns) {
-          await this.upsertCampaign(campaignData);
+          // Check if campaign already exists
+          const existing = await db
+            .select()
+            .from(facebookCampaigns)
+            .where(eq(facebookCampaigns.campaignId, campaignData.campaignId))
+            .limit(1);
+
+          if (existing.length > 0) {
+            // Update existing campaign
+            await db
+              .update(facebookCampaigns)
+              .set({
+                ...campaignData,
+                updatedAt: new Date(),
+                lastSync: new Date()
+              })
+              .where(eq(facebookCampaigns.campaignId, campaignData.campaignId));
+          } else {
+            // Insert new campaign
+            await db
+              .insert(facebookCampaigns)
+              .values({
+                ...campaignData,
+                lastSync: new Date()
+              });
+          }
           syncedCount++;
         }
         
@@ -138,107 +158,68 @@ export class FacebookAdsService {
     return { synced: syncedCount, errors: errors.length > 0 ? errors : undefined };
   }
 
-  private async createDemoCampaigns(): Promise<void> {
-    // First, create a demo Business Manager if not exists
-    const existingBM = await db
-      .select()
-      .from(facebookBusinessManagers)
-      .where(eq(facebookBusinessManagers.businessId, "demo_bm_123"))
-      .limit(1);
-
-    if (existingBM.length === 0) {
-      await db
-        .insert(facebookBusinessManagers)
-        .values({
-          businessId: "demo_bm_123",
-          name: "Business Manager - Demonstração",
-          accessToken: "demo_token",
-          isActive: true,
-        });
+  async getBusinessManagerAccounts(businessId: string, accessToken: string): Promise<any[]> {
+    const url = `${this.baseUrl}/${businessId}/owned_ad_accounts?access_token=${accessToken}&fields=id,name,account_status,currency,timezone_name`;
+    
+    console.log(`Buscando contas de anúncios do Business Manager: ${businessId}`);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Falha ao buscar contas do Business Manager: ${response.status} ${response.statusText} - ${errorText}`);
     }
-
-    const demoCampaigns = [
-      {
-        campaignId: "demo_campaign_1",
-        name: "Campanha de Vendas - Produto Principal",
-        status: "ACTIVE",
-        objective: "CONVERSIONS",
-        dailyBudget: "50.00",
-        lifetimeBudget: null,
-        amountSpent: "1250.80",
-        impressions: 45000,
-        clicks: 1200,
-        cpm: "8.50",
-        cpc: "1.05",
-        ctr: "2.67",
-        isSelected: true,
-        startTime: new Date("2024-01-15"),
-        endTime: null,
-      },
-      {
-        campaignId: "demo_campaign_2", 
-        name: "Remarketing - Carrinho Abandonado",
-        status: "ACTIVE",
-        objective: "CONVERSIONS",
-        dailyBudget: "30.00",
-        lifetimeBudget: null,
-        amountSpent: "890.45",
-        impressions: 28000,
-        clicks: 840,
-        cpm: "7.20",
-        cpc: "1.06",
-        ctr: "3.00",
-        isSelected: false,
-        startTime: new Date("2024-02-01"),
-        endTime: null,
-      },
-      {
-        campaignId: "demo_campaign_3",
-        name: "Lookalike - Clientes Premium",
-        status: "PAUSED",
-        objective: "REACH",
-        dailyBudget: "25.00",
-        lifetimeBudget: null,
-        amountSpent: "423.90",
-        impressions: 15000,
-        clicks: 300,
-        cpm: "12.50",
-        cpc: "1.41",
-        ctr: "2.00",
-        isSelected: true,
-        startTime: new Date("2024-01-20"),
-        endTime: new Date("2024-03-15"),
-      }
-    ];
-
-    for (const campaign of demoCampaigns) {
-      // Check if campaign already exists
-      const existing = await db
-        .select()
-        .from(facebookCampaigns)
-        .where(eq(facebookCampaigns.campaignId, campaign.campaignId))
-        .limit(1);
-
-      if (existing.length > 0) {
-        // Update existing campaign
-        await db
-          .update(facebookCampaigns)
-          .set({
-            ...campaign,
-            updatedAt: new Date(),
-            lastSync: new Date()
-          })
-          .where(eq(facebookCampaigns.campaignId, campaign.campaignId));
-      } else {
-        // Insert new campaign
-        await db
-          .insert(facebookCampaigns)
-          .values({
-            ...campaign,
-            lastSync: new Date()
-          });
-      }
+    
+    const data = await response.json() as any;
+    
+    if (data.error) {
+      throw new Error(`Erro da API do Facebook: ${data.error.message} (Código: ${data.error.code})`);
     }
+    
+    return data.data || [];
+  }
+
+  private async fetchCampaignsFromAPI(accountId: string, accessToken: string): Promise<any[]> {
+    // Ensure account ID has the 'act_' prefix for Facebook API
+    const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+    
+    const url = `${this.baseUrl}/${formattedAccountId}/campaigns?access_token=${accessToken}&fields=id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time,start_time,stop_time,insights.date_preset(lifetime){spend,impressions,clicks,cpm,cpc,ctr}`;
+    
+    console.log(`Buscando campanhas da API do Facebook para conta: ${formattedAccountId}`);
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Falha ao buscar campanhas: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+    
+    const data = await response.json() as any;
+    
+    if (data.error) {
+      throw new Error(`Erro da API do Facebook: ${data.error.message} (Código: ${data.error.code})`);
+    }
+    
+    const campaigns = data.data?.map((campaign: any) => ({
+      campaignId: campaign.id,
+      name: campaign.name,
+      status: campaign.status,
+      objective: campaign.objective,
+      dailyBudget: campaign.daily_budget ? (parseFloat(campaign.daily_budget) / 100).toString() : null,
+      lifetimeBudget: campaign.lifetime_budget ? (parseFloat(campaign.lifetime_budget) / 100).toString() : null,
+      amountSpent: campaign.insights?.data?.[0]?.spend || "0.00",
+      impressions: parseInt(campaign.insights?.data?.[0]?.impressions || "0"),
+      clicks: parseInt(campaign.insights?.data?.[0]?.clicks || "0"),
+      cpm: campaign.insights?.data?.[0]?.cpm || "0.00",
+      cpc: campaign.insights?.data?.[0]?.cpc || "0.00",
+      ctr: campaign.insights?.data?.[0]?.ctr || "0.00",
+      isSelected: false,
+      startTime: campaign.start_time ? new Date(campaign.start_time) : null,
+      endTime: campaign.stop_time ? new Date(campaign.stop_time) : null,
+    })) || [];
+    
+    console.log(`Encontradas ${campaigns.length} campanhas para conta ${formattedAccountId}`);
+    return campaigns;
   }
 
   async updateCampaignSelection(campaignId: string, isSelected: boolean): Promise<FacebookCampaign> {

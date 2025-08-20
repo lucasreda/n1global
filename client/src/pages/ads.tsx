@@ -245,7 +245,7 @@ export default function Ads() {
               <DialogHeader>
                 <DialogTitle className="text-white">Configurar Conta Facebook Ads</DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Adicione suas credenciais para importar campanhas
+                  Adicione suas credenciais reais do Facebook para sincronizar campanhas
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -256,7 +256,8 @@ export default function Ads() {
                     value={newAccount.accountId}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, accountId: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="act_1234567890"
+                    placeholder="1234567890 (sem act_)"
+                    required
                   />
                 </div>
 
@@ -267,19 +268,21 @@ export default function Ads() {
                     value={newAccount.name}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="Minha Conta de Anúncios"
+                    placeholder="Nome descritivo para identificar"
+                    required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token</Label>
+                  <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Facebook</Label>
                   <Input
                     id="accessToken"
                     value={newAccount.accessToken}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="EAAxxxxxxxxxxxx..."
+                    placeholder="EAAxxxxxx... (token real do Facebook)"
                     type="password"
+                    required
                   />
                 </div>
 
@@ -290,7 +293,7 @@ export default function Ads() {
                     value={newAccount.appId}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, appId: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="1234567890123456"
+                    placeholder="ID da aplicação Facebook"
                   />
                 </div>
 
@@ -301,7 +304,7 @@ export default function Ads() {
                     value={newAccount.appSecret}
                     onChange={(e) => setNewAccount(prev => ({ ...prev, appSecret: e.target.value }))}
                     className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="abcdef1234567890abcdef1234567890"
+                    placeholder="Chave secreta da aplicação"
                     type="password"
                   />
                 </div>
