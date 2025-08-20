@@ -6,6 +6,7 @@ import { Download, BarChart3 } from "lucide-react";
 interface ChartsSectionProps {
   revenueData: any[];
   distributionData: { name: string; value: number; percentage: string; color: string }[];
+  isLoading?: boolean;
 }
 
 const RADIAN = Math.PI / 180;
@@ -21,7 +22,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
-export function ChartsSection({ revenueData, distributionData }: ChartsSectionProps) {
+export function ChartsSection({ revenueData, distributionData, isLoading = false }: ChartsSectionProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
       {/* Revenue Chart */}
@@ -41,7 +42,7 @@ export function ChartsSection({ revenueData, distributionData }: ChartsSectionPr
         </div>
         
         <div className="h-64">
-          {revenueData.length > 0 ? (
+          {!isLoading && revenueData && revenueData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData}>
                 <defs>
@@ -84,7 +85,7 @@ export function ChartsSection({ revenueData, distributionData }: ChartsSectionPr
             <div className="chart-gradient rounded-xl flex items-center justify-center h-full">
               <div className="text-center">
                 <BarChart3 className="mx-auto text-4xl text-blue-300 mb-3" size={48} />
-                <p className="text-gray-300">Dados de receita carregando...</p>
+                <p className="text-gray-300">{isLoading ? "Dados de receita carregando..." : "Nenhum dado de receita encontrado"}</p>
               </div>
             </div>
           )}

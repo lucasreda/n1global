@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, updateOrderSchema, insertFulfillmentLeadSchema, insertProductSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema } from "@shared/schema";
 import { europeanFulfillmentService } from "./fulfillment-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -116,261 +116,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard routes - with optimized API integration and caching
+  // Sync routes - for importing data from providers
+  app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { provider = 'european_fulfillment', type = 'full_sync' } = req.body;
+      
+      console.log(`🔄 Starting sync for provider: ${provider}, type: ${type}`);
+      
+      const { syncService } = await import("./sync-service");
+      const jobId = await syncService.startSync(provider, type);
+      
+      res.json({ 
+        success: true, 
+        jobId,
+        message: `Sync job started for ${provider}` 
+      });
+    } catch (error) {
+      console.error("Sync start error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to start sync job",
+        error: error.message 
+      });
+    }
+  });
+  
+  app.get("/api/sync/status/:jobId", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { jobId } = req.params;
+      const { syncService } = await import("./sync-service");
+      const job = await syncService.getSyncStatus(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Sync job not found" });
+      }
+      
+      res.json(job);
+    } catch (error) {
+      console.error("Sync status error:", error);
+      res.status(500).json({ message: "Failed to get sync status" });
+    }
+  });
+  
+  app.get("/api/sync/history", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { provider, limit = 10 } = req.query;
+      const { syncService } = await import("./sync-service");
+      const jobs = await syncService.getRecentSyncJobs(provider as string, Number(limit));
+      
+      res.json(jobs);
+    } catch (error) {
+      console.error("Sync history error:", error);
+      res.status(500).json({ message: "Failed to get sync history" });
+    }
+  });
+
+  // Dashboard routes - using real database data
   app.get("/api/dashboard/metrics", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const date = req.query.date as string;
-      const days = req.query.days as string;
+      const period = (req.query.period as string) || '30d';
+      const provider = req.query.provider as string;
+
+      console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
       
-      // Create cache key for metrics
-      const metricsCacheKey = `metrics:${days || 'all'}:${date || 'today'}`;
-      
-      // Check cache first
-      let apiMetrics = apiCache.get(metricsCacheKey);
-      
-      if (!apiMetrics) {
-        console.log("🔄 Cache miss - fetching metrics from API");
-        
-        // Get more comprehensive data for dashboard metrics with proper date filtering
-        try {
-          let allLeads: any[] = [];
-          
-          // Calculate optimal pages based on expected high data volume (611+ orders for 30 days)
-          let maxPages = 15; // Default for recent data
-          if (days === "90") maxPages = 63; // 3 months = fetch all data
-          else if (days === "30") maxPages = 45; // 1 month = fetch enough for 611+ orders
-          else if (days === "7") maxPages = 15; // 1 week
-          else if (days === "1") maxPages = 5; // Today
-          else if (!days || days === "all") maxPages = 63; // All data - fetch everything
-          
-          console.log(`📊 Fetching ${maxPages} pages for ${days || 'all'} days filter (targeting 611+ orders for 30 days)`);
-          
-          console.log(`🎯 High-volume mode: will fetch comprehensive data to ensure complete metrics`);
-          
-          // Calculate date range for API filtering  
-          let dateFilter: { from?: string, to?: string } | undefined;
-          if (days && days !== "all") {
-            const daysNum = parseInt(days);
-            const toDate = new Date();
-            const fromDate = new Date();
-            fromDate.setDate(fromDate.getDate() - daysNum);
-            
-            dateFilter = {
-              from: fromDate.toISOString().split('T')[0],
-              to: toDate.toISOString().split('T')[0]
-            };
-            
-            console.log(`📅 Date filter: ${dateFilter.from} to ${dateFilter.to} (${daysNum} days) - trying analytics endpoint first`);
-          }
-          
-          // Try analytics endpoint first for date-filtered requests
-          if (dateFilter?.from && dateFilter?.to) {
-            console.log(`🎯 Attempting analytics endpoint for precise date filtering`);
-            allLeads = await europeanFulfillmentService.getLeadsListWithDateFilter("ITALY", dateFilter.from, dateFilter.to);
-            
-            if (allLeads.length > 0) {
-              console.log(`✅ Analytics endpoint returned ${allLeads.length} leads for date range`);
-            } else {
-              console.log(`⚠️  Analytics endpoint returned no data, falling back to pagination`);
-            }
-          }
-          
-          // Fallback to pagination if analytics didn't work or no date filter
-          if (allLeads.length === 0) {
-            let totalFetched = 0;
-            for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
-              console.log(`📄 Fetching page ${currentPage}/${maxPages}...`);
-              const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage, dateFilter?.from, dateFilter?.to);
-              allLeads = allLeads.concat(pageLeads);
-              totalFetched += pageLeads.length;
-              
-              console.log(`📊 Page ${currentPage}: ${pageLeads.length} leads (total: ${totalFetched})`);
-              
-              // For 30-day filter, ensure we get enough data - don't break early until we have substantial data
-              const minRequiredData = days === "30" ? 600 : (days === "7" ? 150 : 50);
-              
-              // Only break if we get less than 15 items AND we have enough data or reached max pages
-              if (pageLeads.length < 15 && (totalFetched >= minRequiredData || currentPage >= maxPages)) {
-                console.log(`🏁 Early break at page ${currentPage} - total fetched: ${totalFetched}, min required: ${minRequiredData}`);
-                break;
-              }
-            }
-            
-            console.log(`📊 Total leads fetched: ${allLeads.length} from API (${Math.ceil(totalFetched / 15)} pages)`);
-          } else {
-            console.log(`📊 Total leads fetched: ${allLeads.length} from analytics endpoint`);
-          }
-          console.log(`🇮🇹 Converting to dashboard format for Italy`);
-          
-          let orders = europeanFulfillmentService.convertLeadsToOrders(allLeads);
-          
-          console.log(`🔄 Converted ${orders.length} leads to orders format`);
-        
-          // Apply date filter if specified with proper timezone handling
-          if (days && days !== "all") {
-            const daysNum = parseInt(days);
-            const now = new Date();
-            let cutoffDate: Date;
-            
-            if (daysNum === 1) {
-              // For "today", start from beginning of today
-              cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            } else {
-              // For other periods, go back N days from now
-              cutoffDate = new Date(now.getTime() - (daysNum * 24 * 60 * 60 * 1000));
-            }
-            
-            console.log(`🗓️  Date range filter: ${cutoffDate.toISOString()} to ${now.toISOString()} (${daysNum} days)`);
-            console.log(`📝 Before filter: ${orders.length} total orders`);
-            
-            const originalCount = orders.length;
-            
-            // Debug: Check first few order dates and understand why filter isn't working
-            console.log(`🔍 Sample order dates from API (problem: all dates are current time, not real order dates):`);
-            orders.slice(0, 5).forEach((order: any, idx: number) => {
-              console.log(`  Order ${idx + 1}: ${order.id} - createdAt: ${order.createdAt} - Raw API created_at: ${order.apiData?.created_at || 'N/A'} - Raw API date_created: ${order.apiData?.date_created || 'N/A'}`);
-            });
-            
-            console.log(`⚠️  ISSUE IDENTIFIED: API doesn't provide created_at field, so all orders get current timestamp`);
-            console.log(`🔧 SOLUTION: Filter by lead ID patterns (newer leads have higher NT numbers)`);
-            
-            // Since API doesn't provide real creation dates, filter by lead ID numbers as proxy
-            if (daysNum === 30) {
-              // For 30 days, keep leads with higher NT numbers (more recent)
-              // Current latest is around NT-461xxx, so 30 days back might be around NT-460xxx
-              const recentThreshold = 460000; // Approximate threshold for 30 days
-              
-              orders = orders.filter((order: any) => {
-                const leadNumber = order.id?.replace('NT-', '');
-                const leadNum = parseInt(leadNumber) || 0;
-                return leadNum >= recentThreshold;
-              });
-              
-              console.log(`🎯 Filtered to ${orders.length} orders using lead number threshold (>= NT-${recentThreshold})`);
-            } else if (daysNum === 7) {
-              // For 7 days, keep even more recent leads
-              const recentThreshold = 461000; // Very recent leads
-              
-              orders = orders.filter((order: any) => {
-                const leadNumber = order.id?.replace('NT-', '');
-                const leadNum = parseInt(leadNumber) || 0;
-                return leadNum >= recentThreshold;
-              });
-              
-              console.log(`🎯 Filtered to ${orders.length} orders using lead number threshold (>= NT-${recentThreshold})`);
-            } else if (daysNum === 1) {
-              // For today, keep the most recent leads
-              const recentThreshold = 461800; // Today's leads
-              
-              orders = orders.filter((order: any) => {
-                const leadNumber = order.id?.replace('NT-', '');
-                const leadNum = parseInt(leadNumber) || 0;
-                return leadNum >= recentThreshold;
-              });
-              
-              console.log(`🎯 Filtered to ${orders.length} orders using lead number threshold (>= NT-${recentThreshold})`);
-            }
-            
-            // Since the lead ID filtering above handles the date range, skip the broken date filter
-            console.log(`📊 Using lead ID-based filtering instead of broken API dates`);
-            
-            console.log(`📊 After date filter: ${orders.length} orders (filtered out ${originalCount - orders.length} orders)`);
-            console.log(`🎯 Filter result for ${daysNum} days: ${orders.length} orders match the date criteria`);
-          }
-          
-          // Calculate real metrics from filtered API data with enhanced status mapping
-          const totalOrders = orders.length;
-          
-          // Enhanced status counting based on real API data patterns
-          const deliveredOrders = orders.filter(o => {
-            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
-            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
-            return deliveryStatus.includes('delivered') || 
-                   deliveryStatus.includes('consegnato') ||
-                   deliveryStatus === 'delivered' ||
-                   confirmationStatus === 'delivered';
-          }).length;
-          
-          const cancelledOrders = orders.filter(o => {
-            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
-            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
-            return confirmationStatus.includes('cancelled') ||
-                   confirmationStatus.includes('duplicated') ||
-                   confirmationStatus.includes('out of area') ||
-                   confirmationStatus.includes('rejected') ||
-                   deliveryStatus.includes('cancelled') ||
-                   deliveryStatus.includes('incident') ||
-                   o.status === 'cancelled';
-          }).length;
-          
-          const shippedOrders = orders.filter(o => {
-            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
-            return deliveryStatus.includes('in delivery') ||
-                   deliveryStatus.includes('shipped') ||
-                   deliveryStatus.includes('in transit') ||
-                   deliveryStatus === 'spedito' ||
-                   o.status === 'shipped';
-          }).length;
-          
-          const confirmedOrders = orders.filter(o => {
-            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
-            return confirmationStatus.includes('confirmed') || 
-                   confirmationStatus === 'new order' ||
-                   o.status === 'confirmed';
-          }).length;
-          
-          const pendingOrders = orders.filter(o => {
-            const confirmationStatus = o.confirmationStatus?.toLowerCase() || '';
-            const deliveryStatus = o.deliveryStatus?.toLowerCase() || '';
-            return (!confirmationStatus || confirmationStatus === '') && 
-                   (!deliveryStatus || deliveryStatus === 'unpacked') ||
-                   o.status === 'pending';
-          }).length;
-          
-          const paidOrders = orders.filter(o => o.paymentStatus === 'paid').length;
-          const totalRevenue = orders.filter(o => o.paymentStatus === 'paid').reduce((sum, o) => sum + o.total, 0);
-          
-          const successRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
-          const conversionRate = totalOrders > 0 ? (paidOrders / totalOrders) * 100 : 0;
-          
-          apiMetrics = {
-            id: `metrics-${new Date().toISOString().split('T')[0]}`,
-            date: new Date().toISOString().split('T')[0],
-            totalOrders,
-            successfulOrders: deliveredOrders,
-            cancelledOrders,
-            shippedOrders,
-            confirmedOrders,
-            pendingOrders,
-            revenue: totalRevenue,
-            successRate: Math.round(successRate * 100) / 100,
-            conversionRate: Math.round(conversionRate * 100) / 100,
-            period: days || "all",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          
-          console.log(`📊 Generated real metrics from ${totalOrders} API orders from ${maxPages} pages (filtered for ${days || 'all'} days)`);
-          console.log(`📈 Status breakdown: Delivered: ${deliveredOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Confirmed: ${confirmedOrders}, Pending: ${pendingOrders}`);
-          
-          // Cache metrics for 5 minutes
-          apiCache.set(metricsCacheKey, apiMetrics, 5);
-        } catch (apiError) {
-          console.warn("⚠️  Failed to fetch API metrics, using local data:", apiError);
-        }
-      } else {
-        console.log("🎯 Cache hit - using cached metrics");
-      }
-      
-      // Fallback to local metrics if API fails
-      if (!apiMetrics) {
-        apiMetrics = await storage.getDashboardMetrics(date);
-      }
-      
-      res.json(apiMetrics);
+      const { dashboardService } = await import("./dashboard-service");
+      const metrics = await dashboardService.getDashboardMetrics(period as any, provider);
+
+      res.json(metrics);
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: "Erro ao buscar métricas" });
+    }
+  });
+
+  app.get("/api/dashboard/revenue-chart", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const period = (req.query.period as string) || '30d';
+      const provider = req.query.provider as string;
+
+      const { dashboardService } = await import("./dashboard-service");
+      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider);
+
+      res.json(revenueData);
+    } catch (error) {
+      console.error("Revenue chart error:", error);
+      res.status(500).json({ 
+        message: "Erro ao buscar dados de receita",
+        error: error.message 
+      });
+    }
+  });
+
+  app.get("/api/dashboard/orders-by-status", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const period = (req.query.period as string) || '30d';
+      const provider = req.query.provider as string;
+
+      const { dashboardService } = await import("./dashboard-service");
+      const statusData = await dashboardService.getOrdersByStatus(period as any, provider);
+
+      res.json(statusData);
+    } catch (error) {
+      console.error("Orders by status error:", error);
+      res.status(500).json({ 
+        message: "Erro ao buscar dados por status",
+        error: error.message 
+      });
     }
   });
 
@@ -647,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create lead
   app.post("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const leadData = insertFulfillmentLeadSchema.parse(req.body);
+      const leadData = req.body;
       const result = await europeanFulfillmentService.createLead(leadData);
       res.json(result);
     } catch (error) {
@@ -679,26 +530,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/fulfillment-leads", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const leadData = insertFulfillmentLeadSchema.parse(req.body);
-      
-      // Create lead locally first
-      const localLead = await storage.createFulfillmentLead(leadData);
+      const leadData = req.body;
       
       // Try to send to European Fulfillment Center
       const result = await europeanFulfillmentService.createLead(leadData);
       
-      if (result.success && result.lead_number) {
-        // Update local lead with remote lead number
-        await storage.updateFulfillmentLead(localLead.id, {
-          leadNumber: result.lead_number,
-          status: "sent"
-        });
-      }
-      
-      res.status(201).json({
-        ...localLead,
-        fulfillmentResponse: result
-      });
+      res.status(201).json(result);
     } catch (error) {
       res.status(400).json({ message: "Dados inválidos" });
     }

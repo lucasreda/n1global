@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
-import { RecentOrders } from "@/components/dashboard/recent-orders";
+
 import { authenticatedApiRequest } from "@/lib/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -13,36 +13,25 @@ import { Calendar, Filter } from "lucide-react";
 export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("7");
 
-  // Fetch dashboard metrics with date filter
+  // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics", dateFilter],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", `/api/dashboard/metrics?days=${dateFilter}`);
+      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : '30d';
+      const response = await authenticatedApiRequest("GET", `/api/dashboard/metrics?period=${period}`);
       return response.json();
     },
   });
 
-  // Fetch recent orders with date filter
-  const { data: ordersResponse, isLoading: ordersLoading } = useQuery({
-    queryKey: ["/api/orders", dateFilter],
+  // Fetch revenue chart data
+  const { data: revenueData, isLoading: revenueLoading } = useQuery({
+    queryKey: ["/api/dashboard/revenue-chart", dateFilter],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", `/api/orders?limit=10&days=${dateFilter}`);
+      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : '30d';
+      const response = await authenticatedApiRequest("GET", `/api/dashboard/revenue-chart?period=${period}`);
       return response.json();
     },
   });
-
-  // Extract orders from response
-  const orders = Array.isArray(ordersResponse) ? ordersResponse : ordersResponse?.data || [];
-
-  // Generate mock revenue data for charts
-  const revenueData = [
-    { name: "Jan", value: 4000 },
-    { name: "Fev", value: 3000 },
-    { name: "Mar", value: 5000 },
-    { name: "Abr", value: 4500 },
-    { name: "Mai", value: 6000 },
-    { name: "Jun", value: 5500 },
-  ];
 
   // Calculate distribution data from real API metrics
   const getDistributionData = () => {
@@ -52,8 +41,8 @@ export default function Dashboard() {
     return [
       {
         name: "Entregues",
-        value: metrics.successfulOrders || 0,
-        percentage: total > 0 ? ((metrics.successfulOrders || 0) / total * 100).toFixed(1) : "0",
+        value: metrics.deliveredOrders || 0,
+        percentage: total > 0 ? ((metrics.deliveredOrders || 0) / total * 100).toFixed(1) : "0",
         color: "#10B981"
       },
       {
@@ -63,9 +52,9 @@ export default function Dashboard() {
         color: "#3B82F6"
       },
       {
-        name: "Confirmados",
-        value: metrics.confirmedOrders || 0,
-        percentage: total > 0 ? ((metrics.confirmedOrders || 0) / total * 100).toFixed(1) : "0",
+        name: "Pendentes",
+        value: metrics.pendingOrders || 0,
+        percentage: total > 0 ? ((metrics.pendingOrders || 0) / total * 100).toFixed(1) : "0",
         color: "#F59E0B"
       },
       {
@@ -73,25 +62,11 @@ export default function Dashboard() {
         value: metrics.cancelledOrders || 0,
         percentage: total > 0 ? ((metrics.cancelledOrders || 0) / total * 100).toFixed(1) : "0",
         color: "#EF4444"
-      },
-      {
-        name: "Pendentes",
-        value: metrics.pendingOrders || 0,
-        percentage: total > 0 ? ((metrics.pendingOrders || 0) / total * 100).toFixed(1) : "0",
-        color: "#6B7280"
       }
     ];
   };
 
-  const handleViewOrder = (orderId: string) => {
-    console.log("View order:", orderId);
-    // TODO: Implement order view modal or navigation
-  };
 
-  const handleEditOrder = (orderId: string) => {
-    console.log("Edit order:", orderId);
-    // TODO: Implement order edit modal or navigation
-  };
 
   if (metricsLoading) {
     return (
@@ -165,14 +140,9 @@ export default function Dashboard() {
       <StatsCards metrics={metrics} isLoading={metricsLoading} />
       
       <ChartsSection 
-        revenueData={revenueData}
+        revenueData={revenueData || []}
         distributionData={getDistributionData()}
-      />
-      
-      <RecentOrders 
-        orders={orders || []}
-        onViewOrder={handleViewOrder}
-        onEditOrder={handleEditOrder}
+        isLoading={revenueLoading}
       />
     </div>
   );
