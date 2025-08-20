@@ -25,7 +25,7 @@ export function SyncStatus() {
 
   // Manual sync mutation
   const syncMutation = useMutation({
-    mutationFn: async (options: { maxPages?: number; forceFullSync?: boolean }) => {
+    mutationFn: async (options: { maxPages?: number; syncType?: string }) => {
       const response = await authenticatedApiRequest("POST", "/api/sync/start", {
         body: JSON.stringify(options),
       });
@@ -52,9 +52,9 @@ export function SyncStatus() {
     },
   });
 
-  const handleManualSync = (maxPages: number = 3) => {
+  const handleManualSync = (syncType: string = "incremental", maxPages: number = 3) => {
     setIsManualSyncing(true);
-    syncMutation.mutate({ maxPages, forceFullSync: false });
+    syncMutation.mutate({ maxPages, syncType });
   };
 
   const formatLastSync = (date: string | null) => {
@@ -147,41 +147,60 @@ export function SyncStatus() {
         </div>
 
         {/* Manual Sync Controls */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="space-y-3 pt-2">
           <div className="text-sm text-gray-400">
-            Sincronização automática a cada 5 minutos
+            Sincronização automática a cada 5 minutos para novos pedidos
           </div>
-          <div className="flex space-x-2">
+          
+          <div className="grid grid-cols-1 gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleManualSync(2)}
+              onClick={() => handleManualSync("full")}
               disabled={isManualSyncing || syncStats?.isRunning}
-              className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10"
-              data-testid="button-quick-sync"
-            >
-              {isManualSyncing ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4 mr-2" />
-              )}
-              Sincronização Rápida
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleManualSync(5)}
-              disabled={isManualSyncing || syncStats?.isRunning}
-              className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10"
-              data-testid="button-full-sync"
+              className="glassmorphism-light text-gray-200 border-orange-600 hover:bg-orange-500/10"
+              data-testid="button-full-initial-sync"
             >
               {isManualSyncing ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Database className="h-4 w-4 mr-2" />
               )}
-              Sincronização Completa
+              Sincronização Completa (Todos os ~950 Leads)
             </Button>
+            
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleManualSync("incremental", 2)}
+                disabled={isManualSyncing || syncStats?.isRunning}
+                className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
+                data-testid="button-quick-sync"
+              >
+                {isManualSyncing ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Play className="h-4 w-4 mr-2" />
+                )}
+                Sync Rápido
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleManualSync("incremental", 5)}
+                disabled={isManualSyncing || syncStats?.isRunning}
+                className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
+                data-testid="button-incremental-sync"
+              >
+                {isManualSyncing ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Sync Incremental
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

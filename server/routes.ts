@@ -119,13 +119,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Smart Sync routes - for intelligent incremental synchronization
   app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { forceFullSync = false, maxPages = 3 } = req.body;
+      const { syncType = "incremental", maxPages = 3 } = req.body;
       const { smartSyncService } = await import("./smart-sync-service");
       
-      const result = await smartSyncService.startIncrementalSync({ 
-        forceFullSync, 
-        maxPages 
-      });
+      let result;
+      if (syncType === "full") {
+        result = await smartSyncService.startFullInitialSync();
+      } else {
+        result = await smartSyncService.startIncrementalSync({ maxPages });
+      }
       
       res.json(result);
     } catch (error) {

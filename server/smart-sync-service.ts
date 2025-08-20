@@ -13,11 +13,149 @@ export class SmartSyncService {
   private isRunning = false;
   private lastSyncTime: Date | null = null;
   
-  // Status que não precisam mais ser atualizados (pedidos finalizados)
+  // Status que indicam pedidos finalizados (mas ainda precisam ser monitorados para mudanças)
   private finalStatuses = ['delivered', 'cancelled', 'refused', 'returned'];
   
-  // Status que precisam ser monitorados
-  private activeStatuses = ['new order', 'confirmed', 'packed', 'shipped', 'in transit'];
+  // Status que precisam monitoramento frequente
+  private activeStatuses = ['new order', 'confirmed', 'packed', 'shipped', 'in transit', 'in delivery', 'incident'];
+
+  async startFullInitialSync(): Promise<{
+    success: boolean;
+    newLeads: number;
+    updatedLeads: number;
+    totalProcessed: number;
+    duration: number;
+    message: string;
+  }> {
+    if (this.isRunning) {
+      return {
+        success: false,
+        newLeads: 0,
+        updatedLeads: 0,
+        totalProcessed: 0,
+        duration: 0,
+        message: "Sincronização já está em execução"
+      };
+    }
+
+    const startTime = Date.now();
+    this.isRunning = true;
+
+    try {
+      console.log("🔄 Iniciando sincronização COMPLETA de todos os leads...");
+
+      let newLeads = 0;
+      let updatedLeads = 0;
+      let totalProcessed = 0;
+      let currentPage = 1;
+      let hasMorePages = true;
+
+      // Buscar TODAS as páginas até o fim
+      while (hasMorePages) {
+        try {
+          console.log(`📄 Processando página ${currentPage}...`);
+          
+          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+          
+          if (!pageLeads || pageLeads.length === 0) {
+            console.log(`📄 Página ${currentPage} vazia, finalizando...`);
+            break;
+          }
+
+          // Processar cada lead da página
+          for (const apiLead of pageLeads) {
+            try {
+              // Verificar se o lead já existe
+              const [existingLead] = await db
+                .select()
+                .from(orders)
+                .where(eq(orders.id, apiLead.n_lead))
+                .limit(1);
+
+              if (!existingLead) {
+                // Lead novo - inserir
+                await db.insert(orders).values({
+                  id: apiLead.n_lead,
+                  customerName: apiLead.name,
+                  customerPhone: apiLead.phone,
+                  customerCity: apiLead.city,
+                  customerCountry: "IT",
+                  total: apiLead.lead_value,
+                  status: apiLead.status_livrison || "new order",
+                  paymentMethod: apiLead.method_payment || "COD",
+                  provider: "european_fulfillment",
+                });
+
+                newLeads++;
+                if (newLeads % 50 === 0) {
+                  console.log(`✅ ${newLeads} leads processados...`);
+                }
+              } else {
+                // Lead existente - atualizar status se mudou
+                if (existingLead.status !== (apiLead.status_livrison || "new order")) {
+                  await db
+                    .update(orders)
+                    .set({
+                      status: apiLead.status_livrison || "new order",
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(orders.id, apiLead.n_lead));
+                  
+                  updatedLeads++;
+                }
+              }
+              
+              totalProcessed++;
+            } catch (error) {
+              console.warn(`⚠️  Erro ao processar lead ${apiLead.n_lead}:`, error);
+            }
+          }
+
+          // Verificar se há mais páginas
+          if (pageLeads.length < 15) {
+            hasMorePages = false;
+          } else {
+            currentPage++;
+            // Pequena pausa para não sobrecarregar a API
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+
+        } catch (error) {
+          console.warn(`⚠️  Erro ao buscar página ${currentPage}:`, error);
+          break;
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      this.lastSyncTime = new Date();
+
+      const message = `Sincronização completa: ${newLeads} novos, ${updatedLeads} atualizados de ${totalProcessed} leads em ${Math.round(duration / 1000)}s`;
+      
+      console.log(`✅ ${message}`);
+
+      return {
+        success: true,
+        newLeads,
+        updatedLeads,
+        totalProcessed,
+        duration,
+        message
+      };
+
+    } catch (error) {
+      console.error("❌ Erro na sincronização completa:", error);
+      return {
+        success: false,
+        newLeads: 0,
+        updatedLeads: 0,
+        totalProcessed: 0,
+        duration: Date.now() - startTime,
+        message: `Erro na sincronização: ${error instanceof Error ? error.message : 'Erro desconhecido'}`
+      };
+    } finally {
+      this.isRunning = false;
+    }
+  }
 
   async startIncrementalSync(options: SyncOptions = {}): Promise<{
     success: boolean;
@@ -53,17 +191,20 @@ export class SmartSyncService {
       let skippedLeads = 0;
       let totalProcessed = 0;
 
-      // 1. Buscar leads existentes que precisam ser atualizados
-      const leadsToUpdate = await db
+      // 1. Buscar leads que precisam ser atualizados (todos os não-finalizados + sample de finalizados)
+      const activeLeads = await db
         .select()
         .from(orders)
-        .where(
-          and(
-            not(inArray(orders.status, this.finalStatuses)),
-            // Atualizar leads modificados nas últimas 48h ou com status ativo
-            inArray(orders.status, this.activeStatuses)
-          )
-        );
+        .where(not(inArray(orders.status, this.finalStatuses)));
+
+      // Também verificar uma amostra de pedidos finalizados (caso o status mude)
+      const finalizedSample = await db
+        .select()
+        .from(orders)
+        .where(inArray(orders.status, this.finalStatuses))
+        .limit(20); // Verificar apenas 20 pedidos finalizados por vez
+
+      const leadsToUpdate = [...activeLeads, ...finalizedSample];
 
       console.log(`📋 Encontrados ${leadsToUpdate.length} leads para atualização`);
 
