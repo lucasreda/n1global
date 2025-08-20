@@ -45,10 +45,10 @@ export class DashboardService {
     const dateRange = this.getDateRange(period);
     console.log(`📅 Calculating metrics for period: ${period}`);
     
-    // Para dados importados, vamos simular diferentes períodos com limitação de registros
+    // Use order_date (data real do pedido) para análises de negócio
     let whereConditions = [
-      gte(orders.createdAt, dateRange.from),
-      lte(orders.createdAt, dateRange.to)
+      gte(orders.orderDate, dateRange.from),
+      lte(orders.orderDate, dateRange.to)
     ];
     
     if (provider) {
