@@ -365,29 +365,22 @@ export class FacebookAdsService {
           .where(eq(facebookAdAccounts.accountId, campaign.accountId || ""));
         
         const originalAmount = parseFloat(campaign.amountSpent || "0");
-        const originalCurrency = campaign.originalCurrency || "USD";
         const baseCurrency = (account?.baseCurrency) || "BRL";
         
-        console.log(`💰 Campanha: ${campaign.name}, Valor: ${originalAmount} ${originalCurrency}, Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
+        console.log(`💰 Campanha: ${campaign.name}, Valor: ${originalAmount} BRL, Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
         
         let amountInBRL = 0;
         
-        // Para contas configuradas como BRL, os valores da API já vêm convertidos para BRL
-        // Para outras contas, converter da moeda original para BRL
-        
+        // Para contas configuradas como BRL, os valores já estão em BRL
+        // Para contas USD, os valores na tabela já foram convertidos para BRL
         if (baseCurrency === "BRL") {
           // Conta configurada em BRL - valores já estão em BRL
           amountInBRL = originalAmount;
           console.log(`💰 Conta BRL - valor já em BRL: ${originalAmount} BRL`);
         } else {
-          // Conta em outra moeda - converter para BRL
-          if (originalCurrency === "BRL") {
-            amountInBRL = originalAmount;
-            console.log(`💰 Valor já em BRL: ${originalAmount} BRL`);
-          } else {
-            amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
-            console.log(`💰 Convertendo ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL (conta: ${baseCurrency})`);
-          }
+          // Para contas USD, os valores na tabela já foram convertidos para BRL
+          amountInBRL = originalAmount;
+          console.log(`💰 Conta ${baseCurrency} - valor já convertido para BRL: ${originalAmount} BRL`);
         }
         
         totalBRL += amountInBRL;
