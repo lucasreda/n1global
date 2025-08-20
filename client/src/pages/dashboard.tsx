@@ -61,32 +61,59 @@ export default function Dashboard() {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
+    
+    // Calculate all status values
+    const delivered = metrics.deliveredOrders || 0;
+    const shipped = metrics.shippedOrders || 0; 
+    const confirmed = metrics.confirmedOrders || 0;
+    const pending = metrics.pendingOrders || 0;
+    const cancelled = metrics.cancelledOrders || 0;
+    const returned = metrics.returnedOrders || 0;
+    
     return [
       {
         name: "Entregues",
-        value: metrics.deliveredOrders || 0,
-        percentage: total > 0 ? ((metrics.deliveredOrders || 0) / total * 100).toFixed(1) : "0",
-        color: "#10B981"
+        value: delivered,
+        percentage: total > 0 ? ((delivered / total) * 100).toFixed(1) : "0",
+        color: "#10B981", // Green
+        description: "Pedidos entregues com sucesso"
+      },
+      {
+        name: "Confirmados", 
+        value: confirmed,
+        percentage: total > 0 ? ((confirmed / total) * 100).toFixed(1) : "0",
+        color: "#3B82F6", // Blue
+        description: "Pedidos confirmados pelo cliente"
       },
       {
         name: "Enviados",
-        value: metrics.shippedOrders || 0,
-        percentage: total > 0 ? ((metrics.shippedOrders || 0) / total * 100).toFixed(1) : "0",
-        color: "#3B82F6"
+        value: shipped,
+        percentage: total > 0 ? ((shipped / total) * 100).toFixed(1) : "0",
+        color: "#8B5CF6", // Purple
+        description: "Pedidos em trânsito"
       },
       {
         name: "Pendentes",
-        value: metrics.pendingOrders || 0,
-        percentage: total > 0 ? ((metrics.pendingOrders || 0) / total * 100).toFixed(1) : "0",
-        color: "#F59E0B"
+        value: pending,
+        percentage: total > 0 ? ((pending / total) * 100).toFixed(1) : "0",
+        color: "#F59E0B", // Amber
+        description: "Aguardando processamento"
+      },
+      {
+        name: "Devolvidos",
+        value: returned,
+        percentage: total > 0 ? ((returned / total) * 100).toFixed(1) : "0",
+        color: "#EF4444", // Red
+        description: "Pedidos devolvidos"
       },
       {
         name: "Cancelados",
-        value: metrics.cancelledOrders || 0,
-        percentage: total > 0 ? ((metrics.cancelledOrders || 0) / total * 100).toFixed(1) : "0",
-        color: "#EF4444"
+        value: cancelled,
+        percentage: total > 0 ? ((cancelled / total) * 100).toFixed(1) : "0",
+        color: "#6B7280", // Gray
+        description: "Pedidos cancelados"
       }
-    ];
+    ].filter(item => item.value > 0); // Filtra apenas status com pedidos
   };
 
 

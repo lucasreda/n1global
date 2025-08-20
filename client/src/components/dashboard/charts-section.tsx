@@ -107,48 +107,96 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={distributionData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={renderCustomizedLabel}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {distributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(30, 41, 59, 0.9)', 
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <div className="lg:col-span-2">
+            <div className="h-64 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={distributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={renderCustomizedLabel}
+                    outerRadius={90}
+                    innerRadius={40}
+                    fill="#8884d8"
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {distributionData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.color}
+                        stroke={entry.color}
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '12px',
+                      color: '#fff',
+                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }}
+                    formatter={(value, name) => [
+                      `${value} pedidos`,
+                      name
+                    ]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              {/* Center total */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">
+                    {distributionData.reduce((sum, item) => sum + item.value, 0)}
+                  </div>
+                  <div className="text-xs text-gray-400">Total</div>
+                </div>
+              </div>
+            </div>
           </div>
           
-          <div className="space-y-4">
+          <div className="lg:col-span-3">
+            <div className="space-y-3">
             {distributionData.map((item) => (
-              <div key={item.name} className="flex items-center justify-between" data-testid={`distribution-${item.name.toLowerCase()}`}>
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-gray-300">{item.name}</span>
+              <div key={item.name} className="glassmorphism-light rounded-lg p-3 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: item.color }}></div>
+                    <div>
+                      <span className="text-white font-medium">{item.name}</span>
+                      <div className="text-xs text-gray-400 mt-1">{item.description}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-bold text-lg" data-testid={`percentage-${item.name.toLowerCase()}`}>
+                      {item.percentage}%
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {item.value} pedidos
+                    </div>
+                  </div>
                 </div>
-                <span className="text-white font-semibold" data-testid={`percentage-${item.name.toLowerCase()}`}>
-                  {item.percentage}%
-                </span>
+                
+                {/* Progress bar */}
+                <div className="w-full bg-gray-700/30 rounded-full h-2">
+                  <div 
+                    className="h-2 rounded-full transition-all duration-300" 
+                    style={{ 
+                      backgroundColor: item.color, 
+                      width: `${item.percentage}%`,
+                      boxShadow: `0 0 10px ${item.color}40`
+                    }}
+                  ></div>
+                </div>
               </div>
             ))}
+            </div>
           </div>
         </div>
       </div>
