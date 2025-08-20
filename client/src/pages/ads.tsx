@@ -341,10 +341,10 @@ export default function Ads() {
                     setNetworkSelectOpen(false);
                     setDialogOpen(true);
                   }}
-                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-blue-600 hover:bg-blue-700 border border-blue-500"
+                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 text-white"
                 >
-                  <Facebook size={24} />
-                  <span className="text-sm font-medium">Facebook Ads</span>
+                  <Facebook size={24} className="text-white" />
+                  <span className="text-sm font-medium text-white">Facebook Ads</span>
                 </Button>
                 <Button
                   onClick={() => {
@@ -352,10 +352,10 @@ export default function Ads() {
                     setNetworkSelectOpen(false);
                     setDialogOpen(true);
                   }}
-                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-red-600 hover:bg-red-700 border border-red-500"
+                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-red-600 hover:bg-red-700 border border-red-500 text-white"
                 >
-                  <SiGoogle size={24} />
-                  <span className="text-sm font-medium">Google Ads</span>
+                  <SiGoogle size={24} className="text-white" />
+                  <span className="text-sm font-medium text-white">Google Ads</span>
                 </Button>
               </div>
             </DialogContent>
