@@ -235,6 +235,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Currency conversion routes
+  app.get("/api/currency/rates", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { currencyService } = await import("./currency-service");
+      const rates = await currencyService.getExchangeRates();
+      res.json(rates);
+    } catch (error) {
+      console.error("Currency rates error:", error);
+      res.status(500).json({ message: "Erro ao buscar taxas de câmbio" });
+    }
+  });
+
+  app.post("/api/currency/convert", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { amount, fromCurrency } = req.body;
+      const { currencyService } = await import("./currency-service");
+      const convertedAmount = await currencyService.convertToBRL(amount, fromCurrency);
+      res.json({ convertedAmount, originalAmount: amount, fromCurrency, toCurrency: 'BRL' });
+    } catch (error) {
+      console.error("Currency conversion error:", error);
+      res.status(500).json({ message: "Erro ao converter moeda" });
+    }
+  });
+
   // Facebook Ads routes
   app.get("/api/facebook/business-managers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

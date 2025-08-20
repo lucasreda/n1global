@@ -32,7 +32,9 @@ interface FacebookCampaign {
   objective: string;
   dailyBudget: string;
   lifetimeBudget: string;
-  amountSpent: string;
+  amountSpent: string; // Valor em BRL
+  originalAmountSpent?: string; // Valor original
+  originalCurrency?: string; // Moeda original
   impressions: number;
   clicks: number;
   cpm: string;
@@ -193,8 +195,19 @@ export default function Ads() {
     return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
   };
 
-  const formatCurrency = (amount: string) => {
-    return `€${parseFloat(amount || "0").toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`;
+  const formatCurrency = (amount: string, currency: string = 'BRL') => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: currency,
+    }).format(parseFloat(amount || "0"));
+  };
+
+  const formatOriginalCurrency = (originalAmount?: string, originalCurrency?: string) => {
+    if (!originalAmount || !originalCurrency || originalCurrency === 'BRL') return null;
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: originalCurrency,
+    }).format(parseFloat(originalAmount));
   };
 
   const formatPercentage = (value: string) => {
@@ -377,7 +390,7 @@ export default function Ads() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString())}</div>
+            <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString(), 'BRL')}</div>
             <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
           </CardContent>
         </Card>
@@ -491,7 +504,14 @@ export default function Ads() {
                           <div className="grid grid-cols-4 gap-3 text-xs">
                             <div>
                               <span className="text-gray-400">Gasto: </span>
-                              <span className="text-white font-medium">{formatCurrency(campaign.amountSpent)}</span>
+                              <div className="flex flex-col">
+                                <span className="text-white font-medium">{formatCurrency(campaign.amountSpent, 'BRL')}</span>
+                                {formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency) && (
+                                  <span className="text-gray-500 text-xs">
+                                    {formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <div>
                               <span className="text-gray-400">Impressões: </span>

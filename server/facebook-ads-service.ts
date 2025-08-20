@@ -12,6 +12,7 @@ import {
   type InsertFacebookBusinessManager
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { currencyService } from './currency-service';
 
 interface FacebookApiCampaign {
   id: string;
@@ -126,6 +127,12 @@ export class FacebookAdsService {
             .where(eq(facebookCampaigns.campaignId, liveCampaign.campaignId))
             .limit(1);
 
+          // Converter valores para BRL
+          const spentInBRL = await currencyService.convertToBRL(
+            parseFloat(liveCampaign.amountSpent || "0"), 
+            account.currency || 'USD'
+          );
+
           // Usar dados ao vivo da API mas manter configurações locais (isSelected)
           campaignsWithLiveData.push({
             ...liveCampaign,
@@ -133,6 +140,9 @@ export class FacebookAdsService {
             isSelected: existing[0]?.isSelected || false,
             accountId: account.accountId, // Adicionar ID da conta
             accountName: account.name, // Adicionar nome da conta
+            amountSpent: spentInBRL.toFixed(2), // Valor convertido para BRL
+            originalAmountSpent: liveCampaign.amountSpent, // Valor original
+            originalCurrency: account.currency || 'USD', // Moeda original
             lastSync: new Date()
           });
         }

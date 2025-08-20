@@ -243,7 +243,9 @@ export const facebookCampaigns = pgTable("facebook_campaigns", {
   objective: varchar("objective", { length: 100 }),
   dailyBudget: decimal("daily_budget", { precision: 10, scale: 2 }),
   lifetimeBudget: decimal("lifetime_budget", { precision: 10, scale: 2 }),
-  amountSpent: decimal("amount_spent", { precision: 10, scale: 2 }).default("0"),
+  amountSpent: decimal("amount_spent", { precision: 10, scale: 2 }).default("0"), // Valor em BRL
+  originalAmountSpent: decimal("original_amount_spent", { precision: 10, scale: 2 }), // Valor original
+  originalCurrency: varchar("original_currency", { length: 10 }).default("USD"), // Moeda original
   impressions: integer("impressions").default(0),
   clicks: integer("clicks").default(0),
   cpm: decimal("cpm", { precision: 10, scale: 2 }).default("0"),
