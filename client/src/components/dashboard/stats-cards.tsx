@@ -122,26 +122,26 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Profit Card - Special Highlight */}
-      <div className="glassmorphism rounded-2xl p-8 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-green-600/20 border-2 border-green-400/30 hover:bg-gradient-to-r hover:from-green-500/30 hover:via-emerald-500/30 hover:to-green-600/30 transition-all duration-300 group">
-        <div className="flex items-center justify-between mb-6">
-          <div className="w-16 h-16 bg-green-500/30 rounded-xl flex items-center justify-center group-hover:bg-green-500/40 transition-all">
-            <DollarSign className="text-green-400 w-8 h-8" />
+      <div className="glassmorphism rounded-2xl p-6 bg-gradient-to-r from-green-400/10 via-green-300/10 to-emerald-400/10 border border-green-300/20 hover:bg-gradient-to-r hover:from-green-400/15 hover:via-green-300/15 hover:to-emerald-400/15 transition-all duration-300 group">
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-12 h-12 bg-green-400/20 rounded-xl flex items-center justify-center group-hover:bg-green-400/30 transition-all">
+            <DollarSign className="text-green-400 w-6 h-6" />
           </div>
           <div className="text-right">
-            <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
               profitMargin >= 0 ? "text-green-400 bg-green-400/20" : "text-red-400 bg-red-400/20"
             }`}>
               {profitMargin >= 0 ? "+" : ""}{profitMargin.toFixed(1)}% margem
             </span>
           </div>
         </div>
-        <h3 className="text-4xl font-bold text-green-400 mb-2" data-testid="value-card-profit">
+        <h3 className="text-2xl font-bold text-green-400 mb-1" data-testid="value-card-profit">
           € {totalProfit.toFixed(2)}
         </h3>
-        <p className="text-gray-300 text-lg" data-testid="label-card-profit">
+        <p className="text-gray-300 text-sm" data-testid="label-card-profit">
           Lucro Total
         </p>
-        <p className="text-sm text-gray-400 mt-2">
+        <p className="text-xs text-gray-400 mt-1">
           Receita - Custos de Produtos - Marketing
         </p>
       </div>
