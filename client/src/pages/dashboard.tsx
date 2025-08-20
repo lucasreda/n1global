@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
+import { SyncStatus } from "@/components/dashboard/sync-status";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -144,6 +145,8 @@ export default function Dashboard() {
         distributionData={getDistributionData()}
         isLoading={revenueLoading}
       />
+      
+      <SyncStatus />
     </div>
   );
 }

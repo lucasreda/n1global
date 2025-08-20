@@ -42,6 +42,10 @@ app.use((req, res, next) => {
   await seedDatabase();
   
   const server = await registerRoutes(app);
+  
+  // Start smart sync service
+  const { smartSyncService } = await import("./smart-sync-service");
+  await smartSyncService.scheduleAutoSync();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
