@@ -38,12 +38,14 @@ export default function Dashboard() {
 
   // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ["/api/dashboard/metrics", dateFilter],
+    queryKey: ["/api/dashboard/metrics", dateFilter, "v2"],
     queryFn: async () => {
       const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
       const response = await authenticatedApiRequest("GET", `/api/dashboard/metrics?period=${period}`);
       return response.json();
     },
+    staleTime: 0,
+    cacheTime: 0,
   });
 
   // Fetch revenue chart data

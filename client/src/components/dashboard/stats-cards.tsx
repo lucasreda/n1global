@@ -118,12 +118,12 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       title: "Receita Paga",
       value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       subtitle: `€ ${revenue.toFixed(2)}`,
-      icon: Percent,
+      icon: DollarSign,
       iconBg: "bg-purple-600/20",
       iconColor: "text-purple-400",
       hoverBg: "group-hover:bg-purple-600/30",
       growth: calculateGrowth(totalRevenueBRL),
-      testId: "card-revenue"
+      testId: "card-paid-revenue"
     },
     {
       title: "Custo de Produtos",
