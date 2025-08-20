@@ -92,7 +92,7 @@ export class FacebookAdsService {
     return campaigns;
   }
 
-  async syncCampaigns(): Promise<{ synced: number; errors?: string[] }> {
+  async syncCampaigns(datePeriod: string = "last_30d"): Promise<{ synced: number; errors?: string[] }> {
     const accounts = await db.select().from(facebookAdAccounts).where(eq(facebookAdAccounts.isActive, true));
     
     if (accounts.length === 0) {
@@ -110,7 +110,7 @@ export class FacebookAdsService {
       
       try {
         console.log(`Sincronizando campanhas para conta: ${account.name} (${account.accountId})`);
-        const campaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken);
+        const campaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken, datePeriod);
         
         for (const campaignData of campaigns) {
           // Check if campaign already exists
@@ -179,13 +179,13 @@ export class FacebookAdsService {
     return data.data || [];
   }
 
-  private async fetchCampaignsFromAPI(accountId: string, accessToken: string): Promise<any[]> {
+  private async fetchCampaignsFromAPI(accountId: string, accessToken: string, datePeriod: string = "last_30d"): Promise<any[]> {
     // Ensure account ID has the 'act_' prefix for Facebook API
     const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
     
-    const url = `${this.baseUrl}/${formattedAccountId}/campaigns?access_token=${accessToken}&fields=id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time,start_time,stop_time,insights.date_preset(last_30d){spend,impressions,clicks,cpm,cpc,ctr}`;
+    const url = `${this.baseUrl}/${formattedAccountId}/campaigns?access_token=${accessToken}&fields=id,name,status,objective,daily_budget,lifetime_budget,created_time,updated_time,start_time,stop_time,insights.date_preset(${datePeriod}){spend,impressions,clicks,cpm,cpc,ctr}`;
     
-    console.log(`Buscando campanhas da API do Facebook para conta: ${formattedAccountId}`);
+    console.log(`Buscando campanhas da API do Facebook para conta: ${formattedAccountId} (período: ${datePeriod})`);
     
     const response = await fetch(url);
     
@@ -218,7 +218,7 @@ export class FacebookAdsService {
       endTime: campaign.stop_time ? new Date(campaign.stop_time) : null,
     })) || [];
     
-    console.log(`Encontradas ${campaigns.length} campanhas para conta ${formattedAccountId}`);
+    console.log(`Encontradas ${campaigns.length} campanhas para conta ${formattedAccountId} (período: ${datePeriod})`);
     return campaigns;
   }
 

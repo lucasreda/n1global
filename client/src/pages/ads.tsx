@@ -66,6 +66,7 @@ interface FacebookAdAccount {
 export default function Ads() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [bmDialogOpen, setBmDialogOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
   const [newAccount, setNewAccount] = useState({
     accountId: "",
     name: "",
@@ -93,9 +94,9 @@ export default function Ads() {
 
   // Fetch Facebook Campaigns
   const { data: campaigns, isLoading: campaignsLoading } = useQuery({
-    queryKey: ["/api/facebook/campaigns"],
+    queryKey: ["/api/facebook/campaigns", selectedPeriod],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/facebook/campaigns");
+      const response = await authenticatedApiRequest("GET", `/api/facebook/campaigns?period=${selectedPeriod}`);
       return response.json() as Promise<FacebookCampaign[]>;
     },
     enabled: (adAccounts?.length || 0) > 0,
@@ -119,7 +120,8 @@ export default function Ads() {
         name: "",
         accessToken: "",
         appId: "",
-        appSecret: ""
+        appSecret: "",
+        businessManagerId: ""
       });
     },
     onError: () => {
@@ -134,7 +136,7 @@ export default function Ads() {
   // Sync campaigns from Facebook
   const syncCampaignsMutation = useMutation({
     mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", "/api/facebook/sync");
+      const response = await authenticatedApiRequest("POST", "/api/facebook/sync-period", { period: selectedPeriod });
       return response.json();
     },
     onSuccess: (data) => {
@@ -142,7 +144,7 @@ export default function Ads() {
         title: "Sincronização concluída",
         description: `${data.synced || 0} campanhas sincronizadas`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns", selectedPeriod] });
     },
     onError: () => {
       toast({
@@ -162,7 +164,7 @@ export default function Ads() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns", selectedPeriod] });
       toast({
         title: "Campanha atualizada",
         description: "Seleção da campanha alterada",
@@ -221,24 +223,37 @@ export default function Ads() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Anúncios Facebook</h1>
-          <p className="text-gray-400">Gerencie campanhas e custos de marketing</p>
+          <h1 className="text-xl font-bold text-white">Facebook Ads</h1>
+          <p className="text-sm text-gray-400">Campanhas e custos de marketing</p>
         </div>
         <div className="flex items-center space-x-3">
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5"
+          >
+            <option value="today">Hoje</option>
+            <option value="yesterday">Ontem</option>
+            <option value="last_7d">Últimos 7 dias</option>
+            <option value="last_30d">Últimos 30 dias</option>
+            <option value="this_month">Este mês</option>
+            <option value="last_month">Mês passado</option>
+            <option value="this_quarter">Este trimestre</option>
+          </select>
           <Button
             onClick={() => syncCampaignsMutation.mutate()}
             disabled={syncCampaignsMutation.isPending || !adAccounts?.length}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8"
             data-testid="button-sync-campaigns"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-            Sincronizar
+            <RefreshCw className={`w-3 h-3 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
+            Sync
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-add-account">
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar Conta
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8" data-testid="button-add-account">
+                <Plus className="w-3 h-3 mr-2" />
+                Conta
               </Button>
             </DialogTrigger>
             <DialogContent className="glassmorphism border-gray-700 max-w-md">
@@ -388,89 +403,61 @@ export default function Ads() {
       {/* Campaigns List */}
       {campaigns?.length ? (
         <Card className="glassmorphism border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white">Campanhas do Facebook</CardTitle>
-            <CardDescription className="text-gray-400">
-              Selecione as campanhas que devem ser consideradas como custos de marketing no dashboard
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-white">Campanhas</CardTitle>
+            <CardDescription className="text-sm text-gray-400">
+              Selecione campanhas para incluir no dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {campaignsLoading ? (
                 [...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-20 glassmorphism-light" />
+                  <Skeleton key={i} className="h-16 glassmorphism-light" />
                 ))
               ) : (
                 campaigns.map((campaign) => (
                   <div
                     key={campaign.id}
-                    className={`glassmorphism-light rounded-xl p-4 border transition-all duration-200 ${
+                    className={`glassmorphism-light rounded-lg p-3 border transition-all duration-200 ${
                       campaign.isSelected 
                         ? 'border-blue-400/50 bg-blue-500/10' 
                         : 'border-gray-600 hover:border-gray-500'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3 flex-1">
                         <Switch
                           checked={campaign.isSelected}
                           onCheckedChange={() => toggleCampaignMutation.mutate({
                             campaignId: campaign.id,
                             isSelected: campaign.isSelected
                           })}
-                          data-testid={`switch-campaign-${campaign.campaignId}`}
+                          className="scale-75"
                         />
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <h4 className="font-medium text-white">{campaign.name}</h4>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h4 className="text-sm font-medium text-white truncate">{campaign.name}</h4>
                             {getStatusBadge(campaign.status)}
                           </div>
-                          <p className="text-sm text-gray-400 mt-1">{campaign.objective}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-semibold text-white">
-                          {formatCurrency(campaign.amountSpent)}
-                        </div>
-                        <div className="text-xs text-gray-400">gasto</div>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-600">
-                      <div className="flex items-center space-x-2">
-                        <Eye className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <div className="text-sm font-medium text-white">
-                            {campaign.impressions.toLocaleString()}
+                          <div className="grid grid-cols-4 gap-3 text-xs">
+                            <div>
+                              <span className="text-gray-400">Gasto: </span>
+                              <span className="text-white font-medium">{formatCurrency(campaign.amountSpent)}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Impressões: </span>
+                              <span className="text-white font-medium">{campaign.impressions.toLocaleString()}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Cliques: </span>
+                              <span className="text-white font-medium">{campaign.clicks.toLocaleString()}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">CTR: </span>
+                              <span className="text-white font-medium">{formatPercentage(campaign.ctr)}</span>
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-400">Impressões</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <MousePointer className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <div className="text-sm font-medium text-white">
-                            {campaign.clicks.toLocaleString()}
-                          </div>
-                          <div className="text-xs text-gray-400">Cliques</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <TrendingUp className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <div className="text-sm font-medium text-white">
-                            {formatPercentage(campaign.ctr)}
-                          </div>
-                          <div className="text-xs text-gray-400">CTR</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <div className="text-sm font-medium text-white">
-                            {formatCurrency(campaign.cpc)}
-                          </div>
-                          <div className="text-xs text-gray-400">CPC</div>
                         </div>
                       </div>
                     </div>

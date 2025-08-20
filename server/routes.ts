@@ -299,6 +299,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/facebook/sync-period", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { period } = req.body;
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const result = await facebookAdsService.syncCampaigns(period || "last_30d");
+      res.json(result);
+    } catch (error) {
+      console.error("Facebook sync period error:", error);
+      res.status(500).json({ message: "Erro ao sincronizar campanhas por período" });
+    }
+  });
+
+  app.patch("/api/facebook/campaigns/:campaignId", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { campaignId } = req.params;
+      const { isSelected } = req.body;
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      await facebookAdsService.updateCampaignSelection(campaignId, isSelected);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Facebook campaign update error:", error);
+      res.status(500).json({ message: "Erro ao atualizar campanha" });
+    }
+  });
+
   app.post("/api/facebook/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { facebookAdsService } = await import("./facebook-ads-service");
