@@ -367,19 +367,16 @@ export class FacebookAdsService {
         
         let amountInBRL = 0;
         
-        if (baseCurrency === "BRL") {
-          // Se a conta está configurada para BRL, os valores JÁ ESTÃO em BRL
-          // Não fazer conversão adicional
+        // A configuração baseCurrency da conta indica em que moeda queremos os valores finais
+        // Mas o originalCurrency indica a moeda real dos dados da API do Facebook
+        // SEMPRE converter da moeda original (API) para BRL, independente da configuração da conta
+        
+        if (originalCurrency === "BRL") {
           amountInBRL = originalAmount;
-          console.log(`💰 Conta configurada em BRL - usando valor direto: ${originalAmount} BRL`);
+          console.log(`💰 Valor já em BRL: ${originalAmount} BRL`);
         } else {
-          // Se a conta não está em BRL, converter da moeda original para BRL
-          if (originalCurrency === "BRL") {
-            amountInBRL = originalAmount;
-          } else {
-            amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
-            console.log(`💰 Convertendo ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL`);
-          }
+          amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
+          console.log(`💰 Convertendo ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL (conta: ${baseCurrency})`);
         }
         
         totalBRL += amountInBRL;
