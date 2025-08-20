@@ -281,7 +281,8 @@ export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
   appId: varchar("app_id", { length: 255 }),
   appSecret: text("app_secret"),
   isActive: boolean("is_active").default(true),
-  currency: varchar("currency", { length: 10 }).default("EUR"),
+  currency: varchar("currency", { length: 10 }).default("EUR"), // Moeda retornada pela API do Facebook
+  baseCurrency: varchar("base_currency", { length: 10 }).default("BRL"), // Moeda configurada pelo usuário (BRL, USD, EUR)
   timezone: varchar("timezone", { length: 50 }).default("Europe/Rome"),
   lastSync: timestamp("last_sync"),
   createdAt: timestamp("created_at").defaultNow(),

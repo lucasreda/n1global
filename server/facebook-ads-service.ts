@@ -127,11 +127,23 @@ export class FacebookAdsService {
             .where(eq(facebookCampaigns.campaignId, liveCampaign.campaignId))
             .limit(1);
 
-          // Converter valores para BRL
-          const spentInBRL = await currencyService.convertToBRL(
-            parseFloat(liveCampaign.amountSpent || "0"), 
-            account.currency || 'USD'
-          );
+          // Converter valores para a moeda base configurada da conta
+          const baseCurrency = account.baseCurrency || 'BRL';
+          const originalCurrency = account.currency || 'EUR';
+          const originalAmount = parseFloat(liveCampaign.amountSpent || "0");
+          
+          let convertedAmount = originalAmount;
+          
+          // Se a moeda base for diferente da moeda original, fazer conversão
+          if (baseCurrency !== originalCurrency) {
+            if (baseCurrency === 'BRL') {
+              convertedAmount = await currencyService.convertToBRL(originalAmount, originalCurrency);
+            } else {
+              // Para outras moedas, converter primeiro para BRL e depois para a moeda desejada
+              const brlValue = await currencyService.convertToBRL(originalAmount, originalCurrency);
+              convertedAmount = await currencyService.convertFromBRL(brlValue, baseCurrency);
+            }
+          }
 
           // Usar dados ao vivo da API mas manter configurações locais (isSelected)
           campaignsWithLiveData.push({
@@ -140,9 +152,10 @@ export class FacebookAdsService {
             isSelected: existing[0]?.isSelected || false,
             accountId: account.accountId, // Adicionar ID da conta
             accountName: account.name, // Adicionar nome da conta
-            amountSpent: spentInBRL.toFixed(2), // Valor convertido para BRL
+            baseCurrency: baseCurrency, // Moeda base configurada
+            amountSpent: convertedAmount.toFixed(2), // Valor convertido para moeda base
             originalAmountSpent: liveCampaign.amountSpent, // Valor original
-            originalCurrency: account.currency || 'USD', // Moeda original
+            originalCurrency: originalCurrency, // Moeda original do Facebook
             lastSync: new Date()
           });
         }

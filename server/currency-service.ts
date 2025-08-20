@@ -125,6 +125,25 @@ export class CurrencyService {
     // Default para USD se não conseguir detectar
     return 'USD';
   }
+
+  async convertFromBRL(amountInBRL: number, toCurrency: string): Promise<number> {
+    if (toCurrency === 'BRL') {
+      return amountInBRL;
+    }
+
+    const rates = await this.getExchangeRates();
+    const rate = rates[toCurrency.toUpperCase()];
+    
+    if (!rate) {
+      console.warn(`Taxa de câmbio não encontrada para ${toCurrency}, usando valor original`);
+      return amountInBRL;
+    }
+    
+    const convertedAmount = amountInBRL / rate;
+    console.log(`💱 Convertendo ${amountInBRL} BRL para ${convertedAmount.toFixed(2)} ${toCurrency} (taxa: ${rate})`);
+    
+    return convertedAmount;
+  }
 }
 
 export const currencyService = CurrencyService.getInstance();
