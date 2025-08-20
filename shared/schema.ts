@@ -202,6 +202,8 @@ export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  profitMargin: true,
+  lastCostUpdate: true,
 });
 
 export const insertShippingProviderSchema = createInsertSchema(shippingProviders).omit({
