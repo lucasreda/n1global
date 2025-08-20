@@ -449,6 +449,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Auto-sync shipping data endpoint
+  app.get('/api/sync/auto', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { syncManager } = await import("./sync-manager");
+      const syncResult = await syncManager.autoSyncShippingIfNeeded();
+      res.json(syncResult);
+    } catch (error) {
+      console.error('Error in auto-sync:', error);
+      res.status(500).json({ 
+        error: 'Auto-sync failed', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // Get shipping sync status
+  app.get('/api/sync/shipping-status', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { syncManager } = await import("./sync-manager");
+      const syncInfo = syncManager.getShippingSyncInfo();
+      res.json(syncInfo);
+    } catch (error) {
+      console.error('Error getting shipping sync status:', error);
+      res.status(500).json({ 
+        error: 'Failed to get sync status', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
   // Orders routes - fetch from database with filters and pagination
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

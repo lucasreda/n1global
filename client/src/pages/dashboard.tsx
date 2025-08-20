@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
@@ -12,6 +12,29 @@ import { Calendar, Filter } from "lucide-react";
 
 export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("current_month");
+
+  // Auto-sync on page load (similar to Facebook Ads)
+  useEffect(() => {
+    const performAutoSync = async () => {
+      try {
+        console.log('🔄 Verificando necessidade de auto-sync da transportadora...');
+        const response = await authenticatedApiRequest("GET", "/api/sync/auto");
+        const result = await response.json();
+        
+        if (result.executed) {
+          console.log('✅ Auto-sync da transportadora executado:', result.reason);
+          // Refresh data after auto-sync
+          window.location.reload();
+        } else {
+          console.log('ℹ️ Auto-sync não necessário:', result.reason);
+        }
+      } catch (error) {
+        console.error('❌ Erro no auto-sync da transportadora:', error);
+      }
+    };
+
+    performAutoSync();
+  }, []); // Run only on component mount
 
   // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
