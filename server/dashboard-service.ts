@@ -100,6 +100,8 @@ export class DashboardService {
     let cancelledOrders = 0;
     let shippedOrders = 0;
     let pendingOrders = 0;
+    let returnedOrders = 0;
+    let confirmedOrders = 0;
     let totalRevenue = 0;
     
     statusCounts.forEach(row => {
@@ -114,10 +116,15 @@ export class DashboardService {
         case 'delivered':
           deliveredOrders += orderCount;
           break;
+        case 'returned':
+          returnedOrders += orderCount;
+          break;
+        case 'unpacked':
+          confirmedOrders += orderCount;
+          break;
         case 'cancelled':
         case 'canceled':
         case 'rejected':
-        case 'returned':
           cancelledOrders += orderCount;
           break;
         case 'shipped':
@@ -129,7 +136,6 @@ export class DashboardService {
         case 'pending':
         case 'new order':
         case 'item packed':
-        case 'unpacked':
         case 'incident':
         default:
           pendingOrders += orderCount;
@@ -157,12 +163,14 @@ export class DashboardService {
     const totalCosts = totalProductCosts + marketingCosts;
     const roi = totalCosts > 0 ? ((totalRevenue - totalCosts) / totalCosts) * 100 : 0;
     
-    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
+    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
     
     return {
       totalOrders,
       deliveredOrders,
       cancelledOrders,
+      returnedOrders,
+      confirmedOrders,
       shippedOrders,
       pendingOrders,
       totalRevenue,

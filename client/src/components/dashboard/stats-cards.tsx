@@ -1,4 +1,4 @@
-import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3 } from "lucide-react";
+import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare } from "lucide-react";
 
 interface StatsCardsProps {
   metrics: any;
@@ -9,7 +9,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {[...Array(8)].map((_, i) => (
+        {[...Array(10)].map((_, i) => (
           <div key={i} className="glassmorphism rounded-2xl p-6 h-32 animate-pulse">
             <div className="w-12 h-12 bg-gray-600/50 rounded-xl mb-4"></div>
             <div className="w-3/4 h-4 bg-gray-600/50 rounded mb-2"></div>
@@ -23,6 +23,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const totalOrders = metrics?.totalOrders || 0;
   const deliveredOrders = metrics?.deliveredOrders || 0;
   const cancelledOrders = metrics?.cancelledOrders || 0;
+  const returnedOrders = metrics?.returnedOrders || 0;
+  const confirmedOrders = metrics?.confirmedOrders || 0;
   const revenue = metrics?.totalRevenue || 0;
   const productCosts = metrics?.totalProductCosts || 0;
   const marketingCosts = metrics?.marketingCosts || 0;
@@ -66,6 +68,26 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       hoverBg: "group-hover:bg-red-600/30",
       growth: calculateGrowth(cancelledOrders, cancelledOrders * 1.1),
       testId: "card-cancelled-orders"
+    },
+    {
+      title: "Pedidos Retornados",
+      value: returnedOrders.toLocaleString(),
+      icon: RotateCcw,
+      iconBg: "bg-amber-600/20",
+      iconColor: "text-amber-400",
+      hoverBg: "group-hover:bg-amber-600/30",
+      growth: calculateGrowth(returnedOrders, returnedOrders * 1.1),
+      testId: "card-returned-orders"
+    },
+    {
+      title: "Pedidos Confirmados",
+      value: confirmedOrders.toLocaleString(),
+      icon: CheckSquare,
+      iconBg: "bg-teal-600/20",
+      iconColor: "text-teal-400",
+      hoverBg: "group-hover:bg-teal-600/30",
+      growth: calculateGrowth(confirmedOrders, confirmedOrders * 0.9),
+      testId: "card-confirmed-orders"
     },
     {
       title: "Receita Total",
