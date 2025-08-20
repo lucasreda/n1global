@@ -44,10 +44,19 @@ interface FacebookCampaign {
   lastSync: string;
 }
 
+interface FacebookBusinessManager {
+  id: string;
+  businessId: string;
+  name: string;
+  isActive: boolean;
+  lastSync: string;
+}
+
 interface FacebookAdAccount {
   id: string;
   accountId: string;
   name: string;
+  businessManagerId?: string;
   isActive: boolean;
   currency: string;
   timezone: string;
@@ -56,12 +65,19 @@ interface FacebookAdAccount {
 
 export default function Ads() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bmDialogOpen, setBmDialogOpen] = useState(false);
   const [newAccount, setNewAccount] = useState({
     accountId: "",
     name: "",
     accessToken: "",
     appId: "",
-    appSecret: ""
+    appSecret: "",
+    businessManagerId: ""
+  });
+  const [newBusinessManager, setNewBusinessManager] = useState({
+    businessId: "",
+    name: "",
+    accessToken: ""
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();

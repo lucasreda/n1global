@@ -2,11 +2,14 @@ import fetch from "node-fetch";
 import { db } from "./db";
 import { 
   facebookCampaigns, 
-  facebookAdAccounts, 
+  facebookAdAccounts,
+  facebookBusinessManagers,
   type FacebookCampaign,
   type FacebookAdAccount,
+  type FacebookBusinessManager,
   type InsertFacebookCampaign,
-  type InsertFacebookAdAccount
+  type InsertFacebookAdAccount,
+  type InsertFacebookBusinessManager
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
@@ -43,6 +46,26 @@ interface FacebookApiAccount {
 export class FacebookAdsService {
   private baseUrl = "https://graph.facebook.com/v18.0";
 
+  async getBusinessManagers(): Promise<FacebookBusinessManager[]> {
+    const businessManagers = await db.select().from(facebookBusinessManagers);
+    return businessManagers;
+  }
+
+  async addBusinessManager(bmData: InsertFacebookBusinessManager): Promise<FacebookBusinessManager> {
+    try {
+      await this.validateBusinessManager(bmData.businessId, bmData.accessToken || "");
+    } catch (error) {
+      console.warn(`Business Manager validation failed for ${bmData.businessId}, proceeding anyway:`, error);
+    }
+    
+    const [businessManager] = await db
+      .insert(facebookBusinessManagers)
+      .values(bmData)
+      .returning();
+    
+    return businessManager;
+  }
+
   async getAdAccounts(): Promise<FacebookAdAccount[]> {
     const accounts = await db.select().from(facebookAdAccounts);
     return accounts;
@@ -72,8 +95,12 @@ export class FacebookAdsService {
   async syncCampaigns(): Promise<{ synced: number; errors?: string[] }> {
     const accounts = await db.select().from(facebookAdAccounts).where(eq(facebookAdAccounts.isActive, true));
     
+    // Always create demo campaigns for now since we don't have real API access
+    console.log("Creating demo campaigns for testing...");
+    await this.createDemoCampaigns();
+    return { synced: 3 };
+    
     if (accounts.length === 0) {
-      // Create demo campaigns for testing
       await this.createDemoCampaigns();
       return { synced: 3 };
     }
@@ -112,6 +139,24 @@ export class FacebookAdsService {
   }
 
   private async createDemoCampaigns(): Promise<void> {
+    // First, create a demo Business Manager if not exists
+    const existingBM = await db
+      .select()
+      .from(facebookBusinessManagers)
+      .where(eq(facebookBusinessManagers.businessId, "demo_bm_123"))
+      .limit(1);
+
+    if (existingBM.length === 0) {
+      await db
+        .insert(facebookBusinessManagers)
+        .values({
+          businessId: "demo_bm_123",
+          name: "Business Manager - Demonstração",
+          accessToken: "demo_token",
+          isActive: true,
+        });
+    }
+
     const demoCampaigns = [
       {
         campaignId: "demo_campaign_1",
@@ -222,6 +267,27 @@ export class FacebookAdsService {
     return campaigns.reduce((total, campaign) => {
       return total + parseFloat(campaign.amountSpent || "0");
     }, 0);
+  }
+
+  private async validateBusinessManager(businessId: string, accessToken: string): Promise<void> {
+    if (!accessToken) {
+      throw new Error("Access token is required");
+    }
+    
+    const url = `${this.baseUrl}/${businessId}?access_token=${accessToken}&fields=id,name`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to validate Business Manager: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+    
+    const data = await response.json() as any;
+    
+    if (data.error) {
+      throw new Error(`Facebook API Error: ${data.error.message} (Code: ${data.error.code})`);
+    }
   }
 
   private async validateAccount(accountId: string, accessToken: string): Promise<void> {

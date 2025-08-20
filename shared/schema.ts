@@ -257,11 +257,24 @@ export const facebookCampaigns = pgTable("facebook_campaigns", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Facebook Business Managers
+export const facebookBusinessManagers = pgTable("facebook_business_managers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  accessToken: text("access_token"),
+  isActive: boolean("is_active").default(true),
+  lastSync: timestamp("last_sync"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Facebook Ads Account Settings
 export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   accountId: varchar("account_id", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
+  businessManagerId: varchar("business_manager_id", { length: 255 }).references(() => facebookBusinessManagers.id),
   accessToken: text("access_token"),
   appId: varchar("app_id", { length: 255 }),
   appSecret: text("app_secret"),
@@ -274,6 +287,13 @@ export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
 });
 
 // Schema validations
+export const insertFacebookBusinessManagerSchema = createInsertSchema(facebookBusinessManagers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
 export const insertFacebookCampaignSchema = createInsertSchema(facebookCampaigns).omit({
   id: true,
   createdAt: true,
@@ -289,6 +309,9 @@ export const insertFacebookAdAccountSchema = createInsertSchema(facebookAdAccoun
 });
 
 // Types
+export type FacebookBusinessManager = typeof facebookBusinessManagers.$inferSelect;
+export type InsertFacebookBusinessManager = z.infer<typeof insertFacebookBusinessManagerSchema>;
+
 export type FacebookCampaign = typeof facebookCampaigns.$inferSelect;
 export type InsertFacebookCampaign = z.infer<typeof insertFacebookCampaignSchema>;
 

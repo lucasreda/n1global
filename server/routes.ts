@@ -236,6 +236,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Facebook Ads routes
+  app.get("/api/facebook/business-managers", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const businessManagers = await facebookAdsService.getBusinessManagers();
+      res.json(businessManagers);
+    } catch (error) {
+      console.error("Facebook business managers error:", error);
+      res.status(500).json({ message: "Erro ao buscar Business Managers" });
+    }
+  });
+
+  app.post("/api/facebook/business-managers", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { insertFacebookBusinessManagerSchema } = await import("@shared/schema");
+      const validatedData = insertFacebookBusinessManagerSchema.parse(req.body);
+      
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const businessManager = await facebookAdsService.addBusinessManager(validatedData);
+      
+      res.json(businessManager);
+    } catch (error) {
+      console.error("Add Facebook business manager error:", error);
+      res.status(500).json({ message: "Erro ao adicionar Business Manager" });
+    }
+  });
+
   app.get("/api/facebook/accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { facebookAdsService } = await import("./facebook-ads-service");
