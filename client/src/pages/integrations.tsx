@@ -19,21 +19,12 @@ export default function Integrations() {
       hasPanel: true,
     },
     {
-      id: "correios",
-      name: "Correios",
-      status: "pending",
-      description: "Integração com rastreamento automático",
-      icon: Truck,
-      color: "green",
-      hasPanel: false,
-    },
-    {
-      id: "jadlog",
-      name: "Jadlog",
-      status: "pending",
-      description: "Aguardando configuração das credenciais",
+      id: "wapi",
+      name: "WAPI",
+      status: "coming-soon",
+      description: "Em breve - Integração WhatsApp Business",
       icon: Globe,
-      color: "yellow",
+      color: "green",
       hasPanel: false,
     },
   ];
@@ -44,6 +35,8 @@ export default function Integrations() {
         return { text: "Ativo", color: "text-green-400", bgColor: "bg-green-500/20" };
       case "connected":
         return { text: "Conectado", color: "text-green-400", bgColor: "bg-green-500/20" };
+      case "coming-soon":
+        return { text: "Em breve", color: "text-blue-400", bgColor: "bg-blue-500/20" };
       case "pending":
         return { text: "Pendente", color: "text-yellow-400", bgColor: "bg-yellow-500/20" };
       default:
@@ -52,11 +45,15 @@ export default function Integrations() {
   };
 
   const getStatusIcon = (status: string) => {
-    return status === "active" || status === "connected" ? (
-      <CheckCircle className="text-green-400" size={20} />
-    ) : (
-      <AlertCircle className="text-yellow-400" size={20} />
-    );
+    switch (status) {
+      case "active":
+      case "connected":
+        return <CheckCircle className="text-green-400" size={20} />;
+      case "coming-soon":
+        return <AlertCircle className="text-blue-400" size={20} />;
+      default:
+        return <AlertCircle className="text-yellow-400" size={20} />;
+    }
   };
 
   return (

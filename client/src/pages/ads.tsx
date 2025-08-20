@@ -99,7 +99,8 @@ export default function Ads() {
     accessToken: "",
     appId: "",
     appSecret: "",
-    businessManagerId: ""
+    businessManagerId: "",
+    baseCurrency: "BRL"
   });
   const [newBusinessManager, setNewBusinessManager] = useState({
     businessId: "",
