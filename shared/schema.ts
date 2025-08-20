@@ -238,6 +238,7 @@ export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema
 export const facebookCampaigns = pgTable("facebook_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   campaignId: varchar("campaign_id", { length: 255 }).notNull().unique(),
+  accountId: varchar("account_id", { length: 255 }).notNull(), // ID da conta do Facebook Ads
   name: varchar("name", { length: 255 }).notNull(),
   status: varchar("status", { length: 50 }).notNull(),
   objective: varchar("objective", { length: 100 }),

@@ -290,6 +290,7 @@ export class FacebookAdsService {
     
     const campaigns = data.data?.map((campaign: any) => ({
       campaignId: campaign.id,
+      accountId: accountId, // Adicionar o ID da conta
       name: campaign.name,
       status: campaign.status,
       objective: campaign.objective,
@@ -359,22 +360,27 @@ export class FacebookAdsService {
           .where(eq(facebookAdAccounts.accountId, campaign.accountId || ""));
         
         const originalAmount = parseFloat(campaign.amountSpent || "0");
-        const originalCurrency = campaign.originalCurrency || "USD"; // Baseado nos dados, todas são USD
+        const originalCurrency = campaign.originalCurrency || "USD";
         const baseCurrency = (account?.baseCurrency) || "BRL";
         
         console.log(`💰 Campanha: ${campaign.name}, Valor: ${originalAmount} ${originalCurrency}, Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
         
         let amountInBRL = 0;
         
-        // Sempre converter para BRL, independente da moeda base da conta
-        if (originalCurrency === "BRL") {
+        if (baseCurrency === "BRL") {
+          // Se a conta está configurada para BRL, os valores JÁ ESTÃO em BRL
+          // Não fazer conversão adicional
           amountInBRL = originalAmount;
+          console.log(`💰 Conta configurada em BRL - usando valor direto: ${originalAmount} BRL`);
         } else {
-          // Converter da moeda original (USD/EUR) para BRL
-          amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
+          // Se a conta não está em BRL, converter da moeda original para BRL
+          if (originalCurrency === "BRL") {
+            amountInBRL = originalAmount;
+          } else {
+            amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
+            console.log(`💰 Convertendo ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL`);
+          }
         }
-        
-        console.log(`💰 Valor convertido ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL`);
         
         totalBRL += amountInBRL;
         
