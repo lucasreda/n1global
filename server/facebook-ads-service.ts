@@ -339,26 +339,57 @@ export class FacebookAdsService {
   }
 
   async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
-    const campaigns = await this.getCampaigns(period);
-    const selectedCampaigns = campaigns.filter((c: any) => c.isSelected);
+    // Buscar TODAS as campanhas selecionadas, independente do período
+    const selectedCampaigns = await db
+      .select()
+      .from(facebookCampaigns)
+      .where(eq(facebookCampaigns.isSelected, true));
+    
+    console.log(`💰 Calculando custos de marketing para ${selectedCampaigns.length} campanhas selecionadas`);
     
     let totalBRL = 0;
     let totalEUR = 0;
     
     for (const campaign of selectedCampaigns) {
-      // Usar sempre o valor em BRL que já foi convertido
-      totalBRL += parseFloat(campaign.amountSpentBRL || campaign.amountSpent || "0");
-      
-      // Para EUR, converter de BRL para EUR usando a API de conversão
-      const eurValue = await currencyService.convertFromBRL(
-        parseFloat(campaign.amountSpentBRL || campaign.amountSpent || "0"), 
-        'EUR'
-      );
-      totalEUR += eurValue;
+      try {
+        // Buscar informações da conta
+        const [account] = await db
+          .select()
+          .from(facebookAdAccounts)
+          .where(eq(facebookAdAccounts.accountId, campaign.accountId || ""));
+        
+        const originalAmount = parseFloat(campaign.amountSpent || "0");
+        const originalCurrency = campaign.originalCurrency || "USD"; // Baseado nos dados, todas são USD
+        const baseCurrency = (account?.baseCurrency) || "BRL";
+        
+        console.log(`💰 Campanha: ${campaign.name}, Valor: ${originalAmount} ${originalCurrency}, Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
+        
+        let amountInBRL = 0;
+        
+        // Sempre converter para BRL, independente da moeda base da conta
+        if (originalCurrency === "BRL") {
+          amountInBRL = originalAmount;
+        } else {
+          // Converter da moeda original (USD/EUR) para BRL
+          amountInBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
+        }
+        
+        console.log(`💰 Valor convertido ${originalAmount} ${originalCurrency} -> ${amountInBRL.toFixed(2)} BRL`);
+        
+        totalBRL += amountInBRL;
+        
+        // Para EUR, converter de BRL para EUR
+        const eurValue = await currencyService.convertFromBRL(amountInBRL, 'EUR');
+        totalEUR += eurValue;
+      } catch (error) {
+        console.error(`💰 Erro ao processar campanha ${campaign.name}:`, error);
+      }
     }
     
+    console.log(`💰 Total calculado: BRL ${totalBRL.toFixed(2)}, EUR ${totalEUR.toFixed(2)}`);
+    
     return {
-      totalBRL: Math.round(totalBRL * 100) / 100, // Arredondar para 2 casas decimais
+      totalBRL: Math.round(totalBRL * 100) / 100,
       totalEUR: Math.round(totalEUR * 100) / 100,
       campaigns: selectedCampaigns
     };
