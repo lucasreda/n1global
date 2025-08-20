@@ -160,12 +160,17 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     },
   ];
 
+  // Calcular valores em BRL
+  const totalProfitBRL = metrics?.totalProfitBRL || 0;
+  const totalRevenueEUR = revenue; // mantém o valor EUR original  
+  const totalRevenueBRL = metrics?.totalRevenueBRL || 0;
+
   // Definir dados por prioridade e tamanho
   const primaryMetrics = [
     {
       title: "Lucro Total",
-      value: `€${totalProfit.toLocaleString('pt-PT', { minimumFractionDigits: 2 })}`,
-      subtitle: `${profitMargin.toFixed(1)}% margem`,
+      value: `R$ ${totalProfitBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+      subtitle: `€ ${totalProfit.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} • ${profitMargin.toFixed(1)}% margem`,
       icon: DollarSign,
       color: "green",
       size: "hero"
@@ -175,8 +180,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const secondaryMetrics = [
     {
       title: "Receita Total",
-      value: `€${revenue.toLocaleString('pt-PT')}`,
-      subtitle: `${totalOrders} pedidos`,
+      value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR')}`,
+      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')} • ${totalOrders} pedidos`,
       icon: BarChart3,
       color: "blue",
       size: "large"

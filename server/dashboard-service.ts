@@ -173,6 +173,10 @@ export class DashboardService {
     const totalProfit = totalRevenue - totalProductCosts - marketingCostsBRL;
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     
+    // Convert values to BRL for display
+    const totalRevenueBRL = await currencyService.convertToBRL(totalRevenue, 'EUR');
+    const totalProfitBRL = await currencyService.convertToBRL(totalProfit, 'EUR');
+    
     // Calculate ROI (return on investment)
     const totalCosts = totalProductCosts + marketingCostsBRL;
     const roi = totalCosts > 0 ? ((totalRevenue - totalCosts) / totalCosts) * 100 : 0;
@@ -189,12 +193,14 @@ export class DashboardService {
       shippedOrders,
       pendingOrders,
       totalRevenue,
+      totalRevenueBRL, // Added BRL value for display
       totalProductCosts,
       marketingCosts: marketingCostsBRL, // Main value for calculations in BRL
       marketingCostsBRL: marketingCosts.totalBRL, // Explicit BRL value
       marketingCostsEUR: marketingCosts.totalEUR, // EUR value for display
       deliveryRate,
       totalProfit,
+      totalProfitBRL, // Added BRL value for display
       profitMargin,
       roi,
       averageOrderValue,
