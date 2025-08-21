@@ -967,17 +967,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders routes - fetch from database with filters and pagination
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      // CRITICAL: Get user's operation for data isolation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const currentOperation = userOperations[0];
+      
+      if (!currentOperation) {
+        console.log(`⚠️ User ${req.user.id} has no operations - returning empty results`);
+        return res.json({ data: [], total: 0, page: 1, totalPages: 0 });
+      }
+
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string;
       const search = req.query.search as string;
       const days = req.query.days as string;
       
-      console.log(`📋 Fetching orders from database: limit=${limit}, offset=${offset}, status=${status || 'all'}, search=${search || 'none'}, days=${days || 'all'}`);
+      console.log(`📋 Fetching orders for operation ${currentOperation.name}: limit=${limit}, offset=${offset}, status=${status || 'all'}, search=${search || 'none'}, days=${days || 'all'}`);
       
-      // Build WHERE clause components
-      const whereConditions = [];
-      const params = [];
+      // Build WHERE clause components - CRITICAL: Always filter by operationId first
+      const whereConditions = [`operation_id = $${1}`];
+      const params = [currentOperation.id];
       
       // Date filter - use order_date (actual order date) for business analytics
       if (days && days !== "all") {
