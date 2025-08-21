@@ -186,7 +186,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     {
       title: "Receita Paga",
       value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR')}`,
-      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')}`,
+      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')} • Apenas entregues`,
       icon: BarChart3,
       color: "blue",
       size: "large"
