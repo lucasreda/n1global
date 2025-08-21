@@ -16,24 +16,34 @@ import logoImage from '@assets/COD DASHBOARD_1755806006009.png';
 
 // European countries with flags
 const EUROPEAN_COUNTRIES = [
-  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-  { code: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
-  { code: 'GR', name: 'Greece', flag: '🇬🇷' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
-  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿' },
-  { code: 'SK', name: 'Slovakia', flag: '🇸🇰' },
-  { code: 'HU', name: 'Hungary', flag: '🇭🇺' },
-  { code: 'RO', name: 'Romania', flag: '🇷🇴' },
-  { code: 'BG', name: 'Bulgaria', flag: '🇧🇬' },
-  { code: 'HR', name: 'Croatia', flag: '🇭🇷' },
-  { code: 'SI', name: 'Slovenia', flag: '🇸🇮' },
-  { code: 'EE', name: 'Estonia', flag: '🇪🇪' },
-  { code: 'LV', name: 'Latvia', flag: '🇱🇻' },
-  { code: 'LT', name: 'Lithuania', flag: '🇱🇹' }
+  { code: 'ES', name: 'Spain', flag: '🇪🇸', currency: 'EUR' },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹', currency: 'EUR' },
+  { code: 'FR', name: 'France', flag: '🇫🇷', currency: 'EUR' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹', currency: 'EUR' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪', currency: 'EUR' },
+  { code: 'AT', name: 'Austria', flag: '🇦🇹', currency: 'EUR' },
+  { code: 'GR', name: 'Greece', flag: '🇬🇷', currency: 'EUR' },
+  { code: 'PL', name: 'Poland', flag: '🇵🇱', currency: 'PLN' },
+  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿', currency: 'CZK' },
+  { code: 'SK', name: 'Slovakia', flag: '🇸🇰', currency: 'EUR' },
+  { code: 'HU', name: 'Hungary', flag: '🇭🇺', currency: 'HUF' },
+  { code: 'RO', name: 'Romania', flag: '🇷🇴', currency: 'RON' },
+  { code: 'BG', name: 'Bulgaria', flag: '🇧🇬', currency: 'BGN' },
+  { code: 'HR', name: 'Croatia', flag: '🇭🇷', currency: 'EUR' },
+  { code: 'SI', name: 'Slovenia', flag: '🇸🇮', currency: 'EUR' },
+  { code: 'EE', name: 'Estonia', flag: '🇪🇪', currency: 'EUR' },
+  { code: 'LV', name: 'Latvia', flag: '🇱🇻', currency: 'EUR' },
+  { code: 'LT', name: 'Lithuania', flag: '🇱🇹', currency: 'EUR' }
+];
+
+// Currency options with symbols
+const EUROPEAN_CURRENCIES = [
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'PLN', name: 'Polish Zloty', symbol: 'zł' },
+  { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč' },
+  { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft' },
+  { code: 'RON', name: 'Romanian Leu', symbol: 'lei' },
+  { code: 'BGN', name: 'Bulgarian Lev', symbol: 'лв' }
 ];
 
 interface OnboardingStep {
@@ -48,6 +58,7 @@ export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const [operationName, setOperationName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('');
   const { toast } = useToast();
   const { selectedOperation, setSelectedOperation } = useOperationStore();
 
@@ -87,6 +98,15 @@ export default function OnboardingPage() {
   };
 
   const currentStep = getCurrentStep();
+
+  // Auto-select currency when country changes
+  const handleCountryChange = (countryCode: string) => {
+    setSelectedCountry(countryCode);
+    const country = EUROPEAN_COUNTRIES.find(c => c.code === countryCode);
+    if (country) {
+      setSelectedCurrency(country.currency);
+    }
+  };
 
   // Check if user has completed onboarding
   useEffect(() => {
@@ -135,7 +155,7 @@ export default function OnboardingPage() {
 
   // Create operation mutation
   const createOperationMutation = useMutation({
-    mutationFn: async (data: { name: string; country: string }) => {
+    mutationFn: async (data: { name: string; country: string; currency: string }) => {
       const response = await apiRequest('POST', '/api/onboarding/create-operation', data);
       return response.json();
     },
@@ -171,7 +191,11 @@ export default function OnboardingPage() {
       toast({ title: 'Selecione um país para a operação', variant: 'destructive' });
       return;
     }
-    createOperationMutation.mutate({ name: operationName, country: selectedCountry });
+    if (!selectedCurrency) {
+      toast({ title: 'Selecione uma moeda para a operação', variant: 'destructive' });
+      return;
+    }
+    createOperationMutation.mutate({ name: operationName, country: selectedCountry, currency: selectedCurrency });
   };
 
   const handleStepComplete = (stepId: string, nextStep: number) => {
@@ -277,7 +301,7 @@ export default function OnboardingPage() {
                   <Label htmlFor="operation-country" className="text-white">
                     País da Operação
                   </Label>
-                  <Select onValueChange={setSelectedCountry} value={selectedCountry}>
+                  <Select onValueChange={handleCountryChange} value={selectedCountry}>
                     <SelectTrigger className="bg-white/10 border-white/20 text-white mt-2" data-testid="select-country">
                       <SelectValue placeholder="Selecione um país" />
                     </SelectTrigger>
@@ -298,9 +322,34 @@ export default function OnboardingPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label htmlFor="operation-currency" className="text-white">
+                    Moeda Padrão
+                  </Label>
+                  <Select onValueChange={setSelectedCurrency} value={selectedCurrency}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white mt-2" data-testid="select-currency">
+                      <SelectValue placeholder="Selecione uma moeda" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      {EUROPEAN_CURRENCIES.map((currency) => (
+                        <SelectItem 
+                          key={currency.code} 
+                          value={currency.code}
+                          className="text-white hover:bg-gray-700"
+                          data-testid={`currency-${currency.code}`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg font-bold">{currency.symbol}</span>
+                            <span>{currency.name} ({currency.code})</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button 
                   onClick={handleCreateOperation}
-                  disabled={createOperationMutation.isPending || !operationName.trim() || !selectedCountry}
+                  disabled={createOperationMutation.isPending || !operationName.trim() || !selectedCountry || !selectedCurrency}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600"
                   data-testid="button-create-operation"
                 >

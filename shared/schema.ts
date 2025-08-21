@@ -51,6 +51,7 @@ export const operations = pgTable("operations", {
   description: text("description"),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links operation to store
   country: text("country").notNull(), // Country code e.g., "ES", "IT", "FR"
+  currency: text("currency").notNull().default("EUR"), // Currency code e.g., "EUR", "PLN", "CZK"
   status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
   settings: jsonb("settings"), // Operation-specific settings
   createdAt: timestamp("created_at").defaultNow(),

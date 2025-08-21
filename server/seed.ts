@@ -84,6 +84,7 @@ export async function seedDatabase() {
           name: "PureDreams",
           description: "Default operation for COD business",
           country: "IT", // Default to Italy
+          currency: "EUR", // Default to Euro
           status: "active",
         })
         .returning();

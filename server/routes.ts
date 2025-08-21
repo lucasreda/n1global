@@ -306,19 +306,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/onboarding/create-operation", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { name, country } = req.body;
+      const { name, country, currency } = req.body;
       if (!name?.trim()) {
         return res.status(400).json({ message: "Nome da operação é obrigatório" });
       }
       if (!country?.trim()) {
         return res.status(400).json({ message: "País da operação é obrigatório" });
       }
+      if (!currency?.trim()) {
+        return res.status(400).json({ message: "Moeda da operação é obrigatória" });
+      }
 
       // Create operation
       const operation = await storage.createOperation({
         name: name.trim(),
         description: `Operação criada durante onboarding`,
-        country: country.trim()
+        country: country.trim(),
+        currency: currency.trim()
       }, req.user.id);
 
       // Update user onboarding step
