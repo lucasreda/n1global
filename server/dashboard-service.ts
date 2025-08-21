@@ -15,6 +15,9 @@ export class DashboardService {
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
+      // Get current exchange rates
+      const exchangeRates = await currencyService.getExchangeRates();
+      
       // Recalculate dynamic values (costs and BRL conversions)
       const totalRevenueBRL = await currencyService.convertToBRL(Number(cached.totalRevenue || 0), 'EUR');
       
@@ -27,6 +30,7 @@ export class DashboardService {
       
       return {
         ...cached,
+        exchangeRates, // Include current exchange rates
         totalRevenueBRL,
         totalProfitBRL,
         totalProfit,
@@ -197,6 +201,9 @@ export class DashboardService {
     // Calculate delivery percentage
     const deliveryRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
     
+    // Get current exchange rates
+    const exchangeRates = await currencyService.getExchangeRates();
+    
     // Convert revenue to BRL for consistent calculations
     const totalRevenueBRL = await currencyService.convertToBRL(totalRevenue, 'EUR');
     
@@ -213,6 +220,7 @@ export class DashboardService {
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
     
     return {
+      exchangeRates, // Include current exchange rates
       totalOrders,
       deliveredOrders,
       cancelledOrders,
