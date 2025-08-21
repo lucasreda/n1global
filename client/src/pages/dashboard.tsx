@@ -3,15 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { SyncStatus } from "@/components/dashboard/sync-status";
+import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Filter } from "lucide-react";
+import { Calendar, Filter, RefreshCw, Download } from "lucide-react";
 
 export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("current_month");
+  const [showCompleteSyncDialog, setShowCompleteSyncDialog] = useState(false);
 
   // Auto-sync on page load (similar to Facebook Ads)
   useEffect(() => {
@@ -140,7 +142,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Euro Rate and Date Filter */}
+      {/* Header with Euro Rate, Complete Sync Button, and Date Filter */}
       <div className="flex justify-between items-center">
         {/* Euro Exchange Rate */}
         <div className="flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-3 py-2">
@@ -150,23 +152,38 @@ export default function Dashboard() {
           <span className="text-gray-400 text-xs">BRL</span>
         </div>
 
-        {/* Date Filter */}
-        <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2">
-          <Calendar className="text-gray-400" size={16} />
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="w-36 bg-transparent border-0 text-gray-300 text-sm h-auto p-0">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent className="glassmorphism border-gray-600">
-              <SelectItem value="current_month">Este Mês</SelectItem>
-              <SelectItem value="1">Hoje</SelectItem>
-              <SelectItem value="7">7 dias</SelectItem>
-              <SelectItem value="30">30 dias</SelectItem>
-              <SelectItem value="90">3 meses</SelectItem>
-              <SelectItem value="365">1 ano</SelectItem>
-              <SelectItem value="all">Tudo</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Action buttons and Date Filter */}
+        <div className="flex items-center space-x-3">
+          {/* Complete Sync Button */}
+          <Button
+            onClick={() => setShowCompleteSyncDialog(true)}
+            variant="outline"
+            size="sm"
+            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors"
+            data-testid="button-complete-sync"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Sync Completo
+          </Button>
+
+          {/* Date Filter */}
+          <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2">
+            <Calendar className="text-gray-400" size={16} />
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-36 bg-transparent border-0 text-gray-300 text-sm h-auto p-0">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent className="glassmorphism border-gray-600">
+                <SelectItem value="current_month">Este Mês</SelectItem>
+                <SelectItem value="1">Hoje</SelectItem>
+                <SelectItem value="7">7 dias</SelectItem>
+                <SelectItem value="30">30 dias</SelectItem>
+                <SelectItem value="90">3 meses</SelectItem>
+                <SelectItem value="365">1 ano</SelectItem>
+                <SelectItem value="all">Tudo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
       
@@ -179,6 +196,16 @@ export default function Dashboard() {
       />
       
       <SyncStatus />
+      
+      {/* Complete Sync Dialog */}
+      <CompleteSyncDialog
+        isOpen={showCompleteSyncDialog}
+        onClose={() => setShowCompleteSyncDialog(false)}
+        onComplete={() => {
+          // Refresh dashboard data after sync completion
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

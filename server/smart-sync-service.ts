@@ -15,6 +15,24 @@ export class SmartSyncService {
   private syncHistory: Array<{ timestamp: Date; newLeads: number; updates: number }> = [];
   private defaultStoreId: string | null = null;
   
+  // Estado da sincronização completa progressiva
+  private completeSyncStatus = {
+    isRunning: false,
+    currentPage: 0,
+    totalPages: 0,
+    processedLeads: 0,
+    totalLeads: 0,
+    newLeads: 0,
+    updatedLeads: 0,
+    errors: 0,
+    retries: 0,
+    estimatedTimeRemaining: "Calculando...",
+    currentSpeed: 0,
+    phase: 'idle' as 'idle' | 'connecting' | 'syncing' | 'completed' | 'error' | 'retrying',
+    message: "Aguardando...",
+    startTime: null as Date | null
+  };
+  
   // Status que indicam pedidos finalizados (mas ainda precisam ser monitorados para mudanças)
   private finalStatuses = ['delivered', 'cancelled', 'refused', 'returned'];
   
@@ -590,6 +608,214 @@ export class SmartSyncService {
       syncHistory: this.syncHistory.slice(-10), // Últimas 10 sincronizações
       currentVolume: this.analyzeVolumePattern()
     };
+  }
+
+  /**
+   * Obtém o status atual da sincronização completa progressiva
+   */
+  getCompleteSyncStatus() {
+    return { ...this.completeSyncStatus };
+  }
+
+  /**
+   * Executa sincronização completa progressiva com atualizações em tempo real
+   */
+  async performCompleteSyncProgressive(options: SyncOptions & { maxRetries?: number } = {}): Promise<void> {
+    if (this.completeSyncStatus.isRunning) {
+      throw new Error('Sincronização completa já está em execução');
+    }
+
+    const maxRetries = options.maxRetries || 5;
+    let currentRetry = 0;
+
+    this.completeSyncStatus = {
+      isRunning: true,
+      currentPage: 0,
+      totalPages: 0,
+      processedLeads: 0,
+      totalLeads: 0,
+      newLeads: 0,
+      updatedLeads: 0,
+      errors: 0,
+      retries: 0,
+      estimatedTimeRemaining: "Calculando...",
+      currentSpeed: 0,
+      phase: 'connecting',
+      message: "Conectando à API da transportadora...",
+      startTime: new Date()
+    };
+
+    while (currentRetry <= maxRetries) {
+      try {
+        await this.executeCompleteSyncWithProgress();
+        
+        // Sucesso - marcar como concluído
+        this.completeSyncStatus.phase = 'completed';
+        this.completeSyncStatus.message = `Sincronização concluída! ${this.completeSyncStatus.totalLeads} pedidos processados.`;
+        this.completeSyncStatus.isRunning = false;
+        return;
+
+      } catch (error) {
+        currentRetry++;
+        this.completeSyncStatus.retries = currentRetry;
+        this.completeSyncStatus.errors++;
+        
+        console.error(`❌ Tentativa ${currentRetry}/${maxRetries + 1} falhou:`, error);
+        
+        if (currentRetry <= maxRetries) {
+          this.completeSyncStatus.phase = 'retrying';
+          this.completeSyncStatus.message = `Erro detectado. Tentando novamente... (${currentRetry}/${maxRetries + 1})`;
+          
+          // Aguardar antes de tentar novamente (backoff exponencial)
+          const waitTime = Math.min(1000 * Math.pow(2, currentRetry), 30000);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          // Esgotar todas as tentativas
+          this.completeSyncStatus.phase = 'error';
+          this.completeSyncStatus.message = `Falha após ${maxRetries + 1} tentativas. Tente novamente mais tarde.`;
+          this.completeSyncStatus.isRunning = false;
+        }
+      }
+    }
+  }
+
+  /**
+   * Executa a sincronização completa com atualizações de progresso
+   */
+  private async executeCompleteSyncWithProgress(): Promise<void> {
+    console.log('🔄 Iniciando sincronização completa progressiva...');
+    
+    this.completeSyncStatus.phase = 'syncing';
+    this.completeSyncStatus.message = "Obtendo informações totais da API...";
+
+    // Obter informações iniciais da API
+    const firstPageResponse = await europeanFulfillmentService.getLeads(1);
+    
+    this.completeSyncStatus.totalLeads = firstPageResponse.total;
+    this.completeSyncStatus.totalPages = Math.ceil(firstPageResponse.total / firstPageResponse.per_page);
+    this.completeSyncStatus.message = `Processando ${this.completeSyncStatus.totalLeads} pedidos em ${this.completeSyncStatus.totalPages} páginas...`;
+
+    console.log(`📊 Total de pedidos a processar: ${this.completeSyncStatus.totalLeads}`);
+    console.log(`📄 Total de páginas: ${this.completeSyncStatus.totalPages}`);
+
+    const storeId = await this.getDefaultStoreId();
+    let allNewLeads = 0;
+    let allUpdatedLeads = 0;
+
+    // Processar todas as páginas
+    for (let page = 1; page <= this.completeSyncStatus.totalPages; page++) {
+      this.completeSyncStatus.currentPage = page;
+      this.completeSyncStatus.message = `Processando página ${page} de ${this.completeSyncStatus.totalPages}...`;
+
+      try {
+        const pageResponse = await europeanFulfillmentService.getLeads(page);
+        const { newLeads, updatedLeads } = await this.processLeadsPage(pageResponse.data, storeId);
+        
+        allNewLeads += newLeads;
+        allUpdatedLeads += updatedLeads;
+        
+        this.completeSyncStatus.newLeads = allNewLeads;
+        this.completeSyncStatus.updatedLeads = allUpdatedLeads;
+        this.completeSyncStatus.processedLeads = (page - 1) * pageResponse.per_page + pageResponse.data.length;
+
+        // Calcular velocidade e tempo estimado
+        const elapsed = (Date.now() - this.completeSyncStatus.startTime!.getTime()) / 1000;
+        this.completeSyncStatus.currentSpeed = Math.round((this.completeSyncStatus.processedLeads / elapsed) * 60);
+        
+        const remaining = this.completeSyncStatus.totalLeads - this.completeSyncStatus.processedLeads;
+        const estimatedSeconds = remaining / (this.completeSyncStatus.currentSpeed / 60);
+        this.completeSyncStatus.estimatedTimeRemaining = this.formatTimeRemaining(estimatedSeconds);
+
+        console.log(`✅ Página ${page}/${this.completeSyncStatus.totalPages}: +${newLeads} novos, ~${updatedLeads} atualizados`);
+
+        // Pequena pausa para não sobrecarregar a API
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error) {
+        console.error(`❌ Erro na página ${page}:`, error);
+        throw error; // Re-throw para tentar novamente
+      }
+    }
+
+    // Atualizar histórico
+    this.syncHistory.push({
+      timestamp: new Date(),
+      newLeads: allNewLeads,
+      updates: allUpdatedLeads
+    });
+
+    this.lastSyncTime = new Date();
+
+    console.log(`🎉 Sincronização completa finalizada: ${allNewLeads} novos, ${allUpdatedLeads} atualizados`);
+  }
+
+  /**
+   * Processa uma página de leads da API
+   */
+  private async processLeadsPage(leads: any[], storeId: string): Promise<{ newLeads: number; updatedLeads: number }> {
+    let newLeads = 0;
+    let updatedLeads = 0;
+
+    for (const apiLead of leads) {
+      try {
+        // Verificar se o lead já existe
+        const [existingLead] = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.id, apiLead.n_lead))
+          .limit(1);
+
+        if (!existingLead) {
+          // Lead novo - inserir
+          await db.insert(orders).values({
+            id: apiLead.n_lead,
+            storeId,
+            customerName: apiLead.name,
+            customerPhone: apiLead.phone,
+            customerCity: apiLead.city,
+            customerCountry: "IT",
+            total: apiLead.lead_value,
+            status: apiLead.status_livrison || "new order",
+            paymentMethod: apiLead.method_payment || "COD",
+            provider: "european_fulfillment",
+          });
+
+          newLeads++;
+        } else {
+          // Lead existente - atualizar status se mudou
+          if (existingLead.status !== (apiLead.status_livrison || "new order")) {
+            await db
+              .update(orders)
+              .set({
+                status: apiLead.status_livrison || "new order",
+                updatedAt: new Date(),
+              })
+              .where(eq(orders.id, apiLead.n_lead));
+            
+            updatedLeads++;
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️  Erro ao processar lead ${apiLead.n_lead}:`, error);
+        throw error; // Re-throw para controle de erro na sincronização
+      }
+    }
+
+    return { newLeads, updatedLeads };
+  }
+
+  /**
+   * Formatar tempo restante em formato legível
+   */
+  private formatTimeRemaining(seconds: number): string {
+    if (isNaN(seconds) || seconds <= 0) return "Finalizando...";
+    
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}min`;
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.round((seconds % 3600) / 60);
+    return `${hours}h ${minutes}min`;
   }
 }
 

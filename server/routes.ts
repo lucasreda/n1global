@@ -480,6 +480,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota para sincronização completa progressiva
+  app.post('/api/sync/complete-progressive', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { forceComplete, maxRetries } = req.body;
+      const { smartSyncService } = await import("./smart-sync-service");
+      
+      // Iniciar sincronização completa progressiva de forma assíncrona
+      smartSyncService.performCompleteSyncProgressive({ 
+        forceFullSync: forceComplete,
+        maxRetries 
+      }).catch(error => {
+        console.error('Erro na sincronização completa progressiva:', error);
+      });
+      
+      res.json({ 
+        success: true, 
+        message: 'Sincronização completa iniciada. Use /sync/complete-status para acompanhar o progresso.' 
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar sincronização completa progressiva:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor' 
+      });
+    }
+  });
+
+  // Rota para obter status da sincronização completa progressiva
+  app.get('/api/sync/complete-status', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { smartSyncService } = await import("./smart-sync-service");
+      const status = smartSyncService.getCompleteSyncStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Erro ao obter status da sincronização completa:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor' 
+      });
+    }
+  });
+
   // Orders routes - fetch from database with filters and pagination
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
