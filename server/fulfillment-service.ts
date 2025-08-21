@@ -329,13 +329,8 @@ class EuropeanFulfillmentService {
         return ["ITALY"];
       }
       
-      // Filter to show only Italy for now
-      const italyCountries = countries.filter(country => 
-        country.toUpperCase().includes('ITALY') || 
-        country.toUpperCase().includes('ITALIA')
-      );
-      
-      return italyCountries.length > 0 ? italyCountries : ["ITALY"];
+      // Return ALL countries from API - no geographic restrictions
+      return countries.length > 0 ? countries : ["ITALY"]; // ITALY only as fallback if API fails
     } catch (error) {
       console.error("Error getting countries:", error);
       return ["ITALY"];

@@ -157,7 +157,19 @@ export class SmartSyncService {
         throw new Error('❌ ID da operação não fornecido para sincronização');
       }
       
-      console.log(`🧠 Sincronização inteligente para operação ${operationId}: Volume ${volumePattern}, ${maxPages} páginas`);
+      // Get operation details to determine the correct country for API calls
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+      
+      if (!operation) {
+        throw new Error(`❌ Operação ${operationId} não encontrada`);
+      }
+      
+      const syncCountry = operation.country || "ITALY"; // Use operation's country, fallback to ITALY
+      console.log(`🧠 Sincronização inteligente para operação ${operationId} (${syncCountry}): Volume ${volumePattern}, ${maxPages} páginas`);
 
       let newLeads = 0;
       let updatedLeads = 0;
@@ -170,7 +182,7 @@ export class SmartSyncService {
         try {
           console.log(`📄 Escaneando página ${currentPage}/${maxPages}...`);
           
-          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+          const pageLeads = await europeanFulfillmentService.getLeadsList(syncCountry, currentPage);
           
           if (!pageLeads || pageLeads.length === 0) {
             console.log(`📄 Página ${currentPage} vazia, finalizando...`);
@@ -318,7 +330,19 @@ export class SmartSyncService {
         throw new Error('❌ ID da operação não fornecido para sincronização');
       }
       
-      console.log(`🔄 Iniciando sincronização COMPLETA para operação ${operationId}...`);
+      // Get operation details to determine the correct country for API calls
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+      
+      if (!operation) {
+        throw new Error(`❌ Operação ${operationId} não encontrada`);
+      }
+      
+      const syncCountry = operation.country || "ITALY"; // Use operation's country, fallback to ITALY
+      console.log(`🔄 Iniciando sincronização COMPLETA para operação ${operationId} (${syncCountry})...`);
 
       let newLeads = 0;
       let updatedLeads = 0;
@@ -331,7 +355,7 @@ export class SmartSyncService {
         try {
           console.log(`📄 Processando página ${currentPage}...`);
           
-          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+          const pageLeads = await europeanFulfillmentService.getLeadsList(syncCountry, currentPage);
           
           if (!pageLeads || pageLeads.length === 0) {
             console.log(`📄 Página ${currentPage} vazia, finalizando...`);
@@ -480,7 +504,19 @@ export class SmartSyncService {
         throw new Error('❌ ID da operação não fornecido para sincronização');
       }
       
-      console.log(`📋 Iniciando sincronização incremental para operação ${operationId}...`);
+      // Get operation details to determine the correct country for API calls
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+      
+      if (!operation) {
+        throw new Error(`❌ Operação ${operationId} não encontrada`);
+      }
+      
+      const syncCountry = operation.country || "ITALY"; // Use operation's country, fallback to ITALY
+      console.log(`📋 Iniciando sincronização incremental para operação ${operationId} (${syncCountry})...`);
 
       let newLeads = 0;
       let updatedLeads = 0;
@@ -546,7 +582,7 @@ export class SmartSyncService {
 
       for (let page = 1; page <= maxPages; page++) {
         try {
-          const pageResponse = await europeanFulfillmentService.getLeadsListWithPagination("ITALY", page);
+          const pageResponse = await europeanFulfillmentService.getLeadsListWithPagination(syncCountry, page);
           const pageLeads = pageResponse.data || pageResponse;
           
           if (!pageLeads || pageLeads.length === 0) break;
