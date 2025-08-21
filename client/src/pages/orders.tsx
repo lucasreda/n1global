@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrencyEUR } from "@/lib/utils";
 
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -92,13 +92,13 @@ export default function Orders() {
   };
 
   const formatAmount = (amount: any) => {
-    if (!amount) return '€ 0,00';
+    if (!amount) return formatCurrencyEUR(0);
     
     // Convert string to number if needed
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     
-    if (isNaN(numAmount)) return '€ 0,00';
-    return `€ ${numAmount.toFixed(2).replace('.', ',')}`;
+    if (isNaN(numAmount)) return formatCurrencyEUR(0);
+    return formatCurrencyEUR(numAmount);
   };
 
   return (

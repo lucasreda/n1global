@@ -2,6 +2,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Download, BarChart3 } from "lucide-react";
+import { formatCurrencyBRL } from "@/lib/utils";
 
 interface ChartsSectionProps {
   revenueData: any[];
@@ -60,7 +61,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                 <YAxis 
                   stroke="#9CA3AF" 
                   fontSize={12}
-                  tickFormatter={(value) => `R$ ${value}`}
+                  tickFormatter={(value) => formatCurrencyBRL(value)}
                 />
                 <Tooltip 
                   contentStyle={{ 
@@ -69,7 +70,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     borderRadius: '8px',
                     color: '#fff'
                   }}
-                  formatter={(value: any) => [`R$ ${value}`, 'Receita']}
+                  formatter={(value: any) => [formatCurrencyBRL(value), 'Receita']}
                 />
                 <Area 
                   type="monotone" 
@@ -170,7 +171,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: item.color }}></div>
                     <div>
                       <span className="text-white font-medium">{item.name}</span>
-                      <div className="text-xs text-gray-400 mt-1">{item.description}</div>
+                      <div className="text-xs text-gray-400 mt-1">{item.name}</div>
                     </div>
                   </div>
                   <div className="text-right">

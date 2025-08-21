@@ -1,4 +1,5 @@
 import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck } from "lucide-react";
+import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
 
 interface StatsCardsProps {
   metrics: any;
@@ -117,8 +118,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     },
     {
       title: "Receita Paga",
-      value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      subtitle: `€ ${revenue.toFixed(2)}`,
+      value: formatCurrencyBRL(totalRevenueBRL),
+      subtitle: formatCurrencyEUR(revenue),
       icon: DollarSign,
       iconBg: "bg-purple-600/20",
       iconColor: "text-purple-400",
@@ -128,8 +129,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     },
     {
       title: "Custo de Produtos",
-      value: `R$ ${productCostsBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      subtitle: `€ ${productCosts.toFixed(2)}`,
+      value: formatCurrencyBRL(productCostsBRL),
+      subtitle: formatCurrencyEUR(productCosts),
       icon: Calculator,
       iconBg: "bg-orange-600/20",
       iconColor: "text-orange-400",
@@ -139,8 +140,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     },
     {
       title: "Custo Marketing",
-      value: `R$ ${marketingCostsBRL.toFixed(2)}`,
-      subtitle: marketingCostsEUR > 0 ? `€ ${marketingCostsEUR.toFixed(2)}` : undefined,
+      value: formatCurrencyBRL(marketingCostsBRL),
+      subtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : undefined,
       icon: TrendingUp,
       iconBg: "bg-pink-600/20",
       iconColor: "text-pink-400",
@@ -174,8 +175,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const primaryMetrics = [
     {
       title: "Lucro Total",
-      value: `R$ ${totalProfitBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      subtitle: `€ ${totalProfit.toLocaleString('pt-PT', { minimumFractionDigits: 2 })} • ${profitMargin.toFixed(1)}% margem`,
+      value: formatCurrencyBRL(totalProfitBRL),
+      subtitle: `${formatCurrencyEUR(totalProfit)} • ${profitMargin.toFixed(1)}% margem`,
       icon: DollarSign,
       color: "green",
       size: "hero"
@@ -185,8 +186,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const secondaryMetrics = [
     {
       title: "💰 Receita Paga",
-      value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR')}`,
-      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')}`,
+      value: formatCurrencyBRL(totalRevenueBRL),
+      subtitle: formatCurrencyEUR(totalRevenueEUR),
       icon: DollarSign,
       color: "blue",
       size: "large"
@@ -223,15 +224,15 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const quaternaryMetrics = [
     {
       title: "Custos Marketing",
-      value: `R$ ${marketingCostsBRL.toLocaleString('pt-BR')}`,
-      subtitle: marketingCostsEUR > 0 ? `€ ${marketingCostsEUR.toFixed(2)}` : "Sem campanhas selecionadas",
+      value: formatCurrencyBRL(marketingCostsBRL),
+      subtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas selecionadas",
       icon: Target,
       color: "purple",
       size: "small"
     },
     {
       title: "Custos Produtos",
-      value: `€${productCosts.toLocaleString('pt-PT')}`,
+      value: formatCurrencyEUR(productCosts),
       subtitle: "Entregues apenas",
       icon: Calculator,
       color: "indigo",
@@ -239,7 +240,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     },
     {
       title: "Custos Envio",
-      value: `€${(metrics?.totalShippingCosts || 0).toLocaleString('pt-PT')}`,
+      value: formatCurrencyEUR(metrics?.totalShippingCosts || 0),
       subtitle: "Entregues + Retornados",
       icon: Truck,
       color: "orange",
@@ -265,7 +266,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <DollarSign className="text-green-400 w-8 h-8" />
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-green-400 mb-2" data-testid="value-card-profit">
-            R$ {totalProfitBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {formatCurrencyBRL(totalProfitBRL)}
           </h1>
           <p className="text-lg text-gray-300 mb-4" data-testid="label-card-profit">Lucro Total</p>
           <div className="flex justify-center items-center space-x-4 text-sm">
@@ -289,9 +290,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               Principal
             </div>
           </div>
-          <h3 className="text-2xl font-bold text-white mb-1">R$ {totalRevenueBRL.toLocaleString('pt-BR')}</h3>
+          <h3 className="text-2xl font-bold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
           <p className="text-gray-300 text-sm font-medium">Receita Paga</p>
-          <p className="text-xs text-blue-400 mt-2">€ {totalRevenueEUR.toLocaleString('pt-PT')}</p>
+          <p className="text-xs text-blue-400 mt-2">{formatCurrencyEUR(totalRevenueEUR)}</p>
         </div>
         
         <div className="glassmorphism rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-emerald-500/20 hover:border-emerald-400/40 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5">
@@ -351,10 +352,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
             <Target className="text-purple-400 w-5 h-5" />
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">R$ {marketingCostsBRL.toLocaleString('pt-BR')}</h5>
+          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(marketingCostsBRL)}</h5>
           <p className="text-gray-400 text-xs">Custos Marketing</p>
           <p className="text-xs text-purple-400 mt-1 opacity-80">
-            {marketingCostsEUR > 0 ? `€ ${marketingCostsEUR.toFixed(2)}` : "Sem campanhas"}
+            {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
           </p>
         </div>
         
@@ -362,18 +363,18 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="w-10 h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
             <Calculator className="text-indigo-400 w-5 h-5" />
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">R$ {productCostsBRL.toLocaleString('pt-BR')}</h5>
+          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(productCostsBRL)}</h5>
           <p className="text-gray-400 text-xs">Custos Produtos</p>
-          <p className="text-xs text-indigo-400 mt-1 opacity-80">€ {productCosts.toFixed(2)}</p>
+          <p className="text-xs text-indigo-400 mt-1 opacity-80">{formatCurrencyEUR(productCosts)}</p>
         </div>
         
         <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-orange-500/10 hover:border-orange-400/25">
           <div className="w-10 h-10 bg-orange-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
             <Truck className="text-orange-400 w-5 h-5" />
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">R$ {(metrics?.totalShippingCostsBRL || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h5>
+          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
           <p className="text-gray-400 text-xs">Custos Envio</p>
-          <p className="text-xs text-orange-400 mt-1 opacity-80">€ {(metrics?.totalShippingCosts || 0).toFixed(2)}</p>
+          <p className="text-xs text-orange-400 mt-1 opacity-80">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
         </div>
         
         <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-red-500/10 hover:border-red-400/25">

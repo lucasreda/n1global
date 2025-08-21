@@ -1,7 +1,7 @@
 import { Eye, Edit, Filter, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrencyEUR } from "@/lib/utils";
 
 interface Order {
   id: string;
@@ -64,7 +64,7 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
   };
 
   const formatAmount = (amount: number) => {
-    return `€ ${amount.toFixed(2).replace('.', ',')}`;
+    return formatCurrencyEUR(amount);
   };
 
   return (
