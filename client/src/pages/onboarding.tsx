@@ -143,7 +143,7 @@ export default function OnboardingPage() {
           <img 
             src={logoImage} 
             alt="COD Dashboard" 
-            className="mx-auto mb-8 h-20 w-auto"
+            className="mx-auto mb-8 h-12 w-auto"
           />
           <p className="text-xl text-white/80 mb-6">
             Configure sua conta em 5 etapas simples
