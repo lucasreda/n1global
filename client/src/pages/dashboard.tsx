@@ -140,8 +140,17 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Compact Date Filter */}
-      <div className="flex justify-end">
+      {/* Header with Euro Rate and Date Filter */}
+      <div className="flex justify-between items-center">
+        {/* Euro Exchange Rate */}
+        <div className="flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-3 py-2">
+          <span className="text-green-400 font-medium text-sm">
+            € {metrics?.exchangeRates?.EUR ? (metrics.exchangeRates.EUR).toFixed(2).replace('.', ',') : '6,40'}
+          </span>
+          <span className="text-gray-400 text-xs">BRL</span>
+        </div>
+
+        {/* Date Filter */}
         <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2">
           <Calendar className="text-gray-400" size={16} />
           <Select value={dateFilter} onValueChange={setDateFilter}>
