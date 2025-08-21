@@ -396,44 +396,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
               'LT': 'LITHUANIA'
             };
 
-            // Try to get leads from operation's country first
+            // Try to get leads from operation's country first with pagination
             if (firstOperation.country) {
               try {
                 const apiCountryName = countryMapping[firstOperation.country] || firstOperation.country;
-                console.log(`🎯 Fetching leads from operation country: ${firstOperation.country} -> ${apiCountryName}`);
-                const countryLeads = await service.getLeadsList(apiCountryName);
-                allLeads.push(...countryLeads);
-                console.log(`🇮🇹 Found ${countryLeads.length} leads from ${apiCountryName}`);
+                console.log(`🎯 Fetching ALL leads from operation country: ${firstOperation.country} -> ${apiCountryName}`);
+                
+                let page = 1;
+                let totalFetched = 0;
+                
+                while (true) {
+                  console.log(`📄 Fetching page ${page} for ${apiCountryName}...`);
+                  const paginatedResponse = await service.getLeadsListWithPagination(apiCountryName, page);
+                  
+                  if (!paginatedResponse.data || paginatedResponse.data.length === 0) {
+                    console.log(`📄 Page ${page} is empty, stopping pagination`);
+                    break;
+                  }
+                  
+                  allLeads.push(...paginatedResponse.data);
+                  totalFetched += paginatedResponse.data.length;
+                  console.log(`📄 Page ${page}: ${paginatedResponse.data.length} leads (Total: ${totalFetched}/${paginatedResponse.total})`);
+                  
+                  // Check if we've reached the last page
+                  if (page >= paginatedResponse.last_page) {
+                    console.log(`📄 Reached last page (${paginatedResponse.last_page})`);
+                    break;
+                  }
+                  
+                  page++;
+                  
+                  // Safety limit to prevent infinite loops
+                  if (page > 100) {
+                    console.log(`🛑 Safety limit reached at page 100`);
+                    break;
+                  }
+                }
+                
+                console.log(`🇪🇸 Found total ${totalFetched} leads from ${apiCountryName}`);
               } catch (countryError) {
                 console.log(`⚠️ No leads found for operation country ${firstOperation.country}: ${countryError.message}`);
               }
             }
             
-            // If no leads from operation country, try all available countries
-            if (allLeads.length === 0) {
-              const countries = await service.getCountries();
-              console.log(`🌍 Trying all available countries: ${countries.join(', ')}`);
-              
-              for (const country of countries) {
-                try {
-                  const countryLeads = await service.getLeadsList(country);
-                  allLeads.push(...countryLeads);
-                  console.log(`🇪🇺 Found ${countryLeads.length} leads from ${country}`);
-                } catch (countryError) {
-                  console.log(`⚠️ No leads found for ${country}: ${countryError.message}`);
-                }
-              }
-            }
-            
-            if (allLeads.length === 0) {
-              // Try without country filter
-              try {
-                allLeads = await service.getLeadsListWithDateFilter();
-                console.log(`🌐 Found ${allLeads.length} leads without country filter`);
-              } catch (globalError) {
-                console.log(`⚠️ Global leads fetch failed: ${globalError.message}`);
-              }
-            }
+            // Note: Removed fallback logic since we now have proper country-specific pagination
             
             // Convert leads to orders and save to database
             if (allLeads.length > 0) {
@@ -451,7 +457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       ...orderData,
                       storeId: req.user.storeId,
                       operationId: firstOperation.id,
-                      orderDate: new Date(orderData.createdAt)
+                      orderDate: orderData.createdAt instanceof Date ? orderData.createdAt : new Date(orderData.createdAt)
                     };
                     
                     await storage.createOrder(dbOrder);

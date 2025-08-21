@@ -542,6 +542,23 @@ class EuropeanFulfillmentService {
     }
   }
 
+  // Helper method to safely parse dates
+  private parseDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    
+    // If it's already a Date object
+    if (dateValue instanceof Date) return dateValue;
+    
+    // If it's a string, try to parse it
+    if (typeof dateValue === 'string') {
+      const parsedDate = new Date(dateValue);
+      return isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+    }
+    
+    // Default to current date
+    return new Date();
+  }
+
   // Convert API leads to dashboard orders format with all transportadora fields
   convertLeadsToOrders(leads: any[]): any[] {
     return leads.map((lead, index) => {
@@ -617,8 +634,8 @@ class EuropeanFulfillmentService {
         
         // Metadata with proper date handling
         notes: `REF: ${lead.n_lead} | Market: ${lead.market || 'N/A'} | Tracking: ${lead.tracking_number || 'N/A'} | Confirmação: ${lead.status_confirmation} | Entrega: ${lead.status_livrison}`,
-        createdAt: lead.created_at || lead.date_created || new Date().toISOString(),
-        updatedAt: lead.updated_at || lead.date_updated || new Date().toISOString(),
+        createdAt: this.parseDate(lead.created_at || lead.date_created),
+        updatedAt: this.parseDate(lead.updated_at || lead.date_updated),
         
         // Raw API data for debugging
         apiData: lead
