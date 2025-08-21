@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, orders, products, shippingProviders, operations, userOperationAccess, User, Order, Product, ShippingProvider, Operation, InsertUser, InsertOrder, InsertProduct } from "@shared/schema";
+import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, User, Order, Product, ShippingProvider, Operation, InsertUser, InsertOrder, InsertProduct } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
