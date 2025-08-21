@@ -45,7 +45,8 @@ export default function Dashboard() {
       return response.json();
     },
     staleTime: 0,
-    cacheTime: 0,
+    gcTime: 0,
+    refetchOnMount: true,
   });
 
   // Fetch revenue chart data

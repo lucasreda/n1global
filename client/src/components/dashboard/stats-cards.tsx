@@ -184,10 +184,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
 
   const secondaryMetrics = [
     {
-      title: "Receita Paga",
+      title: "💰 Receita Paga",
       value: `R$ ${totalRevenueBRL.toLocaleString('pt-BR')}`,
-      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')} • Apenas entregues`,
-      icon: BarChart3,
+      subtitle: `€ ${totalRevenueEUR.toLocaleString('pt-PT')}`,
+      icon: DollarSign,
       color: "blue",
       size: "large"
     },
@@ -290,8 +290,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <h3 className="text-2xl font-bold text-white mb-1">R$ {totalRevenueBRL.toLocaleString('pt-BR')}</h3>
-          <p className="text-gray-300 text-sm font-medium">Receita Total</p>
-          <p className="text-xs text-blue-400 mt-2">{totalOrders} pedidos</p>
+          <p className="text-gray-300 text-sm font-medium">Receita Paga</p>
+          <p className="text-xs text-blue-400 mt-2">€ {totalRevenueEUR.toLocaleString('pt-PT')}</p>
         </div>
         
         <div className="glassmorphism rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-emerald-500/20 hover:border-emerald-400/40 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5">
