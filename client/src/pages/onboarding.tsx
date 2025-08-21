@@ -22,7 +22,6 @@ interface OnboardingStep {
 
 export default function OnboardingPage() {
   const [, setLocation] = useLocation();
-  const [currentStep, setCurrentStep] = useState(1);
   const [operationName, setOperationName] = useState('');
   const { toast } = useToast();
 
@@ -38,6 +37,18 @@ export default function OnboardingPage() {
     step4_ads: false,
     step5_sync: false
   };
+
+  // Determine current step based on completed steps
+  const getCurrentStep = () => {
+    if (!onboardingSteps.step1_operation) return 1;
+    if (!onboardingSteps.step2_shopify) return 2;
+    if (!onboardingSteps.step3_shipping) return 3;
+    if (!onboardingSteps.step4_ads) return 4;
+    if (!onboardingSteps.step5_sync) return 5;
+    return 6;
+  };
+
+  const currentStep = getCurrentStep();
 
   // Check if user has completed onboarding
   useEffect(() => {
@@ -93,7 +104,7 @@ export default function OnboardingPage() {
     onSuccess: () => {
       toast({ title: 'Operação criada com sucesso!' });
       queryClient.invalidateQueries({ queryKey: ['/api/user/onboarding-status'] });
-      setCurrentStep(2);
+      // Don't manually set currentStep - it will be updated automatically
     },
     onError: () => {
       toast({ title: 'Erro ao criar operação', variant: 'destructive' });
@@ -122,7 +133,7 @@ export default function OnboardingPage() {
 
   const handleStepComplete = (stepId: string, nextStep: number) => {
     completeStepMutation.mutate(stepId);
-    setCurrentStep(nextStep);
+    // Don't manually set currentStep - it will be updated automatically when data refetches
   };
 
   const progressPercentage = (steps.filter(s => s.completed).length / steps.length) * 100;
@@ -334,7 +345,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
   });
 
   useEffect(() => {
-    if (existingProviders) {
+    if (existingProviders && Array.isArray(existingProviders)) {
       setProviders(existingProviders);
     }
   }, [existingProviders]);
