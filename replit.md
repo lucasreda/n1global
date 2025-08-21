@@ -30,6 +30,8 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **Multi-Currency Marketing Display**: Marketing costs show primary values in BRL with secondary EUR values, using real-time conversion rates for accurate financial tracking and consolidated reporting.
 
+✅ **Multi-Operation Architecture**: Implemented complete operations-based data organization where all data (orders, integrations, products) are organized under specific operations. Created "PureDreams" as default operation with 1173+ migrated orders. Added operation selector in sidebar with "Add New" functionality for future expansion.
+
 ## System Architecture
 
 ### Frontend Architecture

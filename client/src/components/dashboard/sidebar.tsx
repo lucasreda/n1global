@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   Target,
   Briefcase,
-  ChevronDown
+  ChevronDown,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,7 +100,14 @@ export function Sidebar() {
             <Briefcase className="w-4 h-4 text-white/60" />
             <span className="text-sm text-white/60 font-medium">Operação</span>
           </div>
-          <Select value={selectedOperation} onValueChange={setSelectedOperation}>
+          <Select value={selectedOperation} onValueChange={(value) => {
+            if (value === "add-new") {
+              // TODO: Implementar modal de criação de nova operação
+              console.log("Abrir modal para adicionar nova operação");
+              return;
+            }
+            setSelectedOperation(value);
+          }}>
             <SelectTrigger className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10">
               <SelectValue placeholder="Selecionar operação" />
             </SelectTrigger>
@@ -113,6 +121,18 @@ export function Sidebar() {
                   {operation.name}
                 </SelectItem>
               ))}
+              {/* Separador visual */}
+              <div className="border-t border-gray-700 my-1" />
+              {/* Botão Adicionar Nova */}
+              <SelectItem 
+                value="add-new"
+                className="text-blue-400 hover:bg-blue-900/20 hover:text-blue-300"
+              >
+                <div className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar Nova</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
