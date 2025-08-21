@@ -64,20 +64,27 @@ class GoogleAdsService {
   /**
    * Sincroniza campanhas do Google Ads - similar ao Facebook
    */
-  async syncCampaigns(period: string = "last_30d"): Promise<number> {
+  async syncCampaigns(period: string = "last_30d", storeId?: string): Promise<number> {
     try {
       if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
         console.log('⚠️ Google Ads credenciais não configuradas, pulando sincronização');
         return 0;
       }
 
-      // Buscar contas Google Ads ativas
+      // Buscar contas Google Ads ativas com isolamento por loja
+      let whereConditions = [
+        eq(adAccounts.network, 'google'),
+        eq(adAccounts.isActive, true)
+      ];
+      
+      // Add store isolation if storeId provided
+      if (storeId) {
+        whereConditions.push(eq(adAccounts.storeId, storeId));
+      }
+      
       const googleAccounts = await db.select()
         .from(adAccounts)
-        .where(and(
-          eq(adAccounts.network, 'google'),
-          eq(adAccounts.isActive, true)
-        ));
+        .where(and(...whereConditions));
 
       if (googleAccounts.length === 0) {
         console.log('📭 Nenhuma conta Google Ads ativa encontrada');
@@ -90,7 +97,7 @@ class GoogleAdsService {
         console.log(`Sincronizando campanhas para conta Google: ${account.name} (${account.accountId})`);
         
         try {
-          const campaigns = await this.getCampaignsForAccount(account.accountId, account.accessToken || '', period);
+          const campaigns = await this.getCampaigns(account.accessToken || '', account.accountId, period);
           
           for (const campaign of campaigns) {
             // Salvar/atualizar campanha no banco
@@ -391,77 +398,7 @@ class GoogleAdsService {
     }
   }
 
-  /**
-   * Sincroniza campanhas do Google Ads
-   */
-  async syncCampaigns(accessToken: string, customerId: string): Promise<void> {
-    try {
-      console.log(`Sincronizando campanhas Google Ads para conta: ${customerId}`);
-      
-      const campaigns = await this.getCampaigns(accessToken, customerId);
-      
-      for (const campaign of campaigns) {
-        const costInOriginalCurrency = parseInt(campaign.metrics.costMicros) / 1000000;
-        
-        // Buscar moeda base da conta
-        const account = await db
-          .select()
-          .from(adAccounts)
-          .where(and(
-            eq(adAccounts.network, 'google'),
-            eq(adAccounts.accountId, customerId)
-          ))
-          .limit(1);
 
-        const baseCurrency = account[0]?.baseCurrency || 'EUR';
-        
-        // Converter para BRL
-        let costInBRL = costInOriginalCurrency;
-        if (baseCurrency !== 'BRL') {
-          costInBRL = await currencyService.convertToBRL(costInOriginalCurrency, baseCurrency);
-        }
-
-        await db
-          .insert(campaignsTable)
-          .values({
-            network: 'google',
-            campaignId: campaign.id,
-            accountId: customerId,
-            name: campaign.name,
-            status: campaign.status.toLowerCase(),
-            campaignType: campaign.type,
-            amountSpent: costInBRL.toString(),
-            originalAmountSpent: costInOriginalCurrency.toString(),
-            originalCurrency: baseCurrency,
-            impressions: parseInt(campaign.metrics.impressions) || 0,
-            clicks: parseInt(campaign.metrics.clicks) || 0,
-            ctr: (campaign.metrics.ctr || 0).toString(),
-            cpm: (parseFloat(campaign.metrics.averageCpm) / 1000000 || 0).toString(), // Convert from micros
-            cpc: (parseFloat(campaign.metrics.averageCpc) / 1000000 || 0).toString(), // Convert from micros
-            startTime: campaign.startDate ? new Date(campaign.startDate) : null,
-            endTime: campaign.endDate ? new Date(campaign.endDate) : null,
-          })
-          .onConflictDoUpdate({
-            target: [campaignsTable.network, campaignsTable.campaignId, campaignsTable.accountId],
-            set: {
-              name: campaign.name,
-              status: campaign.status.toLowerCase(),
-              amountSpent: costInBRL.toString(),
-              originalAmountSpent: costInOriginalCurrency.toString(),
-              impressions: parseInt(campaign.metrics.impressions) || 0,
-              clicks: parseInt(campaign.metrics.clicks) || 0,
-              ctr: (campaign.metrics.ctr || 0).toString(),
-              cpm: (parseFloat(campaign.metrics.averageCpm) / 1000000 || 0).toString(),
-              cpc: (parseFloat(campaign.metrics.averageCpc) / 1000000 || 0).toString(),
-              lastSync: new Date(),
-            },
-          });
-      }
-    } catch (error) {
-      console.error(`Erro ao sincronizar campanhas Google Ads para conta ${customerId}:`, error);
-      throw error;
-    }
-  }
 }
 
 export const googleAdsService = new GoogleAdsService();

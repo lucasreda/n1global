@@ -99,9 +99,25 @@ export class FacebookAdsService {
     return campaigns;
   }
 
-  async getCampaignsWithPeriod(datePeriod: string = "last_30d"): Promise<any[]> {
-    // Buscar contas ativas
-    const accounts = await db.select().from(facebookAdAccounts).where(eq(facebookAdAccounts.isActive, true));
+  async getCampaignsWithPeriod(datePeriod: string = "last_30d", storeId?: string): Promise<any[]> {
+    // CRITICAL: Use unified adAccounts table with store isolation
+    const { adAccounts } = await import("@shared/schema");
+    const { and } = await import("drizzle-orm");
+    
+    let whereConditions = [
+      eq(adAccounts.network, 'facebook'),
+      eq(adAccounts.isActive, true)
+    ];
+    
+    // Add store isolation if storeId provided
+    if (storeId) {
+      whereConditions.push(eq(adAccounts.storeId, storeId));
+    }
+    
+    const accounts = await db
+      .select()
+      .from(adAccounts)
+      .where(and(...whereConditions));
     
     if (accounts.length === 0) {
       return [];
@@ -121,10 +137,16 @@ export class FacebookAdsService {
         
         // Para cada campanha da API, verificar se existe no banco e manter configurações locais
         for (const liveCampaign of liveCampaigns) {
+          const { campaigns } = await import("@shared/schema");
+          
           const existing = await db
             .select()
-            .from(facebookCampaigns)
-            .where(eq(facebookCampaigns.campaignId, liveCampaign.campaignId))
+            .from(campaigns)
+            .where(and(
+              eq(campaigns.campaignId, liveCampaign.campaignId),
+              eq(campaigns.accountId, account.accountId),
+              eq(campaigns.network, 'facebook')
+            ))
             .limit(1);
 
           // Converter valores para a moeda base configurada da conta
@@ -175,7 +197,14 @@ export class FacebookAdsService {
       } catch (error) {
         console.error(`Erro ao buscar campanhas ao vivo para conta ${account.name}:`, error);
         // Em caso de erro, usar dados do banco como fallback
-        const storedCampaigns = await db.select().from(facebookCampaigns);
+        const { campaigns } = await import("@shared/schema");
+        const storedCampaigns = await db
+          .select()
+          .from(campaigns)
+          .where(and(
+            eq(campaigns.accountId, account.accountId),
+            eq(campaigns.network, 'facebook')
+          ));
         campaignsWithLiveData.push(...storedCampaigns);
       }
     }
@@ -183,8 +212,25 @@ export class FacebookAdsService {
     return campaignsWithLiveData;
   }
 
-  async syncCampaigns(datePeriod: string = "last_30d"): Promise<{ synced: number; errors?: string[] }> {
-    const accounts = await db.select().from(facebookAdAccounts).where(eq(facebookAdAccounts.isActive, true));
+  async syncCampaigns(datePeriod: string = "last_30d", storeId?: string): Promise<{ synced: number; errors?: string[] }> {
+    // CRITICAL: Use unified adAccounts table with store isolation
+    const { adAccounts } = await import("@shared/schema");
+    const { and } = await import("drizzle-orm");
+    
+    let whereConditions = [
+      eq(adAccounts.network, 'facebook'),
+      eq(adAccounts.isActive, true)
+    ];
+    
+    // Add store isolation if storeId provided
+    if (storeId) {
+      whereConditions.push(eq(adAccounts.storeId, storeId));
+    }
+    
+    const accounts = await db
+      .select()
+      .from(adAccounts)
+      .where(and(...whereConditions));
     
     if (accounts.length === 0) {
       throw new Error("Nenhuma conta do Facebook Ads configurada. Adicione uma conta primeiro.");
@@ -204,31 +250,45 @@ export class FacebookAdsService {
         const campaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken, datePeriod);
         
         for (const campaignData of campaigns) {
+          const { campaigns: campaignsTable } = await import("@shared/schema");
+          
           // Check if campaign already exists
           const existing = await db
             .select()
-            .from(facebookCampaigns)
-            .where(eq(facebookCampaigns.campaignId, campaignData.campaignId))
+            .from(campaignsTable)
+            .where(and(
+              eq(campaignsTable.campaignId, campaignData.campaignId),
+              eq(campaignsTable.accountId, account.accountId),
+              eq(campaignsTable.network, 'facebook')
+            ))
             .limit(1);
 
           if (existing.length > 0) {
             // Update existing campaign - preserve isSelected state
             const { isSelected: _, ...updateData } = campaignData; // Remove isSelected from API data
             await db
-              .update(facebookCampaigns)
+              .update(campaignsTable)
               .set({
                 ...updateData,
+                network: 'facebook',
+                accountId: account.accountId,
                 updatedAt: new Date(),
                 lastSync: new Date()
                 // isSelected is NOT updated here - preserving user selection
               })
-              .where(eq(facebookCampaigns.campaignId, campaignData.campaignId));
+              .where(and(
+                eq(campaignsTable.campaignId, campaignData.campaignId),
+                eq(campaignsTable.accountId, account.accountId),
+                eq(campaignsTable.network, 'facebook')
+              ));
           } else {
             // Insert new campaign
             await db
-              .insert(facebookCampaigns)
+              .insert(campaignsTable)
               .values({
                 ...campaignData,
+                network: 'facebook',
+                accountId: account.accountId,
                 lastSync: new Date()
               });
           }
@@ -237,9 +297,9 @@ export class FacebookAdsService {
         
         // Update last sync time
         await db
-          .update(facebookAdAccounts)
+          .update(adAccounts)
           .set({ lastSync: new Date() })
-          .where(eq(facebookAdAccounts.id, account.id));
+          .where(eq(adAccounts.id, account.id));
           
       } catch (error) {
         const errorMsg = `Conta ${account.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;

@@ -494,10 +494,19 @@ export class DashboardService {
     return { from, to };
   }
   
-  async getRevenueOverTime(period: '7d' | '30d' | '90d' = '30d', provider?: string) {
+  async getRevenueOverTime(period: '7d' | '30d' | '90d' = '30d', provider?: string, req?: any) {
     const dateRange = this.getDateRange(period);
     
+    // CRITICAL: Get operation context for data isolation
+    const userOperations = await storage.getUserOperations(req.user.id);
+    const currentOperation = userOperations[0];
+    
+    if (!currentOperation) {
+      return []; // No operation, no data
+    }
+    
     let whereConditions = [
+      eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
       gte(orders.orderDate, dateRange.from),
       lte(orders.orderDate, dateRange.to),
       eq(orders.status, 'delivered') // Only count delivered orders for revenue
@@ -526,10 +535,19 @@ export class DashboardService {
     }));
   }
   
-  async getOrdersByStatus(period: '7d' | '30d' | '90d' = '30d', provider?: string) {
+  async getOrdersByStatus(period: '7d' | '30d' | '90d' = '30d', provider?: string, req?: any) {
     const dateRange = this.getDateRange(period);
     
+    // CRITICAL: Get operation context for data isolation
+    const userOperations = await storage.getUserOperations(req.user.id);
+    const currentOperation = userOperations[0];
+    
+    if (!currentOperation) {
+      return []; // No operation, no data
+    }
+    
     let whereConditions = [
+      eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
       gte(orders.orderDate, dateRange.from),
       lte(orders.orderDate, dateRange.to)
     ];

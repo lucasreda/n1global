@@ -34,6 +34,12 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **Gamified Onboarding System**: Complete 5-step onboarding flow implemented with database schema updates (onboardingCompleted, onboardingSteps), middleware protection blocking dashboard access until completion, gamified UI with progress tracking, and fullscreen layout without sidebar. Steps include: operation creation, Shopify integration, shipping provider setup, ads integration, and data synchronization with retry logic.
 
+✅ **ADS SERVICES TENANT ISOLATION COMPLETE**: Both Facebook and Google Ads services now enforce strict tenant isolation with storeId filtering throughout the sync pipeline, preventing data leakage across operations and ensuring complete multi-tenant security.
+
+✅ **FACEBOOK ADS ROUTES SECURED**: Updated all Facebook Ads API routes to use storeContext middleware and pass storeId for complete data isolation between different store operations.
+
+✅ **UNIFIED ADS SYNC ARCHITECTURE**: All advertising sync methods (Facebook/Google) now accept and enforce storeId parameters for consistent multi-tenant isolation across the entire advertising data pipeline.
+
 ## System Architecture
 
 ### Frontend Architecture

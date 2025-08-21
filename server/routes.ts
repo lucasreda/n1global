@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const provider = req.query.provider as string;
 
       const { dashboardService } = await import("./dashboard-service");
-      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider);
+      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider, req);
 
       res.json(revenueData);
     } catch (error) {
@@ -241,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const provider = req.query.provider as string;
 
       const { dashboardService } = await import("./dashboard-service");
-      const statusData = await dashboardService.getOrdersByStatus(period as any, provider);
+      const statusData = await dashboardService.getOrdersByStatus(period as any, provider, req);
 
       res.json(statusData);
     } catch (error) {
@@ -793,17 +793,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/facebook/campaigns", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/facebook/campaigns", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { period, autoSync } = req.query;
       const { facebookAdsService } = await import("./facebook-ads-service");
       const { syncManager } = await import("./sync-manager");
       
+      // Get storeId from middleware context for data isolation
+      const storeId = (req as any).storeId;
+      
       // Verificar se deve fazer sincronização automática
       if (autoSync === 'true' && syncManager.shouldAutoSync()) {
         console.log('🔄 Iniciando sincronização automática (30min interval)');
         try {
-          await facebookAdsService.syncCampaigns(period as string || "last_30d");
+          await facebookAdsService.syncCampaigns(period as string || "last_30d", storeId);
           syncManager.updateLastSyncTime();
           console.log('✅ Sincronização automática concluída');
         } catch (syncError) {
@@ -811,7 +814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const campaigns = await facebookAdsService.getCampaignsWithPeriod(period as string || "last_30d");
+      const campaigns = await facebookAdsService.getCampaignsWithPeriod(period as string || "last_30d", storeId);
       res.json(campaigns);
     } catch (error) {
       console.error("Facebook campaigns error:", error);
@@ -831,14 +834,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/facebook/sync-period", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/facebook/sync-period", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { period } = req.body;
       const { facebookAdsService } = await import("./facebook-ads-service");
       const { syncManager } = await import("./sync-manager");
       
+      // Get storeId from middleware context for data isolation
+      const storeId = (req as any).storeId;
+      
       console.log('🔄 Iniciando sincronização por período');
-      const result = await facebookAdsService.syncCampaigns(period || "last_30d");
+      const result = await facebookAdsService.syncCampaigns(period || "last_30d", storeId);
       syncManager.updateLastSyncTime();
       console.log('✅ Sincronização por período concluída');
       
@@ -1303,9 +1309,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Products routes
-  app.get("/api/products", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const products = await storage.getProducts();
+      // Get storeId from middleware context for data isolation
+      const storeId = (req as any).storeId;
+      const products = await storage.getProducts(storeId);
       res.json(products);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar produtos" });
@@ -1360,12 +1368,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Unified Ad Networks Routes (Facebook + Google)
   
   // Get all ad accounts (Facebook + Google)
-  app.get("/api/ad-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/ad-accounts", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { adAccounts } = await import("@shared/schema");
       const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
       
-      const accounts = await db.select().from(adAccounts);
+      // Get storeId from middleware context for data isolation
+      const storeId = (req as any).storeId;
+      
+      const accounts = await db
+        .select()
+        .from(adAccounts)
+        .where(eq(adAccounts.storeId, storeId));
+        
       res.json(accounts);
     } catch (error) {
       console.error("Error fetching ad accounts:", error);
@@ -1374,10 +1390,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add new ad account (Facebook or Google)
-  app.post("/api/ad-accounts", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/ad-accounts", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { insertAdAccountSchema, adAccounts } = await import("@shared/schema");
       const { db } = await import("./db");
+      
+      // Get storeId from middleware context for data isolation
+      const storeId = (req as any).storeId;
       
       const accountData = insertAdAccountSchema.parse(req.body);
       
@@ -1422,7 +1441,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const [newAccount] = await db
         .insert(adAccounts)
-        .values(accountData)
+        .values({
+          ...accountData,
+          storeId // Associate account with store for data isolation
+        })
         .returning();
         
       res.status(201).json(newAccount);
@@ -1433,10 +1455,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get unified campaigns (Facebook + Google)
-  app.get("/api/campaigns", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/campaigns", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const { campaigns } = await import("@shared/schema");
+      const { campaigns, adAccounts } = await import("@shared/schema");
       const { db } = await import("./db");
+      const { eq, and, inArray } = await import("drizzle-orm");
+      
+      // Get storeId from middleware context for data isolation
+      const storeId = (req as any).storeId;
+      
       const period = req.query.period as string || 'last_30d';
       const autoSync = req.query.autoSync === 'true';
       
@@ -1445,25 +1472,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           // Sync Facebook Ads
           const { facebookAdsService } = await import("./facebook-ads-service");
-          await facebookAdsService.syncCampaigns(period);
+          await facebookAdsService.syncCampaigns(period, storeId);
           
           // Sync Google Ads
           const { googleAdsService } = await import("./google-ads-service");
-          await googleAdsService.syncCampaigns(period);
+          await googleAdsService.syncCampaigns(period, storeId);
         } catch (error) {
           console.error('Auto-sync failed:', error);
         }
       }
       
-      const allCampaigns = await db.select().from(campaigns);
+      // CRITICAL: Only get campaigns from accounts belonging to this store
+      const storeAccounts = await db
+        .select()
+        .from(adAccounts)
+        .where(eq(adAccounts.storeId, storeId));
       
-      // Add account name to campaigns
-      const { adAccounts } = await import("@shared/schema");
-      const accounts = await db.select().from(adAccounts);
+      const storeAccountIds = storeAccounts.map(acc => acc.accountId);
       
-      const campaignsWithAccountInfo = allCampaigns.map(campaign => ({
+      if (storeAccountIds.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get campaigns only from store's accounts
+      const storeCampaigns = await db
+        .select()
+        .from(campaigns)
+        .where(inArray(campaigns.accountId, storeAccountIds));
+      
+      // Add account name to campaigns (only from store accounts)
+      const campaignsWithAccountInfo = storeCampaigns.map(campaign => ({
         ...campaign,
-        accountName: accounts.find(acc => acc.accountId === campaign.accountId)?.name || 'Conta Desconhecida'
+        accountName: storeAccounts.find(acc => acc.accountId === campaign.accountId)?.name || 'Conta Desconhecida'
       }));
       
       res.json(campaignsWithAccountInfo);
@@ -1474,22 +1514,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update campaign selection (Facebook + Google)
-  app.patch("/api/campaigns/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.patch("/api/campaigns/:id", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { isSelected } = req.body;
-      const { campaigns } = await import("@shared/schema");
+      const { campaigns, adAccounts } = await import("@shared/schema");
       const { db } = await import("./db");
-      const { eq } = await import("drizzle-orm");
+      const { eq, and, inArray } = await import("drizzle-orm");
+      
+      // Get storeId from middleware context for data isolation
+      const storeId = (req as any).storeId;
+      
+      // CRITICAL: Verify campaign belongs to user's store before updating
+      const storeAccountIds = await db
+        .select({ accountId: adAccounts.accountId })
+        .from(adAccounts)
+        .where(eq(adAccounts.storeId, storeId));
+      
+      const accountIds = storeAccountIds.map(acc => acc.accountId);
       
       const [updatedCampaign] = await db
         .update(campaigns)
         .set({ isSelected })
-        .where(eq(campaigns.id, id))
+        .where(
+          and(
+            eq(campaigns.id, id),
+            inArray(campaigns.accountId, accountIds)
+          )
+        )
         .returning();
         
       if (!updatedCampaign) {
-        return res.status(404).json({ message: "Campanha não encontrada" });
+        return res.status(404).json({ message: "Campanha não encontrada ou sem permissão" });
       }
       
       res.json(updatedCampaign);

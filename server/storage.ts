@@ -114,10 +114,20 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(orders.createdAt));
   }
 
-  async getProducts(): Promise<Product[]> {
+  async getProducts(storeId?: string): Promise<Product[]> {
+    if (!storeId) {
+      // For backward compatibility, return all products if no storeId provided
+      return await db
+        .select()
+        .from(products)
+        .orderBy(desc(products.createdAt));
+    }
+    
+    // Filter by storeId for proper data isolation
     return await db
       .select()
       .from(products)
+      .where(eq(products.storeId, storeId))
       .orderBy(desc(products.createdAt));
   }
 

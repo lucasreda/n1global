@@ -495,6 +495,7 @@ export const facebookBusinessManagers = pgTable("facebook_business_managers", {
 // Ad Accounts - Unified table for Facebook and Google Ads
 export const adAccounts = pgTable("ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // CRITICAL: Link to store for isolation
   network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
   accountId: varchar("account_id", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
