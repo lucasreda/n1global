@@ -355,17 +355,17 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Quaternary Metrics - Small Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
         <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-purple-500/10 hover:border-purple-400/25 flex flex-col justify-between">
           <div className="flex-shrink-0">
             <div className="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
               <Target className="text-purple-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow overflow-hidden">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{formatCurrencyBRL(marketingCostsBRL)}</h5>
-            <p className="text-gray-400 text-xs mb-1 truncate">Custos Marketing</p>
-            <p className="text-xs text-purple-400 opacity-80 leading-tight truncate">
+          <div className="flex-grow">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyBRL(marketingCostsBRL)}</h5>
+            <p className="text-gray-400 text-xs mb-1">Custos Marketing</p>
+            <p className="text-xs text-purple-400 opacity-80 leading-tight">
               {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
             </p>
           </div>
@@ -377,10 +377,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <Calculator className="text-indigo-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow overflow-hidden">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{formatCurrencyBRL(productCostsBRL)}</h5>
-            <p className="text-gray-400 text-xs mb-1 truncate">Custos Produtos</p>
-            <p className="text-xs text-indigo-400 opacity-80 leading-tight truncate">{formatCurrencyEUR(productCosts)}</p>
+          <div className="flex-grow">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyBRL(productCostsBRL)}</h5>
+            <p className="text-gray-400 text-xs mb-1">Custos Produtos</p>
+            <p className="text-xs text-indigo-400 opacity-80 leading-tight whitespace-nowrap">{formatCurrencyEUR(productCosts)}</p>
           </div>
         </div>
         
@@ -390,10 +390,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <Truck className="text-orange-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow overflow-hidden">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
-            <p className="text-gray-400 text-xs mb-1 truncate">Custos Envio</p>
-            <p className="text-xs text-orange-400 opacity-80 leading-tight truncate">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
+          <div className="flex-grow">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
+            <p className="text-gray-400 text-xs mb-1">Custos Envio</p>
+            <p className="text-xs text-orange-400 opacity-80 leading-tight whitespace-nowrap">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
           </div>
         </div>
         
@@ -403,10 +403,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <XCircle className="text-red-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow overflow-hidden">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{cancelledOrders.toLocaleString()}</h5>
-            <p className="text-gray-400 text-xs mb-1 truncate">Cancelados</p>
-            <p className="text-xs text-red-400 opacity-80 leading-tight truncate">Perdidos</p>
+          <div className="flex-grow">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{cancelledOrders.toLocaleString()}</h5>
+            <p className="text-gray-400 text-xs mb-1">Cancelados</p>
+            <p className="text-xs text-red-400 opacity-80 leading-tight">Perdidos</p>
           </div>
         </div>
         
@@ -416,10 +416,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <ShoppingCart className="text-slate-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow overflow-hidden">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{totalOrders.toLocaleString()}</h5>
-            <p className="text-gray-400 text-xs mb-1 truncate">Total Pedidos</p>
-            <p className="text-xs text-slate-400 opacity-80 leading-tight truncate">Todos os status</p>
+          <div className="flex-grow">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{totalOrders.toLocaleString()}</h5>
+            <p className="text-gray-400 text-xs mb-1">Total Pedidos</p>
+            <p className="text-xs text-slate-400 opacity-80 leading-tight">Todos os status</p>
           </div>
         </div>
         
@@ -430,7 +430,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{deliveryRate.toFixed(1)}%</h5>
+            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{deliveryRate.toFixed(1)}%</h5>
             <p className="text-gray-400 text-xs mb-1">% Entregue</p>
             <p className="text-xs text-cyan-400 opacity-80 leading-tight">Taxa sucesso</p>
           </div>
@@ -443,7 +443,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyEUR(averageOrderValue)}</h5>
+            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyEUR(averageOrderValue)}</h5>
             <p className="text-gray-400 text-xs mb-1">Ticket Médio</p>
             <p className="text-xs text-pink-400 opacity-80 leading-tight">Por pedido pago</p>
           </div>
