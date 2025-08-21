@@ -732,7 +732,7 @@ export class SmartSyncService {
         
         this.completeSyncStatus.newLeads = allNewLeads;
         this.completeSyncStatus.updatedLeads = allUpdatedLeads;
-        this.completeSyncStatus.processedLeads = (page - 1) * pageResponse.per_page + pageResponse.data.length;
+        this.completeSyncStatus.processedLeads = (page - 1) * leadsPerPage + pageLeads.length;
 
         // Calcular velocidade e tempo estimado
         const elapsed = (Date.now() - this.completeSyncStatus.startTime!.getTime()) / 1000;
