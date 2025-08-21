@@ -926,15 +926,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const period = req.query.period as string || 'last_30d';
       const autoSync = req.query.autoSync === 'true';
       
-      // Auto-sync Facebook Ads if needed
+      // Auto-sync both Facebook and Google Ads if needed
       if (autoSync) {
         try {
+          // Sync Facebook Ads
           const { facebookAdsService } = await import("./facebook-ads-service");
-          if (facebookAdsService.autoSyncIfNeeded) {
-            await facebookAdsService.autoSyncIfNeeded();
-          }
+          await facebookAdsService.syncCampaigns(period);
+          
+          // Sync Google Ads
+          const { googleAdsService } = await import("./google-ads-service");
+          await googleAdsService.syncCampaigns(period);
         } catch (error) {
-          console.error('Facebook auto-sync failed:', error);
+          console.error('Auto-sync failed:', error);
         }
       }
       
