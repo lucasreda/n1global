@@ -259,7 +259,10 @@ export const shippingProviders = pgTable("shipping_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links provider to store
   name: text("name").notNull(),
-  apiUrl: text("api_url").notNull(),
+  type: text("type").notNull().default("custom"), // 'correios', 'jadlog', 'european_fulfillment', 'custom'
+  apiKey: text("api_key"),
+  apiUrl: text("api_url"),
+  description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

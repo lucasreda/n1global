@@ -391,6 +391,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shipping providers routes
+  app.get("/api/shipping-providers", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const providers = await storage.getShippingProviders();
+      res.json(providers);
+    } catch (error) {
+      console.error("Get shipping providers error:", error);
+      res.status(500).json({ message: "Erro ao buscar transportadoras" });
+    }
+  });
+
+  app.post("/api/shipping-providers", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { name, type, apiKey, description } = req.body;
+      if (!name?.trim()) {
+        return res.status(400).json({ message: "Nome da transportadora é obrigatório" });
+      }
+
+      const provider = await storage.createShippingProvider({
+        name: name.trim(),
+        type: type || 'custom',
+        apiKey: apiKey || null,
+        description: description || null
+      }, req.user.storeId);
+
+      res.json(provider);
+    } catch (error) {
+      console.error("Create shipping provider error:", error);
+      res.status(500).json({ message: "Erro ao criar transportadora" });
+    }
+  });
+
   // Facebook Ads routes
   app.get("/api/facebook/business-managers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

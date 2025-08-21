@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, User, Order, Product, ShippingProvider, Operation, InsertUser, InsertOrder, InsertProduct } from "@shared/schema";
+import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, User, Order, Product, ShippingProvider, Operation, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -34,6 +34,9 @@ export interface IStorage {
   updateOnboardingStep(userId: string, stepId: string, completed: boolean): Promise<void>;
   completeOnboarding(userId: string): Promise<void>;
   createOperation(operationData: { name: string; description: string }, userId: string): Promise<Operation>;
+  
+  // Shipping providers creation
+  createShippingProvider(data: InsertShippingProvider, storeId: string): Promise<ShippingProvider>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -249,6 +252,18 @@ export class DatabaseStorage implements IStorage {
       });
 
     return operation;
+  }
+
+  async createShippingProvider(data: InsertShippingProvider, storeId: string): Promise<ShippingProvider> {
+    const [provider] = await db
+      .insert(shippingProviders)
+      .values({
+        ...data,
+        storeId
+      })
+      .returning();
+    
+    return provider;
   }
 }
 

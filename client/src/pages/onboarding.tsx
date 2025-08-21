@@ -270,41 +270,7 @@ export default function OnboardingPage() {
 
             {/* Step 3: Shipping Integration */}
             {currentStep === 3 && (
-              <div className="space-y-4">
-                <div className="text-center py-8">
-                  <Truck className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-                  <p className="text-white/80 mb-4">
-                    Configure suas transportadoras para gerenciar entregas
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <Card className="bg-white/5 border-white/10">
-                      <CardContent className="p-4 text-center">
-                        <h4 className="text-white font-medium">European Fulfillment</h4>
-                        <p className="text-white/60 text-sm">Disponível</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-white/5 border-white/10">
-                      <CardContent className="p-4 text-center">
-                        <h4 className="text-white font-medium">Correios</h4>
-                        <p className="text-white/60 text-sm">Em breve</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-white/5 border-white/10">
-                      <CardContent className="p-4 text-center">
-                        <h4 className="text-white font-medium">Jadlog</h4>
-                        <p className="text-white/60 text-sm">Em breve</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  <Button 
-                    onClick={() => handleStepComplete('step3_shipping', 4)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    data-testid="button-skip-shipping"
-                  >
-                    Continuar
-                  </Button>
-                </div>
-              </div>
+              <ShippingStep onComplete={() => handleStepComplete('step3_shipping', 4)} />
             )}
 
             {/* Step 4: Ads Integration */}
@@ -344,6 +310,211 @@ export default function OnboardingPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function ShippingStep({ onComplete }: { onComplete: () => void }) {
+  const [providers, setProviders] = useState<any[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [providerData, setProviderData] = useState({
+    name: '',
+    type: 'correios',
+    apiKey: '',
+    description: ''
+  });
+  const { toast } = useToast();
+
+  // Fetch existing shipping providers
+  const { data: existingProviders } = useQuery({
+    queryKey: ['/api/shipping-providers'],
+  });
+
+  useEffect(() => {
+    if (existingProviders) {
+      setProviders(existingProviders);
+    }
+  }, [existingProviders]);
+
+  const createProviderMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/shipping-providers', data);
+      return response.json();
+    },
+    onSuccess: (newProvider) => {
+      setProviders(prev => [...prev, newProvider]);
+      setShowForm(false);
+      setProviderData({ name: '', type: 'correios', apiKey: '', description: '' });
+      toast({ title: 'Transportadora cadastrada com sucesso!' });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao cadastrar transportadora', variant: 'destructive' });
+    }
+  });
+
+  const handleAddProvider = () => {
+    if (!providerData.name.trim()) {
+      toast({ title: 'Nome da transportadora é obrigatório', variant: 'destructive' });
+      return;
+    }
+    createProviderMutation.mutate(providerData);
+  };
+
+  const canContinue = providers.length > 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <Truck className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+        <h3 className="text-xl text-white mb-2">Configure suas transportadoras</h3>
+        <p className="text-white/60">
+          Você precisa cadastrar ao menos uma transportadora para continuar
+        </p>
+      </div>
+
+      {/* Existing providers */}
+      {providers.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-white font-medium">Transportadoras cadastradas:</h4>
+          <div className="grid grid-cols-1 gap-3">
+            {providers.map((provider) => (
+              <Card key={provider.id} className="bg-green-600/20 border-green-400">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h5 className="text-white font-medium">{provider.name}</h5>
+                      <p className="text-white/60 text-sm">{provider.type}</p>
+                    </div>
+                    <div className="text-green-400">
+                      <CheckCircle className="w-5 h-5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add new provider form */}
+      {showForm ? (
+        <Card className="bg-white/10 border-white/20">
+          <CardContent className="p-6 space-y-4">
+            <h4 className="text-white font-medium">Adicionar Nova Transportadora</h4>
+            
+            <div>
+              <Label htmlFor="provider-name" className="text-white">
+                Nome da Transportadora
+              </Label>
+              <Input
+                id="provider-name"
+                placeholder="Ex: Correios SP"
+                value={providerData.name}
+                onChange={(e) => setProviderData(prev => ({ ...prev, name: e.target.value }))}
+                className="bg-white/10 border-white/20 text-white mt-2"
+                data-testid="input-provider-name"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="provider-type" className="text-white">
+                Tipo
+              </Label>
+              <select
+                id="provider-type"
+                value={providerData.type}
+                onChange={(e) => setProviderData(prev => ({ ...prev, type: e.target.value }))}
+                className="w-full mt-2 p-2 bg-white/10 border border-white/20 rounded-md text-white"
+                data-testid="select-provider-type"
+              >
+                <option value="correios">Correios</option>
+                <option value="jadlog">Jadlog</option>
+                <option value="european_fulfillment">European Fulfillment</option>
+                <option value="custom">Personalizada</option>
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="provider-api-key" className="text-white">
+                Chave de API (opcional)
+              </Label>
+              <Input
+                id="provider-api-key"
+                placeholder="Sua chave de API"
+                value={providerData.apiKey}
+                onChange={(e) => setProviderData(prev => ({ ...prev, apiKey: e.target.value }))}
+                className="bg-white/10 border-white/20 text-white mt-2"
+                data-testid="input-provider-api-key"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="provider-description" className="text-white">
+                Descrição (opcional)
+              </Label>
+              <Input
+                id="provider-description"
+                placeholder="Descrição da transportadora"
+                value={providerData.description}
+                onChange={(e) => setProviderData(prev => ({ ...prev, description: e.target.value }))}
+                className="bg-white/10 border-white/20 text-white mt-2"
+                data-testid="input-provider-description"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleAddProvider}
+                disabled={createProviderMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-add-provider"
+              >
+                {createProviderMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Adicionando...
+                  </>
+                ) : (
+                  'Adicionar Transportadora'
+                )}
+              </Button>
+              <Button
+                onClick={() => setShowForm(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white"
+                data-testid="button-cancel-provider"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="text-center">
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            data-testid="button-show-provider-form"
+          >
+            + Adicionar Transportadora
+          </Button>
+        </div>
+      )}
+
+      {/* Continue button */}
+      <div className="text-center pt-4">
+        <Button
+          onClick={onComplete}
+          disabled={!canContinue}
+          className={`${
+            canContinue 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-gray-500 cursor-not-allowed'
+          } text-white`}
+          data-testid="button-continue-shipping"
+        >
+          {canContinue ? 'Continuar' : 'Adicione uma transportadora para continuar'}
+        </Button>
       </div>
     </div>
   );
