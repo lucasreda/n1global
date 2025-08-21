@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { orders, dashboardMetrics, products, type InsertDashboardMetrics } from "@shared/schema";
-import { eq, and, gte, lte, sql, count, sum, avg } from "drizzle-orm";
+import { eq, and, or, gte, lte, sql, count, sum, avg } from "drizzle-orm";
 import { FacebookAdsService } from "./facebook-ads-service";
 import { currencyService } from "./currency-service";
 
