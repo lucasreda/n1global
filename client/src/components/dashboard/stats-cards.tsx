@@ -187,7 +187,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     {
       title: "💰 Receita Paga",
       value: formatCurrencyBRL(totalRevenueBRL),
-      subtitle: formatCurrencyEUR(totalRevenueEUR),
+      subtitle: `${formatCurrencyEUR(totalRevenueEUR)} • ${deliveredOrders} entregas`,
       icon: DollarSign,
       color: "blue",
       size: "large"
@@ -292,7 +292,15 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           </div>
           <h3 className="text-2xl font-bold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
           <p className="text-gray-300 text-sm font-medium">Receita Paga</p>
-          <p className="text-xs text-blue-400 mt-2">{formatCurrencyEUR(totalRevenueEUR)}</p>
+          <div className="flex justify-between items-center mt-3">
+            <p className="text-xs text-blue-400">{formatCurrencyEUR(totalRevenueEUR)}</p>
+            <div className="text-xs text-gray-400">
+              {deliveredOrders} pedidos entregues
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-blue-300">
+            Ticket médio: {formatCurrencyEUR(averageOrderValue)} ({formatCurrencyBRL(averageOrderValue * 6.373034330924346)})
+          </div>
         </div>
         
         <div className="glassmorphism rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-emerald-500/20 hover:border-emerald-400/40 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5">
@@ -408,9 +416,65 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="w-10 h-10 bg-pink-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
             <BarChart3 className="text-pink-400 w-5 h-5" />
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">€{averageOrderValue.toFixed(0)}</h5>
+          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyEUR(averageOrderValue)}</h5>
           <p className="text-gray-400 text-xs">Ticket Médio</p>
-          <p className="text-xs text-pink-400 mt-1 opacity-80">Por pedido</p>
+          <p className="text-xs text-pink-400 mt-1 opacity-80">Por pedido pago</p>
+        </div>
+      </div>
+
+      {/* Receita Paga - Seção Detalhada */}
+      <div className="glassmorphism rounded-2xl p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-white flex items-center">
+            <DollarSign className="mr-3 text-blue-400" size={24} />
+            Análise da Receita Paga
+          </h3>
+          <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium">
+            Apenas Pedidos Entregues
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-400 mb-2">
+              {formatCurrencyBRL(totalRevenueBRL)}
+            </div>
+            <div className="text-lg text-gray-300 mb-1">
+              {formatCurrencyEUR(totalRevenueEUR)}
+            </div>
+            <div className="text-sm text-gray-400">Receita Total em BRL/EUR</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-3xl font-bold text-green-400 mb-2">
+              {deliveredOrders}
+            </div>
+            <div className="text-lg text-gray-300 mb-1">
+              {deliveryRate.toFixed(1)}% de sucesso
+            </div>
+            <div className="text-sm text-gray-400">Pedidos Entregues</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-3xl font-bold text-cyan-400 mb-2">
+              {formatCurrencyEUR(averageOrderValue)}
+            </div>
+            <div className="text-lg text-gray-300 mb-1">
+              {formatCurrencyBRL(averageOrderValue * 6.373034330924346)}
+            </div>
+            <div className="text-sm text-gray-400">Ticket Médio por Pedido</div>
+          </div>
+        </div>
+        
+        <div className="mt-6 pt-4 border-t border-blue-500/20">
+          <div className="flex flex-wrap justify-between items-center text-sm">
+            <div className="text-gray-300">
+              <span className="text-blue-400 font-medium">Conversão:</span> {((deliveredOrders / totalOrders) * 100).toFixed(1)}% dos pedidos geraram receita
+            </div>
+            <div className="text-gray-300">
+              <span className="text-green-400 font-medium">Performance:</span> {formatCurrencyBRL(totalRevenueBRL / totalOrders)} receita por pedido total
+            </div>
+          </div>
         </div>
       </div>
     </div>
