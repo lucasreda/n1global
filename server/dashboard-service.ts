@@ -110,65 +110,25 @@ export class DashboardService {
     const storeId = await this.getStoreId(req);
     console.log(`📅 Calculating metrics for period: ${period}, store: ${storeId}`);
     
-    // Para Product Seller e Store: buscar TODOS os dados da API da European Fulfillment (937 pedidos)
-    console.log(`🔍 Buscando dados completos da API para dashboard (todos os 937 pedidos)`);
+    // Buscar todos os dados da Store (sem filtro de data para mostrar dados completos)
+    let whereConditions = [eq(orders.storeId, storeId)];
     
-    let statusCounts;
-    try {
-      const { europeanFulfillmentService } = await import("./fulfillment-service");
-      
-      // Buscar todos os dados da API (não apenas os sincronizados localmente)
-      const allLeads = await europeanFulfillmentService.getAllLeads();
-      console.log(`📊 Total de leads da API: ${allLeads.length}`);
-      
-      // Processar todos os leads para estatísticas
-      const statusMap = new Map();
-      let totalApiRevenue = 0;
-      
-      allLeads.forEach(lead => {
-        const status = this.mapEuropeanFulfillmentStatus(lead.status_livrison);
-        const value = parseFloat(lead.lead_value || '0');
-        
-        if (!statusMap.has(status)) {
-          statusMap.set(status, { count: 0, totalRevenue: 0 });
-        }
-        
-        const current = statusMap.get(status);
-        current.count += 1;
-        if (status === 'delivered') {
-          current.totalRevenue += value;
-          totalApiRevenue += value;
-        }
-      });
-      
-      // Converter Map para array no formato esperado
-      statusCounts = Array.from(statusMap.entries()).map(([status, data]) => ({
-        status,
-        count: data.count,
-        totalRevenue: data.totalRevenue
-      }));
-      
-      console.log(`📈 Processados ${allLeads.length} leads da API com receita total de €${totalApiRevenue}`);
-      
-    } catch (error) {
-      console.warn("❌ Erro ao buscar dados da API, usando dados locais como fallback:", error);
-      
-      // Fallback: usar dados locais se API falhar
-      let whereConditions = [eq(orders.storeId, storeId)];
-      if (provider) {
-        whereConditions.push(eq(orders.provider, provider));
-      }
-      
-      statusCounts = await db
-        .select({
-          status: orders.status,
-          count: count(),
-          totalRevenue: sum(orders.total)
-        })
-        .from(orders)
-        .where(and(...whereConditions))
-        .groupBy(orders.status);
+    if (provider) {
+      whereConditions.push(eq(orders.provider, provider));
     }
+    
+    const whereClause = and(...whereConditions);
+    
+    // Get all order counts by status (todos os dados da Store)
+    const statusCounts = await db
+      .select({
+        status: orders.status,
+        count: count(),
+        totalRevenue: sum(orders.total)
+      })
+      .from(orders)
+      .where(whereClause)
+      .groupBy(orders.status);
     
     // Calculate metrics
     let totalOrders = 0;
