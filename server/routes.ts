@@ -374,13 +374,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             let allLeads = [];
             
+            // Map country codes to API country names
+            const countryMapping: Record<string, string> = {
+              'ES': 'SPAIN',
+              'IT': 'ITALY', 
+              'FR': 'FRANCE',
+              'PT': 'PORTUGAL',
+              'DE': 'GERMANY',
+              'AT': 'AUSTRIA',
+              'GR': 'GREECE',
+              'PL': 'POLAND',
+              'CZ': 'CZECH REPUBLIC',
+              'SK': 'ESLOVAQUIA',
+              'HU': 'HUNGRY',
+              'RO': 'ROMANIA',
+              'BG': 'BULGARIA',
+              'HR': 'CROACIA',
+              'SI': 'ESLOVENIA',
+              'EE': 'ESTONIA',
+              'LV': 'LATVIA',
+              'LT': 'LITHUANIA'
+            };
+
             // Try to get leads from operation's country first
             if (firstOperation.country) {
               try {
-                console.log(`🎯 Fetching leads from operation country: ${firstOperation.country}`);
-                const countryLeads = await service.getLeadsList(firstOperation.country);
+                const apiCountryName = countryMapping[firstOperation.country] || firstOperation.country;
+                console.log(`🎯 Fetching leads from operation country: ${firstOperation.country} -> ${apiCountryName}`);
+                const countryLeads = await service.getLeadsList(apiCountryName);
                 allLeads.push(...countryLeads);
-                console.log(`🇮🇹 Found ${countryLeads.length} leads from ${firstOperation.country}`);
+                console.log(`🇮🇹 Found ${countryLeads.length} leads from ${apiCountryName}`);
               } catch (countryError) {
                 console.log(`⚠️ No leads found for operation country ${firstOperation.country}: ${countryError.message}`);
               }
