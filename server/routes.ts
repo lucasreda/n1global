@@ -883,6 +883,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Credenciais do Facebook inválidas" });
         }
       } else if (accountData.network === 'google') {
+        // Check if Google Ads credentials are configured
+        if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
+          return res.status(400).json({ 
+            message: "Google Ads não configurado. Configure GOOGLE_ADS_DEVELOPER_TOKEN nas variáveis de ambiente." 
+          });
+        }
+        
         const { googleAdsService } = await import("./google-ads-service");
         const isValid = await googleAdsService.authenticate(
           accountData.accessToken || '',
