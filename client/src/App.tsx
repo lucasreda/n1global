@@ -29,6 +29,13 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     enabled: !!user,
   });
 
+  // Effect to handle redirection without causing React warnings
+  useEffect(() => {
+    if (user && !isLoading && !onboardingStatus?.onboardingCompleted && location !== '/onboarding') {
+      setLocation('/onboarding');
+    }
+  }, [user, isLoading, onboardingStatus?.onboardingCompleted, location, setLocation]);
+
   // Don't interfere with onboarding page itself
   if (location === '/onboarding') {
     return <>{children}</>;
@@ -46,10 +53,16 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Redirect to onboarding if not completed
+  // Show loading if redirection is needed
   if (user && !onboardingStatus?.onboardingCompleted) {
-    setLocation('/onboarding');
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glassmorphism rounded-2xl p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-white">Redirecionando para configuração...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
@@ -78,6 +91,7 @@ function Router() {
 
 function AppContent() {
   const { isAuthenticated, isLoading, checkAuth } = useAuth();
+  const [location] = useLocation();
 
   useEffect(() => {
     checkAuth();
@@ -98,12 +112,22 @@ function AppContent() {
     <>
       <AuthModal isOpen={!isAuthenticated} />
       {isAuthenticated && (
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="ml-64 flex-1 p-6">
-            <Router />
-          </main>
-        </div>
+        <>
+          {/* Fullscreen layout for onboarding */}
+          {location === '/onboarding' ? (
+            <div className="min-h-screen">
+              <Router />
+            </div>
+          ) : (
+            /* Regular dashboard layout with sidebar */
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <main className="ml-64 flex-1 p-6">
+                <Router />
+              </main>
+            </div>
+          )}
+        </>
       )}
     </>
   );
