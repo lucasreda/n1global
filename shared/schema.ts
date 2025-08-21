@@ -260,6 +260,8 @@ export const shippingProviders = pgTable("shipping_providers", {
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links provider to store
   name: text("name").notNull(),
   type: text("type").notNull().default("custom"), // 'correios', 'jadlog', 'european_fulfillment', 'custom'
+  login: text("login"), // Login/Email for the provider
+  password: text("password"), // Password for the provider  
   apiKey: text("api_key"),
   apiUrl: text("api_url"),
   description: text("description"),

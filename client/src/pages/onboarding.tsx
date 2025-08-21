@@ -321,6 +321,8 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
   const [providerData, setProviderData] = useState({
     name: '',
     type: 'correios',
+    login: '',
+    password: '',
     apiKey: '',
     description: ''
   });
@@ -345,7 +347,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
     onSuccess: (newProvider) => {
       setProviders(prev => [...prev, newProvider]);
       setShowForm(false);
-      setProviderData({ name: '', type: 'correios', apiKey: '', description: '' });
+      setProviderData({ name: '', type: 'correios', login: '', password: '', apiKey: '', description: '' });
       toast({ title: 'Transportadora cadastrada com sucesso!' });
     },
     onError: () => {
@@ -356,6 +358,10 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
   const handleAddProvider = () => {
     if (!providerData.name.trim()) {
       toast({ title: 'Nome da transportadora é obrigatório', variant: 'destructive' });
+      return;
+    }
+    if (!providerData.login.trim() || !providerData.password.trim()) {
+      toast({ title: 'Login e senha são obrigatórios', variant: 'destructive' });
       return;
     }
     createProviderMutation.mutate(providerData);
@@ -436,12 +442,41 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
             </div>
 
             <div>
+              <Label htmlFor="provider-login" className="text-white">
+                Login/Email
+              </Label>
+              <Input
+                id="provider-login"
+                placeholder="Seu login ou email"
+                value={providerData.login}
+                onChange={(e) => setProviderData(prev => ({ ...prev, login: e.target.value }))}
+                className="bg-white/10 border-white/20 text-white mt-2"
+                data-testid="input-provider-login"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="provider-password" className="text-white">
+                Senha
+              </Label>
+              <Input
+                id="provider-password"
+                type="password"
+                placeholder="Sua senha"
+                value={providerData.password}
+                onChange={(e) => setProviderData(prev => ({ ...prev, password: e.target.value }))}
+                className="bg-white/10 border-white/20 text-white mt-2"
+                data-testid="input-provider-password"
+              />
+            </div>
+
+            <div>
               <Label htmlFor="provider-api-key" className="text-white">
                 Chave de API (opcional)
               </Label>
               <Input
                 id="provider-api-key"
-                placeholder="Sua chave de API"
+                placeholder="Sua chave de API (se disponível)"
                 value={providerData.apiKey}
                 onChange={(e) => setProviderData(prev => ({ ...prev, apiKey: e.target.value }))}
                 className="bg-white/10 border-white/20 text-white mt-2"
@@ -451,11 +486,11 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
             <div>
               <Label htmlFor="provider-description" className="text-white">
-                Descrição (opcional)
+                Observações (opcional)
               </Label>
               <Input
                 id="provider-description"
-                placeholder="Descrição da transportadora"
+                placeholder="Observações sobre esta transportadora"
                 value={providerData.description}
                 onChange={(e) => setProviderData(prev => ({ ...prev, description: e.target.value }))}
                 className="bg-white/10 border-white/20 text-white mt-2"
