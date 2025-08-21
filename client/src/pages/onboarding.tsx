@@ -354,13 +354,34 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
   const { toast } = useToast();
 
   // Fetch existing shipping providers
-  const { data: existingProviders } = useQuery({
+  const { data: existingProviders, isLoading, error } = useQuery({
     queryKey: ['/api/shipping-providers', selectedOperation],
-    enabled: !!selectedOperation
+    enabled: !!selectedOperation,
+    queryFn: async () => {
+      if (!selectedOperation) return [];
+      
+      // Set operation ID for the request
+      const prevOperationId = localStorage.getItem('current_operation_id');
+      localStorage.setItem('current_operation_id', selectedOperation);
+      
+      try {
+        const response = await apiRequest('GET', '/api/shipping-providers', undefined);
+        return response.json();
+      } finally {
+        // Restore previous operation ID
+        if (prevOperationId) {
+          localStorage.setItem('current_operation_id', prevOperationId);
+        } else {
+          localStorage.removeItem('current_operation_id');
+        }
+      }
+    }
   });
 
   useEffect(() => {
+    console.log('Existing providers data:', existingProviders);
     if (existingProviders && Array.isArray(existingProviders)) {
+      console.log('Setting providers:', existingProviders);
       setProviders(existingProviders);
     }
   }, [existingProviders]);
