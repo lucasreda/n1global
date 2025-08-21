@@ -48,6 +48,8 @@ export const orders = pgTable("orders", {
   
   // Financial
   total: decimal("total", { precision: 10, scale: 2 }),
+  productCost: decimal("product_cost", { precision: 10, scale: 2 }).default("0"),
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }).default("0"),
   currency: text("currency").default("EUR"),
   
   // Products
