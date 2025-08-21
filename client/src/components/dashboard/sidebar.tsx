@@ -41,11 +41,17 @@ export function Sidebar() {
     <nav className="fixed left-0 top-0 h-full w-64 glassmorphism p-6 z-40 animate-slide-up">
       <div className="flex justify-center mb-8">
         <img 
-          src="/attached_assets/n1-cod_1755741045729.png" 
-          alt="N1 COD Logo" 
+          src="/logo.png" 
+          alt="COD Dashboard Logo" 
           className="w-[200px] h-auto object-contain"
-          style={{ filter: 'invert(1) brightness(2)' }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextElementSibling.style.display = 'block';
+          }}
         />
+        <div className="text-2xl font-bold text-white tracking-wider hidden">
+          COD DASHBOARD
+        </div>
       </div>
 
       <ul className="space-y-2" data-testid="nav-menu">
