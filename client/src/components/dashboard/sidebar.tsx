@@ -43,13 +43,13 @@ export function Sidebar() {
         <img 
           src="/logo.png" 
           alt="COD Dashboard Logo" 
-          className="w-[200px] h-auto object-contain"
+          className="w-[140px] h-auto object-contain"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
             e.currentTarget.nextElementSibling.style.display = 'block';
           }}
         />
-        <div className="text-2xl font-bold text-white tracking-wider hidden">
+        <div className="text-xl font-bold text-white tracking-wider hidden">
           COD DASHBOARD
         </div>
       </div>
