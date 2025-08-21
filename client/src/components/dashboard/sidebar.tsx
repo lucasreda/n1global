@@ -8,11 +8,22 @@ import {
   LogOut,
   TrendingUp,
   ShoppingCart,
-  Target
+  Target,
+  Briefcase,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 
 const getNavigationForRole = (userRole: string) => {
   const baseNavigation = [
@@ -35,8 +46,22 @@ const getNavigationForRole = (userRole: string) => {
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const [selectedOperation, setSelectedOperation] = useState<string>("");
   
   const navigation = getNavigationForRole(user?.role || 'user');
+
+  // Fetch user operations
+  const { data: operations = [] } = useQuery<{id: string, name: string, description?: string}[]>({
+    queryKey: ['/api/operations'],
+    enabled: !!user,
+  });
+
+  // Set default operation when data loads
+  useEffect(() => {
+    if (operations.length > 0 && !selectedOperation) {
+      setSelectedOperation(operations[0].id);
+    }
+  }, [operations, selectedOperation]);
 
   const getUserInitials = (name: string) => {
     return name
@@ -66,6 +91,32 @@ export function Sidebar() {
           COD DASHBOARD
         </div>
       </div>
+
+      {/* Operation Selector */}
+      {operations.length > 0 && (
+        <div className="mb-6 p-3 glassmorphism rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Briefcase className="w-4 h-4 text-white/60" />
+            <span className="text-sm text-white/60 font-medium">Operação</span>
+          </div>
+          <Select value={selectedOperation} onValueChange={setSelectedOperation}>
+            <SelectTrigger className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10">
+              <SelectValue placeholder="Selecionar operação" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-900 border-gray-700">
+              {operations.map((operation: any) => (
+                <SelectItem 
+                  key={operation.id} 
+                  value={operation.id}
+                  className="text-white hover:bg-gray-800"
+                >
+                  {operation.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <ul className="space-y-2" data-testid="nav-menu">
         {navigation.map((item) => {

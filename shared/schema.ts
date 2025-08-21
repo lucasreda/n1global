@@ -25,10 +25,23 @@ export const stores = pgTable("stores", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Operations table - business operations within a store
+export const operations = pgTable("operations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "PureDreams", "Operation Alpha"
+  description: text("description"),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links operation to store
+  status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
+  settings: jsonb("settings"), // Operation-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Main orders table - unified for all providers
 export const orders = pgTable("orders", {
   id: text("id").primaryKey(), // Lead number from provider (NT-xxxxx, etc)
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links order to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links order to operation
   
   // Customer information
   customerId: text("customer_id"),
@@ -97,6 +110,7 @@ export const orderStatusHistory = pgTable("order_status_history", {
 export const dashboardMetrics = pgTable("dashboard_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links metrics to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links metrics to operation
   period: text("period").notNull(), // '1d', '7d', '30d', '90d'
   provider: text("provider"), // null for all providers
   
@@ -120,6 +134,7 @@ export const dashboardMetrics = pgTable("dashboard_metrics", {
 export const syncJobs = pgTable("sync_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links sync job to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links sync job to operation
   provider: text("provider").notNull(),
   type: text("type").notNull(), // 'full_sync', 'incremental_sync', 'details_sync'
   
@@ -141,10 +156,56 @@ export const syncJobs = pgTable("sync_jobs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Facebook Ads integrations - per operation
+export const facebookAdsIntegrations = pgTable("facebook_ads_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  accountId: text("account_id").notNull(), // Facebook Ad Account ID
+  accountName: text("account_name"),
+  accessToken: text("access_token").notNull(),
+  
+  selectedCampaignIds: text("selected_campaign_ids").array().default([]), // Array of campaign IDs
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// European Fulfillment integration - per operation 
+export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  provider: text("provider").notNull(), // 'european_fulfillment', 'correios', 'jadlog'
+  credentials: jsonb("credentials").notNull(), // Encrypted credentials
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User operation access - defines which operations a user can access
+export const userOperationAccess = pgTable("user_operation_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
+  permissions: jsonb("permissions"), // Custom permissions
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links product to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links product to operation
   sku: text("sku").unique().notNull(),
   name: text("name").notNull(),
   description: text("description"),
@@ -202,6 +263,33 @@ export const insertStoreSchema = createInsertSchema(stores).omit({
   updatedAt: true,
 });
 
+// Operation schemas
+export const insertOperationSchema = createInsertSchema(operations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Facebook Ads integration schemas
+export const insertFacebookAdsIntegrationSchema = createInsertSchema(facebookAdsIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Fulfillment integration schemas
+export const insertFulfillmentIntegrationSchema = createInsertSchema(fulfillmentIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// User operation access schemas
+export const insertUserOperationAccessSchema = createInsertSchema(userOperationAccess).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Order schemas
 export const insertOrderSchema = createInsertSchema(orders).omit({
   createdAt: true,
@@ -244,6 +332,18 @@ export type User = typeof users.$inferSelect;
 
 export type Store = typeof stores.$inferSelect;
 export type InsertStore = z.infer<typeof insertStoreSchema>;
+
+export type Operation = typeof operations.$inferSelect;
+export type InsertOperation = z.infer<typeof insertOperationSchema>;
+
+export type FacebookAdsIntegration = typeof facebookAdsIntegrations.$inferSelect;
+export type InsertFacebookAdsIntegration = z.infer<typeof insertFacebookAdsIntegrationSchema>;
+
+export type FulfillmentIntegration = typeof fulfillmentIntegrations.$inferSelect;
+export type InsertFulfillmentIntegration = z.infer<typeof insertFulfillmentIntegrationSchema>;
+
+export type UserOperationAccess = typeof userOperationAccess.$inferSelect;
+export type InsertUserOperationAccess = z.infer<typeof insertUserOperationAccessSchema>;
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;

@@ -274,6 +274,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Operations routes
+  app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log("Fetching operations for user:", req.user?.id);
+      const operations = await storage.getUserOperations(req.user.id);
+      console.log("Found operations:", operations);
+      res.json(operations);
+    } catch (error) {
+      console.error("Operations error:", error);
+      res.status(500).json({ message: "Erro ao buscar operações" });
+    }
+  });
+
   // Facebook Ads routes
   app.get("/api/facebook/business-managers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

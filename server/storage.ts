@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, orders, products, shippingProviders, User, Order, Product, ShippingProvider, InsertUser, InsertOrder, InsertProduct } from "@shared/schema";
+import { users, orders, products, shippingProviders, operations, userOperationAccess, User, Order, Product, ShippingProvider, Operation, InsertUser, InsertOrder, InsertProduct } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -26,23 +26,26 @@ export interface IStorage {
   // Shipping provider methods
   getShippingProviders(): Promise<ShippingProvider[]>;
   getShippingProvider(id: string): Promise<ShippingProvider | undefined>;
+
+  // Operation methods
+  getUserOperations(userId: string): Promise<Operation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0] || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result[0] || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const hashedPassword = await bcrypt.hash(insertUser.password, 10);
     
-    const [user] = await db
+    const result = await db
       .insert(users)
       .values({
         ...insertUser,
@@ -50,7 +53,7 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     
-    return user;
+    return result[0];
   }
 
   async getOrders(limit: number = 50, offset: number = 0): Promise<Order[]> {
@@ -137,6 +140,26 @@ export class DatabaseStorage implements IStorage {
   async getShippingProvider(id: string): Promise<ShippingProvider | undefined> {
     const [provider] = await db.select().from(shippingProviders).where(eq(shippingProviders.id, id));
     return provider || undefined;
+  }
+
+  async getUserOperations(userId: string): Promise<Operation[]> {
+    const userOps = await db
+      .select({
+        id: operations.id,
+        name: operations.name,
+        description: operations.description,
+        status: operations.status,
+        createdAt: operations.createdAt,
+        updatedAt: operations.updatedAt,
+        storeId: operations.storeId,
+        settings: operations.settings,
+      })
+      .from(operations)
+      .innerJoin(userOperationAccess, eq(operations.id, userOperationAccess.operationId))
+      .where(eq(userOperationAccess.userId, userId))
+      .orderBy(desc(operations.createdAt));
+    
+    return userOps;
   }
 }
 
