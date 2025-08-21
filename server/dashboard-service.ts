@@ -110,21 +110,9 @@ export class DashboardService {
     const storeId = await this.getStoreId(req);
     console.log(`📅 Calculating metrics for period: ${period}, store: ${storeId}`);
     
-    // Use created_at se order_date for NULL (padrão para pedidos sincronizados)
+    // Para mostrar dados reais da Store, filtramos apenas por storeId (sem filtro de data para dados completos)
     let whereConditions = [
-      eq(orders.storeId, storeId),
-      or(
-        and(
-          isNotNull(orders.orderDate),
-          gte(orders.orderDate, dateRange.from),
-          lte(orders.orderDate, dateRange.to)
-        ),
-        and(
-          eq(orders.orderDate, sql`NULL`),
-          gte(orders.createdAt, dateRange.from),
-          lte(orders.createdAt, dateRange.to)
-        )
-      )
+      eq(orders.storeId, storeId)
     ];
     
     if (provider) {
@@ -133,27 +121,8 @@ export class DashboardService {
     
     const whereClause = and(...whereConditions);
     
-    // Simular diferentes períodos limitando dados baseado no período
-    let limitMultiplier = 1;
-    switch (period) {
-      case '1d':
-        limitMultiplier = 0.1; // 10% dos dados para simular 1 dia
-        break;
-      case '7d':
-        limitMultiplier = 0.4; // 40% dos dados para simular 7 dias
-        break;
-      case '30d':
-        limitMultiplier = 0.8; // 80% dos dados para simular 30 dias
-        break;
-      case '90d':
-        limitMultiplier = 1; // 100% dos dados para simular 90 dias
-        break;
-      default:
-        limitMultiplier = 1;
-    }
-    
-    // Get total order counts by status
-    const allStatusCounts = await db
+    // Get all order counts by status (dados reais da Store)
+    const statusCounts = await db
       .select({
         status: orders.status,
         count: count(),
@@ -162,13 +131,6 @@ export class DashboardService {
       .from(orders)
       .where(whereClause)
       .groupBy(orders.status);
-    
-    // Apply period-based filtering by scaling down the results to simulate different timeframes
-    const statusCounts = allStatusCounts.map(row => ({
-      ...row,
-      count: Math.ceil(Number(row.count) * limitMultiplier),
-      totalRevenue: Number(row.totalRevenue || 0) * limitMultiplier
-    }));
     
     // Calculate metrics
     let totalOrders = 0;
@@ -181,8 +143,8 @@ export class DashboardService {
     let totalRevenue = 0; // Only revenue from delivered/paid orders
     
     statusCounts.forEach(row => {
-      const orderCount = row.count;
-      const revenue = row.totalRevenue;
+      const orderCount = Number(row.count);
+      const revenue = Number(row.totalRevenue || 0);
       
       totalOrders += orderCount;
       
