@@ -9,6 +9,7 @@ import { CheckCircle, Circle, Loader2, Package, ShoppingCart, Truck, Target, Zap
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import logoImage from '@assets/COD DASHBOARD_1755806006009.png';
 
 interface OnboardingStep {
   id: string;
@@ -137,11 +138,13 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Bem-vindo ao COD Dashboard
-          </h1>
+        {/* Logo */}
+        <div className="text-center pt-8 pb-12">
+          <img 
+            src={logoImage} 
+            alt="COD Dashboard" 
+            className="mx-auto mb-8 h-20 w-auto"
+          />
           <p className="text-xl text-white/80 mb-6">
             Configure sua conta em 5 etapas simples
           </p>
