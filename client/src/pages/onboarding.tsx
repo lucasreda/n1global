@@ -230,7 +230,7 @@ export default function OnboardingPage() {
                 <Button 
                   onClick={handleCreateOperation}
                   disabled={createOperationMutation.isPending}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   data-testid="button-create-operation"
                 >
                   {createOperationMutation.isPending ? (
@@ -258,7 +258,7 @@ export default function OnboardingPage() {
                   </p>
                   <Button 
                     onClick={() => handleStepComplete('step2_shopify', 3)}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                     data-testid="button-skip-shopify"
                   >
                     Pular por Agora
@@ -297,7 +297,7 @@ export default function OnboardingPage() {
                   </div>
                   <Button 
                     onClick={() => handleStepComplete('step3_shipping', 4)}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                     data-testid="button-skip-shipping"
                   >
                     Continuar
@@ -319,7 +319,7 @@ export default function OnboardingPage() {
                   </p>
                   <Button 
                     onClick={() => handleStepComplete('step4_ads', 5)}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                     data-testid="button-complete-ads"
                   >
                     Continuar
