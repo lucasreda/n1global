@@ -95,7 +95,7 @@ export class SmartSyncService {
     }
 
     this.defaultStoreId = defaultStore.id;
-    return this.defaultStoreId;
+    return this.defaultStoreId as string;
   }
   
   /**
@@ -306,7 +306,7 @@ export class SmartSyncService {
                 // Lead novo - inserir
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
-                  storeId,
+                  storeId: storeId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
                   customerCity: apiLead.city,
@@ -502,7 +502,7 @@ export class SmartSyncService {
             // Lead novo - inserir com dados básicos da API
             await db.insert(orders).values({
               id: apiLead.n_lead,
-                  storeId,
+              storeId: storeId,
               customerName: apiLead.name,
               customerPhone: apiLead.phone,
               customerCity: apiLead.city,
