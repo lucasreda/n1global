@@ -3,6 +3,9 @@ import { pgTable, text, varchar, decimal, timestamp, integer, boolean, jsonb } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Forward declare stores table for reference
+let stores: any;
+
 // Users table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -10,20 +13,36 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("user"), // 'store', 'product_seller'
-  storeId: varchar("store_id").references(() => stores.id), // For product_seller role - links to parent store
+  storeId: varchar("store_id"), // For product_seller role - links to parent store
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  onboardingSteps: jsonb("onboarding_steps").$type<{
+    step1_operation: boolean;
+    step2_shopify: boolean;
+    step3_shipping: boolean;
+    step4_ads: boolean;
+    step5_sync: boolean;
+  }>().default({
+    step1_operation: false,
+    step2_shopify: false,
+    step3_shipping: false,
+    step4_ads: false,
+    step5_sync: false
+  }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Stores table - main tenant entities
-export const stores = pgTable("stores", {
+stores = pgTable("stores", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
-  ownerId: varchar("owner_id").notNull().references(() => users.id), // Store owner
+  ownerId: varchar("owner_id").notNull(), // Store owner (references users.id but not enforced here)
   settings: jsonb("settings"), // Store-specific settings
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export { stores };
 
 // Operations table - business operations within a store
 export const operations = pgTable("operations", {

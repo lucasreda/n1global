@@ -29,6 +29,11 @@ export interface IStorage {
 
   // Operation methods
   getUserOperations(userId: string): Promise<Operation[]>;
+  
+  // Onboarding methods
+  updateOnboardingStep(userId: string, stepId: string, completed: boolean): Promise<void>;
+  completeOnboarding(userId: string): Promise<void>;
+  createOperation(operationData: { name: string; description: string }, userId: string): Promise<Operation>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -160,6 +165,90 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(operations.createdAt));
     
     return userOps;
+  }
+
+  // Onboarding methods
+  async updateOnboardingStep(userId: string, stepId: string, completed: boolean): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error('Usuário não encontrado');
+
+    const currentSteps = user.onboardingSteps as any || {
+      step1_operation: false,
+      step2_shopify: false,
+      step3_shipping: false,
+      step4_ads: false,
+      step5_sync: false
+    };
+
+    currentSteps[stepId] = completed;
+
+    await db
+      .update(users)
+      .set({ onboardingSteps: currentSteps })
+      .where(eq(users.id, userId));
+  }
+
+  async completeOnboarding(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        onboardingCompleted: true,
+        onboardingSteps: {
+          step1_operation: true,
+          step2_shopify: true,
+          step3_shipping: true,
+          step4_ads: true,
+          step5_sync: true
+        }
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async createOperation(operationData: { name: string; description: string }, userId: string): Promise<Operation> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error('Usuário não encontrado');
+
+    // Get or create store for user
+    let storeId = user.storeId;
+    if (!storeId) {
+      const [store] = await db
+        .insert(stores)
+        .values({
+          name: `${user.name}'s Store`,
+          description: 'Store criada automaticamente durante onboarding',
+          ownerId: userId
+        })
+        .returning();
+      
+      storeId = store.id;
+      
+      // Update user with storeId
+      await db
+        .update(users)
+        .set({ storeId })
+        .where(eq(users.id, userId));
+    }
+
+    // Create operation
+    const [operation] = await db
+      .insert(operations)
+      .values({
+        name: operationData.name,
+        description: operationData.description,
+        storeId
+      })
+      .returning();
+
+    // Grant user access to operation
+    await db
+      .insert(userOperationAccess)
+      .values({
+        userId,
+        operationId: operation.id,
+        role: 'owner'
+      });
+
+    return operation;
   }
 }
 

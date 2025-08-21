@@ -287,6 +287,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding routes
+  app.get("/api/user/onboarding-status", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      res.json({
+        onboardingCompleted: user.onboardingCompleted,
+        onboardingSteps: user.onboardingSteps
+      });
+    } catch (error) {
+      console.error("Onboarding status error:", error);
+      res.status(500).json({ message: "Erro ao buscar status do onboarding" });
+    }
+  });
+
+  app.post("/api/onboarding/create-operation", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { name } = req.body;
+      if (!name?.trim()) {
+        return res.status(400).json({ message: "Nome da operação é obrigatório" });
+      }
+
+      // Create operation
+      const operation = await storage.createOperation({
+        name: name.trim(),
+        description: `Operação criada durante onboarding`
+      }, req.user.id);
+
+      // Update user onboarding step
+      await storage.updateOnboardingStep(req.user.id, 'step1_operation', true);
+
+      res.json({ operation });
+    } catch (error) {
+      console.error("Create operation error:", error);
+      res.status(500).json({ message: "Erro ao criar operação" });
+    }
+  });
+
+  app.post("/api/onboarding/complete-step", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { stepId } = req.body;
+      if (!stepId) {
+        return res.status(400).json({ message: "ID da etapa é obrigatório" });
+      }
+
+      await storage.updateOnboardingStep(req.user.id, stepId, true);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Complete step error:", error);
+      res.status(500).json({ message: "Erro ao completar etapa" });
+    }
+  });
+
+  app.post("/api/onboarding/sync-data", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Get current data counts
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const firstOperation = userOperations[0];
+      
+      let orderCount = 0;
+      let campaignCount = 0;
+
+      if (firstOperation) {
+        // Count orders for this operation
+        const orders = await storage.getOrdersByStore(req.user.storeId || '');
+        orderCount = orders.length;
+
+        // Count campaigns (mock for now)
+        campaignCount = 6; // Based on current Facebook ads setup
+      }
+
+      const status = {
+        orders: {
+          current: orderCount,
+          total: orderCount || 1000, // Use actual count or default
+          completed: orderCount > 0
+        },
+        campaigns: {
+          current: campaignCount,
+          total: campaignCount || 6,
+          completed: campaignCount > 0
+        }
+      };
+
+      res.json({ status });
+    } catch (error) {
+      console.error("Sync data error:", error);
+      res.status(500).json({ message: "Erro na sincronização" });
+    }
+  });
+
+  app.post("/api/onboarding/complete", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Mark all steps as completed and onboarding as done
+      await storage.completeOnboarding(req.user.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Complete onboarding error:", error);
+      res.status(500).json({ message: "Erro ao finalizar onboarding" });
+    }
+  });
+
   // Facebook Ads routes
   app.get("/api/facebook/business-managers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
