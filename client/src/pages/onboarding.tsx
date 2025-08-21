@@ -390,6 +390,10 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
       setShowForm(false);
       setProviderData({ name: '', type: 'european_fulfillment', login: '', password: '' });
       toast({ title: 'Transportadora cadastrada com sucesso!' });
+      // Invalidate query to refresh the list
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/shipping-providers', selectedOperation] 
+      });
     },
     onError: () => {
       toast({ title: 'Erro ao cadastrar transportadora', variant: 'destructive' });
