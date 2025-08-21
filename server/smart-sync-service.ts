@@ -209,10 +209,18 @@ export class SmartSyncService {
                 const status = apiLead.status_livrison || "new order";
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
+                // Garantir que temos storeId válido antes de inserir
+                const finalStoreId = storeId || operation.storeId;
+                
+                if (!finalStoreId) {
+                  console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
+                  continue;
+                }
+                
                 // CRITICAL: Use the specific store AND operation for this sync
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
-                  storeId: storeId,
+                  storeId: finalStoreId,
                   operationId: operationId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
@@ -380,9 +388,17 @@ export class SmartSyncService {
                 const status = apiLead.status_livrison || "new order";
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
+                // Garantir que temos storeId válido antes de inserir
+                const finalStoreId = storeId || operation.storeId;
+                
+                if (!finalStoreId) {
+                  console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
+                  continue;
+                }
+                
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
-                  storeId: storeId,
+                  storeId: finalStoreId,
                   operationId: operationId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
