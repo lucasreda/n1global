@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema } from "@shared/schema";
 import { europeanFulfillmentService } from "./fulfillment-service";
+import { storeContext } from "./middleware/store-context";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
@@ -182,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes - using real database data
-  app.get("/api/dashboard/metrics", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/metrics", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;
@@ -190,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
       
       const { dashboardService } = await import("./dashboard-service");
-      const metrics = await dashboardService.getDashboardMetrics(period as any, provider);
+      const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req);
 
       res.json(metrics);
     } catch (error) {
@@ -199,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/revenue-chart", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;
@@ -217,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/orders-by-status", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/dashboard/orders-by-status", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;

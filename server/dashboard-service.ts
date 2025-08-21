@@ -8,7 +8,13 @@ export class DashboardService {
   private facebookAdsService = new FacebookAdsService();
   private defaultStoreId: string | null = null;
 
-  private async getDefaultStoreId(): Promise<string> {
+  private async getStoreId(req?: any): Promise<string> {
+    // Se há um storeId no request context (vem do middleware), use ele
+    if (req?.storeId) {
+      return req.storeId;
+    }
+
+    // Fallback para loja padrão (compatibilidade)
     if (this.defaultStoreId) {
       return this.defaultStoreId;
     }
@@ -27,11 +33,11 @@ export class DashboardService {
     return this.defaultStoreId;
   }
   
-  async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' | 'current_month' = 'current_month', provider?: string) {
+  async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' | 'current_month' = 'current_month', provider?: string, req?: any) {
     console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
     
     // Check cache first
-    const cached = await this.getCachedMetrics(period, provider);
+    const cached = await this.getCachedMetrics(period, provider, req);
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
@@ -66,17 +72,17 @@ export class DashboardService {
     }
     
     // Calculate fresh metrics
-    const metrics = await this.calculateMetrics(period, provider);
+    const metrics = await this.calculateMetrics(period, provider, req);
     
     // Cache the results
-    await this.cacheMetrics(period, provider, metrics);
+    await this.cacheMetrics(period, provider, metrics, req);
     
     return metrics;
   }
   
-  private async getCachedMetrics(period: string, provider?: string) {
+  private async getCachedMetrics(period: string, provider?: string, req?: any) {
     try {
-      const storeId = await this.getDefaultStoreId();
+      const storeId = await this.getStoreId(req);
       
       const [cached] = await db
         .select()
@@ -99,9 +105,9 @@ export class DashboardService {
     }
   }
   
-  private async calculateMetrics(period: string, provider?: string) {
+  private async calculateMetrics(period: string, provider?: string, req?: any) {
     const dateRange = this.getDateRange(period);
-    const storeId = await this.getDefaultStoreId();
+    const storeId = await this.getStoreId(req);
     console.log(`📅 Calculating metrics for period: ${period}, store: ${storeId}`);
     
     // Use created_at se order_date for NULL (padrão para pedidos sincronizados)
@@ -292,8 +298,8 @@ export class DashboardService {
     };
   }
   
-  private async cacheMetrics(period: string, provider: string | undefined, metrics: any) {
-    const storeId = await this.getDefaultStoreId();
+  private async cacheMetrics(period: string, provider: string | undefined, metrics: any, req?: any) {
+    const storeId = await this.getStoreId(req);
     
     const cacheData: InsertDashboardMetrics = {
       period,
@@ -509,31 +515,30 @@ export class DashboardService {
     
     let from: Date;
     
-    // Para simular diferentes períodos com dados importados, vamos usar uma fração dos dados baseada no período
     switch (period) {
       case '1d':
-        // 1 dia: apenas uma pequena amostra dos dados mais recentes (simulando hoje)
-        from = new Date('2020-01-01');
+        // Último dia
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
         break;
       case '7d':
-        // 7 dias: uma porção dos dados (simulando uma semana)
-        from = new Date('2020-01-01');
+        // Últimos 7 dias
+        from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case '30d':
-        // 30 dias: a maioria dos dados (simulando um mês)
-        from = new Date('2020-01-01');
+        // Últimos 30 dias
+        from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       case '90d':
-        // 90 dias: todos os dados (simulando 3 meses)
-        from = new Date('2020-01-01');
+        // Últimos 90 dias
+        from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
         break;
       case 'current_month':
-        // Este mês: do primeiro dia do mês atual até hoje
-        from = new Date(now.getFullYear(), now.getMonth(), 1); // Primeiro dia do mês
+        // Este mês completo: do primeiro dia do mês atual até hoje
+        from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
         break;
       default:
-        // Default: todos os dados
-        from = new Date('2020-01-01');
+        // Default: todos os dados (últimos 365 dias para performance)
+        from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
     }
     
     return { from, to };
