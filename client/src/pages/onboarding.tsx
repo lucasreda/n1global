@@ -9,6 +9,7 @@ import { CheckCircle, Circle, Loader2, Package, ShoppingCart, Truck, Target, Zap
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import logoImage from '@assets/COD DASHBOARD_1755806006009.png';
 
 interface OnboardingStep {
@@ -86,12 +87,7 @@ export default function OnboardingPage() {
   // Create operation mutation
   const createOperationMutation = useMutation({
     mutationFn: async (name: string) => {
-      const response = await fetch('/api/onboarding/create-operation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
-      });
-      if (!response.ok) throw new Error('Erro ao criar operação');
+      const response = await apiRequest('POST', '/api/onboarding/create-operation', { name });
       return response.json();
     },
     onSuccess: () => {
@@ -107,11 +103,7 @@ export default function OnboardingPage() {
   // Complete step mutation
   const completeStepMutation = useMutation({
     mutationFn: async (stepId: string) => {
-      const response = await fetch('/api/onboarding/complete-step', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stepId })
-      });
+      const response = await apiRequest('POST', '/api/onboarding/complete-step', { stepId });
       if (!response.ok) throw new Error('Erro ao completar etapa');
       return response.json();
     },
@@ -369,11 +361,7 @@ function SyncStep({ onComplete }: { onComplete: () => void }) {
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/onboarding/sync-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) throw new Error('Erro na sincronização');
+      const response = await apiRequest('POST', '/api/onboarding/sync-data', {});
       return response.json();
     },
     onSuccess: (data) => {
@@ -404,11 +392,7 @@ function SyncStep({ onComplete }: { onComplete: () => void }) {
 
   const completeOnboardingMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/onboarding/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) throw new Error('Erro ao finalizar onboarding');
+      const response = await apiRequest('POST', '/api/onboarding/complete', {});
       return response.json();
     },
     onSuccess: () => {
