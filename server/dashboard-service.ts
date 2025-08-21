@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { orders, dashboardMetrics, products, stores, type InsertDashboardMetrics } from "@shared/schema";
 import { eq, and, or, gte, lte, sql, count, sum, avg, isNotNull } from "drizzle-orm";
+import { storage } from "./storage"; // CRITICAL: Import storage
 import { FacebookAdsService } from "./facebook-ads-service";
 import { currencyService } from "./currency-service";
 
