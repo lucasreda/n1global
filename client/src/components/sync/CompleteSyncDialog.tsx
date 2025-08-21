@@ -37,19 +37,17 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete }: CompleteSync
   const startCompleteSync = async () => {
     setIsStarting(true);
     try {
-      const response = await apiRequest('/api/sync/complete-progressive', {
-        method: 'POST',
-        body: JSON.stringify({
-          forceComplete: true,
-          maxRetries: 5
-        })
+      const response = await apiRequest('POST', '/api/sync/complete-progressive', {
+        forceComplete: true,
+        maxRetries: 5
       });
 
-      if (response.success) {
+      const result = await response.json();
+      if (result.success) {
         console.log("🚀 Sincronização completa iniciada");
         startPolling();
       } else {
-        console.error("❌ Erro ao iniciar sincronização:", response.message);
+        console.error("❌ Erro ao iniciar sincronização:", result.message);
       }
     } catch (error) {
       console.error("❌ Erro na requisição de sincronização:", error);
@@ -61,7 +59,8 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete }: CompleteSync
   // Função para buscar status da sincronização
   const fetchSyncStatus = async () => {
     try {
-      const status = await apiRequest('/api/sync/complete-status');
+      const response = await apiRequest('GET', '/api/sync/complete-status');
+      const status = await response.json();
       setSyncStatus(status);
 
       // Se completou ou houve erro, parar o polling
