@@ -40,14 +40,12 @@ export function Sidebar() {
   return (
     <nav className="fixed left-0 top-0 h-full w-64 glassmorphism p-6 z-40 animate-slide-up">
       <div className="flex justify-center mb-8">
-        <div className="w-[200px] h-20 flex items-center justify-center bg-white/5 rounded-lg">
-          <img 
-            src="/attached_assets/n1-cod_1755740892295.png" 
-            alt="N1 COD Logo" 
-            className="max-w-full max-h-full object-contain filter brightness-200"
-            style={{ width: '200px', height: 'auto' }}
-          />
-        </div>
+        <img 
+          src="/attached_assets/n1-cod_1755740892295.png" 
+          alt="N1 COD Logo" 
+          className="w-[200px] h-auto object-contain"
+          style={{ filter: 'invert(1) brightness(2)' }}
+        />
       </div>
 
       <ul className="space-y-2" data-testid="nav-menu">
