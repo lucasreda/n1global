@@ -337,80 +337,25 @@ export class DashboardService {
         limitMultiplier = 1;
     }
     
-    // Get delivered and returned orders for the period (for shipping cost calculation)
-    // Shipping costs apply to both delivered and returned orders since they were shipped
-    const shippedOrders = await db
+    // Sum product costs and shipping costs directly from orders table
+    const [costsResult] = await db
       .select({
-        products: orders.products,
-        status: orders.status
+        totalProductCosts: sql<number>`COALESCE(SUM(${orders.productCost}), 0)`,
+        totalShippingCosts: sql<number>`COALESCE(SUM(${orders.shippingCost}), 0)`,
+        totalOrders: count()
       })
       .from(orders)
-      .where(and(...whereConditions, or(
-        eq(orders.status, 'delivered'),
-        eq(orders.status, 'returned')
-      )));
+      .where(and(...whereConditions));
     
-    // Get only delivered orders for product cost calculation (only charge for successfully delivered products)
-    const deliveredOnlyOrders = shippedOrders.filter(order => order.status === 'delivered');
+    let totalProductCosts = Number(costsResult.totalProductCosts || 0);
+    let totalShippingCosts = Number(costsResult.totalShippingCosts || 0);
+    const totalQuantity = Number(costsResult.totalOrders || 0);
     
-    // Get all products with their costs
-    const allProducts = await db
-      .select({
-        sku: products.sku,
-        costPrice: products.costPrice,
-        shippingCost: products.shippingCost
-      })
-      .from(products);
-    
-    const productCostMap = Object.fromEntries(
-      allProducts.map(p => [p.sku, {
-        costPrice: Number(p.costPrice || 0),
-        shippingCost: Number(p.shippingCost || 0)
-      }])
-    );
-    
-    let totalProductCosts = 0;
-    let totalShippingCosts = 0;
-    let totalQuantity = 0;
-    
-    // Calculate product costs based on delivered orders only
-    deliveredOnlyOrders.forEach(order => {
-      if (order.products && Array.isArray(order.products)) {
-        order.products.forEach((product: any) => {
-          const sku = product.sku;
-          const quantity = product.quantity || 1;
-          const productCostInfo = productCostMap[sku];
-          
-          if (productCostInfo) {
-            const itemCost = productCostInfo.costPrice * quantity;
-            totalProductCosts += itemCost;
-            totalQuantity += quantity;
-          }
-        });
-      }
-    });
-    
-    // Calculate shipping costs based on all shipped orders (delivered + returned)
-    // This is because shipping costs are incurred regardless of final delivery status
-    shippedOrders.forEach(order => {
-      if (order.products && Array.isArray(order.products)) {
-        order.products.forEach((product: any) => {
-          const sku = product.sku;
-          const quantity = product.quantity || 1;
-          const productCostInfo = productCostMap[sku];
-          
-          if (productCostInfo) {
-            const shippingCost = productCostInfo.shippingCost * quantity;
-            totalShippingCosts += shippingCost;
-          }
-        });
-      }
-    });
+    console.log(`💰 Costs calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${totalQuantity}`);
     
     // Apply period multiplier to simulate different timeframes
     totalProductCosts = totalProductCosts * limitMultiplier;
     totalShippingCosts = totalShippingCosts * limitMultiplier;
-    totalQuantity = totalQuantity * limitMultiplier;
     
     // Convert both product and shipping costs from EUR to BRL using the currency API
     const totalProductCostsBRL = await currencyService.convertToBRL(totalProductCosts, 'EUR');
@@ -427,7 +372,7 @@ export class DashboardService {
       totalShippingCostsBRL: Number(totalShippingCostsBRL.toFixed(2)), // Shipping costs only in BRL
       totalCombinedCosts: Number(totalCombinedCosts.toFixed(2)), // Combined costs in EUR
       totalCombinedCostsBRL: Number(totalCombinedCostsBRL.toFixed(2)), // Combined costs in BRL
-      totalQuantity: Math.ceil(totalQuantity)
+      totalQuantity: Math.ceil(totalQuantity * limitMultiplier)
     };
   }
 
