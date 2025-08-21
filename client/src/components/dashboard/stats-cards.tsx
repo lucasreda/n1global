@@ -1,4 +1,4 @@
-import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare } from "lucide-react";
+import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck } from "lucide-react";
 
 interface StatsCardsProps {
   metrics: any;
@@ -243,6 +243,14 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       subtitle: "Entregues apenas",
       icon: Calculator,
       color: "indigo",
+      size: "small"
+    },
+    {
+      title: "Custos Envio",
+      value: `€${(metrics?.totalShippingCosts || 0).toLocaleString('pt-PT')}`,
+      subtitle: "Entregues + Retornados",
+      icon: Truck,
+      color: "orange",
       size: "small"
     },
     {

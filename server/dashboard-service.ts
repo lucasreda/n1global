@@ -172,10 +172,14 @@ export class DashboardService {
     
     const averageOrderValue = deliveredOrders > 0 ? totalRevenue / deliveredOrders : 0;
     
-    // Calculate product costs based on order quantities
+    // Calculate product costs and shipping costs based on order quantities
     const productCosts = await this.calculateProductCosts(period, provider);
-    const totalProductCosts = productCosts.totalProductCosts; // EUR value
-    const totalProductCostsBRL = productCosts.totalProductCostsBRL; // BRL value
+    const totalProductCosts = productCosts.totalProductCosts; // EUR value (product only)
+    const totalProductCostsBRL = productCosts.totalProductCostsBRL; // BRL value (product only)
+    const totalShippingCosts = productCosts.totalShippingCosts; // EUR value (shipping only)
+    const totalShippingCostsBRL = productCosts.totalShippingCostsBRL; // BRL value (shipping only)
+    const totalCombinedCosts = productCosts.totalCombinedCosts; // EUR value (product + shipping)
+    const totalCombinedCostsBRL = productCosts.totalCombinedCostsBRL; // BRL value (product + shipping)
     
     // Calculate marketing costs from selected Facebook campaigns based on period
     const marketingCosts = await this.getMarketingCosts(period);
@@ -196,13 +200,13 @@ export class DashboardService {
     // Convert revenue to BRL for consistent calculations
     const totalRevenueBRL = await currencyService.convertToBRL(totalRevenue, 'EUR');
     
-    // Calculate profit using BRL values (revenue BRL - product costs BRL - marketing costs BRL)
+    // Calculate profit using BRL values (revenue BRL - combined costs BRL - marketing costs BRL)
     const marketingCostsBRL = marketingCosts.totalBRL;
-    const totalProfitBRL = totalRevenueBRL - totalProductCostsBRL - marketingCostsBRL;
+    const totalProfitBRL = totalRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL;
     const profitMargin = totalRevenueBRL > 0 ? (totalProfitBRL / totalRevenueBRL) * 100 : 0;
     
     // Calculate ROI (return on investment) in BRL
-    const totalCostsBRL = totalProductCostsBRL + marketingCostsBRL;
+    const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL;
     const roi = totalCostsBRL > 0 ? ((totalRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
     console.log(`🔍 Debug: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
@@ -218,8 +222,12 @@ export class DashboardService {
       pendingOrders,
       totalRevenue,
       totalRevenueBRL, // Added BRL value for display
-      totalProductCosts, // EUR value for reference
-      totalProductCostsBRL, // BRL value for display and calculations
+      totalProductCosts, // EUR value for reference (product only)
+      totalProductCostsBRL, // BRL value for display (product only)
+      totalShippingCosts, // EUR value for reference (shipping only)
+      totalShippingCostsBRL, // BRL value for display (shipping only)
+      totalCombinedCosts, // EUR value for reference (product + shipping)
+      totalCombinedCostsBRL, // BRL value for calculations (product + shipping)
       marketingCosts: marketingCostsBRL, // Main value for calculations in BRL
       marketingCostsBRL: marketingCosts.totalBRL, // Explicit BRL value
       marketingCostsEUR: marketingCosts.totalEUR, // EUR value for display
@@ -312,13 +320,21 @@ export class DashboardService {
         limitMultiplier = 1;
     }
     
-    // Get only delivered orders for the period (for cost calculation)
-    const deliveredOrders = await db
+    // Get delivered and returned orders for the period (for shipping cost calculation)
+    // Shipping costs apply to both delivered and returned orders since they were shipped
+    const shippedOrders = await db
       .select({
-        products: orders.products
+        products: orders.products,
+        status: orders.status
       })
       .from(orders)
-      .where(and(...whereConditions, eq(orders.status, 'delivered')));
+      .where(and(...whereConditions, or(
+        eq(orders.status, 'delivered'),
+        eq(orders.status, 'returned')
+      )));
+    
+    // Get only delivered orders for product cost calculation (only charge for successfully delivered products)
+    const deliveredOnlyOrders = shippedOrders.filter(order => order.status === 'delivered');
     
     // Get all products with their costs
     const allProducts = await db
@@ -331,15 +347,17 @@ export class DashboardService {
     
     const productCostMap = Object.fromEntries(
       allProducts.map(p => [p.sku, {
-        costPrice: Number(p.costPrice || 0)
+        costPrice: Number(p.costPrice || 0),
+        shippingCost: Number(p.shippingCost || 0)
       }])
     );
     
     let totalProductCosts = 0;
+    let totalShippingCosts = 0;
     let totalQuantity = 0;
     
-    // Calculate costs based on actual quantities in delivered orders only
-    deliveredOrders.forEach(order => {
+    // Calculate product costs based on delivered orders only
+    deliveredOnlyOrders.forEach(order => {
       if (order.products && Array.isArray(order.products)) {
         order.products.forEach((product: any) => {
           const sku = product.sku;
@@ -355,16 +373,43 @@ export class DashboardService {
       }
     });
     
+    // Calculate shipping costs based on all shipped orders (delivered + returned)
+    // This is because shipping costs are incurred regardless of final delivery status
+    shippedOrders.forEach(order => {
+      if (order.products && Array.isArray(order.products)) {
+        order.products.forEach((product: any) => {
+          const sku = product.sku;
+          const quantity = product.quantity || 1;
+          const productCostInfo = productCostMap[sku];
+          
+          if (productCostInfo) {
+            const shippingCost = productCostInfo.shippingCost * quantity;
+            totalShippingCosts += shippingCost;
+          }
+        });
+      }
+    });
+    
     // Apply period multiplier to simulate different timeframes
     totalProductCosts = totalProductCosts * limitMultiplier;
+    totalShippingCosts = totalShippingCosts * limitMultiplier;
     totalQuantity = totalQuantity * limitMultiplier;
     
-    // Convert product costs from EUR to BRL using the currency API
+    // Convert both product and shipping costs from EUR to BRL using the currency API
     const totalProductCostsBRL = await currencyService.convertToBRL(totalProductCosts, 'EUR');
+    const totalShippingCostsBRL = await currencyService.convertToBRL(totalShippingCosts, 'EUR');
+    
+    // Calculate total costs (product + shipping)
+    const totalCombinedCosts = totalProductCosts + totalShippingCosts;
+    const totalCombinedCostsBRL = totalProductCostsBRL + totalShippingCostsBRL;
     
     return {
-      totalProductCosts: Number(totalProductCosts.toFixed(2)), // Keep EUR for reference
-      totalProductCostsBRL: Number(totalProductCostsBRL.toFixed(2)), // Add BRL conversion
+      totalProductCosts: Number(totalProductCosts.toFixed(2)), // Product costs only in EUR
+      totalProductCostsBRL: Number(totalProductCostsBRL.toFixed(2)), // Product costs only in BRL
+      totalShippingCosts: Number(totalShippingCosts.toFixed(2)), // Shipping costs only in EUR
+      totalShippingCostsBRL: Number(totalShippingCostsBRL.toFixed(2)), // Shipping costs only in BRL
+      totalCombinedCosts: Number(totalCombinedCosts.toFixed(2)), // Combined costs in EUR
+      totalCombinedCostsBRL: Number(totalCombinedCostsBRL.toFixed(2)), // Combined costs in BRL
       totalQuantity: Math.ceil(totalQuantity)
     };
   }
