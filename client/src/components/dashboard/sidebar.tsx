@@ -40,10 +40,14 @@ export function Sidebar() {
   return (
     <nav className="fixed left-0 top-0 h-full w-64 glassmorphism p-6 z-40 animate-slide-up">
       <div className="flex items-center space-x-3 mb-8">
-        <div className="w-10 h-10 gradient-blue rounded-xl flex items-center justify-center">
-          <TrendingUp className="text-white" size={20} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-white/10">
+          <img 
+            src="@assets/n1-cod_1755740892295.png" 
+            alt="N1 COD Logo" 
+            className="w-full h-full object-contain"
+          />
         </div>
-        <h1 className="text-xl font-bold text-white">COD Dashboard</h1>
+        <h1 className="text-xl font-bold text-white">N1 COD Dashboard</h1>
       </div>
 
       <ul className="space-y-2" data-testid="nav-menu">
