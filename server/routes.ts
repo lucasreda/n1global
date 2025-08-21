@@ -364,11 +364,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const service = new EuropeanFulfillmentService();
             service.updateCredentials(activeProvider.login, activeProvider.password);
             
-            // Get leads from API (all available leads)
-            const apiLeads = await service.getLeadsList();
-            syncedOrdersFromAPI = apiLeads.length;
+            // Get all available countries first
+            const countries = await service.getCountries();
+            console.log(`🌍 Available countries: ${countries.join(', ')}`);
             
-            console.log(`📊 Synced ${syncedOrdersFromAPI} orders from European Fulfillment API`);
+            let allLeads = [];
+            
+            // Try to get leads from all available countries
+            for (const country of countries) {
+              try {
+                const countryLeads = await service.getLeadsList(country);
+                allLeads.push(...countryLeads);
+                console.log(`🇮🇹 Found ${countryLeads.length} leads from ${country}`);
+              } catch (countryError) {
+                console.log(`⚠️ No leads found for ${country}: ${countryError.message}`);
+              }
+            }
+            
+            if (allLeads.length === 0) {
+              // Try without country filter
+              try {
+                allLeads = await service.getLeadsListWithDateFilter();
+                console.log(`🌐 Found ${allLeads.length} leads without country filter`);
+              } catch (globalError) {
+                console.log(`⚠️ Global leads fetch failed: ${globalError.message}`);
+              }
+            }
+            
+            // Convert leads to orders and save to database
+            if (allLeads.length > 0) {
+              const ordersToSave = service.convertLeadsToOrders(allLeads);
+              
+              // Save orders to database (upsert to avoid duplicates)
+              for (const orderData of ordersToSave) {
+                try {
+                  // Check if order already exists
+                  const existingOrder = await storage.getOrder(orderData.id);
+                  
+                  if (!existingOrder) {
+                    // Add required fields for database
+                    const dbOrder = {
+                      ...orderData,
+                      storeId: req.user.storeId,
+                      operationId: firstOperation.id,
+                      orderDate: new Date(orderData.createdAt)
+                    };
+                    
+                    await storage.createOrder(dbOrder);
+                  }
+                } catch (saveError) {
+                  console.warn(`Failed to save order ${orderData.id}:`, saveError.message);
+                }
+              }
+              
+              console.log(`💾 Saved ${ordersToSave.length} orders to database`);
+              syncedOrdersFromAPI = ordersToSave.length;
+            } else {
+              syncedOrdersFromAPI = 0;
+              console.log(`⚠️ No leads found from API`);
+            }
+            
+            console.log(`📊 Total synced orders: ${syncedOrdersFromAPI}`);
           } catch (apiError) {
             console.warn("Failed to sync from API:", apiError);
             // Fall back to database count
