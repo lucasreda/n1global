@@ -50,6 +50,7 @@ export const operations = pgTable("operations", {
   name: text("name").notNull(), // e.g., "PureDreams", "Operation Alpha"
   description: text("description"),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links operation to store
+  country: text("country").notNull(), // Country code e.g., "ES", "IT", "FR"
   status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
   settings: jsonb("settings"), // Operation-specific settings
   createdAt: timestamp("created_at").defaultNow(),

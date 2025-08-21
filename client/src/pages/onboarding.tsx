@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle, Circle, Loader2, Package, ShoppingCart, Truck, Target, Zap } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
@@ -12,6 +13,28 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useOperationStore } from '@/store/operations';
 import logoImage from '@assets/COD DASHBOARD_1755806006009.png';
+
+// European countries with flags
+const EUROPEAN_COUNTRIES = [
+  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
+  { code: 'GR', name: 'Greece', flag: '🇬🇷' },
+  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
+  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿' },
+  { code: 'SK', name: 'Slovakia', flag: '🇸🇰' },
+  { code: 'HU', name: 'Hungary', flag: '🇭🇺' },
+  { code: 'RO', name: 'Romania', flag: '🇷🇴' },
+  { code: 'BG', name: 'Bulgaria', flag: '🇧🇬' },
+  { code: 'HR', name: 'Croatia', flag: '🇭🇷' },
+  { code: 'SI', name: 'Slovenia', flag: '🇸🇮' },
+  { code: 'EE', name: 'Estonia', flag: '🇪🇪' },
+  { code: 'LV', name: 'Latvia', flag: '🇱🇻' },
+  { code: 'LT', name: 'Lithuania', flag: '🇱🇹' }
+];
 
 interface OnboardingStep {
   id: string;
@@ -24,6 +47,7 @@ interface OnboardingStep {
 export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const [operationName, setOperationName] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
   const { toast } = useToast();
   const { selectedOperation, setSelectedOperation } = useOperationStore();
 
@@ -111,13 +135,14 @@ export default function OnboardingPage() {
 
   // Create operation mutation
   const createOperationMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await apiRequest('POST', '/api/onboarding/create-operation', { name });
+    mutationFn: async (data: { name: string; country: string }) => {
+      const response = await apiRequest('POST', '/api/onboarding/create-operation', data);
       return response.json();
     },
     onSuccess: () => {
       toast({ title: 'Operação criada com sucesso!' });
       queryClient.invalidateQueries({ queryKey: ['/api/user/onboarding-status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
       // Don't manually set currentStep - it will be updated automatically
     },
     onError: () => {
@@ -142,7 +167,11 @@ export default function OnboardingPage() {
       toast({ title: 'Digite um nome para a operação', variant: 'destructive' });
       return;
     }
-    createOperationMutation.mutate(operationName);
+    if (!selectedCountry) {
+      toast({ title: 'Selecione um país para a operação', variant: 'destructive' });
+      return;
+    }
+    createOperationMutation.mutate({ name: operationName, country: selectedCountry });
   };
 
   const handleStepComplete = (stepId: string, nextStep: number) => {
@@ -244,10 +273,35 @@ export default function OnboardingPage() {
                     data-testid="input-operation-name"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="operation-country" className="text-white">
+                    País da Operação
+                  </Label>
+                  <Select onValueChange={setSelectedCountry} value={selectedCountry}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white mt-2" data-testid="select-country">
+                      <SelectValue placeholder="Selecione um país" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      {EUROPEAN_COUNTRIES.map((country) => (
+                        <SelectItem 
+                          key={country.code} 
+                          value={country.code}
+                          className="text-white hover:bg-gray-700"
+                          data-testid={`country-${country.code}`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="text-lg">{country.flag}</span>
+                            <span>{country.name}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button 
                   onClick={handleCreateOperation}
-                  disabled={createOperationMutation.isPending}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={createOperationMutation.isPending || !operationName.trim() || !selectedCountry}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600"
                   data-testid="button-create-operation"
                 >
                   {createOperationMutation.isPending ? (

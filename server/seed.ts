@@ -83,6 +83,7 @@ export async function seedDatabase() {
           storeId: defaultStore.id,
           name: "PureDreams",
           description: "Default operation for COD business",
+          country: "IT", // Default to Italy
           status: "active",
         })
         .returning();

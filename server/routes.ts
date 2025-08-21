@@ -306,15 +306,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/onboarding/create-operation", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { name } = req.body;
+      const { name, country } = req.body;
       if (!name?.trim()) {
         return res.status(400).json({ message: "Nome da operação é obrigatório" });
+      }
+      if (!country?.trim()) {
+        return res.status(400).json({ message: "País da operação é obrigatório" });
       }
 
       // Create operation
       const operation = await storage.createOperation({
         name: name.trim(),
-        description: `Operação criada durante onboarding`
+        description: `Operação criada durante onboarding`,
+        country: country.trim()
       }, req.user.id);
 
       // Update user onboarding step
@@ -364,20 +368,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const service = new EuropeanFulfillmentService();
             service.updateCredentials(activeProvider.login, activeProvider.password);
             
-            // Get all available countries first
-            const countries = await service.getCountries();
-            console.log(`🌍 Available countries: ${countries.join(', ')}`);
-            
             let allLeads = [];
             
-            // Try to get leads from all available countries
-            for (const country of countries) {
+            // Try to get leads from operation's country first
+            if (firstOperation.country) {
               try {
-                const countryLeads = await service.getLeadsList(country);
+                console.log(`🎯 Fetching leads from operation country: ${firstOperation.country}`);
+                const countryLeads = await service.getLeadsList(firstOperation.country);
                 allLeads.push(...countryLeads);
-                console.log(`🇮🇹 Found ${countryLeads.length} leads from ${country}`);
+                console.log(`🇮🇹 Found ${countryLeads.length} leads from ${firstOperation.country}`);
               } catch (countryError) {
-                console.log(`⚠️ No leads found for ${country}: ${countryError.message}`);
+                console.log(`⚠️ No leads found for operation country ${firstOperation.country}: ${countryError.message}`);
+              }
+            }
+            
+            // If no leads from operation country, try all available countries
+            if (allLeads.length === 0) {
+              const countries = await service.getCountries();
+              console.log(`🌍 Trying all available countries: ${countries.join(', ')}`);
+              
+              for (const country of countries) {
+                try {
+                  const countryLeads = await service.getLeadsList(country);
+                  allLeads.push(...countryLeads);
+                  console.log(`🇪🇺 Found ${countryLeads.length} leads from ${country}`);
+                } catch (countryError) {
+                  console.log(`⚠️ No leads found for ${country}: ${countryError.message}`);
+                }
               }
             }
             

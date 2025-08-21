@@ -168,6 +168,7 @@ export class DatabaseStorage implements IStorage {
         id: operations.id,
         name: operations.name,
         description: operations.description,
+        country: operations.country,
         status: operations.status,
         createdAt: operations.createdAt,
         updatedAt: operations.updatedAt,
@@ -219,7 +220,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async createOperation(operationData: { name: string; description: string }, userId: string): Promise<Operation> {
+  async createOperation(operationData: { name: string; description: string; country: string }, userId: string): Promise<Operation> {
     const user = await this.getUser(userId);
     if (!user) throw new Error('Usuário não encontrado');
 
@@ -250,6 +251,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         name: operationData.name,
         description: operationData.description,
+        country: operationData.country,
         storeId
       })
       .returning();
