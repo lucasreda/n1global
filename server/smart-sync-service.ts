@@ -77,6 +77,23 @@ export class SmartSyncService {
   }
 
   /**
+   * Calcula custos de produto e envio baseado no status e valor do pedido
+   */
+  private calculateOrderCosts(status: string, total: string): { productCost: number; shippingCost: number } {
+    const orderValue = parseFloat(total);
+    
+    // Custo do produto: aplicado quando pedido está confirmado/pago
+    const productCost = ['confirmed', 'delivered', 'shipped', 'in transit', 'in delivery'].includes(status) ?
+      (orderValue >= 120 ? 45.00 : orderValue >= 60 ? 35.00 : 30.00) : 0.00;
+    
+    // Custo de envio: aplicado quando pedido está enviado
+    const shippingCost = ['shipped', 'delivered', 'in transit', 'in delivery'].includes(status) ?
+      (orderValue >= 120 ? 15.00 : orderValue >= 60 ? 12.00 : 10.00) : 0.00;
+    
+    return { productCost, shippingCost };
+  }
+
+  /**
    * Obtém o ID da loja padrão para associar aos pedidos
    */
   private async getDefaultStoreId(): Promise<string> {
@@ -167,6 +184,9 @@ export class SmartSyncService {
 
               if (!existingLead) {
                 // Lead novo - inserir
+                const status = apiLead.status_livrison || "new order";
+                const costs = this.calculateOrderCosts(status, apiLead.lead_value);
+                
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
                   storeId,
@@ -175,9 +195,12 @@ export class SmartSyncService {
                   customerCity: apiLead.city,
                   customerCountry: "IT",
                   total: apiLead.lead_value,
-                  status: apiLead.status_livrison || "new order",
+                  status: status,
                   paymentMethod: apiLead.method_payment || "COD",
                   provider: "european_fulfillment",
+                  productCost: costs.productCost,
+                  shippingCost: costs.shippingCost,
+                  orderDate: new Date(),
                 });
 
                 newLeads++;
@@ -304,6 +327,9 @@ export class SmartSyncService {
 
               if (!existingLead) {
                 // Lead novo - inserir
+                const status = apiLead.status_livrison || "new order";
+                const costs = this.calculateOrderCosts(status, apiLead.lead_value);
+                
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
                   storeId: storeId,
@@ -312,9 +338,12 @@ export class SmartSyncService {
                   customerCity: apiLead.city,
                   customerCountry: "IT",
                   total: apiLead.lead_value,
-                  status: apiLead.status_livrison || "new order",
+                  status: status,
                   paymentMethod: apiLead.method_payment || "COD",
                   provider: "european_fulfillment",
+                  productCost: costs.productCost,
+                  shippingCost: costs.shippingCost,
+                  orderDate: new Date(),
                 });
 
                 newLeads++;
