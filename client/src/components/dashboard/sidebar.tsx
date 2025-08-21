@@ -14,19 +14,29 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: Home },
-  { name: "Pedidos", href: "/orders", icon: Package },
-  { name: "Produtos", href: "/products", icon: ShoppingCart },
-  { name: "Análises", href: "/analytics", icon: BarChart3 },
-  { name: "Anúncios", href: "/ads", icon: Target },
-  { name: "Integrações", href: "/integrations", icon: Plug },
-  { name: "Configurações", href: "/settings", icon: Settings },
-];
+const getNavigationForRole = (userRole: string) => {
+  const baseNavigation = [
+    { name: "Dashboard", href: "/", icon: Home },
+    { name: "Pedidos", href: "/orders", icon: Package },
+    { name: "Produtos", href: "/products", icon: ShoppingCart },
+    { name: "Integrações", href: "/integrations", icon: Plug },
+    { name: "Configurações", href: "/settings", icon: Settings },
+  ];
+
+  // Add restricted pages only for admin/user roles
+  if (userRole !== 'product_seller') {
+    baseNavigation.splice(3, 0, { name: "Análises", href: "/analytics", icon: BarChart3 });
+    baseNavigation.splice(4, 0, { name: "Anúncios", href: "/ads", icon: Target });
+  }
+
+  return baseNavigation;
+};
 
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  
+  const navigation = getNavigationForRole(user?.role || 'user');
 
   const getUserInitials = (name: string) => {
     return name
@@ -46,7 +56,10 @@ export function Sidebar() {
           className="w-[140px] h-auto object-contain"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
-            e.currentTarget.nextElementSibling.style.display = 'block';
+            const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+            if (nextElement) {
+              nextElement.style.display = 'block';
+            }
           }}
         />
         <div className="text-xl font-bold text-white tracking-wider hidden">
@@ -91,7 +104,7 @@ export function Sidebar() {
                 {user?.name || "Usuário"}
               </p>
               <p className="text-xs text-gray-400" data-testid="text-user-role">
-                {user?.role === "admin" ? "Administrador" : "Usuário"}
+                {user?.role === "admin" ? "Administrador" : user?.role === "product_seller" ? "Vendedor" : "Usuário"}
               </p>
             </div>
             <Button

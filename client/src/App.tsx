@@ -8,6 +8,7 @@ import { AuthModal } from "@/components/auth/auth-modal";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
+import SellerDashboard from "@/pages/seller-dashboard";
 import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
 import Integrations from "@/pages/integrations";
@@ -17,13 +18,16 @@ import Ads from "@/pages/ads";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  const { user } = useAuth();
+  const isProductSeller = user?.role === 'product_seller';
+
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={isProductSeller ? SellerDashboard : Dashboard} />
       <Route path="/orders" component={Orders} />
-      <Route path="/analytics" component={Analytics} />
+      {!isProductSeller && <Route path="/analytics" component={Analytics} />}
       <Route path="/integrations" component={Integrations} />
-      <Route path="/ads" component={Ads} />
+      {!isProductSeller && <Route path="/ads" component={Ads} />}
       <Route path="/products" component={Products} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
