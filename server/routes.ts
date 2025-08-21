@@ -350,26 +350,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let orderCount = 0;
       let campaignCount = 0;
+      let syncedOrdersFromAPI = 0;
 
       if (firstOperation) {
-        // Count orders for this operation
-        const orders = await storage.getOrdersByStore(req.user.storeId || '');
-        orderCount = orders.length;
+        // Get configured shipping providers for this operation
+        const providers = await storage.getShippingProvidersByOperation(firstOperation.id);
+        const activeProvider = providers.find(p => p.isActive && p.apiKey);
 
-        // Count campaigns (mock for now)
-        campaignCount = 6; // Based on current Facebook ads setup
+        if (activeProvider && activeProvider.type === 'european_fulfillment') {
+          try {
+            // Sync orders from European Fulfillment API
+            const { EuropeanFulfillmentService } = await import('./fulfillment-service');
+            const service = new EuropeanFulfillmentService();
+            service.updateCredentials(activeProvider.login, activeProvider.password);
+            
+            // Get leads from API (all available leads)
+            const apiLeads = await service.getLeadsList();
+            syncedOrdersFromAPI = apiLeads.length;
+            
+            console.log(`📊 Synced ${syncedOrdersFromAPI} orders from European Fulfillment API`);
+          } catch (apiError) {
+            console.warn("Failed to sync from API:", apiError);
+            // Fall back to database count
+            const orders = await storage.getOrdersByStore(req.user.storeId || '');
+            orderCount = orders.length;
+          }
+        } else {
+          // No active provider, count existing orders in database
+          const orders = await storage.getOrdersByStore(req.user.storeId || '');
+          orderCount = orders.length;
+        }
+
+        // Check if user completed ads step - if not, campaigns should be 0
+        const userStatus = await storage.getUser(req.user.id);
+        const onboardingSteps = (userStatus as any)?.onboardingSteps || {};
+        
+        if (onboardingSteps.step4_ads) {
+          campaignCount = 6; // Based on current Facebook ads setup
+        } else {
+          campaignCount = 0; // User skipped ads step
+        }
       }
 
+      const totalOrders = syncedOrdersFromAPI || orderCount;
+      
       const status = {
         orders: {
-          current: orderCount,
-          total: orderCount || 1000, // Use actual count or default
-          completed: orderCount > 0
+          current: totalOrders,
+          total: totalOrders, // Use actual count from API, no artificial limit
+          completed: totalOrders > 0
         },
         campaigns: {
           current: campaignCount,
-          total: campaignCount || 6,
-          completed: campaignCount > 0
+          total: campaignCount,
+          completed: campaignCount > 0 || !firstOperation // Complete if no operation or has campaigns
         }
       };
 
