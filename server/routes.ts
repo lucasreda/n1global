@@ -455,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (provider.type === 'european_fulfillment') {
         // Use European Fulfillment service for authentication
-        const { EuropeanFulfillmentService } = await import('./european-fulfillment-service');
+        const { EuropeanFulfillmentService } = await import('./fulfillment-service');
         const service = new EuropeanFulfillmentService();
         
         configResult = await service.authenticate(provider.login, provider.password);
@@ -510,7 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (provider.type === 'european_fulfillment') {
         // Test with European Fulfillment API
-        const { EuropeanFulfillmentService } = await import('./european-fulfillment-service');
+        const { EuropeanFulfillmentService } = await import('./fulfillment-service');
         const service = new EuropeanFulfillmentService();
         
         try {
