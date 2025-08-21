@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { orders, dashboardMetrics, products, stores, type InsertDashboardMetrics } from "@shared/schema";
-import { eq, and, or, gte, lte, sql, count, sum, avg } from "drizzle-orm";
+import { eq, and, or, gte, lte, sql, count, sum, avg, isNotNull } from "drizzle-orm";
 import { FacebookAdsService } from "./facebook-ads-service";
 import { currencyService } from "./currency-service";
 
@@ -101,12 +101,24 @@ export class DashboardService {
   
   private async calculateMetrics(period: string, provider?: string) {
     const dateRange = this.getDateRange(period);
-    console.log(`📅 Calculating metrics for period: ${period}`);
+    const storeId = await this.getDefaultStoreId();
+    console.log(`📅 Calculating metrics for period: ${period}, store: ${storeId}`);
     
-    // Use order_date (data real do pedido) para análises de negócio
+    // Use created_at se order_date for NULL (padrão para pedidos sincronizados)
     let whereConditions = [
-      gte(orders.orderDate, dateRange.from),
-      lte(orders.orderDate, dateRange.to)
+      eq(orders.storeId, storeId),
+      or(
+        and(
+          isNotNull(orders.orderDate),
+          gte(orders.orderDate, dateRange.from),
+          lte(orders.orderDate, dateRange.to)
+        ),
+        and(
+          eq(orders.orderDate, sql`NULL`),
+          gte(orders.createdAt, dateRange.from),
+          lte(orders.createdAt, dateRange.to)
+        )
+      )
     ];
     
     if (provider) {
