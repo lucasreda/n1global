@@ -190,14 +190,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       icon: DollarSign,
       color: "blue",
       size: "large"
-    },
-    {
-      title: "Taxa de Entrega",
-      value: `${deliveryRate.toFixed(1)}%`,
-      subtitle: `${deliveredOrders} entregues`,
-      icon: CheckCircle,
-      color: "emerald",
-      size: "large"
     }
   ];
 
