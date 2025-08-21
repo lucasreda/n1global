@@ -41,7 +41,7 @@ export function Sidebar() {
     <nav className="fixed left-0 top-0 h-full w-64 glassmorphism p-6 z-40 animate-slide-up">
       <div className="flex justify-center mb-8">
         <img 
-          src="/attached_assets/n1-cod_1755740892295.png" 
+          src="/attached_assets/n1-cod_1755741045729.png" 
           alt="N1 COD Logo" 
           className="w-[200px] h-auto object-contain"
           style={{ filter: 'invert(1) brightness(2)' }}
