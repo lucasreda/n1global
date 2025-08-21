@@ -89,8 +89,8 @@ export const orders = pgTable("orders", {
   // Products
   products: jsonb("products"), // Array of products with quantities and prices
   
-  // Shipping provider info
-  provider: text("provider").notNull(), // 'european_fulfillment', 'correios', 'jadlog'
+  // Shipping provider info  
+  provider: text("provider").notNull().default("european_fulfillment"), // 'european_fulfillment', 'correios', 'jadlog'
   providerOrderId: text("provider_order_id"), // Original ID from provider
   trackingNumber: text("tracking_number"),
   

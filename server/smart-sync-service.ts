@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { orders, stores } from "@shared/schema";
+import { orders, stores, operations } from "@shared/schema";
 import { europeanFulfillmentService } from "./fulfillment-service";
 import { eq, and, not, inArray } from "drizzle-orm";
 
