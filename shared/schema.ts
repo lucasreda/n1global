@@ -265,7 +265,8 @@ export const shippingProviders = pgTable("shipping_providers", {
   apiKey: text("api_key"),
   apiUrl: text("api_url"),
   description: text("description"),
-  isActive: boolean("is_active").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(false),
+  lastTestAt: timestamp("last_test_at"), // When last test was performed
   createdAt: timestamp("created_at").defaultNow(),
 });
 

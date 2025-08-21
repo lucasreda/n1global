@@ -37,6 +37,8 @@ export interface IStorage {
   
   // Shipping providers creation
   createShippingProvider(data: InsertShippingProvider, storeId: string): Promise<ShippingProvider>;
+  updateShippingProvider(id: string, updates: Partial<ShippingProvider>): Promise<ShippingProvider | undefined>;
+  getShippingProvider(id: string): Promise<ShippingProvider | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -264,6 +266,26 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return provider;
+  }
+
+  async updateShippingProvider(id: string, updates: Partial<ShippingProvider>): Promise<ShippingProvider | undefined> {
+    const [provider] = await db
+      .update(shippingProviders)
+      .set(updates)
+      .where(eq(shippingProviders.id, id))
+      .returning();
+    
+    return provider || undefined;
+  }
+
+  async getShippingProvider(id: string): Promise<ShippingProvider | undefined> {
+    const [provider] = await db
+      .select()
+      .from(shippingProviders)
+      .where(eq(shippingProviders.id, id))
+      .limit(1);
+    
+    return provider || undefined;
   }
 }
 

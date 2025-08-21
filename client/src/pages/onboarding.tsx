@@ -329,6 +329,7 @@ export default function OnboardingPage() {
 function ShippingStep({ onComplete }: { onComplete: () => void }) {
   const [providers, setProviders] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
   const [providerData, setProviderData] = useState({
     name: '',
     type: 'correios',
@@ -366,6 +367,50 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
     }
   });
 
+  const configureProviderMutation = useMutation({
+    mutationFn: async (providerId: string) => {
+      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/configure`);
+      return response.json();
+    },
+    onSuccess: (result) => {
+      toast({ 
+        title: result.success ? 'Integração configurada com sucesso!' : 'Erro na configuração',
+        description: result.message,
+        variant: result.success ? 'default' : 'destructive'
+      });
+      // Refresh providers list to get updated status
+      queryClient.invalidateQueries({ queryKey: ['/api/shipping-providers'] });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao configurar integração', variant: 'destructive' });
+    }
+  });
+
+  const testProviderMutation = useMutation({
+    mutationFn: async (providerId: string) => {
+      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/test`);
+      return response.json();
+    },
+    onSuccess: (result) => {
+      toast({
+        title: result.success ? 'Teste realizado com sucesso!' : 'Falha no teste',
+        description: result.message,
+        variant: result.success ? 'default' : 'destructive'
+      });
+      if (result.success) {
+        // Update provider status
+        setProviders(prev => prev.map(p => 
+          p.id === result.providerId 
+            ? { ...p, isActive: true, lastTestAt: new Date().toISOString() }
+            : p
+        ));
+      }
+    },
+    onError: () => {
+      toast({ title: 'Erro ao testar integração', variant: 'destructive' });
+    }
+  });
+
   const handleAddProvider = () => {
     if (!providerData.name.trim()) {
       toast({ title: 'Nome da transportadora é obrigatório', variant: 'destructive' });
@@ -378,7 +423,19 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
     createProviderMutation.mutate(providerData);
   };
 
-  const canContinue = providers.length > 0;
+  const handleConfigureProvider = (providerId: string) => {
+    setTestingProvider(providerId);
+    configureProviderMutation.mutate(providerId);
+  };
+
+  const handleTestProvider = (providerId: string) => {
+    setTestingProvider(providerId);
+    testProviderMutation.mutate(providerId);
+  };
+
+  // Check if at least one provider is active (configured and tested)
+  const hasActiveProvider = providers.some(p => p.isActive && p.lastTestAt);
+  const canContinue = hasActiveProvider;
 
   return (
     <div className="space-y-6">
@@ -395,21 +452,85 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
         <div className="space-y-4">
           <h4 className="text-white font-medium">Transportadoras cadastradas:</h4>
           <div className="grid grid-cols-1 gap-3">
-            {providers.map((provider) => (
-              <Card key={provider.id} className="bg-green-600/20 border-green-400">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h5 className="text-white font-medium">{provider.name}</h5>
-                      <p className="text-white/60 text-sm">{provider.type}</p>
+            {providers.map((provider) => {
+              const isConfigured = provider.token || provider.isActive;
+              const isTested = provider.lastTestAt;
+              const isActive = isConfigured && isTested;
+              const isProcessing = testingProvider === provider.id;
+              
+              return (
+                <Card 
+                  key={provider.id} 
+                  className={`${
+                    isActive 
+                      ? 'bg-green-600/20 border-green-400' 
+                      : isConfigured 
+                      ? 'bg-yellow-600/20 border-yellow-400'
+                      : 'bg-gray-600/20 border-gray-400'
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <h5 className="text-white font-medium">{provider.name}</h5>
+                        <p className="text-white/60 text-sm capitalize">{provider.type}</p>
+                        <p className="text-white/50 text-xs mt-1">
+                          {isActive ? '✅ Ativa e testada' : 
+                           isConfigured ? '⚠️ Configurada (precisa testar)' : 
+                           '❌ Não configurada'}
+                        </p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        {!isConfigured && (
+                          <Button
+                            onClick={() => handleConfigureProvider(provider.id)}
+                            disabled={configureProviderMutation.isPending && testingProvider === provider.id}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            data-testid={`button-configure-${provider.id}`}
+                          >
+                            {isProcessing && configureProviderMutation.isPending ? (
+                              <>
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                Configurando...
+                              </>
+                            ) : (
+                              'Configurar'
+                            )}
+                          </Button>
+                        )}
+                        
+                        {isConfigured && (
+                          <Button
+                            onClick={() => handleTestProvider(provider.id)}
+                            disabled={testProviderMutation.isPending && testingProvider === provider.id}
+                            size="sm"
+                            className={`${
+                              isTested 
+                                ? 'bg-green-600 hover:bg-green-700' 
+                                : 'bg-orange-600 hover:bg-orange-700'
+                            } text-white`}
+                            data-testid={`button-test-${provider.id}`}
+                          >
+                            {isProcessing && testProviderMutation.isPending ? (
+                              <>
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                Testando...
+                              </>
+                            ) : isTested ? (
+                              'Testar novamente'
+                            ) : (
+                              'Testar integração'
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-green-400">
-                      <CheckCircle className="w-5 h-5" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
@@ -559,7 +680,11 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
           } text-white`}
           data-testid="button-continue-shipping"
         >
-          {canContinue ? 'Continuar' : 'Adicione uma transportadora para continuar'}
+          {canContinue 
+            ? 'Continuar' 
+            : providers.length === 0 
+            ? 'Adicione uma transportadora para continuar'
+            : 'Configure e teste uma transportadora para continuar'}
         </Button>
       </div>
     </div>
