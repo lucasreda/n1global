@@ -118,7 +118,7 @@ export class SmartSyncService {
   /**
    * Sincronização inteligente que adapta baseado no volume de atividade
    */
-  async startIntelligentSync(): Promise<{
+  async startIntelligentSync(userContext?: { userId: string; operationId: string; storeId: string }): Promise<{
     success: boolean;
     newLeads: number;
     updatedLeads: number;
@@ -148,9 +148,16 @@ export class SmartSyncService {
       // Analisa o padrão de volume para determinar estratégia
       const volumePattern = this.analyzeVolumePattern();
       const maxPages = this.getOptimalSyncPages(volumePattern);
-      const storeId = await this.getDefaultStoreId();
       
-      console.log(`🧠 Sincronização inteligente: Volume ${volumePattern}, ${maxPages} páginas`);
+      // CRITICAL: Use user-specific context or fallback to default
+      const operationId = userContext?.operationId;
+      const storeId = userContext?.storeId || await this.getDefaultStoreId();
+      
+      if (!operationId) {
+        throw new Error('❌ ID da operação não fornecido para sincronização');
+      }
+      
+      console.log(`🧠 Sincronização inteligente para operação ${operationId}: Volume ${volumePattern}, ${maxPages} páginas`);
 
       let newLeads = 0;
       let updatedLeads = 0;
@@ -175,22 +182,26 @@ export class SmartSyncService {
           // Processar cada lead da página
           for (const apiLead of pageLeads) {
             try {
-              // Verificar se o lead já existe
+              // Verificar se o lead já existe NESTA operação
               const [existingLead] = await db
                 .select()
                 .from(orders)
-                .where(eq(orders.id, apiLead.n_lead))
+                .where(and(
+                  eq(orders.id, apiLead.n_lead),
+                  eq(orders.operationId, operationId)
+                ))
                 .limit(1);
 
               if (!existingLead) {
-                // Lead novo - inserir
+                // Lead novo - inserir COM operationId para isolamento
                 const status = apiLead.status_livrison || "new order";
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
-                // CRITICAL: Use the specific store for this sync operation
+                // CRITICAL: Use the specific store AND operation for this sync
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
                   storeId: storeId,
+                  operationId: operationId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
                   customerCity: apiLead.city,
@@ -206,7 +217,7 @@ export class SmartSyncService {
 
                 newLeads++;
               } else {
-                // Lead existente - atualizar status se mudou
+                // Lead existente - atualizar status se mudou (somente na mesma operação)
                 if (existingLead.status !== (apiLead.status_livrison || "new order")) {
                   await db
                     .update(orders)
@@ -214,7 +225,10 @@ export class SmartSyncService {
                       status: apiLead.status_livrison || "new order",
                       updatedAt: new Date(),
                     })
-                    .where(eq(orders.id, apiLead.n_lead));
+                    .where(and(
+                      eq(orders.id, apiLead.n_lead),
+                      eq(orders.operationId, operationId)
+                    ));
                   
                   updatedLeads++;
                 }
@@ -273,7 +287,7 @@ export class SmartSyncService {
     }
   }
 
-  async startFullInitialSync(): Promise<{
+  async startFullInitialSync(userContext?: { userId: string; operationId: string; storeId: string }): Promise<{
     success: boolean;
     newLeads: number;
     updatedLeads: number;
@@ -296,7 +310,15 @@ export class SmartSyncService {
     this.isRunning = true;
 
     try {
-      console.log("🔄 Iniciando sincronização COMPLETA de todos os leads...");
+      // CRITICAL: Use user-specific context or fallback to default
+      const operationId = userContext?.operationId;
+      const storeId = userContext?.storeId || await this.getDefaultStoreId();
+      
+      if (!operationId) {
+        throw new Error('❌ ID da operação não fornecido para sincronização');
+      }
+      
+      console.log(`🔄 Iniciando sincronização COMPLETA para operação ${operationId}...`);
 
       let newLeads = 0;
       let updatedLeads = 0;
@@ -319,21 +341,25 @@ export class SmartSyncService {
           // Processar cada lead da página
           for (const apiLead of pageLeads) {
             try {
-              // Verificar se o lead já existe
+              // Verificar se o lead já existe NESTA operação
               const [existingLead] = await db
                 .select()
                 .from(orders)
-                .where(eq(orders.id, apiLead.n_lead))
+                .where(and(
+                  eq(orders.id, apiLead.n_lead),
+                  eq(orders.operationId, operationId)
+                ))
                 .limit(1);
 
               if (!existingLead) {
-                // Lead novo - inserir
+                // Lead novo - inserir COM operationId para isolamento
                 const status = apiLead.status_livrison || "new order";
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
                   storeId: storeId,
+                  operationId: operationId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
                   customerCity: apiLead.city,
@@ -352,7 +378,7 @@ export class SmartSyncService {
                   console.log(`✅ ${newLeads} leads processados...`);
                 }
               } else {
-                // Lead existente - atualizar status se mudou
+                // Lead existente - atualizar status se mudou (somente na mesma operação)
                 if (existingLead.status !== (apiLead.status_livrison || "new order")) {
                   await db
                     .update(orders)
@@ -360,7 +386,10 @@ export class SmartSyncService {
                       status: apiLead.status_livrison || "new order",
                       updatedAt: new Date(),
                     })
-                    .where(eq(orders.id, apiLead.n_lead));
+                    .where(and(
+                      eq(orders.id, apiLead.n_lead),
+                      eq(orders.operationId, operationId)
+                    ));
                   
                   updatedLeads++;
                 }
@@ -418,7 +447,7 @@ export class SmartSyncService {
     }
   }
 
-  async startIncrementalSync(options: SyncOptions = {}): Promise<{
+  async startIncrementalSync(options: SyncOptions = {}, userContext?: { userId: string; operationId: string; storeId: string }): Promise<{
     success: boolean;
     newLeads: number;
     updatedLeads: number;
@@ -443,26 +472,38 @@ export class SmartSyncService {
     this.isRunning = true;
 
     try {
-      console.log("🔄 Iniciando sincronização inteligente...");
-
-      console.log("📋 Iniciando sincronização incremental...");
+      // CRITICAL: Use user-specific context or fallback to default
+      const operationId = userContext?.operationId;
+      const storeId = userContext?.storeId || await this.getDefaultStoreId();
+      
+      if (!operationId) {
+        throw new Error('❌ ID da operação não fornecido para sincronização');
+      }
+      
+      console.log(`📋 Iniciando sincronização incremental para operação ${operationId}...`);
 
       let newLeads = 0;
       let updatedLeads = 0;
       let skippedLeads = 0;
       let totalProcessed = 0;
 
-      // 1. Buscar leads que precisam ser atualizados (todos os não-finalizados + sample de finalizados)
+      // 1. Buscar leads que precisam ser atualizados NESTA operação (todos os não-finalizados + sample de finalizados)
       const activeLeads = await db
         .select()
         .from(orders)
-        .where(not(inArray(orders.status, this.finalStatuses)));
+        .where(and(
+          not(inArray(orders.status, this.finalStatuses)),
+          eq(orders.operationId, operationId)
+        ));
 
-      // Também verificar uma amostra de pedidos finalizados (caso o status mude)
+      // Também verificar uma amostra de pedidos finalizados DESTA operação (caso o status mude)
       const finalizedSample = await db
         .select()
         .from(orders)
-        .where(inArray(orders.status, this.finalStatuses))
+        .where(and(
+          inArray(orders.status, this.finalStatuses),
+          eq(orders.operationId, operationId)
+        ))
         .limit(20); // Verificar apenas 20 pedidos finalizados por vez
 
       const leadsToUpdate = [...activeLeads, ...finalizedSample];
@@ -482,7 +523,10 @@ export class SmartSyncService {
                   status: leadDetails.status,
                   updatedAt: new Date(),
                 })
-                .where(eq(orders.id, lead.id));
+                .where(and(
+                  eq(orders.id, lead.id),
+                  eq(orders.operationId, operationId)
+                ));
               
               updatedLeads++;
               console.log(`✏️  Lead ${lead.id} atualizado: ${lead.status} → ${leadDetails.status}`);
@@ -522,19 +566,22 @@ export class SmartSyncService {
       // 4. Processar novos leads
       for (const apiLead of apiLeads) {
         try {
-          // Verificar se o lead já existe
+          // Verificar se o lead já existe NESTA operação
           const [existingLead] = await db
             .select()
             .from(orders)
-            .where(eq(orders.id, apiLead.n_lead))
+            .where(and(
+              eq(orders.id, apiLead.n_lead),
+              eq(orders.operationId, operationId)
+            ))
             .limit(1);
 
           if (!existingLead) {
-            // Lead novo - inserir com dados básicos da API
-            const defaultStoreId = await this.getDefaultStoreId();
+            // Lead novo - inserir com dados básicos da API COM operationId
             await db.insert(orders).values({
               id: apiLead.n_lead,
-              storeId: defaultStoreId,
+              storeId: storeId,
+              operationId: operationId,
               customerName: apiLead.name,
               customerPhone: apiLead.phone,
               customerCity: apiLead.city,

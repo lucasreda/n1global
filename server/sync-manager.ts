@@ -109,16 +109,13 @@ export class SyncManager {
 
     try {
       console.log('🔄 Iniciando sincronização automática da transportadora...');
-      const { SmartSyncService } = await import("./smart-sync-service");
-      const smartSyncService = new SmartSyncService();
-      await smartSyncService.startIntelligentSync();
       
-      this.updateLastShippingSyncTime();
-      console.log('✅ Sincronização automática da transportadora concluída');
+      // CRITICAL: Skip automatic sync - requires user context for operation isolation
+      console.log('⚠️ Sincronização automática ignorada: requer contexto de usuário/operação');
       
       return {
-        executed: true,
-        reason: 'Sincronização automática executada com sucesso'
+        executed: false,
+        reason: 'Sincronização automática desabilitada - requer contexto de usuário específico'
       };
     } catch (error) {
       console.error('❌ Erro na sincronização automática da transportadora:', error);

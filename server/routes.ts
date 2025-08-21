@@ -120,17 +120,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Smart Sync routes - for intelligent incremental synchronization
   app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      // CRITICAL: Get user's operation for data isolation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const currentOperation = userOperations[0];
+      
+      if (!currentOperation) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Nenhuma operação encontrada. Complete o onboarding primeiro." 
+        });
+      }
+
       const { syncType = "intelligent", maxPages = 3 } = req.body;
       const { smartSyncService } = await import("./smart-sync-service");
       
+      const userContext = {
+        userId: req.user.id,
+        operationId: currentOperation.id,
+        storeId: req.user.storeId
+      };
+      
       let result;
       if (syncType === "full") {
-        result = await smartSyncService.startFullInitialSync();
+        result = await smartSyncService.startFullInitialSync(userContext);
       } else if (syncType === "incremental") {
-        result = await smartSyncService.startIncrementalSync({ maxPages });
+        result = await smartSyncService.startIncrementalSync({ maxPages }, userContext);
       } else {
         // Default: intelligent sync
-        result = await smartSyncService.startIntelligentSync();
+        result = await smartSyncService.startIntelligentSync(userContext);
       }
       
       res.json(result);
