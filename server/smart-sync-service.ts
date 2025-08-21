@@ -39,13 +39,13 @@ export class SmartSyncService {
   // Status que precisam monitoramento frequente
   private activeStatuses = ['new order', 'confirmed', 'packed', 'shipped', 'in transit', 'in delivery', 'incident'];
   
-  // Configurações inteligentes baseadas em volume
+  // Configurações inteligentes baseadas em volume - REMOVIDOS LIMITES ARTIFICIAIS
   private adaptiveConfig = {
     lowVolumeThreshold: 5,    // Menos de 5 mudanças/hora = baixo volume
     mediumVolumeThreshold: 50, // Menos de 50 mudanças/hora = médio volume
-    maxPagesLowVolume: 3,     // 3 páginas = ~45 leads para baixo volume
-    maxPagesMediumVolume: 8,  // 8 páginas = ~120 leads para médio volume
-    maxPagesHighVolume: 20,   // 20 páginas = ~300 leads para alto volume
+    maxPagesLowVolume: Infinity,     // SEM LIMITE - sincronizar TODAS as páginas
+    maxPagesMediumVolume: Infinity,  // SEM LIMITE - sincronizar TODAS as páginas
+    maxPagesHighVolume: Infinity,    // SEM LIMITE - sincronizar TODAS as páginas
   };
 
   /**
@@ -540,8 +540,8 @@ export class SmartSyncService {
         totalProcessed++;
       }
 
-      // 3. Buscar novos leads da API (apenas as primeiras páginas para otimizar)
-      const maxPages = options.maxPages || 3; // Limitar a 3 páginas (45 leads mais recentes)
+      // 3. Buscar novos leads da API (TODAS as páginas para garantir completude)
+      const maxPages = options.maxPages || Infinity; // SEM LIMITE - buscar TODOS os leads
       let apiLeads: any[] = [];
 
       for (let page = 1; page <= maxPages; page++) {
