@@ -166,7 +166,7 @@ class EuropeanFulfillmentService {
     return response.json();
   }
 
-  async createLead(leadData: InsertFulfillmentLead): Promise<LeadResponse> {
+  async createLead(leadData: any): Promise<LeadResponse> {
     if (this.simulationMode) {
       const mockLeadNumber = this.generateMockLeadNumber();
       return {

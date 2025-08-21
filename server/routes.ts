@@ -458,7 +458,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { EuropeanFulfillmentService } = await import('./fulfillment-service');
         const service = new EuropeanFulfillmentService();
         
-        configResult = await service.authenticate(provider.login, provider.password);
+        // Update service credentials and test connection
+        service.updateCredentials(provider.login, provider.password);
+        configResult = await service.testConnection();
       } else {
         // For other providers, simulate configuration
         configResult = {
@@ -468,16 +470,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      if (configResult.success) {
-        // Update provider with token
+      if (configResult.connected) {
+        // Update provider as configured
         await storage.updateShippingProvider(id, {
-          apiKey: configResult.token,
+          apiKey: 'configured',
           isActive: true
         });
       }
 
       res.json({
-        success: configResult.success,
+        success: configResult.connected,
         message: configResult.message || 'Configuração realizada'
       });
     } catch (error) {
@@ -513,24 +515,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { EuropeanFulfillmentService } = await import('./fulfillment-service');
         const service = new EuropeanFulfillmentService();
         
+        // Update service credentials
+        service.updateCredentials(provider.login, provider.password);
+        
         try {
-          // Try to create a test lead
-          const testLead = await service.createLead({
-            first_name: "Test",
-            last_name: "User",
-            email: "test@example.com",
-            phone: "+1234567890",
-            address: "Test Address 123",
-            city: "Test City",
-            country: "US",
-            product: "Test Product"
-          });
+          // Test connection to verify credentials work
+          const connectionTest = await service.testConnection();
           
-          testResult = {
-            success: true,
-            message: `Teste realizado com sucesso! Lead criado: ${testLead.lead_number}`,
-            testData: testLead
-          };
+          if (connectionTest.connected) {
+            testResult = {
+              success: true,
+              message: `Teste realizado com sucesso! ${connectionTest.message}`,
+              testData: connectionTest
+            };
+          } else {
+            testResult = {
+              success: false,
+              message: `Erro no teste: ${connectionTest.message}`
+            };
+          }
         } catch (error) {
           testResult = {
             success: false,
