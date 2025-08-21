@@ -362,10 +362,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <Target className="text-purple-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow">
-            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(marketingCostsBRL)}</h5>
-            <p className="text-gray-400 text-xs mb-1">Custos Marketing</p>
-            <p className="text-xs text-purple-400 opacity-80 leading-tight">
+          <div className="flex-grow overflow-hidden">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{formatCurrencyBRL(marketingCostsBRL)}</h5>
+            <p className="text-gray-400 text-xs mb-1 truncate">Custos Marketing</p>
+            <p className="text-xs text-purple-400 opacity-80 leading-tight truncate">
               {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
             </p>
           </div>
@@ -377,10 +377,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <Calculator className="text-indigo-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow">
-            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(productCostsBRL)}</h5>
-            <p className="text-gray-400 text-xs mb-1">Custos Produtos</p>
-            <p className="text-xs text-indigo-400 opacity-80 leading-tight">{formatCurrencyEUR(productCosts)}</p>
+          <div className="flex-grow overflow-hidden">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{formatCurrencyBRL(productCostsBRL)}</h5>
+            <p className="text-gray-400 text-xs mb-1 truncate">Custos Produtos</p>
+            <p className="text-xs text-indigo-400 opacity-80 leading-tight truncate">{formatCurrencyEUR(productCosts)}</p>
           </div>
         </div>
         
@@ -390,10 +390,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <Truck className="text-orange-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow">
-            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
-            <p className="text-gray-400 text-xs mb-1">Custos Envio</p>
-            <p className="text-xs text-orange-400 opacity-80 leading-tight">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
+          <div className="flex-grow overflow-hidden">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
+            <p className="text-gray-400 text-xs mb-1 truncate">Custos Envio</p>
+            <p className="text-xs text-orange-400 opacity-80 leading-tight truncate">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
           </div>
         </div>
         
@@ -403,10 +403,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <XCircle className="text-red-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow">
-            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{cancelledOrders.toLocaleString()}</h5>
-            <p className="text-gray-400 text-xs mb-1">Cancelados</p>
-            <p className="text-xs text-red-400 opacity-80 leading-tight">Perdidos</p>
+          <div className="flex-grow overflow-hidden">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{cancelledOrders.toLocaleString()}</h5>
+            <p className="text-gray-400 text-xs mb-1 truncate">Cancelados</p>
+            <p className="text-xs text-red-400 opacity-80 leading-tight truncate">Perdidos</p>
           </div>
         </div>
         
@@ -416,10 +416,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <ShoppingCart className="text-slate-400 w-5 h-5" />
             </div>
           </div>
-          <div className="flex-grow">
-            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{totalOrders.toLocaleString()}</h5>
-            <p className="text-gray-400 text-xs mb-1">Total Pedidos</p>
-            <p className="text-xs text-slate-400 opacity-80 leading-tight">Todos os status</p>
+          <div className="flex-grow overflow-hidden">
+            <h5 className="text-base font-bold text-white mb-1 leading-tight truncate">{totalOrders.toLocaleString()}</h5>
+            <p className="text-gray-400 text-xs mb-1 truncate">Total Pedidos</p>
+            <p className="text-xs text-slate-400 opacity-80 leading-tight truncate">Todos os status</p>
           </div>
         </div>
         
