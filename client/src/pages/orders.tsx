@@ -189,6 +189,8 @@ export default function Orders() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Name</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Phone</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Lead Value</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Custo Produto</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Custo Envio</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Delivery</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Payment</th>
@@ -198,7 +200,7 @@ export default function Orders() {
                 <tbody className="divide-y divide-gray-600/30">
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-8 text-center text-gray-400">
+                      <td colSpan={12} className="py-8 text-center text-gray-400">
                         Nenhum pedido encontrado
                       </td>
                     </tr>
@@ -233,6 +235,12 @@ export default function Orders() {
                         </td>
                         <td className="py-4 px-4 text-sm text-white font-semibold">
                           {formatAmount(order.total || order.amount || order.lead_value)}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-orange-400 font-semibold">
+                          €{parseFloat(order.productCost || '0').toFixed(2)}
+                        </td>
+                        <td className="py-4 px-4 text-sm text-cyan-400 font-semibold">
+                          €{parseFloat(order.shippingCost || '0').toFixed(2)}
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-200">
                           {order.customerCity || order.city || '-'}

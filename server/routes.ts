@@ -605,6 +605,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           trackingNumber: order.tracking_number,
           providerOrderId: order.provider_order_id,
           leadValue: order.total?.toString(),
+          // Include cost fields
+          productCost: parseFloat(order.product_cost || '0').toFixed(2),
+          shippingCost: parseFloat(order.shipping_cost || '0').toFixed(2),
           items: JSON.stringify([{
             name: order.products?.[0]?.name || "Produto",
             quantity: 1,
