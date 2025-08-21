@@ -254,15 +254,24 @@ export default function OnboardingPage() {
                     Conecte sua loja Shopify para sincronizar produtos automaticamente
                   </p>
                   <p className="text-white/60 text-sm mb-6">
-                    Em breve você poderá adicionar suas credenciais da Shopify
+                    Você pode integrar agora ou configurar depois no dashboard
                   </p>
-                  <Button 
-                    onClick={() => handleStepComplete('step2_shopify', 3)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    data-testid="button-skip-shopify"
-                  >
-                    Pular por Agora
-                  </Button>
+                  <div className="flex gap-4 justify-center">
+                    <Button 
+                      onClick={() => handleStepComplete('step2_shopify', 3)}
+                      className="bg-gray-600 hover:bg-gray-700 text-white"
+                      data-testid="button-skip-shopify"
+                    >
+                      Integrar Depois
+                    </Button>
+                    <Button 
+                      onClick={() => handleStepComplete('step2_shopify', 3)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      data-testid="button-connect-shopify"
+                    >
+                      Conectar Shopify
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -315,15 +324,24 @@ export default function OnboardingPage() {
                     Conecte suas contas de anúncios para calcular custos de marketing
                   </p>
                   <p className="text-white/60 text-sm mb-6">
-                    Facebook Ads já está integrado e funcionando
+                    Facebook Ads está disponível. Você pode configurar agora ou depois.
                   </p>
-                  <Button 
-                    onClick={() => handleStepComplete('step4_ads', 5)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    data-testid="button-complete-ads"
-                  >
-                    Continuar
-                  </Button>
+                  <div className="flex gap-4 justify-center">
+                    <Button 
+                      onClick={() => handleStepComplete('step4_ads', 5)}
+                      className="bg-gray-600 hover:bg-gray-700 text-white"
+                      data-testid="button-skip-ads"
+                    >
+                      Configurar Depois
+                    </Button>
+                    <Button 
+                      onClick={() => handleStepComplete('step4_ads', 5)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      data-testid="button-connect-ads"
+                    >
+                      Conectar Facebook Ads
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
