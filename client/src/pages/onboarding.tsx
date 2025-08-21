@@ -340,7 +340,17 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   // Fetch existing shipping providers
   const { data: existingProviders } = useQuery({
-    queryKey: ['/api/shipping-providers'],
+    queryKey: ['/api/shipping-providers', selectedOperation],
+    enabled: !!selectedOperation,
+    queryFn: async () => {
+      const response = await fetch('/api/shipping-providers', {
+        headers: {
+          'x-operation-id': selectedOperation || ''
+        }
+      });
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    }
   });
 
   useEffect(() => {
@@ -351,7 +361,9 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const createProviderMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/shipping-providers', data);
+      const response = await apiRequest('POST', '/api/shipping-providers', data, {
+        'x-operation-id': selectedOperation || ''
+      });
       return response.json();
     },
     onSuccess: (newProvider) => {
@@ -367,7 +379,9 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const configureProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/configure`);
+      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/configure`, {}, {
+        'x-operation-id': selectedOperation || ''
+      });
       return response.json();
     },
     onSuccess: (result) => {
@@ -386,7 +400,9 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const testProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/test`);
+      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/test`, {}, {
+        'x-operation-id': selectedOperation || ''
+      });
       return response.json();
     },
     onSuccess: (result) => {

@@ -392,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Shipping providers routes
-  app.get("/api/shipping-providers", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.get("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.headers['x-operation-id'] as string;
       if (!operationId) {
@@ -407,7 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/shipping-providers", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.post("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { name, type, login, password } = req.body;
       const operationId = req.headers['x-operation-id'] as string;
@@ -420,12 +420,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Operation ID é obrigatório" });
       }
 
+      // Get user's store ID from the user record
+      const user = await storage.getUser(req.user.id);
+      if (!user?.storeId) {
+        return res.status(400).json({ message: "Usuário não possui store associado" });
+      }
+
       const provider = await storage.createShippingProvider({
         name: name.trim(),
         type: type || 'european_fulfillment',
         login: login || null,
         password: password || null
-      }, req.user.storeId, operationId);
+      }, user.storeId, operationId);
 
       res.json(provider);
     } catch (error) {
@@ -434,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/shipping-providers/:id/configure", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.post("/api/shipping-providers/:id/configure", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       
@@ -483,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/shipping-providers/:id/test", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+  app.post("/api/shipping-providers/:id/test", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       
