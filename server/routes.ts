@@ -883,20 +883,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Credenciais do Facebook inválidas" });
         }
       } else if (accountData.network === 'google') {
-        // Check if Google Ads credentials are configured
+        // Allow account creation but mark as inactive if Google Ads credentials are missing
         if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
-          return res.status(400).json({ 
-            message: "Google Ads não configurado. Configure GOOGLE_ADS_DEVELOPER_TOKEN nas variáveis de ambiente." 
-          });
-        }
-        
-        const { googleAdsService } = await import("./google-ads-service");
-        const isValid = await googleAdsService.authenticate(
-          accountData.accessToken || '',
-          accountData.accountId
-        );
-        if (!isValid) {
-          return res.status(400).json({ message: "Credenciais do Google Ads inválidas" });
+          console.log('⚠️ Google Ads credenciais não configuradas, conta será criada como inativa');
+          accountData.isActive = false;
+        } else {
+          // Only validate if credentials are available
+          try {
+            const { googleAdsService } = await import("./google-ads-service");
+            const isValid = await googleAdsService.authenticate(
+              accountData.accessToken || '',
+              accountData.accountId
+            );
+            if (!isValid) {
+              return res.status(400).json({ message: "Credenciais do Google Ads inválidas" });
+            }
+            accountData.isActive = true;
+          } catch (error) {
+            console.error('Erro validando Google Ads:', error);
+            accountData.isActive = false;
+          }
         }
       }
 
