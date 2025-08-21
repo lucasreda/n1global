@@ -355,70 +355,98 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Quaternary Metrics - Small Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-purple-500/10 hover:border-purple-400/25">
-          <div className="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-            <Target className="text-purple-400 w-5 h-5" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-purple-500/10 hover:border-purple-400/25 flex flex-col justify-between">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+              <Target className="text-purple-400 w-5 h-5" />
+            </div>
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(marketingCostsBRL)}</h5>
-          <p className="text-gray-400 text-xs">Custos Marketing</p>
-          <p className="text-xs text-purple-400 mt-1 opacity-80">
-            {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
-          </p>
+          <div className="flex-grow">
+            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(marketingCostsBRL)}</h5>
+            <p className="text-gray-400 text-xs mb-1">Custos Marketing</p>
+            <p className="text-xs text-purple-400 opacity-80 leading-tight">
+              {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
+            </p>
+          </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-indigo-500/10 hover:border-indigo-400/25">
-          <div className="w-10 h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-            <Calculator className="text-indigo-400 w-5 h-5" />
+        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-indigo-500/10 hover:border-indigo-400/25 flex flex-col justify-between">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+              <Calculator className="text-indigo-400 w-5 h-5" />
+            </div>
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(productCostsBRL)}</h5>
-          <p className="text-gray-400 text-xs">Custos Produtos</p>
-          <p className="text-xs text-indigo-400 mt-1 opacity-80">{formatCurrencyEUR(productCosts)}</p>
+          <div className="flex-grow">
+            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(productCostsBRL)}</h5>
+            <p className="text-gray-400 text-xs mb-1">Custos Produtos</p>
+            <p className="text-xs text-indigo-400 opacity-80 leading-tight">{formatCurrencyEUR(productCosts)}</p>
+          </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-orange-500/10 hover:border-orange-400/25">
-          <div className="w-10 h-10 bg-orange-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-            <Truck className="text-orange-400 w-5 h-5" />
+        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-orange-500/10 hover:border-orange-400/25 flex flex-col justify-between">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-orange-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+              <Truck className="text-orange-400 w-5 h-5" />
+            </div>
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
-          <p className="text-gray-400 text-xs">Custos Envio</p>
-          <p className="text-xs text-orange-400 mt-1 opacity-80">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
+          <div className="flex-grow">
+            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
+            <p className="text-gray-400 text-xs mb-1">Custos Envio</p>
+            <p className="text-xs text-orange-400 opacity-80 leading-tight">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
+          </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-red-500/10 hover:border-red-400/25">
-          <div className="w-10 h-10 bg-red-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-            <XCircle className="text-red-400 w-5 h-5" />
+        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-red-500/10 hover:border-red-400/25 flex flex-col justify-between">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-red-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+              <XCircle className="text-red-400 w-5 h-5" />
+            </div>
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">{cancelledOrders.toLocaleString()}</h5>
-          <p className="text-gray-400 text-xs">Cancelados</p>
-          <p className="text-xs text-red-400 mt-1 opacity-80">Perdidos</p>
+          <div className="flex-grow">
+            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{cancelledOrders.toLocaleString()}</h5>
+            <p className="text-gray-400 text-xs mb-1">Cancelados</p>
+            <p className="text-xs text-red-400 opacity-80 leading-tight">Perdidos</p>
+          </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-slate-500/10 hover:border-slate-400/25">
-          <div className="w-10 h-10 bg-slate-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-            <ShoppingCart className="text-slate-400 w-5 h-5" />
+        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-slate-500/10 hover:border-slate-400/25 flex flex-col justify-between">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-slate-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+              <ShoppingCart className="text-slate-400 w-5 h-5" />
+            </div>
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h5>
-          <p className="text-gray-400 text-xs">Total Pedidos</p>
-          <p className="text-xs text-slate-400 mt-1 opacity-80">Todos os status</p>
+          <div className="flex-grow">
+            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{totalOrders.toLocaleString()}</h5>
+            <p className="text-gray-400 text-xs mb-1">Total Pedidos</p>
+            <p className="text-xs text-slate-400 opacity-80 leading-tight">Todos os status</p>
+          </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-cyan-500/10 hover:border-cyan-400/25">
-          <div className="w-10 h-10 bg-cyan-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-            <Percent className="text-cyan-400 w-5 h-5" />
+        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-cyan-500/10 hover:border-cyan-400/25 flex flex-col justify-between">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-cyan-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+              <Percent className="text-cyan-400 w-5 h-5" />
+            </div>
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">{deliveryRate.toFixed(1)}%</h5>
-          <p className="text-gray-400 text-xs">% Entregue</p>
-          <p className="text-xs text-cyan-400 mt-1 opacity-80">Taxa sucesso</p>
+          <div className="flex-grow">
+            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{deliveryRate.toFixed(1)}%</h5>
+            <p className="text-gray-400 text-xs mb-1">% Entregue</p>
+            <p className="text-xs text-cyan-400 opacity-80 leading-tight">Taxa sucesso</p>
+          </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 hover:scale-105 transition-all duration-300 group cursor-pointer border border-pink-500/10 hover:border-pink-400/25">
-          <div className="w-10 h-10 bg-pink-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-            <BarChart3 className="text-pink-400 w-5 h-5" />
+        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-pink-500/10 hover:border-pink-400/25 flex flex-col justify-between">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-pink-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+              <BarChart3 className="text-pink-400 w-5 h-5" />
+            </div>
           </div>
-          <h5 className="text-lg font-bold text-white mb-1">{formatCurrencyEUR(averageOrderValue)}</h5>
-          <p className="text-gray-400 text-xs">Ticket Médio</p>
-          <p className="text-xs text-pink-400 mt-1 opacity-80">Por pedido pago</p>
+          <div className="flex-grow">
+            <h5 className="text-lg font-bold text-white mb-1 leading-tight">{formatCurrencyEUR(averageOrderValue)}</h5>
+            <p className="text-gray-400 text-xs mb-1">Ticket Médio</p>
+            <p className="text-xs text-pink-400 opacity-80 leading-tight">Por pedido pago</p>
+          </div>
         </div>
       </div>
 
