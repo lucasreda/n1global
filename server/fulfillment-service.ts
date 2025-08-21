@@ -1,7 +1,7 @@
 import fetch, { Response } from "node-fetch";
 import { randomUUID } from "crypto";
 import https from "https";
-import type { InsertFulfillmentLead, FulfillmentLead } from "@shared/schema";
+// Removed unused imports
 
 // Disable SSL verification for development
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
@@ -454,6 +454,43 @@ class EuropeanFulfillmentService {
     } catch (error) {
       console.error(`Error getting leads with date filter:`, error);
       return [];
+    }
+  }
+
+  async getLeadsListWithPagination(country?: string, page: number = 1, dateFrom?: string, dateTo?: string): Promise<any> {
+    if (this.simulationMode) {
+      const mockLeads = this.getMockLeadsList();
+      const filteredLeads = country ? mockLeads.filter(lead => lead.country === country) : mockLeads;
+      return {
+        data: filteredLeads,
+        total: filteredLeads.length,
+        per_page: 15,
+        last_page: Math.ceil(filteredLeads.length / 15)
+      };
+    }
+
+    try {
+      let endpoint = `api/leads?page=${page}`;
+      if (country) {
+        endpoint += `&country=${encodeURIComponent(country)}`;
+      }
+      
+      if (dateFrom) {
+        endpoint += `&date_from=${encodeURIComponent(dateFrom)}`;
+      }
+      
+      if (dateTo) {
+        endpoint += `&date_to=${encodeURIComponent(dateTo)}`;
+      }
+      
+      console.log(`🔍 API Request: ${endpoint}`);
+      const response = await this.makeAuthenticatedRequest(endpoint);
+      
+      // Return the full response with pagination metadata
+      return response;
+    } catch (error) {
+      console.error(`Error getting leads list with pagination for page ${page}:`, error);
+      return { data: [], total: 0, per_page: 15, last_page: 1 };
     }
   }
 

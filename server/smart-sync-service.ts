@@ -187,9 +187,10 @@ export class SmartSyncService {
                 const status = apiLead.status_livrison || "new order";
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
+                const defaultStoreId = await this.getDefaultStoreId();
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
-                  storeId,
+                  storeId: defaultStoreId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
                   customerCity: apiLead.city,
@@ -198,8 +199,8 @@ export class SmartSyncService {
                   status: status,
                   paymentMethod: apiLead.method_payment || "COD",
                   provider: "european_fulfillment",
-                  productCost: costs.productCost,
-                  shippingCost: costs.shippingCost,
+                  productCost: costs.productCost.toString(),
+                  shippingCost: costs.shippingCost.toString(),
                   orderDate: new Date(),
                 });
 
@@ -501,7 +502,8 @@ export class SmartSyncService {
 
       for (let page = 1; page <= maxPages; page++) {
         try {
-          const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", page);
+          const pageResponse = await europeanFulfillmentService.getLeadsListWithPagination("ITALY", page);
+          const pageLeads = pageResponse.data || pageResponse;
           
           if (!pageLeads || pageLeads.length === 0) break;
           
@@ -529,9 +531,10 @@ export class SmartSyncService {
 
           if (!existingLead) {
             // Lead novo - inserir com dados básicos da API
+            const defaultStoreId = await this.getDefaultStoreId();
             await db.insert(orders).values({
               id: apiLead.n_lead,
-              storeId: storeId,
+              storeId: defaultStoreId,
               customerName: apiLead.name,
               customerPhone: apiLead.phone,
               customerCity: apiLead.city,
@@ -724,14 +727,14 @@ export class SmartSyncService {
       throw new Error('Não foi possível obter dados da primeira página da API');
     }
 
-    // Para obter o total real, vamos usar o método que sabemos que funciona
-    // Fazemos uma estimativa conservadora baseada nas páginas disponíveis
-    const estimatedTotalLeads = 937; // Total conhecido da API
-    const leadsPerPage = 15; // Padrão da API European Fulfillment
-    const estimatedTotalPages = Math.ceil(estimatedTotalLeads / leadsPerPage);
+    // Usar o total real retornado pela API
+    const apiResponse = await europeanFulfillmentService.getLeadsListWithPagination("ITALY", 1);
+    const totalLeads = apiResponse?.total || 1173; // Fallback baseado no último valor conhecido
+    const leadsPerPage = apiResponse?.per_page || 15; // Usar o valor real da API
+    const totalPages = apiResponse?.last_page || Math.ceil(totalLeads / leadsPerPage);
     
-    this.completeSyncStatus.totalLeads = estimatedTotalLeads;
-    this.completeSyncStatus.totalPages = estimatedTotalPages;
+    this.completeSyncStatus.totalLeads = totalLeads;
+    this.completeSyncStatus.totalPages = totalPages;
     this.completeSyncStatus.message = `Processando ${this.completeSyncStatus.totalLeads} pedidos em ${this.completeSyncStatus.totalPages} páginas...`;
 
     console.log(`📊 Total de pedidos a processar: ${this.completeSyncStatus.totalLeads}`);
@@ -747,7 +750,8 @@ export class SmartSyncService {
       this.completeSyncStatus.message = `Processando página ${page} de ${this.completeSyncStatus.totalPages}...`;
 
       try {
-        const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", page);
+        const pageResponse = await europeanFulfillmentService.getLeadsListWithPagination("ITALY", page);
+        const pageLeads = pageResponse.data || pageResponse;
         
         if (!pageLeads || pageLeads.length === 0) {
           console.log(`📄 Página ${page} vazia, finalizando...`);
