@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, products, shippingProviders } from "@shared/schema";
+import { users, products, shippingProviders, stores } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
@@ -7,43 +7,79 @@ export async function seedDatabase() {
   try {
     console.log("🌱 Starting database seeding...");
     
-    // Check if admin user already exists
-    const [existingAdmin] = await db
+    // Check if store owner already exists
+    const [existingOwner] = await db
       .select()
       .from(users)
       .where(eq(users.email, "admin@cod-dashboard.com"))
       .limit(1);
 
-    if (!existingAdmin) {
-      // Create admin user
+    let storeOwner;
+    let defaultStore;
+
+    if (!existingOwner) {
+      // Create store owner user (convert admin to store)
       const hashedPassword = await bcrypt.hash("admin123", 10);
       
-      const [adminUser] = await db
+      [storeOwner] = await db
         .insert(users)
         .values({
-          name: "Administrador",
+          name: "Store Owner",
           email: "admin@cod-dashboard.com",
           password: hashedPassword,
-          role: "admin",
+          role: "store",
         })
         .returning();
       
-      console.log("✅ Admin user created:", adminUser.email);
+      console.log("✅ Store owner created:", storeOwner.email);
     } else {
-      console.log("ℹ️  Admin user already exists");
+      // Update existing admin to store role
+      [storeOwner] = await db
+        .update(users)
+        .set({ role: "store" })
+        .where(eq(users.email, "admin@cod-dashboard.com"))
+        .returning();
+      
+      console.log("✅ Updated admin to store role");
     }
 
-    // Check if European Fulfillment provider exists
+    // Check if default store exists
+    const [existingStore] = await db
+      .select()
+      .from(stores)
+      .where(eq(stores.ownerId, storeOwner.id))
+      .limit(1);
+
+    if (!existingStore) {
+      // Create default store
+      [defaultStore] = await db
+        .insert(stores)
+        .values({
+          name: "COD Dashboard Store",
+          description: "Primary store for COD operations",
+          ownerId: storeOwner.id,
+          settings: {},
+        })
+        .returning();
+      
+      console.log("✅ Default store created:", defaultStore.name);
+    } else {
+      defaultStore = existingStore;
+      console.log("ℹ️  Default store already exists");
+    }
+
+    // Check if European Fulfillment provider exists for this store
     const [existingProvider] = await db
       .select()
       .from(shippingProviders)
-      .where(eq(shippingProviders.name, "European Fulfillment Center"))
+      .where(eq(shippingProviders.storeId, defaultStore.id))
       .limit(1);
 
     if (!existingProvider) {
       const [provider] = await db
         .insert(shippingProviders)
         .values({
+          storeId: defaultStore.id,
           name: "European Fulfillment Center",
           apiUrl: "https://api-test.ecomfulfilment.eu/",
           isActive: true,
@@ -55,12 +91,17 @@ export async function seedDatabase() {
       console.log("ℹ️  European Fulfillment provider already exists");
     }
 
-    // Create sample products if none exist
-    const existingProducts = await db.select().from(products).limit(1);
+    // Create sample products if none exist for this store
+    const existingProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.storeId, defaultStore.id))
+      .limit(1);
     
     if (existingProducts.length === 0) {
       const sampleProducts = [
         {
+          storeId: defaultStore.id,
           sku: "RS-8050",
           name: "Produto Premium",
           description: "Produto de alta qualidade",
@@ -73,6 +114,7 @@ export async function seedDatabase() {
           isActive: true,
         },
         {
+          storeId: defaultStore.id,
           sku: "PD-933000", 
           name: "Parfum Luxo",
           description: "Perfume importado",

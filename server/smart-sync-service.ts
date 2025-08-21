@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { orders } from "@shared/schema";
+import { orders, stores } from "@shared/schema";
 import { europeanFulfillmentService } from "./fulfillment-service";
 import { eq, and, not, inArray } from "drizzle-orm";
 
@@ -13,6 +13,7 @@ export class SmartSyncService {
   private isRunning = false;
   private lastSyncTime: Date | null = null;
   private syncHistory: Array<{ timestamp: Date; newLeads: number; updates: number }> = [];
+  private defaultStoreId: string | null = null;
   
   // Status que indicam pedidos finalizados (mas ainda precisam ser monitorados para mudanças)
   private finalStatuses = ['delivered', 'cancelled', 'refused', 'returned'];
@@ -56,6 +57,28 @@ export class SmartSyncService {
       case 'high': return this.adaptiveConfig.maxPagesHighVolume;
     }
   }
+
+  /**
+   * Obtém o ID da loja padrão para associar aos pedidos
+   */
+  private async getDefaultStoreId(): Promise<string> {
+    if (this.defaultStoreId) {
+      return this.defaultStoreId;
+    }
+
+    // Buscar a primeira loja existente
+    const [defaultStore] = await db
+      .select({ id: stores.id })
+      .from(stores)
+      .limit(1);
+
+    if (!defaultStore) {
+      throw new Error('❌ Nenhuma loja encontrada no sistema');
+    }
+
+    this.defaultStoreId = defaultStore.id;
+    return this.defaultStoreId;
+  }
   
   /**
    * Sincronização inteligente que adapta baseado no volume de atividade
@@ -90,6 +113,7 @@ export class SmartSyncService {
       // Analisa o padrão de volume para determinar estratégia
       const volumePattern = this.analyzeVolumePattern();
       const maxPages = this.getOptimalSyncPages(volumePattern);
+      const storeId = await this.getDefaultStoreId();
       
       console.log(`🧠 Sincronização inteligente: Volume ${volumePattern}, ${maxPages} páginas`);
 
@@ -127,6 +151,7 @@ export class SmartSyncService {
                 // Lead novo - inserir
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
+                  storeId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
                   customerCity: apiLead.city,
@@ -263,6 +288,7 @@ export class SmartSyncService {
                 // Lead novo - inserir
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
+                  storeId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
                   customerCity: apiLead.city,
@@ -458,6 +484,7 @@ export class SmartSyncService {
             // Lead novo - inserir com dados básicos da API
             await db.insert(orders).values({
               id: apiLead.n_lead,
+                  storeId,
               customerName: apiLead.name,
               customerPhone: apiLead.phone,
               customerCity: apiLead.city,

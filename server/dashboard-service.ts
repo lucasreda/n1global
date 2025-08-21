@@ -1,11 +1,31 @@
 import { db } from "./db";
-import { orders, dashboardMetrics, products, type InsertDashboardMetrics } from "@shared/schema";
+import { orders, dashboardMetrics, products, stores, type InsertDashboardMetrics } from "@shared/schema";
 import { eq, and, or, gte, lte, sql, count, sum, avg } from "drizzle-orm";
 import { FacebookAdsService } from "./facebook-ads-service";
 import { currencyService } from "./currency-service";
 
 export class DashboardService {
   private facebookAdsService = new FacebookAdsService();
+  private defaultStoreId: string | null = null;
+
+  private async getDefaultStoreId(): Promise<string> {
+    if (this.defaultStoreId) {
+      return this.defaultStoreId;
+    }
+
+    // Buscar a primeira loja existente
+    const [defaultStore] = await db
+      .select({ id: stores.id })
+      .from(stores)
+      .limit(1);
+
+    if (!defaultStore) {
+      throw new Error('❌ Nenhuma loja encontrada no sistema');
+    }
+
+    this.defaultStoreId = defaultStore.id;
+    return this.defaultStoreId;
+  }
   
   async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' | 'current_month' = 'current_month', provider?: string) {
     console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
@@ -55,21 +75,28 @@ export class DashboardService {
   }
   
   private async getCachedMetrics(period: string, provider?: string) {
-    const [cached] = await db
-      .select()
-      .from(dashboardMetrics)
-      .where(
-        and(
-          eq(dashboardMetrics.period, period),
-          provider 
-            ? eq(dashboardMetrics.provider, provider)
-            : eq(dashboardMetrics.provider, sql`NULL`)
+    try {
+      const storeId = await this.getDefaultStoreId();
+      
+      const [cached] = await db
+        .select()
+        .from(dashboardMetrics)
+        .where(
+          and(
+            eq(dashboardMetrics.period, period),
+            eq(dashboardMetrics.storeId, storeId),
+            provider 
+              ? eq(dashboardMetrics.provider, provider)
+              : eq(dashboardMetrics.provider, sql`NULL`)
+          )
         )
-      )
-      .orderBy(sql`${dashboardMetrics.calculatedAt} DESC`)
-      .limit(1);
-    
-    return cached;
+        .limit(1);
+      
+      return cached || null;
+    } catch (error) {
+      console.warn("Failed to get cached metrics:", error);
+      return null;
+    }
   }
   
   private async calculateMetrics(period: string, provider?: string) {
@@ -254,9 +281,12 @@ export class DashboardService {
   }
   
   private async cacheMetrics(period: string, provider: string | undefined, metrics: any) {
+    const storeId = await this.getDefaultStoreId();
+    
     const cacheData: InsertDashboardMetrics = {
       period,
       provider: provider || null,
+      storeId,
       totalOrders: metrics.totalOrders,
       deliveredOrders: metrics.deliveredOrders,
       cancelledOrders: metrics.cancelledOrders,
@@ -268,12 +298,13 @@ export class DashboardService {
       validUntil: metrics.validUntil
     };
     
-    // Delete old cache entries for this period/provider
+    // Delete old cache entries for this period/provider/store
     await db
       .delete(dashboardMetrics)
       .where(
         and(
           eq(dashboardMetrics.period, period),
+          eq(dashboardMetrics.storeId, storeId),
           provider 
             ? eq(dashboardMetrics.provider, provider)
             : eq(dashboardMetrics.provider, sql`NULL`)

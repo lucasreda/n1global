@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
 import { pgTable, text, varchar, decimal, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -9,13 +9,26 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("user"), // 'admin', 'user', 'product_seller'
+  role: text("role").notNull().default("user"), // 'store', 'product_seller'
+  storeId: varchar("store_id").references(() => stores.id), // For product_seller role - links to parent store
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Stores table - main tenant entities
+export const stores = pgTable("stores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  ownerId: varchar("owner_id").notNull().references(() => users.id), // Store owner
+  settings: jsonb("settings"), // Store-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Main orders table - unified for all providers
 export const orders = pgTable("orders", {
   id: text("id").primaryKey(), // Lead number from provider (NT-xxxxx, etc)
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links order to store
   
   // Customer information
   customerId: text("customer_id"),
@@ -81,6 +94,7 @@ export const orderStatusHistory = pgTable("order_status_history", {
 // Dashboard metrics cache
 export const dashboardMetrics = pgTable("dashboard_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links metrics to store
   period: text("period").notNull(), // '1d', '7d', '30d', '90d'
   provider: text("provider"), // null for all providers
   
@@ -103,6 +117,7 @@ export const dashboardMetrics = pgTable("dashboard_metrics", {
 // Sync jobs - track data imports from providers
 export const syncJobs = pgTable("sync_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links sync job to store
   provider: text("provider").notNull(),
   type: text("type").notNull(), // 'full_sync', 'incremental_sync', 'details_sync'
   
@@ -127,6 +142,7 @@ export const syncJobs = pgTable("sync_jobs", {
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links product to store
   sku: text("sku").unique().notNull(),
   name: text("name").notNull(),
   description: text("description"),
@@ -159,6 +175,7 @@ export const products = pgTable("products", {
 // Shipping providers configuration
 export const shippingProviders = pgTable("shipping_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links provider to store
   name: text("name").notNull(),
   apiUrl: text("api_url").notNull(),
   isActive: boolean("is_active").notNull().default(true),
@@ -174,6 +191,13 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const loginSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+});
+
+// Store schemas
+export const insertStoreSchema = createInsertSchema(stores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Order schemas
@@ -216,6 +240,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
 export type User = typeof users.$inferSelect;
 
+export type Store = typeof stores.$inferSelect;
+export type InsertStore = z.infer<typeof insertStoreSchema>;
+
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
@@ -233,6 +260,69 @@ export type InsertProduct = z.infer<typeof insertProductSchema>;
 
 export type ShippingProvider = typeof shippingProviders.$inferSelect;
 export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema>;
+
+// Relations
+export const storesRelations = relations(stores, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [stores.ownerId],
+    references: [users.id],
+  }),
+  productSellers: many(users, {
+    relationName: "store_sellers"
+  }),
+  orders: many(orders),
+  products: many(products),
+  shippingProviders: many(shippingProviders),
+  dashboardMetrics: many(dashboardMetrics),
+  syncJobs: many(syncJobs),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  ownedStore: one(stores, {
+    fields: [users.id],
+    references: [stores.ownerId],
+  }),
+  linkedStore: one(stores, {
+    fields: [users.storeId],
+    references: [stores.id],
+    relationName: "store_sellers"
+  }),
+}));
+
+export const ordersRelations = relations(orders, ({ one }) => ({
+  store: one(stores, {
+    fields: [orders.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const productsRelations = relations(products, ({ one }) => ({
+  store: one(stores, {
+    fields: [products.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const shippingProvidersRelations = relations(shippingProviders, ({ one }) => ({
+  store: one(stores, {
+    fields: [shippingProviders.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const dashboardMetricsRelations = relations(dashboardMetrics, ({ one }) => ({
+  store: one(stores, {
+    fields: [dashboardMetrics.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const syncJobsRelations = relations(syncJobs, ({ one }) => ({
+  store: one(stores, {
+    fields: [syncJobs.storeId],
+    references: [stores.id],
+  }),
+}));
 
 // Facebook Ads Campaigns table
 export const facebookCampaigns = pgTable("facebook_campaigns", {
