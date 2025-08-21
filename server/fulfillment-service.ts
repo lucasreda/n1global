@@ -687,4 +687,5 @@ class EuropeanFulfillmentService {
   }
 }
 
+export { EuropeanFulfillmentService };
 export const europeanFulfillmentService = new EuropeanFulfillmentService();
