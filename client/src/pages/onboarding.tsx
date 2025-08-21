@@ -356,16 +356,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
   // Fetch existing shipping providers
   const { data: existingProviders } = useQuery({
     queryKey: ['/api/shipping-providers', selectedOperation],
-    enabled: !!selectedOperation,
-    queryFn: async () => {
-      const response = await fetch('/api/shipping-providers', {
-        headers: {
-          'x-operation-id': selectedOperation || ''
-        }
-      });
-      if (!response.ok) throw new Error('Network response was not ok');
-      return response.json();
-    }
+    enabled: !!selectedOperation
   });
 
   useEffect(() => {
@@ -376,16 +367,23 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const createProviderMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/shipping-providers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-operation-id': selectedOperation || ''
-        },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error('Network response was not ok');
-      return response.json();
+      // Temporarily set the operation ID in localStorage for the request
+      const prevOperationId = localStorage.getItem('current_operation_id');
+      if (selectedOperation) {
+        localStorage.setItem('current_operation_id', selectedOperation);
+      }
+      
+      try {
+        const response = await apiRequest('POST', '/api/shipping-providers', data);
+        return response.json();
+      } finally {
+        // Restore previous operation ID
+        if (prevOperationId) {
+          localStorage.setItem('current_operation_id', prevOperationId);
+        } else {
+          localStorage.removeItem('current_operation_id');
+        }
+      }
     },
     onSuccess: (newProvider) => {
       setProviders(prev => [...prev, newProvider]);
@@ -400,15 +398,21 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const configureProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      const response = await fetch(`/api/shipping-providers/${providerId}/configure`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-operation-id': selectedOperation || ''
+      const prevOperationId = localStorage.getItem('current_operation_id');
+      if (selectedOperation) {
+        localStorage.setItem('current_operation_id', selectedOperation);
+      }
+      
+      try {
+        const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/configure`, {});
+        return response.json();
+      } finally {
+        if (prevOperationId) {
+          localStorage.setItem('current_operation_id', prevOperationId);
+        } else {
+          localStorage.removeItem('current_operation_id');
         }
-      });
-      if (!response.ok) throw new Error('Network response was not ok');
-      return response.json();
+      }
     },
     onSuccess: (result) => {
       toast({ 
@@ -426,15 +430,21 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const testProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      const response = await fetch(`/api/shipping-providers/${providerId}/test`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-operation-id': selectedOperation || ''
+      const prevOperationId = localStorage.getItem('current_operation_id');
+      if (selectedOperation) {
+        localStorage.setItem('current_operation_id', selectedOperation);
+      }
+      
+      try {
+        const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/test`, {});
+        return response.json();
+      } finally {
+        if (prevOperationId) {
+          localStorage.setItem('current_operation_id', prevOperationId);
+        } else {
+          localStorage.removeItem('current_operation_id');
         }
-      });
-      if (!response.ok) throw new Error('Network response was not ok');
-      return response.json();
+      }
     },
     onSuccess: (result) => {
       toast({
