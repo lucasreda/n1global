@@ -441,26 +441,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Note: Removed fallback logic since we now have proper country-specific pagination
             
-            // Convert leads to orders and save to database
+            // Convert leads to orders and save to database with STRICT operation isolation
             if (allLeads.length > 0) {
               const ordersToSave = service.convertLeadsToOrders(allLeads);
               
-              // Save orders to database (upsert to avoid duplicates)
+              // Save orders to database with OPERATION-SPECIFIC isolation
               for (const orderData of ordersToSave) {
                 try {
-                  // Check if order already exists
-                  const existingOrder = await storage.getOrder(orderData.id);
+                  // Check if order already exists FOR THIS SPECIFIC OPERATION
+                  const existingOrdersInOperation = await storage.getOrdersByOperation(firstOperation.id);
+                  const existingOrder = existingOrdersInOperation.find(o => o.id === orderData.id);
                   
                   if (!existingOrder) {
-                    // Add required fields for database
+                    // Add MANDATORY operation-specific fields for database
                     const dbOrder = {
                       ...orderData,
-                      storeId: req.user.storeId,
-                      operationId: firstOperation.id,
+                      storeId: req.user.storeId, // Store the current user's store
+                      operationId: firstOperation.id, // CRITICAL: Tie to specific operation
                       orderDate: orderData.createdAt instanceof Date ? orderData.createdAt : new Date(orderData.createdAt)
                     };
                     
                     await storage.createOrder(dbOrder);
+                    console.log(`✅ Saved order ${orderData.id} to operation ${firstOperation.name}`);
                   }
                 } catch (saveError) {
                   console.warn(`Failed to save order ${orderData.id}:`, saveError.message);

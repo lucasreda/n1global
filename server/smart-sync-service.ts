@@ -187,10 +187,10 @@ export class SmartSyncService {
                 const status = apiLead.status_livrison || "new order";
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
-                const defaultStoreId = await this.getDefaultStoreId();
+                // CRITICAL: Use the specific store for this sync operation
                 await db.insert(orders).values({
                   id: apiLead.n_lead,
-                  storeId: defaultStoreId,
+                  storeId: storeId,
                   customerName: apiLead.name,
                   customerPhone: apiLead.phone,
                   customerCity: apiLead.city,

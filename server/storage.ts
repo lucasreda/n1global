@@ -157,11 +157,6 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(shippingProviders.createdAt));
   }
 
-  async getShippingProvider(id: string): Promise<ShippingProvider | undefined> {
-    const [provider] = await db.select().from(shippingProviders).where(eq(shippingProviders.id, id));
-    return provider || undefined;
-  }
-
   async getUserOperations(userId: string): Promise<Operation[]> {
     const userOps = await db
       .select({
@@ -169,6 +164,7 @@ export class DatabaseStorage implements IStorage {
         name: operations.name,
         description: operations.description,
         country: operations.country,
+        currency: operations.currency, // CRITICAL: Include missing currency field
         status: operations.status,
         createdAt: operations.createdAt,
         updatedAt: operations.updatedAt,
@@ -310,6 +306,17 @@ export class DatabaseStorage implements IStorage {
       .orderBy(shippingProviders.createdAt);
     
     return providers;
+  }
+
+  // CRITICAL: Operation-specific data isolation for orders
+  async getOrdersByOperation(operationId: string): Promise<Order[]> {
+    const operationOrders = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.operationId, operationId))
+      .orderBy(orders.orderDate);
+    
+    return operationOrders;
   }
 }
 

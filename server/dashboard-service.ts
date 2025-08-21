@@ -80,9 +80,38 @@ export class DashboardService {
     return metrics;
   }
   
+  private getEmptyMetrics() {
+    return {
+      totalOrders: 0,
+      deliveredOrders: 0,
+      cancelledOrders: 0,
+      shippedOrders: 0,
+      pendingOrders: 0,
+      returnedOrders: 0,
+      confirmedOrders: 0,
+      totalRevenue: 0,
+      averageOrderValue: 0,
+      conversionRate: 0,
+      successRate: 0,
+      productCosts: 0,
+      shippingCosts: 0,
+      marketingCosts: 0,
+      marketingCostsBRL: 0,
+      marketingCostsEUR: 0,
+      profitMargin: 0,
+      roi: 0
+    };
+  }
+  
   private async getCachedMetrics(period: string, provider?: string, req?: any) {
     try {
-      const storeId = await this.getStoreId(req);
+      // CRITICAL: Cache by operation, not by store
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const currentOperation = userOperations[0];
+      
+      if (!currentOperation) {
+        return null;
+      }
       
       const [cached] = await db
         .select()
@@ -90,7 +119,7 @@ export class DashboardService {
         .where(
           and(
             eq(dashboardMetrics.period, period),
-            eq(dashboardMetrics.storeId, storeId),
+            eq(dashboardMetrics.operationId, currentOperation.id), // Use operationId
             provider 
               ? eq(dashboardMetrics.provider, provider)
               : eq(dashboardMetrics.provider, sql`NULL`)
@@ -107,11 +136,20 @@ export class DashboardService {
   
   private async calculateMetrics(period: string, provider?: string, req?: any) {
     const dateRange = this.getDateRange(period);
-    const storeId = await this.getStoreId(req);
-    console.log(`📅 Calculating metrics for period: ${period}, store: ${storeId}`);
     
-    // Buscar todos os dados da Store (sem filtro de data para mostrar dados completos)
-    let whereConditions = [eq(orders.storeId, storeId)];
+    // CRITICAL: Get user's current operation for data isolation
+    const userOperations = await storage.getUserOperations(req.user.id);
+    const currentOperation = userOperations[0]; // User's active operation
+    
+    if (!currentOperation) {
+      console.log(`⚠️ No operation found for user ${req.user.id}`);
+      return this.getEmptyMetrics();
+    }
+    
+    console.log(`📅 Calculating metrics for period: ${period}, operation: ${currentOperation.name} (${currentOperation.id})`);
+    
+    // CRITICAL: Use operationId instead of storeId for data isolation
+    let whereConditions = [eq(orders.operationId, currentOperation.id)];
     
     if (provider) {
       whereConditions.push(eq(orders.provider, provider));
@@ -259,12 +297,18 @@ export class DashboardService {
   }
   
   private async cacheMetrics(period: string, provider: string | undefined, metrics: any, req?: any) {
-    const storeId = await this.getStoreId(req);
+    // CRITICAL: Cache by operation, not store
+    const userOperations = await storage.getUserOperations(req.user.id);
+    const currentOperation = userOperations[0];
+    
+    if (!currentOperation) {
+      return; // No operation to cache for
+    }
     
     const cacheData: InsertDashboardMetrics = {
       period,
       provider: provider || null,
-      storeId,
+      operationId: currentOperation.id, // Use operationId instead of storeId
       totalOrders: metrics.totalOrders,
       deliveredOrders: metrics.deliveredOrders,
       cancelledOrders: metrics.cancelledOrders,
@@ -276,13 +320,13 @@ export class DashboardService {
       validUntil: metrics.validUntil
     };
     
-    // Delete old cache entries for this period/provider/store
+    // Delete old cache entries for this period/provider/operation
     await db
       .delete(dashboardMetrics)
       .where(
         and(
           eq(dashboardMetrics.period, period),
-          eq(dashboardMetrics.storeId, storeId),
+          eq(dashboardMetrics.operationId, currentOperation.id), // Use operationId
           provider 
             ? eq(dashboardMetrics.provider, provider)
             : eq(dashboardMetrics.provider, sql`NULL`)
