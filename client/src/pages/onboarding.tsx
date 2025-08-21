@@ -10,6 +10,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import { useOperationStore } from '@/store/operations';
 import logoImage from '@assets/COD DASHBOARD_1755806006009.png';
 
 interface OnboardingStep {
@@ -24,13 +25,26 @@ export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const [operationName, setOperationName] = useState('');
   const { toast } = useToast();
+  const { selectedOperation, setSelectedOperation } = useOperationStore();
 
   // Fetch user onboarding status
   const { data: userStatus } = useQuery({
     queryKey: ['/api/user/onboarding-status'],
   });
 
-  const onboardingSteps = userStatus?.onboardingSteps || {
+  // Fetch user operations to set selected operation
+  const { data: operations } = useQuery({
+    queryKey: ['/api/operations'],
+  });
+
+  // Set selected operation automatically if not set and operations are available
+  useEffect(() => {
+    if (!selectedOperation && operations && operations.length > 0) {
+      setSelectedOperation(operations[0].id);
+    }
+  }, [operations, selectedOperation, setSelectedOperation]);
+
+  const onboardingSteps = (userStatus as any)?.onboardingSteps || {
     step1_operation: false,
     step2_shopify: false,
     step3_shipping: false,
@@ -52,7 +66,7 @@ export default function OnboardingPage() {
 
   // Check if user has completed onboarding
   useEffect(() => {
-    if (userStatus?.onboardingCompleted) {
+    if ((userStatus as any)?.onboardingCompleted) {
       setLocation('/');
     }
   }, [userStatus, setLocation]);
@@ -327,6 +341,7 @@ export default function OnboardingPage() {
 }
 
 function ShippingStep({ onComplete }: { onComplete: () => void }) {
+  const { selectedOperation } = useOperationStore();
   const [providers, setProviders] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
@@ -361,9 +376,15 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const createProviderMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/shipping-providers', data, {
-        'x-operation-id': selectedOperation || ''
+      const response = await fetch('/api/shipping-providers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operation-id': selectedOperation || ''
+        },
+        body: JSON.stringify(data)
       });
+      if (!response.ok) throw new Error('Network response was not ok');
       return response.json();
     },
     onSuccess: (newProvider) => {
@@ -379,9 +400,14 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const configureProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/configure`, {}, {
-        'x-operation-id': selectedOperation || ''
+      const response = await fetch(`/api/shipping-providers/${providerId}/configure`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operation-id': selectedOperation || ''
+        }
       });
+      if (!response.ok) throw new Error('Network response was not ok');
       return response.json();
     },
     onSuccess: (result) => {
@@ -400,9 +426,14 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
   const testProviderMutation = useMutation({
     mutationFn: async (providerId: string) => {
-      const response = await apiRequest('POST', `/api/shipping-providers/${providerId}/test`, {}, {
-        'x-operation-id': selectedOperation || ''
+      const response = await fetch(`/api/shipping-providers/${providerId}/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-operation-id': selectedOperation || ''
+        }
       });
+      if (!response.ok) throw new Error('Network response was not ok');
       return response.json();
     },
     onSuccess: (result) => {
