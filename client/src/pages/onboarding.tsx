@@ -139,22 +139,24 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Logo */}
-        <div className="text-center pt-8 pb-12">
+        <div className="pt-4 pb-8">
           <img 
             src={logoImage} 
             alt="COD Dashboard" 
-            className="mx-auto mb-8 h-12 w-auto"
+            className="mb-8 h-8 w-auto"
           />
-          <p className="text-xl text-white/80 mb-6">
-            Configure sua conta em 5 etapas simples
-          </p>
-          <Progress 
-            value={progressPercentage} 
-            className="w-full max-w-md mx-auto h-3"
-          />
-          <p className="text-white/60 mt-2">
-            {Math.round(progressPercentage)}% concluído
-          </p>
+          <div className="text-center">
+            <p className="text-xl text-white/80 mb-6">
+              Configure sua conta em 5 etapas simples
+            </p>
+            <Progress 
+              value={progressPercentage} 
+              className="w-full max-w-md mx-auto h-3"
+            />
+            <p className="text-white/60 mt-2">
+              {Math.round(progressPercentage)}% concluído
+            </p>
+          </div>
         </div>
 
         {/* Steps Overview */}
