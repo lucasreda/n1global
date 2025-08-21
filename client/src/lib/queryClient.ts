@@ -13,11 +13,16 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const token = localStorage.getItem("auth_token");
+  const operationId = localStorage.getItem("current_operation_id");
   
   const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
   
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+  
+  if (operationId) {
+    headers["x-operation-id"] = operationId;
   }
 
   const res = await fetch(url, {
@@ -45,10 +50,14 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const token = localStorage.getItem("auth_token");
+    const operationId = localStorage.getItem("current_operation_id");
     
     const headers: HeadersInit = {};
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
+    }
+    if (operationId) {
+      headers["x-operation-id"] = operationId;
     }
 
     const res = await fetch(queryKey.join("/") as string, {

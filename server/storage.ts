@@ -36,9 +36,10 @@ export interface IStorage {
   createOperation(operationData: { name: string; description: string }, userId: string): Promise<Operation>;
   
   // Shipping providers creation
-  createShippingProvider(data: InsertShippingProvider, storeId: string): Promise<ShippingProvider>;
+  createShippingProvider(data: InsertShippingProvider, storeId: string, operationId: string): Promise<ShippingProvider>;
   updateShippingProvider(id: string, updates: Partial<ShippingProvider>): Promise<ShippingProvider | undefined>;
   getShippingProvider(id: string): Promise<ShippingProvider | undefined>;
+  getShippingProvidersByOperation(operationId: string): Promise<ShippingProvider[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -256,12 +257,13 @@ export class DatabaseStorage implements IStorage {
     return operation;
   }
 
-  async createShippingProvider(data: InsertShippingProvider, storeId: string): Promise<ShippingProvider> {
+  async createShippingProvider(data: InsertShippingProvider, storeId: string, operationId: string): Promise<ShippingProvider> {
     const [provider] = await db
       .insert(shippingProviders)
       .values({
         ...data,
-        storeId
+        storeId,
+        operationId
       })
       .returning();
     
@@ -286,6 +288,16 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return provider || undefined;
+  }
+
+  async getShippingProvidersByOperation(operationId: string): Promise<ShippingProvider[]> {
+    const providers = await db
+      .select()
+      .from(shippingProviders)
+      .where(eq(shippingProviders.operationId, operationId))
+      .orderBy(shippingProviders.createdAt);
+    
+    return providers;
   }
 }
 

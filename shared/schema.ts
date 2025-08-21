@@ -258,6 +258,7 @@ export const products = pgTable("products", {
 export const shippingProviders = pgTable("shipping_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links provider to store
+  operationId: varchar("operation_id").notNull().references(() => operations.id), // Links provider to specific operation
   name: text("name").notNull(),
   type: text("type").notNull().default("custom"), // 'correios', 'jadlog', 'european_fulfillment', 'custom'
   login: text("login"), // Login/Email for the provider

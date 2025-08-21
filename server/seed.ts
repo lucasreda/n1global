@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, products, shippingProviders, stores } from "@shared/schema";
+import { users, products, shippingProviders, stores, operations } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
@@ -68,11 +68,36 @@ export async function seedDatabase() {
       console.log("ℹ️  Default store already exists");
     }
 
-    // Check if European Fulfillment provider exists for this store
+    // Check if default operation exists
+    let defaultOperation;
+    const [existingOperation] = await db
+      .select()
+      .from(operations)
+      .where(eq(operations.storeId, defaultStore.id))
+      .limit(1);
+
+    if (!existingOperation) {
+      [defaultOperation] = await db
+        .insert(operations)
+        .values({
+          storeId: defaultStore.id,
+          name: "PureDreams",
+          description: "Default operation for COD business",
+          status: "active",
+        })
+        .returning();
+      
+      console.log("✅ Default operation created:", defaultOperation.name);
+    } else {
+      defaultOperation = existingOperation;
+      console.log("ℹ️  Default operation already exists");
+    }
+
+    // Check if European Fulfillment provider exists for this operation
     const [existingProvider] = await db
       .select()
       .from(shippingProviders)
-      .where(eq(shippingProviders.storeId, defaultStore.id))
+      .where(eq(shippingProviders.operationId, defaultOperation.id))
       .limit(1);
 
     if (!existingProvider) {
@@ -80,7 +105,9 @@ export async function seedDatabase() {
         .insert(shippingProviders)
         .values({
           storeId: defaultStore.id,
+          operationId: defaultOperation.id,
           name: "European Fulfillment Center",
+          type: "european_fulfillment",
           apiUrl: "https://api-test.ecomfulfilment.eu/",
           isActive: true,
         })

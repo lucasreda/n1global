@@ -60,9 +60,19 @@ export function Sidebar() {
   // Set default operation when data loads
   useEffect(() => {
     if (operations.length > 0 && !selectedOperation) {
-      setSelectedOperation(operations[0].id);
+      const firstOperationId = operations[0].id;
+      setSelectedOperation(firstOperationId);
+      localStorage.setItem("current_operation_id", firstOperationId);
     }
   }, [operations, selectedOperation]);
+
+  // Handle operation change
+  const handleOperationChange = (operationId: string) => {
+    setSelectedOperation(operationId);
+    localStorage.setItem("current_operation_id", operationId);
+    // Force refresh of operation-dependent queries
+    window.location.reload();
+  };
 
   const getUserInitials = (name: string) => {
     return name
@@ -106,7 +116,7 @@ export function Sidebar() {
               console.log("Abrir modal para adicionar nova operação");
               return;
             }
-            setSelectedOperation(value);
+            handleOperationChange(value);
           }}>
             <SelectTrigger className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10">
               <SelectValue placeholder="Selecionar operação" />

@@ -394,7 +394,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Shipping providers routes
   app.get("/api/shipping-providers", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const providers = await storage.getShippingProviders();
+      const operationId = req.headers['x-operation-id'] as string;
+      if (!operationId) {
+        return res.status(400).json({ message: "Operation ID é obrigatório" });
+      }
+      
+      const providers = await storage.getShippingProvidersByOperation(operationId);
       res.json(providers);
     } catch (error) {
       console.error("Get shipping providers error:", error);
@@ -405,8 +410,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/shipping-providers", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { name, type, login, password, apiKey, description } = req.body;
+      const operationId = req.headers['x-operation-id'] as string;
+      
       if (!name?.trim()) {
         return res.status(400).json({ message: "Nome da transportadora é obrigatório" });
+      }
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "Operation ID é obrigatório" });
       }
 
       const provider = await storage.createShippingProvider({
@@ -416,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: password || null,
         apiKey: apiKey || null,
         description: description || null
-      }, req.user.storeId);
+      }, req.user.storeId, operationId);
 
       res.json(provider);
     } catch (error) {
