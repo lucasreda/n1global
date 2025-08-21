@@ -409,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/shipping-providers", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const { name, type, login, password, apiKey, description } = req.body;
+      const { name, type, login, password } = req.body;
       const operationId = req.headers['x-operation-id'] as string;
       
       if (!name?.trim()) {
@@ -422,11 +422,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const provider = await storage.createShippingProvider({
         name: name.trim(),
-        type: type || 'custom',
+        type: type || 'european_fulfillment',
         login: login || null,
-        password: password || null,
-        apiKey: apiKey || null,
-        description: description || null
+        password: password || null
       }, req.user.storeId, operationId);
 
       res.json(provider);

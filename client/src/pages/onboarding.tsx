@@ -332,11 +332,9 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
   const [providerData, setProviderData] = useState({
     name: '',
-    type: 'correios',
+    type: 'european_fulfillment',
     login: '',
-    password: '',
-    apiKey: '',
-    description: ''
+    password: ''
   });
   const { toast } = useToast();
 
@@ -359,7 +357,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
     onSuccess: (newProvider) => {
       setProviders(prev => [...prev, newProvider]);
       setShowForm(false);
-      setProviderData({ name: '', type: 'correios', login: '', password: '', apiKey: '', description: '' });
+      setProviderData({ name: '', type: 'european_fulfillment', login: '', password: '' });
       toast({ title: 'Transportadora cadastrada com sucesso!' });
     },
     onError: () => {
@@ -559,18 +557,13 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
               <Label htmlFor="provider-type" className="text-white">
                 Tipo
               </Label>
-              <select
+              <Input
                 id="provider-type"
-                value={providerData.type}
-                onChange={(e) => setProviderData(prev => ({ ...prev, type: e.target.value }))}
-                className="w-full mt-2 p-2 bg-white/10 border border-white/20 rounded-md text-white"
-                data-testid="select-provider-type"
-              >
-                <option value="correios">Correios</option>
-                <option value="jadlog">Jadlog</option>
-                <option value="european_fulfillment">European Fulfillment</option>
-                <option value="custom">Personalizada</option>
-              </select>
+                value="European Fulfillment"
+                disabled
+                className="bg-white/5 border-white/10 text-white/60 mt-2"
+                data-testid="input-provider-type"
+              />
             </div>
 
             <div>
@@ -602,33 +595,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
               />
             </div>
 
-            <div>
-              <Label htmlFor="provider-api-key" className="text-white">
-                Chave de API (opcional)
-              </Label>
-              <Input
-                id="provider-api-key"
-                placeholder="Sua chave de API (se disponível)"
-                value={providerData.apiKey}
-                onChange={(e) => setProviderData(prev => ({ ...prev, apiKey: e.target.value }))}
-                className="bg-white/10 border-white/20 text-white mt-2"
-                data-testid="input-provider-api-key"
-              />
-            </div>
 
-            <div>
-              <Label htmlFor="provider-description" className="text-white">
-                Observações (opcional)
-              </Label>
-              <Input
-                id="provider-description"
-                placeholder="Observações sobre esta transportadora"
-                value={providerData.description}
-                onChange={(e) => setProviderData(prev => ({ ...prev, description: e.target.value }))}
-                className="bg-white/10 border-white/20 text-white mt-2"
-                data-testid="input-provider-description"
-              />
-            </div>
 
             <div className="flex gap-3">
               <Button
