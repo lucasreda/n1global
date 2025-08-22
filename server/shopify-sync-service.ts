@@ -95,16 +95,20 @@ export class ShopifySyncService {
       
       console.log(`📄 Página ${pageCount}: Buscando próximos pedidos${sinceId ? ` (desde ID ${sinceId})` : ''}`);
       
-      // Usar paginação simples por ID para garantir todos os pedidos
+      // Debug: mostrar parâmetros de busca
       const params: any = {
         limit: 250,
-        status: 'any',
-        order: 'created_at asc'
+        status: 'any'
       };
       
       if (sinceId) {
         params.since_id = sinceId;
+        console.log(`🔍 Usando since_id: ${sinceId} para paginação`);
+      } else {
+        console.log(`🔍 Primeira página - sem since_id`);
       }
+      
+      console.log(`🔍 Parâmetros da busca:`, params);
       
       const ordersResult = await shopifyService.getOrders(integration.shopName, integration.accessToken, params);
       
@@ -123,25 +127,42 @@ export class ShopifySyncService {
         break;
       }
       
+      console.log(`📊 Processando ${orders.length} pedidos da página ${pageCount}...`);
+      let newInThisPage = 0;
+      let updatedInThisPage = 0;
+      
       for (const shopifyOrder of orders) {
         try {
           const result = await this.processShopifyOrder(operationId, shopifyOrder);
           if (result.created) {
             imported++;
+            newInThisPage++;
             if (imported % 50 === 0) {
               console.log(`📈 Progresso: ${imported} novos pedidos importados...`);
             }
           } else {
             updated++;
+            updatedInThisPage++;
           }
         } catch (error) {
           console.error(`❌ Erro ao processar pedido ${shopifyOrder.name}:`, error);
         }
       }
       
+      console.log(`📊 Página ${pageCount} processada: ${newInThisPage} novos, ${updatedInThisPage} atualizados`);
+      
       // Definir since_id para próxima página (último pedido processado)
       const lastOrder = orders[orders.length - 1];
-      sinceId = lastOrder.id;
+      const newSinceId = lastOrder.id;
+      
+      if (newSinceId === sinceId) {
+        console.log(`⚠️ since_id repetido (${newSinceId}) - possível loop infinito, parando`);
+        hasMorePages = false;
+        break;
+      }
+      
+      sinceId = newSinceId;
+      console.log(`🔄 Próxima página usará since_id: ${sinceId}`);
       
       // Se recebeu menos que o limite, não há mais páginas
       if (orders.length < 250) {
