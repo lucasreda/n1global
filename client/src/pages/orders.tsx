@@ -36,7 +36,11 @@ export default function Orders() {
       const operationToUse = selectedOperation || DSS_OPERATION_ID;
       console.log(`💾 Using operation ID: ${operationToUse}`);
       
-      const response = await authenticatedApiRequest("GET", `/api/orders?${params}`);
+      const response = await authenticatedApiRequest("GET", `/api/orders?${params}`, {
+        headers: {
+          'X-Operation-Id': operationToUse
+        }
+      });
       return response.json();
     },
     enabled: !!selectedOperation, // Only run when we have an operation selected

@@ -994,7 +994,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // CRITICAL: Get user's operation for data isolation
       const userOperations = await storage.getUserOperations(req.user.id);
-      const currentOperation = userOperations[0];
+      
+      // Check if frontend specified an operation ID
+      const requestedOperationId = req.headers['x-operation-id'] as string;
+      let currentOperation;
+      
+      if (requestedOperationId) {
+        // Validate that the requested operation belongs to this user
+        currentOperation = userOperations.find(op => op.id === requestedOperationId);
+        if (!currentOperation) {
+          console.log(`⚠️ User ${req.user.id} requested invalid operation ${requestedOperationId}`);
+          currentOperation = userOperations[0]; // Fallback to first operation
+        } else {
+          console.log(`✅ Using requested operation: ${currentOperation.name} (${currentOperation.id})`);
+        }
+      } else {
+        currentOperation = userOperations[0];
+      }
       
       if (!currentOperation) {
         console.log(`⚠️ User ${req.user.id} has no operations - returning empty results`);

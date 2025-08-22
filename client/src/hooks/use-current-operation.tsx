@@ -25,8 +25,12 @@ export function useCurrentOperation() {
         setSelectedOperation(dssOperation.id);
         localStorage.setItem("current_operation_id", dssOperation.id);
         
-        // Force refresh all queries
+        // Force refresh all queries immediately
         queryClient.invalidateQueries();
+        queryClient.removeQueries(); // Clear cache completely
+        
+        // Force immediate re-fetch by clearing specific queries
+        queryClient.refetchQueries({ queryKey: ['/api/orders'] });
         
         // Set a flag to indicate we've forced the switch
         sessionStorage.setItem("dss_forced", "true");
