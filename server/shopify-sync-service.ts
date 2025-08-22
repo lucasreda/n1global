@@ -261,6 +261,23 @@ export class ShopifySyncService {
         )
       );
     
+    // Debug: análise dos dados Shopify
+    const totalOrders = unmatchedOrders.length;
+    const ordersWithPhone = unmatchedOrders.filter(o => o.customerPhone && o.customerPhone.trim() !== '').length;
+    const ordersWithName = unmatchedOrders.filter(o => o.customerName && o.customerName.trim() !== '').length;
+    
+    console.log(`📊 Análise dados Shopify:`);
+    console.log(`   Total pedidos: ${totalOrders}`);
+    console.log(`   Com telefone: ${ordersWithPhone} (${((ordersWithPhone/totalOrders)*100).toFixed(1)}%)`);
+    console.log(`   Com nome: ${ordersWithName} (${((ordersWithName/totalOrders)*100).toFixed(1)}%)`);
+    
+    // Exemplos de telefones Shopify
+    const phoneSamples = unmatchedOrders
+      .filter(o => o.customerPhone)
+      .slice(0, 5)
+      .map(o => o.customerPhone);
+    console.log(`   📱 Exemplos telefones Shopify:`, phoneSamples);
+    
     console.log(`🔍 Encontrados ${unmatchedOrders.length} pedidos para match`);
     
     // Debug: mostrar alguns exemplos de nomes Shopify para comparação
@@ -469,9 +486,24 @@ export class ShopifySyncService {
       
       console.log(`📦 Encontrados ${leads.length} leads da transportadora`);
       
-      // Debug: mostrar alguns exemplos de dados para verificar formato
+      // Debug: análise detalhada dos dados da transportadora
       if (leads.length > 0) {
-        console.log(`🔍 Exemplos de dados da transportadora:`);
+        const leadsWithPhone = leads.filter(l => l.phone && l.phone.trim() !== '').length;
+        const leadsWithName = leads.filter(l => l.name && l.name.trim() !== '').length;
+        
+        console.log(`🔍 Análise dados Transportadora:`);
+        console.log(`   Total leads: ${leads.length}`);
+        console.log(`   Com telefone: ${leadsWithPhone} (${((leadsWithPhone/leads.length)*100).toFixed(1)}%)`);
+        console.log(`   Com nome: ${leadsWithName} (${((leadsWithName/leads.length)*100).toFixed(1)}%)`);
+        
+        // Exemplos de telefones da transportadora
+        const carrierPhoneSamples = leads
+          .filter(l => l.phone)
+          .slice(0, 5)
+          .map(l => l.phone);
+        console.log(`   📞 Exemplos telefones Transportadora:`, carrierPhoneSamples);
+        
+        console.log(`🔍 Primeiros 3 leads detalhados:`);
         leads.slice(0, 3).forEach((lead, index) => {
           console.log(`  Lead ${index + 1}:`, {
             name: lead.name || lead.customer_name || lead.first_name + ' ' + lead.last_name || 'SEM NOME',
