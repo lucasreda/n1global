@@ -300,13 +300,56 @@ export class ShopifySyncService {
     
     console.log(`🔍 Iniciando processo de matching de ${unmatchedOrders.length} pedidos...`);
     
+    // Análise cruzada de dados - procurar possíveis matches
+    console.log(`🔍 Fazendo análise cruzada de dados...`);
+    let potentialMatches = 0;
+    let exactPhoneMatches = 0;
+    let phoneAfterNormalization = 0;
+    
+    // Primeiro pass: análise de potenciais matches sem aplicar ainda
+    for (let i = 0; i < Math.min(50, unmatchedOrders.length); i++) {
+      const order = unmatchedOrders[i];
+      if (!order.customerPhone) continue;
+      
+      const normalizedShopifyPhone = this.normalizePhone(order.customerPhone);
+      
+      for (let j = 0; j < Math.min(100, carrierLeads.length); j++) {
+        const lead = carrierLeads[j];
+        if (!lead.phone) continue;
+        
+        const normalizedCarrierPhone = this.normalizePhone(lead.phone);
+        
+        // Verifica match exato de telefone original
+        if (order.customerPhone === lead.phone) {
+          exactPhoneMatches++;
+          console.log(`🎯 Match telefone exato: "${order.customerPhone}" = "${lead.phone}"`);
+        }
+        
+        // Verifica match após normalização
+        if (this.phonesMatch(normalizedShopifyPhone, normalizedCarrierPhone)) {
+          phoneAfterNormalization++;
+          if (potentialMatches < 5) {
+            console.log(`🔍 Match potencial: ${order.customerName} (${order.customerPhone} → ${normalizedShopifyPhone}) ↔ ${lead.name} (${lead.phone} → ${normalizedCarrierPhone})`);
+          }
+          potentialMatches++;
+          break;
+        }
+      }
+    }
+    
+    console.log(`📊 Análise cruzada (primeiros 50x100):`);
+    console.log(`   Matches telefone exato: ${exactPhoneMatches}`);
+    console.log(`   Matches após normalização: ${phoneAfterNormalization}`);
+    console.log(`   Potenciais matches encontrados: ${potentialMatches}`);
+    
+    // Agora aplica os matches de verdade
     for (const order of unmatchedOrders) {
-      // Debug específico do matching
-      if (matched < 3) { // Log apenas os primeiros 3 para não poluir
-        console.log(`🔍 Tentando match para pedido:`, {
-          shopifyId: order.id,
+      // Debug específico do matching nos primeiros
+      if (matched < 5) {
+        console.log(`🔍 Tentando match para:`, {
           name: order.customerName,
-          phone: order.customerPhone
+          phone: order.customerPhone,
+          normalized: this.normalizePhone(order.customerPhone || '')
         });
       }
       
@@ -319,8 +362,8 @@ export class ShopifySyncService {
       
       if (matchedLead) {
         console.log(`✅ Match encontrado! Shopify: ${order.customerName} (${order.customerPhone}) ↔ Transportadora: ${matchedLead.name} (${matchedLead.phone})`);
-      } else if (matched < 3) {
-        console.log(`❌ Sem match para: ${order.customerName} (${order.customerPhone})`);
+      } else if (matched < 5) {
+        console.log(`❌ Sem match para: ${order.customerName} (${order.customerPhone} → ${this.normalizePhone(order.customerPhone || '')})`);
       }
       
       if (matchedLead) {
