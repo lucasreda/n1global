@@ -347,6 +347,21 @@ export class ShopifySyncService {
     console.log(`   Matches após normalização: ${phoneAfterNormalization}`);
     console.log(`   Potenciais matches encontrados: ${potentialMatches}`);
     
+    // Se não há matches potenciais, as bases podem ser de períodos diferentes
+    if (potentialMatches === 0 && unmatchedOrders.length > 0 && carrierLeads.length > 0) {
+      console.log(`⚠️ ANÁLISE: Sem matches potenciais encontrados`);
+      console.log(`   Isso pode indicar que:`);
+      console.log(`   1. Os pedidos Shopify são de período diferente dos leads da transportadora`);
+      console.log(`   2. Nem todos os pedidos Shopify passam pela European Fulfillment`);
+      console.log(`   3. Há diferença temporal entre quando foi criado no Shopify vs transportadora`);
+      
+      // Mostra alguns telefones de cada lado para comparação manual
+      const shopifyPhones = unmatchedOrders.slice(0, 5).map(o => this.normalizePhone(o.customerPhone || ''));
+      const carrierPhones = carrierLeads.slice(0, 5).map(l => this.normalizePhone(l.phone || ''));
+      console.log(`   📱 Primeiros 5 telefones Shopify normalizados:`, shopifyPhones);
+      console.log(`   📞 Primeiros 5 telefones Transportadora normalizados:`, carrierPhones);
+    }
+    
     // Agora aplica os matches de verdade
     for (const order of unmatchedOrders) {
       // Debug específico do matching nos primeiros
@@ -670,10 +685,17 @@ export class ShopifySyncService {
   private phonesMatch(phone1: string, phone2: string): boolean {
     if (!phone1 || !phone2 || phone1.length < 8 || phone2.length < 8) return false;
     
-    // Match exato
+    // Match exato (prioritário)
     if (phone1 === phone2) return true;
     
-    // Match pelos últimos 8 dígitos (números locais)
+    // Match pelos últimos 9 dígitos (mais específico para evitar falsos positivos)
+    if (phone1.length >= 9 && phone2.length >= 9) {
+      const suffix1 = phone1.slice(-9);
+      const suffix2 = phone2.slice(-9);
+      if (suffix1 === suffix2) return true;
+    }
+    
+    // Match pelos últimos 8 dígitos como fallback
     const suffix1 = phone1.slice(-8);
     const suffix2 = phone2.slice(-8);
     
