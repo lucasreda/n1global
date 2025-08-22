@@ -422,6 +422,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/onboarding/skip-step", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { stepId } = req.body;
+      if (!stepId) {
+        return res.status(400).json({ message: "ID da etapa é obrigatório" });
+      }
+
+      // Skip step by marking it as completed
+      await storage.updateOnboardingStep(req.user.id, stepId, true);
+      res.json({ success: true, message: "Etapa pulada com sucesso" });
+    } catch (error) {
+      console.error("Skip step error:", error);
+      res.status(500).json({ message: "Erro ao pular etapa" });
+    }
+  });
+
   app.post("/api/onboarding/sync-data", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       console.log(`🔍 Onboarding sync-data: Starting for user ${req.user.id}`);

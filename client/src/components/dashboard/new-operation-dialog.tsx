@@ -179,10 +179,16 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     mutationFn: async (stepId: string) => {
       const response = await fetch('/api/onboarding/skip-step', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify({ stepId, operationId }),
       });
-      if (!response.ok) throw new Error('Failed to skip step');
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Failed to skip step: ${errorData}`);
+      }
       return response.json();
     },
     onSuccess: (_, stepId) => {
