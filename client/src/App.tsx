@@ -45,16 +45,20 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
   // Effect to handle redirection without causing React warnings
   useEffect(() => {
+    const needsOnboarding = user && !isLoading && !onboardingStatus?.onboardingCompleted;
+    
     console.log('OnboardingGuard - Debug:', {
       user: !!user,
       userId: user?.id,
       isLoading,
       onboardingCompleted: onboardingStatus?.onboardingCompleted,
+      onboardingSteps: onboardingStatus?.onboardingSteps,
       location,
-      shouldRedirect: user && !isLoading && !onboardingStatus?.onboardingCompleted && location !== '/onboarding'
+      needsOnboarding,
+      shouldRedirect: needsOnboarding && location !== '/onboarding'
     });
     
-    if (user && !isLoading && !onboardingStatus?.onboardingCompleted && location !== '/onboarding') {
+    if (needsOnboarding && location !== '/onboarding') {
       console.log('OnboardingGuard - Redirecting to /onboarding');
       setLocation('/onboarding');
     }
