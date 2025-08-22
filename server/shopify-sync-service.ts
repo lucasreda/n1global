@@ -404,10 +404,10 @@ export class ShopifySyncService {
       const fulfillmentService = new EuropeanFulfillmentService();
       
       // Configura as credenciais
-      fulfillmentService.setCredentials({
-        email: 'unit1@n1storeworld.com',
-        password: 'Ecom@2025'
-      });
+      fulfillmentService.updateCredentials(
+        'unit1@n1storeworld.com',
+        'Ecom@2025'
+      );
       
       // Busca os leads da API da transportadora
       console.log(`🚚 Buscando leads da transportadora para storeId: ${operation.storeId}`);
