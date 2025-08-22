@@ -80,8 +80,21 @@ export class ShopifyService {
    */
   async testConnection(shopName: string, accessToken: string): Promise<{ success: boolean; data?: ShopifyStore; error?: string }> {
     try {
-      // Limpa o nome da loja se vier com protocolo ou barra
-      const cleanShopName = shopName.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      // Limpa e valida o nome da loja
+      let cleanShopName = shopName.replace(/^https?:\/\//, '').replace(/\/$/, '').trim();
+      
+      // Se não termina com .myshopify.com, adiciona
+      if (!cleanShopName.includes('.myshopify.com')) {
+        cleanShopName = `${cleanShopName}.myshopify.com`;
+      }
+      
+      // Validação básica do formato
+      if (!cleanShopName.match(/^[a-zA-Z0-9\-]+\.myshopify\.com$/)) {
+        return {
+          success: false,
+          error: 'Formato inválido. Use: sua-loja.myshopify.com ou apenas sua-loja'
+        };
+      }
       
       console.log(`🔗 Testando conexão Shopify: ${cleanShopName}`);
       
@@ -93,7 +106,7 @@ export class ShopifyService {
           'Content-Type': 'application/json',
           'User-Agent': 'COD-Dashboard/1.0'
         },
-        timeout: 30000, // 30 segundos de timeout
+        signal: AbortSignal.timeout(30000), // 30 segundos de timeout
       });
 
       console.log(`📊 Resposta Shopify: ${response.status} ${response.statusText}`);
@@ -101,9 +114,19 @@ export class ShopifyService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`❌ Erro Shopify: ${response.status} - ${errorText}`);
+        
+        let userFriendlyError = `HTTP ${response.status}`;
+        if (response.status === 401) {
+          userFriendlyError = 'Token de acesso inválido ou expirado';
+        } else if (response.status === 403) {
+          userFriendlyError = 'Acesso negado. Verifique as permissões do token';
+        } else if (response.status === 404) {
+          userFriendlyError = 'Loja não encontrada. Verifique o nome da loja';
+        }
+        
         return {
           success: false,
-          error: `HTTP ${response.status}: ${errorText || response.statusText}`
+          error: userFriendlyError
         };
       }
 
@@ -116,10 +139,23 @@ export class ShopifyService {
       };
     } catch (error) {
       console.error('❌ Erro na conexão Shopify:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      let userFriendlyError = 'Erro desconhecido';
+      if (error instanceof Error) {
+        if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
+          userFriendlyError = 'Loja não encontrada. Verifique se o nome está correto (ex: sua-loja.myshopify.com)';
+        } else if (error.message.includes('ECONNREFUSED')) {
+          userFriendlyError = 'Conexão recusada. Verifique se a loja existe';
+        } else if (error.message.includes('timeout')) {
+          userFriendlyError = 'Timeout na conexão. Tente novamente';
+        } else {
+          userFriendlyError = error.message;
+        }
+      }
+      
       return {
         success: false,
-        error: `Falha na conexão: ${errorMessage}`
+        error: userFriendlyError
       };
     }
   }
