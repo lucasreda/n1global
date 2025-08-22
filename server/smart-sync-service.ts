@@ -480,6 +480,22 @@ export class SmartSyncService {
       if (!operation) {
         throw new Error(`❌ Operação ${operationId} não encontrada`);
       }
+
+      // Get shipping providers for this operation to configure credentials
+      const { storage } = await import("./storage");
+      const providers = await storage.getShippingProvidersByOperation(operationId);
+      const activeProvider = providers.find(p => p.isActive && p.apiKey);
+      
+      if (!activeProvider || activeProvider.type !== 'european_fulfillment') {
+        throw new Error(`❌ Nenhum provedor European Fulfillment ativo encontrado para a operação ${operationId}`);
+      }
+
+      // Create a user-specific fulfillment service instance with their credentials
+      const userFulfillmentService = new EuropeanFulfillmentService(
+        activeProvider.login,
+        activeProvider.password,
+        activeProvider.apiUrl || undefined
+      );
       
       // Map operation country to API country format
       const countryMapping = {
@@ -503,7 +519,7 @@ export class SmartSyncService {
         try {
           console.log(`📄 Teste: página ${currentPage}/${maxPages}...`);
           
-          const pageLeads = await this.fulfillmentService.getLeadsList(syncCountry, currentPage);
+          const pageLeads = await userFulfillmentService.getLeadsList(syncCountry, currentPage);
           
           if (!pageLeads || pageLeads.length === 0) {
             console.log(`📄 Página ${currentPage} vazia, finalizando teste...`);
