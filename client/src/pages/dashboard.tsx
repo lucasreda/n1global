@@ -39,11 +39,15 @@ export default function Dashboard() {
   }, []); // Run only on component mount
 
   // Fetch dashboard metrics with new API
+  const operationId = localStorage.getItem("current_operation_id");
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ["/api/dashboard/metrics", dateFilter, "v3"],
+    queryKey: ["/api/dashboard/metrics", dateFilter, operationId, "v3"],
     queryFn: async () => {
       const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
-      const response = await authenticatedApiRequest("GET", `/api/dashboard/metrics?period=${period}`);
+      const url = operationId 
+        ? `/api/dashboard/metrics?period=${period}&operationId=${operationId}`
+        : `/api/dashboard/metrics?period=${period}`;
+      const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },
     staleTime: 0,
@@ -53,10 +57,13 @@ export default function Dashboard() {
 
   // Fetch revenue chart data
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ["/api/dashboard/revenue-chart", dateFilter],
+    queryKey: ["/api/dashboard/revenue-chart", dateFilter, operationId],
     queryFn: async () => {
       const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
-      const response = await authenticatedApiRequest("GET", `/api/dashboard/revenue-chart?period=${period}`);
+      const url = operationId 
+        ? `/api/dashboard/revenue-chart?period=${period}&operationId=${operationId}`
+        : `/api/dashboard/revenue-chart?period=${period}`;
+      const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },
   });

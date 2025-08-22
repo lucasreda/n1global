@@ -230,11 +230,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;
+      const operationId = req.query.operationId as string;
 
-      console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
+      console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}, operation: ${operationId || 'auto'}`);
       
       const { dashboardService } = await import("./dashboard-service");
-      const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req);
+      const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req, operationId);
 
       res.json(metrics);
     } catch (error) {
@@ -247,9 +248,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const period = (req.query.period as string) || '30d';
       const provider = req.query.provider as string;
+      const operationId = req.query.operationId as string;
 
       const { dashboardService } = await import("./dashboard-service");
-      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider, req);
+      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider, req, operationId);
 
       res.json(revenueData);
     } catch (error) {

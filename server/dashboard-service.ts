@@ -34,11 +34,11 @@ export class DashboardService {
     return this.defaultStoreId;
   }
   
-  async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' | 'current_month' = 'current_month', provider?: string, req?: any) {
+  async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' | 'current_month' = 'current_month', provider?: string, req?: any, operationId?: string) {
     console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
     
     // Check cache first
-    const cached = await this.getCachedMetrics(period, provider, req);
+    const cached = await this.getCachedMetrics(period, provider, req, operationId);
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
@@ -73,10 +73,10 @@ export class DashboardService {
     }
     
     // Calculate fresh metrics
-    const metrics = await this.calculateMetrics(period, provider, req);
+    const metrics = await this.calculateMetrics(period, provider, req, operationId);
     
     // Cache the results
-    await this.cacheMetrics(period, provider, metrics, req);
+    await this.cacheMetrics(period, provider, metrics, req, operationId);
     
     return metrics;
   }
@@ -104,11 +104,20 @@ export class DashboardService {
     };
   }
   
-  private async getCachedMetrics(period: string, provider?: string, req?: any) {
+  private async getCachedMetrics(period: string, provider?: string, req?: any, operationId?: string) {
     try {
       // CRITICAL: Cache by operation, not by store
-      const userOperations = await storage.getUserOperations(req.user.id);
-      const currentOperation = userOperations[0];
+      let currentOperation;
+      
+      if (operationId) {
+        // Use specific operation ID
+        const userOperations = await storage.getUserOperations(req.user.id);
+        currentOperation = userOperations.find(op => op.id === operationId);
+      } else {
+        // Fallback to first operation
+        const userOperations = await storage.getUserOperations(req.user.id);
+        currentOperation = userOperations[0];
+      }
       
       if (!currentOperation) {
         return null;
@@ -135,12 +144,21 @@ export class DashboardService {
     }
   }
   
-  private async calculateMetrics(period: string, provider?: string, req?: any) {
+  private async calculateMetrics(period: string, provider?: string, req?: any, operationId?: string) {
     const dateRange = this.getDateRange(period);
     
     // CRITICAL: Get user's current operation for data isolation
-    const userOperations = await storage.getUserOperations(req.user.id);
-    const currentOperation = userOperations[0]; // User's active operation
+    let currentOperation;
+    
+    if (operationId) {
+      // Use specific operation ID
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations.find(op => op.id === operationId);
+    } else {
+      // Fallback to first operation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations[0]; // User's active operation
+    }
     
     if (!currentOperation) {
       console.log(`⚠️ No operation found for user ${req.user.id}`);
@@ -297,10 +315,19 @@ export class DashboardService {
     };
   }
   
-  private async cacheMetrics(period: string, provider: string | undefined, metrics: any, req?: any) {
+  private async cacheMetrics(period: string, provider: string | undefined, metrics: any, req?: any, operationId?: string) {
     // CRITICAL: Cache by operation, not store
-    const userOperations = await storage.getUserOperations(req.user.id);
-    const currentOperation = userOperations[0];
+    let currentOperation;
+    
+    if (operationId) {
+      // Use specific operation ID
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations.find(op => op.id === operationId);
+    } else {
+      // Fallback to first operation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations[0];
+    }
     
     if (!currentOperation) {
       return; // No operation to cache for
@@ -495,12 +522,21 @@ export class DashboardService {
     return { from, to };
   }
   
-  async getRevenueOverTime(period: '7d' | '30d' | '90d' = '30d', provider?: string, req?: any) {
+  async getRevenueOverTime(period: '7d' | '30d' | '90d' = '30d', provider?: string, req?: any, operationId?: string) {
     const dateRange = this.getDateRange(period);
     
     // CRITICAL: Get operation context for data isolation
-    const userOperations = await storage.getUserOperations(req.user.id);
-    const currentOperation = userOperations[0];
+    let currentOperation;
+    
+    if (operationId) {
+      // Use specific operation ID
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations.find(op => op.id === operationId);
+    } else {
+      // Fallback to first operation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations[0];
+    }
     
     if (!currentOperation) {
       return []; // No operation, no data
