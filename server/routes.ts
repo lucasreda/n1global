@@ -989,6 +989,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota para sincronização combinada Shopify + Transportadora
+  app.post('/api/sync/shopify-carrier', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Get user's operation for data isolation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const currentOperation = userOperations[0];
+      
+      if (!currentOperation) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Nenhuma operação encontrada. Complete o onboarding primeiro." 
+        });
+      }
+
+      const { shopifySyncService } = await import("./shopify-sync-service");
+      
+      // Fase 1: Sincronização do Shopify
+      console.log(`🛍️ Iniciando sincronização Shopify para operação ${currentOperation.name}`);
+      const shopifyResult = await shopifySyncService.syncShopifyOrders(currentOperation.id);
+      
+      // Fase 2: Match com transportadora
+      console.log(`🔗 Iniciando match com transportadora`);
+      const matchResult = await shopifySyncService.matchWithCarrier(currentOperation.id);
+      
+      const result = {
+        success: true,
+        shopify: {
+          imported: shopifyResult.imported,
+          updated: shopifyResult.updated
+        },
+        carrier: {
+          matched: matchResult.matched
+        },
+        message: `Shopify: ${shopifyResult.imported} novos, ${shopifyResult.updated} atualizados. Transportadora: ${matchResult.matched} matched.`
+      };
+      
+      console.log(`✅ Sincronização combinada concluída:`, result);
+      res.json(result);
+    } catch (error) {
+      console.error('Erro na sincronização Shopify + Transportadora:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor' 
+      });
+    }
+  });
+
   // Orders routes - fetch from database with filters and pagination
   app.get("/api/orders", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

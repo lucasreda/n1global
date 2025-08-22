@@ -244,7 +244,7 @@ export class ShopifySyncService {
   /**
    * Faz match dos pedidos Shopify com dados da transportadora por nome do cliente
    */
-  private async matchWithCarrier(operationId: string): Promise<{ matched: number }> {
+  async matchWithCarrier(operationId: string): Promise<{ matched: number }> {
     console.log(`🔗 Fazendo match com transportadora para operação ${operationId}`);
     
     // Busca pedidos do Shopify que ainda não foram matched
@@ -279,15 +279,15 @@ export class ShopifySyncService {
           .set({
             carrierImported: true,
             carrierMatchedAt: new Date(),
-            carrierOrderId: matchedLead.id,
-            trackingNumber: matchedLead.tracking_number,
-            status: this.mapCarrierStatus(matchedLead.status),
+            carrierOrderId: matchedLead.n_lead || matchedLead.id,
+            trackingNumber: matchedLead.tracking_number || matchedLead.tracking,
+            status: this.mapCarrierStatus(matchedLead.status_livrison || matchedLead.status),
             providerData: matchedLead,
             updatedAt: new Date(),
           })
           .where(eq(orders.id, order.id));
         
-        console.log(`🔗 Match encontrado: ${order.customerName} -> ${matchedLead.customer_name}`);
+        console.log(`🔗 Match encontrado: ${order.customerName} -> ${matchedLead.name || matchedLead.customer_name}`);
         matched++;
       }
     }
@@ -378,10 +378,32 @@ export class ShopifySyncService {
   
   private async getCarrierLeads(operationId: string): Promise<any[]> {
     // Busca leads da transportadora para a operação
-    // Implementação específica para European Fulfillment
     try {
-      // Por enquanto retorna array vazio, será implementado quando integrar com a API
-      return [];
+      // Busca a operação para obter storeId
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId));
+      
+      if (!operation) {
+        console.error('❌ Operação não encontrada para buscar leads da transportadora');
+        return [];
+      }
+      
+      // Busca o provedor de fulfillment para esta operação
+      const { FulfillmentService } = await import('./fulfillment-service');
+      const fulfillmentService = new FulfillmentService();
+      
+      // Busca os leads da API da transportadora
+      const leadsResult = await fulfillmentService.getLeads(operation.storeId);
+      
+      if (!leadsResult.success || !leadsResult.leads) {
+        console.error('❌ Erro ao buscar leads da transportadora:', leadsResult.error);
+        return [];
+      }
+      
+      console.log(`📦 Encontrados ${leadsResult.leads.length} leads da transportadora`);
+      return leadsResult.leads;
     } catch (error) {
       console.error('❌ Erro ao buscar leads da transportadora:', error);
       return [];
@@ -394,7 +416,7 @@ export class ShopifySyncService {
     const normalizedName = this.normalizeName(customerName);
     
     for (const lead of carrierLeads) {
-      const leadName = this.normalizeName(lead.customer_name || '');
+      const leadName = this.normalizeName(lead.name || lead.customer_name || '');
       if (leadName && this.namesMatch(normalizedName, leadName)) {
         return lead;
       }

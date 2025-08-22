@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation, DSS_OPERATION_ID } from "@/hooks/use-current-operation";
@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit } from "lucide-react";
+import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap } from "lucide-react";
 import { cn, formatCurrencyEUR } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -17,6 +18,8 @@ export default function Orders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize] = useState(15);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: ordersResponse, isLoading } = useQuery({
     queryKey: ["/api/orders", currentPage, statusFilter, searchTerm, dateFilter, selectedOperation],
@@ -74,6 +77,31 @@ export default function Orders() {
     console.log("Edit order:", orderId);
     // TODO: Implement order edit functionality
   };
+
+  // Mutation for combined Shopify + Carrier sync
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await authenticatedApiRequest("POST", "/api/sync/shopify-carrier");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      console.log("✅ Sincronização completa:", data);
+      toast({
+        title: "Sincronização Concluída",
+        description: data.message || "Pedidos sincronizados com sucesso",
+      });
+      // Refresh orders list
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+    },
+    onError: (error: any) => {
+      console.error("❌ Erro na sincronização:", error);
+      toast({
+        title: "Erro na Sincronização",
+        description: error.message || "Falha ao sincronizar pedidos",
+        variant: "destructive",
+      });
+    }
+  });
 
   if (isLoading) {
     return (
@@ -183,6 +211,19 @@ export default function Orders() {
                 <SelectItem value="all">Todos os períodos</SelectItem>
               </SelectContent>
             </Select>
+            <Button 
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
+              data-testid="button-sync-shopify-carrier"
+            >
+              {syncMutation.isPending ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4 mr-2" />
+              )}
+              {syncMutation.isPending ? "Sincronizando..." : "Sync Shopify + Transportadora"}
+            </Button>
             <div className="text-sm text-gray-300">
               {totalOrders} pedidos encontrados
             </div>
