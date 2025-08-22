@@ -73,8 +73,13 @@ export function Sidebar() {
   const handleOperationChange = (operationId: string) => {
     setSelectedOperation(operationId);
     localStorage.setItem("current_operation_id", operationId);
-    // Force refresh of operation-dependent queries
-    window.location.reload();
+    
+    // Invalidate all dashboard-related queries to refresh data for new operation
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-chart'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/sync/stats'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
   };
 
   // Handle new operation created
@@ -84,10 +89,13 @@ export function Sidebar() {
     // Select the new operation
     setSelectedOperation(operationId);
     localStorage.setItem("current_operation_id", operationId);
-    // Refresh to load the new operation data
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+    
+    // Invalidate all dashboard-related queries to refresh data for new operation
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-chart'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/sync/stats'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
   };
 
   const getUserInitials = (name: string) => {
