@@ -303,6 +303,29 @@ export class ShopifySyncService {
     }
     
     console.log(`🔗 Match concluído: ${matched} pedidos matched`);
+    
+    // Análise detalhada dos matches
+    const totalShopifyOrders = unmatchedOrders.length;
+    const totalCarrierLeads = carrierLeads.length;
+    const matchRate = ((matched / totalShopifyOrders) * 100).toFixed(1);
+    
+    console.log(`📊 Análise de Match:`);
+    console.log(`   Pedidos Shopify: ${totalShopifyOrders}`);
+    console.log(`   Leads Transportadora: ${totalCarrierLeads}`);
+    console.log(`   Matches encontrados: ${matched} (${matchRate}%)`);
+    console.log(`   Sem match: ${totalShopifyOrders - matched} pedidos`);
+    
+    // Amostra de pedidos sem telefone
+    const ordersWithoutPhone = unmatchedOrders.filter(order => !order.customerPhone);
+    console.log(`   📱 Pedidos sem telefone: ${ordersWithoutPhone.length}`);
+    
+    if (ordersWithoutPhone.length > 0) {
+      console.log(`   Exemplos sem telefone:`, ordersWithoutPhone.slice(0, 3).map(o => ({
+        name: o.customerName,
+        phone: o.customerPhone || 'SEM TELEFONE'
+      })));
+    }
+    
     return { matched };
   }
   
