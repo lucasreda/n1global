@@ -30,47 +30,49 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 0, // Don't cache to ensure fresh data
+    gcTime: 0,
   });
 
   // Clear cache when user changes
   useEffect(() => {
     if (user) {
-      // Clear all onboarding-related queries for clean state
       queryClient.removeQueries({ 
         queryKey: ['/api/user/onboarding-status'] 
       });
     }
   }, [user?.id]);
 
-  // Effect to handle redirection without causing React warnings
+  // Handle redirection
   useEffect(() => {
-    const needsOnboarding = user && !isLoading && !onboardingStatus?.onboardingCompleted;
+    const hasUser = !!user;
+    const hasData = !isLoading && onboardingStatus !== undefined;
+    const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted;
+    const notOnOnboardingPage = location !== '/onboarding';
     
     console.log('OnboardingGuard - Debug:', {
-      user: !!user,
-      userId: user?.id,
+      hasUser,
       isLoading,
+      hasData,
       onboardingCompleted: onboardingStatus?.onboardingCompleted,
-      onboardingSteps: onboardingStatus?.onboardingSteps,
-      location,
       needsOnboarding,
-      shouldRedirect: needsOnboarding && location !== '/onboarding'
+      location,
+      shouldRedirect: hasUser && needsOnboarding && notOnOnboardingPage
     });
-    
-    if (needsOnboarding && location !== '/onboarding') {
-      console.log('OnboardingGuard - Redirecting to /onboarding');
+
+    if (hasUser && needsOnboarding && notOnOnboardingPage) {
+      console.log('OnboardingGuard - REDIRECTING NOW');
       setLocation('/onboarding');
     }
-  }, [user, isLoading, onboardingStatus?.onboardingCompleted, location, setLocation]);
+  }, [user, isLoading, onboardingStatus, location, setLocation]);
 
-  // Don't interfere with onboarding page itself
+  // Always render onboarding page if we're on that route
   if (location === '/onboarding') {
     return <>{children}</>;
   }
 
-  // Loading state
-  if (isLoading) {
+  // Show loading while checking auth or onboarding status
+  if (!user || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glassmorphism rounded-2xl p-8">
@@ -81,8 +83,16 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Show loading if redirection is needed
-  if (user && !onboardingStatus?.onboardingCompleted) {
+  // If we have user and onboarding data, check if redirection is needed
+  if (onboardingStatus && !onboardingStatus.onboardingCompleted) {
+    // Force redirect after a brief delay if not already on onboarding page
+    if (location !== '/onboarding') {
+      setTimeout(() => {
+        console.log('OnboardingGuard - Force redirect to onboarding');
+        setLocation('/onboarding');
+      }, 100);
+    }
+    
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glassmorphism rounded-2xl p-8">
