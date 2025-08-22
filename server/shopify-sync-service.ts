@@ -400,8 +400,8 @@ export class ShopifySyncService {
       }
       
       // Busca o provedor de fulfillment para esta operação
-      const fulfillmentServiceModule = await import('./fulfillment-service');
-      const fulfillmentService = new fulfillmentServiceModule.FulfillmentService();
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
+      const fulfillmentService = new EuropeanFulfillmentService();
       
       // Busca os leads da API da transportadora
       console.log(`🚚 Buscando leads da transportadora para storeId: ${operation.storeId}`);
