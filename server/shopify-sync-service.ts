@@ -1,6 +1,6 @@
 import { db } from './db';
 import { orders, operations } from '../shared/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { shopifyService, type ShopifyOrder as ShopifyServiceOrder } from './shopify-service';
 
 // Usar o tipo ShopifyOrder do shopify-service
@@ -171,7 +171,16 @@ export class ShopifySyncService {
       }
     }
     
-    console.log(`📦 Importação Shopify concluída: ${imported} novos, ${updated} atualizados`);
+    console.log(`📦 Importação Shopify FINAL: ${imported} novos, ${updated} atualizados (Total processado: ${imported + updated})`);
+    
+    // Debug final para verificar total de pedidos
+    const totalOrders = await db
+      .select({ count: sql`count(*)`.as('count') })
+      .from(orders)
+      .where(eq(orders.operationId, operationId));
+    
+    console.log(`🔍 VERIFICAÇÃO FINAL: Total de pedidos no banco para esta operação: ${totalOrders[0]?.count || 0}`);
+    
     return { imported, updated };
   }
   

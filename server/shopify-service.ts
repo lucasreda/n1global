@@ -17,6 +17,7 @@ export interface ShopifyOrder {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   created_at: string;
   updated_at: string;
   total_price: string;
@@ -31,7 +32,16 @@ export interface ShopifyOrder {
     email: string;
     phone: string;
   };
-  shipping_address: {
+  shipping_address?: {
+    first_name: string;
+    last_name: string;
+    address1: string;
+    city: string;
+    province: string;
+    country: string;
+    zip: string;
+  };
+  billing_address?: {
     first_name: string;
     last_name: string;
     address1: string;
