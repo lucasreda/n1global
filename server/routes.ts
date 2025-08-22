@@ -1097,6 +1097,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           trackingNumber: order.tracking_number,
           providerOrderId: order.provider_order_id,
           leadValue: order.total?.toString(),
+          // Shopify fields mapping
+          shopifyOrderId: order.shopify_order_id,
+          shopifyOrderNumber: order.shopify_order_number,
           // Include cost fields
           productCost: parseFloat(order.product_cost || '0').toFixed(2),
           shippingCost: parseFloat(order.shipping_cost || '0').toFixed(2),
