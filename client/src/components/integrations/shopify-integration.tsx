@@ -320,7 +320,7 @@ export function ShopifyIntegration() {
                 onChange={(e) => setShopName(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Digite apenas o nome da loja (ex: minhaloja.myshopify.com)
+                Digite o nome da loja: minhaloja.myshopify.com ou apenas minhaloja
               </p>
             </div>
 
