@@ -258,8 +258,17 @@ export default function Orders() {
                         </td>
                         <td className="py-4 px-4 text-sm text-white font-mono">
                           <div className="space-y-1">
-                            <div className="text-blue-400">{order.refS || order.n_lead || order.id}</div>
-                            <div className="text-gray-400 text-xs">{order.refNumber || order.n_lead || order.id}</div>
+                            <div className="text-blue-400">
+                              {(() => {
+                                // Extract SKU from Shopify products array
+                                if (order.products && Array.isArray(order.products) && order.products.length > 0) {
+                                  const sku = order.products[0]?.sku;
+                                  return sku ? `#${sku.toUpperCase()}` : (order.refS || order.n_lead || order.id);
+                                }
+                                return order.refS || order.n_lead || order.id;
+                              })()}
+                            </div>
+                            <div className="text-gray-400 text-xs">{order.shopifyOrderNumber || order.refNumber || order.n_lead || order.id}</div>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-sm text-blue-400 font-mono">
