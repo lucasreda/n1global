@@ -60,14 +60,24 @@ export function Sidebar() {
     enabled: !!user,
   });
 
-  // Set default operation when data loads
+  // Initialize operation from localStorage or set default
   useEffect(() => {
-    if (operations.length > 0 && !selectedOperation) {
-      const firstOperationId = operations[0].id;
-      setSelectedOperation(firstOperationId);
-      localStorage.setItem("current_operation_id", firstOperationId);
+    if (operations.length > 0) {
+      const savedOperationId = localStorage.getItem("current_operation_id");
+      
+      // Check if saved operation still exists in operations list
+      const validOperation = savedOperationId && operations.find(op => op.id === savedOperationId);
+      
+      if (validOperation) {
+        setSelectedOperation(savedOperationId);
+      } else {
+        // If no valid saved operation, use first available
+        const firstOperationId = operations[0].id;
+        setSelectedOperation(firstOperationId);
+        localStorage.setItem("current_operation_id", firstOperationId);
+      }
     }
-  }, [operations, selectedOperation]);
+  }, [operations]);
 
   // Handle operation change
   const handleOperationChange = (operationId: string) => {
