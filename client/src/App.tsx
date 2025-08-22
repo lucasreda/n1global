@@ -24,24 +24,30 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const { data: onboardingStatus, isLoading, error } = useQuery({
-    queryKey: ['/api/user/onboarding-status'],
+  const { data: onboardingStatus, isLoading, error, refetch } = useQuery({
+    queryKey: ['/api/user/onboarding-status', user?.id],
     enabled: !!user,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     refetchInterval: false,
     staleTime: 0,
     gcTime: 0,
+    retry: 3,
   });
 
-  // Clear cache when user changes
+  // Clear cache when user changes - force fresh data
   useEffect(() => {
     if (user) {
       queryClient.removeQueries({ 
         queryKey: ['/api/user/onboarding-status'] 
       });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/user/onboarding-status'] 
+      });
+      // Force refetch with new user ID
+      refetch();
     }
-  }, [user?.id]);
+  }, [user?.id, refetch]);
 
   // Handle redirection
   useEffect(() => {
@@ -86,16 +92,8 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If we have user and onboarding data, check if redirection is needed
-  if (onboardingStatus && !onboardingStatus.onboardingCompleted) {
-    // Force redirect after a brief delay if not already on onboarding page
-    if (location !== '/onboarding') {
-      setTimeout(() => {
-        console.log('OnboardingGuard - Force redirect to onboarding');
-        setLocation('/onboarding');
-      }, 100);
-    }
-    
+  // If we have user and onboarding data but not completed, ensure we're on onboarding
+  if (onboardingStatus && !onboardingStatus.onboardingCompleted && location !== '/onboarding') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glassmorphism rounded-2xl p-8">
