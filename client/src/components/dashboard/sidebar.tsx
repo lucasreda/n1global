@@ -24,7 +24,9 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
+import { NewOperationDialog } from "./new-operation-dialog";
 
 const getNavigationForRole = (userRole: string) => {
   const baseNavigation = [
@@ -48,6 +50,7 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [selectedOperation, setSelectedOperation] = useState<string>("");
+  const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
   
   const navigation = getNavigationForRole(user?.role || 'user');
 
@@ -72,6 +75,19 @@ export function Sidebar() {
     localStorage.setItem("current_operation_id", operationId);
     // Force refresh of operation-dependent queries
     window.location.reload();
+  };
+
+  // Handle new operation created
+  const handleOperationCreated = (operationId: string) => {
+    // Invalidate operations query to refresh the list
+    queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
+    // Select the new operation
+    setSelectedOperation(operationId);
+    localStorage.setItem("current_operation_id", operationId);
+    // Refresh to load the new operation data
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   const getUserInitials = (name: string) => {
@@ -112,8 +128,7 @@ export function Sidebar() {
           </div>
           <Select value={selectedOperation} onValueChange={(value) => {
             if (value === "add-new") {
-              // TODO: Implementar modal de criação de nova operação
-              console.log("Abrir modal para adicionar nova operação");
+              setShowNewOperationDialog(true);
               return;
             }
             handleOperationChange(value);
@@ -200,6 +215,13 @@ export function Sidebar() {
           </div>
         </div>
       </div>
+
+      {/* New Operation Dialog */}
+      <NewOperationDialog
+        open={showNewOperationDialog}
+        onOpenChange={setShowNewOperationDialog}
+        onOperationCreated={handleOperationCreated}
+      />
     </nav>
   );
 }
