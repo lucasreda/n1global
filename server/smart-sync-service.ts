@@ -210,7 +210,7 @@ export class SmartSyncService {
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
                 // Garantir que temos storeId válido antes de inserir
-                const finalStoreId = storeId || operation.storeId;
+                const finalStoreId = storeId || operation.storeId || await this.getDefaultStoreId();
                 
                 if (!finalStoreId) {
                   console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
@@ -401,7 +401,7 @@ export class SmartSyncService {
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
                 // Garantir que temos storeId válido antes de inserir
-                const finalStoreId = storeId || operation.storeId;
+                const finalStoreId = storeId || operation.storeId || await this.getDefaultStoreId();
                 
                 if (!finalStoreId) {
                   console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
@@ -586,7 +586,7 @@ export class SmartSyncService {
                 const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
                 // Garantir que temos storeId válido antes de inserir
-                const finalStoreId = storeId || operation.storeId;
+                const finalStoreId = storeId || operation.storeId || await this.getDefaultStoreId();
                 
                 if (!finalStoreId) {
                   console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);

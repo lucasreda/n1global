@@ -309,6 +309,7 @@ export class DashboardService {
     const cacheData: InsertDashboardMetrics = {
       period,
       provider: provider || null,
+      storeId: currentOperation.storeId, // Add storeId from operation
       operationId: currentOperation.id, // Use operationId instead of storeId
       totalOrders: metrics.totalOrders,
       deliveredOrders: metrics.deliveredOrders,
