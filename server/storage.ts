@@ -34,6 +34,7 @@ export interface IStorage {
   // Onboarding methods
   updateOnboardingStep(userId: string, stepId: string, completed: boolean): Promise<void>;
   completeOnboarding(userId: string): Promise<void>;
+  resetUserOnboarding(userId: string): Promise<void>;
   createOperation(operationData: { name: string; description: string }, userId: string): Promise<Operation>;
   
   // Shipping providers creation
@@ -222,6 +223,16 @@ export class DatabaseStorage implements IStorage {
           step4_ads: true,
           step5_sync: true
         }
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async resetUserOnboarding(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        onboardingCompleted: false,
+        onboardingSteps: {}
       })
       .where(eq(users.id, userId));
   }

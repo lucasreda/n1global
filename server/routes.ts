@@ -117,6 +117,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Development endpoint to reset onboarding for testing
+  app.post("/api/auth/reset-onboarding", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      await storage.resetUserOnboarding(req.user.id);
+      res.json({ 
+        success: true, 
+        message: "Onboarding resetado. Faça logout e login novamente." 
+      });
+    } catch (error) {
+      console.error("Error resetting onboarding:", error);
+      res.status(500).json({ message: "Erro ao resetar onboarding" });
+    }
+  });
+
   // Smart Sync routes - for intelligent incremental synchronization
   app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
