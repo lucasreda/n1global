@@ -24,13 +24,13 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const { data: onboardingStatus, isLoading } = useQuery({
-    queryKey: ['/api/user/onboarding-status', user?.id],
+  const { data: onboardingStatus, isLoading, error } = useQuery({
+    queryKey: ['/api/user/onboarding-status'],
     enabled: !!user,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    staleTime: 0, // Don't cache to ensure fresh data
+    staleTime: 0,
     gcTime: 0,
   });
 
@@ -52,8 +52,11 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     
     console.log('OnboardingGuard - Debug:', {
       hasUser,
+      userId: user?.id,
       isLoading,
+      error: error?.message,
       hasData,
+      onboardingStatus,
       onboardingCompleted: onboardingStatus?.onboardingCompleted,
       needsOnboarding,
       location,
@@ -64,7 +67,7 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       console.log('OnboardingGuard - REDIRECTING NOW');
       setLocation('/onboarding');
     }
-  }, [user, isLoading, onboardingStatus, location, setLocation]);
+  }, [user, isLoading, onboardingStatus, error, location, setLocation]);
 
   // Always render onboarding page if we're on that route
   if (location === '/onboarding') {
