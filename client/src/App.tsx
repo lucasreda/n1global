@@ -22,22 +22,34 @@ import NotFound from "@/pages/not-found";
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const { data: onboardingStatus, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/user/onboarding-status', user?.id],
-    enabled: !!user,
+    queryKey: ['/api/user/onboarding-status'],
+    enabled: !!user && isAuthenticated,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchInterval: false,
     staleTime: 0,
     gcTime: 0,
     retry: 3,
+    meta: {
+      errorMessage: 'Failed to fetch onboarding status'
+    }
+  });
+
+  // Debug the query response
+  console.log('Query Debug:', {
+    enabled: !!user && isAuthenticated,
+    data: onboardingStatus,
+    isLoading,
+    error: error?.message,
+    queryKey: ['/api/user/onboarding-status']
   });
 
   // Clear cache when user changes - force fresh data
   useEffect(() => {
-    if (user) {
+    if (user && isAuthenticated) {
       queryClient.removeQueries({ 
         queryKey: ['/api/user/onboarding-status'] 
       });
@@ -47,11 +59,12 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       // Force refetch with new user ID
       refetch();
     }
-  }, [user?.id, refetch]);
+  }, [user?.id, isAuthenticated, refetch]);
 
   // Handle redirection
   useEffect(() => {
     const hasUser = !!user;
+    const hasAuth = isAuthenticated;
     const hasData = !isLoading && onboardingStatus !== undefined;
     const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted;
     const notOnOnboardingPage = location !== '/onboarding';
@@ -59,6 +72,7 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     console.log('OnboardingGuard - Debug:', {
       hasUser,
       userId: user?.id,
+      isAuthenticated: hasAuth,
       isLoading,
       error: error?.message,
       hasData,
@@ -66,14 +80,20 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       onboardingCompleted: onboardingStatus?.onboardingCompleted,
       needsOnboarding,
       location,
-      shouldRedirect: hasUser && needsOnboarding && notOnOnboardingPage
+      queryEnabled: !!user && isAuthenticated,
+      shouldRedirect: hasUser && hasAuth && needsOnboarding && notOnOnboardingPage
     });
 
-    if (hasUser && needsOnboarding && notOnOnboardingPage) {
+    // Se temos dados válidos e o usuário precisa fazer onboarding, force logout para relogin
+    if (hasData && onboardingStatus && onboardingStatus.onboardingCompleted === false) {
+      console.log('🚨 ONBOARDING REQUIRED - User needs to complete onboarding');
+    }
+
+    if (hasUser && hasAuth && needsOnboarding && notOnOnboardingPage) {
       console.log('OnboardingGuard - REDIRECTING NOW');
       setLocation('/onboarding');
     }
-  }, [user, isLoading, onboardingStatus, error, location, setLocation]);
+  }, [user, isAuthenticated, isLoading, onboardingStatus, error, location, setLocation]);
 
   // Always render onboarding page if we're on that route
   if (location === '/onboarding') {
