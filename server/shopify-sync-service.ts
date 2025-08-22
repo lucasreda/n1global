@@ -263,6 +263,13 @@ export class ShopifySyncService {
     
     console.log(`🔍 Encontrados ${unmatchedOrders.length} pedidos para match`);
     
+    // Debug: mostrar alguns exemplos de nomes Shopify para comparação
+    if (unmatchedOrders.length > 0) {
+      console.log(`🛍️ Exemplos de nomes Shopify:`, 
+        unmatchedOrders.slice(0, 3).map(order => order.customerName || 'SEM NOME')
+      );
+    }
+    
     // Busca dados da transportadora para comparação
     const carrierLeads = await this.getCarrierLeads(operationId);
     
@@ -393,10 +400,11 @@ export class ShopifySyncService {
       }
       
       // Busca o provedor de fulfillment para esta operação
-      const { FulfillmentService } = await import('./fulfillment-service');
-      const fulfillmentService = new FulfillmentService();
+      const fulfillmentServiceModule = await import('./fulfillment-service');
+      const fulfillmentService = new fulfillmentServiceModule.FulfillmentService();
       
       // Busca os leads da API da transportadora
+      console.log(`🚚 Buscando leads da transportadora para storeId: ${operation.storeId}`);
       const leadsResult = await fulfillmentService.getLeads(operation.storeId);
       
       if (!leadsResult.success || !leadsResult.leads) {
@@ -405,6 +413,14 @@ export class ShopifySyncService {
       }
       
       console.log(`📦 Encontrados ${leadsResult.leads.length} leads da transportadora`);
+      
+      // Debug: mostrar alguns exemplos de nomes para verificar formato
+      if (leadsResult.leads.length > 0) {
+        console.log(`🔍 Exemplos de nomes da transportadora:`, 
+          leadsResult.leads.slice(0, 3).map(lead => lead.name || lead.customer_name || 'SEM NOME')
+        );
+      }
+      
       return leadsResult.leads;
     } catch (error) {
       console.error('❌ Erro ao buscar leads da transportadora:', error);
