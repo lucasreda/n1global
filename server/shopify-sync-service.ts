@@ -79,40 +79,52 @@ export class ShopifySyncService {
       throw new Error('Integração Shopify não encontrada para esta operação');
     }
     
-    // Busca TODOS os pedidos do Shopify usando paginação baseada em cursor
+    // Busca TODOS os pedidos do Shopify usando paginação baseada em created_at
     let imported = 0;
     let updated = 0;
-    let sinceId: string | undefined = undefined;
+    let currentDate = new Date();
     let hasMorePages = true;
+    let pageCount = 0;
     
-    console.log(`🔄 Iniciando importação completa de todos os pedidos históricos do Shopify...`);
+    console.log(`🔄 Iniciando importação completa de TODOS os pedidos históricos do Shopify...`);
+    
+    // Buscar pedidos mais antigos primeiro, trabalhando para frente
+    // Começar de 2 anos atrás para garantir histórico completo
+    let startDate = new Date(currentDate.getTime() - (2 * 365 * 24 * 60 * 60 * 1000));
     
     while (hasMorePages) {
+      pageCount++;
+      
+      // Buscar pedidos em janelas de 30 dias para evitar limitações
+      let endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+      if (endDate > currentDate) {
+        endDate = currentDate;
+      }
+      
+      console.log(`📄 Página ${pageCount}: Buscando pedidos de ${startDate.toISOString().split('T')[0]} até ${endDate.toISOString().split('T')[0]}`);
+      
       const ordersResult = await shopifyService.getOrders(integration.shopName, integration.accessToken, {
-        limit: 250, // Máximo permitido pelo Shopify
+        limit: 250,
         status: 'any',
-        since_id: sinceId
+        created_at_min: startDate.toISOString(),
+        created_at_max: endDate.toISOString()
       });
       
       if (!ordersResult.success || !ordersResult.orders) {
-        console.error(`❌ Erro ao buscar pedidos: ${ordersResult.error}`);
+        console.error(`❌ Erro ao buscar pedidos da página ${pageCount}: ${ordersResult.error}`);
         break;
       }
       
       const orders = ordersResult.orders;
-      
-      // Se retornou menos de 250 pedidos, é a última página
-      hasMorePages = orders.length === 250;
-      
-      console.log(`📦 Processando ${orders.length} pedidos (Total importados até agora: ${imported})`);
+      console.log(`📦 Encontrados ${orders.length} pedidos no período`);
       
       for (const shopifyOrder of orders) {
         try {
           const result = await this.processShopifyOrder(operationId, shopifyOrder);
           if (result.created) {
             imported++;
-            if (imported % 100 === 0) {
-              console.log(`📈 Progresso: ${imported} pedidos importados...`);
+            if (imported % 50 === 0) {
+              console.log(`📈 Progresso: ${imported} novos pedidos importados...`);
             }
           } else {
             updated++;
@@ -122,10 +134,19 @@ export class ShopifySyncService {
         }
       }
       
-      // Define o since_id para a próxima página (último pedido da página atual)
-      if (orders.length > 0 && hasMorePages) {
-        sinceId = orders[orders.length - 1].id.toString();
-        console.log(`➡️ Continuando com since_id: ${sinceId}`);
+      // Avançar para o próximo período
+      startDate = new Date(endDate.getTime() + 1); // +1ms para evitar duplicatas
+      
+      // Se chegamos até a data atual, parar
+      if (startDate >= currentDate) {
+        hasMorePages = false;
+        console.log(`✅ Chegamos à data atual - importação histórica completa`);
+      }
+      
+      // Limite de segurança para evitar loops infinitos
+      if (pageCount > 50) {
+        console.log(`⚠️ Limite de 50 páginas atingido - parando por segurança`);
+        hasMorePages = false;
       }
     }
     

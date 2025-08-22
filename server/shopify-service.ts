@@ -266,6 +266,7 @@ export class ShopifyService {
     limit?: number;
     since_id?: string;
     created_at_min?: string;
+    created_at_max?: string;
     status?: string;
     page?: number;
   } = {}): Promise<{ success: boolean; orders?: ShopifyOrder[]; error?: string }> {
@@ -275,6 +276,7 @@ export class ShopifyService {
       if (options.limit) params.append('limit', options.limit.toString());
       if (options.since_id) params.append('since_id', options.since_id);
       if (options.created_at_min) params.append('created_at_min', options.created_at_min);
+      if (options.created_at_max) params.append('created_at_max', options.created_at_max);
       if (options.status) params.append('status', options.status);
       if (options.page) params.append('page', options.page.toString());
 
