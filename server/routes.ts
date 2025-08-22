@@ -1715,7 +1715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sync Shopify data
+  // Sync Shopify data with new Shopify-first approach
   app.post("/api/integrations/shopify/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.query;
@@ -1724,7 +1724,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "operationId é obrigatório" });
       }
       
-      const result = await shopifyService.syncData(operationId as string);
+      // Use new Shopify-first sync service
+      const { shopifySyncService } = await import('./shopify-sync-service');
+      const result = await shopifySyncService.syncOperation(operationId as string);
       
       if (!result.success) {
         return res.status(400).json({ message: result.message });
@@ -1732,7 +1734,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(result);
     } catch (error) {
-      console.error("Error syncing Shopify data:", error);
+      console.error("Error syncing Shopify-first data:", error);
       res.status(500).json({ message: "Erro ao sincronizar dados Shopify" });
     }
   });

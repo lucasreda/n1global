@@ -13,7 +13,7 @@ interface ShopifyStore {
   created_at: string;
 }
 
-interface ShopifyOrder {
+export interface ShopifyOrder {
   id: string;
   name: string;
   email: string;

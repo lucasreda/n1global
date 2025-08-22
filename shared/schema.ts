@@ -60,9 +60,17 @@ export const operations = pgTable("operations", {
 
 // Main orders table - unified for all providers
 export const orders = pgTable("orders", {
-  id: text("id").primaryKey(), // Lead number from provider (NT-xxxxx, etc)
+  id: text("id").primaryKey(), // Lead number from provider (NT-xxxxx, etc) or Shopify order ID
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links order to store
   operationId: varchar("operation_id").references(() => operations.id), // Links order to operation
+  
+  // Source identification - NEW FIELDS FOR SHOPIFY-FIRST FLOW
+  dataSource: text("data_source").notNull().default("shopify"), // 'shopify', 'carrier', 'manual'
+  shopifyOrderId: text("shopify_order_id"), // Original Shopify order ID
+  shopifyOrderNumber: text("shopify_order_number"), // Shopify order number (#1001, etc)
+  carrierImported: boolean("carrier_imported").notNull().default(false), // If found in carrier API
+  carrierMatchedAt: timestamp("carrier_matched_at"), // When matched with carrier
+  carrierOrderId: text("carrier_order_id"), // ID from carrier when matched
   
   // Customer information
   customerId: text("customer_id"),
@@ -91,11 +99,12 @@ export const orders = pgTable("orders", {
   
   // Shipping provider info  
   provider: text("provider").notNull().default("european_fulfillment"), // 'european_fulfillment', 'correios', 'jadlog'
-  providerOrderId: text("provider_order_id"), // Original ID from provider
+  providerOrderId: text("provider_order_id"), // Original ID from provider (legacy, use carrierOrderId)
   trackingNumber: text("tracking_number"),
   
   // Provider specific data stored as JSON
   providerData: jsonb("provider_data"),
+  shopifyData: jsonb("shopify_data"), // Complete Shopify order data
   
   // Timestamps - CRITICAL: Use real dates from provider history
   orderDate: timestamp("order_date"), // Real order creation date from provider

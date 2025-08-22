@@ -266,7 +266,7 @@ export function ShopifyIntegration() {
                   ) : (
                     <RefreshCw className="w-4 h-4 mr-2" />
                   )}
-                  Sincronizar
+                  Sincronizar Shopify
                 </Button>
                 <Button
                   onClick={() => setIsConfiguring(true)}
@@ -386,6 +386,14 @@ export function ShopifyIntegration() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
+          <div className="bg-blue-50 p-3 rounded-md border-l-4 border-blue-500">
+            <h4 className="font-medium text-blue-800">🚀 Nova Arquitetura Shopify-First</h4>
+            <p className="text-blue-700 text-sm mt-1">
+              Os pedidos agora são importados primeiro do Shopify e depois matched com a transportadora por nome do cliente. 
+              Isso garante que temos todos os dados do pedido, mesmo os que não estão na transportadora.
+            </p>
+          </div>
+          
           <div>
             <h4 className="font-medium">1. Criar app privado na Shopify</h4>
             <p className="text-muted-foreground">
@@ -403,6 +411,16 @@ export function ShopifyIntegration() {
             <p className="text-muted-foreground">
               Copie o "Admin API access token" gerado automaticamente
             </p>
+          </div>
+          
+          <div className="bg-green-50 p-3 rounded-md border-l-4 border-green-500">
+            <h4 className="font-medium text-green-800">🔄 Fluxo de Sincronização</h4>
+            <div className="text-green-700 text-sm mt-1 space-y-1">
+              <p>1. Importa pedidos do Shopify (fonte primária)</p>
+              <p>2. Faz match com transportadora por nome do cliente</p>
+              <p>3. Atualiza status/tracking baseado na transportadora</p>
+              <p>4. Marca pedidos como "Importado pela Transportadora"</p>
+            </div>
           </div>
         </CardContent>
       </Card>
