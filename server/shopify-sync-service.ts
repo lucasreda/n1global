@@ -280,11 +280,17 @@ export class ShopifySyncService {
     
     console.log(`🔍 Encontrados ${unmatchedOrders.length} pedidos para match`);
     
-    // Debug: mostrar alguns exemplos de nomes Shopify para comparação
+    // Debug: mostrar alguns exemplos detalhados do Shopify para comparação
     if (unmatchedOrders.length > 0) {
-      console.log(`🛍️ Exemplos de nomes Shopify:`, 
-        unmatchedOrders.slice(0, 3).map(order => order.customerName || 'SEM NOME')
-      );
+      console.log(`🛍️ Exemplos detalhados Shopify:`);
+      unmatchedOrders.slice(0, 5).forEach((order, index) => {
+        console.log(`  Pedido ${index + 1}:`, {
+          id: order.id,
+          name: order.customerName || 'SEM NOME',
+          phone: order.customerPhone || 'SEM TELEFONE',
+          email: order.customerEmail || 'SEM EMAIL'
+        });
+      });
     }
     
     // Busca dados da transportadora para comparação
@@ -292,13 +298,30 @@ export class ShopifySyncService {
     
     let matched = 0;
     
+    console.log(`🔍 Iniciando processo de matching de ${unmatchedOrders.length} pedidos...`);
+    
     for (const order of unmatchedOrders) {
+      // Debug específico do matching
+      if (matched < 3) { // Log apenas os primeiros 3 para não poluir
+        console.log(`🔍 Tentando match para pedido:`, {
+          shopifyId: order.id,
+          name: order.customerName,
+          phone: order.customerPhone
+        });
+      }
+      
       // Busca lead da transportadora por telefone ou nome
       const matchedLead = this.findCarrierMatch(
         order.customerPhone || '', 
         order.customerName || '', 
         carrierLeads
       );
+      
+      if (matchedLead) {
+        console.log(`✅ Match encontrado! Shopify: ${order.customerName} (${order.customerPhone}) ↔ Transportadora: ${matchedLead.name} (${matchedLead.phone})`);
+      } else if (matched < 3) {
+        console.log(`❌ Sem match para: ${order.customerName} (${order.customerPhone})`);
+      }
       
       if (matchedLead) {
         // Atualiza o pedido com dados da transportadora
