@@ -638,6 +638,31 @@ export class SmartSyncService {
       
       console.log(`✅ ${message}`);
 
+      // Se importamos muitos pedidos novos (indicando sincronização inicial completa), marcar onboarding como concluído
+      if (newLeads >= 100 && userContext?.userId) {
+        try {
+          const { storage } = await import("./storage");
+          const user = await storage.getUser(userContext.userId);
+          
+          if (user && !user.onboardingCompleted) {
+            const steps = typeof user.onboardingSteps === 'string' 
+              ? JSON.parse(user.onboardingSteps) 
+              : user.onboardingSteps || {};
+            
+            steps.step5_sync = true;
+            
+            await storage.updateUser(userContext.userId, {
+              onboardingCompleted: true,
+              onboardingSteps: JSON.stringify(steps)
+            });
+            
+            console.log(`🎉 Onboarding concluído automaticamente para usuário ${userContext.userId} após sincronizar ${newLeads} pedidos!`);
+          }
+        } catch (error) {
+          console.warn("⚠️ Erro ao marcar onboarding como concluído:", error);
+        }
+      }
+
       return {
         success: true,
         newLeads,
@@ -869,18 +894,7 @@ export class SmartSyncService {
   }
 
   async scheduleAutoSync(): Promise<void> {
-    // Sincronização inteligente automática a cada 5 minutos
-    setInterval(async () => {
-      if (!this.isRunning) {
-        console.log("🧠 Executando sincronização inteligente automática...");
-        const result = await this.startIntelligentSync();
-        if (result.success) {
-          console.log(`🎯 Sync automático (${result.volume}): ${result.newLeads} novos, ${result.updatedLeads} atualizados em ${result.pagesScanned} páginas`);
-        }
-      }
-    }, 5 * 60 * 1000); // 5 minutos
-
-    console.log("⏰ Sincronização inteligente automática agendada para cada 5 minutos");
+    console.log("⏰ Sincronização automática desabilitada temporariamente - use sincronização manual via dashboard");
   }
 
   getLastSyncTime(): Date | null {
