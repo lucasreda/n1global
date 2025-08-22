@@ -25,8 +25,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { NewOperationDialog } from "./new-operation-dialog";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 
 const getNavigationForRole = (userRole: string) => {
   const baseNavigation = [
@@ -49,61 +50,14 @@ const getNavigationForRole = (userRole: string) => {
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
-  const [selectedOperation, setSelectedOperation] = useState<string>("");
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
+  const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
   
   const navigation = getNavigationForRole(user?.role || 'user');
 
-  // Fetch user operations
-  const { data: operations = [] } = useQuery<{id: string, name: string, description?: string}[]>({
-    queryKey: ['/api/operations'],
-    enabled: !!user,
-  });
-
-  // Initialize operation from localStorage or set default
-  useEffect(() => {
-    if (operations.length > 0) {
-      const savedOperationId = localStorage.getItem("current_operation_id");
-      
-      // Check if saved operation still exists in operations list
-      const validOperation = savedOperationId && operations.find(op => op.id === savedOperationId);
-      
-      // Always prioritize "Dss" operation (has Shopify orders)
-      const dssOperation = operations.find((op: any) => op.name === "Dss");
-      
-      if (dssOperation) {
-        // Always force switch to Dss operation (has the Shopify orders)
-        console.log("🔄 Forcing switch to Dss operation with orders");
-        setSelectedOperation(dssOperation.id);
-        localStorage.setItem("current_operation_id", dssOperation.id);
-        
-        // Invalidate queries to refresh data for the new operation
-        queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-chart'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/sync/stats'] });
-      } else if (validOperation) {
-        setSelectedOperation(savedOperationId);
-      } else {
-        // Fallback to first operation
-        const defaultOperationId = operations[0].id;
-        setSelectedOperation(defaultOperationId);
-        localStorage.setItem("current_operation_id", defaultOperationId);
-      }
-    }
-  }, [operations]);
-
   // Handle operation change
   const handleOperationChange = (operationId: string) => {
-    setSelectedOperation(operationId);
-    localStorage.setItem("current_operation_id", operationId);
-    
-    // Invalidate all dashboard-related queries to refresh data for new operation
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-chart'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/sync/stats'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+    changeOperation(operationId);
   };
 
   // Handle new operation created
@@ -111,15 +65,7 @@ export function Sidebar() {
     // Invalidate operations query to refresh the list
     queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
     // Select the new operation
-    setSelectedOperation(operationId);
-    localStorage.setItem("current_operation_id", operationId);
-    
-    // Invalidate all dashboard-related queries to refresh data for new operation
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-chart'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/sync/stats'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/products'] });
+    changeOperation(operationId);
   };
 
   const getUserInitials = (name: string) => {

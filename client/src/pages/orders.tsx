@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { authenticatedApiRequest } from "@/lib/auth";
+import { useCurrentOperation, DSS_OPERATION_ID } from "@/hooks/use-current-operation";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -15,10 +16,13 @@ export default function Orders() {
   const [dateFilter, setDateFilter] = useState("7");
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize] = useState(15);
+  const { selectedOperation, isDssOperation } = useCurrentOperation();
 
   const { data: ordersResponse, isLoading } = useQuery({
-    queryKey: ["/api/orders", currentPage, statusFilter, searchTerm, dateFilter],
+    queryKey: ["/api/orders", currentPage, statusFilter, searchTerm, dateFilter, selectedOperation],
     queryFn: async () => {
+      console.log(`🔍 Fetching orders with operation: ${selectedOperation}`);
+      
       const params = new URLSearchParams({
         limit: pageSize.toString(),
         offset: ((currentPage - 1) * pageSize).toString(),
@@ -28,9 +32,14 @@ export default function Orders() {
       if (searchTerm) params.append("search", searchTerm);
       if (dateFilter !== "all") params.append("days", dateFilter);
       
+      // Force Dss operation if available
+      const operationToUse = selectedOperation || DSS_OPERATION_ID;
+      console.log(`💾 Using operation ID: ${operationToUse}`);
+      
       const response = await authenticatedApiRequest("GET", `/api/orders?${params}`);
       return response.json();
     },
+    enabled: !!selectedOperation, // Only run when we have an operation selected
   });
 
   const orders = Array.isArray(ordersResponse) ? ordersResponse : ordersResponse?.data || [];
