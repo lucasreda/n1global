@@ -39,6 +39,8 @@ export default function Orders() {
   const hasNext = ordersResponse?.hasNext || false;
   const hasPrev = ordersResponse?.hasPrev || false;
 
+  // Remove the query for operations with orders since we'll show a simple message
+
   const handleViewOrder = (orderId: string) => {
     console.log("View order:", orderId);
     // TODO: Implement order view functionality
@@ -200,8 +202,20 @@ export default function Orders() {
                 <tbody className="divide-y divide-gray-600/30">
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center text-gray-400">
-                        Nenhum pedido encontrado
+                      <td colSpan={12} className="py-8 text-center">
+                        <div className="space-y-4">
+                          <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
+                          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-md mx-auto">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                              <span className="text-blue-400 font-medium text-sm">💡 Dica</span>
+                            </div>
+                            <p className="text-blue-300 text-xs">
+                              Se você fez a sincronização do Shopify, verifique se está na operação correta. 
+                              Use o seletor de "Operação" no canto superior esquerdo da barra lateral para trocar para a operação "Dss" onde estão os pedidos importados.
+                            </p>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ) : (
