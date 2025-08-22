@@ -307,6 +307,181 @@ export class SmartSyncService {
     }
   }
 
+  /**
+   * Sincronização limitada para teste do onboarding
+   */
+  async startIntelligentSyncLimited(userContext: { userId: string; operationId: string; storeId: string }, maxPages: number = 4): Promise<{
+    success: boolean;
+    newLeads: number;
+    updatedLeads: number;
+    totalProcessed: number;
+    duration: number;
+    pagesScanned: number;
+    message: string;
+  }> {
+    if (this.isRunning) {
+      return {
+        success: false,
+        newLeads: 0,
+        updatedLeads: 0,
+        totalProcessed: 0,
+        duration: 0,
+        pagesScanned: 0,
+        message: "Sincronização já está em execução"
+      };
+    }
+
+    const startTime = Date.now();
+    this.isRunning = true;
+
+    try {
+      const operationId = userContext.operationId;
+      const storeId = userContext.storeId;
+      
+      console.log(`🧪 Teste de sincronização limitada: max ${maxPages} páginas para operação ${operationId}`);
+      
+      // Get operation details to determine the correct country for API calls
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+      
+      if (!operation) {
+        throw new Error(`❌ Operação ${operationId} não encontrada`);
+      }
+      
+      // Map operation country to API country format
+      const countryMapping = {
+        'ES': 'SPAIN',
+        'IT': 'ITALY',
+        'FR': 'FRANCE',
+        'DE': 'GERMANY'
+      };
+      
+      const syncCountry = countryMapping[operation.country] || "SPAIN";
+      console.log(`🌍 Sincronizando ${maxPages} páginas para ${operation.country} -> ${syncCountry}`);
+
+      let newLeads = 0;
+      let updatedLeads = 0;
+      let totalProcessed = 0;
+      let currentPage = 1;
+      let pagesScanned = 0;
+
+      // Sincronizar apenas o número limitado de páginas
+      while (currentPage <= maxPages) {
+        try {
+          console.log(`📄 Teste: página ${currentPage}/${maxPages}...`);
+          
+          const pageLeads = await europeanFulfillmentService.getLeadsList(syncCountry, currentPage);
+          
+          if (!pageLeads || pageLeads.length === 0) {
+            console.log(`📄 Página ${currentPage} vazia, finalizando teste...`);
+            break;
+          }
+
+          pagesScanned++;
+
+          // Processar cada lead da página
+          for (const apiLead of pageLeads) {
+            try {
+              // Verificar se o lead já existe NESTA operação
+              const [existingLead] = await db
+                .select()
+                .from(orders)
+                .where(and(
+                  eq(orders.id, apiLead.n_lead),
+                  eq(orders.operationId, operationId)
+                ))
+                .limit(1);
+
+              if (!existingLead) {
+                // Lead novo - inserir COM operationId para isolamento
+                const status = apiLead.status_livrison || "new order";
+                const costs = this.calculateOrderCosts(status, apiLead.lead_value);
+                
+                // Garantir que temos storeId válido antes de inserir
+                const finalStoreId = storeId || operation.storeId;
+                
+                if (!finalStoreId) {
+                  console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
+                  continue;
+                }
+                
+                await db.insert(orders).values({
+                  id: apiLead.n_lead,
+                  storeId: finalStoreId,
+                  operationId: operationId,
+                  customerName: apiLead.name,
+                  customerPhone: apiLead.phone,
+                  customerCity: apiLead.city,
+                  customerCountry: "ES",
+                  total: apiLead.lead_value,
+                  status: status,
+                  paymentMethod: apiLead.method_payment || "COD",
+                  provider: "european_fulfillment",
+                  productCost: costs.productCost,
+                  shippingCost: costs.shippingCost,
+                  orderDate: new Date(),
+                });
+
+                newLeads++;
+                console.log(`✅ Teste: lead ${apiLead.n_lead} salvo (${newLeads}/${maxPages * 15})`);
+              } else {
+                // Lead existente - atualizar status se mudou
+                if (existingLead.status !== (apiLead.status_livrison || "new order")) {
+                  await db
+                    .update(orders)
+                    .set({
+                      status: apiLead.status_livrison || "new order",
+                      updatedAt: new Date(),
+                    })
+                    .where(and(
+                      eq(orders.id, apiLead.n_lead),
+                      eq(orders.operationId, operationId)
+                    ));
+                  
+                  updatedLeads++;
+                }
+              }
+              
+              totalProcessed++;
+            } catch (error) {
+              console.warn(`⚠️  Erro ao processar lead ${apiLead.n_lead}:`, error);
+            }
+          }
+
+          currentPage++;
+          
+          // Pequena pausa entre páginas
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+        } catch (error) {
+          console.warn(`⚠️  Erro ao buscar página ${currentPage}:`, error);
+          break;
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      
+      const message = `Teste de sincronização: ${newLeads} novos, ${updatedLeads} atualizados em ${pagesScanned} páginas`;
+      console.log(`✅ ${message} (${duration}ms)`);
+
+      return {
+        success: true,
+        newLeads,
+        updatedLeads,
+        totalProcessed,
+        duration,
+        pagesScanned,
+        message
+      };
+
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
   async startFullInitialSync(userContext?: { userId: string; operationId: string; storeId: string }): Promise<{
     success: boolean;
     newLeads: number;

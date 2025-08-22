@@ -1308,6 +1308,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding Step 5: Data Synchronization Test Route
+  app.post("/api/onboarding/test-sync", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, maxOrders = 50 } = req.body;
+      const storeId = (req as any).storeId;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "Operation ID é obrigatório" });
+      }
+      
+      console.log(`🧪 Iniciando teste de sincronização do onboarding para operação ${operationId}`);
+      
+      // Import smart sync service
+      const { SmartSyncService } = await import("./smart-sync-service");
+      const syncService = new SmartSyncService();
+      
+      // Get operation details
+      const { db } = await import("./db");
+      const { operations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+      
+      if (!operation) {
+        return res.status(404).json({ message: "Operação não encontrada" });
+      }
+      
+      // Create user context for sync
+      const userContext = {
+        userId: req.user.id,
+        operationId: operationId,
+        storeId: storeId
+      };
+      
+      // Run limited sync (only 3-4 pages for testing = ~45-60 orders)
+      const pageLimit = Math.ceil(maxOrders / 15); // 15 orders per page
+      const result = await syncService.startIntelligentSyncLimited(userContext, pageLimit);
+      
+      // Update onboarding step 5 as completed if sync was successful
+      if (result.success && result.newLeads > 0) {
+        const user = await storage.getUser(req.user.id);
+        if (user) {
+          const steps = typeof user.onboardingSteps === 'string' 
+            ? JSON.parse(user.onboardingSteps) 
+            : user.onboardingSteps || {};
+          
+          steps.step5_sync = true;
+          
+          await storage.updateUser(req.user.id, {
+            onboardingCompleted: true,
+            onboardingSteps: JSON.stringify(steps)
+          });
+          
+          console.log(`✅ Onboarding concluído para usuário ${req.user.id}`);
+        }
+      }
+      
+      res.json({
+        success: result.success,
+        message: result.success 
+          ? `Sincronização teste concluída: ${result.newLeads} pedidos importados`
+          : "Falha na sincronização de teste",
+        details: {
+          newOrders: result.newLeads,
+          updatedOrders: result.updatedLeads,
+          totalProcessed: result.totalProcessed,
+          pagesScanned: result.pagesScanned || pageLimit,
+          operationName: operation.name,
+          operationCountry: operation.country,
+          onboardingCompleted: result.success && result.newLeads > 0
+        }
+      });
+      
+    } catch (error) {
+      console.error("Onboarding sync test error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Erro no teste de sincronização",
+        details: error instanceof Error ? error.message : "Erro desconhecido"
+      });
+    }
+  });
+
   // Products routes
   app.get("/api/products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {

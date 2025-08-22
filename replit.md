@@ -40,6 +40,8 @@ Preferred communication style: Simple, everyday language.
 
 ✅ **UNIFIED ADS SYNC ARCHITECTURE**: All advertising sync methods (Facebook/Google) now accept and enforce storeId parameters for consistent multi-tenant isolation across the entire advertising data pipeline.
 
+✅ **ONBOARDING SYNC TESTING ROUTE**: Created dedicated `/api/onboarding/test-sync` endpoint for testing step 5 synchronization with controlled data import (limited pages). Route includes proper authentication, store context middleware, automatic onboarding completion logic, and comprehensive error handling with detailed response metrics.
+
 ## System Architecture
 
 ### Frontend Architecture
