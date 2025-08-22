@@ -13,7 +13,7 @@ import { cn, formatCurrencyEUR } from "@/lib/utils";
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("7");
+  const [dateFilter, setDateFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize] = useState(15);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
