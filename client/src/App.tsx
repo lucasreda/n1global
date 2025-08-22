@@ -25,13 +25,37 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
   const { data: onboardingStatus, isLoading } = useQuery({
-    queryKey: ['/api/user/onboarding-status'],
+    queryKey: ['/api/user/onboarding-status', user?.id],
     enabled: !!user,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
+    staleTime: 30000, // Cache for 30 seconds
   });
+
+  // Clear cache when user changes
+  useEffect(() => {
+    if (user) {
+      // Clear all onboarding-related queries for clean state
+      queryClient.removeQueries({ 
+        queryKey: ['/api/user/onboarding-status'] 
+      });
+    }
+  }, [user?.id]);
 
   // Effect to handle redirection without causing React warnings
   useEffect(() => {
+    console.log('OnboardingGuard - Debug:', {
+      user: !!user,
+      userId: user?.id,
+      isLoading,
+      onboardingCompleted: onboardingStatus?.onboardingCompleted,
+      location,
+      shouldRedirect: user && !isLoading && !onboardingStatus?.onboardingCompleted && location !== '/onboarding'
+    });
+    
     if (user && !isLoading && !onboardingStatus?.onboardingCompleted && location !== '/onboarding') {
+      console.log('OnboardingGuard - Redirecting to /onboarding');
       setLocation('/onboarding');
     }
   }, [user, isLoading, onboardingStatus?.onboardingCompleted, location, setLocation]);
