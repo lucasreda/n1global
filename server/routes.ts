@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema } from "@shared/schema";
-import { europeanFulfillmentService } from "./fulfillment-service";
+import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { storeContext } from "./middleware/store-context";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -1110,7 +1110,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test connection
   app.get("/api/integrations/european-fulfillment/test", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const result = await europeanFulfillmentService.testConnection();
+      const service = new EuropeanFulfillmentService();
+      const result = await service.testConnection();
       res.json(result);
     } catch (error) {
       res.status(500).json({ 
@@ -1130,10 +1131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email e senha são obrigatórios" });
       }
       
-      europeanFulfillmentService.updateCredentials(email, password, apiUrl);
+      const service = new EuropeanFulfillmentService(email, password, apiUrl);
       
       // Test the new credentials
-      const testResult = await europeanFulfillmentService.testConnection();
+      const testResult = await service.testConnection();
       
       res.json({
         message: "Credenciais atualizadas",
@@ -1147,7 +1148,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get countries
   app.get("/api/integrations/european-fulfillment/countries", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const countries = await europeanFulfillmentService.getCountries();
+      const service = new EuropeanFulfillmentService();
+      const countries = await service.getCountries();
       res.json(countries);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar países" });
@@ -1157,7 +1159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get stores
   app.get("/api/integrations/european-fulfillment/stores", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const stores = await europeanFulfillmentService.getStores();
+      const service = new EuropeanFulfillmentService();
+      const stores = await service.getStores();
       res.json(stores);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar lojas" });
@@ -1185,7 +1188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Default to Italy if no country specified
       const country = (req.query.country as string) || "ITALY";
-      const leads = await europeanFulfillmentService.getLeadsList(country);
+      const service = new EuropeanFulfillmentService();
+      const leads = await service.getLeadsList(country);
       res.json(leads);
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar leads" });
@@ -1196,7 +1200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const leadData = req.body;
-      const result = await europeanFulfillmentService.createLead(leadData);
+      const service = new EuropeanFulfillmentService();
+      const result = await service.createLead(leadData);
       res.json(result);
     } catch (error) {
       res.status(500).json({ message: "Erro ao criar lead" });
@@ -1246,7 +1251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get status from European Fulfillment Center
-      const status = await europeanFulfillmentService.getLeadStatus(lead.leadNumber);
+      const service = new EuropeanFulfillmentService();
+      const status = await service.getLeadStatus(lead.leadNumber);
       
       if (status) {
         // Update local status

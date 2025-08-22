@@ -57,14 +57,19 @@ class EuropeanFulfillmentService {
   private token: EuropeanFulfillmentToken | null = null;
   private simulationMode: boolean = false;
 
-  constructor() {
-    // Use working credentials that successfully imported 1076 orders
+  constructor(email?: string, password?: string, apiUrl?: string) {
+    // Initialize with user-specific credentials if provided
     this.credentials = {
-      email: "euz155@gmail.com",
-      password: "euz155", 
-      apiUrl: "https://api.ecomfulfilment.eu/"
+      email: email || "",
+      password: password || "",
+      apiUrl: apiUrl || "https://api.ecomfulfilment.eu/"
     };
-    console.log("European Fulfillment Service initialized with email:", this.credentials.email);
+    
+    if (email && password) {
+      console.log("European Fulfillment Service initialized with user credentials:", this.credentials.email);
+    } else {
+      console.log("European Fulfillment Service initialized without credentials - must be configured");
+    }
   }
 
   // Method to update credentials (for when user provides their own)
@@ -79,6 +84,11 @@ class EuropeanFulfillmentService {
   }
 
   private async getAuthToken(): Promise<string> {
+    // Check if we have credentials configured
+    if (!this.credentials.email || !this.credentials.password) {
+      throw new Error("❌ Credenciais do provedor não configuradas. Configure as credenciais específicas do usuário.");
+    }
+
     // Check if we have a valid token
     if (this.token && this.token.expiresAt > new Date()) {
       return this.token.token;
@@ -701,4 +711,4 @@ class EuropeanFulfillmentService {
 }
 
 export { EuropeanFulfillmentService };
-export const europeanFulfillmentService = new EuropeanFulfillmentService();
+// Removed global instance - each provider should have its own instance with specific credentials
