@@ -170,11 +170,16 @@ export class ShopifySyncService {
       throw new Error('Operação não encontrada');
     }
     
-    // Verifica se o pedido já existe (por Shopify Order ID)
+    // Verifica se o pedido já existe (por Shopify Order ID E operação)
     const [existingOrder] = await db
       .select()
       .from(orders)
-      .where(eq(orders.shopifyOrderId, shopifyOrder.id.toString()));
+      .where(
+        and(
+          eq(orders.shopifyOrderId, shopifyOrder.id.toString()),
+          eq(orders.operationId, operationId)
+        )
+      );
     
     // Monta dados do cliente
     const customerName = this.getCustomerName(shopifyOrder);
@@ -604,11 +609,26 @@ export class ShopifySyncService {
         }
       }
       
-      // Debug: mostrar primeiro telefone que não deu match
-      if (carrierLeads.length > 0) {
-        const firstLead = carrierLeads[0];
-        const firstLeadPhone = this.normalizePhone(firstLead.phone || '');
-        console.log(`🔍 Debug normalização: Shopify "${customerPhone}" -> "${normalizedPhone}" vs Transportadora "${firstLead.phone}" -> "${firstLeadPhone}"`);
+      // Debug: mostrar alguns telefones da transportadora para comparação
+      if (carrierLeads.length > 0 && customerPhone) {
+        console.log(`🔍 Debug normalização: Shopify "${customerPhone}" -> "${normalizedPhone}"`);
+        
+        // Procura 3 telefones da transportadora que começam com os mesmos dígitos
+        const similarLeads = carrierLeads
+          .filter(lead => lead.phone && this.normalizePhone(lead.phone).startsWith(normalizedPhone.substring(0, 4)))
+          .slice(0, 3);
+          
+        if (similarLeads.length > 0) {
+          console.log(`   📞 Similares na transportadora:`, 
+            similarLeads.map(lead => `${lead.phone} -> ${this.normalizePhone(lead.phone)}`)
+          );
+        } else {
+          // Se não há similares, mostra alguns exemplos aleatórios
+          const randomSamples = carrierLeads.slice(0, 3);
+          console.log(`   📞 Exemplos transportadora:`, 
+            randomSamples.map(lead => `${lead.phone} -> ${this.normalizePhone(lead.phone)}`)
+          );
+        }
       }
     }
     
