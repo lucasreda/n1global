@@ -164,12 +164,6 @@ export class ShopifySyncService {
       sinceId = newSinceId;
       console.log(`🔄 Próxima página usará since_id: ${sinceId}`);
       
-      // Se recebeu menos que o limite, não há mais páginas
-      if (orders.length < 250) {
-        hasMorePages = false;
-        console.log(`✅ Última página processada - importação completa`);
-      }
-      
       // Limite de segurança para evitar loops infinitos
       if (pageCount > 100) {
         console.log(`⚠️ Limite de 100 páginas atingido - parando por segurança`);
