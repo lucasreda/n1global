@@ -210,6 +210,31 @@ export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Shopify integrations table
+export const shopifyIntegrations = pgTable("shopify_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  shopName: text("shop_name").notNull(), // e.g., "mystore.myshopify.com"
+  accessToken: text("access_token").notNull(), // Shopify Admin API access token
+  
+  status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  syncErrors: text("sync_errors"), // Error messages from last sync
+  
+  // Store metadata
+  metadata: jsonb("metadata").$type<{
+    storeName?: string;
+    storeEmail?: string;
+    plan?: string;
+    currency?: string;
+    timezone?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // User operation access - defines which operations a user can access
 export const userOperationAccess = pgTable("user_operation_access", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -312,6 +337,13 @@ export const insertFulfillmentIntegrationSchema = createInsertSchema(fulfillment
   updatedAt: true,
 });
 
+// Shopify integration schemas
+export const insertShopifyIntegrationSchema = createInsertSchema(shopifyIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // User operation access schemas
 export const insertUserOperationAccessSchema = createInsertSchema(userOperationAccess).omit({
   id: true,
@@ -369,6 +401,9 @@ export type InsertFacebookAdsIntegration = z.infer<typeof insertFacebookAdsInteg
 
 export type FulfillmentIntegration = typeof fulfillmentIntegrations.$inferSelect;
 export type InsertFulfillmentIntegration = z.infer<typeof insertFulfillmentIntegrationSchema>;
+
+export type ShopifyIntegration = typeof shopifyIntegrations.$inferSelect;
+export type InsertShopifyIntegration = z.infer<typeof insertShopifyIntegrationSchema>;
 
 export type UserOperationAccess = typeof userOperationAccess.$inferSelect;
 export type InsertUserOperationAccess = z.infer<typeof insertUserOperationAccessSchema>;

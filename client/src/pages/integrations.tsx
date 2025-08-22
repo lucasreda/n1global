@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { EuropeanFulfillmentPanel } from "@/components/integration/european-fulfillment-panel";
+import { ShopifyIntegration } from "@/components/integrations/shopify-integration";
 import { Settings, CheckCircle, AlertCircle, Package, Truck, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,6 +10,15 @@ export default function Integrations() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
 
   const integrations = [
+    {
+      id: "shopify",
+      name: "Shopify Store",
+      status: "pending",
+      description: "Integração com loja Shopify para importar pedidos e produtos",
+      icon: Package,
+      color: "green",
+      hasPanel: true,
+    },
     {
       id: "european-fulfillment",
       name: "European Fulfillment Center",
@@ -112,6 +122,7 @@ export default function Integrations() {
                             <span>{integration.name}</span>
                           </DialogTitle>
                         </DialogHeader>
+                        {integration.id === "shopify" && <ShopifyIntegration />}
                         {integration.id === "european-fulfillment" && <EuropeanFulfillmentPanel />}
                       </DialogContent>
                     </Dialog>

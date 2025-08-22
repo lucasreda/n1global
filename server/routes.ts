@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema } from "@shared/schema";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
+import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
@@ -1646,6 +1647,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating campaign:", error);
       res.status(500).json({ message: "Erro ao atualizar campanha" });
+    }
+  });
+
+  // Shopify Integration Routes
+  
+  // Get Shopify integration for operation
+  app.get("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      const integration = await shopifyService.getIntegration(operationId as string);
+      
+      if (!integration) {
+        return res.status(404).json({ message: "Integração Shopify não encontrada" });
+      }
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Error getting Shopify integration:", error);
+      res.status(500).json({ message: "Erro ao buscar integração Shopify" });
+    }
+  });
+
+  // Save/update Shopify integration
+  app.post("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, shopName, accessToken } = req.body;
+      
+      if (!operationId || !shopName || !accessToken) {
+        return res.status(400).json({ message: "operationId, shopName e accessToken são obrigatórios" });
+      }
+      
+      const integration = await shopifyService.saveIntegration(operationId, shopName, accessToken);
+      res.json(integration);
+    } catch (error) {
+      console.error("Error saving Shopify integration:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Erro ao salvar integração Shopify" 
+      });
+    }
+  });
+
+  // Test Shopify connection
+  app.post("/api/integrations/shopify/test", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { shopName, accessToken } = req.body;
+      
+      if (!shopName || !accessToken) {
+        return res.status(400).json({ message: "shopName e accessToken são obrigatórios" });
+      }
+      
+      const result = await shopifyService.testConnection(shopName, accessToken);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error testing Shopify connection:", error);
+      res.status(500).json({ message: "Erro ao testar conexão Shopify" });
+    }
+  });
+
+  // Sync Shopify data
+  app.post("/api/integrations/shopify/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      const result = await shopifyService.syncData(operationId as string);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error syncing Shopify data:", error);
+      res.status(500).json({ message: "Erro ao sincronizar dados Shopify" });
+    }
+  });
+
+  // Remove Shopify integration
+  app.delete("/api/integrations/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      const removed = await shopifyService.removeIntegration(operationId as string);
+      
+      if (!removed) {
+        return res.status(404).json({ message: "Integração Shopify não encontrada" });
+      }
+      
+      res.json({ message: "Integração Shopify removida com sucesso" });
+    } catch (error) {
+      console.error("Error removing Shopify integration:", error);
+      res.status(500).json({ message: "Erro ao remover integração Shopify" });
     }
   });
 
