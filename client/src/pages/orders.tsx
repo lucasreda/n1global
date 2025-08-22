@@ -259,7 +259,20 @@ export default function Orders() {
                         <td className="py-4 px-4 text-sm text-white font-mono">
                           <div className="space-y-1">
                             <div className="text-blue-400">
-                              {order.shopifyOrderNumber || order.refS || order.n_lead || order.id}
+                              {(() => {
+                                // 1. Se tem shopify_order_number, exibe ele (#PDIT3732)
+                                if (order.shopifyOrderNumber) {
+                                  return order.shopifyOrderNumber;
+                                }
+                                
+                                // 2. Se é pedido Shopify sem order_number, formata o ID
+                                if (order.id && order.id.startsWith('shopify_')) {
+                                  return `#${order.id.replace('shopify_', '')}`;
+                                }
+                                
+                                // 3. Outros casos (NT-, refS, etc.)
+                                return order.refS || order.n_lead || order.id;
+                              })()}
                             </div>
                             <div className="text-gray-400 text-xs">
                               {(() => {
