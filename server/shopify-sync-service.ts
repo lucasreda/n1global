@@ -81,36 +81,32 @@ export class ShopifySyncService {
       throw new Error(`Integração Shopify não encontrada para operação ${operationId}`);
     }
     
-    // Busca TODOS os pedidos do Shopify usando paginação baseada em created_at
+    // Busca TODOS os pedidos do Shopify usando paginação simples
     let imported = 0;
     let updated = 0;
-    let currentDate = new Date();
     let hasMorePages = true;
     let pageCount = 0;
+    let sinceId = null;
     
-    console.log(`🔄 Iniciando importação completa de TODOS os pedidos históricos do Shopify...`);
-    
-    // Buscar pedidos mais antigos primeiro, trabalhando para frente
-    // Começar de 2 anos atrás para garantir histórico completo
-    let startDate = new Date(currentDate.getTime() - (2 * 365 * 24 * 60 * 60 * 1000));
+    console.log(`🔄 Iniciando importação completa de TODOS os pedidos do Shopify...`);
     
     while (hasMorePages) {
       pageCount++;
       
-      // Buscar pedidos em janelas de 30 dias para evitar limitações
-      let endDate = new Date(startDate.getTime() + (30 * 24 * 60 * 60 * 1000));
-      if (endDate > currentDate) {
-        endDate = currentDate;
-      }
+      console.log(`📄 Página ${pageCount}: Buscando próximos pedidos${sinceId ? ` (desde ID ${sinceId})` : ''}`);
       
-      console.log(`📄 Página ${pageCount}: Buscando pedidos de ${startDate.toISOString().split('T')[0]} até ${endDate.toISOString().split('T')[0]}`);
-      
-      const ordersResult = await shopifyService.getOrders(integration.shopName, integration.accessToken, {
+      // Usar paginação simples por ID para garantir todos os pedidos
+      const params: any = {
         limit: 250,
         status: 'any',
-        created_at_min: startDate.toISOString(),
-        created_at_max: endDate.toISOString()
-      });
+        order: 'created_at asc'
+      };
+      
+      if (sinceId) {
+        params.since_id = sinceId;
+      }
+      
+      const ordersResult = await shopifyService.getOrders(integration.shopName, integration.accessToken, params);
       
       if (!ordersResult.success || !ordersResult.orders) {
         console.error(`❌ Erro ao buscar pedidos da página ${pageCount}: ${ordersResult.error}`);
@@ -118,7 +114,14 @@ export class ShopifySyncService {
       }
       
       const orders = ordersResult.orders;
-      console.log(`📦 Encontrados ${orders.length} pedidos no período`);
+      console.log(`📦 Encontrados ${orders.length} pedidos nesta página`);
+      
+      // Se não há pedidos, fim da paginação
+      if (orders.length === 0) {
+        hasMorePages = false;
+        console.log(`✅ Não há mais pedidos - importação completa`);
+        break;
+      }
       
       for (const shopifyOrder of orders) {
         try {
@@ -136,18 +139,19 @@ export class ShopifySyncService {
         }
       }
       
-      // Avançar para o próximo período
-      startDate = new Date(endDate.getTime() + 1); // +1ms para evitar duplicatas
+      // Definir since_id para próxima página (último pedido processado)
+      const lastOrder = orders[orders.length - 1];
+      sinceId = lastOrder.id;
       
-      // Se chegamos até a data atual, parar
-      if (startDate >= currentDate) {
+      // Se recebeu menos que o limite, não há mais páginas
+      if (orders.length < 250) {
         hasMorePages = false;
-        console.log(`✅ Chegamos à data atual - importação histórica completa`);
+        console.log(`✅ Última página processada - importação completa`);
       }
       
       // Limite de segurança para evitar loops infinitos
-      if (pageCount > 50) {
-        console.log(`⚠️ Limite de 50 páginas atingido - parando por segurança`);
+      if (pageCount > 100) {
+        console.log(`⚠️ Limite de 100 páginas atingido - parando por segurança`);
         hasMorePages = false;
       }
     }
