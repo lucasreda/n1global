@@ -403,25 +403,26 @@ export class ShopifySyncService {
       const { EuropeanFulfillmentService } = await import('./fulfillment-service');
       const fulfillmentService = new EuropeanFulfillmentService();
       
+      // Configura as credenciais
+      fulfillmentService.setCredentials({
+        email: 'unit1@n1storeworld.com',
+        password: 'Ecom@2025'
+      });
+      
       // Busca os leads da API da transportadora
       console.log(`🚚 Buscando leads da transportadora para storeId: ${operation.storeId}`);
-      const leadsResult = await fulfillmentService.getLeads(operation.storeId);
+      const leads = await fulfillmentService.getLeadsList('IT'); // Italy como país padrão
       
-      if (!leadsResult.success || !leadsResult.leads) {
-        console.error('❌ Erro ao buscar leads da transportadora:', leadsResult.error);
-        return [];
-      }
-      
-      console.log(`📦 Encontrados ${leadsResult.leads.length} leads da transportadora`);
+      console.log(`📦 Encontrados ${leads.length} leads da transportadora`);
       
       // Debug: mostrar alguns exemplos de nomes para verificar formato
-      if (leadsResult.leads.length > 0) {
+      if (leads.length > 0) {
         console.log(`🔍 Exemplos de nomes da transportadora:`, 
-          leadsResult.leads.slice(0, 3).map(lead => lead.name || lead.customer_name || 'SEM NOME')
+          leads.slice(0, 3).map(lead => lead.name || lead.customer_name || lead.first_name + ' ' + lead.last_name || 'SEM NOME')
         );
       }
       
-      return leadsResult.leads;
+      return leads;
     } catch (error) {
       console.error('❌ Erro ao buscar leads da transportadora:', error);
       return [];
