@@ -12,9 +12,9 @@ export function useCurrentOperation() {
     queryKey: ['/api/operations'],
   });
 
-  // Force Dss operation on load
+  // Force Dss operation on load (only once)
   useEffect(() => {
-    if (operations.length > 0) {
+    if (operations.length > 0 && !selectedOperation) {
       console.log("🎯 Available operations:", operations.map(op => `${op.name} (${op.id})`));
       
       // Always force Dss operation (has the Shopify orders)
@@ -24,23 +24,13 @@ export function useCurrentOperation() {
         console.log("✅ Forcing Dss operation:", dssOperation.id);
         setSelectedOperation(dssOperation.id);
         localStorage.setItem("current_operation_id", dssOperation.id);
-        
-        // Force refresh all queries immediately
-        queryClient.invalidateQueries();
-        queryClient.removeQueries(); // Clear cache completely
-        
-        // Force immediate re-fetch by clearing specific queries
-        queryClient.refetchQueries({ queryKey: ['/api/orders'] });
-        
-        // Set a flag to indicate we've forced the switch
-        sessionStorage.setItem("dss_forced", "true");
       } else {
         console.warn("⚠️ Dss operation not found, using fallback");
         setSelectedOperation(operations[0].id);
         localStorage.setItem("current_operation_id", operations[0].id);
       }
     }
-  }, [operations]);
+  }, [operations, selectedOperation]);
 
   const changeOperation = (operationId: string) => {
     console.log("🔄 Manual operation change:", operationId);
