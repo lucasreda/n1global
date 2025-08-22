@@ -417,23 +417,25 @@ export class ShopifySyncService {
       console.log(`🔍 Buscando todos os leads com paginação`);
       let allLeads: any[] = [];
       
-      // Primeiro tenta com país 'ITALY' que sabemos que funciona
+      // Busca TODOS os leads da transportadora (sem limite de páginas)
       let page = 1;
-      const maxPages = 10; // Limita a 10 páginas (150 leads) para não sobrecarregar
       
-      while (page <= maxPages) {
+      while (true) {
         try {
           console.log(`📄 Buscando página ${page} de leads`);
           const pageLeads = await fulfillmentService.getLeadsList('ITALY', page);
           
           if (pageLeads.length === 0) {
-            console.log(`✅ Página ${page} vazia - fim da busca`);
+            console.log(`✅ Página ${page} vazia - fim da busca (total: ${allLeads.length} leads)`);
             break;
           }
           
           allLeads = allLeads.concat(pageLeads);
           console.log(`📦 Página ${page}: ${pageLeads.length} leads (total: ${allLeads.length})`);
           page++;
+          
+          // Pequena pausa entre requests para não sobrecarregar a API
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.log(`⚠️ Erro na página ${page}:`, error);
           break;
