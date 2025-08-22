@@ -552,12 +552,20 @@ export class ShopifySyncService {
     // Primeiro tenta match por telefone (mais confiável)
     if (customerPhone) {
       const normalizedPhone = this.normalizePhone(customerPhone);
+      
       for (const lead of carrierLeads) {
         const leadPhone = this.normalizePhone(lead.phone || lead.telephone || lead.mobile || '');
         if (leadPhone && this.phonesMatch(normalizedPhone, leadPhone)) {
-          console.log(`📞 Match por telefone: ${customerPhone} ↔ ${lead.phone || lead.telephone || lead.mobile}`);
+          console.log(`📞 Match por telefone: ${customerPhone} (${normalizedPhone}) ↔ ${lead.phone || lead.telephone || lead.mobile} (${leadPhone})`);
           return lead;
         }
+      }
+      
+      // Debug: mostrar primeiro telefone que não deu match
+      if (carrierLeads.length > 0) {
+        const firstLead = carrierLeads[0];
+        const firstLeadPhone = this.normalizePhone(firstLead.phone || '');
+        console.log(`🔍 Debug normalização: Shopify "${customerPhone}" -> "${normalizedPhone}" vs Transportadora "${firstLead.phone}" -> "${firstLeadPhone}"`);
       }
     }
     
@@ -578,8 +586,22 @@ export class ShopifySyncService {
   
   private normalizePhone(phone: string): string {
     if (!phone) return '';
+    
     // Remove todos os caracteres não numéricos
-    return phone.replace(/\D/g, '');
+    let normalized = phone.replace(/\D/g, '');
+    
+    // Remove prefixos italianos comuns
+    // +39 -> remove 39
+    if (normalized.startsWith('39') && normalized.length > 10) {
+      normalized = normalized.substring(2);
+    }
+    
+    // Se começar com 0, remove (formato nacional italiano)
+    if (normalized.startsWith('0')) {
+      normalized = normalized.substring(1);
+    }
+    
+    return normalized;
   }
   
   private phonesMatch(phone1: string, phone2: string): boolean {
