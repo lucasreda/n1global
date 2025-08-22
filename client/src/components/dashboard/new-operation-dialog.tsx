@@ -143,10 +143,16 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     mutationFn: async (data: { name: string; country: string; currency: string }) => {
       const response = await fetch('/api/operations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error('Failed to create operation');
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Failed to create operation: ${errorData}`);
+      }
       return response.json();
     },
     onSuccess: (response: any) => {

@@ -330,6 +330,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { name, country, currency } = req.body;
+      if (!name?.trim()) {
+        return res.status(400).json({ message: "Nome da operação é obrigatório" });
+      }
+      if (!country?.trim()) {
+        return res.status(400).json({ message: "País da operação é obrigatório" });
+      }
+      if (!currency?.trim()) {
+        return res.status(400).json({ message: "Moeda da operação é obrigatória" });
+      }
+
+      // Create operation
+      const operation = await storage.createOperation({
+        name: name.trim(),
+        description: `Operação criada em ${new Date().toLocaleDateString()}`,
+        country: country.trim(),
+        currency: currency.trim()
+      }, req.user.id);
+
+      console.log("New operation created:", operation);
+      res.json(operation);
+    } catch (error) {
+      console.error("Create operation error:", error);
+      res.status(500).json({ message: "Erro ao criar operação" });
+    }
+  });
+
   // Onboarding routes
   app.get("/api/user/onboarding-status", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
