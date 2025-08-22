@@ -276,10 +276,12 @@ export class ShopifySyncService {
     let matched = 0;
     
     for (const order of unmatchedOrders) {
-      if (!order.customerName) continue;
-      
-      // Busca lead da transportadora com nome similar
-      const matchedLead = this.findCarrierMatch(order.customerName, carrierLeads);
+      // Busca lead da transportadora por telefone ou nome
+      const matchedLead = this.findCarrierMatch(
+        order.customerPhone || '', 
+        order.customerName || '', 
+        carrierLeads
+      );
       
       if (matchedLead) {
         // Atualiza o pedido com dados da transportadora
@@ -296,7 +298,6 @@ export class ShopifySyncService {
           })
           .where(eq(orders.id, order.id));
         
-        console.log(`🔗 Match encontrado: ${order.customerName} -> ${matchedLead.name || matchedLead.customer_name}`);
         matched++;
       }
     }
@@ -411,15 +412,41 @@ export class ShopifySyncService {
       
       // Busca os leads da API da transportadora
       console.log(`🚚 Buscando leads da transportadora para storeId: ${operation.storeId}`);
-      const leads = await fulfillmentService.getLeadsList('IT'); // Italy como país padrão
+      
+      // Primeiro tenta sem filtro de país para ver todos os leads disponíveis
+      console.log(`🔍 Buscando todos os leads sem filtro de país`);
+      let leads = await fulfillmentService.getLeadsList();
+      
+      // Se não encontrou, tenta com diferentes códigos de país
+      if (leads.length === 0) {
+        console.log(`⚠️ Nenhum lead encontrado sem filtro, tentando diferentes códigos de país`);
+        const countryCodes = ['ITALY', 'Italy', 'italia', 'it', 'ITA'];
+        
+        for (const country of countryCodes) {
+          console.log(`🔍 Tentando país: ${country}`);
+          leads = await fulfillmentService.getLeadsList(country);
+          if (leads.length > 0) {
+            console.log(`✅ Encontrados leads com país: ${country}`);
+            break;
+          }
+        }
+      }
       
       console.log(`📦 Encontrados ${leads.length} leads da transportadora`);
       
-      // Debug: mostrar alguns exemplos de nomes para verificar formato
+      // Debug: mostrar alguns exemplos de dados para verificar formato
       if (leads.length > 0) {
-        console.log(`🔍 Exemplos de nomes da transportadora:`, 
-          leads.slice(0, 3).map(lead => lead.name || lead.customer_name || lead.first_name + ' ' + lead.last_name || 'SEM NOME')
-        );
+        console.log(`🔍 Exemplos de dados da transportadora:`);
+        leads.slice(0, 3).forEach((lead, index) => {
+          console.log(`  Lead ${index + 1}:`, {
+            name: lead.name || lead.customer_name || lead.first_name + ' ' + lead.last_name || 'SEM NOME',
+            phone: lead.phone || lead.telephone || lead.mobile || 'SEM TELEFONE',
+            email: lead.email || 'SEM EMAIL',
+            keys: Object.keys(lead)
+          });
+        });
+      } else {
+        console.log(`⚠️ Nenhum lead encontrado - verificar configuração da API`);
       }
       
       return leads;
@@ -429,19 +456,53 @@ export class ShopifySyncService {
     }
   }
   
-  private findCarrierMatch(customerName: string, carrierLeads: any[]): any | null {
-    if (!customerName || carrierLeads.length === 0) return null;
+  private findCarrierMatch(customerPhone: string, customerName: string, carrierLeads: any[]): any | null {
+    if (carrierLeads.length === 0) return null;
     
-    const normalizedName = this.normalizeName(customerName);
+    // Primeiro tenta match por telefone (mais confiável)
+    if (customerPhone) {
+      const normalizedPhone = this.normalizePhone(customerPhone);
+      for (const lead of carrierLeads) {
+        const leadPhone = this.normalizePhone(lead.phone || lead.telephone || lead.mobile || '');
+        if (leadPhone && this.phonesMatch(normalizedPhone, leadPhone)) {
+          console.log(`📞 Match por telefone: ${customerPhone} ↔ ${lead.phone || lead.telephone || lead.mobile}`);
+          return lead;
+        }
+      }
+    }
     
-    for (const lead of carrierLeads) {
-      const leadName = this.normalizeName(lead.name || lead.customer_name || '');
-      if (leadName && this.namesMatch(normalizedName, leadName)) {
-        return lead;
+    // Se não encontrou por telefone, tenta por nome
+    if (customerName) {
+      const normalizedName = this.normalizeName(customerName);
+      for (const lead of carrierLeads) {
+        const leadName = this.normalizeName(lead.name || lead.customer_name || lead.first_name + ' ' + lead.last_name || '');
+        if (leadName && this.namesMatch(normalizedName, leadName)) {
+          console.log(`👤 Match por nome: ${customerName} ↔ ${leadName}`);
+          return lead;
+        }
       }
     }
     
     return null;
+  }
+  
+  private normalizePhone(phone: string): string {
+    if (!phone) return '';
+    // Remove todos os caracteres não numéricos
+    return phone.replace(/\D/g, '');
+  }
+  
+  private phonesMatch(phone1: string, phone2: string): boolean {
+    if (!phone1 || !phone2 || phone1.length < 8 || phone2.length < 8) return false;
+    
+    // Match exato
+    if (phone1 === phone2) return true;
+    
+    // Match pelos últimos 8 dígitos (números locais)
+    const suffix1 = phone1.slice(-8);
+    const suffix2 = phone2.slice(-8);
+    
+    return suffix1 === suffix2;
   }
   
   private normalizeName(name: string): string {
