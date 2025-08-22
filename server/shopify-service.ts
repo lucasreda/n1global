@@ -80,30 +80,46 @@ export class ShopifyService {
    */
   async testConnection(shopName: string, accessToken: string): Promise<{ success: boolean; data?: ShopifyStore; error?: string }> {
     try {
-      const response = await fetch(`https://${shopName}/admin/api/2023-10/shop.json`, {
+      // Limpa o nome da loja se vier com protocolo ou barra
+      const cleanShopName = shopName.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      
+      console.log(`🔗 Testando conexão Shopify: ${cleanShopName}`);
+      
+      const url = `https://${cleanShopName}/admin/api/2023-10/shop.json`;
+      const response = await fetch(url, {
+        method: 'GET',
         headers: {
           'X-Shopify-Access-Token': accessToken,
           'Content-Type': 'application/json',
+          'User-Agent': 'COD-Dashboard/1.0'
         },
+        timeout: 30000, // 30 segundos de timeout
       });
+
+      console.log(`📊 Resposta Shopify: ${response.status} ${response.statusText}`);
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`❌ Erro Shopify: ${response.status} - ${errorText}`);
         return {
           success: false,
-          error: `HTTP ${response.status}: ${errorText}`
+          error: `HTTP ${response.status}: ${errorText || response.statusText}`
         };
       }
 
-      const data = await response.json();
+      const data = await response.json() as { shop: ShopifyStore };
+      console.log(`✅ Loja Shopify conectada: ${data.shop.name}`);
+      
       return {
         success: true,
         data: data.shop
       };
     } catch (error) {
+      console.error('❌ Erro na conexão Shopify:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+        error: `Falha na conexão: ${errorMessage}`
       };
     }
   }
@@ -204,7 +220,7 @@ export class ShopifyService {
       .delete(shopifyIntegrations)
       .where(eq(shopifyIntegrations.operationId, operationId));
 
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   /**
@@ -319,7 +335,7 @@ export class ShopifyService {
       // Busca dados da loja
       const shopResult = await this.getShopInfo(integration.shopName, integration.accessToken);
       if (!shopResult.success) {
-        await this.updateIntegrationStatus(operationId, 'error', shopResult.error);
+        await this.updateIntegrationStatus(operationId, 'error', shopResult.error || null);
         return {
           success: false,
           message: `Erro ao conectar com a loja: ${shopResult.error}`
@@ -334,7 +350,7 @@ export class ShopifyService {
       });
 
       if (!ordersResult.success) {
-        await this.updateIntegrationStatus(operationId, 'error', ordersResult.error);
+        await this.updateIntegrationStatus(operationId, 'error', ordersResult.error || null);
         return {
           success: false,
           message: `Erro ao buscar pedidos: ${ordersResult.error}`
@@ -348,7 +364,7 @@ export class ShopifyService {
       });
 
       if (!productsResult.success) {
-        await this.updateIntegrationStatus(operationId, 'error', productsResult.error);
+        await this.updateIntegrationStatus(operationId, 'error', productsResult.error || null);
         return {
           success: false,
           message: `Erro ao buscar produtos: ${productsResult.error}`
