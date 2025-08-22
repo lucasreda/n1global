@@ -39,6 +39,20 @@ export class SmartSyncService {
   // Status que precisam monitoramento frequente
   private activeStatuses = ['new order', 'confirmed', 'packed', 'shipped', 'in transit', 'in delivery', 'incident'];
   
+  // Progress tracking for better UX
+  private syncProgress = {
+    isRunning: false,
+    currentPage: 0,
+    totalPages: 0,
+    processedOrders: 0,
+    newOrders: 0,
+    updatedOrders: 0,
+    currentStep: '',
+    estimatedTimeRemaining: '',
+    startTime: null as Date | null,
+    percentage: 0
+  };
+  
   // Configurações inteligentes baseadas em volume - REMOVIDOS LIMITES ARTIFICIAIS
   private adaptiveConfig = {
     lowVolumeThreshold: 5,    // Menos de 5 mudanças/hora = baixo volume
@@ -94,6 +108,47 @@ export class SmartSyncService {
   }
 
   /**
+   * Retorna o progresso atual da sincronização para feedback em tempo real
+   */
+  async getSyncProgress() {
+    return {
+      ...this.syncProgress,
+      timeElapsed: this.syncProgress.startTime ? 
+        Math.floor((Date.now() - this.syncProgress.startTime.getTime()) / 1000) : 0
+    };
+  }
+
+  /**
+   * Atualiza o progresso da sincronização
+   */
+  private updateSyncProgress(updates: Partial<typeof this.syncProgress>) {
+    this.syncProgress = { ...this.syncProgress, ...updates };
+    
+    // Calcular porcentagem baseada nas páginas
+    if (this.syncProgress.totalPages > 0) {
+      this.syncProgress.percentage = Math.round(
+        (this.syncProgress.currentPage / this.syncProgress.totalPages) * 100
+      );
+    }
+    
+    // Estimar tempo restante baseado no progresso atual
+    if (this.syncProgress.startTime && this.syncProgress.percentage > 5) {
+      const elapsed = Date.now() - this.syncProgress.startTime.getTime();
+      const estimatedTotal = elapsed / (this.syncProgress.percentage / 100);
+      const remaining = Math.max(0, estimatedTotal - elapsed);
+      
+      const remainingMinutes = Math.floor(remaining / 60000);
+      const remainingSeconds = Math.floor((remaining % 60000) / 1000);
+      
+      if (remainingMinutes > 0) {
+        this.syncProgress.estimatedTimeRemaining = `${remainingMinutes}min ${remainingSeconds}s`;
+      } else {
+        this.syncProgress.estimatedTimeRemaining = `${remainingSeconds}s`;
+      }
+    }
+  }
+
+  /**
    * Obtém o ID da loja padrão para associar aos pedidos
    */
   private async getDefaultStoreId(): Promise<string> {
@@ -144,6 +199,19 @@ export class SmartSyncService {
     const startTime = Date.now();
     this.isRunning = true;
 
+    // Initialize progress tracking
+    this.updateSyncProgress({
+      isRunning: true,
+      currentPage: 0,
+      totalPages: 0,
+      processedOrders: 0,
+      newOrders: 0,
+      updatedOrders: 0,
+      currentStep: 'Iniciando sincronização inteligente...',
+      startTime: new Date(),
+      percentage: 0
+    });
+
     try {
       // Analisa o padrão de volume para determinar estratégia
       const volumePattern = this.analyzeVolumePattern();
@@ -183,6 +251,12 @@ export class SmartSyncService {
       const syncCountry = countryMapping[operation.country] || operation.country || "SPAIN";
       console.log(`🧠 Sincronização inteligente para operação ${operationId} (${operation.country} -> ${syncCountry}): Volume ${volumePattern}, ${maxPages} páginas`);
 
+      // Update progress with total pages estimate
+      this.updateSyncProgress({
+        totalPages: maxPages,
+        currentStep: `Preparando sincronização para ${operation.country}...`
+      });
+
       let newLeads = 0;
       let updatedLeads = 0;
       let totalProcessed = 0;
@@ -192,6 +266,12 @@ export class SmartSyncService {
       // Sincronizar apenas as páginas necessárias baseado no volume
       while (currentPage <= maxPages) {
         try {
+          // Update progress for current page
+          this.updateSyncProgress({
+            currentPage,
+            currentStep: `Processando página ${currentPage} de ${maxPages}...`
+          });
+
           console.log(`📄 Escaneando página ${currentPage}/${maxPages}...`);
           
           const pageLeads = await europeanFulfillmentService.getLeadsList(syncCountry, currentPage);
@@ -248,6 +328,16 @@ export class SmartSyncService {
                 });
 
                 newLeads++;
+                
+                // Update progress every 5 new orders for better UX
+                if (newLeads % 5 === 0) {
+                  this.updateSyncProgress({
+                    processedOrders: totalProcessed + 1,
+                    newOrders: newLeads,
+                    updatedOrders: updatedLeads,
+                    currentStep: `Importando pedidos: ${newLeads} novos importados (Página ${currentPage})`
+                  });
+                }
               } else {
                 // Lead existente - atualizar status se mudou (somente na mesma operação)
                 if (existingLead.status !== (apiLead.status_livrison || "new order")) {
@@ -303,6 +393,16 @@ export class SmartSyncService {
       const message = `Sincronização inteligente (${volumePattern}): ${newLeads} novos, ${updatedLeads} atualizados em ${pagesScanned} páginas`;
       console.log(`✅ ${message} (${duration}ms)`);
 
+      // Final progress update
+      this.updateSyncProgress({
+        isRunning: false,
+        currentStep: `Sincronização concluída! ${newLeads} pedidos importados`,
+        processedOrders: totalProcessed,
+        newOrders: newLeads,
+        updatedOrders: updatedLeads,
+        percentage: 100
+      });
+
       return {
         success: true,
         newLeads,
@@ -316,6 +416,19 @@ export class SmartSyncService {
 
     } finally {
       this.isRunning = false;
+      // Reset progress when sync ends
+      setTimeout(() => {
+        this.updateSyncProgress({
+          isRunning: false,
+          currentPage: 0,
+          totalPages: 0,
+          processedOrders: 0,
+          newOrders: 0,
+          updatedOrders: 0,
+          currentStep: 'Aguardando próxima sincronização...',
+          percentage: 0
+        });
+      }, 5000); // Keep final status visible for 5 seconds
     }
   }
 
@@ -438,7 +551,12 @@ export class SmartSyncService {
                 });
 
                 newLeads++;
-                console.log(`✅ Teste: lead ${apiLead.n_lead} salvo (${newLeads}/${maxPages * 15})`);
+                totalProcessed++;
+                
+                // Progresso detalhado para o usuário
+                if (totalProcessed % 10 === 0 || totalProcessed <= 5) {
+                  console.log(`📦 Importando pedidos: ${totalProcessed} processados, ${newLeads} novos (Página ${currentPage}/${maxPages})`);
+                }
               } else {
                 // Lead existente - atualizar status se mudou
                 if (existingLead.status !== (apiLead.status_livrison || "new order")) {

@@ -182,6 +182,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get sync stats" });
     }
   });
+
+  // Real-time sync progress endpoint for better user experience
+  app.get("/api/sync/progress", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { smartSyncService } = await import("./smart-sync-service");
+      const progress = await smartSyncService.getSyncProgress();
+      res.json(progress);
+    } catch (error) {
+      console.error("Sync progress error:", error);
+      res.status(500).json({ message: "Erro ao obter progresso da sincronização" });
+    }
+  });
   
   app.get("/api/sync/status/:jobId", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
