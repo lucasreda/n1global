@@ -88,14 +88,16 @@ export class ShopifySyncService {
     let pageCount = 0;
     let sinceId = null;
     
-    console.log(`🔄 Iniciando importação completa de TODOS os pedidos do Shopify...`);
+    console.log(`🔄 ========== INICIANDO IMPORTAÇÃO COMPLETA ==========`);
+    console.log(`🎯 OBJETIVO: Importar TODOS os 1572 pedidos da Shopify`);
+    console.log(`📊 STATUS ATUAL: ${imported} novos, ${updated} atualizados`);
     
     while (hasMorePages) {
       pageCount++;
       
-      console.log(`📄 Página ${pageCount}: Buscando próximos pedidos${sinceId ? ` (desde ID ${sinceId})` : ''}`);
+      console.log(`\n📄 ========== PÁGINA ${pageCount} ==========`);
+      console.log(`🔍 Buscando pedidos${sinceId ? ` desde ID ${sinceId}` : ' (primeira página)'}`);
       
-      // Debug: mostrar parâmetros de busca
       const params: any = {
         limit: 250,
         status: 'any'
@@ -103,12 +105,9 @@ export class ShopifySyncService {
       
       if (sinceId) {
         params.since_id = sinceId;
-        console.log(`🔍 Usando since_id: ${sinceId} para paginação`);
-      } else {
-        console.log(`🔍 Primeira página - sem since_id`);
       }
       
-      console.log(`🔍 Parâmetros da busca:`, params);
+      console.log(`🌐 Fazendo requisição para Shopify API com:`, JSON.stringify(params, null, 2));
       
       const ordersResult = await shopifyService.getOrders(integration.shopName, integration.accessToken, params);
       
