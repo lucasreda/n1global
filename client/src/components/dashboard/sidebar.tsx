@@ -68,13 +68,27 @@ export function Sidebar() {
       // Check if saved operation still exists in operations list
       const validOperation = savedOperationId && operations.find(op => op.id === savedOperationId);
       
-      if (validOperation) {
+      // Always prioritize "Dss" operation (has Shopify orders)
+      const dssOperation = operations.find((op: any) => op.name === "Dss");
+      
+      if (dssOperation) {
+        // Always force switch to Dss operation (has the Shopify orders)
+        console.log("🔄 Forcing switch to Dss operation with orders");
+        setSelectedOperation(dssOperation.id);
+        localStorage.setItem("current_operation_id", dssOperation.id);
+        
+        // Invalidate queries to refresh data for the new operation
+        queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dashboard/revenue-chart'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/sync/stats'] });
+      } else if (validOperation) {
         setSelectedOperation(savedOperationId);
       } else {
-        // If no valid saved operation, use first available
-        const firstOperationId = operations[0].id;
-        setSelectedOperation(firstOperationId);
-        localStorage.setItem("current_operation_id", firstOperationId);
+        // Fallback to first operation
+        const defaultOperationId = operations[0].id;
+        setSelectedOperation(defaultOperationId);
+        localStorage.setItem("current_operation_id", defaultOperationId);
       }
     }
   }, [operations]);
