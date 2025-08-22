@@ -463,51 +463,47 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
     queryFn: async () => {
       if (!selectedOperation) return [];
       
-      // Set operation ID for the request
-      const prevOperationId = localStorage.getItem('current_operation_id');
+      console.log('Fetching providers for operation:', selectedOperation);
+      
+      // Clear any existing operation context and set the correct one
+      localStorage.removeItem('current_operation_id');
       localStorage.setItem('current_operation_id', selectedOperation);
       
       try {
         const response = await apiRequest('GET', '/api/shipping-providers', undefined);
-        return response.json();
+        const data = await response.json();
+        console.log('Provider response for operation', selectedOperation, ':', data);
+        return data;
       } finally {
-        // Restore previous operation ID
-        if (prevOperationId) {
-          localStorage.setItem('current_operation_id', prevOperationId);
-        } else {
-          localStorage.removeItem('current_operation_id');
-        }
+        // Keep the current operation set for the session
+        // Don't restore previous value during onboarding
       }
     }
   });
 
   useEffect(() => {
+    console.log('Selected operation in ShippingStep:', selectedOperation);
     console.log('Existing providers data:', existingProviders);
     if (existingProviders && Array.isArray(existingProviders)) {
       console.log('Setting providers:', existingProviders);
       setProviders(existingProviders);
     }
-  }, [existingProviders]);
+  }, [existingProviders, selectedOperation]);
 
   const createProviderMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Temporarily set the operation ID in localStorage for the request
-      const prevOperationId = localStorage.getItem('current_operation_id');
-      if (selectedOperation) {
-        localStorage.setItem('current_operation_id', selectedOperation);
+      if (!selectedOperation) {
+        throw new Error('Operation not selected');
       }
       
-      try {
-        const response = await apiRequest('POST', '/api/shipping-providers', data);
-        return response.json();
-      } finally {
-        // Restore previous operation ID
-        if (prevOperationId) {
-          localStorage.setItem('current_operation_id', prevOperationId);
-        } else {
-          localStorage.removeItem('current_operation_id');
-        }
-      }
+      console.log('Creating provider for operation:', selectedOperation);
+      
+      // Ensure correct operation context is set
+      localStorage.removeItem('current_operation_id');
+      localStorage.setItem('current_operation_id', selectedOperation);
+      
+      const response = await apiRequest('POST', '/api/shipping-providers', data);
+      return response.json();
     },
     onSuccess: (newProvider) => {
       setProviders(prev => [...prev, newProvider]);

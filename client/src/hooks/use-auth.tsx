@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { authService } from "@/lib/auth";
+import { useOperationStore } from "@/store/operations";
 
 interface User {
   id: string;
@@ -25,6 +26,10 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     try {
+      // Clear operation store for fresh user session
+      useOperationStore.getState().setSelectedOperation(null);
+      localStorage.removeItem('current_operation_id');
+      
       const response = await authService.login({ email, password });
       set({
         user: response.user,
@@ -52,6 +57,10 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    // Clear operation store and localStorage
+    useOperationStore.getState().setSelectedOperation(null);
+    localStorage.removeItem('current_operation_id');
+    
     authService.logout();
     set({
       user: null,
