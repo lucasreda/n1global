@@ -413,24 +413,34 @@ export class ShopifySyncService {
       // Busca os leads da API da transportadora
       console.log(`🚚 Buscando leads da transportadora para storeId: ${operation.storeId}`);
       
-      // Primeiro tenta sem filtro de país para ver todos os leads disponíveis
-      console.log(`🔍 Buscando todos os leads sem filtro de país`);
-      let leads = await fulfillmentService.getLeadsList();
+      // Busca todos os leads da transportadora (múltiplas páginas)
+      console.log(`🔍 Buscando todos os leads com paginação`);
+      let allLeads: any[] = [];
       
-      // Se não encontrou, tenta com diferentes códigos de país
-      if (leads.length === 0) {
-        console.log(`⚠️ Nenhum lead encontrado sem filtro, tentando diferentes códigos de país`);
-        const countryCodes = ['ITALY', 'Italy', 'italia', 'it', 'ITA'];
-        
-        for (const country of countryCodes) {
-          console.log(`🔍 Tentando país: ${country}`);
-          leads = await fulfillmentService.getLeadsList(country);
-          if (leads.length > 0) {
-            console.log(`✅ Encontrados leads com país: ${country}`);
+      // Primeiro tenta com país 'ITALY' que sabemos que funciona
+      let page = 1;
+      const maxPages = 10; // Limita a 10 páginas (150 leads) para não sobrecarregar
+      
+      while (page <= maxPages) {
+        try {
+          console.log(`📄 Buscando página ${page} de leads`);
+          const pageLeads = await fulfillmentService.getLeadsList('ITALY', page);
+          
+          if (pageLeads.length === 0) {
+            console.log(`✅ Página ${page} vazia - fim da busca`);
             break;
           }
+          
+          allLeads = allLeads.concat(pageLeads);
+          console.log(`📦 Página ${page}: ${pageLeads.length} leads (total: ${allLeads.length})`);
+          page++;
+        } catch (error) {
+          console.log(`⚠️ Erro na página ${page}:`, error);
+          break;
         }
       }
+      
+      const leads = allLeads;
       
       console.log(`📦 Encontrados ${leads.length} leads da transportadora`);
       
