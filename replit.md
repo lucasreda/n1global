@@ -10,7 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Progress (August 2025)
 
-✅ **SKU DISPLAY IMPLEMENTATION COMPLETE** (August 22, 2025): Successfully implemented SKU display in orders table showing Shopify product SKUs in format #KITLENCOL (uppercase) with fallback to original reference system. Column "REF.S / REF" now extracts SKU from products JSON array and displays as #[SKU] format as requested by user.
+✅ **SHOPIFY ORDER DISPLAY IMPLEMENTATION COMPLETE** (August 22, 2025): Successfully implemented correct display separating order identifier vs product SKU. Primary line shows Shopify order number in #PDIT3733 format from shopifyOrderNumber field. Secondary line shows product SKU without # prefix (ex: "SKU: kitlencol"). Column properly distinguishes between order reference and product identification as requested by user.
 
 ✅ **FRONTEND-BACKEND SYNCHRONIZATION RESOLVED** (August 22, 2025): Fixed critical desynchronization issue preventing order display. Implemented proper X-Operation-Id header passing, corrected authenticatedApiRequest function parameters, and resolved token validation. System now successfully displays 1,264 Shopify orders in operation "Dss" with complete data integration.
 
