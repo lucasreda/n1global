@@ -70,7 +70,7 @@ export class ShopifySyncService {
   /**
    * Importa pedidos do Shopify para o banco de dados
    */
-  private async importShopifyOrders(operationId: string): Promise<{ imported: number; updated: number }> {
+  async importShopifyOrders(operationId: string): Promise<{ imported: number; updated: number }> {
     console.log(`📦 Importando pedidos do Shopify para operação ${operationId}`);
     
     // Busca integração Shopify

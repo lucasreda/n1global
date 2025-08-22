@@ -1007,7 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fase 1: Sincronização do Shopify
       console.log(`🛍️ Iniciando sincronização Shopify para operação ${currentOperation.name}`);
-      const shopifyResult = await shopifySyncService.syncShopifyOrders(currentOperation.id);
+      const shopifyResult = await shopifySyncService.importShopifyOrders(currentOperation.id);
       
       // Fase 2: Match com transportadora
       console.log(`🔗 Iniciando match com transportadora`);
