@@ -259,24 +259,16 @@ export default function Orders() {
                         <td className="py-4 px-4 text-sm text-white font-mono">
                           <div className="space-y-1">
                             <div className="text-blue-400">
-                              {(() => {
-                                // Use Shopify order number (contains #PDIT3733 format)
-                                if (order.shopifyOrderNumber) {
-                                  return order.shopifyOrderNumber;
-                                }
-                                
-                                // Fallback to original reference
-                                return order.refS || order.n_lead || order.id;
-                              })()}
+                              {order.shopifyOrderNumber || order.refS || order.n_lead || order.id}
                             </div>
                             <div className="text-gray-400 text-xs">
                               {(() => {
-                                // Extract SKU from Shopify products array (without #)
+                                // Extract SKU from Shopify products array
                                 if (order.products && Array.isArray(order.products) && order.products.length > 0) {
                                   const sku = order.products[0]?.sku;
-                                  return sku ? `SKU: ${sku.toLowerCase()}` : (order.shopifyOrderNumber || order.refNumber);
+                                  return sku ? sku.toLowerCase() : 'No SKU';
                                 }
-                                return order.shopifyOrderNumber || order.refNumber || 'No SKU';
+                                return order.refNumber || 'No SKU';
                               })()}
                             </div>
                           </div>
