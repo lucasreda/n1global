@@ -395,133 +395,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/onboarding/sync-data", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      console.log(`🔍 Onboarding sync-data: Starting for user ${req.user.id}`);
+      
       // Get current data counts
       const userOperations = await storage.getUserOperations(req.user.id);
+      console.log(`🔍 Onboarding: Found ${userOperations.length} operations for user`);
+      
       const firstOperation = userOperations[0];
+      console.log(`🔍 Onboarding: First operation:`, firstOperation ? firstOperation.name : 'NONE');
       
       let orderCount = 0;
       let campaignCount = 0;
       let syncedOrdersFromAPI = 0;
 
       if (firstOperation) {
+        console.log(`🔍 Onboarding: Found operation ${firstOperation.name} (${firstOperation.id})`);
+        
         // Get configured shipping providers for this operation
         const providers = await storage.getShippingProvidersByOperation(firstOperation.id);
+        console.log(`🔍 Onboarding: Found ${providers.length} providers:`, providers.map(p => `${p.name} (${p.type}) - active: ${p.isActive}, apiKey: ${!!p.apiKey}`));
+        
         const activeProvider = providers.find(p => p.isActive && p.apiKey);
+        console.log(`🔍 Onboarding: Active provider:`, activeProvider ? `${activeProvider.name} (${activeProvider.type})` : 'NONE');
 
         if (activeProvider && activeProvider.type === 'european_fulfillment') {
           try {
-            // Sync orders from European Fulfillment API
-            const { EuropeanFulfillmentService } = await import('./fulfillment-service');
-            const service = new EuropeanFulfillmentService();
-            service.updateCredentials(activeProvider.login, activeProvider.password);
+            // Use the smart sync service for consistent synchronization
+            const { smartSyncService } = await import('./smart-sync-service');
             
-            let allLeads = [];
+            // Get the user's store ID for context
+            const userStoreId = req.user.storeId || firstOperation.storeId;
             
-            // Map country codes to API country names
-            const countryMapping: Record<string, string> = {
-              'ES': 'SPAIN',
-              'IT': 'ITALY', 
-              'FR': 'FRANCE',
-              'PT': 'PORTUGAL',
-              'DE': 'GERMANY',
-              'AT': 'AUSTRIA',
-              'GR': 'GREECE',
-              'PL': 'POLAND',
-              'CZ': 'CZECH REPUBLIC',
-              'SK': 'ESLOVAQUIA',
-              'HU': 'HUNGRY',
-              'RO': 'ROMANIA',
-              'BG': 'BULGARIA',
-              'HR': 'CROACIA',
-              'SI': 'ESLOVENIA',
-              'EE': 'ESTONIA',
-              'LV': 'LATVIA',
-              'LT': 'LITHUANIA'
+            // Create user context for the sync
+            const userContext = {
+              userId: req.user.id,
+              operationId: firstOperation.id,
+              storeId: userStoreId
             };
-
-            // Try to get leads from operation's country first with pagination
-            if (firstOperation.country) {
-              try {
-                const apiCountryName = countryMapping[firstOperation.country] || firstOperation.country;
-                console.log(`🎯 Fetching ALL leads from operation country: ${firstOperation.country} -> ${apiCountryName}`);
-                
-                let page = 1;
-                let totalFetched = 0;
-                
-                while (true) {
-                  console.log(`📄 Fetching page ${page} for ${apiCountryName}...`);
-                  const paginatedResponse = await service.getLeadsListWithPagination(apiCountryName, page);
-                  
-                  if (!paginatedResponse.data || paginatedResponse.data.length === 0) {
-                    console.log(`📄 Page ${page} is empty, stopping pagination`);
-                    break;
-                  }
-                  
-                  allLeads.push(...paginatedResponse.data);
-                  totalFetched += paginatedResponse.data.length;
-                  console.log(`📄 Page ${page}: ${paginatedResponse.data.length} leads (Total: ${totalFetched}/${paginatedResponse.total})`);
-                  
-                  // Check if we've reached the last page
-                  if (page >= paginatedResponse.last_page) {
-                    console.log(`📄 Reached last page (${paginatedResponse.last_page})`);
-                    break;
-                  }
-                  
-                  page++;
-                  
-                  // Safety limit to prevent infinite loops
-                  if (page > 100) {
-                    console.log(`🛑 Safety limit reached at page 100`);
-                    break;
-                  }
-                }
-                
-                console.log(`🇪🇸 Found total ${totalFetched} leads from ${apiCountryName}`);
-              } catch (countryError) {
-                console.log(`⚠️ No leads found for operation country ${firstOperation.country}: ${countryError.message}`);
-              }
-            }
             
-            // Note: Removed fallback logic since we now have proper country-specific pagination
+            console.log(`🚀 Starting onboarding sync for operation ${firstOperation.name} (${firstOperation.country})`);
             
-            // Convert leads to orders and save to database with STRICT operation isolation
-            if (allLeads.length > 0) {
-              const ordersToSave = service.convertLeadsToOrders(allLeads);
-              
-              // Save orders to database with OPERATION-SPECIFIC isolation
-              for (const orderData of ordersToSave) {
-                try {
-                  // Check if order already exists FOR THIS SPECIFIC OPERATION
-                  const existingOrdersInOperation = await storage.getOrdersByOperation(firstOperation.id);
-                  const existingOrder = existingOrdersInOperation.find(o => o.id === orderData.id);
-                  
-                  if (!existingOrder) {
-                    // Add MANDATORY operation-specific fields for database
-                    const dbOrder = {
-                      ...orderData,
-                      storeId: req.user.storeId, // Store the current user's store
-                      operationId: firstOperation.id, // CRITICAL: Tie to specific operation
-                      orderDate: orderData.createdAt instanceof Date ? orderData.createdAt : new Date(orderData.createdAt)
-                    };
-                    
-                    await storage.createOrder(dbOrder);
-                    console.log(`✅ Saved order ${orderData.id} to operation ${firstOperation.name}`);
-                  }
-                } catch (saveError) {
-                  console.warn(`Failed to save order ${orderData.id}:`, saveError.message);
-                }
-              }
-              
-              console.log(`💾 Saved ${ordersToSave.length} orders to database`);
-              syncedOrdersFromAPI = ordersToSave.length;
+            // Run a limited sync during onboarding (first 10 pages to avoid timeout)
+            const syncResult = await smartSyncService.startIntelligentSyncLimited(userContext, 10);
+            
+            if (syncResult.success) {
+              syncedOrdersFromAPI = syncResult.newLeads;
+              console.log(`✅ Onboarding sync completed: ${syncResult.newLeads} orders imported`);
             } else {
+              console.warn(`⚠️ Onboarding sync failed: ${syncResult.message}`);
               syncedOrdersFromAPI = 0;
-              console.log(`⚠️ No leads found from API`);
             }
             
-            console.log(`📊 Total synced orders: ${syncedOrdersFromAPI}`);
           } catch (apiError) {
             console.warn("Failed to sync from API:", apiError);
+            console.error("Full API error:", apiError);
             // Fall back to database count
             const orders = await storage.getOrdersByStore(req.user.storeId || '');
             orderCount = orders.length;
