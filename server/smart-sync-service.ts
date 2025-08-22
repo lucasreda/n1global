@@ -1112,7 +1112,7 @@ export class SmartSyncService {
     return this.isRunning;
   }
 
-  async getSyncStats(): Promise<{
+  async getSyncStats(operationId?: string): Promise<{
     totalLeads: number;
     activeLeads: number;
     finalizedLeads: number;
@@ -1121,7 +1121,16 @@ export class SmartSyncService {
     syncHistory: Array<{ timestamp: Date; newLeads: number; updates: number }>;
     currentVolume: 'low' | 'medium' | 'high';
   }> {
-    const allLeads = await db.select().from(orders);
+    let allLeads;
+    
+    if (operationId) {
+      // Filter by specific operation
+      allLeads = await db.select().from(orders).where(eq(orders.operationId, operationId));
+    } else {
+      // Get all leads (fallback for compatibility)
+      allLeads = await db.select().from(orders);
+    }
+    
     const totalCount = allLeads.length;
     const activeCount = allLeads.filter(lead => this.activeStatuses.includes(lead.status)).length;
     const finalizedCount = allLeads.filter(lead => this.finalStatuses.includes(lead.status)).length;

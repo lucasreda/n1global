@@ -173,8 +173,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/sync/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      const operationId = req.query.operationId as string;
       const { smartSyncService } = await import("./smart-sync-service");
-      const stats = await smartSyncService.getSyncStats();
+      const stats = await smartSyncService.getSyncStats(operationId);
       
       res.json(stats);
     } catch (error) {

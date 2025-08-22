@@ -14,10 +14,14 @@ export function SyncStatus() {
   const queryClient = useQueryClient();
 
   // Fetch sync stats
+  const operationId = localStorage.getItem("current_operation_id");
   const { data: syncStats, isLoading } = useQuery({
-    queryKey: ["/api/sync/stats"],
+    queryKey: ["/api/sync/stats", operationId],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/sync/stats");
+      const url = operationId 
+        ? `/api/sync/stats?operationId=${operationId}`
+        : "/api/sync/stats";
+      const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },
     refetchInterval: 30000, // Auto-refresh every 30 seconds

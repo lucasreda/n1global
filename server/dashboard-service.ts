@@ -239,7 +239,7 @@ export class DashboardService {
     const averageOrderValue = deliveredOrders > 0 ? totalRevenue / deliveredOrders : 0;
     
     // Calculate product costs and shipping costs based on order quantities
-    const productCosts = await this.calculateProductCosts(period, provider);
+    const productCosts = await this.calculateProductCosts(period, provider, operationId, req);
     const totalProductCosts = productCosts.totalProductCosts; // EUR value (product only)
     const totalProductCostsBRL = productCosts.totalProductCostsBRL; // BRL value (product only)
     const totalShippingCosts = productCosts.totalShippingCosts; // EUR value (shipping only)
@@ -378,11 +378,38 @@ export class DashboardService {
     }
   }
   
-  private async calculateProductCosts(period: string, provider?: string) {
+  private async calculateProductCosts(period: string, provider?: string, operationId?: string, req?: any) {
     const dateRange = this.getDateRange(period);
     
-    // Build where conditions for the same period
+    // CRITICAL: Get operation for data isolation
+    let currentOperation;
+    
+    if (operationId) {
+      // Use specific operation ID
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations.find(op => op.id === operationId);
+    } else {
+      // Fallback to first operation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      currentOperation = userOperations[0];
+    }
+    
+    if (!currentOperation) {
+      // No operation, return zero costs
+      return {
+        totalProductCosts: 0,
+        totalProductCostsBRL: 0,
+        totalShippingCosts: 0,
+        totalShippingCostsBRL: 0,
+        totalCombinedCosts: 0,
+        totalCombinedCostsBRL: 0,
+        totalQuantity: 0
+      };
+    }
+    
+    // Build where conditions for the same period AND operation
     let whereConditions = [
+      eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
       gte(orders.orderDate, dateRange.from),
       lte(orders.orderDate, dateRange.to)
     ];
