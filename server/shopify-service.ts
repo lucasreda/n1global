@@ -267,6 +267,7 @@ export class ShopifyService {
     since_id?: string;
     created_at_min?: string;
     status?: string;
+    page?: number;
   } = {}): Promise<{ success: boolean; orders?: ShopifyOrder[]; error?: string }> {
     try {
       const params = new URLSearchParams();
@@ -275,6 +276,7 @@ export class ShopifyService {
       if (options.since_id) params.append('since_id', options.since_id);
       if (options.created_at_min) params.append('created_at_min', options.created_at_min);
       if (options.status) params.append('status', options.status);
+      if (options.page) params.append('page', options.page.toString());
 
       const response = await fetch(`https://${shopName}/admin/api/2023-10/orders.json?${params}`, {
         headers: {
