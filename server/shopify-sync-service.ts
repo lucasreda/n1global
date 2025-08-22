@@ -74,9 +74,11 @@ export class ShopifySyncService {
     console.log(`📦 Importando pedidos do Shopify para operação ${operationId}`);
     
     // Busca integração Shopify
+    console.log(`🔍 Buscando integração Shopify para operação: ${operationId}`);
     const integration = await shopifyService.getIntegration(operationId);
+    console.log(`🔍 Integração encontrada:`, integration ? 'SIM' : 'NÃO');
     if (!integration) {
-      throw new Error('Integração Shopify não encontrada para esta operação');
+      throw new Error(`Integração Shopify não encontrada para operação ${operationId}`);
     }
     
     // Busca TODOS os pedidos do Shopify usando paginação baseada em created_at

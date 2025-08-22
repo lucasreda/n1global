@@ -992,9 +992,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para sincronização combinada Shopify + Transportadora
   app.post('/api/sync/shopify-carrier', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      // Get user's operation for data isolation
+      // Get user's operation for data isolation - prioritize Dss operation
       const userOperations = await storage.getUserOperations(req.user.id);
-      const currentOperation = userOperations[0];
+      let currentOperation = userOperations.find(op => op.name === 'Dss');
+      if (!currentOperation) {
+        currentOperation = userOperations[0];
+      }
       
       if (!currentOperation) {
         return res.status(400).json({ 
