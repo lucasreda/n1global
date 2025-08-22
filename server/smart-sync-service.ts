@@ -524,8 +524,30 @@ export class SmartSyncService {
         throw new Error(`❌ Operação ${operationId} não encontrada`);
       }
       
-      const syncCountry = operation.country || "ITALY"; // Use operation's country, fallback to ITALY
-      console.log(`🔄 Iniciando sincronização COMPLETA para operação ${operationId} (${syncCountry})...`);
+      // Map country codes to API format  
+      const countryMapping = {
+        'ES': 'SPAIN',
+        'IT': 'ITALY', 
+        'FR': 'FRANCE',
+        'PT': 'PORTUGAL',
+        'DE': 'GERMANY',
+        'AT': 'AUSTRIA',
+        'GR': 'GREECE',
+        'PL': 'POLAND',
+        'CZ': 'CZECH REPUBLIC',
+        'SK': 'ESLOVAQUIA',
+        'HU': 'HUNGRY',
+        'RO': 'ROMANIA',
+        'BG': 'BULGARIA',
+        'HR': 'CROACIA',
+        'SI': 'ESLOVENIA',
+        'EE': 'ESTONIA',
+        'LV': 'LATVIA',
+        'LT': 'LITHUANIA'
+      };
+      
+      const syncCountry = countryMapping[operation.country] || "SPAIN";
+      console.log(`🔄 Iniciando sincronização COMPLETA para operação ${operationId} (${operation.country} -> ${syncCountry})...`);
 
       let newLeads = 0;
       let updatedLeads = 0;
