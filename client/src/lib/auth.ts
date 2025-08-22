@@ -73,10 +73,14 @@ const originalApiRequest = apiRequest;
 export const authenticatedApiRequest = async (
   method: string,
   url: string,
-  data?: unknown
+  data?: unknown,
+  options?: { headers?: Record<string, string> }
 ): Promise<Response> => {
   const token = authService.getToken();
-  const headers: HeadersInit = data ? { "Content-Type": "application/json" } : {};
+  const headers: HeadersInit = {
+    ...(data ? { "Content-Type": "application/json" } : {}),
+    ...(options?.headers || {})
+  };
   
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
