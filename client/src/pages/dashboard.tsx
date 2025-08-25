@@ -95,22 +95,20 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate distribution data from real API metrics - Simple and correct logic
+  // Calculate distribution data focusing on 3 key metrics: Delivered, Returned, Cancelled
   const getDistributionData = () => {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
     
-    // Use actual values from API
+    // Focus on the 3 most relevant business metrics
     const delivered = metrics.deliveredOrders || 0;
-    const pending = metrics.pendingOrders || 0;
-    
-    // Others = everything else (total minus the main categories)
-    const others = Math.max(0, total - delivered - pending);
+    const returned = metrics.returnedOrders || 0;
+    const cancelled = metrics.cancelledOrders || 0;
     
     const data = [];
     
-    // Only add categories that have orders
+    // Always show these 3 key metrics if they exist
     if (delivered > 0) {
       data.push({
         name: "Entregues",
@@ -121,23 +119,34 @@ export default function Dashboard() {
       });
     }
     
-    if (pending > 0) {
+    if (returned > 0) {
       data.push({
-        name: "Pendentes", 
-        value: pending,
-        percentage: ((pending / total) * 100).toFixed(1),
-        color: "#F59E0B", // Amber
-        description: "Aguardando processamento"
+        name: "Retornados",
+        value: returned,
+        percentage: ((returned / total) * 100).toFixed(1),
+        color: "#EF4444", // Red
+        description: "Pedidos devolvidos pelos clientes"
       });
     }
     
-    if (others > 0) {
+    if (cancelled > 0) {
       data.push({
-        name: "Outros",
-        value: others, 
-        percentage: ((others / total) * 100).toFixed(1),
-        color: "#8B5CF6", // Purple
-        description: "Enviados, cancelados e devolvidos"
+        name: "Cancelados",
+        value: cancelled,
+        percentage: ((cancelled / total) * 100).toFixed(1),
+        color: "#6B7280", // Gray
+        description: "Pedidos cancelados antes do envio"
+      });
+    }
+    
+    // If no data exists, show a placeholder
+    if (data.length === 0) {
+      data.push({
+        name: "Sem dados",
+        value: total,
+        percentage: "100.0",
+        color: "#374151", // Dark gray
+        description: "Aguardando dados de entrega"
       });
     }
     

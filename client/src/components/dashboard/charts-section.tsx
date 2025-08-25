@@ -6,7 +6,7 @@ import { formatCurrencyBRL } from "@/lib/utils";
 
 interface ChartsSectionProps {
   revenueData: any[];
-  distributionData: { name: string; value: number; percentage: string; color: string }[];
+  distributionData: { name: string; value: number; percentage: string; color: string; description: string }[];
   isLoading?: boolean;
 }
 
@@ -111,8 +111,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     cy="50%"
                     labelLine={false}
                     label={renderCustomizedLabel}
-                    outerRadius={80}
-                    innerRadius={35}
+                    outerRadius={65}
+                    innerRadius={30}
                     fill="#8884d8"
                     dataKey="value"
                     stroke="none"
