@@ -8,8 +8,16 @@ export function useCurrentOperation() {
   const [selectedOperation, setSelectedOperation] = useState<string>("");
 
   // Fetch user operations
-  const { data: operations = [] } = useQuery<{id: string, name: string, description?: string}[]>({
+  const { data: operations = [], isLoading, error } = useQuery<{id: string, name: string, description?: string}[]>({
     queryKey: ['/api/operations'],
+  });
+
+  // Debug query state
+  console.log("🔍 Operations query debug:", { 
+    operationsCount: operations?.length || 0, 
+    isLoading, 
+    error: error?.message,
+    operations: operations?.map(op => op.name) 
   });
 
   // Force Dss operation on load (only once)
