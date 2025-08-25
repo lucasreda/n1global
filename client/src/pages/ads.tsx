@@ -200,13 +200,14 @@ export default function Ads() {
   // Toggle campaign selection
   const toggleCampaignMutation = useMutation({
     mutationFn: async ({ campaignId, isSelected }: { campaignId: string; isSelected: boolean }) => {
-      const response = await authenticatedApiRequest("PATCH", `/api/campaigns/${campaignId}`, {
+      const response = await authenticatedApiRequest("PATCH", `/api/facebook/campaigns/${campaignId}`, {
         isSelected: !isSelected
       });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod] });
+      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns", selectedPeriod] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
         title: "Campanha atualizada",
         description: "Seleção da campanha alterada",
