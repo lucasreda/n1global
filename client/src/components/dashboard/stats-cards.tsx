@@ -382,52 +382,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-700/50">
-          <div className="text-center">
-            <p className="text-xs text-blue-300 mb-1">Ticket Médio BRL</p>
-            <p className="text-lg font-semibold text-white">{formatCurrencyBRL(averageOrderValue * 6.373034330924346)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-blue-300 mb-1">Ticket Médio EUR</p>
-            <p className="text-lg font-semibold text-white">{formatCurrencyEUR(averageOrderValue)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-blue-300 mb-1">Taxa Conversão</p>
-            <p className="text-lg font-semibold text-white">R$ 6,37</p>
-          </div>
-        </div>
       </div>
 
-      {/* Secondary Metrics - Large Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="glassmorphism rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-emerald-500/20 hover:border-emerald-400/40 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-14 h-14 bg-emerald-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <CheckCircle className="text-emerald-400 w-7 h-7" />
-            </div>
-            <div className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">
-              Principal
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-white mb-1">{deliveryRate.toFixed(1)}%</h3>
-          <p className="text-gray-300 text-sm font-medium">Taxa de Entrega</p>
-          <p className="text-xs text-emerald-400 mt-2">{deliveredOrders} entregues</p>
-        </div>
-        
-        <div className="glassmorphism rounded-2xl p-6 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <ShoppingCart className="text-blue-400 w-7 h-7" />
-            </div>
-            <div className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
-              Total
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h3>
-          <p className="text-gray-300 text-sm font-medium">Pedidos Totais</p>
-          <p className="text-xs text-blue-400 mt-2">{confirmedOrders} confirmados • {returnedOrders} devolvidos</p>
-        </div>
-      </div>
 
       {/* Tertiary Metrics - Medium Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
