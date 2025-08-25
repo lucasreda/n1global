@@ -184,6 +184,8 @@ function Router() {
   );
 }
 
+import supplierLogo from "@assets/SUPPLIER_1756128445862.png";
+
 function SupplierHeader() {
   const { user, logout } = useAuth();
 
@@ -194,7 +196,7 @@ function SupplierHeader() {
           {/* Logo */}
           <div className="flex items-center">
             <img 
-              src="/src/assets/SUPPLIER_1756128445862.png" 
+              src={supplierLogo} 
               alt="Supplier Dashboard" 
               className="h-8"
             />
