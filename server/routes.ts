@@ -1044,7 +1044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let adsResult = { campaigns: 0, accounts: 0 };
       try {
         const { FacebookAdsService } = await import("./facebook-ads-service");
-        const facebookAdsService = new FacebookAdsService(req.user.storeId);
+        const facebookAdsService = new FacebookAdsService();
         const syncResult = await facebookAdsService.syncCampaigns("last_30d", req.user.storeId);
         adsResult = {
           campaigns: syncResult.synced || 0,

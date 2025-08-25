@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Filter, RefreshCw, Download } from "lucide-react";
 
 export default function Dashboard() {
-  const [dateFilter, setDateFilter] = useState("current_month");
+  const [dateFilter, setDateFilter] = useState("30");
   const [showCompleteSyncDialog, setShowCompleteSyncDialog] = useState(false);
 
   // Auto-sync on page load (similar to Facebook Ads)
@@ -43,7 +43,7 @@ export default function Dashboard() {
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics", dateFilter, operationId, "v3"],
     queryFn: async () => {
-      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
+      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : '30d';
       const url = operationId 
         ? `/api/dashboard/metrics?period=${period}&operationId=${operationId}`
         : `/api/dashboard/metrics?period=${period}`;
@@ -59,7 +59,7 @@ export default function Dashboard() {
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
     queryKey: ["/api/dashboard/revenue-chart", dateFilter, operationId],
     queryFn: async () => {
-      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
+      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : '30d';
       const url = operationId 
         ? `/api/dashboard/revenue-chart?period=${period}&operationId=${operationId}`
         : `/api/dashboard/revenue-chart?period=${period}`;
