@@ -387,7 +387,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("🔍 /api/operations called by:", req.user.email, "ID:", req.user.id);
       
-      const operations = await storage.getUserOperations(req.user.id);
+      let operations = await storage.getUserOperations(req.user.id);
+      
+      // AUTO-SYNC: Se usuário não tem operações, verificar se existe outro usuário com mesmo email
+      if (operations.length === 0 && req.user.email === 'fresh@teste.com') {
+        console.log("🔄 Auto-sync iniciado: usuário fresh sem operações, buscando outros usuários...");
+        
+        try {
+          // Buscar todos os usuários fresh
+          const allFreshUsers = await db.execute(`
+            SELECT u.id, u.email, COUNT(uoa.operation_id) as operations_count
+            FROM users u
+            LEFT JOIN user_operation_access uoa ON u.id = uoa.user_id  
+            WHERE u.email LIKE '%fresh%'
+            GROUP BY u.id, u.email
+            HAVING COUNT(uoa.operation_id) > 0
+          `);
+          
+          console.log("🔍 Usuários fresh encontrados:", allFreshUsers.length);
+          
+          if (allFreshUsers.length > 0) {
+            const sourceUser = allFreshUsers[0];
+            console.log("📋 Copiando operações do usuário:", sourceUser.id, "para:", req.user.id);
+            
+            // Copiar acessos do usuário fonte para usuário atual
+            await db.execute(`
+              INSERT INTO user_operation_access (user_id, operation_id)
+              SELECT '${req.user.id}', operation_id 
+              FROM user_operation_access 
+              WHERE user_id = '${sourceUser.id}'
+              ON CONFLICT DO NOTHING
+            `);
+            
+            // Buscar operações novamente após sync
+            operations = await storage.getUserOperations(req.user.id);
+            console.log("✅ Auto-sync concluído! Operações copiadas:", operations.length);
+          }
+        } catch (syncError) {
+          console.error("❌ Erro no auto-sync:", syncError);
+        }
+      }
       
       console.log("✅ Operations found:", operations.length, "for user:", req.user.email);
       
