@@ -397,6 +397,7 @@ export class FacebookAdsService {
 
   async getSelectedCampaignsSpend(): Promise<number> {
     const { campaigns } = await import("@shared/schema");
+    const { and, eq } = await import("drizzle-orm");
     const campaignsList = await db
       .select()
       .from(campaigns)
@@ -413,6 +414,7 @@ export class FacebookAdsService {
   async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
     // Buscar campanhas selecionadas e seus dados ao vivo para o período específico
     const { campaigns } = await import("@shared/schema");
+    const { and, eq } = await import("drizzle-orm");
     const selectedCampaigns = await db
       .select()
       .from(campaigns)
