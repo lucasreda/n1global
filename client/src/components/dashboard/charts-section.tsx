@@ -108,9 +108,10 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-2">
-            <div className="h-64 relative">
+        <div className="flex flex-col lg:flex-row gap-8 items-center">
+          {/* Chart Section */}
+          <div className="flex-shrink-0">
+            <div className="w-60 h-60 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -119,8 +120,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     cy="50%"
                     labelLine={false}
                     label={renderCustomizedLabel}
-                    outerRadius={90}
-                    innerRadius={40}
+                    outerRadius={70}
+                    innerRadius={30}
                     fill="#8884d8"
                     dataKey="value"
                     stroke="none"
@@ -162,41 +163,42 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
             </div>
           </div>
           
-          <div className="lg:col-span-3">
+          {/* Legend Section */}
+          <div className="flex-1 min-w-0">
             <div className="space-y-3">
-            {distributionData.map((item) => (
-              <div key={item.name} className="glassmorphism-light rounded-lg p-3 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: item.color }}></div>
-                    <div>
-                      <span className="text-white font-medium">{item.name}</span>
-                      <div className="text-xs text-gray-400 mt-1">{item.name}</div>
+              {distributionData.map((item) => (
+                <div key={item.name} className="glassmorphism-light rounded-lg p-3 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: item.color }}></div>
+                      <div>
+                        <span className="text-white font-medium">{item.name}</span>
+                        <div className="text-xs text-gray-400 mt-1">{item.description}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-white font-bold text-lg" data-testid={`percentage-${item.name.toLowerCase()}`}>
+                        {item.percentage}%
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {item.value} pedidos
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-white font-bold text-lg" data-testid={`percentage-${item.name.toLowerCase()}`}>
-                      {item.percentage}%
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {item.value} pedidos
-                    </div>
+                  
+                  {/* Progress bar */}
+                  <div className="w-full bg-gray-700/30 rounded-full h-2">
+                    <div 
+                      className="h-2 rounded-full transition-all duration-300" 
+                      style={{ 
+                        backgroundColor: item.color, 
+                        width: `${item.percentage}%`,
+                        boxShadow: `0 0 10px ${item.color}40`
+                      }}
+                    ></div>
                   </div>
                 </div>
-                
-                {/* Progress bar */}
-                <div className="w-full bg-gray-700/30 rounded-full h-2">
-                  <div 
-                    className="h-2 rounded-full transition-all duration-300" 
-                    style={{ 
-                      backgroundColor: item.color, 
-                      width: `${item.percentage}%`,
-                      boxShadow: `0 0 10px ${item.color}40`
-                    }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+              ))}
             </div>
           </div>
         </div>
