@@ -158,10 +158,12 @@ export class SmartSyncService {
       }
 
       // Aplica custos baseado no status do pedido
-      const productCost = ['confirmed', 'delivered', 'shipped', 'in transit', 'in delivery'].includes(status) ?
+      // Custo do produto: aplicado para pedidos confirmados/entregues/pendentes
+      const productCost = ['confirmed', 'delivered', 'shipped', 'in transit', 'in delivery', 'pending'].includes(status) ?
         productCostBase : 0.00;
       
-      const shippingCost = ['shipped', 'delivered', 'in transit', 'in delivery'].includes(status) ?
+      // Custo de envio: aplicado para pedidos enviados/entregues + pendentes
+      const shippingCost = ['shipped', 'delivered', 'in transit', 'in delivery', 'pending'].includes(status) ?
         shippingCostBase : 0.00;
 
       return { productCost, shippingCost };
