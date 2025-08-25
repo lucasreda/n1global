@@ -190,7 +190,14 @@ export default function InsidePage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="container mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Painel Administrativo</h1>
+          <div className="flex items-center gap-4 mb-2">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="h-8 w-8 object-contain"
+            />
+            <h1 className="text-2xl font-bold text-white">Painel Administrativo</h1>
+          </div>
           <p className="text-slate-300">Visão global de todas as operações e dados do sistema</p>
         </div>
 
