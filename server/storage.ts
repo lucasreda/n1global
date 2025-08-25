@@ -567,10 +567,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(orders)
       .leftJoin(operations, eq(orders.operationId, operations.id))
-      .where(
-        // Filter orders that contain supplier SKUs in products JSON
-        // This is a simplified approach - in production you might want more sophisticated JSON querying
-      );
+      .where(sql`TRUE`); // Get all orders, we'll filter by SKU afterwards
 
     // Filter orders that actually contain supplier SKUs
     return ordersWithSupplierProducts.filter(order => {
