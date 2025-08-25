@@ -219,6 +219,14 @@ export async function seedDatabase() {
         .where(eq(userOperationAccess.userId, freshUser.id));
       
       console.log("🔍 Final fresh user operations:", finalAccess.map(item => item.operations.name));
+      
+      // PRODUCTION DEBUG: Extra verification
+      const verifyAccess = await db
+        .select()
+        .from(userOperationAccess)
+        .where(eq(userOperationAccess.userId, freshUser.id));
+      console.log("🔍 SEED VERIFICATION - Access count:", verifyAccess.length);
+      console.log("🔍 SEED VERIFICATION - Access details:", verifyAccess.map(a => a.operationId));
     }
 
     console.log("🌱 Database seeding completed!");

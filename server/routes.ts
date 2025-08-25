@@ -385,7 +385,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Operations routes
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      // Production debug - check if user exists and has access
+      if (req.user.email === 'fresh@teste.com') {
+        console.log("🔍 PRODUCTION DEBUG - fresh@teste.com request");
+        console.log("🔍 User ID:", req.user.id);
+        
+        // Check user exists in database
+        const user = await storage.getUser(req.user.id);
+        console.log("🔍 User from DB:", user ? `${user.email} (${user.id})` : 'NOT FOUND');
+        
+        // Check direct database access
+        const directAccess = await db
+          .select()
+          .from(userOperationAccess)
+          .where(eq(userOperationAccess.userId, req.user.id));
+        console.log("🔍 Direct access count:", directAccess.length);
+        
+        // Check operations exist
+        const allOperations = await db.select().from(operations);
+        console.log("🔍 Total operations in DB:", allOperations.length);
+      }
+      
       const operations = await storage.getUserOperations(req.user.id);
+      
+      if (req.user.email === 'fresh@teste.com') {
+        console.log("🔍 Operations returned for fresh:", operations.length);
+      }
+      
       res.json(operations);
     } catch (error) {
       console.error("Operations error:", error);
