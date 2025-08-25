@@ -205,6 +205,19 @@ export class DashboardService {
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
+    // 3. Get ALL transportadora data for delivery rate and total counts (NO date filter)
+    const transportadoraStats = await db
+      .select({
+        status: orders.status,
+        count: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        provider ? eq(orders.provider, provider) : sql`TRUE`
+      ))
+      .groupBy(orders.status);
+    
     // Calculate metrics from order counts (filtered by period)
     let totalOrders = 0;
     let deliveredOrders = 0;
