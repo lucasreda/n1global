@@ -54,6 +54,15 @@ export const authService = {
     localStorage.removeItem("user");
   },
 
+  forceLogout() {
+    // Clear all localStorage data
+    localStorage.clear();
+    // Also clear sessionStorage just in case
+    sessionStorage.clear();
+    // Force page reload to reset all state
+    window.location.href = '/';
+  },
+
   getToken(): string | null {
     return localStorage.getItem("auth_token");
   },
