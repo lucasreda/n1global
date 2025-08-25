@@ -223,7 +223,7 @@ export default function InsidePage() {
               <img 
                 src={logoImage} 
                 alt="Logo" 
-                className="h-12 w-auto object-contain"
+                className="h-6 w-auto object-contain"
               />
             </div>
             
