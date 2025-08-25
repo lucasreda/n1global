@@ -680,16 +680,18 @@ function ProductsManager() {
                     </div>
                     <div className="flex items-center space-x-6">
                       <div className="text-right">
-                        <p className="text-sm text-slate-400">Preço de Venda</p>
+                        <p className="text-sm text-slate-400">Preço B2B Fornecedor</p>
                         <p className="font-medium text-white">
                           {formatCurrency(Number(product.price))}
                         </p>
+                        <p className="text-xs text-slate-500">Preço que fornecedor cobra</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-slate-400">Custo Produto</p>
+                        <p className="text-sm text-slate-400">Custo para Operações</p>
                         <p className="font-medium text-orange-400">
-                          {formatCurrency(Number(product.costPrice || 0))}
+                          {formatCurrency(Number(product.price))}
                         </p>
+                        <p className="text-xs text-slate-500">O que operações pagam</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-slate-400">Custo Envio</p>

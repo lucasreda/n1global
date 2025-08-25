@@ -157,7 +157,7 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="price">Preço de Venda (€) *</Label>
+              <Label htmlFor="price">Preço de Venda B2B (€) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -167,9 +167,12 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
                 onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
                 data-testid="input-price"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Preço que você cobra das operações
+              </p>
             </div>
             <div>
-              <Label htmlFor="costPrice">Preço de Custo (€)</Label>
+              <Label htmlFor="costPrice">Custo de Produção (€)</Label>
               <Input
                 id="costPrice"
                 type="number"
@@ -179,6 +182,9 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
                 onChange={(e) => handleInputChange('costPrice', parseFloat(e.target.value) || 0)}
                 data-testid="input-cost-price"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Seu custo real para produzir/adquirir
+              </p>
             </div>
           </div>
 

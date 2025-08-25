@@ -158,7 +158,7 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Preço de Venda</Label>
+                <Label className="text-xs">Preço B2B</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -167,9 +167,12 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
                   className="text-sm"
                   data-testid={`input-price-${product.sku}`}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Para operações
+                </p>
               </div>
               <div>
-                <Label className="text-xs">Preço de Custo</Label>
+                <Label className="text-xs">Custo Produção</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -178,6 +181,9 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
                   className="text-sm"
                   data-testid={`input-cost-price-${product.sku}`}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Seu custo real
+                </p>
               </div>
             </div>
 
@@ -245,13 +251,15 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-muted-foreground">Preço:</span>
+                <span className="text-muted-foreground">Preço B2B:</span>
                 <div className="font-medium">{formatCurrency(product.price)}</div>
+                <span className="text-xs text-muted-foreground">Para operações</span>
               </div>
               {product.costPrice > 0 && (
                 <div>
-                  <span className="text-muted-foreground">Custo:</span>
+                  <span className="text-muted-foreground">Custo Produção:</span>
                   <div className="font-medium">{formatCurrency(product.costPrice)}</div>
+                  <span className="text-xs text-muted-foreground">Seu custo real</span>
                 </div>
               )}
             </div>
