@@ -127,7 +127,7 @@ export async function seedDatabase() {
     const [existingFreshUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, "fresh@example.com"))
+      .where(eq(users.email, "fresh@teste.com"))
       .limit(1);
 
     if (!existingFreshUser) {
@@ -138,7 +138,7 @@ export async function seedDatabase() {
         .insert(users)
         .values({
           name: "Fresh User",
-          email: "fresh@example.com",
+          email: "fresh@teste.com",
           password: hashedPassword,
           role: "user",
           onboardingCompleted: true,
