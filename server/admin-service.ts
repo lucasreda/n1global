@@ -119,16 +119,7 @@ export class AdminService {
     offset?: number;
   }) {
     try {
-      const { searchTerm, storeId, operationId, dateRange, limit = 50, offset = 0 } = filters;
-      
-      console.log('🔍 Global Orders Debug:', {
-        searchTerm,
-        storeId,
-        operationId,
-        dateRange,
-        limit,
-        offset
-      });
+      const { searchTerm, storeId, operationId, dateRange, limit = 20, offset = 0 } = filters;
       
       // Build date filter
       let dateFilter = sql`TRUE`;
@@ -199,14 +190,76 @@ export class AdminService {
         .limit(limit)
         .offset(offset);
       
-      console.log('📦 Global Orders Result:', globalOrders.length, 'pedidos encontrados');
-      
       return globalOrders.map(order => ({
         ...order,
         amount: Number(order.amount) || 0
       }));
     } catch (error) {
       console.error('❌ Error getting global orders:', error);
+      throw error;
+    }
+  }
+
+  async getGlobalOrdersCount(filters: {
+    searchTerm?: string;
+    storeId?: string;
+    operationId?: string;
+    dateRange?: string;
+  }) {
+    try {
+      const { searchTerm, storeId, operationId, dateRange } = filters;
+      
+      // Build date filter
+      let dateFilter = sql`TRUE`;
+      const now = new Date();
+      
+      switch (dateRange) {
+        case '7d':
+          const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          dateFilter = sql`${orders.orderDate} >= ${sevenDaysAgo.toISOString()}`;
+          break;
+        case '30d':
+          const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          dateFilter = sql`${orders.orderDate} >= ${thirtyDaysAgo.toISOString()}`;
+          break;
+        case '90d':
+          const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          dateFilter = sql`${orders.orderDate} >= ${ninetyDaysAgo.toISOString()}`;
+          break;
+        default:
+          dateFilter = sql`TRUE`;
+      }
+      
+      // Build search filter
+      let searchFilter = sql`TRUE`;
+      if (searchTerm && searchTerm.trim()) {
+        searchFilter = or(
+          ilike(orders.customerName, `%${searchTerm}%`),
+          ilike(orders.customerPhone, `%${searchTerm}%`),
+          ilike(orders.id, `%${searchTerm}%`)
+        ) || sql`TRUE`;
+      }
+      
+      // Build store filter
+      let storeFilter = sql`TRUE`;
+      if (storeId && storeId !== 'all') {
+        storeFilter = sql`${orders.storeId} = ${storeId}`;
+      }
+      
+      // Build operation filter
+      let operationFilter = sql`TRUE`;
+      if (operationId && operationId !== 'all') {
+        operationFilter = sql`${orders.operationId} = ${operationId}`;
+      }
+      
+      const [countResult] = await db
+        .select({ count: count() })
+        .from(orders)
+        .where(and(dateFilter, searchFilter, storeFilter, operationFilter));
+      
+      return countResult.count;
+    } catch (error) {
+      console.error('❌ Error counting global orders:', error);
       throw error;
     }
   }

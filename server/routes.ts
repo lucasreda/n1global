@@ -1878,7 +1878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storeId: req.query.storeId as string,
         operationId: req.query.operationId as string,
         dateRange: req.query.dateRange as string,
-        limit: parseInt(req.query.limit as string) || 50,
+        limit: parseInt(req.query.limit as string) || 20,
         offset: parseInt(req.query.offset as string) || 0
       };
       
@@ -1887,6 +1887,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Admin orders error:", error);
       res.status(500).json({ message: "Erro ao buscar pedidos globais" });
+    }
+  });
+
+  app.get("/api/admin/orders/count", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const filters = {
+        searchTerm: req.query.searchTerm as string,
+        storeId: req.query.storeId as string,
+        operationId: req.query.operationId as string,
+        dateRange: req.query.dateRange as string
+      };
+      
+      const total = await adminService.getGlobalOrdersCount(filters);
+      res.json({ total });
+    } catch (error) {
+      console.error("Admin orders count error:", error);
+      res.status(500).json({ message: "Erro ao contar pedidos globais" });
     }
   });
 

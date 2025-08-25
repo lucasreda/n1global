@@ -56,6 +56,10 @@ export default function InsidePage() {
   const [selectedOperation, setSelectedOperation] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("all");
   const [selectedTab, setSelectedTab] = useState("overview");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  
+  const pageSize = 20;
   
   // Check if user has made any specific selection to enable orders query
   const hasActiveSearch = searchTerm.trim().length > 0 || 
@@ -63,22 +67,14 @@ export default function InsidePage() {
                          selectedOperation !== "all" || 
                          dateRange !== "all";
   
-  console.log('🔍 Search Debug:', {
-    searchTerm: searchTerm,
-    selectedStore,
-    selectedOperation,
-    dateRange,
-    hasActiveSearch,
-    selectedTab
-  });
 
   const { data: adminStats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/stats'],
     enabled: true
   });
 
-  const { data: globalOrders, isLoading: ordersLoading, error: ordersError } = useQuery<GlobalOrder[]>({
-    queryKey: ['/api/admin/orders', searchTerm, selectedStore, selectedOperation, dateRange],
+  const { data: ordersResponse, isLoading: ordersLoading, error: ordersError } = useQuery<{orders: GlobalOrder[], total: number}>({
+    queryKey: ['/api/admin/orders', searchTerm, selectedStore, selectedOperation, dateRange, currentPage],
     enabled: selectedTab === "orders" && hasActiveSearch,
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -86,9 +82,10 @@ export default function InsidePage() {
       if (selectedStore !== 'all') params.append('storeId', selectedStore);
       if (selectedOperation !== 'all') params.append('operationId', selectedOperation);
       if (dateRange !== 'all') params.append('dateRange', dateRange);
+      params.append('limit', pageSize.toString());
+      params.append('offset', ((currentPage - 1) * pageSize).toString());
       
       const url = `/api/admin/orders?${params.toString()}`;
-      console.log('🌐 Fetching orders from:', url);
       
       const token = localStorage.getItem("auth_token");
       const response = await fetch(url, {
@@ -102,18 +99,46 @@ export default function InsidePage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return response.json();
+      const orders = await response.json();
+      
+      // Fazer uma segunda consulta para obter o total de registros
+      const countParams = new URLSearchParams();
+      if (searchTerm) countParams.append('searchTerm', searchTerm);
+      if (selectedStore !== 'all') countParams.append('storeId', selectedStore);
+      if (selectedOperation !== 'all') countParams.append('operationId', selectedOperation);
+      if (dateRange !== 'all') countParams.append('dateRange', dateRange);
+      countParams.append('countOnly', 'true');
+      
+      const countResponse = await fetch(`/api/admin/orders/count?${countParams.toString()}`, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      let total = orders.length;
+      if (countResponse.ok) {
+        const countData = await countResponse.json();
+        total = countData.total || 0;
+      }
+      
+      return { orders, total };
     }
   });
+  
+  const globalOrders = ordersResponse?.orders || [];
+  const totalPages = Math.ceil((ordersResponse?.total || 0) / pageSize);
 
   useEffect(() => {
-    if (globalOrders) {
-      console.log('📦 Global Orders Response:', globalOrders.length, 'pedidos recebidos');
+    if (ordersResponse) {
+      setTotalOrders(ordersResponse.total);
     }
-    if (ordersError) {
-      console.error('❌ Error loading orders:', ordersError);
-    }
-  }, [globalOrders, ordersError]);
+  }, [ordersResponse]);
+  
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStore, selectedOperation, dateRange]);
 
   const { data: stores } = useQuery<Array<{ id: string; name: string; operationsCount: number }>>({
     queryKey: ['/api/admin/stores'],
@@ -434,6 +459,57 @@ export default function InsidePage() {
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-700">
+                        <div className="text-sm text-slate-400">
+                          Página {currentPage} de {totalPages} · {totalOrders} pedidos no total
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="border-slate-600 text-slate-300"
+                          >
+                            Anterior
+                          </Button>
+                          
+                          {/* Page numbers */}
+                          <div className="flex items-center space-x-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className={currentPage === pageNum 
+                                    ? "bg-blue-600 text-white" 
+                                    : "border-slate-600 text-slate-300"
+                                  }
+                                >
+                                  {pageNum}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="border-slate-600 text-slate-300"
+                          >
+                            Próxima
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
