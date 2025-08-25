@@ -212,7 +212,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                       
                       <Button
                         type="submit"
-                        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all duration-200 transform hover:scale-[1.02]"
+                        className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 transform hover:scale-[1.02]"
                         disabled={loginForm.formState.isSubmitting}
                         data-testid="button-login"
                       >
