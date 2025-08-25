@@ -15,6 +15,7 @@ import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
 import Integrations from "@/pages/integrations";
 import Products from "@/pages/products";
+import Tools from "@/pages/tools";
 import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Onboarding from "@/pages/onboarding";
@@ -152,6 +153,7 @@ function Router() {
         <Route path="/integrations" component={Integrations} />
         {!isProductSeller && <Route path="/ads" component={Ads} />}
         <Route path="/products" component={Products} />
+        <Route path="/tools" component={Tools} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

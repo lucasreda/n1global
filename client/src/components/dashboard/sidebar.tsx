@@ -11,7 +11,8 @@ import {
   Target,
   Briefcase,
   ChevronDown,
-  Plus
+  Plus,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,7 @@ const getNavigationForRole = (userRole: string) => {
     { name: "Pedidos", href: "/orders", icon: Package },
     { name: "Produtos", href: "/products", icon: ShoppingCart },
     { name: "Integrações", href: "/integrations", icon: Plug },
+    { name: "Ferramentas", href: "/tools", icon: Wrench },
     { name: "Configurações", href: "/settings", icon: Settings },
   ];
 
@@ -141,7 +143,7 @@ export function Sidebar() {
         </div>
       )}
 
-      <ul className="space-y-2" data-testid="nav-menu">
+      <ul className="space-y-1" data-testid="nav-menu">
         {navigation.map((item) => {
           const isActive = location === item.href;
           return (
@@ -149,15 +151,15 @@ export function Sidebar() {
               <Link href={item.href}>
                 <a
                   className={cn(
-                    "flex items-center space-x-3 px-4 py-3 rounded-xl transition-all",
+                    "flex items-center space-x-2 px-3 py-2 rounded-lg transition-all text-sm",
                     isActive
                       ? "text-white bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30"
                       : "text-gray-300 hover:text-white hover:bg-white/10"
                   )}
                   data-testid={`nav-link-${item.name.toLowerCase()}`}
                 >
-                  <item.icon size={18} className={isActive ? "text-blue-400" : "text-gray-400"} />
-                  <span>{item.name}</span>
+                  <item.icon size={16} className={isActive ? "text-blue-400" : "text-gray-400"} />
+                  <span className="text-sm font-medium">{item.name}</span>
                 </a>
               </Link>
             </li>
