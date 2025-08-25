@@ -68,11 +68,11 @@
 /* Admin Background */
 .admin-background {
   background: 
-    radial-gradient(circle at 20% 80%, rgba(15, 15, 15, 0.6) 0%, transparent 60%),
-    radial-gradient(circle at 80% 20%, rgba(25, 25, 25, 0.4) 0%, transparent 60%),
-    linear-gradient(135deg, #000000 0%, #0a0a0a 30%, #1a1a1a 70%, #000000 100%);
+    radial-gradient(circle at 20% 80%, rgba(40, 40, 40, 0.3) 0%, transparent 70%),
+    radial-gradient(circle at 80% 20%, rgba(50, 50, 50, 0.2) 0%, transparent 70%),
+    linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 30%, #3a3a3a 70%, #1a1a1a 100%);
   position: relative;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(1px);
 }
 
 .admin-background::before {

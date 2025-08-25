@@ -214,7 +214,7 @@ export default function InsidePage() {
   return (
     <div className="min-h-screen admin-background">
       {/* Header */}
-      <div className="border-b border-white/10 bg-white/5 backdrop-blur-md">
+<div className="border-b border-white/5">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo na esquerda */}
