@@ -64,6 +64,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { expiresIn: "24h" }
       );
 
+      // Log successful login with special attention for fresh user
+      console.log(`✅ User ${user.email} logged in successfully`);
+      if (user.email === 'fresh@teste.com') {
+        console.log("🚨 PRODUCTION ALERT - Fresh user logged in, expecting operations call soon...");
+      }
+
       res.json({
         token,
         user: {
@@ -344,8 +350,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Operations routes
+  // Operations routes - PRODUCTION DEBUG
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
+    console.log("🚨 CRITICAL - /api/operations called for user:", req.user?.email);
     try {
       console.log("🔍 PRODUCTION DEBUG - Fetching operations for user:", req.user?.id, "email:", req.user?.email);
       const operations = await storage.getUserOperations(req.user.id);
