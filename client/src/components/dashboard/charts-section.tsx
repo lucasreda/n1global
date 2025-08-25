@@ -95,22 +95,13 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
 
       {/* Distribution Chart */}
       <div className="glassmorphism rounded-2xl p-8 min-h-[400px]" data-testid="chart-distribution">
-        <div className="flex items-center justify-between mb-8">
+        <div className="mb-8">
           <h3 className="text-lg font-semibold text-white">Distribuição de Status</h3>
-          <Button 
-            variant="ghost"
-            size="sm"
-            className="glassmorphism-light rounded-lg px-3 py-2 text-sm text-gray-200 hover:bg-white/20 transition-all"
-            data-testid="button-export-chart"
-          >
-            <Download className="mr-2" size={16} />
-            Exportar
-          </Button>
         </div>
         
-        <div className="flex flex-col lg:flex-row gap-6 items-center">
+        <div className="flex flex-col gap-8">
           {/* Chart Section */}
-          <div className="flex-shrink-0">
+          <div className="flex justify-center">
             <div className="w-64 h-64 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -164,7 +155,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </div>
           
           {/* Legend Section */}
-          <div className="flex-1 min-w-0">
+          <div className="w-full">
             <div className="space-y-4">
               {distributionData.map((item) => (
                 <div key={item.name} className="glassmorphism-light rounded-lg p-4 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
