@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
 
 interface CalculatorFields {
   deliveryRate: number; // Taxa de entregado (%)
@@ -33,6 +34,13 @@ interface CalculationResults {
   monthlyProfit: number;
 }
 
+interface ConvertedResults {
+  dailyRevenueBRL: number;
+  dailyCostsBRL: number;
+  dailyProfitBRL: number;
+  monthlyProfitBRL: number;
+}
+
 export default function CostCalculator() {
   const [fields, setFields] = useState<CalculatorFields>({
     deliveryRate: 85, // 85%
@@ -51,6 +59,21 @@ export default function CostCalculator() {
     dailyProfit: 0,
     profitMargin: 0,
     monthlyProfit: 0
+  });
+
+  const [convertedResults, setConvertedResults] = useState<ConvertedResults>({
+    dailyRevenueBRL: 0,
+    dailyCostsBRL: 0,
+    dailyProfitBRL: 0,
+    monthlyProfitBRL: 0
+  });
+
+  // Buscar taxas de câmbio para conversão
+  const { data: exchangeRates } = useQuery({
+    queryKey: ['/api/currency/rates'],
+    enabled: fields.currency !== 'BRL',
+    refetchInterval: 15 * 60 * 1000, // Atualizar a cada 15 minutos
+    staleTime: 10 * 60 * 1000 // 10 minutos
   });
 
   // Calcula lucro em tempo real sempre que os campos mudam
@@ -83,7 +106,26 @@ export default function CostCalculator() {
       profitMargin,
       monthlyProfit
     });
-  }, [fields]);
+
+    // Conversão para BRL se a moeda selecionada não for BRL
+    if (fields.currency !== 'BRL' && exchangeRates) {
+      const rate = exchangeRates[fields.currency] || 1;
+      setConvertedResults({
+        dailyRevenueBRL: dailyRevenue * rate,
+        dailyCostsBRL: dailyCosts * rate,
+        dailyProfitBRL: dailyProfit * rate,
+        monthlyProfitBRL: monthlyProfit * rate
+      });
+    } else {
+      // Se for BRL, usar os valores originais
+      setConvertedResults({
+        dailyRevenueBRL: dailyRevenue,
+        dailyCostsBRL: dailyCosts,
+        dailyProfitBRL: dailyProfit,
+        monthlyProfitBRL: monthlyProfit
+      });
+    }
+  }, [fields, exchangeRates]);
 
   const handleFieldChange = (field: keyof CalculatorFields, value: string) => {
     if (field === 'currency') {
@@ -313,6 +355,42 @@ export default function CostCalculator() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Conversão para BRL - Destaque se não for BRL */}
+            {fields.currency !== 'BRL' && (
+              <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 mb-4">
+                <div className="text-center mb-3">
+                  <div className="text-sm text-green-400 font-medium mb-1">🇧🇷 Valores Convertidos para Real (BRL)</div>
+                  <div className="text-xs text-gray-400">Taxa de câmbio atual aplicada</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-center p-2 bg-green-500/5 rounded-lg">
+                    <div className="text-xs text-green-400 mb-1">Receita Diária</div>
+                    <div className="text-sm font-semibold text-white">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyRevenueBRL)}
+                    </div>
+                  </div>
+                  <div className="text-center p-2 bg-red-500/10 rounded-lg">
+                    <div className="text-xs text-red-400 mb-1">Custos Diários</div>
+                    <div className="text-sm font-semibold text-white">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyCostsBRL)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mt-3 p-2 bg-green-500/5 rounded-lg">
+                  <span className="text-sm text-green-400">Lucro Diário (BRL):</span>
+                  <span className="font-semibold text-white">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyProfitBRL)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-2 p-2 bg-green-500/5 rounded-lg">
+                  <span className="text-sm text-green-400">Lucro Mensal (BRL):</span>
+                  <span className="font-semibold text-white">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.monthlyProfitBRL)}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Margem de Lucro - Destaque Principal */}
             <div className="text-center p-4 glassmorphism-light rounded-xl">
               <div className="text-sm text-gray-400 mb-1">Margem de Lucro</div>
