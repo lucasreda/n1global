@@ -167,8 +167,12 @@ export class DashboardService {
     
     console.log(`📅 Calculating metrics for period: ${period}, operation: ${currentOperation.name} (${currentOperation.id})`);
     
-    // CRITICAL: Use operationId instead of storeId for data isolation
-    let whereConditions = [eq(orders.operationId, currentOperation.id)];
+    // CRITICAL: Use operationId instead of storeId for data isolation + DATE FILTERING
+    let whereConditions = [
+      eq(orders.operationId, currentOperation.id),
+      gte(orders.orderDate, dateRange.from), // FIXED: Filter by Shopify order date
+      lte(orders.orderDate, dateRange.to)    // FIXED: Filter by Shopify order date
+    ];
     
     if (provider) {
       whereConditions.push(eq(orders.provider, provider));
