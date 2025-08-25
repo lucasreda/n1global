@@ -1782,19 +1782,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      // Get campaigns only from store's accounts
-      const storeCampaigns = await db
-        .select()
-        .from(campaigns)
-        .where(inArray(campaigns.accountId, storeAccountIds));
+      // Use Facebook Ads service to get campaigns with live data for the specific period
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const campaignsWithLiveData = await facebookAdsService.getCampaignsWithPeriod(period, storeId);
       
-      // Add account name to campaigns (only from store accounts)
-      const campaignsWithAccountInfo = storeCampaigns.map(campaign => ({
-        ...campaign,
-        accountName: storeAccounts.find(acc => acc.accountId === campaign.accountId)?.name || 'Conta Desconhecida'
-      }));
-      
-      res.json(campaignsWithAccountInfo);
+      res.json(campaignsWithLiveData);
     } catch (error) {
       console.error("Error fetching campaigns:", error);
       res.status(500).json({ message: "Erro ao buscar campanhas" });
