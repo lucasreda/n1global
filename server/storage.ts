@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, User, Order, Product, ShippingProvider, Operation, UserProduct, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, LinkProductBySku } from "@shared/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -58,6 +58,9 @@ export interface IStorage {
   updateSupplierProduct(id: string, updates: any): Promise<Product | undefined>;
   getOrdersBySupplierSkus(supplierId: string): Promise<any[]>;
   getSupplierMetrics(supplierId: string): Promise<any>;
+  
+  // Stock calculation methods
+  getAvailableStock(sku: string): Promise<{ initialStock: number; soldQuantity: number; availableStock: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -592,6 +595,38 @@ export class DatabaseStorage implements IStorage {
       deliveredOrders,
       returnedOrders,
       cancelledOrders
+    };
+  }
+
+  async getAvailableStock(sku: string): Promise<{ initialStock: number; soldQuantity: number; availableStock: number }> {
+    // Get initial stock from products table
+    const [product] = await db
+      .select({ stock: products.stock })
+      .from(products)
+      .where(eq(products.sku, sku));
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    const initialStock = product.stock || 0;
+
+    // Calculate total sold quantity across all orders
+    // Query orders where products JSONB array contains this SKU
+    const result = await db.execute(sql`
+      SELECT COALESCE(SUM((product->>'quantity')::int), 0) as total_sold
+      FROM orders, jsonb_array_elements(products) AS product 
+      WHERE product->>'sku' = ${sku}
+      AND products IS NOT NULL
+    `);
+
+    const soldQuantity = result.rows[0] ? (result.rows[0] as any).total_sold || 0 : 0;
+    const availableStock = Math.max(0, initialStock - soldQuantity);
+
+    return {
+      initialStock,
+      soldQuantity,
+      availableStock
     };
   }
 }

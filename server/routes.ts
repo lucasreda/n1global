@@ -2201,6 +2201,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/products/available-stock/:sku - Get available stock for a SKU
+  app.get('/api/products/available-stock/:sku', authenticateToken, async (req, res) => {
+    try {
+      const sku = req.params.sku;
+      const stockInfo = await storage.getAvailableStock(sku);
+      res.json(stockInfo);
+    } catch (error) {
+      console.error('Error fetching available stock:', error);
+      if (error.message === 'Product not found') {
+        res.status(404).json({ message: 'Produto não encontrado' });
+      } else {
+        res.status(500).json({ message: 'Erro interno do servidor' });
+      }
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

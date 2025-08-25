@@ -71,6 +71,12 @@ type UserProduct = {
   product: Product;
 };
 
+type StockInfo = {
+  initialStock: number;
+  soldQuantity: number;
+  availableStock: number;
+};
+
 export default function ProductsPage() {
   const [isLinking, setIsLinking] = useState(false);
   const [searchedProduct, setSearchedProduct] = useState<Product | null>(null);
@@ -85,6 +91,30 @@ export default function ProductsPage() {
       const response = await authenticatedApiRequest("GET", "/api/user-products");
       return response.json();
     },
+  });
+
+  // Fetch available stock for each product
+  const { data: stockData = {} } = useQuery({
+    queryKey: ["/api/products/stock", userProducts.map((up: UserProduct) => up.sku)],
+    queryFn: async () => {
+      const stockPromises = userProducts.map(async (userProduct: UserProduct) => {
+        try {
+          const response = await authenticatedApiRequest("GET", `/api/products/available-stock/${userProduct.sku}`);
+          const stockInfo = await response.json();
+          return { sku: userProduct.sku, ...stockInfo };
+        } catch (error) {
+          console.error(`Failed to fetch stock for ${userProduct.sku}:`, error);
+          return { sku: userProduct.sku, initialStock: 0, soldQuantity: 0, availableStock: 0 };
+        }
+      });
+      
+      const stockResults = await Promise.all(stockPromises);
+      return stockResults.reduce((acc, stock) => {
+        acc[stock.sku] = stock;
+        return acc;
+      }, {} as Record<string, StockInfo & { sku: string }>);
+    },
+    enabled: userProducts.length > 0,
   });
 
   // Search product by SKU mutation
@@ -302,7 +332,12 @@ export default function ProductsPage() {
                       </Badge>
                     </div>
                     <CardDescription className="text-gray-300">
-                      SKU: {product.sku} | Estoque: {product.stock}
+                      SKU: {product.sku} | Disponível: {stockData[product.sku]?.availableStock ?? product.stock} 
+                      {stockData[product.sku] && (
+                        <span className="text-gray-500">
+                          {" "}(Vendidos: {stockData[product.sku].soldQuantity})
+                        </span>
+                      )}
                     </CardDescription>
                   </div>
                   <Button
@@ -335,9 +370,20 @@ export default function ProductsPage() {
                   </div>
                   <div className="text-center space-y-1">
                     <div className="text-lg font-bold text-blue-400">
-                      {product.stock}
+                      {stockData[product.sku]?.availableStock ?? product.stock}
                     </div>
-                    <div className="text-xs text-gray-400">Estoque Disponível</div>
+                    <div className="text-xs text-gray-400">
+                      {stockData[product.sku] ? (
+                        <div>
+                          <div>Disponível: {stockData[product.sku].availableStock}</div>
+                          <div className="text-xs text-gray-500">
+                            Vendidos: {stockData[product.sku].soldQuantity}
+                          </div>
+                        </div>
+                      ) : (
+                        "Estoque Disponível"
+                      )}
+                    </div>
                   </div>
                 </div>
 
