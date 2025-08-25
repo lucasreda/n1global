@@ -411,29 +411,22 @@ export class AdminService {
 
   async deleteProduct(productId: string) {
     try {
-      // Use a transaction to ensure both operations succeed or both fail
-      const result = await db.transaction(async (tx) => {
-        // First, delete all references in user_products table
-        const userProductsResult = await tx
-          .delete(userProducts)
-          .where(eq(userProducts.productId, productId));
-        
-        console.log(`Removed ${userProductsResult.rowCount || 0} user product links`);
+      // First, delete all references in user_products table using SQL
+      await db.execute(sql`DELETE FROM user_products WHERE product_id = ${productId}`);
+      
+      console.log(`Removed user product links for product ${productId}`);
 
-        // Then delete the product
-        const [deletedProduct] = await tx
-          .delete(products)
-          .where(eq(products.id, productId))
-          .returning();
+      // Then delete the product
+      const [deletedProduct] = await db
+        .delete(products)
+        .where(eq(products.id, productId))
+        .returning();
 
-        if (!deletedProduct) {
-          throw new Error('Product not found');
-        }
+      if (!deletedProduct) {
+        throw new Error('Product not found');
+      }
 
-        return deletedProduct;
-      });
-
-      return result;
+      return deletedProduct;
     } catch (error) {
       console.error('❌ Error deleting product:', error);
       throw error;
