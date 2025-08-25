@@ -49,8 +49,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const url = queryKey.join("/") as string;
     const token = localStorage.getItem("auth_token");
     const operationId = localStorage.getItem("current_operation_id");
+    
+    console.log("🔧 Query request:", { url, hasToken: !!token, tokenLength: token?.length });
     
     const headers: HeadersInit = {};
     if (token) {
@@ -60,16 +63,20 @@ export const getQueryFn: <T>(options: {
       headers["x-operation-id"] = operationId;
     }
 
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetch(url, {
       headers,
       credentials: "include",
     });
 
+    console.log("🔧 Query response:", { url, status: res.status, statusText: res.statusText });
+
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      console.log("🔧 Returning null for 401");
       return null;
     }
 
     if (res.status === 401 || res.status === 403) {
+      console.log("🔧 Auth failed, redirecting");
       // Token expired or invalid, clear auth
       localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
@@ -77,7 +84,9 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    console.log("🔧 Query data:", { url, dataLength: Array.isArray(data) ? data.length : 'not-array' });
+    return data;
   };
 
 export const queryClient = new QueryClient({

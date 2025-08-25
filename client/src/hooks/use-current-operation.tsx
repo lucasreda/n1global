@@ -17,8 +17,17 @@ export function useCurrentOperation() {
     operationsCount: operations?.length || 0, 
     isLoading, 
     error: error?.message,
-    operations: operations?.map(op => op.name) 
+    operations: operations?.map(op => op.name),
+    fullError: error
   });
+
+  // Production debug - check token status
+  if (typeof window !== 'undefined' && window.location.hostname.includes('replit.app')) {
+    console.log("🚨 PRODUCTION MODE - Token check:", {
+      hasToken: !!localStorage.getItem('auth_token'),
+      tokenLength: localStorage.getItem('auth_token')?.length || 0
+    });
+  }
 
   // Force Dss operation on load (only once)
   useEffect(() => {
