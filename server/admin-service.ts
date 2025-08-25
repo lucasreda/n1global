@@ -12,6 +12,12 @@ export class AdminService {
       const [operationsCount] = await db.select({ count: count() }).from(operations);
       const [ordersCount] = await db.select({ count: count() }).from(orders);
       
+      console.log('🔍 Global Stats Debug:', {
+        storesCount: storesCount.count,
+        operationsCount: operationsCount.count,
+        ordersCount: ordersCount.count
+      });
+      
       // Get total revenue (sum of all delivered orders)
       const [revenueResult] = await db
         .select({ 
@@ -149,7 +155,7 @@ export class AdminService {
           ilike(orders.customerName, `%${searchTerm}%`),
           ilike(orders.customerPhone, `%${searchTerm}%`),
           ilike(orders.id, `%${searchTerm}%`)
-        );
+        ) || sql`TRUE`;
       }
       
       // Build store filter
