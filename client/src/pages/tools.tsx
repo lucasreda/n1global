@@ -1,6 +1,7 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Wrench, Calculator, Database, FileText, Download, Upload, Settings, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function Tools() {
   const tools = [
@@ -101,16 +102,30 @@ export default function Tools() {
               <h3 className="text-white font-semibold mb-2">{tool.name}</h3>
               <p className="text-gray-400 text-sm mb-4 leading-relaxed">{tool.description}</p>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                className={isActive ? "text-blue-400 hover:text-blue-300 hover:bg-blue-400/10" : "text-gray-400 cursor-not-allowed"}
-                disabled={!isActive}
-                data-testid={`button-${tool.id}`}
-              >
-                <Settings size={16} className="mr-2" />
-                {isActive ? "Abrir" : "Em Breve"}
-              </Button>
+              {isActive && tool.id === "cost-calculator" ? (
+                <Link href="/cost-calculator">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                    data-testid={`button-${tool.id}`}
+                  >
+                    <Settings size={16} className="mr-2" />
+                    Abrir
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 cursor-not-allowed"
+                  disabled={true}
+                  data-testid={`button-${tool.id}`}
+                >
+                  <Settings size={16} className="mr-2" />
+                  Em Breve
+                </Button>
+              )}
             </div>
           );
         })}

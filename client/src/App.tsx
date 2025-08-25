@@ -16,6 +16,7 @@ import Analytics from "@/pages/analytics";
 import Integrations from "@/pages/integrations";
 import Products from "@/pages/products";
 import Tools from "@/pages/tools";
+import CostCalculator from "@/pages/cost-calculator";
 import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Onboarding from "@/pages/onboarding";
@@ -154,6 +155,7 @@ function Router() {
         {!isProductSeller && <Route path="/ads" component={Ads} />}
         <Route path="/products" component={Products} />
         <Route path="/tools" component={Tools} />
+        <Route path="/cost-calculator" component={CostCalculator} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
