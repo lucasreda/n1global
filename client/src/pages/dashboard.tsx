@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { SyncStatus } from "@/components/dashboard/sync-status";
-import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 
 import { authenticatedApiRequest } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +13,34 @@ import { Calendar, Filter, RefreshCw, Download } from "lucide-react";
 
 export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("30");
-  const [showCompleteSyncDialog, setShowCompleteSyncDialog] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Sync mutation (same as orders page)
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await authenticatedApiRequest("POST", "/api/sync/shopify-carrier");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      console.log("✅ Sincronização completa:", data);
+      toast({
+        title: "Sincronização Concluída",
+        description: data.message || "Dados sincronizados com sucesso",
+      });
+      // Refresh dashboard data without page reload
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
+    },
+    onError: (error: any) => {
+      console.error("❌ Erro na sincronização:", error);
+      toast({
+        title: "Erro na Sincronização",
+        description: error.message || "Falha ao sincronizar dados",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Auto-sync on page load (similar to Facebook Ads)
   useEffect(() => {
@@ -163,14 +190,15 @@ export default function Dashboard() {
         <div className="flex items-center space-x-3">
           {/* Complete Sync Button */}
           <Button
-            onClick={() => setShowCompleteSyncDialog(true)}
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
             variant="outline"
             size="sm"
-            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors"
+            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50"
             data-testid="button-complete-sync"
           >
             <Download className="w-4 h-4 mr-2" />
-            Sync Completo
+            {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
           </Button>
 
           {/* Date Filter */}
@@ -204,15 +232,6 @@ export default function Dashboard() {
       
       <SyncStatus />
       
-      {/* Complete Sync Dialog */}
-      <CompleteSyncDialog
-        isOpen={showCompleteSyncDialog}
-        onClose={() => setShowCompleteSyncDialog(false)}
-        onComplete={() => {
-          // Refresh dashboard data after sync completion
-          window.location.reload();
-        }}
-      />
     </div>
   );
 }
