@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, products, shippingProviders, stores, operations } from "@shared/schema";
+import { users, products, shippingProviders, stores, operations, userOperationAccess } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
@@ -175,6 +175,41 @@ export async function seedDatabase() {
       console.log("✅ Super admin created:", superAdmin.email);
     } else {
       console.log("ℹ️  Super admin already exists");
+    }
+
+    // ⚠️ CRITICAL: Give fresh user access to all existing operations
+    // This is what was missing causing the operations selector to be empty in production!
+    const [freshUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "fresh@teste.com"))
+      .limit(1);
+
+    if (freshUser) {
+      // Get all existing operations
+      const allOperations = await db.select().from(operations);
+      
+      for (const operation of allOperations) {
+        // Check if access already exists
+        const [existingAccess] = await db
+          .select()
+          .from(userOperationAccess)
+          .where(eq(userOperationAccess.userId, freshUser.id))
+          .where(eq(userOperationAccess.operationId, operation.id))
+          .limit(1);
+
+        if (!existingAccess) {
+          await db
+            .insert(userOperationAccess)
+            .values({
+              userId: freshUser.id,
+              operationId: operation.id,
+              role: 'viewer' // Fresh user gets viewer access to all operations
+            });
+          
+          console.log(`✅ Granted fresh user access to operation: ${operation.name}`);
+        }
+      }
     }
 
     console.log("🌱 Database seeding completed!");
