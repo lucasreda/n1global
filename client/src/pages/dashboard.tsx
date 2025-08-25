@@ -95,20 +95,25 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate distribution data focusing on 3 key metrics: Delivered, Returned, Cancelled
+  // Calculate distribution data with 3 meaningful categories
   const getDistributionData = () => {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
     
-    // Focus on the 3 most relevant business metrics
+    // Use the actual data available: Delivered, Pending, Others
     const delivered = metrics.deliveredOrders || 0;
-    const returned = metrics.returnedOrders || 0;
+    const pending = metrics.pendingOrders || 0;
+    const shipped = metrics.shippedOrders || 0;
     const cancelled = metrics.cancelledOrders || 0;
+    const returned = metrics.returnedOrders || 0;
+    
+    // Others = shipped + cancelled + returned
+    const others = shipped + cancelled + returned;
     
     const data = [];
     
-    // Always show these 3 key metrics if they exist
+    // Always show delivered if exists
     if (delivered > 0) {
       data.push({
         name: "Entregues",
@@ -119,35 +124,50 @@ export default function Dashboard() {
       });
     }
     
-    if (returned > 0) {
+    // Always show pending if exists
+    if (pending > 0) {
       data.push({
-        name: "Retornados",
-        value: returned,
-        percentage: ((returned / total) * 100).toFixed(1),
-        color: "#EF4444", // Red
-        description: "Pedidos devolvidos pelos clientes"
+        name: "Pendentes",
+        value: pending,
+        percentage: ((pending / total) * 100).toFixed(1),
+        color: "#F59E0B", // Amber
+        description: "Aguardando processamento"
       });
     }
     
-    if (cancelled > 0) {
+    // Show others if exists
+    if (others > 0) {
       data.push({
-        name: "Cancelados",
-        value: cancelled,
-        percentage: ((cancelled / total) * 100).toFixed(1),
-        color: "#6B7280", // Gray
-        description: "Pedidos cancelados antes do envio"
+        name: "Outros",
+        value: others,
+        percentage: ((others / total) * 100).toFixed(1),
+        color: "#8B5CF6", // Purple
+        description: "Enviados, cancelados e retornados"
       });
     }
     
-    // If no data exists, show a placeholder
-    if (data.length === 0) {
-      data.push({
-        name: "Sem dados",
-        value: total,
-        percentage: "100.0",
-        color: "#374151", // Dark gray
-        description: "Aguardando dados de entrega"
-      });
+    // If we still have no meaningful data, create a basic split
+    if (data.length <= 1 && total > 0) {
+      const remaining = Math.max(0, total - delivered);
+      
+      if (delivered > 0) {
+        data.push({
+          name: "Não Entregues",
+          value: remaining,
+          percentage: ((remaining / total) * 100).toFixed(1),
+          color: "#EF4444", // Red
+          description: "Pedidos ainda não entregues"
+        });
+      } else {
+        // Complete fallback
+        data.push({
+          name: "Total",
+          value: total,
+          percentage: "100.0",
+          color: "#6B7280", // Gray
+          description: "Todos os pedidos do período"
+        });
+      }
     }
     
     return data;
