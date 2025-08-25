@@ -205,7 +205,7 @@ export class DashboardService {
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
-    // 3. Get transportadora data filtered by period for delivery rate calculations
+    // 3. Get transportadora data filtered by period AND carrier_imported = true
     const transportadoraStats = await db
       .select({
         status: orders.status,
@@ -216,6 +216,7 @@ export class DashboardService {
         eq(orders.operationId, currentOperation.id),
         gte(orders.orderDate, dateRange.from), // SAME period filter
         lte(orders.orderDate, dateRange.to),   // SAME period filter
+        eq(orders.carrierImported, true), // ONLY orders found in carrier/transportadora
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ))
       .groupBy(orders.status);
