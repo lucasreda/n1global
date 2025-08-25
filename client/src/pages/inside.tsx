@@ -54,8 +54,14 @@ export default function InsidePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStore, setSelectedStore] = useState<string>("all");
   const [selectedOperation, setSelectedOperation] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<string>("30d");
+  const [dateRange, setDateRange] = useState<string>("all");
   const [selectedTab, setSelectedTab] = useState("overview");
+  
+  // Check if user has made any specific selection to enable orders query
+  const hasActiveSearch = searchTerm.trim().length > 0 || 
+                         selectedStore !== "all" || 
+                         selectedOperation !== "all" || 
+                         dateRange !== "all";
 
   const { data: adminStats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/stats'],
@@ -64,7 +70,7 @@ export default function InsidePage() {
 
   const { data: globalOrders, isLoading: ordersLoading } = useQuery<GlobalOrder[]>({
     queryKey: ['/api/admin/orders', searchTerm, selectedStore, selectedOperation, dateRange],
-    enabled: selectedTab === "orders"
+    enabled: selectedTab === "orders" && hasActiveSearch
   });
 
   const { data: stores } = useQuery<Array<{ id: string; name: string; operationsCount: number }>>({
@@ -308,10 +314,10 @@ export default function InsidePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-700 border-slate-600">
+                        <SelectItem value="all">Selecionar período</SelectItem>
                         <SelectItem value="7d">Últimos 7 dias</SelectItem>
                         <SelectItem value="30d">Últimos 30 dias</SelectItem>
                         <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                        <SelectItem value="all">Todos os períodos</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -334,8 +340,22 @@ export default function InsidePage() {
                 </Button>
               </CardHeader>
               <CardContent>
-                {ordersLoading ? (
+                {!hasActiveSearch ? (
+                  <div className="text-center py-12 space-y-4">
+                    <Search className="h-12 w-12 text-slate-500 mx-auto" />
+                    <div className="space-y-2">
+                      <p className="text-slate-300 font-medium">Realize uma pesquisa para visualizar os pedidos</p>
+                      <p className="text-slate-400 text-sm">
+                        Digite um termo de busca, selecione uma loja específica, operação ou período para começar
+                      </p>
+                    </div>
+                  </div>
+                ) : ordersLoading ? (
                   <div className="text-center py-8 text-slate-400">Carregando pedidos...</div>
+                ) : !globalOrders || globalOrders.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400">
+                    Nenhum pedido encontrado com os filtros selecionados
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {globalOrders?.map((order) => (
