@@ -49,6 +49,7 @@ export interface IStorage {
   getUserLinkedProducts(userId: string, storeId: string): Promise<(UserProduct & { product: Product })[]>;
   unlinkProductFromUser(userId: string, productId: string): Promise<boolean>;
   updateUserProductCosts(userProductId: string, costs: Partial<Pick<UserProduct, 'customCostPrice' | 'customShippingCost' | 'customHandlingFee'>>): Promise<UserProduct | undefined>;
+  getUserProductBySku(sku: string, storeId: string): Promise<(UserProduct & { product: Product }) | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -458,6 +459,34 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return userProduct || undefined;
+  }
+
+  async getUserProductBySku(sku: string, storeId: string): Promise<(UserProduct & { product: Product }) | undefined> {
+    const result = await db
+      .select({
+        id: userProducts.id,
+        userId: userProducts.userId,
+        storeId: userProducts.storeId,
+        productId: userProducts.productId,
+        sku: userProducts.sku,
+        customCostPrice: userProducts.customCostPrice,
+        customShippingCost: userProducts.customShippingCost,
+        customHandlingFee: userProducts.customHandlingFee,
+        linkedAt: userProducts.linkedAt,
+        lastUpdated: userProducts.lastUpdated,
+        isActive: userProducts.isActive,
+        product: products
+      })
+      .from(userProducts)
+      .innerJoin(products, eq(userProducts.productId, products.id))
+      .where(and(
+        eq(userProducts.sku, sku),
+        eq(userProducts.storeId, storeId),
+        eq(userProducts.isActive, true)
+      ))
+      .limit(1);
+
+    return result[0] || undefined;
   }
 }
 

@@ -9,7 +9,7 @@ export class DashboardService {
   private facebookAdsService = new FacebookAdsService();
   private defaultStoreId: string | null = null;
 
-  private async getStoreId(req?: any): Promise<string> {
+  private async getStoreId(req?: any): Promise<string | null> {
     // Se há um storeId no request context (vem do middleware), use ele
     if (req?.storeId) {
       return req.storeId;
@@ -464,9 +464,10 @@ export class DashboardService {
       };
     }
     
-    // Build where conditions for the same period AND operation
+    // Build where conditions for delivered orders only (as requested)
     let whereConditions = [
-      eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
+      eq(orders.operationId, currentOperation.id),
+      eq(orders.status, 'delivered'), // Only delivered orders
       gte(orders.orderDate, dateRange.from),
       lte(orders.orderDate, dateRange.to)
     ];
@@ -475,44 +476,65 @@ export class DashboardService {
       whereConditions.push(eq(orders.provider, provider));
     }
     
-    // Apply the same period-based filtering
-    let limitMultiplier = 1;
-    switch (period) {
-      case '1d':
-        limitMultiplier = 0.1;
-        break;
-      case '7d':
-        limitMultiplier = 0.4;
-        break;
-      case '30d':
-        limitMultiplier = 0.8;
-        break;
-      case '90d':
-        limitMultiplier = 1;
-        break;
-      default:
-        limitMultiplier = 1;
-    }
-    
-    // Sum product costs and shipping costs directly from orders table
-    const [costsResult] = await db
+    // Get delivered orders with their products data
+    const deliveredOrders = await db
       .select({
-        totalProductCosts: sql<number>`COALESCE(SUM(${orders.productCost}), 0)`,
-        totalShippingCosts: sql<number>`COALESCE(SUM(${orders.shippingCost}), 0)`,
-        totalOrders: count()
+        id: orders.id,
+        products: orders.products,
+        total: orders.total
       })
       .from(orders)
       .where(and(...whereConditions));
     
-    let totalProductCosts = Number(costsResult.totalProductCosts || 0);
-    let totalShippingCosts = Number(costsResult.totalShippingCosts || 0);
-    const totalQuantity = Number(costsResult.totalOrders || 0);
+    let totalProductCosts = 0;
+    let totalShippingCosts = 0;
+    let processedOrders = 0;
     
-    console.log(`💰 Costs calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${totalQuantity}`);
+    // Get store context for user product lookup
+    const storeId = await this.getStoreId(req);
     
-    // Apply period multiplier to simulate different timeframes
-    totalProductCosts = totalProductCosts * limitMultiplier;
-    totalShippingCosts = totalShippingCosts * limitMultiplier;
+    // Process each delivered order to calculate costs based on linked products
+    for (const order of deliveredOrders) {
+      if (!order.products) continue;
+      
+      // Extract SKUs from products array (jsonb)
+      const productsArray = order.products as any[];
+      if (!Array.isArray(productsArray)) continue;
+      
+      // Process each product in the order
+      for (const productInfo of productsArray) {
+        const sku = productInfo?.sku || productInfo?.product_sku;
+        if (!sku) continue;
+        
+        // Find linked product by SKU for this store
+        const linkedProduct = await storage.getUserProductBySku(sku, storeId);
+        
+        if (linkedProduct) {
+          // Use custom costs from linked product or fall back to product defaults
+          const productCost = parseFloat(linkedProduct.customCostPrice || linkedProduct.product.costPrice || "0");
+          const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
+          
+          totalProductCosts += productCost;
+          totalShippingCosts += shippingCost;
+          
+          console.log(`💰 Order ${order.id}: SKU ${sku} - Product: €${productCost}, Shipping: €${shippingCost}`);
+        } else {
+          // If no linked product found, use fallback calculation
+          const orderValue = parseFloat(order.total || "0");
+          const fallbackProductCost = orderValue >= 120 ? 45.00 : orderValue >= 60 ? 35.00 : 30.00;
+          const fallbackShippingCost = orderValue >= 120 ? 15.00 : orderValue >= 60 ? 12.00 : 10.00;
+          
+          totalProductCosts += fallbackProductCost;
+          totalShippingCosts += fallbackShippingCost;
+          
+          console.log(`💰 Order ${order.id}: SKU ${sku} (fallback) - Product: €${fallbackProductCost}, Shipping: €${fallbackShippingCost}`);
+        }
+      }
+      
+      processedOrders++;
+    }
+    
+    console.log(`💰 Costs calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${processedOrders}`);
     
     // Convert both product and shipping costs from EUR to BRL using the currency API
     const totalProductCostsBRL = await currencyService.convertToBRL(totalProductCosts, 'EUR');
@@ -529,7 +551,7 @@ export class DashboardService {
       totalShippingCostsBRL: Number(totalShippingCostsBRL.toFixed(2)), // Shipping costs only in BRL
       totalCombinedCosts: Number(totalCombinedCosts.toFixed(2)), // Combined costs in EUR
       totalCombinedCostsBRL: Number(totalCombinedCostsBRL.toFixed(2)), // Combined costs in BRL
-      totalQuantity: Math.ceil(totalQuantity * limitMultiplier)
+      totalQuantity: processedOrders
     };
   }
 
