@@ -402,8 +402,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("🔍 Direct access count:", directAccess.length);
         
         // Check operations exist
-        const allOperations = await db.select().from(operations);
-        console.log("🔍 Total operations in DB:", allOperations.length);
+        const allOps = await db.select().from(operations);
+        console.log("🔍 Total operations in DB:", allOps.length);
       }
       
       const operations = await storage.getUserOperations(req.user.id);
