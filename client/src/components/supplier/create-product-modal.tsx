@@ -41,16 +41,9 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
 
   const createProductMutation = useMutation({
     mutationFn: (data: ProductFormData) => {
-      return fetch('/api/supplier/products', {
+      return apiRequest('/api/supplier/products', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(data)
-      }).then(res => {
-        if (!res.ok) throw new Error('Failed to create product');
-        return res.json();
+        body: JSON.stringify(data),
       });
     },
     onSuccess: () => {
