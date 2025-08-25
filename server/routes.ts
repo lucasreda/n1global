@@ -385,16 +385,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Operations routes
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      console.log("🔍 /api/operations called by:", req.user.email, "ID:", req.user.id);
+      console.log("🔍 /api/operations called by:", req.user.email, "ID:", req.user.id, "ENV:", process.env.NODE_ENV || 'unknown');
       
       let operations = await storage.getUserOperations(req.user.id);
+      console.log("📊 Initial operations found:", operations.length);
       
       // AUTO-SYNC: Se usuário não tem operações, verificar se existe outro usuário com mesmo email
       if (operations.length === 0 && req.user.email === 'fresh@teste.com') {
-        console.log("🔄 Auto-sync iniciado: usuário fresh sem operações, buscando outros usuários...");
+        console.log("🔄 PRODUCTION AUTO-SYNC INICIADO: usuário fresh sem operações, buscando outros usuários...");
         
         try {
-          // Buscar todos os usuários fresh
+          // Primeiro, verificar todos os usuários fresh no banco
+          const allUsers = await db.execute(`SELECT id, email FROM users WHERE email LIKE '%fresh%'`);
+          console.log("👥 Todos usuários fresh no banco:", allUsers.length);
+          
+          // Buscar usuários fresh com operações
           const allFreshUsers = await db.execute(`
             SELECT u.id, u.email, COUNT(uoa.operation_id) as operations_count
             FROM users u
@@ -404,31 +409,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
             HAVING COUNT(uoa.operation_id) > 0
           `);
           
-          console.log("🔍 Usuários fresh encontrados:", allFreshUsers.length);
+          console.log("🔍 Usuários fresh COM operações encontrados:", allFreshUsers.length);
+          allFreshUsers.forEach((user: any) => {
+            console.log("  - User:", user.id, "Email:", user.email, "Operations:", user.operations_count);
+          });
           
           if (allFreshUsers.length > 0) {
             const sourceUser = allFreshUsers[0];
-            console.log("📋 Copiando operações do usuário:", sourceUser.id, "para:", req.user.id);
+            console.log("📋 COPIANDO operações do usuário:", sourceUser.id, "para:", req.user.id);
+            
+            // Primeiro, verificar operações do usuário fonte
+            const sourceOperations = await db.execute(`
+              SELECT operation_id FROM user_operation_access WHERE user_id = '${sourceUser.id}'
+            `);
+            console.log("📋 Operações para copiar:", sourceOperations.length);
             
             // Copiar acessos do usuário fonte para usuário atual
-            await db.execute(`
+            const insertResult = await db.execute(`
               INSERT INTO user_operation_access (user_id, operation_id)
               SELECT '${req.user.id}', operation_id 
               FROM user_operation_access 
               WHERE user_id = '${sourceUser.id}'
               ON CONFLICT DO NOTHING
             `);
+            console.log("📋 Insert result:", insertResult);
             
             // Buscar operações novamente após sync
             operations = await storage.getUserOperations(req.user.id);
-            console.log("✅ Auto-sync concluído! Operações copiadas:", operations.length);
+            console.log("✅ PRODUCTION AUTO-SYNC CONCLUÍDO! Operações copiadas:", operations.length);
+          } else {
+            console.log("❌ Nenhum usuário fresh com operações encontrado para copiar");
           }
         } catch (syncError) {
           console.error("❌ Erro no auto-sync:", syncError);
         }
       }
       
-      console.log("✅ Operations found:", operations.length, "for user:", req.user.email);
+      console.log("✅ FINAL Operations found:", operations.length, "for user:", req.user.email);
       
       res.json(operations);
     } catch (error) {
