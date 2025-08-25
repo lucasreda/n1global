@@ -34,6 +34,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
+  const [showCursor, setShowCursor] = useState(true);
   const { login, register } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -45,6 +46,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
     if (!isOpen) return;
     
     setDisplayedText("");
+    setShowCursor(true);
     let currentIndex = 0;
     
     const typewriterInterval = setInterval(() => {
@@ -53,6 +55,10 @@ export function AuthModal({ isOpen }: AuthModalProps) {
         currentIndex++;
       } else {
         clearInterval(typewriterInterval);
+        // Esconder o cursor após um pequeno delay
+        setTimeout(() => {
+          setShowCursor(false);
+        }, 500);
       }
     }, 80); // Velocidade da digitação (80ms por caractere)
 
@@ -164,7 +170,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                           {index < displayedText.split(" ").length - 1 && " "}
                         </span>
                       ))}
-                      <span className="animate-pulse text-primary">|</span>
+                      {showCursor && <span className="animate-pulse text-primary">|</span>}
                     </h1>
                     <p className={`text-xl text-muted-foreground leading-relaxed max-w-lg transition-opacity duration-500 ${
                       displayedText === fullText ? 'opacity-100' : 'opacity-0'
