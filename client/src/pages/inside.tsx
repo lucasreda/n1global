@@ -220,9 +220,9 @@ export default function InsidePage() {
             {/* Logo na esquerda */}
             <div className="flex items-center">
               <img 
-                src="/logo.png" 
+                src="@assets/INSIDE_1756100933599.png" 
                 alt="Logo" 
-                className="h-8 w-8 object-contain"
+                className="h-12 w-auto object-contain"
               />
             </div>
             
