@@ -8,6 +8,7 @@ import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema }
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
+import { adminService } from "./admin-service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
@@ -31,6 +32,14 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
     req.user = user;
     next();
   });
+};
+
+// Middleware to verify super admin role
+const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user || req.user.role !== 'super_admin') {
+    return res.status(403).json({ message: "Acesso negado: requer permissões de super administrador" });
+  }
+  next();
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1827,6 +1836,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing Shopify integration:", error);
       res.status(500).json({ message: "Erro ao remover integração Shopify" });
+    }
+  });
+
+  // Admin routes (super admin only)
+  app.get("/api/admin/stats", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const stats = await adminService.getGlobalStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Admin stats error:", error);
+      res.status(500).json({ message: "Erro ao buscar estatísticas administrativas" });
+    }
+  });
+
+  app.get("/api/admin/stores", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const stores = await adminService.getAllStores();
+      res.json(stores);
+    } catch (error) {
+      console.error("Admin stores error:", error);
+      res.status(500).json({ message: "Erro ao buscar lojas" });
+    }
+  });
+
+  app.get("/api/admin/operations", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const storeId = req.query.storeId as string;
+      const operations = await adminService.getAllOperations(storeId);
+      res.json(operations);
+    } catch (error) {
+      console.error("Admin operations error:", error);
+      res.status(500).json({ message: "Erro ao buscar operações" });
+    }
+  });
+
+  app.get("/api/admin/orders", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const filters = {
+        searchTerm: req.query.searchTerm as string,
+        storeId: req.query.storeId as string,
+        operationId: req.query.operationId as string,
+        dateRange: req.query.dateRange as string,
+        limit: parseInt(req.query.limit as string) || 50,
+        offset: parseInt(req.query.offset as string) || 0
+      };
+      
+      const orders = await adminService.getGlobalOrders(filters);
+      res.json(orders);
+    } catch (error) {
+      console.error("Admin orders error:", error);
+      res.status(500).json({ message: "Erro ao buscar pedidos globais" });
     }
   });
 

@@ -18,6 +18,7 @@ import Products from "@/pages/products";
 import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Onboarding from "@/pages/onboarding";
+import InsidePage from "@/pages/inside";
 import NotFound from "@/pages/not-found";
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -129,12 +130,22 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 
 function Router() {
   const { user } = useAuth();
+  const [location, setLocation] = useLocation();
   const isProductSeller = user?.role === 'product_seller';
+  const isSuperAdmin = user?.role === 'super_admin';
+
+  // Auto-redirect super admin to /inside
+  useEffect(() => {
+    if (isSuperAdmin && location === '/') {
+      setLocation('/inside');
+    }
+  }, [isSuperAdmin, location, setLocation]);
 
   return (
     <OnboardingGuard>
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
+        <Route path="/inside" component={isSuperAdmin ? InsidePage : () => <NotFound />} />
         <Route path="/" component={isProductSeller ? SellerDashboard : Dashboard} />
         <Route path="/orders" component={Orders} />
         {!isProductSeller && <Route path="/analytics" component={Analytics} />}
@@ -172,8 +183,8 @@ function AppContent() {
       <AuthModal isOpen={!isAuthenticated} />
       {isAuthenticated && (
         <>
-          {/* Fullscreen layout for onboarding */}
-          {location === '/onboarding' ? (
+          {/* Fullscreen layout for onboarding and inside page */}
+          {(location === '/onboarding' || location === '/inside') ? (
             <div className="min-h-screen">
               <Router />
             </div>

@@ -163,6 +163,33 @@ export async function seedDatabase() {
       console.log("ℹ️  Products already exist");
     }
 
+    // Check if super admin already exists
+    const [existingSuperAdmin] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "super@admin.com"))
+      .limit(1);
+
+    if (!existingSuperAdmin) {
+      // Create super admin user
+      const hashedPassword = await bcrypt.hash("super123", 10);
+      
+      const [superAdmin] = await db
+        .insert(users)
+        .values({
+          name: "Super Administrator",
+          email: "super@admin.com",
+          password: hashedPassword,
+          role: "super_admin",
+          onboardingCompleted: true,
+        })
+        .returning();
+      
+      console.log("✅ Super admin created:", superAdmin.email);
+    } else {
+      console.log("ℹ️  Super admin already exists");
+    }
+
     console.log("🌱 Database seeding completed!");
   } catch (error) {
     console.error("❌ Database seeding failed:", error);
