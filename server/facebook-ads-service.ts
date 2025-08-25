@@ -376,14 +376,16 @@ export class FacebookAdsService {
     return campaigns;
   }
 
-  async updateCampaignSelection(campaignId: string, isSelected: boolean): Promise<FacebookCampaign> {
+  async updateCampaignSelection(campaignId: string, isSelected: boolean): Promise<any> {
+    const { campaigns } = await import("@shared/schema");
+    
     const [campaign] = await db
-      .update(facebookCampaigns)
+      .update(campaigns)
       .set({ 
         isSelected,
         updatedAt: new Date()
       })
-      .where(eq(facebookCampaigns.id, campaignId))
+      .where(eq(campaigns.id, campaignId))
       .returning();
       
     if (!campaign) {
@@ -394,22 +396,30 @@ export class FacebookAdsService {
   }
 
   async getSelectedCampaignsSpend(): Promise<number> {
-    const campaigns = await db
+    const { campaigns } = await import("@shared/schema");
+    const campaignsList = await db
       .select()
-      .from(facebookCampaigns)
-      .where(eq(facebookCampaigns.isSelected, true));
+      .from(campaigns)
+      .where(and(
+        eq(campaigns.isSelected, true),
+        eq(campaigns.network, 'facebook')
+      ));
       
-    return campaigns.reduce((total, campaign) => {
+    return campaignsList.reduce((total, campaign) => {
       return total + parseFloat(campaign.amountSpent || "0");
     }, 0);
   }
 
   async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
     // Buscar campanhas selecionadas e seus dados ao vivo para o período específico
+    const { campaigns } = await import("@shared/schema");
     const selectedCampaigns = await db
       .select()
-      .from(facebookCampaigns)
-      .where(eq(facebookCampaigns.isSelected, true));
+      .from(campaigns)
+      .where(and(
+        eq(campaigns.isSelected, true),
+        eq(campaigns.network, 'facebook')
+      ));
     
     console.log(`💰 Calculando custos de marketing para ${selectedCampaigns.length} campanhas selecionadas (período: ${period})`);
     
