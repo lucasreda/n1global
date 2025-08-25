@@ -385,21 +385,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Operations routes
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      // Production debug for fresh user
-      if (req.user.email === 'fresh@teste.com') {
-        console.log("🔍 PRODUCTION DEBUG - fresh@teste.com requesting operations");
-        console.log("🔍 User ID:", req.user.id);
-      }
+      console.log("🎯 /api/operations called by user:", req.user.email);
       
       const operations = await storage.getUserOperations(req.user.id);
       
+      console.log("✅ Retrieved operations:", operations.length, "for user:", req.user.email);
       if (req.user.email === 'fresh@teste.com') {
-        console.log("🔍 Operations returned for fresh:", operations.length);
+        console.log("🔍 Operations details:", operations.map(op => ({ id: op.id, name: op.name })));
       }
       
       res.json(operations);
     } catch (error) {
-      console.error("Operations error:", error);
+      console.error("❌ Operations error for user", req.user.email, ":", error);
       res.status(500).json({ message: "Erro ao buscar operações" });
     }
   });
