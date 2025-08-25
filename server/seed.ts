@@ -148,6 +148,13 @@ export async function seedDatabase() {
       console.log("✅ Fresh user created:", freshUser.email);
     } else {
       console.log("ℹ️  Fresh user already exists");
+      // Fix password if needed
+      const hashedPassword = await bcrypt.hash("password123", 10);
+      await db
+        .update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.email, "fresh@teste.com"));
+      console.log("🔧 Fresh user password updated");
     }
 
     // Check if super admin already exists
