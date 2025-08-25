@@ -65,6 +65,36 @@
   --ring: hsl(224, 71.4%, 4.1%);
 }
 
+/* Admin Background */
+.admin-background {
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(40, 40, 40, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(30, 30, 30, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(20, 20, 20, 0.2) 0%, transparent 50%),
+    linear-gradient(135deg, #000000 0%, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%, #000000 100%);
+  position: relative;
+}
+
+.admin-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0);
+  background-size: 20px 20px;
+  backdrop-filter: blur(0.5px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.admin-background > * {
+  position: relative;
+  z-index: 1;
+}
+
 @layer base {
   * {
     @apply border-border;

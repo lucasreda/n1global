@@ -198,14 +198,14 @@ export default function InsidePage() {
 
   if (statsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen admin-background flex items-center justify-center">
         <div className="text-white">Carregando painel administrativo...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen admin-background">
       <div className="container mx-auto p-6">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-2">
