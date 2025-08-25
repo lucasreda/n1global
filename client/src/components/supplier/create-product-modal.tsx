@@ -22,12 +22,8 @@ interface ProductFormData {
   type: string;
   price: number;
   costPrice: number;
-  shippingCost: number;
   initialStock: number;
   lowStock: number;
-  imageUrl?: string;
-  videoUrl?: string;
-  productUrl?: string;
 }
 
 export function CreateProductModal({ open, onOpenChange, onProductCreated }: CreateProductModalProps) {
@@ -39,12 +35,8 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
     type: 'fisico',
     price: 0,
     costPrice: 0,
-    shippingCost: 0,
     initialStock: 0,
-    lowStock: 10,
-    imageUrl: '',
-    videoUrl: '',
-    productUrl: ''
+    lowStock: 10
   });
 
   const createProductMutation = useMutation({
@@ -86,12 +78,8 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
       type: 'fisico',
       price: 0,
       costPrice: 0,
-      shippingCost: 0,
       initialStock: 0,
-      lowStock: 10,
-      imageUrl: '',
-      videoUrl: '',
-      productUrl: ''
+      lowStock: 10
     });
   };
 
@@ -203,19 +191,7 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="shippingCost">Custo de Envio (€)</Label>
-              <Input
-                id="shippingCost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.shippingCost}
-                onChange={(e) => handleInputChange('shippingCost', parseFloat(e.target.value) || 0)}
-                data-testid="input-shipping-cost"
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="initialStock">Estoque Inicial</Label>
               <Input
@@ -240,42 +216,6 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h4 className="font-medium text-sm">URLs (Opcional)</h4>
-            <div>
-              <Label htmlFor="imageUrl">URL da Imagem</Label>
-              <Input
-                id="imageUrl"
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => handleInputChange('imageUrl', e.target.value)}
-                placeholder="https://..."
-                data-testid="input-image-url"
-              />
-            </div>
-            <div>
-              <Label htmlFor="videoUrl">URL do Vídeo</Label>
-              <Input
-                id="videoUrl"
-                type="url"
-                value={formData.videoUrl}
-                onChange={(e) => handleInputChange('videoUrl', e.target.value)}
-                placeholder="https://..."
-                data-testid="input-video-url"
-              />
-            </div>
-            <div>
-              <Label htmlFor="productUrl">URL do Produto</Label>
-              <Input
-                id="productUrl"
-                type="url"
-                value={formData.productUrl}
-                onChange={(e) => handleInputChange('productUrl', e.target.value)}
-                placeholder="https://..."
-                data-testid="input-product-url"
-              />
-            </div>
-          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button 
