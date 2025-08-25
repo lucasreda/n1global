@@ -95,60 +95,53 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate distribution data from real API metrics - Fixed logic for correct percentages
+  // Calculate distribution data from real API metrics - Simple and correct logic
   const getDistributionData = () => {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
     
-    // Get the main status values (non-overlapping)
+    // Use actual values from API
     const delivered = metrics.deliveredOrders || 0;
     const pending = metrics.pendingOrders || 0;
     
-    // Calculate others as remaining orders (excluding confirmed which is total)
-    const shipped = metrics.shippedOrders || 0; 
-    const cancelled = metrics.cancelledOrders || 0;
-    const returned = metrics.returnedOrders || 0;
-    
-    // Others = remaining orders that are not delivered or pending
+    // Others = everything else (total minus the main categories)
     const others = Math.max(0, total - delivered - pending);
     
-    const distributionData = [];
+    const data = [];
     
-    // Always show Delivered if exists
+    // Only add categories that have orders
     if (delivered > 0) {
-      distributionData.push({
+      data.push({
         name: "Entregues",
         value: delivered,
-        percentage: total > 0 ? ((delivered / total) * 100).toFixed(1) : "0",
+        percentage: ((delivered / total) * 100).toFixed(1),
         color: "#10B981", // Green
         description: "Pedidos entregues com sucesso"
       });
     }
     
-    // Always show Pending if exists
     if (pending > 0) {
-      distributionData.push({
-        name: "Pendentes",
+      data.push({
+        name: "Pendentes", 
         value: pending,
-        percentage: total > 0 ? ((pending / total) * 100).toFixed(1) : "0",
+        percentage: ((pending / total) * 100).toFixed(1),
         color: "#F59E0B", // Amber
         description: "Aguardando processamento"
       });
     }
     
-    // Show Others only if there are remaining orders
     if (others > 0) {
-      distributionData.push({
+      data.push({
         name: "Outros",
-        value: others,
-        percentage: total > 0 ? ((others / total) * 100).toFixed(1) : "0",
+        value: others, 
+        percentage: ((others / total) * 100).toFixed(1),
         color: "#8B5CF6", // Purple
         description: "Enviados, cancelados e devolvidos"
       });
     }
     
-    return distributionData;
+    return data;
   };
 
 

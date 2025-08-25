@@ -108,10 +108,10 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+        <div className="flex flex-col lg:flex-row gap-6 items-center">
           {/* Chart Section */}
-          <div className="lg:col-span-2 flex justify-center">
-            <div className="w-72 h-72 relative">
+          <div className="flex-shrink-0">
+            <div className="w-64 h-64 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -120,8 +120,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     cy="50%"
                     labelLine={false}
                     label={renderCustomizedLabel}
-                    outerRadius={100}
-                    innerRadius={45}
+                    outerRadius={80}
+                    innerRadius={35}
                     fill="#8884d8"
                     dataKey="value"
                     stroke="none"
@@ -164,8 +164,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </div>
           
           {/* Legend Section */}
-          <div className="lg:col-span-3">
-            <div className="space-y-5">
+          <div className="flex-1 min-w-0">
+            <div className="space-y-4">
               {distributionData.map((item) => (
                 <div key={item.name} className="glassmorphism-light rounded-lg p-4 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
                   <div className="flex items-center justify-between mb-3">
