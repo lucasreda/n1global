@@ -49,19 +49,9 @@ export default function SupplierDashboard() {
   });
 
 
-  // Fetch supplier metrics (orders, deliveries, returns)
+  // Fetch supplier metrics (orders, deliveries, returns)  
   const { data: supplierMetrics, isLoading: isLoadingMetrics } = useQuery<SupplierMetrics>({
-    queryKey: ['/api/supplier/metrics', dateFilter],
-    queryFn: async () => {
-      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
-      const response = await fetch(`/api/supplier/metrics?period=${period}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      return response.json();
-    },
+    queryKey: [`/api/supplier/metrics?period=${dateFilter}`],
     enabled: !!user && user.role === 'supplier',
   });
 
