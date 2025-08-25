@@ -101,7 +101,7 @@ export default function SupplierDashboard() {
   const hasProducts = supplierProducts && supplierProducts.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-6 py-8 space-y-6">
       {/* Page Title */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
