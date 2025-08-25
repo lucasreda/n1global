@@ -94,8 +94,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       </div>
 
       {/* Distribution Chart */}
-      <div className="glassmorphism rounded-2xl p-6" data-testid="chart-distribution">
-        <div className="flex items-center justify-between mb-6">
+      <div className="glassmorphism rounded-2xl p-8 min-h-[400px]" data-testid="chart-distribution">
+        <div className="flex items-center justify-between mb-8">
           <h3 className="text-lg font-semibold text-white">Distribuição de Status</h3>
           <Button 
             variant="ghost"
@@ -108,10 +108,10 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </Button>
         </div>
         
-        <div className="flex flex-col lg:flex-row gap-8 items-center">
+        <div className="flex flex-col lg:flex-row gap-10 items-start lg:items-center h-full">
           {/* Chart Section */}
-          <div className="flex-shrink-0">
-            <div className="w-60 h-60 relative">
+          <div className="flex-shrink-0 flex justify-center lg:justify-start">
+            <div className="w-64 h-64 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -120,8 +120,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     cy="50%"
                     labelLine={false}
                     label={renderCustomizedLabel}
-                    outerRadius={70}
-                    innerRadius={30}
+                    outerRadius={80}
+                    innerRadius={35}
                     fill="#8884d8"
                     dataKey="value"
                     stroke="none"
@@ -164,36 +164,36 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </div>
           
           {/* Legend Section */}
-          <div className="flex-1 min-w-0">
-            <div className="space-y-3">
+          <div className="flex-1 min-w-0 w-full lg:w-auto">
+            <div className="space-y-4">
               {distributionData.map((item) => (
-                <div key={item.name} className="glassmorphism-light rounded-lg p-3 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-4 h-4 rounded-full shadow-lg" style={{ backgroundColor: item.color }}></div>
-                      <div>
-                        <span className="text-white font-medium">{item.name}</span>
-                        <div className="text-xs text-gray-400 mt-1">{item.description}</div>
+                <div key={item.name} className="glassmorphism-light rounded-lg p-4 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-white font-medium text-base block">{item.name}</span>
+                        <div className="text-sm text-gray-400 mt-1">{item.description}</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-white font-bold text-lg" data-testid={`percentage-${item.name.toLowerCase()}`}>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <div className="text-white font-bold text-xl" data-testid={`percentage-${item.name.toLowerCase()}`}>
                         {item.percentage}%
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-sm text-gray-400">
                         {item.value} pedidos
                       </div>
                     </div>
                   </div>
                   
                   {/* Progress bar */}
-                  <div className="w-full bg-gray-700/30 rounded-full h-2">
+                  <div className="w-full bg-gray-700/30 rounded-full h-3">
                     <div 
-                      className="h-2 rounded-full transition-all duration-300" 
+                      className="h-3 rounded-full transition-all duration-500" 
                       style={{ 
                         backgroundColor: item.color, 
                         width: `${item.percentage}%`,
-                        boxShadow: `0 0 10px ${item.color}40`
+                        boxShadow: `0 0 12px ${item.color}50`
                       }}
                     ></div>
                   </div>
