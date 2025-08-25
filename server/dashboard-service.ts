@@ -180,18 +180,30 @@ export class DashboardService {
     
     const whereClause = and(...whereConditions);
     
-    // Get all order counts by status (todos os dados da Store)
+    // 1. Get order counts by status filtered by Shopify order date (for counting)
     const statusCounts = await db
       .select({
         status: orders.status,
-        count: count(),
-        totalRevenue: sum(orders.total)
+        count: count()
       })
       .from(orders)
       .where(whereClause)
       .groupBy(orders.status);
     
-    // Calculate metrics
+    // 2. Get revenue from delivered orders in the operation (regardless of order date)
+    const revenueQuery = await db
+      .select({
+        totalRevenue: sum(orders.total),
+        deliveredCount: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        eq(orders.status, 'delivered'),
+        provider ? eq(orders.provider, provider) : sql`TRUE`
+      ));
+    
+    // Calculate metrics from order counts (filtered by period)
     let totalOrders = 0;
     let deliveredOrders = 0;
     let cancelledOrders = 0;
@@ -199,19 +211,15 @@ export class DashboardService {
     let pendingOrders = 0;
     let returnedOrders = 0;
     let confirmedOrders = 0;
-    let totalRevenue = 0; // Only revenue from delivered/paid orders
     
     statusCounts.forEach(row => {
       const orderCount = Number(row.count);
-      const revenue = Number(row.totalRevenue || 0);
-      
       totalOrders += orderCount;
       
       // Map real status values from European Fulfillment to dashboard categories
       switch (row.status) {
         case 'delivered':
           deliveredOrders += orderCount;
-          totalRevenue += revenue; // Only count revenue from delivered/paid orders
           break;
         case 'returned':
           returnedOrders += orderCount;
@@ -240,7 +248,11 @@ export class DashboardService {
       }
     });
     
-    const averageOrderValue = deliveredOrders > 0 ? totalRevenue / deliveredOrders : 0;
+    // Get total revenue from delivered orders (all delivered in operation, not filtered by period)
+    const totalRevenue = Number(revenueQuery[0]?.totalRevenue || 0);
+    const totalDeliveredForRevenue = Number(revenueQuery[0]?.deliveredCount || 0);
+    
+    const averageOrderValue = totalDeliveredForRevenue > 0 ? totalRevenue / totalDeliveredForRevenue : 0;
     
     // Calculate product costs and shipping costs based on order quantities
     const productCosts = await this.calculateProductCosts(period, provider, operationId, req);
