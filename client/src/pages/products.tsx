@@ -241,7 +241,7 @@ export default function ProductsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-medium text-white">{searchedProduct.name}</h3>
-                        <p className="text-sm text-gray-300">SKU: {searchedProduct.sku} | Preço: €{searchedProduct.price}</p>
+                        <p className="text-sm text-gray-300">SKU: {searchedProduct.sku}</p>
                         {searchedProduct.description && (
                           <p className="text-sm text-gray-400 mt-1">{searchedProduct.description}</p>
                         )}
@@ -302,7 +302,7 @@ export default function ProductsPage() {
                       </Badge>
                     </div>
                     <CardDescription className="text-gray-300">
-                      SKU: {product.sku} | Preço: €{product.price} | Estoque: {product.stock}
+                      SKU: {product.sku} | Estoque: {product.stock}
                     </CardDescription>
                   </div>
                   <Button
@@ -320,13 +320,7 @@ export default function ProductsPage() {
 
               <CardContent className="space-y-4">
                 {/* Product Info */}
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="text-center space-y-1">
-                    <div className="text-lg font-bold text-green-400">
-                      €{product.price}
-                    </div>
-                    <div className="text-xs text-gray-400">Preço de Venda</div>
-                  </div>
+                <div className="grid grid-cols-3 gap-4">
                   <div className="text-center space-y-1">
                     <div className="text-lg font-bold text-orange-400">
                       €{userProduct.customCostPrice || product.costPrice || "0.00"}
