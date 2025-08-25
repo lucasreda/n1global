@@ -141,7 +141,7 @@ export async function seedDatabase() {
           email: "fresh@example.com",
           password: hashedPassword,
           role: "user",
-          onboardingCompleted: false,
+          onboardingCompleted: true,
         })
         .returning();
       
