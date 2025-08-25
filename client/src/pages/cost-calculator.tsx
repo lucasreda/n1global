@@ -355,42 +355,6 @@ export default function CostCalculator() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Conversão para BRL - Destaque se não for BRL */}
-            {fields.currency !== 'BRL' && (
-              <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/30 mb-4">
-                <div className="text-center mb-3">
-                  <div className="text-sm text-green-400 font-medium mb-1">🇧🇷 Valores Convertidos para Real (BRL)</div>
-                  <div className="text-xs text-gray-400">Taxa de câmbio atual aplicada</div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-2 bg-green-500/5 rounded-lg">
-                    <div className="text-xs text-green-400 mb-1">Receita Diária</div>
-                    <div className="text-sm font-semibold text-white">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyRevenueBRL)}
-                    </div>
-                  </div>
-                  <div className="text-center p-2 bg-red-500/10 rounded-lg">
-                    <div className="text-xs text-red-400 mb-1">Custos Diários</div>
-                    <div className="text-sm font-semibold text-white">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyCostsBRL)}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center mt-3 p-2 bg-green-500/5 rounded-lg">
-                  <span className="text-sm text-green-400">Lucro Diário (BRL):</span>
-                  <span className="font-semibold text-white">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyProfitBRL)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-2 p-2 bg-green-500/5 rounded-lg">
-                  <span className="text-sm text-green-400">Lucro Mensal (BRL):</span>
-                  <span className="font-semibold text-white">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.monthlyProfitBRL)}
-                  </span>
-                </div>
-              </div>
-            )}
-
             {/* Margem de Lucro - Destaque Principal */}
             <div className="text-center p-4 glassmorphism-light rounded-xl">
               <div className="text-sm text-gray-400 mb-1">Margem de Lucro</div>
@@ -403,6 +367,11 @@ export default function CostCalculator() {
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <div className="text-xs text-blue-400 mb-1">Receita Diária</div>
+                {fields.currency !== 'BRL' && (
+                  <div className="text-sm text-green-400 mb-1">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyRevenueBRL)}
+                  </div>
+                )}
                 <div className="text-lg font-semibold text-white" data-testid="text-daily-revenue">
                   {formatCurrency(results.dailyRevenue)}
                 </div>
@@ -410,6 +379,11 @@ export default function CostCalculator() {
               
               <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
                 <div className="text-xs text-red-400 mb-1">Custos Diários</div>
+                {fields.currency !== 'BRL' && (
+                  <div className="text-sm text-green-400 mb-1">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyCostsBRL)}
+                  </div>
+                )}
                 <div className="text-lg font-semibold text-white" data-testid="text-daily-costs">
                   {formatCurrency(results.dailyCosts)}
                 </div>
@@ -420,16 +394,30 @@ export default function CostCalculator() {
             <div className="space-y-3">
               <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
                 <span className="text-gray-300">Lucro Diário:</span>
-                <span className={`font-semibold ${getProfitColor()}`} data-testid="text-daily-profit">
-                  {formatCurrency(results.dailyProfit)}
-                </span>
+                <div className="text-right">
+                  {fields.currency !== 'BRL' && (
+                    <div className="text-sm text-green-400 mb-1">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyProfitBRL)}
+                    </div>
+                  )}
+                  <span className={`font-semibold ${getProfitColor()}`} data-testid="text-daily-profit">
+                    {formatCurrency(results.dailyProfit)}
+                  </span>
+                </div>
               </div>
               
               <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
                 <span className="text-gray-300">Lucro Mensal:</span>
-                <span className={`font-semibold ${getProfitColor()}`} data-testid="text-monthly-profit">
-                  {formatCurrency(results.monthlyProfit)}
-                </span>
+                <div className="text-right">
+                  {fields.currency !== 'BRL' && (
+                    <div className="text-sm text-green-400 mb-1">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.monthlyProfitBRL)}
+                    </div>
+                  )}
+                  <span className={`font-semibold ${getProfitColor()}`} data-testid="text-monthly-profit">
+                    {formatCurrency(results.monthlyProfit)}
+                  </span>
+                </div>
               </div>
             </div>
 
