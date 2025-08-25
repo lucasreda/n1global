@@ -24,6 +24,7 @@ import {
   LogOut,
   User
 } from "lucide-react";
+import logoImage from "@assets/INSIDE_1756100933599.png";
 
 interface AdminStats {
   totalUsers: number;
@@ -220,7 +221,7 @@ export default function InsidePage() {
             {/* Logo na esquerda */}
             <div className="flex items-center">
               <img 
-                src="@assets/INSIDE_1756100933599.png" 
+                src={logoImage} 
                 alt="Logo" 
                 className="h-12 w-auto object-contain"
               />
