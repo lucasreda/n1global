@@ -226,7 +226,7 @@ export default function SupplierDashboard() {
                     <Badge variant="outline">{product.sku}</Badge>
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p>Preço: €{parseFloat(product.price).toFixed(2)}</p>
+                    <p>Preço: €{parseFloat(product.price?.toString() || '0').toFixed(2)}</p>
                     <p>Tipo: {product.type}</p>
                     <p>Estoque inicial: {product.initialStock || 0}</p>
                   </div>

@@ -193,9 +193,11 @@ function SupplierHeader() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              COD Dashboard
-            </div>
+            <img 
+              src="/src/assets/SUPPLIER_1756128445862.png" 
+              alt="Supplier Dashboard" 
+              className="h-8"
+            />
           </div>
           
           {/* User menu */}
