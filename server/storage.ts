@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, User, Order, Product, ShippingProvider, Operation, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, User, Order, Product, ShippingProvider, Operation, UserProduct, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, LinkProductBySku } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -42,6 +42,13 @@ export interface IStorage {
   updateShippingProvider(id: string, updates: Partial<ShippingProvider>): Promise<ShippingProvider | undefined>;
   getShippingProvider(id: string): Promise<ShippingProvider | undefined>;
   getShippingProvidersByOperation(operationId: string): Promise<ShippingProvider[]>;
+
+  // User Products methods
+  findProductBySku(sku: string): Promise<Product | undefined>;
+  linkProductToUser(userId: string, storeId: string, linkData: LinkProductBySku): Promise<UserProduct>;
+  getUserLinkedProducts(userId: string, storeId: string): Promise<(UserProduct & { product: Product })[]>;
+  unlinkProductFromUser(userId: string, productId: string): Promise<boolean>;
+  updateUserProductCosts(userProductId: string, costs: Partial<Pick<UserProduct, 'customCostPrice' | 'customShippingCost' | 'customHandlingFee'>>): Promise<UserProduct | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -338,6 +345,119 @@ export class DatabaseStorage implements IStorage {
       .orderBy(orders.orderDate);
     
     return operationOrders;
+  }
+
+  // User Products methods implementation
+  async findProductBySku(sku: string): Promise<Product | undefined> {
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.sku, sku));
+    return product || undefined;
+  }
+
+  async linkProductToUser(userId: string, storeId: string, linkData: LinkProductBySku): Promise<UserProduct> {
+    // First find the product by SKU
+    const product = await this.findProductBySku(linkData.sku);
+    if (!product) {
+      throw new Error(`Produto com SKU "${linkData.sku}" não encontrado na base global`);
+    }
+
+    // Check if already linked
+    const [existing] = await db
+      .select()
+      .from(userProducts)
+      .where(and(
+        eq(userProducts.userId, userId),
+        eq(userProducts.productId, product.id),
+        eq(userProducts.isActive, true)
+      ));
+
+    if (existing) {
+      throw new Error(`Produto "${linkData.sku}" já está vinculado à sua conta`);
+    }
+
+    // Create the link
+    const [userProduct] = await db
+      .insert(userProducts)
+      .values({
+        userId,
+        storeId,
+        productId: product.id,
+        sku: product.sku,
+        customCostPrice: linkData.customCostPrice?.toString(),
+        customShippingCost: linkData.customShippingCost?.toString(),
+        customHandlingFee: linkData.customHandlingFee?.toString(),
+        isActive: true,
+      })
+      .returning();
+
+    return userProduct;
+  }
+
+  async getUserLinkedProducts(userId: string, storeId: string): Promise<(UserProduct & { product: Product })[]> {
+    const result = await db
+      .select({
+        id: userProducts.id,
+        userId: userProducts.userId,
+        storeId: userProducts.storeId,
+        productId: userProducts.productId,
+        sku: userProducts.sku,
+        customCostPrice: userProducts.customCostPrice,
+        customShippingCost: userProducts.customShippingCost,
+        customHandlingFee: userProducts.customHandlingFee,
+        linkedAt: userProducts.linkedAt,
+        lastUpdated: userProducts.lastUpdated,
+        isActive: userProducts.isActive,
+        product: products,
+      })
+      .from(userProducts)
+      .innerJoin(products, eq(userProducts.productId, products.id))
+      .where(and(
+        eq(userProducts.userId, userId),
+        eq(userProducts.storeId, storeId),
+        eq(userProducts.isActive, true)
+      ))
+      .orderBy(desc(userProducts.linkedAt));
+
+    return result;
+  }
+
+  async unlinkProductFromUser(userId: string, productId: string): Promise<boolean> {
+    const result = await db
+      .update(userProducts)
+      .set({ isActive: false, lastUpdated: new Date() })
+      .where(and(
+        eq(userProducts.userId, userId),
+        eq(userProducts.productId, productId)
+      ));
+
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  async updateUserProductCosts(
+    userProductId: string, 
+    costs: Partial<Pick<UserProduct, 'customCostPrice' | 'customShippingCost' | 'customHandlingFee'>>
+  ): Promise<UserProduct | undefined> {
+    const updates: any = { lastUpdated: new Date() };
+    
+    if (costs.customCostPrice !== undefined) {
+      updates.customCostPrice = costs.customCostPrice?.toString();
+    }
+    if (costs.customShippingCost !== undefined) {
+      updates.customShippingCost = costs.customShippingCost?.toString();
+    }
+    if (costs.customHandlingFee !== undefined) {
+      updates.customHandlingFee = costs.customHandlingFee?.toString();
+    }
+
+    const [userProduct] = await db
+      .update(userProducts)
+      .set(updates)
+      .where(eq(userProducts.id, userProductId))
+      .returning();
+
+    return userProduct || undefined;
   }
 }
 

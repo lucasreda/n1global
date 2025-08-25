@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Package, DollarSign, TrendingUp, Calculator, Edit, Save, X } from "lucide-react";
+import { Plus, Package, DollarSign, TrendingUp, Calculator, Edit, Save, X, Search, Link2, Unlink } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -24,6 +24,13 @@ const productCostSchema = z.object({
   handlingFee: z.string().transform((val) => val === "" ? null : parseFloat(val)),
   marketingCost: z.string().transform((val) => val === "" ? null : parseFloat(val)),
   operationalCost: z.string().transform((val) => val === "" ? null : parseFloat(val)),
+});
+
+const skuSearchSchema = z.object({
+  sku: z.string().min(1, "SKU é obrigatório"),
+  customCostPrice: z.string().optional().transform((val) => val === "" ? undefined : parseFloat(val)),
+  customShippingCost: z.string().optional().transform((val) => val === "" ? undefined : parseFloat(val)),
+  customHandlingFee: z.string().optional().transform((val) => val === "" ? undefined : parseFloat(val)),
 });
 
 const productSchema = z.object({
@@ -62,19 +69,37 @@ type Product = {
   updatedAt: string;
 };
 
+type UserProduct = {
+  id: string;
+  userId: string;
+  storeId: string;
+  productId: string;
+  sku: string;
+  customCostPrice?: string;
+  customShippingCost?: string;
+  customHandlingFee?: string;
+  linkedAt: string;
+  lastUpdated: string;
+  isActive: boolean;
+  product: Product;
+};
+
 export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingCosts, setEditingCosts] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const [searchedProduct, setSearchedProduct] = useState<Product | null>(null);
+  const [searchSku, setSearchSku] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch products
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["/api/products"],
+  // Fetch linked products
+  const { data: userProducts = [], isLoading } = useQuery({
+    queryKey: ["/api/user-products"],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/products");
-      return response.json();
+      const response = await authenticatedApiRequest("GET", "/api/user-products");
+      return response.json() as UserProduct[];
     },
   });
 

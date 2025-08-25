@@ -291,6 +291,27 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// User Products - Links users to global products via SKU
+export const userProducts = pgTable("user_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  sku: text("sku").notNull(), // Cached for quick access
+  
+  // User can override costs for their specific business
+  customCostPrice: decimal("custom_cost_price", { precision: 10, scale: 2 }),
+  customShippingCost: decimal("custom_shipping_cost", { precision: 10, scale: 2 }),
+  customHandlingFee: decimal("custom_handling_fee", { precision: 10, scale: 2 }),
+  
+  // Track when product was linked and last updated
+  linkedAt: timestamp("linked_at").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  
+  // Unique constraint to prevent duplicate user-product links
+  isActive: boolean("is_active").notNull().default(true),
+});
+
 // Shipping providers configuration
 export const shippingProviders = pgTable("shipping_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -395,6 +416,20 @@ export const insertShippingProviderSchema = createInsertSchema(shippingProviders
   createdAt: true,
 });
 
+// User Products schemas
+export const insertUserProductSchema = createInsertSchema(userProducts).omit({
+  id: true,
+  linkedAt: true,
+  lastUpdated: true,
+});
+
+export const linkProductBySkuSchema = z.object({
+  sku: z.string().min(1, "SKU é obrigatório"),
+  customCostPrice: z.number().optional(),
+  customShippingCost: z.number().optional(),
+  customHandlingFee: z.number().optional(),
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -435,6 +470,10 @@ export type InsertProduct = z.infer<typeof insertProductSchema>;
 
 export type ShippingProvider = typeof shippingProviders.$inferSelect;
 export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema>;
+
+export type UserProduct = typeof userProducts.$inferSelect;
+export type InsertUserProduct = z.infer<typeof insertUserProductSchema>;
+export type LinkProductBySku = z.infer<typeof linkProductBySkuSchema>;
 
 // Relations
 export const storesRelations = relations(stores, ({ one, many }) => ({

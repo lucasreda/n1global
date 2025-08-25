@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema } from "@shared/schema";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
@@ -1525,6 +1525,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(product);
     } catch (error) {
       res.status(400).json({ message: "Dados inválidos" });
+    }
+  });
+
+  // User Products routes - new SKU-based linking system
+  app.get("/api/user-products/search/:sku", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const product = await storage.findProductBySku(req.params.sku);
+      if (!product) {
+        return res.status(404).json({ message: "Produto não encontrado na base global" });
+      }
+      res.json(product);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar produto" });
+    }
+  });
+
+  app.post("/api/user-products/link", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const linkData = linkProductBySkuSchema.parse(req.body);
+      const userId = req.user.id;
+      const storeId = (req as any).storeId;
+      
+      const userProduct = await storage.linkProductToUser(userId, storeId, linkData);
+      res.status(201).json(userProduct);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: "Erro ao vincular produto" });
+      }
+    }
+  });
+
+  app.get("/api/user-products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const storeId = (req as any).storeId;
+      
+      const userProducts = await storage.getUserLinkedProducts(userId, storeId);
+      res.json(userProducts);
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao buscar produtos vinculados" });
+    }
+  });
+
+  app.delete("/api/user-products/:productId", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user.id;
+      const productId = req.params.productId;
+      
+      const success = await storage.unlinkProductFromUser(userId, productId);
+      if (!success) {
+        return res.status(404).json({ message: "Produto não encontrado ou não vinculado" });
+      }
+      res.json({ message: "Produto desvinculado com sucesso" });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao desvincular produto" });
+    }
+  });
+
+  app.patch("/api/user-products/:userProductId/costs", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const userProductId = req.params.userProductId;
+      const costs = req.body;
+      
+      const userProduct = await storage.updateUserProductCosts(userProductId, costs);
+      if (!userProduct) {
+        return res.status(404).json({ message: "Produto vinculado não encontrado" });
+      }
+      res.json(userProduct);
+    } catch (error) {
+      res.status(400).json({ message: "Erro ao atualizar custos do produto" });
     }
   });
 
