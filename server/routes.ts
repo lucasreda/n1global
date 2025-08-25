@@ -385,13 +385,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Operations routes
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      console.log("🎯 /api/operations called by user:", req.user.email);
-      
       const operations = await storage.getUserOperations(req.user.id);
       
-      console.log("✅ Retrieved operations:", operations.length, "for user:", req.user.email);
       if (req.user.email === 'fresh@teste.com') {
-        console.log("🔍 Operations details:", operations.map(op => ({ id: op.id, name: op.name })));
+        console.log("🎯 PRODUCTION: fresh@teste.com got", operations.length, "operations");
       }
       
       res.json(operations);
