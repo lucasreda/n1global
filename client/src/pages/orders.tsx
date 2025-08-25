@@ -256,7 +256,7 @@ export default function Orders() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Name</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Phone</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Lead Value</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Custo Produto</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Preço B2B</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Custo Envio</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Delivery</th>

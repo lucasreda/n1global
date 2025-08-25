@@ -355,7 +355,7 @@ export default function ProductsPage() {
                     <div className="text-lg font-bold text-orange-400">
                       €{userProduct.customCostPrice || product.costPrice || "0.00"}
                     </div>
-                    <div className="text-xs text-gray-400">Custo do Produto</div>
+                    <div className="text-xs text-gray-400">Preço B2B</div>
                   </div>
                   <div className="text-center space-y-1">
                     <div className="text-lg font-bold text-purple-400">
