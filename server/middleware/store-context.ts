@@ -49,6 +49,29 @@ export async function storeContext(req: Request, res: Response, next: NextFuncti
         req.storeId = userRecord.storeId;
         console.log(`✅ Product seller storeId: ${req.storeId}`);
       }
+    } else if (user.role === 'user') {
+      // For regular users, get their associated store ID
+      const [userRecord] = await db
+        .select({ storeId: users.storeId })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
+
+      if (userRecord?.storeId) {
+        req.storeId = userRecord.storeId;
+        console.log(`✅ User storeId from DB: ${req.storeId}`);
+      } else {
+        // Fallback: find any store this user can access (for legacy users)
+        const [defaultStore] = await db
+          .select({ storeId: stores.id })
+          .from(stores)
+          .limit(1);
+        
+        if (defaultStore) {
+          req.storeId = defaultStore.storeId;
+          console.log(`✅ User using default store: ${req.storeId}`);
+        }
+      }
     }
 
     // Fallback: try to use storeId from user object if available
