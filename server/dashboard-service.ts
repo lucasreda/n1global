@@ -190,7 +190,7 @@ export class DashboardService {
       .where(whereClause)
       .groupBy(orders.status);
     
-    // 2. Get revenue from delivered orders in the operation (regardless of order date)
+    // 2. Get ALL delivered/paid orders revenue from transportadora (NO date filter)
     const revenueQuery = await db
       .select({
         totalRevenue: sum(orders.total),
@@ -199,9 +199,23 @@ export class DashboardService {
       .from(orders)
       .where(and(
         eq(orders.operationId, currentOperation.id),
-        eq(orders.status, 'delivered'),
+        eq(orders.status, 'delivered'), // Only delivered/paid orders count for revenue
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
+    
+    // 3. Get ALL status counts for financial calculations (NO date filter)
+    const allStatusCounts = await db
+      .select({
+        status: orders.status,
+        count: count(),
+        totalRevenue: sum(orders.total)
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        provider ? eq(orders.provider, provider) : sql`TRUE`
+      ))
+      .groupBy(orders.status);
     
     // Calculate metrics from order counts (filtered by period)
     let totalOrders = 0;
@@ -248,9 +262,28 @@ export class DashboardService {
       }
     });
     
-    // Get total revenue from delivered orders (all delivered in operation, not filtered by period)
-    const totalRevenue = Number(revenueQuery[0]?.totalRevenue || 0);
-    const totalDeliveredForRevenue = Number(revenueQuery[0]?.deliveredCount || 0);
+    // Calculate transportation/delivery metrics (ALL orders, no date filter)
+    let totalDeliveredForRevenue = 0;
+    let totalReturnedForRevenue = 0;
+    let totalRevenueFromTransportadora = 0;
+    
+    allStatusCounts.forEach(row => {
+      const orderCount = Number(row.count);
+      const revenue = Number(row.totalRevenue || 0);
+      
+      switch (row.status) {
+        case 'delivered':
+          totalDeliveredForRevenue += orderCount;
+          totalRevenueFromTransportadora += revenue; // Only delivered orders generate revenue
+          break;
+        case 'returned':
+          totalReturnedForRevenue += orderCount;
+          break;
+      }
+    });
+    
+    // Final revenue calculation from transportadora data
+    const totalRevenue = totalRevenueFromTransportadora;
     
     const averageOrderValue = totalDeliveredForRevenue > 0 ? totalRevenue / totalDeliveredForRevenue : 0;
     
