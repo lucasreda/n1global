@@ -1152,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pool.query(`
           SELECT * FROM orders 
           ${whereClause}
-          ORDER BY created_at DESC 
+          ORDER BY order_date DESC, created_at DESC 
           LIMIT $${params.length + 1} OFFSET $${params.length + 2}
         `, [...params, limit, offset]),
         
