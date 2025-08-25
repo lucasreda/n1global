@@ -121,19 +121,39 @@ export function AuthModal({ isOpen }: AuthModalProps) {
             <img src={logoPath} alt="Logo" className="h-8 w-auto" />
           </div>
 
-          {/* Main Content */}
-          <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-              {/* Auth Card */}
-              <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl">
-                <DialogHeader className="text-center mb-8">
-                  <DialogTitle className="text-3xl font-bold text-foreground mb-2">
-                    {isLoginMode ? "Bem-vindo" : "Criar Conta"}
-                  </DialogTitle>
-                  <p className="text-muted-foreground">
-                    {isLoginMode ? "Acesse seu dashboard COD" : "Configure seu acesso ao dashboard"}
-                  </p>
-                </DialogHeader>
+          {/* Main Content - Desktop Split Layout */}
+          <div className="relative z-10 min-h-screen flex items-center justify-center">
+            <div className="w-full max-w-7xl mx-auto">
+              <div className="flex flex-col lg:flex-row items-center min-h-screen lg:min-h-auto">
+                
+                {/* Left Side - Title (Desktop Only) */}
+                <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center lg:px-12">
+                  <div className="text-left">
+                    <h1 className="text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6">
+                      Descomplicando suas{" "}
+                      <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                        vendas
+                      </span>{" "}
+                      por todo o mundo.
+                    </h1>
+                    <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
+                      Gerencie seus pedidos COD, analise métricas em tempo real e integre com as principais plataformas de vendas.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right Side - Auth Form */}
+                <div className="w-full max-w-md lg:max-w-lg xl:max-w-xl lg:flex-shrink-0 p-4">
+                  {/* Auth Card */}
+                  <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl">
+                    <DialogHeader className="text-center mb-8">
+                      <DialogTitle className="text-3xl font-bold text-foreground mb-2">
+                        {isLoginMode ? "Bem-vindo" : "Criar Conta"}
+                      </DialogTitle>
+                      <p className="text-muted-foreground">
+                        {isLoginMode ? "Acesse seu dashboard COD" : "Configure seu acesso ao dashboard"}
+                      </p>
+                    </DialogHeader>
 
                 {isLoginMode ? (
                   <Form {...loginForm}>
@@ -288,17 +308,19 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                   </Form>
                 )}
 
-                <div className="mt-8 pt-6 border-t border-border">
-                  <p className="text-center text-muted-foreground">
-                    {isLoginMode ? "Novo por aqui?" : "Já tem conta?"}{" "}
-                    <button
-                      onClick={() => setIsLoginMode(!isLoginMode)}
-                      className="text-primary hover:text-primary/80 font-medium transition-colors duration-200"
-                      data-testid="button-toggle-auth"
-                    >
-                      {isLoginMode ? "Criar conta" : "Fazer login"}
-                    </button>
-                  </p>
+                    <div className="mt-8 pt-6 border-t border-border">
+                      <p className="text-center text-muted-foreground">
+                        {isLoginMode ? "Novo por aqui?" : "Já tem conta?"}{" "}
+                        <button
+                          onClick={() => setIsLoginMode(!isLoginMode)}
+                          className="text-primary hover:text-primary/80 font-medium transition-colors duration-200"
+                          data-testid="button-toggle-auth"
+                        >
+                          {isLoginMode ? "Criar conta" : "Fazer login"}
+                        </button>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
