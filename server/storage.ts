@@ -598,14 +598,16 @@ export class DatabaseStorage implements IStorage {
     }, {} as Record<string, any>);
     
     const totalOrders = orders.length;
-    const deliveredOrders = orders.filter(o => o.status === 'delivered');
     const returnedOrders = orders.filter(o => o.status === 'cancelled').length;
     const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
+    
+    // Filter specifically for carrier-delivered orders (status = 'delivered') across all operations
+    const carrierDeliveredOrders = orders.filter(o => o.status === 'delivered');
     
     // Calculate profit: (B2B Price - Production Cost) x Delivered Quantity
     let totalProfit = 0;
     
-    deliveredOrders.forEach(order => {
+    carrierDeliveredOrders.forEach(order => {
       if (order.products && Array.isArray(order.products)) {
         order.products.forEach((orderProduct: any) => {
           const productData = skuToProduct[orderProduct.sku];
@@ -621,7 +623,7 @@ export class DatabaseStorage implements IStorage {
     
     return {
       totalOrders,
-      deliveredOrders: deliveredOrders.length,
+      deliveredOrders: carrierDeliveredOrders.length, // Count of orders delivered by carrier across all operations
       returnedOrders,
       cancelledOrders,
       totalProfit: Math.round(totalProfit * 100) / 100 // Round to 2 decimal places
