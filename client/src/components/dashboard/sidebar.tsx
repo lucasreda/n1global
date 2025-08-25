@@ -102,10 +102,10 @@ export function Sidebar() {
       {/* Operation Selector */}
       {console.log("🔍 Sidebar operations debug:", { operationsLength: operations.length, operations: operations.map(op => op.name) })}
       {operations.length > 0 && (
-        <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div className="mb-6 p-3 rounded-lg border border-gray-600 bg-gray-800 text-white shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Briefcase className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground font-medium">Operação</span>
+            <Briefcase className="w-4 h-4 text-gray-400" />
+            <span className="text-sm text-gray-300 font-medium">Operação</span>
           </div>
           <Select value={selectedOperation} onValueChange={(value) => {
             if (value === "add-new") {
@@ -114,8 +114,8 @@ export function Sidebar() {
             }
             handleOperationChange(value);
           }}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecionar operação" />
+            <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
+              <SelectValue placeholder="Selecionar operação" className="text-white" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
               {operations.map((operation: any) => (
