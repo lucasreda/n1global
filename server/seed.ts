@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { users, products, shippingProviders, stores, operations, userOperationAccess } from "@shared/schema";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 export async function seedDatabase() {
   try {
@@ -186,10 +186,13 @@ export async function seedDatabase() {
       .limit(1);
 
     if (freshUser) {
-      // Get all existing operations
-      const allOperations = await db.select().from(operations);
+      // Get specific operations for fresh user (exclude PureDreams - it's for admin only)
+      const relevantOperations = await db
+        .select()
+        .from(operations)
+        .where(inArray(operations.name, ['Dss', 'test 2', 'Test 3']));
       
-      for (const operation of allOperations) {
+      for (const operation of relevantOperations) {
         // Check if access already exists
         const [existingAccess] = await db
           .select()
@@ -204,7 +207,7 @@ export async function seedDatabase() {
             .values({
               userId: freshUser.id,
               operationId: operation.id,
-              role: 'viewer' // Fresh user gets viewer access to all operations
+              role: 'owner' // Fresh user gets owner access to his relevant operations
             });
           
           console.log(`✅ Granted fresh user access to operation: ${operation.name}`);
