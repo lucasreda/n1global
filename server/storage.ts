@@ -256,6 +256,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
+  async forceCompleteOnboarding(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ 
+        onboardingCompleted: true,
+        onboardingSteps: {
+          step1_operation: true,
+          step2_shopify: true,
+          step3_shipping: true,
+          step4_ads: true,
+          step5_sync: true
+        }
+      })
+      .where(eq(users.id, userId));
+  }
+
   async createOperation(operationData: { name: string; description: string; country: string; currency: string }, userId: string): Promise<Operation> {
     const user = await this.getUser(userId);
     if (!user) throw new Error('Usuário não encontrado');

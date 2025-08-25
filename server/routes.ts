@@ -141,6 +141,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Development endpoint to force complete onboarding
+  app.post("/api/auth/force-complete-onboarding", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      await storage.forceCompleteOnboarding(req.user.id);
+      res.json({ 
+        success: true, 
+        message: "Onboarding forçado como completo." 
+      });
+    } catch (error) {
+      console.error("Error forcing onboarding completion:", error);
+      res.status(500).json({ message: "Erro ao completar onboarding" });
+    }
+  });
+
   // Smart Sync routes - for intelligent incremental synchronization
   app.post("/api/sync/start", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
