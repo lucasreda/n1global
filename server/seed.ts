@@ -123,6 +123,33 @@ export async function seedDatabase() {
     // Sample products removed - no longer creating automatic demo products
     console.log("ℹ️  Skipped sample products creation (disabled)");
 
+    // Check if fresh user already exists
+    const [existingFreshUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "fresh@example.com"))
+      .limit(1);
+
+    if (!existingFreshUser) {
+      // Create fresh regular user
+      const hashedPassword = await bcrypt.hash("password123", 10);
+      
+      const [freshUser] = await db
+        .insert(users)
+        .values({
+          name: "Fresh User",
+          email: "fresh@example.com",
+          password: hashedPassword,
+          role: "user",
+          onboardingCompleted: false,
+        })
+        .returning();
+      
+      console.log("✅ Fresh user created:", freshUser.email);
+    } else {
+      console.log("ℹ️  Fresh user already exists");
+    }
+
     // Check if super admin already exists
     const [existingSuperAdmin] = await db
       .select()
@@ -132,7 +159,7 @@ export async function seedDatabase() {
 
     if (!existingSuperAdmin) {
       // Create super admin user
-      const hashedPassword = await bcrypt.hash("super123", 10);
+      const hashedPassword = await bcrypt.hash("password123", 10);
       
       const [superAdmin] = await db
         .insert(users)
