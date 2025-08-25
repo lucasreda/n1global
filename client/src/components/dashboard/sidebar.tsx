@@ -80,7 +80,7 @@ export function Sidebar() {
   };
 
   return (
-    <nav className="fixed left-0 top-0 h-full w-64 glassmorphism p-6 z-40 animate-slide-up">
+    <nav className="fixed left-0 top-0 h-full w-64 rounded-lg border bg-card text-card-foreground shadow-sm p-6 z-40 animate-slide-up">
       <div className="flex justify-center mb-8">
         <img 
           src="/logo.png" 
@@ -101,10 +101,10 @@ export function Sidebar() {
 
       {/* Operation Selector */}
       {operations.length > 0 && (
-        <div className="mb-6 p-3 glassmorphism rounded-lg">
+        <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Briefcase className="w-4 h-4 text-white/60" />
-            <span className="text-sm text-white/60 font-medium">Operação</span>
+            <Briefcase className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground font-medium">Operação</span>
           </div>
           <Select value={selectedOperation} onValueChange={(value) => {
             if (value === "add-new") {
@@ -113,7 +113,7 @@ export function Sidebar() {
             }
             handleOperationChange(value);
           }}>
-            <SelectTrigger className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecionar operação" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
@@ -168,10 +168,10 @@ export function Sidebar() {
       </ul>
 
       <div className="absolute bottom-6 left-6 right-6">
-        <div className="glassmorphism-light rounded-xl p-4">
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-4">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 gradient-success rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-white" data-testid="text-user-initials">
+              <span className="text-xs font-bold text-foreground" data-testid="text-user-initials">
                 {user ? getUserInitials(user.name) : "U"}
               </span>
             </div>
