@@ -205,7 +205,7 @@ export class DashboardService {
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
-    // 3. Get ALL transportadora data for delivery rate and total counts (NO date filter)
+    // 3. Get transportadora data filtered by period for delivery rate calculations
     const transportadoraStats = await db
       .select({
         status: orders.status,
@@ -214,6 +214,8 @@ export class DashboardService {
       .from(orders)
       .where(and(
         eq(orders.operationId, currentOperation.id),
+        gte(orders.orderDate, dateRange.from), // SAME period filter
+        lte(orders.orderDate, dateRange.to),   // SAME period filter
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ))
       .groupBy(orders.status);
@@ -291,8 +293,29 @@ export class DashboardService {
     
     console.log(`🔍 Debug: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
     
-    // Calculate delivery percentage
-    const deliveryRate = totalOrders > 0 ? (deliveredOrders / totalOrders) * 100 : 0;
+    // Calculate transportadora totals for delivery rate (period-filtered)
+    let totalTransportadoraOrders = 0;
+    let deliveredTransportadoraOrders = 0;
+    let cancelledTransportadoraOrders = 0;
+    
+    transportadoraStats.forEach(row => {
+      const orderCount = Number(row.count);
+      totalTransportadoraOrders += orderCount;
+      
+      switch (row.status) {
+        case 'delivered':
+          deliveredTransportadoraOrders += orderCount;
+          break;
+        case 'cancelled':
+        case 'canceled':
+        case 'rejected':
+          cancelledTransportadoraOrders += orderCount;
+          break;
+      }
+    });
+    
+    // Calculate delivery percentage based on transportadora data
+    const deliveryRate = totalTransportadoraOrders > 0 ? (deliveredTransportadoraOrders / totalTransportadoraOrders) * 100 : 0;
     
     // Get current exchange rates
     const exchangeRates = await currencyService.getExchangeRates();
@@ -314,9 +337,9 @@ export class DashboardService {
     
     return {
       exchangeRates, // Include current exchange rates
-      totalOrders,
-      deliveredOrders,
-      cancelledOrders,
+      totalOrders, // Shopify orders filtered by period
+      deliveredOrders, // Shopify delivered orders filtered by period
+      cancelledOrders: cancelledTransportadoraOrders, // Transportadora cancelled orders filtered by period
       returnedOrders,
       confirmedOrders,
       shippedOrders,
