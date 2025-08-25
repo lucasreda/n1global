@@ -81,31 +81,45 @@ export class ShopifySyncService {
       throw new Error(`Integração Shopify não encontrada para operação ${operationId}`);
     }
     
-    // Busca TODOS os pedidos do Shopify usando paginação robusta
+    // Primeiro, vamos verificar o total de pedidos na Shopify
+    console.log(`🔍 Verificando total de pedidos na Shopify...`);
+    const countResponse = await fetch(`https://${integration.shopName}/admin/api/2023-10/orders/count.json?status=any`, {
+      headers: {
+        'X-Shopify-Access-Token': integration.accessToken,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const countData = await countResponse.json();
+    const totalShopifyOrders = countData.count || 0;
+    console.log(`🎯 Total de pedidos na Shopify: ${totalShopifyOrders}`);
+    
+    // Busca TODOS os pedidos do Shopify usando paginação baseada em data
     let imported = 0;
     let updated = 0;
     let hasMorePages = true;
     let pageCount = 0;
-    let sinceId = null;
+    let lastCreatedAt = null;
     
     console.log(`🔄 ========== INICIANDO IMPORTAÇÃO COMPLETA ==========`);
-    console.log(`🎯 OBJETIVO: Importar TODOS os pedidos da Shopify (sem limite)`);
+    console.log(`🎯 OBJETIVO: Importar TODOS os ${totalShopifyOrders} pedidos da Shopify`);
     console.log(`📊 STATUS ATUAL: ${imported} novos, ${updated} atualizados`);
     
     while (hasMorePages) {
       pageCount++;
       
       console.log(`\n📄 ========== PÁGINA ${pageCount} ==========`);
-      console.log(`🔍 Buscando pedidos${sinceId ? ` desde ID ${sinceId}` : ' (primeira página)'}`);
+      console.log(`🔍 Buscando pedidos${lastCreatedAt ? ` criados antes de ${lastCreatedAt}` : ' (primeira página)'}`);
       
       const params: any = {
         limit: 250, // Máximo permitido pela Shopify API
         status: 'any',
+        order: 'created_at desc', // Ordenação para paginação consistente
         fields: 'id,name,email,phone,created_at,updated_at,total_price,subtotal_price,currency,financial_status,fulfillment_status,customer,shipping_address,billing_address,line_items'
       };
       
-      if (sinceId) {
-        params.since_id = sinceId;
+      if (lastCreatedAt) {
+        params.created_at_max = lastCreatedAt;
       }
       
       console.log(`🌐 Fazendo requisição para Shopify API com:`, JSON.stringify(params, null, 2));
@@ -160,27 +174,32 @@ export class ShopifySyncService {
       
       console.log(`📊 Página ${pageCount} processada: ${newInThisPage} novos, ${updatedInThisPage} atualizados`);
       console.log(`📈 Total acumulado: ${imported} novos, ${updated} atualizados (${imported + updated} processados)`);
+      console.log(`🎯 Progresso: ${imported + updated}/${totalShopifyOrders} pedidos (${((imported + updated) / totalShopifyOrders * 100).toFixed(1)}%)`);
       
-      // Configurar since_id para próxima página se ainda há mais páginas
+      // Configurar created_at_max para próxima página se ainda há mais páginas
       if (hasMorePages) {
         const lastOrder = orders[orders.length - 1];
-        const newSinceId = lastOrder.id;
+        const newLastCreatedAt = lastOrder.created_at;
         
-        if (newSinceId === sinceId) {
-          console.log(`⚠️ since_id repetido (${newSinceId}) - fim da paginação`);
+        if (newLastCreatedAt === lastCreatedAt) {
+          console.log(`⚠️ created_at repetido (${newLastCreatedAt}) - fim da paginação`);
           hasMorePages = false;
           break;
         }
         
-        sinceId = newSinceId;
-        console.log(`🔄 Próxima página usará since_id: ${sinceId}`);
+        lastCreatedAt = newLastCreatedAt;
+        console.log(`🔄 Próxima página usará created_at_max: ${lastCreatedAt}`);
       }
       
-      // Remover limite artificial - continuar até não haver mais páginas
-      // A paginação para naturalmente quando não há mais pedidos
+      // Continue até não haver mais páginas - verificação robusta do progresso
+      if (imported + updated >= totalShopifyOrders) {
+        console.log(`✅ Todos os pedidos processados: ${imported + updated}/${totalShopifyOrders}`);
+        hasMorePages = false;
+      }
     }
     
     console.log(`📦 Importação Shopify FINAL: ${imported} novos, ${updated} atualizados (Total processado: ${imported + updated})`);
+    console.log(`🎯 RESULTADO FINAL: ${imported + updated}/${totalShopifyOrders} pedidos (${((imported + updated) / totalShopifyOrders * 100).toFixed(1)}%)`);
     
     // Debug final para verificar total de pedidos
     const totalOrders = await db
@@ -189,6 +208,12 @@ export class ShopifySyncService {
       .where(eq(orders.operationId, operationId));
     
     console.log(`🔍 VERIFICAÇÃO FINAL: Total de pedidos no banco para esta operação: ${totalOrders[0]?.count || 0}`);
+    
+    if ((imported + updated) < totalShopifyOrders) {
+      console.log(`⚠️ ALERTA: Apenas ${imported + updated} de ${totalShopifyOrders} pedidos foram processados. ${totalShopifyOrders - (imported + updated)} pedidos podem estar faltando.`);
+    } else {
+      console.log(`✅ SUCESSO: Todos os ${totalShopifyOrders} pedidos da Shopify foram processados com sucesso!`);
+    }
     
     return { imported, updated };
   }
