@@ -129,7 +129,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                 {/* Left Side - Title (Desktop Only) */}
                 <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center lg:px-12">
                   <div className="text-left">
-                    <h1 className="text-5xl xl:text-6xl font-bold text-foreground leading-tight mb-6">
+                    <h1 className="text-4xl xl:text-5xl font-bold text-foreground leading-tight mb-6">
                       Descomplicando suas{" "}
                       <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                         vendas
