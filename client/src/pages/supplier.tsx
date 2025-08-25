@@ -102,6 +102,22 @@ export default function SupplierDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Page Title */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Dashboard do Fornecedor
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Gerencie seus produtos e acompanhe pedidos globais
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Package className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          </div>
+        </div>
+      </div>
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -204,11 +220,17 @@ export default function SupplierDashboard() {
           ) : hasProducts ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {supplierProducts.map((product) => (
-                <SupplierProductCard 
-                  key={product.id} 
-                  product={product}
-                  onUpdate={() => refetchProducts()}
-                />
+                <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{product.name}</h3>
+                    <Badge variant="outline">{product.sku}</Badge>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <p>Preço: €{parseFloat(product.price).toFixed(2)}</p>
+                    <p>Tipo: {product.type}</p>
+                    <p>Estoque inicial: {product.initialStock || 0}</p>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
@@ -248,7 +270,7 @@ export default function SupplierDashboard() {
                 </div>
               </div>
             ) : globalOrders && globalOrders.length > 0 ? (
-              <SupplierOrdersTable orders={globalOrders} />
+              <SupplierOrdersTable orders={globalOrders} isLoading={isLoadingOrders} />
             ) : (
               <div className="text-center py-12" data-testid="empty-state-orders">
                 <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
