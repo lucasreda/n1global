@@ -198,13 +198,10 @@ export default function ProductsPage() {
     }
   };
 
-  const handleLinkProduct = (data: any) => {
+  const handleLinkProduct = () => {
     if (searchedProduct) {
       linkProductMutation.mutate({
         sku: searchedProduct.sku,
-        customCostPrice: data.customCostPrice,
-        customShippingCost: data.customShippingCost,
-        customHandlingFee: data.customHandlingFee,
       });
     }
   };
@@ -289,95 +286,31 @@ export default function ProductsPage() {
                 </Card>
               )}
 
-              {/* Link Configuration Form */}
+              {/* Link Action Buttons */}
               {searchedProduct && (
-                <Form {...linkForm}>
-                  <form onSubmit={linkForm.handleSubmit(handleLinkProduct)} className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={linkForm.control}
-                        name="customCostPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-200">Custo Personalizado (€)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                step="0.01"
-                                placeholder="Opcional"
-                                className="glassmorphism-light text-white"
-                                data-testid="input-custom-cost"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={linkForm.control}
-                        name="customShippingCost"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-200">Custo Envio (€)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                step="0.01"
-                                placeholder="Opcional"
-                                className="glassmorphism-light text-white"
-                                data-testid="input-custom-shipping"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={linkForm.control}
-                        name="customHandlingFee"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-gray-200">Taxa Processamento (€)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                step="0.01"
-                                placeholder="Opcional"
-                                className="glassmorphism-light text-white"
-                                data-testid="input-custom-handling"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setIsLinking(false);
-                          setSearchedProduct(null);
-                          setSearchSku("");
-                        }}
-                        className="glassmorphism-light text-gray-200"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={linkProductMutation.isPending}
-                        className="glassmorphism-light text-white border-blue-600"
-                        data-testid="button-confirm-link"
-                      >
-                        <Link2 className="h-4 w-4 mr-2" />
-                        {linkProductMutation.isPending ? "Vinculando..." : "Vincular Produto"}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsLinking(false);
+                      setSearchedProduct(null);
+                      setSearchSku("");
+                    }}
+                    className="glassmorphism-light text-gray-200"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleLinkProduct}
+                    disabled={linkProductMutation.isPending}
+                    className="glassmorphism-light text-white border-blue-600"
+                    data-testid="button-confirm-link"
+                  >
+                    <Link2 className="h-4 w-4 mr-2" />
+                    {linkProductMutation.isPending ? "Vinculando..." : "Vincular Produto"}
+                  </Button>
+                </div>
               )}
             </div>
           </DialogContent>
