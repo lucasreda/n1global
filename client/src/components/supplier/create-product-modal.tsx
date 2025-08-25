@@ -40,11 +40,9 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
   });
 
   const createProductMutation = useMutation({
-    mutationFn: (data: ProductFormData) => {
-      return apiRequest('/api/supplier/products', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+    mutationFn: async (data: ProductFormData) => {
+      const response = await apiRequest('POST', '/api/supplier/products', data);
+      return response.json();
     },
     onSuccess: () => {
       toast({
