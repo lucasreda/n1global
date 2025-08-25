@@ -8,15 +8,9 @@ export class AdminService {
   async getGlobalStats() {
     try {
       // Get total counts
-      const [storesCount] = await db.select({ count: count() }).from(stores);
+      const [usersCount] = await db.select({ count: count() }).from(users);
       const [operationsCount] = await db.select({ count: count() }).from(operations);
       const [ordersCount] = await db.select({ count: count() }).from(orders);
-      
-      console.log('🔍 Global Stats Debug:', {
-        storesCount: storesCount.count,
-        operationsCount: operationsCount.count,
-        ordersCount: ordersCount.count
-      });
       
       // Get total revenue (sum of all delivered orders)
       const [revenueResult] = await db
@@ -44,7 +38,7 @@ export class AdminService {
         .limit(5);
       
       return {
-        totalStores: storesCount.count,
+        totalUsers: usersCount.count,
         totalOperations: operationsCount.count,
         totalOrders: ordersCount.count,
         totalRevenue: Number(revenueResult.totalRevenue) || 0,
