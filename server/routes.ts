@@ -350,62 +350,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Operations routes - PRODUCTION DEBUG
+  // Operations routes
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
-    console.log("🚨 CRITICAL - /api/operations called for user:", req.user?.email);
     try {
-      console.log("🔍 PRODUCTION DEBUG - Fetching operations for user:", req.user?.id, "email:", req.user?.email);
       const operations = await storage.getUserOperations(req.user.id);
-      console.log("🎯 PRODUCTION DEBUG - Found operations:", operations.map(op => `${op.name} (${op.id})`));
-      
-      // Special handling for fresh@teste.com to ensure correct operations
-      if (req.user?.email === 'fresh@teste.com') {
-        console.log("🚨 PRODUCTION DEBUG - Fresh user detected, applying fixes...");
-        
-        // Force create access to correct operations if missing
-        const { db } = await import("./db");
-        const { operations: opsTable, userOperationAccess } = await import("@shared/schema");
-        const { eq, inArray } = await import("drizzle-orm");
-        
-        try {
-          // Clean existing access
-          console.log("🧹 PRODUCTION - Cleaning fresh user accesses...");
-          await db.delete(userOperationAccess).where(eq(userOperationAccess.userId, req.user.id));
-          
-          // Get correct operations
-          const correctOps = await db
-            .select()
-            .from(opsTable)
-            .where(inArray(opsTable.name, ['Dss', 'test 2', 'Test 3']));
-            
-          console.log("🎯 PRODUCTION - Found correct operations:", correctOps.map(op => op.name));
-          
-          // Create access
-          for (const op of correctOps) {
-            await db.insert(userOperationAccess).values({
-              userId: req.user.id,
-              operationId: op.id,
-              role: 'owner'
-            });
-            console.log(`✅ PRODUCTION - Created access to: ${op.name}`);
-          }
-          
-          // Return the correct operations
-          res.json(correctOps);
-        } catch (dbError) {
-          console.error("🚨 PRODUCTION - Database fix error:", dbError);
-          // Fallback to filtering
-          const correctOperations = operations.filter(op => 
-            ['Dss', 'test 2', 'Test 3'].includes(op.name)
-          );
-          console.log("🔄 PRODUCTION - Fallback filtered operations:", correctOperations.map(op => op.name));
-          res.json(correctOperations);
-        }
-      } else {
-        res.json(operations);
-      }
+      res.json(operations);
     } catch (error) {
-      console.error("🚨 PRODUCTION - Operations error:", error);
+      console.error("Operations error:", error);
       res.status(500).json({ message: "Erro ao buscar operações" });
     }
   });
