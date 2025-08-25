@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -31,6 +32,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const { login, register } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -52,6 +54,20 @@ export function AuthModal({ isOpen }: AuthModalProps) {
   const handleLogin = async (data: LoginForm) => {
     try {
       await login(data.email, data.password);
+      
+      // Get user role from localStorage after successful login
+      const userData = localStorage.getItem("user");
+      const userRole = userData ? JSON.parse(userData).role : null;
+      
+      // Redirect based on user role after successful login
+      if (userRole === 'super_admin') {
+        setLocation('/inside');
+      } else if (userRole === 'supplier') {
+        setLocation('/supplier');
+      } else {
+        setLocation('/');
+      }
+      
       toast({
         title: "Login realizado com sucesso!",
         description: "Bem-vindo ao COD Dashboard",
