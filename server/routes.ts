@@ -1039,6 +1039,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔗 Iniciando match com transportadora`);
       const matchResult = await shopifySyncService.matchWithCarrier(currentOperation.id);
       
+      // Fase 3: Sincronização de Facebook Ads
+      console.log(`📢 Iniciando sincronização Facebook Ads`);
+      let adsResult = { campaigns: 0, accounts: 0 };
+      try {
+        const { FacebookAdsService } = await import("./facebook-ads-service");
+        const facebookAdsService = new FacebookAdsService(req.user.storeId);
+        const syncResult = await facebookAdsService.syncCampaigns();
+        adsResult = {
+          campaigns: syncResult.campaigns || 0,
+          accounts: syncResult.accounts || 0
+        };
+        console.log(`✅ Facebook Ads sync: ${adsResult.campaigns} campanhas, ${adsResult.accounts} contas`);
+      } catch (adsError) {
+        console.warn('⚠️ Facebook Ads sync falhou, continuando sem ads:', adsError);
+      }
+      
       const result = {
         success: true,
         shopify: {
@@ -1048,13 +1064,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         carrier: {
           matched: matchResult.matched
         },
-        message: `Shopify: ${shopifyResult.imported} novos, ${shopifyResult.updated} atualizados. Transportadora: ${matchResult.matched} matched.`
+        ads: {
+          campaigns: adsResult.campaigns,
+          accounts: adsResult.accounts
+        },
+        message: `Shopify: ${shopifyResult.imported} novos, ${shopifyResult.updated} atualizados. Transportadora: ${matchResult.matched} matched. Ads: ${adsResult.campaigns} campanhas sincronizadas.`
       };
       
-      console.log(`✅ Sincronização combinada concluída:`, result);
+      console.log(`✅ Sincronização completa concluída:`, result);
       res.json(result);
     } catch (error) {
-      console.error('Erro na sincronização Shopify + Transportadora:', error);
+      console.error('Erro na sincronização completa:', error);
       res.status(500).json({ 
         success: false, 
         message: error instanceof Error ? error.message : 'Erro interno do servidor' 

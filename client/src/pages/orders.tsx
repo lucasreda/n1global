@@ -222,7 +222,7 @@ export default function Orders() {
               ) : (
                 <Zap className="w-4 h-4 mr-2" />
               )}
-              {syncMutation.isPending ? "Sincronizando..." : "Sync Shopify + Transportadora"}
+              {syncMutation.isPending ? "Sincronizando..." : "Sync Shopify + Transportadora + Ads"}
             </Button>
             <div className="text-sm text-gray-300">
               {totalOrders} pedidos encontrados
