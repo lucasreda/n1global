@@ -20,7 +20,9 @@ import {
   Package,
   Plus,
   Pencil,
-  Trash2
+  Trash2,
+  LogOut,
+  User
 } from "lucide-react";
 
 interface AdminStats {
@@ -204,18 +206,48 @@ export default function InsidePage() {
     );
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    window.location.href = "/login";
+  };
+
   return (
     <div className="min-h-screen admin-background">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-white/5 backdrop-blur-md">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo na esquerda */}
+            <div className="flex items-center">
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                className="h-8 w-8 object-contain"
+              />
+            </div>
+            
+            {/* Usuário e logout na direita */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-white">
+                <User className="h-4 w-4" />
+                <span className="text-sm">super@admin.com</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-white hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto p-6">
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-2">
-            <img 
-              src="/logo.png" 
-              alt="Logo" 
-              className="h-8 w-8 object-contain"
-            />
-            <h1 className="text-2xl font-bold text-white">Painel Administrativo</h1>
-          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Painel Administrativo</h1>
           <p className="text-slate-300">Visão global de todas as operações e dados do sistema</p>
         </div>
 
