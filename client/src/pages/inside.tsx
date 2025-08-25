@@ -18,7 +18,9 @@ import {
   Download,
   Eye,
   Package,
-  Plus
+  Plus,
+  Pencil,
+  Trash2
 } from "lucide-react";
 
 interface AdminStats {
@@ -555,6 +557,8 @@ export default function InsidePage() {
 // Products Management Component
 function ProductsManager() {
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -660,6 +664,24 @@ function ProductsManager() {
                           {formatCurrency(Number(product.shippingCost || 0))}
                         </p>
                       </div>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingProduct(product)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setDeletingProduct(product)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-400"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   {product.description && (
@@ -678,6 +700,30 @@ function ProductsManager() {
           onClose={() => setShowAddProduct(false)}
           onSuccess={() => {
             setShowAddProduct(false);
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <EditProductModal 
+          product={editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onSuccess={() => {
+            setEditingProduct(null);
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingProduct && (
+        <DeleteProductModal 
+          product={deletingProduct}
+          onClose={() => setDeletingProduct(null)}
+          onSuccess={() => {
+            setDeletingProduct(null);
             refetch();
           }}
         />
@@ -848,6 +894,267 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Edit Product Modal Component
+function EditProductModal({ product, onClose, onSuccess }: { 
+  product: Product; 
+  onClose: () => void; 
+  onSuccess: () => void 
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    sku: product.sku,
+    name: product.name,
+    type: product.type,
+    price: product.price.toString(),
+    costPrice: product.costPrice?.toString() || '0',
+    shippingCost: product.shippingCost?.toString() || '0',
+    description: product.description || ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          ...formData,
+          price: parseFloat(formData.price),
+          costPrice: parseFloat(formData.costPrice || '0'),
+          shippingCost: parseFloat(formData.shippingCost || '0')
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao atualizar produto');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      alert('Erro ao atualizar produto: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="bg-slate-800 border-slate-700 w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-white">Editar Produto</CardTitle>
+          <CardDescription className="text-slate-400">
+            Atualize as informações do produto
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">SKU *</label>
+              <Input
+                value={formData.sku}
+                onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Ex: PROD001"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Nome *</label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Nome do produto"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Tipo *</label>
+              <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-700 border-slate-600">
+                  <SelectItem value="fisico">Físico</SelectItem>
+                  <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Preço de Venda (€) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  className="bg-slate-700 border-slate-600 text-white"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Custo Produto (€) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.costPrice}
+                  onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
+                  className="bg-slate-700 border-slate-600 text-white"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Custo do Envio (€) *</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.shippingCost}
+                onChange={(e) => setFormData({...formData, shippingCost: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Descrição</label>
+              <Input
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Descrição opcional"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                className="border-slate-600 text-slate-300"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Delete Product Confirmation Modal
+function DeleteProductModal({ product, onClose, onSuccess }: { 
+  product: Product; 
+  onClose: () => void; 
+  onSuccess: () => void 
+}) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include"
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao excluir produto');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error);
+      alert('Erro ao excluir produto: ' + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="bg-slate-800 border-slate-700 w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-white">Confirmar Exclusão</CardTitle>
+          <CardDescription className="text-slate-400">
+            Esta ação não pode ser desfeita
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+              <p className="text-red-200 text-sm mb-2">
+                Você está prestes a excluir o produto:
+              </p>
+              <div className="bg-slate-700/50 rounded p-3">
+                <p className="text-white font-medium">{product.name}</p>
+                <p className="text-slate-400 text-sm">SKU: {product.sku}</p>
+                <p className="text-slate-400 text-sm">
+                  Tipo: {product.type === 'nutraceutico' ? 'Nutracêutico' : 'Físico'}
+                </p>
+              </div>
+            </div>
+            
+            <p className="text-slate-300 text-sm">
+              Tem certeza que deseja excluir este produto? Esta ação é permanente e não pode ser desfeita.
+            </p>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                className="border-slate-600 text-slate-300"
+                disabled={isDeleting}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? 'Excluindo...' : 'Sim, Excluir'}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

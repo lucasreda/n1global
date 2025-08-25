@@ -1,7 +1,7 @@
 import { storage } from "./storage";
 import { db } from "./db";
 import { stores, operations, orders, users, products } from "@shared/schema";
-import { count, sql, and, gte, lte, ilike, or, desc } from "drizzle-orm";
+import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
 export class AdminService {
   
@@ -363,6 +363,66 @@ export class AdminService {
       };
     } catch (error) {
       console.error('❌ Error creating product:', error);
+      throw error;
+    }
+  }
+
+  async updateProduct(productId: string, productData: {
+    sku?: string;
+    name?: string;
+    type?: string;
+    description?: string;
+    price?: number;
+    costPrice?: number;
+    shippingCost?: number;
+  }) {
+    try {
+      const updateData: any = {};
+      
+      if (productData.sku !== undefined) updateData.sku = productData.sku;
+      if (productData.name !== undefined) updateData.name = productData.name;
+      if (productData.type !== undefined) updateData.type = productData.type;
+      if (productData.description !== undefined) updateData.description = productData.description;
+      if (productData.price !== undefined) updateData.price = productData.price.toString();
+      if (productData.costPrice !== undefined) updateData.costPrice = productData.costPrice.toString();
+      if (productData.shippingCost !== undefined) updateData.shippingCost = productData.shippingCost.toString();
+      
+      const [updatedProduct] = await db
+        .update(products)
+        .set(updateData)
+        .where(eq(products.id, productId))
+        .returning();
+
+      if (!updatedProduct) {
+        throw new Error('Product not found');
+      }
+
+      return {
+        ...updatedProduct,
+        price: Number(updatedProduct.price) || 0,
+        costPrice: Number(updatedProduct.costPrice) || 0,
+        shippingCost: Number(updatedProduct.shippingCost) || 0
+      };
+    } catch (error) {
+      console.error('❌ Error updating product:', error);
+      throw error;
+    }
+  }
+
+  async deleteProduct(productId: string) {
+    try {
+      const [deletedProduct] = await db
+        .delete(products)
+        .where(eq(products.id, productId))
+        .returning();
+
+      if (!deletedProduct) {
+        throw new Error('Product not found');
+      }
+
+      return deletedProduct;
+    } catch (error) {
+      console.error('❌ Error deleting product:', error);
       throw error;
     }
   }

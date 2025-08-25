@@ -1952,6 +1952,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/admin/products/:id", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { sku, name, type, description, price, costPrice, shippingCost } = req.body;
+      
+      // Validation for type if provided
+      if (type && !['fisico', 'nutraceutico'].includes(type)) {
+        return res.status(400).json({ message: "Tipo deve ser 'fisico' ou 'nutraceutico'" });
+      }
+
+      const updateData: any = {};
+      if (sku !== undefined) updateData.sku = sku;
+      if (name !== undefined) updateData.name = name;
+      if (type !== undefined) updateData.type = type;
+      if (description !== undefined) updateData.description = description;
+      if (price !== undefined) updateData.price = parseFloat(price);
+      if (costPrice !== undefined) updateData.costPrice = parseFloat(costPrice);
+      if (shippingCost !== undefined) updateData.shippingCost = parseFloat(shippingCost);
+
+      const product = await adminService.updateProduct(id, updateData);
+      res.json(product);
+    } catch (error) {
+      console.error("Update product error:", error);
+      if (error.message?.includes('duplicate key')) {
+        res.status(400).json({ message: "SKU já existe. Use um SKU único." });
+      } else if (error.message === 'Product not found') {
+        res.status(404).json({ message: "Produto não encontrado" });
+      } else {
+        res.status(500).json({ message: "Erro ao atualizar produto" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/products/:id", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      await adminService.deleteProduct(id);
+      res.json({ message: "Produto excluído com sucesso" });
+    } catch (error) {
+      console.error("Delete product error:", error);
+      if (error.message === 'Product not found') {
+        res.status(404).json({ message: "Produto não encontrado" });
+      } else {
+        res.status(500).json({ message: "Erro ao excluir produto" });
+      }
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
