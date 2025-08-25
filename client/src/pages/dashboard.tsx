@@ -95,64 +95,59 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate distribution data from real API metrics
+  // Calculate distribution data from real API metrics - Optimized for top 3 most relevant statuses
   const getDistributionData = () => {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
     
-    // Calculate all status values
+    // Get the main status values
     const delivered = metrics.deliveredOrders || 0;
+    const pending = metrics.pendingOrders || 0;
+    
+    // Group all other statuses into "Others"
     const shipped = metrics.shippedOrders || 0; 
     const confirmed = metrics.confirmedOrders || 0;
-    const pending = metrics.pendingOrders || 0;
     const cancelled = metrics.cancelledOrders || 0;
     const returned = metrics.returnedOrders || 0;
+    const others = shipped + confirmed + cancelled + returned;
     
-    return [
-      {
+    const distributionData = [];
+    
+    // Always show Delivered if exists
+    if (delivered > 0) {
+      distributionData.push({
         name: "Entregues",
         value: delivered,
         percentage: total > 0 ? ((delivered / total) * 100).toFixed(1) : "0",
         color: "#10B981", // Green
         description: "Pedidos entregues com sucesso"
-      },
-      {
-        name: "Confirmados", 
-        value: confirmed,
-        percentage: total > 0 ? ((confirmed / total) * 100).toFixed(1) : "0",
-        color: "#3B82F6", // Blue
-        description: "Pedidos confirmados pelo cliente"
-      },
-      {
-        name: "Enviados",
-        value: shipped,
-        percentage: total > 0 ? ((shipped / total) * 100).toFixed(1) : "0",
-        color: "#8B5CF6", // Purple
-        description: "Pedidos em trânsito"
-      },
-      {
+      });
+    }
+    
+    // Always show Pending if exists
+    if (pending > 0) {
+      distributionData.push({
         name: "Pendentes",
         value: pending,
         percentage: total > 0 ? ((pending / total) * 100).toFixed(1) : "0",
         color: "#F59E0B", // Amber
         description: "Aguardando processamento"
-      },
-      {
-        name: "Devolvidos",
-        value: returned,
-        percentage: total > 0 ? ((returned / total) * 100).toFixed(1) : "0",
-        color: "#EF4444", // Red
-        description: "Pedidos devolvidos"
-      },
-      {
-        name: "Cancelados",
-        value: cancelled,
-        percentage: total > 0 ? ((cancelled / total) * 100).toFixed(1) : "0",
-        color: "#6B7280", // Gray
-        description: "Pedidos cancelados"
-      }
-    ].filter(item => item.value > 0); // Filtra apenas status com pedidos
+      });
+    }
+    
+    // Show Others (grouped) if exists
+    if (others > 0) {
+      distributionData.push({
+        name: "Outros",
+        value: others,
+        percentage: total > 0 ? ((others / total) * 100).toFixed(1) : "0",
+        color: "#8B5CF6", // Purple
+        description: "Confirmados, enviados, cancelados e devolvidos"
+      });
+    }
+    
+    return distributionData;
   };
 
 
