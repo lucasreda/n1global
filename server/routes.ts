@@ -13,7 +13,7 @@ import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 import { adminService } from "./admin-service";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
 interface AuthRequest extends Request {
   user?: any;
