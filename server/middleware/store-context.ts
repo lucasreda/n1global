@@ -22,6 +22,7 @@ export async function storeContext(req: Request, res: Response, next: NextFuncti
       return next();
     }
 
+    console.log(`🔍 Store context for user ${user.id}, role: ${user.role}, storeId: ${user.storeId}`);
     req.userRole = user.role;
 
     if (user.role === 'store') {
@@ -34,6 +35,7 @@ export async function storeContext(req: Request, res: Response, next: NextFuncti
 
       if (userStore) {
         req.storeId = userStore.storeId;
+        console.log(`✅ Store owner storeId: ${req.storeId}`);
       }
     } else if (user.role === 'product_seller') {
       // For product sellers, use their linked store
@@ -45,9 +47,17 @@ export async function storeContext(req: Request, res: Response, next: NextFuncti
 
       if (userRecord?.storeId) {
         req.storeId = userRecord.storeId;
+        console.log(`✅ Product seller storeId: ${req.storeId}`);
       }
     }
 
+    // Fallback: try to use storeId from user object if available
+    if (!req.storeId && user.storeId) {
+      req.storeId = user.storeId;
+      console.log(`✅ Fallback storeId from user: ${req.storeId}`);
+    }
+
+    console.log(`🎯 Final storeId for request: ${req.storeId}`);
     next();
   } catch (error) {
     console.error('❌ Store context middleware error:', error);
