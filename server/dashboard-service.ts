@@ -510,8 +510,9 @@ export class DashboardService {
         const linkedProduct = await storage.getUserProductBySku(sku, storeId);
         
         if (linkedProduct) {
-          // Use custom costs from linked product or fall back to product defaults
-          const productCost = parseFloat(linkedProduct.customCostPrice || linkedProduct.product.costPrice || "0");
+          // Para dashboard: usar CUSTO REAL do fornecedor, não o preço B2B
+          // customCostPrice = Preço B2B (€12.50), product.costPrice = Custo real fornecedor (€10.00)
+          const productCost = parseFloat(linkedProduct.product.costPrice || "0"); // Sempre usar custo real
           const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
           
           totalProductCosts += productCost;
