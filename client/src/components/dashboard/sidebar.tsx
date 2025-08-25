@@ -99,48 +99,44 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Operation Selector - FORCED VISIBLE */}
-      <div className="mb-6 p-4 rounded-lg border-2 border-blue-500 bg-blue-900 text-white shadow-lg" style={{display: 'block !important', visibility: 'visible !important'}}>
-        <div className="flex items-center gap-2 mb-3">
-          <Briefcase className="w-5 h-5 text-blue-300" />
-          <span className="text-sm text-blue-100 font-bold">OPERAÇÃO ({operations.length})</span>
+      {/* Operation Selector - Always show regardless of condition */}
+      <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Briefcase className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground font-medium">Operação</span>
         </div>
-        {operations.length > 0 ? (
-          <Select value={selectedOperation} onValueChange={(value) => {
-            if (value === "add-new") {
-              setShowNewOperationDialog(true);
-              return;
-            }
-            handleOperationChange(value);
-          }}>
-            <SelectTrigger className="w-full bg-blue-800 border-blue-600 text-white font-medium">
-              <SelectValue placeholder="Selecionar operação" />
-            </SelectTrigger>
-            <SelectContent className="bg-gray-900 border-gray-700">
-              {operations.map((operation: any) => (
-                <SelectItem 
-                  key={operation.id} 
-                  value={operation.id}
-                  className="text-white hover:bg-gray-800 font-medium"
-                >
-                  {operation.name}
-                </SelectItem>
-              ))}
-              <div className="border-t border-gray-700 my-1" />
+        <Select value={selectedOperation} onValueChange={(value) => {
+          if (value === "add-new") {
+            setShowNewOperationDialog(true);
+            return;
+          }
+          handleOperationChange(value);
+        }}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecionar operação" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-900 border-gray-700">
+            {operations.map((operation: any) => (
               <SelectItem 
-                value="add-new"
-                className="text-blue-400 hover:bg-blue-900/20 hover:text-blue-300"
+                key={operation.id} 
+                value={operation.id}
+                className="text-white hover:bg-gray-800"
               >
-                <div className="flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  <span>Adicionar Nova</span>
-                </div>
+                {operation.name}
               </SelectItem>
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className="text-yellow-300 font-bold">CARREGANDO OPERAÇÕES...</div>
-        )}
+            ))}
+            <div className="border-t border-gray-700 my-1" />
+            <SelectItem 
+              value="add-new"
+              className="text-blue-400 hover:bg-blue-900/20 hover:text-blue-300"
+            >
+              <div className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                <span>Adicionar Nova</span>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <ul className="space-y-1" data-testid="nav-menu">
