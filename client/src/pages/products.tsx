@@ -91,9 +91,7 @@ export default function ProductsPage() {
   // Search product by SKU mutation
   const searchProductMutation = useMutation({
     mutationFn: async (sku: string) => {
-      const response = await authenticatedApiRequest("POST", "/api/products/search-by-sku", {
-        sku
-      });
+      const response = await authenticatedApiRequest("GET", `/api/user-products/search/${sku}`);
       return response.json();
     },
     onSuccess: (product) => {
@@ -116,7 +114,7 @@ export default function ProductsPage() {
   // Link product mutation
   const linkProductMutation = useMutation({
     mutationFn: async (linkData: { sku: string; customCostPrice?: number; customShippingCost?: number; customHandlingFee?: number }) => {
-      const response = await authenticatedApiRequest("POST", "/api/products/link", linkData);
+      const response = await authenticatedApiRequest("POST", "/api/user-products/link", linkData);
       return response.json();
     },
     onSuccess: () => {
@@ -141,7 +139,7 @@ export default function ProductsPage() {
   // Unlink product mutation
   const unlinkProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const response = await authenticatedApiRequest("DELETE", `/api/products/unlink/${productId}`);
+      const response = await authenticatedApiRequest("DELETE", `/api/user-products/${productId}`);
       return response.json();
     },
     onSuccess: () => {
