@@ -609,8 +609,8 @@ export class DashboardService {
         from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case '30d':
-        // Últimos 30 dias
-        from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        // Últimos 30 dias - incluir toda a data para pegar mais dados históricos
+        from = new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
         break;
       case '90d':
         // Últimos 90 dias
