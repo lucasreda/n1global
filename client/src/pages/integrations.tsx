@@ -33,10 +33,6 @@ export default function Integrations() {
       color: "blue",
       hasPanel: true,
     },
-  ];
-
-  // Outras integrações
-  const otherIntegrations = [
     {
       id: "wapi",
       name: "WAPI",
@@ -47,6 +43,7 @@ export default function Integrations() {
       hasPanel: false,
     },
   ];
+
 
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -181,28 +178,41 @@ export default function Integrations() {
                     {statusInfo.text}
                   </span>
                   
-                  <Dialog open={openDialog === integration.id} onOpenChange={(open) => setOpenDialog(open ? integration.id : null)}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
-                        data-testid={`button-configure-${integration.id}`}
-                      >
-                        <Settings size={16} className="mr-2" />
-                        Configurar
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle className="text-white flex items-center space-x-2">
-                          <IconComponent className={`text-${integration.color}-400`} size={20} />
-                          <span>{integration.name}</span>
-                        </DialogTitle>
-                      </DialogHeader>
-                      {integration.id === "european-fulfillment" && <EuropeanFulfillmentPanel />}
-                    </DialogContent>
-                  </Dialog>
+                  {integration.hasPanel ? (
+                    <Dialog open={openDialog === integration.id} onOpenChange={(open) => setOpenDialog(open ? integration.id : null)}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                          data-testid={`button-configure-${integration.id}`}
+                        >
+                          <Settings size={16} className="mr-2" />
+                          Configurar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="text-white flex items-center space-x-2">
+                            <IconComponent className={`text-${integration.color}-400`} size={20} />
+                            <span>{integration.name}</span>
+                          </DialogTitle>
+                        </DialogHeader>
+                        {integration.id === "european-fulfillment" && <EuropeanFulfillmentPanel />}
+                      </DialogContent>
+                    </Dialog>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-400 cursor-not-allowed"
+                      disabled
+                      data-testid={`button-configure-${integration.id}`}
+                    >
+                      <Settings size={16} className="mr-2" />
+                      Em Breve
+                    </Button>
+                  )}
                 </div>
               </div>
             );
@@ -210,57 +220,6 @@ export default function Integrations() {
         </div>
       </div>
 
-      {/* Outras Integrações */}
-      <div className="glassmorphism rounded-2xl p-6">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-            <Globe className="text-purple-400" size={20} />
-          </div>
-          <h3 className="text-xl font-semibold text-white">Outras Integrações</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {otherIntegrations.map((integration) => {
-            const statusInfo = getStatusInfo(integration.status);
-            const IconComponent = integration.icon;
-            
-            return (
-              <div key={integration.id} className="glassmorphism-light rounded-xl p-6" data-testid={`integration-${integration.id}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-lg bg-${integration.color}-500/20 flex items-center justify-center`}>
-                      <IconComponent className={`text-${integration.color}-400`} size={20} />
-                    </div>
-                    <div>
-                      <h4 className="text-white font-medium">{integration.name}</h4>
-                      <p className="text-gray-400 text-sm">{integration.description}</p>
-                    </div>
-                  </div>
-                  
-                  {getStatusIcon(integration.status)}
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
-                    {statusInfo.text}
-                  </span>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-400 cursor-not-allowed"
-                    disabled
-                    data-testid={`button-configure-${integration.id}`}
-                  >
-                    <Settings size={16} className="mr-2" />
-                    Em Breve
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
       
       {/* Status das Integrações */}
       <div className="glassmorphism rounded-2xl p-6">
@@ -274,7 +233,7 @@ export default function Integrations() {
             <div className="text-sm text-gray-400">Ativas</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">2</div>
+            <div className="text-2xl font-bold text-yellow-400">1</div>
             <div className="text-sm text-gray-400">Pendentes</div>
           </div>
           <div className="text-center">
