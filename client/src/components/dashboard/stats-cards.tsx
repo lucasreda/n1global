@@ -56,7 +56,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const averageOrderValue = metrics?.averageOrderValue || 0;
   
   // Novos cálculos para os cards especiais
-  const shopifyOrders = totalOrders; // Todos os pedidos são da Shopify agora
+  const shopifyOrders = metrics?.shopifyOrders || 0; // Pedidos Shopify específicos
   const avgCPA = shopifyOrders > 0 ? (marketingCostsBRL / shopifyOrders) : 0; // CPA médio em BRL
 
   // Calcular valores em BRL
