@@ -7,7 +7,6 @@ import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign } from "l
 import { useAuth } from "@/hooks/use-auth";
 import { CreateProductModal } from "@/components/supplier/create-product-modal";
 import { SupplierProductCard } from "@/components/supplier/supplier-product-card";
-import { SupplierOrdersTable } from "@/components/supplier/supplier-orders-table";
 
 // Types for API responses
 interface SupplierProduct {
@@ -36,25 +35,6 @@ interface SupplierMetrics {
   totalProfit: number;
 }
 
-interface SupplierOrder {
-  id: string;
-  customerName?: string;
-  customerCity?: string;
-  customerCountry?: string;
-  status: string;
-  total?: string;
-  currency?: string;
-  orderDate?: string;
-  shopifyOrderNumber?: string;
-  products?: Array<{
-    sku: string;
-    quantity: number;
-  }>;
-  operation?: {
-    name: string;
-    country: string;
-  };
-}
 
 export default function SupplierDashboard() {
   const { user } = useAuth();
@@ -66,11 +46,6 @@ export default function SupplierDashboard() {
     enabled: !!user && user.role === 'supplier',
   });
 
-  // Fetch global orders for supplier's SKUs (across all operations)
-  const { data: globalOrders = [], isLoading: isLoadingOrders } = useQuery<SupplierOrder[]>({
-    queryKey: ['/api/supplier/orders'],
-    enabled: !!user && user.role === 'supplier',
-  });
 
   // Fetch supplier metrics (orders, deliveries, returns)
   const { data: supplierMetrics, isLoading: isLoadingMetrics } = useQuery<SupplierMetrics>({
@@ -247,40 +222,6 @@ export default function SupplierDashboard() {
         </CardContent>
       </Card>
 
-      {/* Pedidos Globais dos SKUs do Supplier */}
-      {hasProducts && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Pedidos Globais dos Meus SKUs
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Todos os pedidos dos seus produtos em todas as operações
-            </p>
-          </CardHeader>
-          <CardContent>
-            {isLoadingOrders ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Carregando pedidos...</p>
-                </div>
-              </div>
-            ) : globalOrders && globalOrders.length > 0 ? (
-              <SupplierOrdersTable orders={globalOrders} isLoading={isLoadingOrders} />
-            ) : (
-              <div className="text-center py-12" data-testid="empty-state-orders">
-                <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum pedido encontrado</h3>
-                <p className="text-muted-foreground">
-                  Ainda não há pedidos dos seus produtos. Quando alguém comprar seus SKUs, eles aparecerão aqui.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
       {/* Modal de Criação de Produto */}
       <CreateProductModal 
