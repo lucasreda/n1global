@@ -332,7 +332,7 @@ export default function ProductsPage() {
                       </Badge>
                     </div>
                     <CardDescription className="text-gray-300">
-                      SKU: {product.sku} | Disponível: {stockData[product.sku]?.availableStock ?? product.stock}
+                      SKU: {product.sku} | Disponíveis: {stockData[product.sku]?.availableStock ?? product.stock}
                     </CardDescription>
                   </div>
                   <Button
@@ -367,7 +367,7 @@ export default function ProductsPage() {
                     <div className="text-lg font-bold text-blue-400">
                       {stockData[product.sku]?.availableStock ?? product.stock}
                     </div>
-                    <div className="text-xs text-gray-400">Disponível</div>
+                    <div className="text-xs text-gray-400">Disponíveis</div>
                   </div>
                 </div>
 
