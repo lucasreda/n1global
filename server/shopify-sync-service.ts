@@ -81,7 +81,7 @@ export class ShopifySyncService {
       throw new Error(`Integração Shopify não encontrada para operação ${operationId}`);
     }
     
-    // Busca TODOS os pedidos do Shopify usando paginação simples
+    // Busca TODOS os pedidos do Shopify usando paginação robusta
     let imported = 0;
     let updated = 0;
     let hasMorePages = true;
@@ -89,7 +89,7 @@ export class ShopifySyncService {
     let sinceId = null;
     
     console.log(`🔄 ========== INICIANDO IMPORTAÇÃO COMPLETA ==========`);
-    console.log(`🎯 OBJETIVO: Importar TODOS os 1572 pedidos da Shopify`);
+    console.log(`🎯 OBJETIVO: Importar TODOS os pedidos da Shopify (sem limite)`);
     console.log(`📊 STATUS ATUAL: ${imported} novos, ${updated} atualizados`);
     
     while (hasMorePages) {
@@ -99,8 +99,9 @@ export class ShopifySyncService {
       console.log(`🔍 Buscando pedidos${sinceId ? ` desde ID ${sinceId}` : ' (primeira página)'}`);
       
       const params: any = {
-        limit: 250,
-        status: 'any'
+        limit: 250, // Máximo permitido pela Shopify API
+        status: 'any',
+        fields: 'id,name,email,phone,created_at,updated_at,total_price,subtotal_price,currency,financial_status,fulfillment_status,customer,shipping_address,billing_address,line_items'
       };
       
       if (sinceId) {
@@ -126,6 +127,12 @@ export class ShopifySyncService {
         break;
       }
       
+      // Se retornou menos que o limite, é a última página
+      if (orders.length < 250) {
+        console.log(`📄 Última página detectada (${orders.length} < 250 pedidos)`);
+        hasMorePages = false;
+      }
+      
       console.log(`📊 Processando ${orders.length} pedidos da página ${pageCount}...`);
       let newInThisPage = 0;
       let updatedInThisPage = 0;
@@ -136,12 +143,15 @@ export class ShopifySyncService {
           if (result.created) {
             imported++;
             newInThisPage++;
-            if (imported % 50 === 0) {
+            if (imported % 100 === 0) {
               console.log(`📈 Progresso: ${imported} novos pedidos importados...`);
             }
           } else {
             updated++;
             updatedInThisPage++;
+            if (updated % 100 === 0) {
+              console.log(`🔄 Progresso: ${updated} pedidos atualizados...`);
+            }
           }
         } catch (error) {
           console.error(`❌ Erro ao processar pedido ${shopifyOrder.name}:`, error);
@@ -149,25 +159,25 @@ export class ShopifySyncService {
       }
       
       console.log(`📊 Página ${pageCount} processada: ${newInThisPage} novos, ${updatedInThisPage} atualizados`);
+      console.log(`📈 Total acumulado: ${imported} novos, ${updated} atualizados (${imported + updated} processados)`);
       
-      // Definir since_id para próxima página (último pedido processado)
-      const lastOrder = orders[orders.length - 1];
-      const newSinceId = lastOrder.id;
-      
-      if (newSinceId === sinceId) {
-        console.log(`⚠️ since_id repetido (${newSinceId}) - possível loop infinito, parando`);
-        hasMorePages = false;
-        break;
+      // Configurar since_id para próxima página se ainda há mais páginas
+      if (hasMorePages) {
+        const lastOrder = orders[orders.length - 1];
+        const newSinceId = lastOrder.id;
+        
+        if (newSinceId === sinceId) {
+          console.log(`⚠️ since_id repetido (${newSinceId}) - fim da paginação`);
+          hasMorePages = false;
+          break;
+        }
+        
+        sinceId = newSinceId;
+        console.log(`🔄 Próxima página usará since_id: ${sinceId}`);
       }
       
-      sinceId = newSinceId;
-      console.log(`🔄 Próxima página usará since_id: ${sinceId}`);
-      
-      // Limite de segurança para evitar loops infinitos
-      if (pageCount > 100) {
-        console.log(`⚠️ Limite de 100 páginas atingido - parando por segurança`);
-        hasMorePages = false;
-      }
+      // Remover limite artificial - continuar até não haver mais páginas
+      // A paginação para naturalmente quando não há mais pedidos
     }
     
     console.log(`📦 Importação Shopify FINAL: ${imported} novos, ${updated} atualizados (Total processado: ${imported + updated})`);

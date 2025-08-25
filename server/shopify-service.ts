@@ -279,6 +279,7 @@ export class ShopifyService {
     created_at_max?: string;
     status?: string;
     page?: number;
+    fields?: string;
   } = {}): Promise<{ success: boolean; orders?: ShopifyOrder[]; error?: string }> {
     try {
       const params = new URLSearchParams();
@@ -289,16 +290,22 @@ export class ShopifyService {
       if (options.created_at_max) params.append('created_at_max', options.created_at_max);
       if (options.status) params.append('status', options.status);
       if (options.page) params.append('page', options.page.toString());
+      if (options.fields) params.append('fields', options.fields);
+
+      console.log(`🌐 Shopify API Request: https://${shopName}/admin/api/2023-10/orders.json?${params}`);
 
       const response = await fetch(`https://${shopName}/admin/api/2023-10/orders.json?${params}`, {
         headers: {
           'X-Shopify-Access-Token': accessToken,
           'Content-Type': 'application/json',
         },
+        // Timeout de 60 segundos para requisições grandes
+        signal: AbortSignal.timeout(60000),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`❌ Shopify API Error: ${response.status} - ${errorText}`);
         return {
           success: false,
           error: `HTTP ${response.status}: ${errorText}`
@@ -306,11 +313,14 @@ export class ShopifyService {
       }
 
       const data = await response.json();
+      console.log(`✅ Shopify API Success: ${data.orders?.length || 0} orders returned`);
+      
       return {
         success: true,
         orders: data.orders
       };
     } catch (error) {
+      console.error(`❌ Shopify API Exception:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erro desconhecido'

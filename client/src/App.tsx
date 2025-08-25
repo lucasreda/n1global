@@ -19,13 +19,6 @@ import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Onboarding from "@/pages/onboarding";
 import NotFound from "@/pages/not-found";
-import { authService } from "./lib/auth";
-
-// Temporary force logout - execute once
-if (typeof window !== 'undefined' && window.location.search.includes('force_logout=true')) {
-  console.log('🔥 FORCE LOGOUT TRIGGERED');
-  authService.forceLogout();
-}
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
