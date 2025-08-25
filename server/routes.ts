@@ -2193,7 +2193,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/supplier/metrics - Get supplier metrics
   app.get('/api/supplier/metrics', authenticateToken, requireSupplier, async (req, res) => {
     try {
-      const metrics = await storage.getSupplierMetrics(req.user.id);
+      const period = req.query.period as string || 'current_month';
+      const metrics = await storage.getSupplierMetrics(req.user.id, period);
       res.json(metrics);
     } catch (error) {
       console.error('Error fetching supplier metrics:', error);

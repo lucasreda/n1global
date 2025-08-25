@@ -581,9 +581,19 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getSupplierMetrics(supplierId: string): Promise<any> {
+  async getSupplierMetrics(supplierId: string, period?: string): Promise<any> {
     // Get orders for supplier SKUs
-    const orders = await this.getOrdersBySupplierSkus(supplierId);
+    let orders = await this.getOrdersBySupplierSkus(supplierId);
+    
+    // Apply date filter if period is specified
+    if (period && period !== 'all') {
+      const { from } = this.getDateRange(period);
+      orders = orders.filter(order => {
+        if (!order.orderDate) return false;
+        const orderDate = new Date(order.orderDate);
+        return orderDate >= from;
+      });
+    }
     
     // Get supplier products to get B2B prices and costs
     const supplierProducts = await db
@@ -631,6 +641,40 @@ export class DatabaseStorage implements IStorage {
       cancelledOrders,
       totalProfit: Math.round(totalProfit * 100) / 100 // Round to 2 decimal places
     };
+  }
+
+  // Date range utility function (copied from dashboard-service.ts)
+  private getDateRange(period: string): { from: Date; to: Date } {
+    const now = new Date();
+    const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    let from: Date;
+
+    switch (period) {
+      case '1d':
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        break;
+      case '7d':
+        from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30d':
+        from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '90d':
+        from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case '365d':
+        from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      case 'current_month':
+        from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        break;
+      default:
+        // Return a very old date for 'all' or any unknown period
+        from = new Date(2020, 0, 1);
+        break;
+    }
+
+    return { from, to };
   }
 
   async getAvailableStock(sku: string): Promise<{ initialStock: number; soldQuantity: number; availableStock: number }> {

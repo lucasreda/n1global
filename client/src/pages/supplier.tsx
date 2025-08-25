@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { CreateProductModal } from "@/components/supplier/create-product-modal";
 import { SupplierProductCard } from "@/components/supplier/supplier-product-card";
@@ -39,6 +40,7 @@ interface SupplierMetrics {
 export default function SupplierDashboard() {
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [dateFilter, setDateFilter] = useState("current_month");
 
   // Fetch supplier products (produtos globais criados por este supplier)
   const { data: supplierProducts = [], isLoading: isLoadingProducts, refetch: refetchProducts } = useQuery<SupplierProduct[]>({
@@ -49,7 +51,17 @@ export default function SupplierDashboard() {
 
   // Fetch supplier metrics (orders, deliveries, returns)
   const { data: supplierMetrics, isLoading: isLoadingMetrics } = useQuery<SupplierMetrics>({
-    queryKey: ['/api/supplier/metrics'],
+    queryKey: ['/api/supplier/metrics', dateFilter],
+    queryFn: async () => {
+      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : 'current_month';
+      const response = await fetch(`/api/supplier/metrics?period=${period}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.json();
+    },
     enabled: !!user && user.role === 'supplier',
   });
 
@@ -89,10 +101,33 @@ export default function SupplierDashboard() {
               Gerencie seus produtos globais e acompanhe pedidos em todas as operações
             </p>
           </div>
-          <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-product">
-            <Plus className="h-4 w-4 mr-2" />
-            {hasProducts ? 'Novo Produto' : 'Criar Primeiro Produto'}
-          </Button>
+
+          {/* Action buttons and Date Filter */}
+          <div className="flex items-center space-x-3">
+            {/* Date Filter */}
+            <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2">
+              <Calendar className="text-gray-400" size={16} />
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-36 bg-transparent border-0 text-gray-300 text-sm h-auto p-0">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent className="glassmorphism border-gray-600">
+                  <SelectItem value="current_month">Este Mês</SelectItem>
+                  <SelectItem value="1">Hoje</SelectItem>
+                  <SelectItem value="7">7 dias</SelectItem>
+                  <SelectItem value="30">30 dias</SelectItem>
+                  <SelectItem value="90">3 meses</SelectItem>
+                  <SelectItem value="365">1 ano</SelectItem>
+                  <SelectItem value="all">Tudo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-product">
+              <Plus className="h-4 w-4 mr-2" />
+              {hasProducts ? 'Novo Produto' : 'Criar Primeiro Produto'}
+            </Button>
+          </div>
         </div>
       </div>
 
