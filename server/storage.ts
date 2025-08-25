@@ -50,6 +50,14 @@ export interface IStorage {
   unlinkProductFromUser(userId: string, productId: string): Promise<boolean>;
   updateUserProductCosts(userProductId: string, costs: Partial<Pick<UserProduct, 'customCostPrice' | 'customShippingCost' | 'customHandlingFee'>>): Promise<UserProduct | undefined>;
   getUserProductBySku(sku: string, storeId: string): Promise<(UserProduct & { product: Product }) | undefined>;
+
+  // Supplier methods
+  getProductsBySupplier(supplierId: string): Promise<Product[]>;
+  createSupplierProduct(productData: any): Promise<Product>;
+  getProductById(id: string): Promise<Product | undefined>;
+  updateSupplierProduct(id: string, updates: any): Promise<Product | undefined>;
+  getOrdersBySupplierSkus(supplierId: string): Promise<any[]>;
+  getSupplierMetrics(supplierId: string): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -487,6 +495,104 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     return result[0] || undefined;
+  }
+
+  // ===== SUPPLIER METHODS =====
+  
+  async getProductsBySupplier(supplierId: string): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(eq(products.supplierId, supplierId))
+      .orderBy(desc(products.createdAt));
+  }
+
+  async createSupplierProduct(productData: any): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values(productData)
+      .returning();
+    
+    return product;
+  }
+
+  async getProductById(id: string): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product || undefined;
+  }
+
+  async updateSupplierProduct(id: string, updates: any): Promise<Product | undefined> {
+    const [product] = await db
+      .update(products)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    
+    return product || undefined;
+  }
+
+  async getOrdersBySupplierSkus(supplierId: string): Promise<any[]> {
+    // Get all products created by this supplier
+    const supplierProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.supplierId, supplierId));
+
+    if (supplierProducts.length === 0) {
+      return [];
+    }
+
+    const supplierSkus = supplierProducts.map(p => p.sku);
+    
+    // Find orders that contain any of these SKUs
+    const ordersWithSupplierProducts = await db
+      .select({
+        id: orders.id,
+        customerName: orders.customerName,
+        customerCity: orders.customerCity,
+        customerCountry: orders.customerCountry,
+        status: orders.status,
+        total: orders.total,
+        currency: orders.currency,
+        orderDate: orders.orderDate,
+        shopifyOrderNumber: orders.shopifyOrderNumber,
+        products: orders.products,
+        operation: {
+          name: operations.name,
+          country: operations.country,
+        }
+      })
+      .from(orders)
+      .leftJoin(operations, eq(orders.operationId, operations.id))
+      .where(
+        // Filter orders that contain supplier SKUs in products JSON
+        // This is a simplified approach - in production you might want more sophisticated JSON querying
+      );
+
+    // Filter orders that actually contain supplier SKUs
+    return ordersWithSupplierProducts.filter(order => {
+      if (!order.products || !Array.isArray(order.products)) return false;
+      return order.products.some((product: any) => 
+        supplierSkus.includes(product.sku)
+      );
+    });
+  }
+
+  async getSupplierMetrics(supplierId: string): Promise<any> {
+    // Get orders for supplier SKUs
+    const orders = await this.getOrdersBySupplierSkus(supplierId);
+    
+    const totalOrders = orders.length;
+    const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
+    const returnedOrders = orders.filter(o => o.status === 'cancelled').length;
+    const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
+    
+    return {
+      totalOrders,
+      deliveredOrders,
+      returnedOrders,
+      cancelledOrders
+    };
   }
 }
 

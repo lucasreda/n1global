@@ -2081,6 +2081,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== SUPPLIER ROUTES =====
+  
+  // Middleware to verify supplier role
+  const requireSupplier = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user || req.user.role !== 'supplier') {
+      return res.status(403).json({ message: "Acesso negado: requer permissões de fornecedor" });
+    }
+    next();
+  };
+
+  // GET /api/supplier/products - List products created by this supplier
+  app.get('/api/supplier/products', authenticateToken, requireSupplier, async (req, res) => {
+    try {
+      const products = await storage.getProductsBySupplier(req.user.id);
+      res.json(products);
+    } catch (error) {
+      console.error('Error fetching supplier products:', error);
+      res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
+  // POST /api/supplier/products - Create new global product
+  app.post('/api/supplier/products', authenticateToken, requireSupplier, async (req, res) => {
+    try {
+      const productData = {
+        ...req.body,
+        supplierId: req.user.id, // Set current user as supplier
+        storeId: null, // Global products don't belong to a specific store initially
+        operationId: null, // Global products don't belong to a specific operation initially
+        stock: req.body.initialStock || 0,
+      };
+
+      const product = await storage.createSupplierProduct(productData);
+      res.json(product);
+    } catch (error: any) {
+      console.error('Error creating supplier product:', error);
+      if (error.message?.includes('SKU already exists')) {
+        res.status(400).json({ message: 'SKU já existe no sistema' });
+      } else {
+        res.status(500).json({ message: 'Erro interno do servidor' });
+      }
+    }
+  });
+
+  // PUT /api/supplier/products/:id - Update supplier product
+  app.put('/api/supplier/products/:id', authenticateToken, requireSupplier, async (req, res) => {
+    try {
+      // Verify the product belongs to this supplier
+      const product = await storage.getProductById(req.params.id);
+      if (!product || product.supplierId !== req.user.id) {
+        return res.status(404).json({ message: 'Produto não encontrado ou sem permissão para editar' });
+      }
+
+      const updatedProduct = await storage.updateSupplierProduct(req.params.id, req.body);
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error('Error updating supplier product:', error);
+      res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
+  // GET /api/supplier/orders - Get global orders for supplier's SKUs
+  app.get('/api/supplier/orders', authenticateToken, requireSupplier, async (req, res) => {
+    try {
+      const orders = await storage.getOrdersBySupplierSkus(req.user.id);
+      res.json(orders);
+    } catch (error) {
+      console.error('Error fetching supplier orders:', error);
+      res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
+  // GET /api/supplier/metrics - Get supplier metrics
+  app.get('/api/supplier/metrics', authenticateToken, requireSupplier, async (req, res) => {
+    try {
+      const metrics = await storage.getSupplierMetrics(req.user.id);
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching supplier metrics:', error);
+      res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -21,13 +21,25 @@ import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Onboarding from "@/pages/onboarding";
 import InsidePage from "@/pages/inside";
+import SupplierDashboard from "@/pages/supplier";
 import NotFound from "@/pages/not-found";
+
+interface OnboardingStatus {
+  onboardingCompleted: boolean;
+  onboardingSteps: {
+    step1_operation: boolean;
+    step2_shopify: boolean;
+    step3_shipping: boolean;
+    step4_ads: boolean;
+    step5_sync: boolean;
+  };
+}
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
 
-  const { data: onboardingStatus, isLoading, error, refetch } = useQuery({
+  const { data: onboardingStatus, isLoading, error, refetch } = useQuery<OnboardingStatus>({
     queryKey: ['/api/user/onboarding-status'],
     enabled: !!user && isAuthenticated,
     refetchOnWindowFocus: true,
@@ -135,20 +147,24 @@ function Router() {
   const [location, setLocation] = useLocation();
   const isProductSeller = user?.role === 'product_seller';
   const isSuperAdmin = user?.role === 'super_admin';
+  const isSupplier = user?.role === 'supplier';
 
-  // Auto-redirect super admin to /inside
+  // Auto-redirect users based on role
   useEffect(() => {
     if (isSuperAdmin && location === '/') {
       setLocation('/inside');
+    } else if (isSupplier && location === '/') {
+      setLocation('/supplier');
     }
-  }, [isSuperAdmin, location, setLocation]);
+  }, [isSuperAdmin, isSupplier, location, setLocation]);
 
   return (
     <OnboardingGuard>
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/inside" component={isSuperAdmin ? InsidePage : () => <NotFound />} />
-        <Route path="/" component={isProductSeller ? SellerDashboard : Dashboard} />
+        <Route path="/supplier" component={isSupplier ? SupplierDashboard : () => <NotFound />} />
+        <Route path="/" component={isSupplier ? SupplierDashboard : isProductSeller ? SellerDashboard : Dashboard} />
         <Route path="/orders" component={Orders} />
         {!isProductSeller && <Route path="/analytics" component={Analytics} />}
         <Route path="/integrations" component={Integrations} />
