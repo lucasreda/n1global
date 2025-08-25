@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,9 +33,31 @@ interface AuthModalProps {
 export function AuthModal({ isOpen }: AuthModalProps) {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [displayedText, setDisplayedText] = useState("");
   const { login, register } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  const fullText = "Descomplicando suas vendas por todo o mundo.";
+
+  // Typewriting effect
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    setDisplayedText("");
+    let currentIndex = 0;
+    
+    const typewriterInterval = setInterval(() => {
+      if (currentIndex < fullText.length) {
+        setDisplayedText(fullText.slice(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        clearInterval(typewriterInterval);
+      }
+    }, 80); // Velocidade da digitação (80ms por caractere)
+
+    return () => clearInterval(typewriterInterval);
+  }, [isOpen, fullText]);
 
   const loginForm = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -129,14 +151,24 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                 {/* Left Side - Title (Desktop Only) */}
                 <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center lg:px-12">
                   <div className="text-left">
-                    <h1 className="text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6">
-                      Descomplicando suas{" "}
-                      <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                        vendas
-                      </span>{" "}
-                      por todo o mundo.
+                    <h1 className="text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 min-h-[200px] xl:min-h-[240px]">
+                      {displayedText.split(" ").map((word, index) => (
+                        <span key={index}>
+                          {word === "vendas" ? (
+                            <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                              {word}
+                            </span>
+                          ) : (
+                            word
+                          )}
+                          {index < displayedText.split(" ").length - 1 && " "}
+                        </span>
+                      ))}
+                      <span className="animate-pulse text-primary">|</span>
                     </h1>
-                    <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
+                    <p className={`text-xl text-muted-foreground leading-relaxed max-w-lg transition-opacity duration-500 ${
+                      displayedText === fullText ? 'opacity-100' : 'opacity-0'
+                    }`}>
                       Gerencie seus pedidos COD, analise métricas em tempo real e integre com as principais plataformas de vendas.
                     </p>
                   </div>
