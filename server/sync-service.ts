@@ -1,14 +1,20 @@
 import { db } from "./db";
 import { orders, orderStatusHistory, syncJobs, type InsertOrder, type InsertOrderStatusHistory, type InsertSyncJob } from "@shared/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { europeanFulfillmentService } from "./fulfillment-service";
+import { EuropeanFulfillmentService } from "./fulfillment-service";
 
 export class SyncService {
+  private fulfillmentService: EuropeanFulfillmentService;
+  
+  constructor() {
+    this.fulfillmentService = new EuropeanFulfillmentService();
+  }
   
   async startSync(provider: string, type: 'full_sync' | 'incremental_sync' | 'details_sync' = 'full_sync'): Promise<string> {
     console.log(`🔄 Starting ${type} for provider: ${provider}`);
     
     const syncJob: InsertSyncJob = {
+      storeId: 'default',
       provider,
       type,
       status: 'running',
@@ -27,7 +33,7 @@ export class SyncService {
       console.error(`Sync job ${job.id} failed:`, error);
       this.updateSyncJob(job.id, { 
         status: 'failed', 
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         completedAt: new Date()
       });
     });
@@ -55,7 +61,7 @@ export class SyncService {
       console.error(`❌ Sync job ${jobId} failed:`, error);
       await this.updateSyncJob(jobId, {
         status: 'failed',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         completedAt: new Date(),
         logs: logs
       });
@@ -129,7 +135,7 @@ export class SyncService {
         } catch (orderError) {
           console.error(`Error processing lead ${lead.n_lead}:`, orderError);
           errorCount++;
-          logs.push(`Error processing ${lead.n_lead}: ${orderError.message}`);
+          logs.push(`Error processing ${lead.n_lead}: ${orderError instanceof Error ? orderError.message : String(orderError)}`);
         }
       }
       
@@ -144,7 +150,7 @@ export class SyncService {
       logs.push(`Sync completed: ${ordersCreated} created, ${ordersUpdated} updated, ${errorCount} errors`);
       
     } catch (error) {
-      logs.push(`Sync failed: ${error.message}`);
+      logs.push(`Sync failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -156,7 +162,7 @@ export class SyncService {
     
     while (currentPage <= maxPages) {
       try {
-        const pageLeads = await europeanFulfillmentService.getLeadsList("ITALY", currentPage);
+        const pageLeads = await this.fulfillmentService.getLeadsList("ITALY", currentPage);
         allLeads.push(...pageLeads);
         
         console.log(`📄 Page ${currentPage}: ${pageLeads.length} leads (total: ${allLeads.length})`);
@@ -179,7 +185,7 @@ export class SyncService {
   private async getLeadDetails(leadNumber: string): Promise<any> {
     try {
       console.log(`🔍 Getting details for lead: ${leadNumber}`);
-      const response = await europeanFulfillmentService.makeAuthenticatedRequest(`api/leads/details?leadNumber=${leadNumber}`);
+      const response = await this.fulfillmentService.getLeadDetails(leadNumber);
       
       if (response && response.Lead) {
         return response;
@@ -229,6 +235,7 @@ export class SyncService {
     
     return {
       id: leadData.code ? `NT-${leadData.code}` : lead.n_lead,
+      storeId: 'default',
       customerId: `customer-${leadData.phone?.replace(/\D/g, '') || 'unknown'}`,
       customerName: leadData.name || 'Cliente não informado',
       customerEmail: leadData.email || '',

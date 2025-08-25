@@ -266,6 +266,15 @@ class EuropeanFulfillmentService {
     }
   }
 
+  async getLeadDetails(leadNumber: string): Promise<any> {
+    try {
+      return await this.makeAuthenticatedRequest(`api/leads/details?leadNumber=${leadNumber}`);
+    } catch (error) {
+      console.error("Error getting lead details:", error);
+      return null;
+    }
+  }
+
   async getLeadHistory(leadNumber: string): Promise<any> {
     try {
       return await this.makeAuthenticatedRequest(`api/leads/history?leadNumber=${leadNumber}`);
