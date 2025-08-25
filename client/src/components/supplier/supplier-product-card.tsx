@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Edit3, Package, TrendingUp, Save, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Edit3, Package, TrendingUp, Save, X, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -17,6 +18,7 @@ interface SupplierProductCardProps {
 export function SupplierProductCard({ product, onUpdate }: SupplierProductCardProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editData, setEditData] = useState({
     price: product.price,
     costPrice: product.costPrice || 0,
@@ -51,6 +53,28 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
       toast({
         variant: "destructive",
         title: "Erro ao atualizar produto",
+        description: error.message || "Ocorreu um erro inesperado.",
+      });
+    },
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('DELETE', `/api/supplier/products/${product.id}`);
+      return response;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Produto excluído!",
+        description: "O produto foi removido com sucesso.",
+      });
+      setShowDeleteDialog(false);
+      onUpdate();
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir produto",
         description: error.message || "Ocorreu um erro inesperado.",
       });
     },
@@ -99,15 +123,27 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
               </Badge>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsEditing(!isEditing)}
-            disabled={updateProductMutation.isPending}
-            data-testid={`button-edit-${product.sku}`}
-          >
-            <Edit3 className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(!isEditing)}
+              disabled={updateProductMutation.isPending || deleteProductMutation.isPending}
+              data-testid={`button-edit-${product.sku}`}
+            >
+              <Edit3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={updateProductMutation.isPending || deleteProductMutation.isPending}
+              data-testid={`button-delete-${product.sku}`}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -256,6 +292,40 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           </div>
         )}
       </CardContent>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent data-testid={`delete-dialog-${product.sku}`}>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o produto <strong>{product.name}</strong> (SKU: {product.sku})?
+              <br /><br />
+              <span className="text-red-600 font-medium">
+                Esta ação não pode ser desfeita.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={deleteProductMutation.isPending}
+              data-testid={`button-cancel-delete-${product.sku}`}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteProductMutation.mutate()}
+              disabled={deleteProductMutation.isPending}
+              data-testid={`button-confirm-delete-${product.sku}`}
+            >
+              {deleteProductMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

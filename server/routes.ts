@@ -2150,6 +2150,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // DELETE /api/supplier/products/:id - Delete supplier product
+  app.delete('/api/supplier/products/:id', authenticateToken, requireSupplier, async (req, res) => {
+    try {
+      // Verify the product belongs to this supplier
+      const product = await storage.getProductById(req.params.id);
+      if (!product || product.supplierId !== (req as any).user.id) {
+        return res.status(404).json({ message: 'Produto não encontrado ou sem permissão para excluir' });
+      }
+
+      // First remove all user_products references
+      await (await import('./db')).db.delete((await import('@shared/schema')).userProducts)
+        .where((await import('drizzle-orm')).eq((await import('@shared/schema')).userProducts.productId, req.params.id));
+
+      // Then delete the product
+      const deleted = await (await import('./db')).db.delete((await import('@shared/schema')).products)
+        .where((await import('drizzle-orm')).eq((await import('@shared/schema')).products.id, req.params.id))
+        .returning();
+
+      if (deleted.length === 0) {
+        return res.status(404).json({ message: 'Produto não encontrado' });
+      }
+
+      res.json({ message: 'Produto excluído com sucesso', product: deleted[0] });
+    } catch (error) {
+      console.error('Error deleting supplier product:', error);
+      res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
   // GET /api/supplier/orders - Get global orders for supplier's SKUs
   app.get('/api/supplier/orders', authenticateToken, requireSupplier, async (req, res) => {
     try {
