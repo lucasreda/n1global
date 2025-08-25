@@ -476,45 +476,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <p className="text-xs text-red-400 opacity-80 leading-tight">Perdidos</p>
           </div>
         </div>
-        
-        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-slate-500/10 hover:border-slate-400/25 flex flex-col justify-between">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-slate-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <ShoppingCart className="text-slate-400 w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{totalOrders.toLocaleString()}</h5>
-            <p className="text-gray-400 text-xs mb-1">Total Pedidos</p>
-            <p className="text-xs text-slate-400 opacity-80 leading-tight">Todos os status</p>
-          </div>
-        </div>
-        
-        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-cyan-500/10 hover:border-cyan-400/25 flex flex-col justify-between">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-cyan-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <Percent className="text-cyan-400 w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{deliveryRate.toFixed(1)}%</h5>
-            <p className="text-gray-400 text-xs mb-1">% Entregue</p>
-            <p className="text-xs text-cyan-400 opacity-80 leading-tight">Taxa sucesso</p>
-          </div>
-        </div>
-        
-        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-pink-500/10 hover:border-pink-400/25 flex flex-col justify-between">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-pink-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <BarChart3 className="text-pink-400 w-5 h-5" />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyEUR(averageOrderValue)}</h5>
-            <p className="text-gray-400 text-xs mb-1">Ticket Médio</p>
-            <p className="text-xs text-pink-400 opacity-80 leading-tight">Por pedido pago</p>
-          </div>
-        </div>
       </div>
 
       {/* Receita Paga - Seção Detalhada */}
