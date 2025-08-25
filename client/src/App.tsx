@@ -198,7 +198,7 @@ function SupplierHeader() {
             <img 
               src={supplierLogo} 
               alt="Supplier Dashboard" 
-              className="h-8"
+              className="h-6"
             />
           </div>
           
