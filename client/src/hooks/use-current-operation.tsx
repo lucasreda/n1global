@@ -12,6 +12,15 @@ export function useCurrentOperation() {
     queryKey: ['/api/operations'],
   });
 
+  // Temporary debug logs
+  console.log("🔍 OPERATIONS DEBUG:", { 
+    count: operations?.length || 0, 
+    isLoading, 
+    hasError: !!error,
+    errorMsg: error?.message,
+    operations: operations?.map(op => op.name) || []
+  });
+
 
 
   // Force Dss operation on load (only once)
