@@ -1,20 +1,47 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { EuropeanFulfillmentPanel } from "@/components/integration/european-fulfillment-panel";
 import { ShopifyIntegration } from "@/components/integrations/shopify-integration";
 import { Settings, CheckCircle, AlertCircle, Package, Truck, Globe, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { authenticatedApiRequest } from "@/lib/auth";
 
 export default function Integrations() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
+
+  // Buscar o operationId atual
+  const operationId = localStorage.getItem("current_operation_id");
+
+  // Buscar status da integração Shopify
+  const { data: shopifyIntegration } = useQuery({
+    queryKey: ["/api/integrations/shopify", operationId],
+    queryFn: async () => {
+      if (!operationId) return null;
+      try {
+        const response = await authenticatedApiRequest("GET", `/api/integrations/shopify?operationId=${operationId}`);
+        if (response.status === 404) return null;
+        return response.json();
+      } catch (error) {
+        return null;
+      }
+    },
+    enabled: !!operationId,
+  });
+
+  // Determinar status real da integração Shopify
+  const getShopifyStatus = () => {
+    if (!shopifyIntegration) return "pending";
+    return shopifyIntegration.status || "pending";
+  };
 
   // Integrações de E-commerce
   const ecommerceIntegrations = [
     {
       id: "shopify",
       name: "Shopify Store",
-      status: "pending",
+      status: getShopifyStatus(),
       description: "Integração com loja Shopify para importar pedidos e produtos",
       icon: Package,
       color: "green",
@@ -229,15 +256,21 @@ export default function Integrations() {
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">1</div>
+            <div className="text-2xl font-bold text-green-400">
+              {[...ecommerceIntegrations, ...fulfillmentIntegrations].filter(i => i.status === "active").length}
+            </div>
             <div className="text-sm text-gray-400">Ativas</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">1</div>
+            <div className="text-2xl font-bold text-yellow-400">
+              {[...ecommerceIntegrations, ...fulfillmentIntegrations].filter(i => i.status === "pending").length}
+            </div>
             <div className="text-sm text-gray-400">Pendentes</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">3</div>
+            <div className="text-2xl font-bold text-blue-400">
+              {ecommerceIntegrations.length + fulfillmentIntegrations.length}
+            </div>
             <div className="text-sm text-gray-400">Total</div>
           </div>
         </div>
