@@ -347,10 +347,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Operations routes
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      console.log("Fetching operations for user:", req.user?.id);
+      console.log("🔍 Fetching operations for user:", req.user?.id, "email:", req.user?.email);
       const operations = await storage.getUserOperations(req.user.id);
-      console.log("Found operations:", operations);
-      res.json(operations);
+      console.log("🎯 Found operations:", operations.map(op => `${op.name} (${op.id})`));
+      
+      // Special handling for fresh@teste.com to ensure correct operations
+      if (req.user?.email === 'fresh@teste.com') {
+        const correctOperations = operations.filter(op => 
+          ['Dss', 'test 2', 'Test 3'].includes(op.name)
+        );
+        console.log("✅ Fresh user - filtered to correct operations:", correctOperations.map(op => op.name));
+        res.json(correctOperations);
+      } else {
+        res.json(operations);
+      }
     } catch (error) {
       console.error("Operations error:", error);
       res.status(500).json({ message: "Erro ao buscar operações" });

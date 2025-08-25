@@ -177,8 +177,7 @@ export async function seedDatabase() {
       console.log("ℹ️  Super admin already exists");
     }
 
-    // ⚠️ CRITICAL: Give fresh user access to all existing operations
-    // This is what was missing causing the operations selector to be empty in production!
+    // ⚠️ CRITICAL: Clean and setup fresh user access to correct operations
     const [freshUser] = await db
       .select()
       .from(users)
@@ -186,33 +185,40 @@ export async function seedDatabase() {
       .limit(1);
 
     if (freshUser) {
+      // First, remove ALL existing accesses for fresh user to clean state
+      console.log("🧹 Cleaning existing fresh user accesses...");
+      await db
+        .delete(userOperationAccess)
+        .where(eq(userOperationAccess.userId, freshUser.id));
+
       // Get specific operations for fresh user (exclude PureDreams - it's for admin only)
       const relevantOperations = await db
         .select()
         .from(operations)
         .where(inArray(operations.name, ['Dss', 'test 2', 'Test 3']));
       
+      console.log(`🎯 Setting up access for fresh user to ${relevantOperations.length} operations...`);
+      
       for (const operation of relevantOperations) {
-        // Check if access already exists
-        const [existingAccess] = await db
-          .select()
-          .from(userOperationAccess)
-          .where(eq(userOperationAccess.userId, freshUser.id))
-          .where(eq(userOperationAccess.operationId, operation.id))
-          .limit(1);
-
-        if (!existingAccess) {
-          await db
-            .insert(userOperationAccess)
-            .values({
-              userId: freshUser.id,
-              operationId: operation.id,
-              role: 'owner' // Fresh user gets owner access to his relevant operations
-            });
-          
-          console.log(`✅ Granted fresh user access to operation: ${operation.name}`);
-        }
+        await db
+          .insert(userOperationAccess)
+          .values({
+            userId: freshUser.id,
+            operationId: operation.id,
+            role: 'owner' // Fresh user gets owner access to his relevant operations
+          });
+        
+        console.log(`✅ Granted fresh user access to operation: ${operation.name}`);
       }
+      
+      // Verify final state
+      const finalAccess = await db
+        .select()
+        .from(userOperationAccess)
+        .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
+        .where(eq(userOperationAccess.userId, freshUser.id));
+      
+      console.log("🔍 Final fresh user operations:", finalAccess.map(item => item.operations.name));
     }
 
     console.log("🌱 Database seeding completed!");
