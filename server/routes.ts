@@ -46,6 +46,67 @@ const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // DEBUG: Rota para diagnóstico e sincronização manual
+  app.get("/api/debug/sync-fresh", async (req, res) => {
+    try {
+      console.log("🔧 DEBUG SYNC MANUAL INICIADO");
+      
+      // Buscar usuário fresh pelo email
+      const freshUser = await storage.getUserByEmail('fresh@teste.com');
+      if (!freshUser) {
+        return res.json({ error: "Usuário fresh não encontrado", success: false });
+      }
+      
+      console.log("👤 Fresh user encontrado:", freshUser.id, freshUser.email);
+      
+      // Verificar operações atuais
+      let operations = await storage.getUserOperations(freshUser.id);
+      console.log("📊 Operações atuais:", operations.length);
+      
+      if (operations.length === 0) {
+        // Buscar outros usuários fresh com operações
+        const allFreshUsers = await db.execute(`
+          SELECT u.id, u.email, COUNT(uoa.operation_id) as operations_count
+          FROM users u
+          LEFT JOIN user_operation_access uoa ON u.id = uoa.user_id  
+          WHERE u.email LIKE '%fresh%'
+          GROUP BY u.id, u.email
+          HAVING COUNT(uoa.operation_id) > 0
+        `);
+        
+        console.log("🔍 Fresh users com operações:", allFreshUsers.length);
+        
+        if (allFreshUsers.length > 0) {
+          const sourceUser = allFreshUsers[0];
+          console.log("📋 Copiando de:", sourceUser.id, "para:", freshUser.id);
+          
+          // Copiar operações
+          await db.execute(`
+            INSERT INTO user_operation_access (user_id, operation_id)
+            SELECT '${freshUser.id}', operation_id 
+            FROM user_operation_access 
+            WHERE user_id = '${sourceUser.id}'
+            ON CONFLICT DO NOTHING
+          `);
+          
+          // Verificar novamente
+          operations = await storage.getUserOperations(freshUser.id);
+          console.log("✅ Operações após sync:", operations.length);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        user: freshUser.id, 
+        operations: operations.length,
+        operationsList: operations 
+      });
+    } catch (error) {
+      console.error("❌ Erro no debug sync:", error);
+      res.json({ error: error.message, success: false });
+    }
+  });
+
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
