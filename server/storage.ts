@@ -585,16 +585,46 @@ export class DatabaseStorage implements IStorage {
     // Get orders for supplier SKUs
     const orders = await this.getOrdersBySupplierSkus(supplierId);
     
+    // Get supplier products to get B2B prices and costs
+    const supplierProducts = await db
+      .select()
+      .from(products)
+      .where(eq(products.supplierId, supplierId));
+
+    // Create a SKU to product map for quick lookup
+    const skuToProduct = supplierProducts.reduce((acc, product) => {
+      acc[product.sku] = product;
+      return acc;
+    }, {} as Record<string, any>);
+    
     const totalOrders = orders.length;
-    const deliveredOrders = orders.filter(o => o.status === 'delivered').length;
+    const deliveredOrders = orders.filter(o => o.status === 'delivered');
     const returnedOrders = orders.filter(o => o.status === 'cancelled').length;
     const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
     
+    // Calculate profit: (B2B Price - Production Cost) x Delivered Quantity
+    let totalProfit = 0;
+    
+    deliveredOrders.forEach(order => {
+      if (order.products && Array.isArray(order.products)) {
+        order.products.forEach((orderProduct: any) => {
+          const productData = skuToProduct[orderProduct.sku];
+          if (productData && productData.price && productData.costPrice) {
+            const profitPerUnit = productData.price - productData.costPrice;
+            const quantity = orderProduct.quantity || 0;
+            const productProfit = profitPerUnit * quantity;
+            totalProfit += productProfit;
+          }
+        });
+      }
+    });
+    
     return {
       totalOrders,
-      deliveredOrders,
+      deliveredOrders: deliveredOrders.length,
       returnedOrders,
-      cancelledOrders
+      cancelledOrders,
+      totalProfit: Math.round(totalProfit * 100) / 100 // Round to 2 decimal places
     };
   }
 

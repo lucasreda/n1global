@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown } from "lucide-react";
+import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { CreateProductModal } from "@/components/supplier/create-product-modal";
 import { SupplierProductCard } from "@/components/supplier/supplier-product-card";
@@ -33,6 +33,7 @@ interface SupplierMetrics {
   deliveredOrders: number;
   returnedOrders: number;
   cancelledOrders: number;
+  totalProfit: number;
 }
 
 interface SupplierOrder {
@@ -121,7 +122,7 @@ export default function SupplierDashboard() {
       </div>
 
       {/* Métricas Globais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Produtos Ativos</CardTitle>
@@ -184,6 +185,21 @@ export default function SupplierDashboard() {
                 `${((supplierMetrics.returnedOrders / supplierMetrics.totalOrders) * 100).toFixed(1)}% dos pedidos` : 
                 'taxa de retorno'
               }
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950 dark:to-green-950 border-emerald-200 dark:border-emerald-800">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Lucro Total</CardTitle>
+            <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="metric-total-profit">
+              {isLoadingMetrics ? '-' : `€${(supplierMetrics?.totalProfit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            </div>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">
+              de produtos entregues
             </p>
           </CardContent>
         </Card>
