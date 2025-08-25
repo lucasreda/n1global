@@ -115,21 +115,13 @@ export function Sidebar() {
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Selecionar operação" />
           </SelectTrigger>
-          <SelectContent className="bg-gray-900 border-gray-700">
+          <SelectContent>
             {operations.map((operation: any) => (
-              <SelectItem 
-                key={operation.id} 
-                value={operation.id}
-                className="text-white hover:bg-gray-800"
-              >
+              <SelectItem key={operation.id} value={operation.id}>
                 {operation.name}
               </SelectItem>
             ))}
-            <div className="border-t border-gray-700 my-1" />
-            <SelectItem 
-              value="add-new"
-              className="text-blue-400 hover:bg-blue-900/20 hover:text-blue-300"
-            >
+            <SelectItem value="add-new">
               <div className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 <span>Adicionar Nova</span>
