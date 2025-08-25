@@ -2094,7 +2094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/supplier/products - List products created by this supplier
   app.get('/api/supplier/products', authenticateToken, requireSupplier, async (req, res) => {
     try {
-      const products = await storage.getProductsBySupplier(req.user.id);
+      const products = await storage.getProductsBySupplier((req as any).user.id);
       res.json(products);
     } catch (error) {
       console.error('Error fetching supplier products:', error);
@@ -2106,14 +2106,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/supplier/products', authenticateToken, requireSupplier, async (req, res) => {
     try {
       // Get default store for global products
-      const [defaultStore] = await db.select().from(stores).limit(1);
+      const [defaultStore] = await (await import('./db')).db.select().from((await import('@shared/schema')).stores).limit(1);
       if (!defaultStore) {
         return res.status(500).json({ message: 'Sistema não configurado corretamente' });
       }
 
       const productData = {
         ...req.body,
-        supplierId: req.user.id, // Set current user as supplier
+        supplierId: (req as any).user.id, // Set current user as supplier
         storeId: defaultStore.id, // Use default store for global products
         operationId: null, // Global products don't belong to a specific operation initially
         stock: req.body.initialStock || 0,
@@ -2138,7 +2138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Verify the product belongs to this supplier
       const product = await storage.getProductById(req.params.id);
-      if (!product || product.supplierId !== req.user.id) {
+      if (!product || product.supplierId !== (req as any).user.id) {
         return res.status(404).json({ message: 'Produto não encontrado ou sem permissão para editar' });
       }
 
@@ -2153,7 +2153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/supplier/orders - Get global orders for supplier's SKUs
   app.get('/api/supplier/orders', authenticateToken, requireSupplier, async (req, res) => {
     try {
-      const orders = await storage.getOrdersBySupplierSkus(req.user.id);
+      const orders = await storage.getOrdersBySupplierSkus((req as any).user.id);
       res.json(orders);
     } catch (error) {
       console.error('Error fetching supplier orders:', error);
