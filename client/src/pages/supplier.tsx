@@ -208,17 +208,11 @@ export default function SupplierDashboard() {
           ) : hasProducts ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {supplierProducts.map((product) => (
-                <div key={product.id} className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">{product.name}</h3>
-                    <Badge variant="outline">{product.sku}</Badge>
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p>Preço: €{parseFloat(product.price?.toString() || '0').toFixed(2)}</p>
-                    <p>Tipo: {product.type}</p>
-                    <p>Estoque inicial: {product.initialStock || 0}</p>
-                  </div>
-                </div>
+                <SupplierProductCard 
+                  key={product.id} 
+                  product={product} 
+                  onUpdate={refetchProducts}
+                />
               ))}
             </div>
           ) : (
