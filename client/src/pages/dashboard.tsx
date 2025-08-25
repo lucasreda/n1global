@@ -95,22 +95,23 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate distribution data from real API metrics - Optimized for top 3 most relevant statuses
+  // Calculate distribution data from real API metrics - Fixed logic for correct percentages
   const getDistributionData = () => {
     if (!metrics) return [];
     
     const total = metrics.totalOrders || 1;
     
-    // Get the main status values
+    // Get the main status values (non-overlapping)
     const delivered = metrics.deliveredOrders || 0;
     const pending = metrics.pendingOrders || 0;
     
-    // Group all other statuses into "Others"
+    // Calculate others as remaining orders (excluding confirmed which is total)
     const shipped = metrics.shippedOrders || 0; 
-    const confirmed = metrics.confirmedOrders || 0;
     const cancelled = metrics.cancelledOrders || 0;
     const returned = metrics.returnedOrders || 0;
-    const others = shipped + confirmed + cancelled + returned;
+    
+    // Others = remaining orders that are not delivered or pending
+    const others = Math.max(0, total - delivered - pending);
     
     const distributionData = [];
     
@@ -136,14 +137,14 @@ export default function Dashboard() {
       });
     }
     
-    // Show Others (grouped) if exists
+    // Show Others only if there are remaining orders
     if (others > 0) {
       distributionData.push({
         name: "Outros",
         value: others,
         percentage: total > 0 ? ((others / total) * 100).toFixed(1) : "0",
         color: "#8B5CF6", // Purple
-        description: "Confirmados, enviados, cancelados e devolvidos"
+        description: "Enviados, cancelados e devolvidos"
       });
     }
     
