@@ -100,6 +100,7 @@ export function Sidebar() {
       </div>
 
       {/* Operation Selector */}
+      {console.log("🔍 Sidebar operations debug:", { operationsLength: operations.length, operations: operations.map(op => op.name) })}
       {operations.length > 0 && (
         <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
           <div className="flex items-center gap-2 mb-2">
