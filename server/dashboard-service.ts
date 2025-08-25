@@ -339,8 +339,8 @@ export class DashboardService {
     
     return {
       exchangeRates, // Include current exchange rates
-      totalOrders, // Shopify orders filtered by period
-      deliveredOrders, // Shopify delivered orders filtered by period
+      totalOrders: totalTransportadoraOrders, // Transportadora orders filtered by period
+      deliveredOrders, // Shopify delivered orders filtered by period  
       cancelledOrders: cancelledTransportadoraOrders, // Transportadora cancelled orders filtered by period
       returnedOrders,
       confirmedOrders,
