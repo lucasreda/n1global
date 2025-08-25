@@ -98,18 +98,78 @@ export class SmartSyncService {
   /**
    * Calcula custos de produto e envio baseado no status e valor do pedido
    */
-  private calculateOrderCosts(status: string, total: string): { productCost: number; shippingCost: number } {
-    const orderValue = parseFloat(total);
+  private async calculateOrderCosts(status: string, total: string, products: any[], storeId: string): Promise<{ productCost: number; shippingCost: number }> {
+    // Se não há produtos, retorna custos zerados
+    if (!products || products.length === 0) {
+      return { productCost: 0, shippingCost: 0 };
+    }
+
+    // Extrai o SKU do primeiro produto (assumindo um produto por pedido)
+    const firstProduct = products[0];
+    const sku = firstProduct?.sku;
     
-    // Custo do produto: aplicado quando pedido está confirmado/pago
-    const productCost = ['confirmed', 'delivered', 'shipped', 'in transit', 'in delivery'].includes(status) ?
-      (orderValue >= 120 ? 45.00 : orderValue >= 60 ? 35.00 : 30.00) : 0.00;
-    
-    // Custo de envio: aplicado quando pedido está enviado
-    const shippingCost = ['shipped', 'delivered', 'in transit', 'in delivery'].includes(status) ?
-      (orderValue >= 120 ? 15.00 : orderValue >= 60 ? 12.00 : 10.00) : 0.00;
-    
-    return { productCost, shippingCost };
+    if (!sku) {
+      console.warn('⚠️ Produto sem SKU encontrado, usando custos padrão');
+      return { productCost: 0, shippingCost: 0 };
+    }
+
+    try {
+      const { pool } = await import("./db");
+      
+      // Busca custos customizados do produto primeiro (user_products)
+      const customCostsResult = await pool.query(`
+        SELECT 
+          up.custom_cost_price,
+          up.custom_shipping_cost,
+          p.cost_price,
+          p.shipping_cost
+        FROM user_products up
+        JOIN products p ON up.product_id = p.id
+        WHERE up.sku = $1 AND up.store_id = $2 AND up.is_active = true
+        LIMIT 1
+      `, [sku, storeId]);
+
+      let productCostBase = 0;
+      let shippingCostBase = 0;
+
+      if (customCostsResult.rows.length > 0) {
+        const costs = customCostsResult.rows[0];
+        // Usa custo customizado se disponível, senão usa o custo padrão do produto
+        productCostBase = parseFloat(costs.custom_cost_price) || parseFloat(costs.cost_price) || 0;
+        shippingCostBase = parseFloat(costs.custom_shipping_cost) || parseFloat(costs.shipping_cost) || 0;
+        console.log(`💰 Custos encontrados para SKU ${sku}: Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
+      } else {
+        // Fallback: busca diretamente na tabela products
+        const productResult = await pool.query(`
+          SELECT cost_price, shipping_cost
+          FROM products 
+          WHERE sku = $1 AND store_id = $2 
+          LIMIT 1
+        `, [sku, storeId]);
+
+        if (productResult.rows.length > 0) {
+          const costs = productResult.rows[0];
+          productCostBase = parseFloat(costs.cost_price) || 0;
+          shippingCostBase = parseFloat(costs.shipping_cost) || 0;
+          console.log(`💰 Custos padrão para SKU ${sku}: Produto: €${productCostBase}, Envio: €${shippingCostBase}`);
+        } else {
+          console.warn(`⚠️ Produto com SKU ${sku} não encontrado, usando custos zerados`);
+        }
+      }
+
+      // Aplica custos baseado no status do pedido
+      const productCost = ['confirmed', 'delivered', 'shipped', 'in transit', 'in delivery'].includes(status) ?
+        productCostBase : 0.00;
+      
+      const shippingCost = ['shipped', 'delivered', 'in transit', 'in delivery'].includes(status) ?
+        shippingCostBase : 0.00;
+
+      return { productCost, shippingCost };
+      
+    } catch (error) {
+      console.error('❌ Erro ao calcular custos do produto:', error);
+      return { productCost: 0, shippingCost: 0 };
+    }
   }
 
   /**
@@ -320,7 +380,6 @@ export class SmartSyncService {
               if (!existingLead) {
                 // Lead novo - inserir COM operationId para isolamento
                 const status = apiLead.status_livrison || "new order";
-                const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
                 // Garantir que temos storeId válido antes de inserir
                 const finalStoreId = storeId || operation.storeId || await this.getDefaultStoreId();
@@ -329,6 +388,8 @@ export class SmartSyncService {
                   console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
                   continue;
                 }
+                
+                const costs = await this.calculateOrderCosts(status, apiLead.lead_value, [], finalStoreId);
                 
                 // CRITICAL: Use the specific store AND operation for this sync
                 await db.insert(orders).values({
@@ -560,7 +621,6 @@ export class SmartSyncService {
               if (!existingLead) {
                 // Lead novo - inserir COM operationId para isolamento
                 const status = apiLead.status_livrison || "new order";
-                const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
                 // Garantir que temos storeId válido antes de inserir
                 const finalStoreId = storeId || operation.storeId || await this.getDefaultStoreId();
@@ -569,6 +629,8 @@ export class SmartSyncService {
                   console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
                   continue;
                 }
+                
+                const costs = await this.calculateOrderCosts(status, apiLead.lead_value, [], finalStoreId);
                 
                 const orderData: InsertOrder = {
                   id: apiLead.n_lead,
@@ -768,7 +830,6 @@ export class SmartSyncService {
               if (!existingLead) {
                 // Lead novo - inserir COM operationId para isolamento
                 const status = apiLead.status_livrison || "new order";
-                const costs = this.calculateOrderCosts(status, apiLead.lead_value);
                 
                 // Garantir que temos storeId válido antes de inserir
                 const finalStoreId = storeId || operation.storeId || await this.getDefaultStoreId();
@@ -777,6 +838,8 @@ export class SmartSyncService {
                   console.error(`❌ StoreId null para lead ${apiLead.n_lead}, pulando...`);
                   continue;
                 }
+                
+                const costs = await this.calculateOrderCosts(status, apiLead.lead_value, [], finalStoreId);
                 
                 const orderData: InsertOrder = {
                   id: apiLead.n_lead,
