@@ -99,15 +99,13 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Operation Selector - Always show regardless of condition */}
+      {/* Operation Selector */}
       <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <Briefcase className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground font-medium">Operação ({operations.length})</span>
+          <span className="text-sm text-muted-foreground font-medium">Operação</span>
         </div>
-        {console.log("🚨 PRODUCTION DEBUG - Operations in Select:", operations)}
         <Select value={selectedOperation} onValueChange={(value) => {
-          console.log("🚨 PRODUCTION DEBUG - Select change:", value);
           if (value === "add-new") {
             setShowNewOperationDialog(true);
             return;
@@ -118,20 +116,11 @@ export function Sidebar() {
             <SelectValue placeholder="Selecionar operação" />
           </SelectTrigger>
           <SelectContent>
-            {console.log("🚨 PRODUCTION DEBUG - Rendering SelectContent with operations:", operations.length)}
-            {operations.length === 0 && (
-              <SelectItem value="no-ops" disabled>
-                Nenhuma operação encontrada
+            {operations.map((operation: any) => (
+              <SelectItem key={operation.id} value={operation.id}>
+                {operation.name}
               </SelectItem>
-            )}
-            {operations.map((operation: any) => {
-              console.log("🚨 PRODUCTION DEBUG - Rendering operation:", operation.name);
-              return (
-                <SelectItem key={operation.id} value={operation.id}>
-                  {operation.name}
-                </SelectItem>
-              );
-            })}
+            ))}
             <SelectItem value="add-new">
               <div className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
