@@ -24,6 +24,10 @@ interface CalculatorFields {
   cpa: number; // Custo por aquisição
   ordersPerDay: number; // Pedidos por dia
   currency: string; // Moeda selecionada
+  insurance: number; // Seguro
+  storage: number; // Armazenagem
+  trafficPerDay: number; // Tráfego diário
+  cpaOnConfirmed: boolean; // CPA sobre confirmados ou total
 }
 
 interface CalculationResults {
@@ -32,6 +36,10 @@ interface CalculationResults {
   dailyProfit: number;
   profitMargin: number;
   monthlyProfit: number;
+  grossProfit: number; // Lucro bruto (sem marketing)
+  totalCostWithoutTraffic: number; // CT sem tráfego
+  valueReceived: number; // Valor efetivamente recebido
+  conversionRate: number; // Taxa de conversão tráfego -> pedidos
 }
 
 interface ConvertedResults {
@@ -50,7 +58,11 @@ export default function CostCalculator() {
     productCost: 12.50,
     cpa: 15.00,
     ordersPerDay: 50,
-    currency: 'BRL'
+    currency: 'BRL',
+    insurance: 0, // Seguro
+    storage: 0, // Armazenagem
+    trafficPerDay: 50, // Tráfego = pedidos por padrão
+    cpaOnConfirmed: false // CPA sobre total por padrão
   });
 
   const [results, setResults] = useState<CalculationResults>({
@@ -58,7 +70,11 @@ export default function CostCalculator() {
     dailyCosts: 0,
     dailyProfit: 0,
     profitMargin: 0,
-    monthlyProfit: 0
+    monthlyProfit: 0,
+    grossProfit: 0,
+    totalCostWithoutTraffic: 0,
+    valueReceived: 0,
+    conversionRate: 0
   });
 
   const [convertedResults, setConvertedResults] = useState<ConvertedResults>({
@@ -67,6 +83,13 @@ export default function CostCalculator() {
     dailyProfitBRL: 0,
     monthlyProfitBRL: 0
   });
+
+  // Atualizar tráfego quando pedidos mudarem (manter sincronia por padrão)
+  useEffect(() => {
+    if (fields.trafficPerDay === 0 || fields.trafficPerDay === fields.ordersPerDay) {
+      setFields(prev => ({...prev, trafficPerDay: fields.ordersPerDay}));
+    }
+  }, [fields.ordersPerDay]);
 
   // Buscar taxas de câmbio para conversão
   const { data: exchangeRates } = useQuery({
@@ -80,6 +103,10 @@ export default function CostCalculator() {
   useEffect(() => {
     const confirmedOrders = fields.ordersPerDay * (fields.confirmationRate / 100);
     const deliveredOrders = confirmedOrders * (fields.deliveryRate / 100);
+    const refusedOrders = confirmedOrders - deliveredOrders;
+    
+    // Taxa de conversão tráfego -> pedidos
+    const conversionRate = fields.trafficPerDay > 0 ? (fields.ordersPerDay / fields.trafficPerDay) * 100 : 0;
     
     // Receita diária (apenas pedidos entregues geram receita)
     const dailyRevenue = deliveredOrders * fields.salePrice;
@@ -87,10 +114,24 @@ export default function CostCalculator() {
     // Custos diários
     const productCosts = confirmedOrders * fields.productCost; // Produto é enviado para pedidos confirmados
     const shippingCosts = confirmedOrders * fields.shippingCost; // Envio para pedidos confirmados
-    const marketingCosts = fields.ordersPerDay * fields.cpa; // Marketing pago por todos os pedidos
-    const dailyCosts = productCosts + shippingCosts + marketingCosts;
+    const insuranceCosts = confirmedOrders * fields.insurance; // Seguro para confirmados
+    const storageCosts = confirmedOrders * fields.storage; // Armazenagem para confirmados
     
-    // Lucro diário
+    // Marketing: CPA sobre confirmados ou sobre tráfego total
+    const marketingCosts = fields.cpaOnConfirmed 
+      ? confirmedOrders * fields.cpa 
+      : fields.trafficPerDay * fields.cpa;
+    
+    const totalCostWithoutTraffic = productCosts + shippingCosts + insuranceCosts + storageCosts;
+    const dailyCosts = totalCostWithoutTraffic + marketingCosts;
+    
+    // Valor efetivamente recebido (considera recusas)
+    const valueReceived = dailyRevenue - (refusedOrders * fields.shippingCost);
+    
+    // Lucro bruto (sem marketing)
+    const grossProfit = dailyRevenue - totalCostWithoutTraffic;
+    
+    // Lucro líquido (com marketing)
     const dailyProfit = dailyRevenue - dailyCosts;
     
     // Margem de lucro (%)
@@ -104,7 +145,11 @@ export default function CostCalculator() {
       dailyCosts,
       dailyProfit,
       profitMargin,
-      monthlyProfit
+      monthlyProfit,
+      grossProfit,
+      totalCostWithoutTraffic,
+      valueReceived,
+      conversionRate
     });
 
     // Conversão para BRL se a moeda selecionada não for BRL
@@ -127,14 +172,19 @@ export default function CostCalculator() {
     }
   }, [fields, exchangeRates]);
 
-  const handleFieldChange = (field: keyof CalculatorFields, value: string) => {
+  const handleFieldChange = (field: keyof CalculatorFields, value: string | boolean) => {
     if (field === 'currency') {
       setFields(prev => ({
         ...prev,
         [field]: value
       }));
+    } else if (field === 'cpaOnConfirmed') {
+      setFields(prev => ({
+        ...prev,
+        [field]: value as boolean
+      }));
     } else {
-      const numValue = parseFloat(value) || 0;
+      const numValue = parseFloat(value as string) || 0;
       setFields(prev => ({
         ...prev,
         [field]: numValue
@@ -327,18 +377,79 @@ export default function CostCalculator() {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="cpa" className="text-gray-300">CPA - Custo por Aquisição ({getCurrencySymbol()})</Label>
-              <Input
-                id="cpa"
-                type="number"
-                min="0"
-                step="0.01"
-                value={fields.cpa}
-                onChange={(e) => handleFieldChange('cpa', e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
-                data-testid="input-cpa"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="insurance" className="text-gray-300">Seguro ({getCurrencySymbol()})</Label>
+                <Input
+                  id="insurance"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fields.insurance}
+                  onChange={(e) => handleFieldChange('insurance', e.target.value)}
+                  className="bg-gray-800 border-gray-600 text-white"
+                  data-testid="input-insurance"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="storage" className="text-gray-300">Armazenagem ({getCurrencySymbol()})</Label>
+                <Input
+                  id="storage"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fields.storage}
+                  onChange={(e) => handleFieldChange('storage', e.target.value)}
+                  className="bg-gray-800 border-gray-600 text-white"
+                  data-testid="input-storage"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="trafficPerDay" className="text-gray-300">Tráfego Diário</Label>
+                <Input
+                  id="trafficPerDay"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={fields.trafficPerDay}
+                  onChange={(e) => handleFieldChange('trafficPerDay', e.target.value)}
+                  className="bg-gray-800 border-gray-600 text-white"
+                  data-testid="input-traffic-per-day"
+                />
+                <div className="text-xs text-gray-400 mt-1">
+                  Taxa conversão: {results.conversionRate.toFixed(1)}%
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="cpa" className="text-gray-300">CPA ({getCurrencySymbol()})</Label>
+                <Input
+                  id="cpa"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={fields.cpa}
+                  onChange={(e) => handleFieldChange('cpa', e.target.value)}
+                  className="bg-gray-800 border-gray-600 text-white"
+                  data-testid="input-cpa"
+                />
+                <div className="flex items-center space-x-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="cpaOnConfirmed"
+                    checked={fields.cpaOnConfirmed}
+                    onChange={(e) => handleFieldChange('cpaOnConfirmed', e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500"
+                  />
+                  <Label htmlFor="cpaOnConfirmed" className="text-xs text-gray-400">
+                    CPA sobre confirmados
+                  </Label>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -421,10 +532,45 @@ export default function CostCalculator() {
               </div>
             </div>
 
+            {/* Métricas Adicionais */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
+                <span className="text-gray-300">Lucro Bruto (sem marketing):</span>
+                <div className="text-right">
+                  {fields.currency !== 'BRL' && (
+                    <div className="text-sm text-green-400 mb-1">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyRevenueBRL - (results.totalCostWithoutTraffic * (exchangeRates?.[fields.currency] || 1)))}
+                    </div>
+                  )}
+                  <span className={`font-semibold ${results.grossProfit > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatCurrency(results.grossProfit)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
+                <span className="text-gray-300">Valor Efetivamente Recebido:</span>
+                <div className="text-right">
+                  {fields.currency !== 'BRL' && (
+                    <div className="text-sm text-green-400 mb-1">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(results.valueReceived * (exchangeRates?.[fields.currency] || 1))}
+                    </div>
+                  )}
+                  <span className="font-semibold text-white">
+                    {formatCurrency(results.valueReceived)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Breakdown dos Pedidos */}
             <div className="mt-6 p-4 bg-gray-800/30 rounded-lg">
               <div className="text-sm text-gray-400 mb-3 font-medium">Breakdown dos Pedidos:</div>
               <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Tráfego diário:</span>
+                  <span className="text-white">{fields.trafficPerDay}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-300">Pedidos totais/dia:</span>
                   <span className="text-white">{fields.ordersPerDay}</span>
@@ -436,6 +582,10 @@ export default function CostCalculator() {
                 <div className="flex justify-between">
                   <span className="text-gray-300">Pedidos entregues:</span>
                   <span className="text-white">{Math.round(fields.ordersPerDay * (fields.confirmationRate / 100) * (fields.deliveryRate / 100))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Pedidos recusados:</span>
+                  <span className="text-white">{Math.round(fields.ordersPerDay * (fields.confirmationRate / 100) * (1 - fields.deliveryRate / 100))}</span>
                 </div>
               </div>
             </div>
