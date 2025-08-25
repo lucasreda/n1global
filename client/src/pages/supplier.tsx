@@ -110,26 +110,14 @@ export default function SupplierDashboard() {
               Dashboard do Fornecedor
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Gerencie seus produtos e acompanhe pedidos globais
+              Gerencie seus produtos globais e acompanhe pedidos em todas as operações
             </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <Package className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-          </div>
+          <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-product">
+            <Plus className="h-4 w-4 mr-2" />
+            {hasProducts ? 'Novo Produto' : 'Criar Primeiro Produto'}
+          </Button>
         </div>
-      </div>
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard do Fornecedor</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus produtos globais e acompanhe pedidos em todas as operações
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-product">
-          <Plus className="h-4 w-4 mr-2" />
-          {hasProducts ? 'Novo Produto' : 'Criar Primeiro Produto'}
-        </Button>
       </div>
 
       {/* Métricas Globais */}
