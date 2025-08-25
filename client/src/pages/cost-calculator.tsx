@@ -3,9 +3,16 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calculator, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Calculator, TrendingUp, TrendingDown, Minus, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CalculatorFields {
   deliveryRate: number; // Taxa de entregado (%)
@@ -15,6 +22,7 @@ interface CalculatorFields {
   productCost: number; // Custo do produto
   cpa: number; // Custo por aquisição
   ordersPerDay: number; // Pedidos por dia
+  currency: string; // Moeda selecionada
 }
 
 interface CalculationResults {
@@ -33,7 +41,8 @@ export default function CostCalculator() {
     shippingCost: 7.50,
     productCost: 12.50,
     cpa: 15.00,
-    ordersPerDay: 50
+    ordersPerDay: 50,
+    currency: 'BRL'
   });
 
   const [results, setResults] = useState<CalculationResults>({
@@ -77,19 +86,42 @@ export default function CostCalculator() {
   }, [fields]);
 
   const handleFieldChange = (field: keyof CalculatorFields, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setFields(prev => ({
-      ...prev,
-      [field]: numValue
-    }));
+    if (field === 'currency') {
+      setFields(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    } else {
+      const numValue = parseFloat(value) || 0;
+      setFields(prev => ({
+        ...prev,
+        [field]: numValue
+      }));
+    }
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
+    const locale = fields.currency === 'BRL' ? 'pt-BR' : fields.currency === 'EUR' ? 'de-DE' : 'en-US';
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'BRL'
+      currency: fields.currency
     }).format(value);
   };
+
+  const getCurrencySymbol = () => {
+    switch (fields.currency) {
+      case 'BRL': return 'R$';
+      case 'EUR': return '€';
+      case 'USD': return '$';
+      default: return fields.currency;
+    }
+  };
+
+  const currencies = [
+    { value: 'BRL', label: 'Real (R$)', flag: '🇧🇷' },
+    { value: 'EUR', label: 'Euro (€)', flag: '🇪🇺' },
+    { value: 'USD', label: 'Dólar ($)', flag: '🇺🇸' }
+  ];
 
   const formatPercentage = (value: number) => {
     return `${value.toFixed(2)}%`;
@@ -132,6 +164,33 @@ export default function CostCalculator() {
             <CardDescription className="text-gray-400">
               Ajuste os valores para calcular o lucro estimado
             </CardDescription>
+            
+            {/* Seletor de Moeda */}
+            <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <Label className="text-blue-400 text-sm font-medium mb-2 flex items-center space-x-2">
+                <Globe size={16} />
+                <span>Moeda</span>
+              </Label>
+              <Select value={fields.currency} onValueChange={(value) => handleFieldChange('currency', value)}>
+                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                  <SelectValue placeholder="Selecionar moeda" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-700">
+                  {currencies.map((currency) => (
+                    <SelectItem 
+                      key={currency.value} 
+                      value={currency.value}
+                      className="text-white hover:bg-gray-800"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span>{currency.flag}</span>
+                        <span>{currency.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -182,7 +241,7 @@ export default function CostCalculator() {
               </div>
               
               <div>
-                <Label htmlFor="salePrice" className="text-gray-300">Preço de Venda (R$)</Label>
+                <Label htmlFor="salePrice" className="text-gray-300">Preço de Venda ({getCurrencySymbol()})</Label>
                 <Input
                   id="salePrice"
                   type="number"
@@ -198,7 +257,7 @@ export default function CostCalculator() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="productCost" className="text-gray-300">Custo do Produto (R$)</Label>
+                <Label htmlFor="productCost" className="text-gray-300">Custo do Produto ({getCurrencySymbol()})</Label>
                 <Input
                   id="productCost"
                   type="number"
@@ -212,7 +271,7 @@ export default function CostCalculator() {
               </div>
               
               <div>
-                <Label htmlFor="shippingCost" className="text-gray-300">Custo do Envio (R$)</Label>
+                <Label htmlFor="shippingCost" className="text-gray-300">Custo do Envio ({getCurrencySymbol()})</Label>
                 <Input
                   id="shippingCost"
                   type="number"
@@ -227,7 +286,7 @@ export default function CostCalculator() {
             </div>
 
             <div>
-              <Label htmlFor="cpa" className="text-gray-300">CPA - Custo por Aquisição (R$)</Label>
+              <Label htmlFor="cpa" className="text-gray-300">CPA - Custo por Aquisição ({getCurrencySymbol()})</Label>
               <Input
                 id="cpa"
                 type="number"
