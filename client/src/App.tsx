@@ -81,27 +81,32 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     const hasUser = !!user;
     const hasAuth = isAuthenticated;
     const hasData = !isLoading && onboardingStatus !== undefined;
-    const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted;
+    const isSupplier = user?.role === 'supplier';
+    const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted && !isSupplier;
     const notOnOnboardingPage = location !== '/onboarding';
     
     console.log('OnboardingGuard - Debug:', {
       hasUser,
       userId: user?.id,
+      userRole: user?.role,
       isAuthenticated: hasAuth,
       isLoading,
       error: error?.message,
       hasData,
       onboardingStatus,
       onboardingCompleted: onboardingStatus?.onboardingCompleted,
+      isSupplier,
       needsOnboarding,
       location,
       queryEnabled: !!user && isAuthenticated,
       shouldRedirect: hasUser && hasAuth && needsOnboarding && notOnOnboardingPage
     });
 
-    // Se temos dados válidos e o usuário precisa fazer onboarding, force logout para relogin
-    if (hasData && onboardingStatus && onboardingStatus.onboardingCompleted === false) {
+    // Se temos dados válidos e o usuário precisa fazer onboarding, mas não é supplier
+    if (hasData && onboardingStatus && onboardingStatus.onboardingCompleted === false && !isSupplier) {
       console.log('🚨 ONBOARDING REQUIRED - User needs to complete onboarding');
+    } else if (isSupplier) {
+      console.log('✅ SUPPLIER USER - Skipping onboarding');
     }
 
     if (hasUser && hasAuth && needsOnboarding && notOnOnboardingPage) {
@@ -127,8 +132,8 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If we have user and onboarding data but not completed, ensure we're on onboarding
-  if (onboardingStatus && !onboardingStatus.onboardingCompleted && location !== '/onboarding') {
+  // If we have user and onboarding data but not completed (and not a supplier), ensure we're on onboarding
+  if (onboardingStatus && !onboardingStatus.onboardingCompleted && location !== '/onboarding' && user?.role !== 'supplier') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glassmorphism rounded-2xl p-8">
