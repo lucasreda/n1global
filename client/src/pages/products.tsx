@@ -319,13 +319,25 @@ export default function ProductsPage() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Basic Product Info */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Product Info */}
+                <div className="grid grid-cols-4 gap-4">
                   <div className="text-center space-y-1">
                     <div className="text-lg font-bold text-green-400">
                       €{product.price}
                     </div>
                     <div className="text-xs text-gray-400">Preço de Venda</div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="text-lg font-bold text-orange-400">
+                      €{userProduct.customCostPrice || product.costPrice || "0.00"}
+                    </div>
+                    <div className="text-xs text-gray-400">Custo do Produto</div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <div className="text-lg font-bold text-purple-400">
+                      €{userProduct.customShippingCost || product.shippingCost || "0.00"}
+                    </div>
+                    <div className="text-xs text-gray-400">Valor de Envio</div>
                   </div>
                   <div className="text-center space-y-1">
                     <div className="text-lg font-bold text-blue-400">
