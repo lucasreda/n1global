@@ -121,6 +121,15 @@ export class AdminService {
     try {
       const { searchTerm, storeId, operationId, dateRange, limit = 50, offset = 0 } = filters;
       
+      console.log('🔍 Global Orders Debug:', {
+        searchTerm,
+        storeId,
+        operationId,
+        dateRange,
+        limit,
+        offset
+      });
+      
       // Build date filter
       let dateFilter = sql`TRUE`;
       const now = new Date();
@@ -189,6 +198,8 @@ export class AdminService {
         .orderBy(desc(orders.orderDate))
         .limit(limit)
         .offset(offset);
+      
+      console.log('📦 Global Orders Result:', globalOrders.length, 'pedidos encontrados');
       
       return globalOrders.map(order => ({
         ...order,

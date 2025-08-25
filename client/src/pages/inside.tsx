@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,16 +62,58 @@ export default function InsidePage() {
                          selectedStore !== "all" || 
                          selectedOperation !== "all" || 
                          dateRange !== "all";
+  
+  console.log('🔍 Search Debug:', {
+    searchTerm: searchTerm,
+    selectedStore,
+    selectedOperation,
+    dateRange,
+    hasActiveSearch,
+    selectedTab
+  });
 
   const { data: adminStats, isLoading: statsLoading } = useQuery<AdminStats>({
     queryKey: ['/api/admin/stats'],
     enabled: true
   });
 
-  const { data: globalOrders, isLoading: ordersLoading } = useQuery<GlobalOrder[]>({
+  const { data: globalOrders, isLoading: ordersLoading, error: ordersError } = useQuery<GlobalOrder[]>({
     queryKey: ['/api/admin/orders', searchTerm, selectedStore, selectedOperation, dateRange],
-    enabled: selectedTab === "orders" && hasActiveSearch
+    enabled: selectedTab === "orders" && hasActiveSearch,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('searchTerm', searchTerm);
+      if (selectedStore !== 'all') params.append('storeId', selectedStore);
+      if (selectedOperation !== 'all') params.append('operationId', selectedOperation);
+      if (dateRange !== 'all') params.append('dateRange', dateRange);
+      
+      const url = `/api/admin/orders?${params.toString()}`;
+      console.log('🌐 Fetching orders from:', url);
+      
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(url, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    }
   });
+
+  useEffect(() => {
+    if (globalOrders) {
+      console.log('📦 Global Orders Response:', globalOrders.length, 'pedidos recebidos');
+    }
+    if (ordersError) {
+      console.error('❌ Error loading orders:', ordersError);
+    }
+  }, [globalOrders, ordersError]);
 
   const { data: stores } = useQuery<Array<{ id: string; name: string; operationsCount: number }>>({
     queryKey: ['/api/admin/stores'],
@@ -358,7 +400,7 @@ export default function InsidePage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {globalOrders?.map((order) => (
+                    {globalOrders.map((order: GlobalOrder) => (
                       <div key={order.id} className="border border-slate-700 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-4">
