@@ -99,14 +99,13 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Operation Selector */}
-      {console.log("🔍 Sidebar operations debug:", { operationsLength: operations.length, operations: operations.map(op => op.name) })}
-      {operations.length > 0 && (
-        <div className="mb-6 p-3 rounded-lg border border-gray-600 bg-gray-800 text-white shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Briefcase className="w-4 h-4 text-gray-400" />
-            <span className="text-sm text-gray-300 font-medium">Operação</span>
-          </div>
+      {/* Operation Selector - FORCED VISIBLE */}
+      <div className="mb-6 p-4 rounded-lg border-2 border-blue-500 bg-blue-900 text-white shadow-lg" style={{display: 'block !important', visibility: 'visible !important'}}>
+        <div className="flex items-center gap-2 mb-3">
+          <Briefcase className="w-5 h-5 text-blue-300" />
+          <span className="text-sm text-blue-100 font-bold">OPERAÇÃO ({operations.length})</span>
+        </div>
+        {operations.length > 0 ? (
           <Select value={selectedOperation} onValueChange={(value) => {
             if (value === "add-new") {
               setShowNewOperationDialog(true);
@@ -114,22 +113,20 @@ export function Sidebar() {
             }
             handleOperationChange(value);
           }}>
-            <SelectTrigger className="w-full bg-gray-700 border-gray-600 text-white">
-              <SelectValue placeholder="Selecionar operação" className="text-white" />
+            <SelectTrigger className="w-full bg-blue-800 border-blue-600 text-white font-medium">
+              <SelectValue placeholder="Selecionar operação" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
               {operations.map((operation: any) => (
                 <SelectItem 
                   key={operation.id} 
                   value={operation.id}
-                  className="text-white hover:bg-gray-800"
+                  className="text-white hover:bg-gray-800 font-medium"
                 >
                   {operation.name}
                 </SelectItem>
               ))}
-              {/* Separador visual */}
               <div className="border-t border-gray-700 my-1" />
-              {/* Botão Adicionar Nova */}
               <SelectItem 
                 value="add-new"
                 className="text-blue-400 hover:bg-blue-900/20 hover:text-blue-300"
@@ -141,8 +138,10 @@ export function Sidebar() {
               </SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      )}
+        ) : (
+          <div className="text-yellow-300 font-bold">CARREGANDO OPERAÇÕES...</div>
+        )}
+      </div>
 
       <ul className="space-y-1" data-testid="nav-menu">
         {navigation.map((item) => {
