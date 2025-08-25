@@ -5,6 +5,9 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema } from "@shared/schema";
+import { db } from "./db";
+import { userOperationAccess } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
@@ -347,6 +350,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao testar CurrencyAPI:", error);
       res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Debug endpoint for production troubleshooting
+  app.get("/api/debug/user-info", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const operations = await storage.getUserOperations(req.user.id);
+      
+      // Check user_operation_access directly
+      const directQuery = await db
+        .select()
+        .from(userOperationAccess)
+        .where(eq(userOperationAccess.userId, req.user.id));
+      
+      res.json({
+        user: {
+          id: user?.id,
+          email: user?.email,
+          role: user?.role,
+          storeId: user?.storeId
+        },
+        operations: operations,
+        directAccess: directQuery,
+        tokenUserId: req.user.id
+      });
+    } catch (error) {
+      console.error("Debug endpoint error:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 
