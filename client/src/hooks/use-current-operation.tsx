@@ -12,12 +12,6 @@ export function useCurrentOperation() {
     queryKey: ['/api/operations'],
   });
 
-  // Debug query state
-  console.log("🔍 Operations query debug:", { 
-    operationsCount: operations?.length || 0, 
-    isLoading, 
-    operations: operations?.map(op => op.name) 
-  });
 
   // Force Dss operation on load (only once)
   useEffect(() => {
