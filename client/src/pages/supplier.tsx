@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar } from "lucide-react";
+import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar, Crown } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { CreateProductModal } from "@/components/supplier/create-product-modal";
 import { SupplierProductCard } from "@/components/supplier/supplier-product-card";
@@ -84,8 +84,12 @@ export default function SupplierDashboard() {
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold flex items-center gap-3">
               Dashboard do Fornecedor
+              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 text-xs font-semibold px-2 py-1 rounded-full">
+                <Crown className="h-3 w-3" />
+                Fornecedor
+              </span>
             </h1>
             <p className="text-muted-foreground mt-1">
               Gerencie seus produtos globais e acompanhe pedidos em todas as operações
