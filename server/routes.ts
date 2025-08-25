@@ -2105,12 +2105,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/supplier/products - Create new global product
   app.post('/api/supplier/products', authenticateToken, requireSupplier, async (req, res) => {
     try {
+      // Get default store for global products
+      const [defaultStore] = await db.select().from(stores).limit(1);
+      if (!defaultStore) {
+        return res.status(500).json({ message: 'Sistema não configurado corretamente' });
+      }
+
       const productData = {
         ...req.body,
         supplierId: req.user.id, // Set current user as supplier
-        storeId: null, // Global products don't belong to a specific store initially
+        storeId: defaultStore.id, // Use default store for global products
         operationId: null, // Global products don't belong to a specific operation initially
         stock: req.body.initialStock || 0,
+        price: req.body.price?.toString(),
+        costPrice: req.body.costPrice?.toString(),
       };
 
       const product = await storage.createSupplierProduct(productData);
