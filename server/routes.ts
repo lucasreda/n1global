@@ -1545,8 +1545,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const linkData = linkProductBySkuSchema.parse(req.body);
       const userId = req.user.id;
-      const storeId = (req as any).storeId;
+      const storeId = req.storeId || req.user.storeId;
       
+      if (!storeId) {
+        return res.status(400).json({ message: "Store ID é obrigatório" });
+      }
+      
+      console.log(`Linking product ${linkData.sku} for user ${userId} to store ${storeId}`);
       const userProduct = await storage.linkProductToUser(userId, storeId, linkData);
       res.status(201).json(userProduct);
     } catch (error) {
@@ -1561,7 +1566,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user-products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user.id;
-      const storeId = (req as any).storeId;
+      const storeId = req.storeId || req.user.storeId;
+      
+      if (!storeId) {
+        return res.status(400).json({ message: "Store ID é obrigatório" });
+      }
       
       const userProducts = await storage.getUserLinkedProducts(userId, storeId);
       res.json(userProducts);
