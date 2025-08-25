@@ -220,7 +220,7 @@ export default function InsidePage() {
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-black/60 border border-gray-800/50 backdrop-blur-md">
+          <TabsList className="grid w-full grid-cols-4 bg-white/10 border border-white/20 backdrop-blur-md">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">
               Visão Geral
             </TabsTrigger>
@@ -238,7 +238,7 @@ export default function InsidePage() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-slate-200">Total de Usuários</CardTitle>
                   <Users className="h-4 w-4 text-blue-400" />
@@ -249,7 +249,7 @@ export default function InsidePage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-slate-200">Total de Operações</CardTitle>
                   <TrendingUp className="h-4 w-4 text-green-400" />
@@ -260,7 +260,7 @@ export default function InsidePage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-slate-200">Total de Pedidos</CardTitle>
                   <ShoppingCart className="h-4 w-4 text-orange-400" />
@@ -271,7 +271,7 @@ export default function InsidePage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-slate-200">Receita Total</CardTitle>
                   <TrendingUp className="h-4 w-4 text-purple-400" />
@@ -286,7 +286,7 @@ export default function InsidePage() {
             </div>
 
             {/* Recent Stores Activity */}
-            <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
               <CardHeader>
                 <CardTitle className="text-slate-200">Atividade Recente das Lojas</CardTitle>
                 <CardDescription className="text-slate-400">
@@ -321,7 +321,7 @@ export default function InsidePage() {
 
           {/* Stores Tab */}
           <TabsContent value="stores" className="space-y-6">
-            <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
               <CardHeader>
                 <CardTitle className="text-slate-200">Lojas e Operações</CardTitle>
                 <CardDescription className="text-slate-400">
@@ -349,7 +349,7 @@ export default function InsidePage() {
           {/* Orders Tab */}
           <TabsContent value="orders" className="space-y-6">
             {/* Filters */}
-            <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
               <CardHeader>
                 <CardTitle className="text-slate-200">Filtros</CardTitle>
               </CardHeader>
@@ -371,10 +371,10 @@ export default function InsidePage() {
                   <div className="space-y-2">
                     <label className="text-sm text-slate-400">Loja</label>
                     <Select value={selectedStore} onValueChange={setSelectedStore}>
-                      <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm">
                         <SelectValue placeholder="Selecionar loja" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-700 border-slate-600">
+                      <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
                         <SelectItem value="all">Todas as lojas</SelectItem>
                         {stores?.map((store) => (
                           <SelectItem key={store.id} value={store.id}>
@@ -388,10 +388,10 @@ export default function InsidePage() {
                   <div className="space-y-2">
                     <label className="text-sm text-slate-400">Operação</label>
                     <Select value={selectedOperation} onValueChange={setSelectedOperation}>
-                      <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm">
                         <SelectValue placeholder="Selecionar operação" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-700 border-slate-600">
+                      <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
                         <SelectItem value="all">Todas as operações</SelectItem>
                         {operations?.map((operation) => (
                           <SelectItem key={operation.id} value={operation.id}>
@@ -405,10 +405,10 @@ export default function InsidePage() {
                   <div className="space-y-2">
                     <label className="text-sm text-slate-400">Período</label>
                     <Select value={dateRange} onValueChange={setDateRange}>
-                      <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-700 border-slate-600">
+                      <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
                         <SelectItem value="all">Selecionar período</SelectItem>
                         <SelectItem value="7d">Últimos 7 dias</SelectItem>
                         <SelectItem value="30d">Últimos 30 dias</SelectItem>
@@ -421,7 +421,7 @@ export default function InsidePage() {
             </Card>
 
             {/* Orders Table */}
-            <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-slate-200">Pedidos Globais</CardTitle>
@@ -589,7 +589,7 @@ function ProductsManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+      <Card className="bg-white/10 border-white/20 backdrop-blur-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-slate-200 flex items-center gap-2">
@@ -611,7 +611,7 @@ function ProductsManager() {
       </Card>
 
       {/* Products List */}
-      <Card className="bg-black/40 border-gray-800/30 backdrop-blur-md">
+      <Card className="bg-white/10 border-white/20 backdrop-blur-md">
         <CardHeader>
           <CardTitle className="text-slate-200">Lista de Produtos</CardTitle>
           <CardDescription className="text-slate-400">
@@ -634,7 +634,7 @@ function ProductsManager() {
           ) : (
             <div className="space-y-4">
               {products.map((product) => (
-                <div key={product.id} className="border border-gray-800/30 rounded-lg p-4 bg-black/20 backdrop-blur-sm">
+                <div key={product.id} className="border border-white/20 rounded-lg p-4 bg-white/5 backdrop-blur-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4">
                       <div>
@@ -781,7 +781,7 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="bg-black/60 border-gray-800/40 backdrop-blur-lg w-full max-w-md">
+      <Card className="bg-white/15 border-white/25 backdrop-blur-lg w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-white">Novo Produto</CardTitle>
           <CardDescription className="text-slate-400">
@@ -795,7 +795,7 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               <Input
                 value={formData.sku}
                 onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="Ex: PROD001"
                 required
               />
@@ -806,7 +806,7 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="Nome do produto"
                 required
               />
@@ -815,10 +815,10 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
             <div>
               <label className="text-sm text-slate-400 block mb-1">Tipo *</label>
               <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
                   <SelectItem value="fisico">Físico</SelectItem>
                   <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
                 </SelectContent>
@@ -833,7 +833,7 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                   step="0.01"
                   value={formData.price}
                   onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                   placeholder="0.00"
                   required
                 />
@@ -846,7 +846,7 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                   step="0.01"
                   value={formData.costPrice}
                   onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                   placeholder="0.00"
                   required
                 />
@@ -860,7 +860,7 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                 step="0.01"
                 value={formData.shippingCost}
                 onChange={(e) => setFormData({...formData, shippingCost: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="0.00"
                 required
               />
@@ -871,7 +871,7 @@ function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSucces
               <Input
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="Descrição opcional"
               />
             </div>
@@ -954,7 +954,7 @@ function EditProductModal({ product, onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="bg-black/60 border-gray-800/40 backdrop-blur-lg w-full max-w-md">
+      <Card className="bg-white/15 border-white/25 backdrop-blur-lg w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-white">Editar Produto</CardTitle>
           <CardDescription className="text-slate-400">
@@ -968,7 +968,7 @@ function EditProductModal({ product, onClose, onSuccess }: {
               <Input
                 value={formData.sku}
                 onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="Ex: PROD001"
                 required
               />
@@ -979,7 +979,7 @@ function EditProductModal({ product, onClose, onSuccess }: {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="Nome do produto"
                 required
               />
@@ -988,10 +988,10 @@ function EditProductModal({ product, onClose, onSuccess }: {
             <div>
               <label className="text-sm text-slate-400 block mb-1">Tipo *</label>
               <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
                   <SelectItem value="fisico">Físico</SelectItem>
                   <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
                 </SelectContent>
@@ -1006,7 +1006,7 @@ function EditProductModal({ product, onClose, onSuccess }: {
                   step="0.01"
                   value={formData.price}
                   onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                   placeholder="0.00"
                   required
                 />
@@ -1019,7 +1019,7 @@ function EditProductModal({ product, onClose, onSuccess }: {
                   step="0.01"
                   value={formData.costPrice}
                   onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
-                  className="bg-slate-700 border-slate-600 text-white"
+                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                   placeholder="0.00"
                   required
                 />
@@ -1033,7 +1033,7 @@ function EditProductModal({ product, onClose, onSuccess }: {
                 step="0.01"
                 value={formData.shippingCost}
                 onChange={(e) => setFormData({...formData, shippingCost: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="0.00"
                 required
               />
@@ -1044,7 +1044,7 @@ function EditProductModal({ product, onClose, onSuccess }: {
               <Input
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
                 placeholder="Descrição opcional"
               />
             </div>
@@ -1110,7 +1110,7 @@ function DeleteProductModal({ product, onClose, onSuccess }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="bg-black/60 border-gray-800/40 backdrop-blur-lg w-full max-w-md">
+      <Card className="bg-white/15 border-white/25 backdrop-blur-lg w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-white">Confirmar Exclusão</CardTitle>
           <CardDescription className="text-slate-400">
@@ -1123,7 +1123,7 @@ function DeleteProductModal({ product, onClose, onSuccess }: {
               <p className="text-red-200 text-sm mb-2">
                 Você está prestes a excluir o produto:
               </p>
-              <div className="bg-slate-700/50 rounded p-3">
+              <div className="bg-white/10 rounded p-3 backdrop-blur-sm">
                 <p className="text-white font-medium">{product.name}</p>
                 <p className="text-slate-400 text-sm">SKU: {product.sku}</p>
                 <p className="text-slate-400 text-sm">
