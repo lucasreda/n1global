@@ -120,48 +120,8 @@ export async function seedDatabase() {
       console.log("ℹ️  European Fulfillment provider already exists");
     }
 
-    // Create sample products if none exist for this store
-    const existingProducts = await db
-      .select()
-      .from(products)
-      .where(eq(products.storeId, defaultStore.id))
-      .limit(1);
-    
-    if (existingProducts.length === 0) {
-      const sampleProducts = [
-        {
-          storeId: defaultStore.id,
-          sku: "RS-8050",
-          name: "Produto Premium",
-          description: "Produto de alta qualidade",
-          price: "149.90",
-          stock: 25,
-          lowStock: 5,
-          imageUrl: "https://via.placeholder.com/300x300",
-          videoUrl: "https://example.com/video",
-          productUrl: "https://example.com/product",
-          isActive: true,
-        },
-        {
-          storeId: defaultStore.id,
-          sku: "PD-933000", 
-          name: "Parfum Luxo",
-          description: "Perfume importado",
-          price: "199.50",
-          stock: 40,
-          lowStock: 10,
-          imageUrl: "https://via.placeholder.com/300x300",
-          videoUrl: "https://example.com/video2",
-          productUrl: "https://example.com/product2",
-          isActive: true,
-        },
-      ];
-
-      await db.insert(products).values(sampleProducts);
-      console.log("✅ Sample products created");
-    } else {
-      console.log("ℹ️  Products already exist");
-    }
+    // Sample products removed - no longer creating automatic demo products
+    console.log("ℹ️  Skipped sample products creation (disabled)");
 
     // Check if super admin already exists
     const [existingSuperAdmin] = await db
