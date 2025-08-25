@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { stores, operations, orders, users, products } from "@shared/schema";
+import { stores, operations, orders, users, products, userProducts } from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
 export class AdminService {
@@ -411,6 +411,12 @@ export class AdminService {
 
   async deleteProduct(productId: string) {
     try {
+      // First, delete all references in user_products table
+      await db
+        .delete(userProducts)
+        .where(eq(userProducts.productId, productId));
+
+      // Then delete the product
       const [deletedProduct] = await db
         .delete(products)
         .where(eq(products.id, productId))
