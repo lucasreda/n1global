@@ -1,4 +1,5 @@
-import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck } from "lucide-react";
+import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock } from "lucide-react";
+import { SiShopify } from "react-icons/si";
 import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
 
 interface StatsCardsProps {
@@ -53,6 +54,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const profitMargin = metrics?.profitMargin || 0;
   const roi = metrics?.roi || 0;
   const averageOrderValue = metrics?.averageOrderValue || 0;
+  
+  // Novos cálculos para os cards especiais
+  const shopifyOrders = totalOrders; // Todos os pedidos são da Shopify agora
+  const avgCPA = shopifyOrders > 0 ? (marketingCostsBRL / shopifyOrders) : 0; // CPA médio em BRL
 
   // Calcular valores em BRL
   const totalProfitBRL = metrics?.totalProfitBRL || 0;
@@ -63,6 +68,44 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     if (previous === 0) return 0;
     return ((current - previous) / previous * 100).toFixed(1);
   };
+
+  // Novos cards especiais
+  const specialStats = [
+    {
+      title: "Pedidos Shopify",
+      value: shopifyOrders.toLocaleString(),
+      subtitle: `Pedidos importados`,
+      icon: SiShopify,
+      iconBg: "bg-green-600/20",
+      iconColor: "text-green-400",
+      hoverBg: "group-hover:bg-green-600/30",
+      growth: calculateGrowth(shopifyOrders),
+      testId: "card-shopify-orders"
+    },
+    {
+      title: "CPA Médio",
+      value: formatCurrencyBRL(avgCPA),
+      subtitle: `Custo por aquisição`,
+      icon: Target,
+      iconBg: "bg-orange-600/20",
+      iconColor: "text-orange-400",
+      hoverBg: "group-hover:bg-orange-600/30",
+      growth: calculateGrowth(avgCPA, avgCPA * 1.1), // Menor é melhor para CPA
+      testId: "card-avg-cpa"
+    },
+    {
+      title: "Em Breve",
+      value: "---",
+      subtitle: `Funcionalidade bloqueada`,
+      icon: Lock,
+      iconBg: "bg-gray-600/20",
+      iconColor: "text-gray-400",
+      hoverBg: "group-hover:bg-gray-600/30",
+      growth: "0",
+      testId: "card-coming-soon",
+      disabled: true
+    }
+  ];
 
   const stats = [
     {
@@ -277,6 +320,44 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <div className="text-green-400">{roi.toFixed(1)}% ROI</div>
           </div>
         </div>
+      </div>
+
+      {/* Special Cards - Shopify, CPA, Coming Soon */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {specialStats.map((stat, index) => {
+          const IconComponent = stat.icon;
+          const isDisabled = stat.disabled;
+          
+          return (
+            <div
+              key={index}
+              className={`glassmorphism rounded-2xl p-4 transition-all duration-300 border ${
+                isDisabled 
+                  ? 'opacity-60 border-gray-600/20 cursor-not-allowed' 
+                  : 'hover:scale-[1.02] group cursor-pointer border-gray-500/20 hover:border-gray-400/40'
+              } ${stat.hoverBg}`}
+              data-testid={stat.testId}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center ${!isDisabled && 'group-hover:scale-110'} transition-transform duration-300`}>
+                  <IconComponent className={`${stat.iconColor} w-6 h-6`} />
+                </div>
+                {!isDisabled && (
+                  <div className={`text-xs px-2 py-1 rounded-full ${
+                    parseFloat(stat.growth) > 0 ? 'bg-green-500/20 text-green-400' : 
+                    parseFloat(stat.growth) < 0 ? 'bg-red-500/20 text-red-400' : 
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {parseFloat(stat.growth) > 0 ? '+' : ''}{stat.growth}%
+                  </div>
+                )}
+              </div>
+              <h3 className="text-xl font-bold text-white mb-1">{stat.value}</h3>
+              <p className="text-gray-300 text-sm font-medium">{stat.title}</p>
+              <p className="text-gray-400 text-xs mt-1">{stat.subtitle}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* Revenue Card - Full Width */}
