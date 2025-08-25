@@ -430,11 +430,15 @@ export class FacebookAdsService {
     
     for (const campaign of selectedCampaigns) {
       try {
-        // Buscar informações da conta
+        // Buscar informações da conta na tabela unificada
+        const { adAccounts } = await import("@shared/schema");
         const [account] = await db
           .select()
-          .from(facebookAdAccounts)
-          .where(eq(facebookAdAccounts.accountId, campaign.accountId || ""));
+          .from(adAccounts)
+          .where(and(
+            eq(adAccounts.accountId, campaign.accountId || ""),
+            eq(adAccounts.network, 'facebook')
+          ));
         
         if (!account?.accessToken) {
           console.warn(`Account ${campaign.accountId} has no access token, skipping campaign ${campaign.name}`);
