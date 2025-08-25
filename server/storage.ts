@@ -598,7 +598,10 @@ export class DatabaseStorage implements IStorage {
     }, {} as Record<string, any>);
     
     const totalOrders = orders.length;
-    const returnedOrders = orders.filter(o => o.status === 'cancelled').length;
+    
+    // Status que representam pedidos retornados/cancelados
+    const returnedStatuses = ['returned', 'cancelled', 'refused'];
+    const returnedOrders = orders.filter(o => returnedStatuses.includes(o.status)).length;
     const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
     
     // Filter specifically for carrier-delivered orders (status = 'delivered') across all operations
