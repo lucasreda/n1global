@@ -72,7 +72,6 @@ type UserProduct = {
 };
 
 export default function ProductsPage() {
-  const [editingCosts, setEditingCosts] = useState<string | null>(null);
   const [isLinking, setIsLinking] = useState(false);
   const [searchedProduct, setSearchedProduct] = useState<Product | null>(null);
   const [searchSku, setSearchSku] = useState("");
@@ -158,39 +157,6 @@ export default function ProductsPage() {
     },
   });
 
-  // Cost form
-  const costForm = useForm({
-    resolver: zodResolver(productCostSchema),
-    defaultValues: {
-      costPrice: "",
-      shippingCost: "",
-      handlingFee: "",
-      marketingCost: "",
-      operationalCost: "",
-    },
-  });
-
-  // Link form
-  const linkForm = useForm({
-    resolver: zodResolver(skuSearchSchema),
-    defaultValues: {
-      sku: "",
-      customCostPrice: "",
-      customShippingCost: "",
-      customHandlingFee: "",
-    },
-  });
-
-  const openCostEditor = (product: Product) => {
-    setEditingCosts(product.id);
-    costForm.reset({
-      costPrice: product.costPrice || "",
-      shippingCost: product.shippingCost || "",
-      handlingFee: product.handlingFee || "",
-      marketingCost: product.marketingCost || "",
-      operationalCost: product.operationalCost || "",
-    });
-  };
 
   const handleSearchProduct = () => {
     if (searchSku.trim()) {
@@ -339,34 +305,22 @@ export default function ProductsPage() {
                       SKU: {product.sku} | Preço: €{product.price} | Estoque: {product.stock}
                     </CardDescription>
                   </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openCostEditor(product)}
-                      className="glassmorphism-light text-gray-200 border-orange-600"
-                      data-testid={`button-edit-costs-${product.id}`}
-                    >
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Configurar Custos
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleUnlinkProduct(userProduct.productId)}
-                      className="glassmorphism-light text-gray-200 border-red-600"
-                      data-testid={`button-unlink-${product.id}`}
-                    >
-                      <Unlink className="h-4 w-4 mr-2" />
-                      Desvincular
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUnlinkProduct(userProduct.productId)}
+                    className="glassmorphism-light text-gray-200 border-red-600"
+                    data-testid={`button-unlink-${product.id}`}
+                  >
+                    <Unlink className="h-4 w-4 mr-2" />
+                    Desvincular
+                  </Button>
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Financial Overview */}
-                <div className="grid grid-cols-4 gap-4">
+                {/* Basic Product Info */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="text-center space-y-1">
                     <div className="text-lg font-bold text-green-400">
                       €{product.price}
@@ -374,59 +328,17 @@ export default function ProductsPage() {
                     <div className="text-xs text-gray-400">Preço de Venda</div>
                   </div>
                   <div className="text-center space-y-1">
-                    <div className="text-lg font-bold text-orange-400">
-                      €{(
-                        (parseFloat(userProduct.customCostPrice || product.costPrice || "0")) +
-                        (parseFloat(userProduct.customShippingCost || product.shippingCost || "0")) +
-                        (parseFloat(userProduct.customHandlingFee || product.handlingFee || "0"))
-                      ).toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-400">Total de Custos</div>
-                  </div>
-                  <div className="text-center space-y-1">
                     <div className="text-lg font-bold text-blue-400">
-                      €{(
-                        parseFloat(product.price) - 
-                        (parseFloat(userProduct.customCostPrice || product.costPrice || "0")) - 
-                        (parseFloat(userProduct.customShippingCost || product.shippingCost || "0")) - 
-                        (parseFloat(userProduct.customHandlingFee || product.handlingFee || "0"))
-                      ).toFixed(2)}
+                      {product.stock}
                     </div>
-                    <div className="text-xs text-gray-400">Lucro Bruto</div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <div className="text-lg font-bold text-purple-400">
-                      {((
-                        (parseFloat(product.price) - 
-                         (parseFloat(userProduct.customCostPrice || product.costPrice || "0")) - 
-                         (parseFloat(userProduct.customShippingCost || product.shippingCost || "0")) - 
-                         (parseFloat(userProduct.customHandlingFee || product.handlingFee || "0"))
-                        ) / parseFloat(product.price)
-                      ) * 100).toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-gray-400">Margem de Lucro</div>
+                    <div className="text-xs text-gray-400">Estoque Disponível</div>
                   </div>
                 </div>
 
-                {/* Custom Costs Display */}
-                {(userProduct.customCostPrice || userProduct.customShippingCost || userProduct.customHandlingFee) && (
-                  <>
-                    <Separator className="bg-gray-600" />
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="text-center">
-                        <div className="font-medium text-white">€{userProduct.customCostPrice || "0.00"}</div>
-                        <div className="text-xs text-gray-400">Custo Personalizado</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-medium text-white">€{userProduct.customShippingCost || "0.00"}</div>
-                        <div className="text-xs text-gray-400">Envio Personalizado</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-medium text-white">€{userProduct.customHandlingFee || "0.00"}</div>
-                        <div className="text-xs text-gray-400">Taxa Personalizada</div>
-                      </div>
-                    </div>
-                  </>
+                {product.description && (
+                  <div className="text-sm text-gray-300">
+                    {product.description}
+                  </div>
                 )}
 
                 {userProduct.linkedAt && (
