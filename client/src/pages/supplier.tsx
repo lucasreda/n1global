@@ -81,13 +81,13 @@ export default function SupplierDashboard() {
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
       {/* Page Title */}
-      <div className="glassmorphism rounded-lg p-6">
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold">
               Dashboard do Fornecedor
             </h1>
-            <p className="text-gray-300 mt-1">
+            <p className="text-muted-foreground mt-1">
               Gerencie seus produtos globais e acompanhe pedidos em todas as operações
             </p>
           </div>
