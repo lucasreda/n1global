@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { stores, operations, orders, users } from "@shared/schema";
+import { stores, operations, orders, users, products } from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc } from "drizzle-orm";
 
 export class AdminService {
@@ -285,6 +285,84 @@ export class AdminService {
       return superAdmin;
     } catch (error) {
       console.error('❌ Error creating super admin:', error);
+      throw error;
+    }
+  }
+
+  async getAllProducts() {
+    try {
+      const productsList = await db
+        .select({
+          id: products.id,
+          sku: products.sku,
+          name: products.name,
+          type: products.type,
+          description: products.description,
+          price: products.price,
+          costPrice: products.costPrice,
+          shippingCost: products.shippingCost,
+          isActive: products.isActive,
+          createdAt: products.createdAt
+        })
+        .from(products)
+        .orderBy(desc(products.createdAt));
+
+      return productsList.map(product => ({
+        ...product,
+        price: Number(product.price) || 0,
+        costPrice: Number(product.costPrice) || 0,
+        shippingCost: Number(product.shippingCost) || 0
+      }));
+    } catch (error) {
+      console.error('❌ Error getting products:', error);
+      throw error;
+    }
+  }
+
+  async createProduct(productData: {
+    sku: string;
+    name: string;
+    type: string;
+    description?: string;
+    price: number;
+    costPrice: number;
+    shippingCost: number;
+  }) {
+    try {
+      // Since products are global, we'll use a default store/operation for now
+      // In a future version, this could be made more flexible
+      const [defaultStore] = await db.select().from(stores).limit(1);
+      const [defaultOperation] = await db.select().from(operations).limit(1);
+      
+      if (!defaultStore) {
+        throw new Error('No default store found');
+      }
+
+      const [newProduct] = await db
+        .insert(products)
+        .values({
+          sku: productData.sku,
+          name: productData.name,
+          type: productData.type,
+          description: productData.description || null,
+          price: productData.price.toString(),
+          costPrice: productData.costPrice.toString(),
+          shippingCost: productData.shippingCost.toString(),
+          storeId: defaultStore.id,
+          operationId: defaultOperation?.id || null,
+          stock: 0,
+          isActive: true
+        })
+        .returning();
+
+      return {
+        ...newProduct,
+        price: Number(newProduct.price) || 0,
+        costPrice: Number(newProduct.costPrice) || 0,
+        shippingCost: Number(newProduct.shippingCost) || 0
+      };
+    } catch (error) {
+      console.error('❌ Error creating product:', error);
       throw error;
     }
   }

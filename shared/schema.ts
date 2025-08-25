@@ -264,6 +264,7 @@ export const products = pgTable("products", {
   sku: text("sku").unique().notNull(),
   name: text("name").notNull(),
   description: text("description"),
+  type: text("type").notNull().default("fisico"), // 'fisico', 'nutraceutico'
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   stock: integer("stock").notNull().default(0),
   lowStock: integer("low_stock").notNull().default(10),

@@ -16,7 +16,9 @@ import {
   Search,
   Filter,
   Download,
-  Eye
+  Eye,
+  Package,
+  Plus
 } from "lucide-react";
 
 interface AdminStats {
@@ -50,6 +52,19 @@ interface GlobalOrder {
   dataSource: string;
 }
 
+interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  type: string;
+  price: number;
+  costPrice: number;
+  shippingCost: number;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export default function InsidePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStore, setSelectedStore] = useState<string>("all");
@@ -58,6 +73,7 @@ export default function InsidePage() {
   const [selectedTab, setSelectedTab] = useState("overview");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
+  const [showAddProduct, setShowAddProduct] = useState(false);
   
   const pageSize = 20;
   
@@ -202,7 +218,7 @@ export default function InsidePage() {
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border border-slate-700">
+          <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border border-slate-700">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">
               Visão Geral
             </TabsTrigger>
@@ -211,6 +227,9 @@ export default function InsidePage() {
             </TabsTrigger>
             <TabsTrigger value="orders" className="data-[state=active]:bg-blue-600">
               Pedidos Globais
+            </TabsTrigger>
+            <TabsTrigger value="products" className="data-[state=active]:bg-blue-600">
+              Produtos
             </TabsTrigger>
           </TabsList>
 
@@ -522,8 +541,315 @@ export default function InsidePage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Products Tab */}
+          <TabsContent value="products" className="space-y-6">
+            <ProductsManager />
+          </TabsContent>
         </Tabs>
       </div>
+    </div>
+  );
+}
+
+// Products Management Component
+function ProductsManager() {
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { data: productsData, isLoading: productsLoading, refetch } = useQuery<Product[]>({
+    queryKey: ['/api/admin/products'],
+    enabled: true
+  });
+
+  useEffect(() => {
+    if (productsData) {
+      setProducts(productsData);
+    }
+  }, [productsData]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  };
+
+  const getTypeColor = (type: string) => {
+    return type === 'nutraceutico' 
+      ? 'bg-green-100 text-green-800' 
+      : 'bg-blue-100 text-blue-800';
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-slate-200 flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Produtos Globais
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Gerencie o catálogo global de produtos para toda a aplicação
+            </CardDescription>
+          </div>
+          <Button 
+            onClick={() => setShowAddProduct(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Produto
+          </Button>
+        </CardHeader>
+      </Card>
+
+      {/* Products List */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-slate-200">Lista de Produtos</CardTitle>
+          <CardDescription className="text-slate-400">
+            {products.length} produtos cadastrados
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {productsLoading ? (
+            <div className="text-center py-8 text-slate-400">Carregando produtos...</div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-12 space-y-4">
+              <Package className="h-12 w-12 text-slate-500 mx-auto" />
+              <div className="space-y-2">
+                <p className="text-slate-300 font-medium">Nenhum produto cadastrado</p>
+                <p className="text-slate-400 text-sm">
+                  Adicione produtos para que possam ser utilizados em toda a aplicação
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {products.map((product) => (
+                <div key={product.id} className="border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-4">
+                      <div>
+                        <p className="font-medium text-white">{product.name}</p>
+                        <p className="text-sm text-slate-400">SKU: {product.sku}</p>
+                      </div>
+                      <Badge className={getTypeColor(product.type)}>
+                        {product.type === 'nutraceutico' ? 'Nutracêutico' : 'Físico'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center space-x-6">
+                      <div className="text-right">
+                        <p className="text-sm text-slate-400">Preço de Venda</p>
+                        <p className="font-medium text-white">
+                          {formatCurrency(Number(product.price))}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-slate-400">Custo Produto</p>
+                        <p className="font-medium text-orange-400">
+                          {formatCurrency(Number(product.costPrice || 0))}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-slate-400">Custo Envio</p>
+                        <p className="font-medium text-purple-400">
+                          {formatCurrency(Number(product.shippingCost || 0))}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {product.description && (
+                    <p className="text-sm text-slate-400 mt-2">{product.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Product Modal */}
+      {showAddProduct && (
+        <AddProductModal 
+          onClose={() => setShowAddProduct(false)}
+          onSuccess={() => {
+            setShowAddProduct(false);
+            refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Add Product Modal Component
+function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    sku: '',
+    name: '',
+    type: 'fisico',
+    price: '',
+    costPrice: '',
+    shippingCost: '',
+    description: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          ...formData,
+          price: parseFloat(formData.price),
+          costPrice: parseFloat(formData.costPrice || '0'),
+          shippingCost: parseFloat(formData.shippingCost || '0')
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar produto');
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error('Erro ao criar produto:', error);
+      alert('Erro ao criar produto. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="bg-slate-800 border-slate-700 w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-white">Novo Produto</CardTitle>
+          <CardDescription className="text-slate-400">
+            Adicione um novo produto ao catálogo global
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">SKU *</label>
+              <Input
+                value={formData.sku}
+                onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Ex: PROD001"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Nome *</label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Nome do produto"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Tipo *</label>
+              <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-700 border-slate-600">
+                  <SelectItem value="fisico">Físico</SelectItem>
+                  <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Preço de Venda (€) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({...formData, price: e.target.value})}
+                  className="bg-slate-700 border-slate-600 text-white"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Custo Produto (€) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.costPrice}
+                  onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
+                  className="bg-slate-700 border-slate-600 text-white"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Custo do Envio (€) *</label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.shippingCost}
+                onChange={(e) => setFormData({...formData, shippingCost: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-400 block mb-1">Descrição</label>
+              <Input
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Descrição opcional"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onClose}
+                className="border-slate-600 text-slate-300"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? 'Criando...' : 'Criar Produto'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

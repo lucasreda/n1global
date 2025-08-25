@@ -1907,6 +1907,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Products routes
+  app.get("/api/admin/products", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const products = await adminService.getAllProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Admin products error:", error);
+      res.status(500).json({ message: "Erro ao buscar produtos" });
+    }
+  });
+
+  app.post("/api/admin/products", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { sku, name, type, description, price, costPrice, shippingCost } = req.body;
+      
+      // Validation
+      if (!sku || !name || !type || price === undefined || costPrice === undefined || shippingCost === undefined) {
+        return res.status(400).json({ message: "Campos obrigatórios: sku, name, type, price, costPrice, shippingCost" });
+      }
+      
+      if (!['fisico', 'nutraceutico'].includes(type)) {
+        return res.status(400).json({ message: "Tipo deve ser 'fisico' ou 'nutraceutico'" });
+      }
+
+      const product = await adminService.createProduct({
+        sku,
+        name,
+        type,
+        description,
+        price: parseFloat(price),
+        costPrice: parseFloat(costPrice),
+        shippingCost: parseFloat(shippingCost)
+      });
+      
+      res.status(201).json(product);
+    } catch (error) {
+      console.error("Create product error:", error);
+      if (error.message?.includes('duplicate key')) {
+        res.status(400).json({ message: "SKU já existe. Use um SKU único." });
+      } else {
+        res.status(500).json({ message: "Erro ao criar produto" });
+      }
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
