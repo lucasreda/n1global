@@ -113,7 +113,7 @@ export default function SupplierDashboard() {
               </Select>
             </div>
 
-            <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-product">
+            <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-product" className="text-white">
               <Plus className="h-4 w-4 mr-2" />
               {hasProducts ? 'Novo Produto' : 'Criar Primeiro Produto'}
             </Button>
