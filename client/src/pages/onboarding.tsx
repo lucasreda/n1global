@@ -280,8 +280,12 @@ export default function OnboardingPage() {
             {/* Typewriting Text */}
             <div className="mb-12">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[200px] flex items-center justify-center">
-                {displayedText}
-                <span className="ml-2 animate-pulse">|</span>
+                {displayedText && (
+                  <>
+                    {displayedText}
+                    <span className="ml-2 animate-pulse">|</span>
+                  </>
+                )}
               </h1>
             </div>
 
