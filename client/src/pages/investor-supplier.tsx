@@ -40,24 +40,19 @@ export default function InvestorSupplierLanding() {
       <div className="relative z-10">
       {/* Header */}
       <header className="border-b border-slate-700/30 backdrop-blur-sm bg-transparent">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <img 
                 src={supplierLogo} 
                 alt="N1 Ecosystem" 
-                className="h-6"
+                className="h-5 sm:h-6"
               />
             </div>
             
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button variant="ghost" className="text-slate-300 hover:text-white">
-                  Voltar ao Dashboard
-                </Button>
-              </Link>
+            <div className="flex items-center">
               <Link href="/login">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm px-3 sm:px-4">
                   Começar Agora
                 </Button>
               </Link>
@@ -67,14 +62,14 @@ export default function InvestorSupplierLanding() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-6">
+      <section className="py-12 sm:py-20 px-4 sm:px-6">
         <div className="container mx-auto text-center">
-          <Badge className="mb-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border-blue-500/30">
+          <Badge className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border-blue-500/30 text-xs sm:text-sm">
             <Star className="h-3 w-3 mr-1 text-white" />
             Oportunidade Exclusiva para Produtores
           </Badge>
           
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-8 leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-6 sm:mb-8 leading-tight px-2">
             Torne-se um{" "}
             <span className="bg-gradient-to-r from-blue-400 to-teal-200 bg-clip-text text-transparent">
               Investidor de<br />Produtos
@@ -82,47 +77,47 @@ export default function InvestorSupplierLanding() {
             no Ecossistema N1
           </h1>
           
-          <p className="text-xl text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-xl text-slate-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-2">
             Disponibilize seus produtos como produtor e deixe que nossa rede de afiliados e parceiros 
             comercializem em larga escala. <strong className="text-white">Retorno rápido de 2-3 meses</strong> com 
             lucratividade e liquidez garantidas.
           </p>
 
-          <div className="grid md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12 max-w-4xl mx-auto px-2">
             <Card className="glassmorphism border-slate-600/50">
-              <CardContent className="p-6 text-center">
-                <TrendingUp className="h-8 w-8 text-green-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Retorno Rápido</h3>
-                <p className="text-slate-300">2-3 meses para ver resultados</p>
+              <CardContent className="p-4 sm:p-6 text-center">
+                <TrendingUp className="h-6 sm:h-8 w-6 sm:w-8 text-green-400 mx-auto mb-3 sm:mb-4" />
+                <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Retorno Rápido</h3>
+                <p className="text-slate-300 text-sm sm:text-base">2-3 meses para ver resultados</p>
               </CardContent>
             </Card>
             
             <Card className="glassmorphism border-slate-600/50">
-              <CardContent className="p-6 text-center">
-                <DollarSign className="h-8 w-8 text-blue-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Alta Lucratividade</h3>
-                <p className="text-slate-300">Margens de até 27% sobre custo</p>
+              <CardContent className="p-4 sm:p-6 text-center">
+                <DollarSign className="h-6 sm:h-8 w-6 sm:w-8 text-blue-400 mx-auto mb-3 sm:mb-4" />
+                <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Alta Lucratividade</h3>
+                <p className="text-slate-300 text-sm sm:text-base">Margens de até 27% sobre custo</p>
               </CardContent>
             </Card>
             
-            <Card className="glassmorphism border-slate-600/50">
-              <CardContent className="p-6 text-center">
-                <Users className="h-8 w-8 text-purple-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Rede Estabelecida</h3>
-                <p className="text-slate-300">Afiliados prontos para vender</p>
+            <Card className="glassmorphism border-slate-600/50 sm:col-span-2 md:col-span-1">
+              <CardContent className="p-4 sm:p-6 text-center">
+                <Users className="h-6 sm:h-8 w-6 sm:w-8 text-purple-400 mx-auto mb-3 sm:mb-4" />
+                <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Rede Estabelecida</h3>
+                <p className="text-slate-300 text-sm sm:text-base">Afiliados prontos para vender</p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/login">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-8 py-3">
-                <Crown className="h-5 w-5 mr-2" />
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-6 sm:px-8 py-3 w-full sm:w-auto text-sm sm:text-base">
+                <Crown className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
                 Começar Como Investidor
-                <ArrowRight className="h-5 w-5 ml-2" />
+                <ArrowRight className="h-4 sm:h-5 w-4 sm:w-5 ml-2" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:text-white hover:border-slate-500">
+            <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:text-white hover:border-slate-500 w-full sm:w-auto text-sm sm:text-base">
               Ver Demonstração
             </Button>
           </div>
@@ -130,10 +125,10 @@ export default function InvestorSupplierLanding() {
       </section>
 
       {/* Tab Navigation */}
-      <section className="py-16 px-6 border-t border-slate-700/50">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-slate-700/50">
         <div className="container mx-auto">
-          <div className="flex justify-center mb-12">
-            <div className="flex space-x-1 p-1 bg-slate-800/50 rounded-lg">
+          <div className="flex justify-center mb-8 sm:mb-12">
+            <div className="flex space-x-1 p-1 bg-slate-800/50 rounded-lg w-full max-w-md sm:w-auto">
               {[
                 { id: 'benefits', label: 'Benefícios', icon: CheckCircle },
                 { id: 'process', label: 'Como Funciona', icon: Zap },
@@ -143,23 +138,24 @@ export default function InvestorSupplierLanding() {
                   key={id}
                   variant={activeTab === id ? 'default' : 'ghost'}
                   onClick={() => setActiveTab(id as any)}
-                  className={`flex items-center space-x-2 px-6 py-3 ${
+                  className={`flex flex-col items-center justify-center px-2 sm:px-6 py-2 sm:py-3 text-xs sm:text-base flex-1 sm:flex-none ${
                     activeTab === id 
                       ? 'bg-blue-600 text-white' 
                       : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
+                  <Icon className="h-4 w-4 mb-1 sm:mb-0 sm:mr-2" />
+                  <span className="text-xs sm:text-base sm:inline">{label.split(' ')[0]}</span>
+                  <span className="hidden lg:inline">{label}</span>
                 </Button>
               ))}
             </div>
           </div>
 
           {/* Tab Content */}
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto px-2 sm:px-0">
             {activeTab === 'benefits' && (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {[
                   {
                     icon: Shield,
@@ -199,10 +195,10 @@ export default function InvestorSupplierLanding() {
                   }
                 ].map((benefit, index) => (
                   <Card key={index} className="glassmorphism border-slate-600/50 hover:border-slate-500/50 transition-all">
-                    <CardContent className="p-6">
-                      <benefit.icon className={`h-8 w-8 ${benefit.color} mb-4`} />
-                      <h3 className="text-xl font-semibold text-white mb-3">{benefit.title}</h3>
-                      <p className="text-slate-300 leading-relaxed">{benefit.description}</p>
+                    <CardContent className="p-4 sm:p-6">
+                      <benefit.icon className={`h-6 sm:h-8 w-6 sm:w-8 ${benefit.color} mb-3 sm:mb-4`} />
+                      <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 sm:mb-3">{benefit.title}</h3>
+                      <p className="text-slate-300 text-sm sm:text-base leading-relaxed">{benefit.description}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -210,13 +206,13 @@ export default function InvestorSupplierLanding() {
             )}
 
             {activeTab === 'process' && (
-              <div className="space-y-8">
-                <div className="text-center mb-12">
-                  <h2 className="text-3xl font-bold text-white mb-4">Processo Simples em 4 Etapas</h2>
-                  <p className="text-slate-300 text-lg">Do cadastro à primeira venda em menos de uma semana</p>
+              <div className="space-y-6 sm:space-y-8">
+                <div className="text-center mb-8 sm:mb-12">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4 px-2">Processo Simples em 4 Etapas</h2>
+                  <p className="text-slate-300 text-base sm:text-lg px-2">Do cadastro à primeira venda em menos de uma semana</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {[
                     {
                       step: "01",
@@ -244,16 +240,16 @@ export default function InvestorSupplierLanding() {
                     }
                   ].map((process, index) => (
                     <Card key={index} className="glassmorphism border-slate-600/50 relative overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="absolute top-4 right-4">
-                          <Badge className="bg-blue-600/20 text-blue-300 border-blue-500/30">
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                          <Badge className="bg-blue-600/20 text-blue-300 border-blue-500/30 text-xs sm:text-sm">
                             {process.step}
                           </Badge>
                         </div>
                         
-                        <process.icon className="h-8 w-8 text-blue-400 mb-4" />
-                        <h3 className="text-lg font-semibold text-white mb-3">{process.title}</h3>
-                        <p className="text-slate-300 text-sm leading-relaxed">{process.description}</p>
+                        <process.icon className="h-6 sm:h-8 w-6 sm:w-8 text-blue-400 mb-3 sm:mb-4" />
+                        <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">{process.title}</h3>
+                        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">{process.description}</p>
                       </CardContent>
                     </Card>
                   ))}
@@ -262,18 +258,18 @@ export default function InvestorSupplierLanding() {
             )}
 
             {activeTab === 'roi' && (
-              <div className="space-y-8">
-                <div className="text-center mb-12">
-                  <h2 className="text-3xl font-bold text-white mb-4">Potencial de Retorno</h2>
-                  <p className="text-slate-300 text-lg">Números reais baseados em dados da plataforma</p>
+              <div className="space-y-6 sm:space-y-8">
+                <div className="text-center mb-8 sm:mb-12">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4 px-2">Potencial de Retorno</h2>
+                  <p className="text-slate-300 text-base sm:text-lg px-2">Números reais baseados em dados da plataforma</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                   {/* ROI Calculator Example */}
                   <Card className="glassmorphism border-slate-600/50">
-                    <CardContent className="p-8">
-                      <h3 className="text-2xl font-bold text-white mb-6 flex items-center">
-                        <Calculator className="h-6 w-6 text-blue-400 mr-2" />
+                    <CardContent className="p-4 sm:p-8">
+                      <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 flex items-center">
+                        <Calculator className="h-5 sm:h-6 w-5 sm:w-6 text-blue-400 mr-2" />
                         Exemplo de ROI
                       </h3>
                       
@@ -360,48 +356,54 @@ export default function InvestorSupplierLanding() {
       </section>
 
       {/* CTA Final */}
-      <section className="py-20 px-6 border-t border-slate-700/50 bg-gradient-to-br from-blue-900/20 to-purple-900/20">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 border-t border-slate-700/50 bg-gradient-to-br from-blue-900/20 to-purple-900/20">
         <div className="container mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6 px-2">
             Pronto para Escalar sua Produção?
           </h2>
-          <p className="text-xl text-slate-300 mb-12 max-w-3xl mx-auto">
+          <p className="text-base sm:text-xl text-slate-300 mb-8 sm:mb-12 max-w-3xl mx-auto px-2">
             Junte-se ao ecossistema N1 e transforme seus produtos em uma fonte de renda recorrente e escalável. 
             Comece hoje e veja resultados em 2-3 meses.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-            <Link href="/login">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-8 py-4 text-lg">
-                <Crown className="h-5 w-5 mr-2" />
+          <div className="flex flex-col gap-4 sm:gap-6 justify-center items-center">
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-6 sm:px-8 py-4 text-base sm:text-lg w-full sm:w-auto">
+                <Crown className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
                 Começar Como Investidor Agora
-                <ArrowRight className="h-5 w-5 ml-2" />
+                <ArrowRight className="h-4 sm:h-5 w-4 sm:w-5 ml-2" />
               </Button>
             </Link>
             
-            <div className="flex items-center space-x-3 text-slate-300">
-              <CheckCircle className="h-5 w-5 text-green-400" />
-              <span>Sem taxas de setup</span>
-              <CheckCircle className="h-5 w-5 text-green-400" />
-              <span>ROI garantido</span>
-              <CheckCircle className="h-5 w-5 text-green-400" />
-              <span>Suporte completo</span>
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6 text-slate-300 text-sm sm:text-base">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 sm:h-5 w-4 sm:w-5 text-green-400" />
+                <span>Sem taxas de setup</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 sm:h-5 w-4 sm:w-5 text-green-400" />
+                <span>ROI garantido</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 sm:h-5 w-4 sm:w-5 text-green-400" />
+                <span>Suporte completo</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t border-slate-700/50 bg-slate-900/50">
+      <footer className="py-6 sm:py-8 px-4 sm:px-6 border-t border-slate-700/50 bg-slate-900/50">
         <div className="container mx-auto text-center">
-          <div className="flex items-center justify-center mb-4">
+          <div className="flex items-center justify-center mb-3 sm:mb-4">
             <img 
               src={supplierLogo} 
               alt="N1 Ecosystem" 
-              className="h-5"
+              className="h-4 sm:h-5"
             />
           </div>
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-xs sm:text-sm px-2">
             © 2025 N1 Ecosystem. Plataforma de investimento em produtos para mercados europeus.
           </p>
         </div>
