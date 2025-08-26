@@ -1506,7 +1506,25 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
     }
   };
 
-  // Iniciar sync quando o componente é montado
+  // Iniciar polling automaticamente quando o componente é montado
+  useEffect(() => {
+    if (operationId) {
+      console.log('🚀 Iniciando polling automático para operationId:', operationId);
+      setIsPolling(true);
+      // Iniciar polling imediatamente
+      setTimeout(() => {
+        pollSyncProgress();
+      }, 500);
+    }
+    
+    // Cleanup - parar polling quando componente é desmontado
+    return () => {
+      console.log('🛑 Parando polling - componente desmontado');
+      setIsPolling(false);
+    };
+  }, [operationId]);
+
+  // Também iniciar sync completo
   useEffect(() => {
     if (operationId) {
       startFullSync();
