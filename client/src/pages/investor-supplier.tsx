@@ -62,7 +62,7 @@ export default function InvestorSupplierLanding() {
             Oportunidade Exclusiva para Produtores
           </Badge>
           
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-8 leading-tight">
             Torne-se um{" "}
             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Investidor de Produtos
