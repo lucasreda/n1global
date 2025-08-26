@@ -55,6 +55,9 @@ export function Sidebar() {
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
   const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
   
+  // Disabled debug logs
+  // console.log("🔍 Sidebar Debug:", ...);
+  
   const navigation = getNavigationForRole(user?.role || 'user');
 
   // Handle operation change
@@ -137,9 +140,9 @@ export function Sidebar() {
           return (
             <li key={item.name}>
               <Link href={item.href}>
-                <a
+                <div
                   className={cn(
-                    "flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-all",
+                    "flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer",
                     isActive
                       ? "text-white bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30"
                       : "text-gray-300 hover:text-white hover:bg-white/10"
@@ -148,7 +151,7 @@ export function Sidebar() {
                 >
                   <item.icon size={15} className={isActive ? "text-blue-400" : "text-gray-400"} />
                   <span className="font-medium">{item.name}</span>
-                </a>
+                </div>
               </Link>
             </li>
           );

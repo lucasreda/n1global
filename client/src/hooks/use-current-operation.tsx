@@ -12,6 +12,9 @@ export function useCurrentOperation() {
     queryKey: ['/api/operations'],
   });
 
+  // Disabled debug logs
+  // console.log("🔍 useCurrentOperation Debug:", ...);
+
 
 
 
