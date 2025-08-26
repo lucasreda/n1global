@@ -279,6 +279,15 @@
   backdrop-filter: blur(4px);
 }
 
+/* Override padding for inputs with icons */
+.apple-input.pl-10 {
+  padding-left: 2.5rem !important;
+}
+
+.apple-input.pr-10 {
+  padding-right: 2.5rem !important;
+}
+
 .apple-input::placeholder {
   color: hsl(var(--muted-foreground));
 }
