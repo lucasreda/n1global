@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Switch, Route } from "wouter";
+import { LogOut } from "lucide-react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -214,9 +215,10 @@ function SupplierHeader() {
             </div>
             <button
               onClick={logout}
-              className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+              title="Sair"
             >
-              Sair
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </div>
