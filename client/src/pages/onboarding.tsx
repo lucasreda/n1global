@@ -74,14 +74,14 @@ function renderTextWithGradient(displayedText: string, textConfig: any, currentI
   
   return (
     <span>
-      {beforeGradient.split('\n').map((line, index) => (
+      {beforeGradient.split('\n').map((line: string, index: number) => (
         <span key={index}>
           {line}
           {index < beforeGradient.split('\n').length - 1 && <br />}
         </span>
       ))}
       <span className="gradient-text">
-        {gradientPart.split('\n').map((line, index) => (
+        {gradientPart.split('\n').map((line: string, index: number) => (
           <span key={index}>
             {line}
             {index < gradientPart.split('\n').length - 1 && <br />}
@@ -1521,7 +1521,8 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             current: shopifyData.ordersProcessed || 0, 
             total: shopifyData.ordersProcessed || 0, 
             completed: true, 
-            status: `${shopifyData.ordersProcessed || 0} pedidos sincronizados`
+            status: `${shopifyData.ordersProcessed || 0} pedidos sincronizados`,
+            percentage: 100
           }
         }));
         setSyncPhase('shipping');
@@ -1534,7 +1535,8 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             current: 0, 
             total: 0, 
             completed: true, 
-            status: 'Shopify não configurado (opcional)'
+            status: 'Shopify não configurado (opcional)',
+            percentage: 100
           }
         }));
         setSyncPhase('shipping');
@@ -1556,7 +1558,9 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             current: shippingData.leadsProcessed || 0, 
             total: shippingData.leadsProcessed || 0, 
             completed: true, 
-            status: `${shippingData.leadsProcessed || 0} leads sincronizados`
+            started: true,
+            status: `${shippingData.leadsProcessed || 0} leads sincronizados`,
+            percentage: 100
           }
         }));
         setSyncPhase('ads');
@@ -1569,7 +1573,9 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             current: 0, 
             total: 0, 
             completed: true, 
-            status: 'Transportadora não configurada (opcional)'
+            started: true,
+            status: 'Transportadora não configurada (opcional)',
+            percentage: 100
           }
         }));
         setSyncPhase('ads');
@@ -1591,7 +1597,8 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             current: adsData.campaignsProcessed || 0, 
             total: adsData.campaignsProcessed || 0, 
             completed: true, 
-            status: `${adsData.campaignsProcessed || 0} campanhas sincronizadas`
+            status: `${adsData.campaignsProcessed || 0} campanhas sincronizadas`,
+            percentage: 100
           }
         }));
         setSyncPhase('matching');
@@ -1603,7 +1610,8 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             current: 0, 
             total: 0, 
             completed: true, 
-            status: 'Campanhas não configuradas (opcional)'
+            status: 'Campanhas não configuradas (opcional)',
+            percentage: 100
           }
         }));
         setSyncPhase('matching');
@@ -1625,7 +1633,9 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             current: matchData.matchesFound || 0, 
             total: matchData.totalProcessed || 0, 
             completed: true, 
-            status: `${matchData.matchesFound || 0} correspondências encontradas`
+            started: true,
+            status: `${matchData.matchesFound || 0} correspondências encontradas`,
+            percentage: 100
           }
         }));
         setSyncPhase('completed');

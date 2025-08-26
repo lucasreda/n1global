@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -58,89 +58,6 @@ const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // ADMIN: Endpoint temporário para criar usuários administrativos em produção
-  app.post("/api/admin/create-system-users", async (req, res) => {
-    try {
-      console.log("🔧 CRIAÇÃO DE USUÁRIOS ADMINISTRATIVOS INICIADA");
-      
-      // Verificação de segurança simples
-      const { securityKey } = req.body;
-      if (securityKey !== "CREATE_ADMIN_USERS_2025_SECURE") {
-        return res.status(403).json({ error: "Chave de segurança inválida" });
-      }
-
-      const usersToCreate = [
-        {
-          name: 'Super Administrador',
-          email: 'admin@codashboard.com',
-          password: 'AdminCOD2025!@#',
-          role: 'super_admin'
-        },
-        {
-          name: 'Fornecedor Principal',
-          email: 'supplier@codashboard.com',
-          password: 'SupplierCOD2025!@#',
-          role: 'supplier'
-        }
-      ];
-
-      const results = [];
-
-      for (const userData of usersToCreate) {
-        // Verificar se já existe
-        const existingUser = await storage.getUserByEmail(userData.email);
-        if (existingUser) {
-          results.push({ 
-            email: userData.email, 
-            status: 'already_exists',
-            id: existingUser.id 
-          });
-          continue;
-        }
-
-        // Criar usuário
-        const hashedPassword = await bcrypt.hash(userData.password, 12);
-        const newUser = await storage.createUser({
-          name: userData.name,
-          email: userData.email,
-          password: hashedPassword,
-          role: userData.role,
-          onboardingCompleted: true
-        });
-
-        results.push({
-          email: userData.email,
-          status: 'created',
-          id: newUser.id,
-          role: newUser.role,
-          credentials: {
-            email: userData.email,
-            password: userData.password
-          }
-        });
-
-        console.log(`✅ Usuário criado: ${userData.email} (${userData.role})`);
-      }
-
-      console.log("🎉 Processo de criação de usuários concluído");
-      
-      res.json({
-        success: true,
-        message: "Usuários administrativos processados com sucesso",
-        users: results,
-        summary: `${results.filter(r => r.status === 'created').length} criados, ${results.filter(r => r.status === 'already_exists').length} já existiam`
-      });
-
-    } catch (error) {
-      console.error("❌ Erro na criação de usuários administrativos:", error);
-      res.status(500).json({ 
-        success: false, 
-        error: "Erro interno do servidor",
-        details: error.message 
-      });
-    }
-  });
-
   // DEBUG: Rota para diagnóstico e sincronização manual
   app.get("/api/debug/sync-fresh", async (req, res) => {
     try {
@@ -169,10 +86,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           HAVING COUNT(uoa.operation_id) > 0
         `);
         
-        console.log("🔍 Fresh users com operações:", allFreshUsers.length);
+        console.log("🔍 Fresh users com operações:", allFreshUsers.rows?.length || 0);
         
-        if (allFreshUsers.length > 0) {
-          const sourceUser = allFreshUsers[0];
+        if (allFreshUsers.rows && allFreshUsers.rows.length > 0) {
+          const sourceUser = allFreshUsers.rows[0];
           console.log("📋 Copiando de:", sourceUser.id, "para:", freshUser.id);
           
           // Copiar operações
@@ -198,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("❌ Erro no debug sync:", error);
-      res.json({ error: error.message, success: false });
+      res.json({ error: error instanceof Error ? error.message : 'Unknown error', success: false });
     }
   });
 
@@ -635,7 +552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Debug endpoint error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -678,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
