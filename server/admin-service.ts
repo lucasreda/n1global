@@ -20,18 +20,18 @@ export class AdminService {
         .from(orders)
         .where(sql`${orders.status} = 'delivered'`);
       
-      // Get top stores globally by total orders
+      // Get top operations globally by total orders
       const topStoresGlobal = await db
         .select({
-          id: stores.id,
-          name: stores.name,
-          operationsCount: count(operations.id),
+          id: operations.id,
+          name: operations.name,
+          storeName: stores.name,
           totalOrders: sql<number>`COUNT(${orders.id})`
         })
-        .from(stores)
-        .leftJoin(operations, eq(operations.storeId, stores.id))
-        .leftJoin(orders, eq(orders.storeId, stores.id))
-        .groupBy(stores.id, stores.name)
+        .from(operations)
+        .leftJoin(stores, eq(stores.id, operations.storeId))
+        .leftJoin(orders, eq(orders.storeId, operations.storeId))
+        .groupBy(operations.id, operations.name, stores.name)
         .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
 
@@ -47,22 +47,23 @@ export class AdminService {
         .orderBy(desc(sql<number>`COUNT(*)`))
         .limit(10);
 
-      // Get top stores today by Shopify orders
+      // Get top operations today by Shopify orders
       const today = new Date().toISOString().split('T')[0];
       const topStoresToday = await db
         .select({
-          id: stores.id,
-          name: stores.name,
+          id: operations.id,
+          name: operations.name,
+          storeName: stores.name,
           todayOrders: sql<number>`COUNT(${orders.id})`
         })
-        .from(stores)
-        .leftJoin(operations, eq(operations.storeId, stores.id))
+        .from(operations)
+        .leftJoin(stores, eq(stores.id, operations.storeId))
         .leftJoin(orders, and(
-          eq(orders.storeId, stores.id),
+          eq(orders.storeId, operations.storeId),
           eq(orders.dataSource, 'shopify'),
           sql`DATE(${orders.orderDate}) = ${today}`
         ))
-        .groupBy(stores.id, stores.name)
+        .groupBy(operations.id, operations.name, stores.name)
         .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
       
@@ -71,18 +72,21 @@ export class AdminService {
         totalOperations: operationsCount.count,
         totalOrders: ordersCount.count,
         totalRevenue: Number(revenueResult.totalRevenue) || 0,
-        topStoresGlobal: topStoresGlobal.map(store => ({
-          ...store,
-          operationsCount: Number(store.operationsCount),
-          totalOrders: Number(store.totalOrders)
+        topStoresGlobal: topStoresGlobal.map(operation => ({
+          id: operation.id,
+          name: operation.name,
+          storeName: operation.storeName,
+          totalOrders: Number(operation.totalOrders)
         })),
         ordersByCountry: ordersByCountry.map(country => ({
           country: country.country,
           orders: Number(country.orders)
         })),
-        topStoresToday: topStoresToday.map(store => ({
-          ...store,
-          todayOrders: Number(store.todayOrders)
+        topStoresToday: topStoresToday.map(operation => ({
+          id: operation.id,
+          name: operation.name,
+          storeName: operation.storeName,
+          todayOrders: Number(operation.todayOrders)
         }))
       };
     } catch (error) {

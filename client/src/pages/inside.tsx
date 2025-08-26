@@ -45,7 +45,7 @@ interface AdminStats {
   topStoresGlobal: Array<{
     id: string;
     name: string;
-    operationsCount: number;
+    storeName: string;
     totalOrders: number;
   }>;
   ordersByCountry: Array<{
@@ -55,6 +55,7 @@ interface AdminStats {
   topStoresToday: Array<{
     id: string;
     name: string;
+    storeName: string;
     todayOrders: number;
   }>;
 }
@@ -508,7 +509,7 @@ export default function InsidePage() {
                 <CardHeader>
                   <CardTitle className="text-slate-200 flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-yellow-400" />
-                    Top Lojas Globais
+                    Top Operações Globais
                   </CardTitle>
                   <CardDescription className="text-slate-400">
                     Ranking por número total de pedidos
@@ -529,7 +530,7 @@ export default function InsidePage() {
                           </div>
                           <div>
                             <p className="font-medium text-white text-sm">{store.name}</p>
-                            <p className="text-xs text-slate-400">{store.operationsCount} operações</p>
+                            <p className="text-xs text-slate-400">{store.storeName}</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -595,7 +596,7 @@ export default function InsidePage() {
                 <CardHeader>
                   <CardTitle className="text-slate-200 flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-green-400" />
-                    Top Lojas do Dia
+                    Top Operações do Dia
                   </CardTitle>
                   <CardDescription className="text-slate-400">
                     Ranking por pedidos Shopify hoje
@@ -616,7 +617,7 @@ export default function InsidePage() {
                           </div>
                           <div>
                             <p className="font-medium text-white text-sm">{store.name}</p>
-                            <p className="text-xs text-slate-400">Shopify</p>
+                            <p className="text-xs text-slate-400">{store.storeName}</p>
                           </div>
                         </div>
                         <div className="text-right">
