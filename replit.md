@@ -20,6 +20,8 @@ The COD Dashboard is a modern full-stack web application designed for managing C
 ✓ **Data Reset System**: Implemented complete data cleanup system that properly removes all orders and resets onboarding status for fresh testing cycles
 ✓ **Critical JWT Token Fix**: Resolved 403 "Token inválido" error in onboarding completion by correcting localStorage token key from 'token' to 'auth_token' - this was the root cause preventing users from completing onboarding flow and accessing the dashboard
 ✓ **Post-Onboarding Redirect Fix**: Corrected redirect destination from '/dashboard' to '/' after onboarding completion to match application's root route structure
+✓ **Critical Marketing Costs Data Isolation Fix**: Resolved major bug where marketing costs were being pulled from all operations instead of filtering by current operation - implemented proper storeId filtering through adAccounts relationship to ensure operation-specific cost display
+✓ **Product Costs Fallback System Removed**: Eliminated fallback cost calculation system that was showing product and shipping costs even when no products were linked to the operation - now shows zero costs when no products are vinculados, providing accurate financial representation
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

@@ -522,15 +522,8 @@ export class DashboardService {
           
           console.log(`💰 Order ${order.id}: SKU ${sku} - Product: €${productCost}, Shipping: €${shippingCost}`);
         } else {
-          // If no linked product found, use fallback calculation
-          const orderValue = parseFloat(order.total || "0");
-          const fallbackProductCost = orderValue >= 120 ? 45.00 : orderValue >= 60 ? 35.00 : 30.00;
-          const fallbackShippingCost = orderValue >= 120 ? 15.00 : orderValue >= 60 ? 12.00 : 10.00;
-          
-          totalProductCosts += fallbackProductCost;
-          totalShippingCosts += fallbackShippingCost;
-          
-          console.log(`💰 Order ${order.id}: SKU ${sku} (fallback) - Product: €${fallbackProductCost}, Shipping: €${fallbackShippingCost}`);
+          // Sem produto vinculado - não adicionar custos (valor = 0)
+          console.log(`💰 Order ${order.id}: SKU ${sku} - Nenhum produto vinculado, custos = €0`);
         }
       }
       
