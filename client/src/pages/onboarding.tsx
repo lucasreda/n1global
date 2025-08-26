@@ -1442,13 +1442,13 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
                         }
                         // Redirecionar após tentar marcar como completo
                         setTimeout(() => {
-                          window.location.href = '/dashboard';
+                          window.location.href = '/';
                         }, 2000); // 2 segundos para o usuário ver o sucesso
                       }).catch(error => {
                         console.error('Erro ao marcar onboarding como completo:', error);
                         // Redirecionar mesmo se houver erro na marcação
                         setTimeout(() => {
-                          window.location.href = '/dashboard';
+                          window.location.href = '/';
                         }, 2000);
                       });
                     }

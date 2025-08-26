@@ -19,6 +19,7 @@ The COD Dashboard is a modern full-stack web application designed for managing C
 ✓ **Onboarding Completion Fix**: Corrected endpoint URL in frontend (from `/api/users/onboarding-complete` to `/api/user/complete-onboarding`) and added proper authentication headers to ensure onboarding completion is properly marked in database
 ✓ **Data Reset System**: Implemented complete data cleanup system that properly removes all orders and resets onboarding status for fresh testing cycles
 ✓ **Critical JWT Token Fix**: Resolved 403 "Token inválido" error in onboarding completion by correcting localStorage token key from 'token' to 'auth_token' - this was the root cause preventing users from completing onboarding flow and accessing the dashboard
+✓ **Post-Onboarding Redirect Fix**: Corrected redirect destination from '/dashboard' to '/' after onboarding completion to match application's root route structure
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
