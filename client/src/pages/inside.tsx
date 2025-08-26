@@ -507,7 +507,7 @@ export default function InsidePage() {
               {/* Top Lojas Globais */}
               <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader>
-                  <CardTitle className="text-slate-200 flex items-center gap-2">
+                  <CardTitle className="text-slate-200 flex items-center gap-2 text-[19px]">
                     <Trophy className="h-5 w-5 text-yellow-400" />
                     Top Operações Globais
                   </CardTitle>
@@ -551,7 +551,7 @@ export default function InsidePage() {
               {/* Pedidos por Países (Mensal) */}
               <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader>
-                  <CardTitle className="text-slate-200 flex items-center gap-2">
+                  <CardTitle className="text-slate-200 flex items-center gap-2 text-[19px]">
                     <Globe className="h-5 w-5 text-blue-400" />
                     Pedidos por Países
                   </CardTitle>
@@ -594,7 +594,7 @@ export default function InsidePage() {
               {/* Top Lojas do Dia */}
               <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader>
-                  <CardTitle className="text-slate-200 flex items-center gap-2">
+                  <CardTitle className="text-slate-200 flex items-center gap-2 text-[19px]">
                     <Calendar className="h-5 w-5 text-green-400" />
                     Top Operações do Dia
                   </CardTitle>
