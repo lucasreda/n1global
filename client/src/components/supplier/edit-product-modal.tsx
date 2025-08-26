@@ -236,28 +236,28 @@ export function EditProductModal({ open, onOpenChange, product, onProductUpdated
           </div>
 
           {/* Product Metrics */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <h4 className="text-sm font-medium mb-3">Informações do Produto</h4>
+          <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+            <h4 className="text-sm font-medium mb-3 text-gray-100">Informações do Produto</h4>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">SKU:</span>
-                <div className="font-medium">{product?.sku}</div>
+                <span className="text-gray-400">SKU:</span>
+                <div className="font-medium text-gray-200">{product?.sku}</div>
               </div>
               <div>
-                <span className="text-muted-foreground">Tipo:</span>
-                <div className="font-medium">
+                <span className="text-gray-400">Tipo:</span>
+                <div className="font-medium text-gray-200">
                   {product?.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
                 </div>
               </div>
               <div>
-                <span className="text-muted-foreground">Criado em:</span>
-                <div className="font-medium">
+                <span className="text-gray-400">Criado em:</span>
+                <div className="font-medium text-gray-200">
                   {product?.createdAt ? new Date(product.createdAt).toLocaleDateString('pt-BR') : '-'}
                 </div>
               </div>
               <div>
-                <span className="text-muted-foreground">Atualizado em:</span>
-                <div className="font-medium">
+                <span className="text-gray-400">Atualizado em:</span>
+                <div className="font-medium text-gray-200">
                   {product?.updatedAt ? new Date(product.updatedAt).toLocaleDateString('pt-BR') : '-'}
                 </div>
               </div>
