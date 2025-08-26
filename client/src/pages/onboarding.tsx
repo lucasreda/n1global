@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Circle, Loader2, Package, ShoppingCart, Truck, Target, Zap } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Package, ShoppingCart, Truck, Target, Zap, TrendingUp, BarChart3, Brain, ArrowRight } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -119,18 +119,15 @@ export default function OnboardingPage() {
 
   // Typewriting effect for step 0
   useEffect(() => {
-    console.log("Typewriting useEffect called", { showStep0, currentTextIndex });
     if (!showStep0) return;
     
     let currentIndex = 0;
     const currentText = texts[currentTextIndex];
-    console.log("Starting typewriter for text:", currentText);
     setDisplayedText("");
     
     const typewriterInterval = setInterval(() => {
       if (currentIndex < currentText.length) {
         const newText = currentText.slice(0, currentIndex + 1);
-        console.log("Typing:", newText);
         setDisplayedText(newText);
         currentIndex++;
       } else {
@@ -140,12 +137,13 @@ export default function OnboardingPage() {
         setTimeout(() => {
           if (currentTextIndex === 0) {
             // Clear text and show second text
-            console.log("Moving to second text");
             setCurrentTextIndex(1);
           } else {
-            // Show card after second text
-            console.log("Showing card");
-            setShowCard(true);
+            // Hide second text and wait 3 seconds before showing card
+            setDisplayedText("");
+            setTimeout(() => {
+              setShowCard(true);
+            }, 3000);
           }
         }, 3000);
       }
@@ -290,23 +288,56 @@ export default function OnboardingPage() {
             {/* Card */}
             {showCard && (
               <div className="animate-fade-in">
-                <Card className="bg-white/10 border-white/20 backdrop-blur-lg max-w-2xl mx-auto mb-8">
-                  <CardContent className="p-8 text-center">
-                    <h2 className="text-2xl font-bold text-white mb-4">
+                <Card className="bg-white/10 border-white/20 backdrop-blur-lg max-w-3xl mx-auto mb-8 overflow-hidden">
+                  <CardContent className="p-10 text-center relative">
+                    {/* Elemento gráfico - Ícones de dados flutuando */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      <div className="absolute top-4 left-8 text-blue-300/30 animate-bounce" style={{animationDelay: '0s'}}>
+                        <TrendingUp className="w-6 h-6" />
+                      </div>
+                      <div className="absolute top-12 right-12 text-purple-300/30 animate-bounce" style={{animationDelay: '1s'}}>
+                        <BarChart3 className="w-8 h-8" />
+                      </div>
+                      <div className="absolute bottom-16 left-16 text-green-300/30 animate-bounce" style={{animationDelay: '2s'}}>
+                        <Target className="w-7 h-7" />
+                      </div>
+                      <div className="absolute bottom-8 right-8 text-yellow-300/30 animate-bounce" style={{animationDelay: '1.5s'}}>
+                        <Zap className="w-6 h-6" />
+                      </div>
+                    </div>
+
+                    {/* Ícone principal */}
+                    <div className="relative z-10 mb-6">
+                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Brain className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+
+                    <h2 className="text-3xl font-bold text-white mb-4 relative z-10">
                       Quanto mais dados, mais inteligência
                     </h2>
-                    <p className="text-white/80 text-lg leading-relaxed mb-6">
-                      Alimente a plataforma com o máximo de informações sobre sua operação e obtenha uma inteligência de dados mais precisa.
+                    <p className="text-white/90 text-xl leading-relaxed mb-8 relative z-10 max-w-2xl mx-auto">
+                      <span className="text-blue-300 font-semibold">Transforme</span> cada informação da sua operação em{' '}
+                      <span className="text-purple-300 font-semibold">insights poderosos</span>.{' '}
+                      Nossa IA aprende com seus dados para entregar{' '}
+                      <span className="text-green-300 font-semibold">decisões mais precisas</span> e{' '}
+                      <span className="text-yellow-300 font-semibold">resultados excepcionais</span>.
                     </p>
-                    <Button 
-                      onClick={handleContinueToStep1}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105"
-                      data-testid="button-continue-step1"
-                    >
-                      Continuar
-                    </Button>
                   </CardContent>
                 </Card>
+                
+                {/* Botão Continuar - Separado e maior */}
+                <div className="flex justify-center">
+                  <Button 
+                    onClick={handleContinueToStep1}
+                    size="lg"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-4 text-xl font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-2xl hover:shadow-blue-500/25"
+                    data-testid="button-continue-step1"
+                  >
+                    <ArrowRight className="w-6 h-6 mr-3" />
+                    Começar Agora
+                  </Button>
+                </div>
               </div>
             )}
           </div>
