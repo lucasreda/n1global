@@ -84,12 +84,8 @@ export default function SupplierDashboard() {
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-3">
+            <h1 className="text-2xl font-bold">
               Dashboard do Fornecedor
-              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900 text-xs font-semibold px-2 py-1 rounded-full">
-                <Crown className="h-3 w-3" />
-                Fornecedor
-              </span>
             </h1>
             <p className="text-muted-foreground mt-1">
               Gerencie seus produtos globais e acompanhe pedidos em todas as operações
