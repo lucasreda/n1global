@@ -212,7 +212,7 @@ export default function SupplierDashboard() {
       {/* Produtos do Fornecedor */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-xl">
             <Package className="h-5 w-5" />
             Meus Produtos Globais
           </CardTitle>
