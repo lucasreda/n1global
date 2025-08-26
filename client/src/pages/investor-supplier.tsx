@@ -36,7 +36,7 @@ export default function InvestorSupplierLanding() {
               <img 
                 src={supplierLogo} 
                 alt="N1 Ecosystem" 
-                className="h-8"
+                className="h-6"
               />
             </div>
             
@@ -388,7 +388,7 @@ export default function InvestorSupplierLanding() {
             <img 
               src={supplierLogo} 
               alt="N1 Ecosystem" 
-              className="h-6"
+              className="h-5"
             />
           </div>
           <p className="text-slate-400 text-sm">
