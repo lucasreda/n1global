@@ -153,7 +153,7 @@ export default function OnboardingPage() {
 
   const cardTitleConfig = {
     plain: "Quanto mais dados,\nmais inteligência",
-    gradientStart: 20 // posição onde começa "mais inteligência" (incluindo o "m")
+    gradientStart: 19 // posição onde começa "mais inteligência" (incluindo o "m")
   };
 
   // Determine current step based on completed steps
