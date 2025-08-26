@@ -89,20 +89,24 @@ export default function OnboardingPage() {
 
   // State for step 0 presentation
   const [showStep0, setShowStep0] = useState(true);
-  const [displayedText, setDisplayedText] = useState("");
-  const [finalText, setFinalText] = useState("");
+  const [typedSegments, setTypedSegments] = useState<Array<{text: string, isGradient: boolean, isComplete: boolean}>>([]);
   const [showCard, setShowCard] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
 
   const texts = [
     {
-      plain: "Ter dados precisos da sua operação mudam o jogo",
-      html: "Ter dados precisos da sua operação <span class='gradient-text'>mudam o jogo</span>"
+      segments: [
+        { text: "Ter dados precisos da sua operação ", isGradient: false },
+        { text: "mudam o jogo", isGradient: true }
+      ]
     },
     {
-      plain: "Um sistema que unifica tudo em um só lugar", 
-      html: "Um sistema que <span class='gradient-text'>unifica</span> tudo em um só lugar"
+      segments: [
+        { text: "Um sistema que ", isGradient: false },
+        { text: "unifica", isGradient: true },
+        { text: " tudo em um só lugar", isGradient: false }
+      ]
     }
   ];
 
@@ -129,41 +133,58 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!showStep0) return;
     
-    let currentIndex = 0;
-    const currentText = texts[currentTextIndex].plain;
-    setDisplayedText("");
+    const currentSegments = texts[currentTextIndex].segments;
+    setTypedSegments([]);
     setIsTypingComplete(false);
-    setFinalText("");
     
-    const typewriterInterval = setInterval(() => {
-      if (currentIndex < currentText.length) {
-        const newText = currentText.slice(0, currentIndex + 1);
-        setDisplayedText(newText);
-        currentIndex++;
-      } else {
-        clearInterval(typewriterInterval);
+    let segmentIndex = 0;
+    let charIndex = 0;
+    let allSegments: Array<{text: string, isGradient: boolean, isComplete: boolean}> = [];
+    
+    const typeNextChar = () => {
+      if (segmentIndex >= currentSegments.length) {
         setIsTypingComplete(true);
-        setFinalText(texts[currentTextIndex].html);
-        
         // Wait 3 seconds after completing the text
         setTimeout(() => {
           if (currentTextIndex === 0) {
-            // Clear text and show second text
             setCurrentTextIndex(1);
           } else {
-            // Hide second text and wait 3 seconds before showing card
-            setDisplayedText("");
-            setFinalText("");
+            setTypedSegments([]);
             setIsTypingComplete(false);
             setTimeout(() => {
               setShowCard(true);
             }, 3000);
           }
         }, 3000);
+        return;
       }
-    }, 80);
-
-    return () => clearInterval(typewriterInterval);
+      
+      const currentSegment = currentSegments[segmentIndex];
+      
+      if (charIndex < currentSegment.text.length) {
+        // Update current segment being typed
+        const typedText = currentSegment.text.slice(0, charIndex + 1);
+        const newSegments = [
+          ...allSegments,
+          { text: typedText, isGradient: currentSegment.isGradient, isComplete: false }
+        ];
+        setTypedSegments(newSegments);
+        charIndex++;
+        setTimeout(typeNextChar, 80);
+      } else {
+        // Complete current segment and move to next
+        allSegments.push({ 
+          text: currentSegment.text, 
+          isGradient: currentSegment.isGradient, 
+          isComplete: true 
+        });
+        segmentIndex++;
+        charIndex = 0;
+        setTimeout(typeNextChar, 80);
+      }
+    };
+    
+    typeNextChar();
   }, [showStep0, currentTextIndex]);
 
   const handleContinueToStep1 = () => {
@@ -292,15 +313,18 @@ export default function OnboardingPage() {
           /* Step 0 - Presentation */
           <div className="flex flex-col items-center text-center">
             {/* Typewriting Text - Com margem superior adicional apenas para os textos */}
-            <div className="mb-6" style={{ marginTop: displayedText || finalText ? '150px' : '0px' }}>
+            <div className="mb-6" style={{ marginTop: typedSegments.length > 0 ? '150px' : '0px' }}>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[120px] flex items-center justify-center">
-                {(displayedText || finalText) && (
+                {typedSegments.length > 0 && (
                   <>
-                    {isTypingComplete && finalText ? (
-                      <span dangerouslySetInnerHTML={{ __html: finalText }} />
-                    ) : (
-                      <span>{displayedText}</span>
-                    )}
+                    {typedSegments.map((segment, index) => (
+                      <span
+                        key={index}
+                        className={segment.isGradient ? 'gradient-text' : ''}
+                      >
+                        {segment.text}
+                      </span>
+                    ))}
                     {!isTypingComplete && (
                       <span className="ml-2 animate-pulse">|</span>
                     )}
@@ -400,11 +424,11 @@ export default function OnboardingPage() {
             {/* Current Step Content */}
             <Card className="bg-white/10 border-white/20">
               <CardContent className="p-8">
-                {currentStep === 1 && <OperationStep onComplete={handleStepComplete} />}
-                {currentStep === 2 && <ShopifyStep onComplete={handleStepComplete} />}
-                {currentStep === 3 && <ShippingStep onComplete={handleStepComplete} />}
-                {currentStep === 4 && <AdAccountsStep onComplete={handleStepComplete} />}
-                {currentStep === 5 && <SyncStep onComplete={handleComplete} />}
+                {currentStep === 1 && <OperationStep onComplete={() => handleStepComplete('step1_operation', 2)} />}
+                {currentStep === 2 && <ShopifyStep onComplete={() => handleStepComplete('step2_shopify', 3)} />}
+                {currentStep === 3 && <ShippingStep onComplete={() => handleStepComplete('step3_shipping', 4)} />}
+                {currentStep === 4 && <AdAccountsStep onComplete={() => handleStepComplete('step4_ads', 5)} />}
+                {currentStep === 5 && <SyncStep onComplete={() => handleStepComplete('step5_sync', 6)} />}
                 {currentStep === 6 && (
                   <div className="text-center">
                     <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
@@ -413,7 +437,7 @@ export default function OnboardingPage() {
                       Sua operação está configurada e pronta para uso.
                     </p>
                     <Button 
-                      onClick={handleComplete}
+                      onClick={() => navigate('/')}
                       className="bg-green-600 hover:bg-green-700 text-white"
                       data-testid="button-finish-onboarding"
                     >
