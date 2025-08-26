@@ -55,6 +55,11 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
   const profitPerUnit = formData.price - formData.costPrice;
   const profitMargin = formData.costPrice > 0 ? ((profitPerUnit / formData.costPrice) * 100) : 0;
   const totalEstimatedProfit = profitPerUnit * formData.initialStock;
+  
+  // EUR to BRL conversion (approximate rate: 1 EUR = 6.2 BRL)
+  const eurToBrlRate = 6.2;
+  const profitPerUnitBRL = profitPerUnit * eurToBrlRate;
+  const totalEstimatedProfitBRL = totalEstimatedProfit * eurToBrlRate;
 
   // Update price if it exceeds maximum when cost changes
   useEffect(() => {
@@ -307,18 +312,27 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-3 bg-slate-800/50 rounded border border-slate-600/50">
                       <span className="text-xs text-slate-400 block mb-1">Lucro por Unidade</span>
-                      <p className="font-bold text-lg text-emerald-400">€{profitPerUnit.toFixed(2)}</p>
+                      <div className="space-y-1">
+                        <p className="font-bold text-xl text-white">R$ {profitPerUnitBRL.toFixed(2)}</p>
+                        <p className="text-sm text-slate-400">€{profitPerUnit.toFixed(2)}</p>
+                      </div>
                     </div>
                     <div className="text-center p-3 bg-slate-800/50 rounded border border-slate-600/50">
                       <span className="text-xs text-slate-400 block mb-1">Margem de Lucro</span>
-                      <p className="font-bold text-lg text-blue-400">{profitMargin.toFixed(1)}%</p>
+                      <p className="font-bold text-xl text-blue-400">{profitMargin.toFixed(1)}%</p>
                     </div>
                   </div>
                   {formData.initialStock > 0 && (
                     <div className="text-center p-4 bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-emerald-400/50 rounded-lg">
-                      <span className="text-sm text-emerald-300 block mb-1">🚀 Potencial de Lucro Total (Estoque Completo)</span>
-                      <p className="font-bold text-2xl text-emerald-300">€{totalEstimatedProfit.toFixed(2)}</p>
-                      <p className="text-xs text-emerald-400 mt-1">{formData.initialStock} unidades × €{profitPerUnit.toFixed(2)} lucro</p>
+                      <span className="text-sm text-emerald-300 block mb-2">🚀 Potencial de Lucro Total (Estoque Completo)</span>
+                      <div className="space-y-1">
+                        <p className="font-bold text-3xl text-white">R$ {totalEstimatedProfitBRL.toFixed(2)}</p>
+                        <p className="text-lg text-emerald-300">€{totalEstimatedProfit.toFixed(2)}</p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-emerald-500/30">
+                        <p className="text-xs text-emerald-400">{formData.initialStock} unidades × R$ {profitPerUnitBRL.toFixed(2)} lucro</p>
+                        <p className="text-xs text-slate-400">Taxa EUR/BRL: {eurToBrlRate}</p>
+                      </div>
                     </div>
                   )}
                 </div>
