@@ -112,7 +112,7 @@ export default function InvestorSupplierLanding() {
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-6 sm:px-8 py-3 w-full sm:w-auto text-sm sm:text-base">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-500 text-white px-6 sm:px-8 py-3 w-full sm:w-auto text-sm sm:text-base">
                 <Crown className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
                 Começar Como Investidor
                 <ArrowRight className="h-4 sm:h-5 w-4 sm:w-5 ml-2" />
@@ -369,7 +369,7 @@ export default function InvestorSupplierLanding() {
 
           <div className="flex flex-col gap-4 sm:gap-6 justify-center items-center">
             <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-6 sm:px-8 py-4 text-base sm:text-lg w-full sm:w-auto">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400 hover:from-blue-700 hover:via-blue-600 hover:to-cyan-500 text-white px-6 sm:px-8 py-4 text-base sm:text-lg w-full sm:w-auto">
                 <Crown className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
                 Começar Como Investidor Agora
                 <ArrowRight className="h-4 sm:h-5 w-4 sm:w-5 ml-2" />
