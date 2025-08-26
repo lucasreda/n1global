@@ -277,8 +277,8 @@ export default function OnboardingPage() {
         {showStep0 ? (
           /* Step 0 - Presentation */
           <div className="flex flex-col items-center text-center">
-            {/* Typewriting Text */}
-            <div className="mb-6">
+            {/* Typewriting Text - Com margem superior adicional apenas para os textos */}
+            <div className="mb-6" style={{ marginTop: displayedText ? '100px' : '0px' }}>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[120px] flex items-center justify-center">
                 {displayedText && (
                   <>
@@ -289,9 +289,9 @@ export default function OnboardingPage() {
               </h1>
             </div>
 
-            {/* Card */}
+            {/* Card - Movido 50px para cima */}
             {showCard && (
-              <div className="animate-fade-in">
+              <div className="animate-fade-in -mt-12">
                 <Card className="bg-white/10 border-white/20 backdrop-blur-lg max-w-3xl mx-auto mb-8 overflow-hidden">
                   <CardContent className="p-10 text-center relative">
                     {/* Elemento gráfico - Ícones de dados flutuando */}
