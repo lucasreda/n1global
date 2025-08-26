@@ -1252,10 +1252,10 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 function SyncStep({ operationId, onComplete }: { operationId: string, onComplete: () => void }) {
   const [syncPhase, setSyncPhase] = useState<'shopify' | 'shipping' | 'ads' | 'matching' | 'completed'>('shopify');
   const [syncStats, setSyncStats] = useState({
-    shopify: { current: 0, total: 0, completed: false, status: 'Iniciando...' },
-    shipping: { current: 0, total: 0, completed: false, status: 'Aguardando...' },
-    ads: { current: 0, total: 0, completed: false, status: 'Aguardando...' },
-    matching: { current: 0, total: 0, completed: false, status: 'Aguardando...' }
+    shopify: { current: 0, total: 0, completed: false, status: 'Iniciando...', percentage: 0 },
+    shipping: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
+    ads: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
+    matching: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 }
   });
   const [overallProgress, setOverallProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -1300,15 +1300,22 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
         setSyncStats(prev => {
           const newStats = { ...prev };
           
-          // Atualizar progresso do Shopify
-          if (progressData.shopify) {
-            console.log('🛒 Updating Shopify progress:', progressData.shopify);
+          // Atualizar progresso do Shopify baseado nos dados reais
+          if (progressData.isRunning && progressData.processedOrders > 0) {
+            newStats.shopify = {
+              current: progressData.processedOrders,
+              total: progressData.totalOrders || progressData.processedOrders,
+              completed: false,
+              status: progressData.currentStep || 'Sincronizando pedidos da Shopify...',
+              percentage: progressData.percentage || Math.round((progressData.processedOrders / (progressData.totalOrders || 1)) * 100)
+            };
+          } else if (!progressData.isRunning && prev.shopify.current > 0) {
+            // Shopify completed
             newStats.shopify = {
               ...prev.shopify,
-              current: progressData.shopify.processed || 0,
-              total: progressData.shopify.total || 0,
-              status: progressData.shopify.status || prev.shopify.status,
-              completed: progressData.shopify.completed || false
+              completed: true,
+              status: `${prev.shopify.current} pedidos sincronizados`,
+              percentage: 100
             };
           }
           
@@ -1566,14 +1573,7 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
         </p>
       </div>
 
-      {/* Progress bar geral */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-white/80 text-sm">
-          <span>Progresso Geral</span>
-          <span>{Math.round(getProgress())}%</span>
-        </div>
-        <Progress value={getProgress()} className="h-3" />
-      </div>
+{/* Progresso individual de cada etapa */}
 
       {/* Fases detalhadas com progresso granular */}
       <div className="space-y-4">
@@ -1590,12 +1590,10 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
               <div className="text-white/60 text-sm">{syncStats.shopify.status}</div>
             </div>
           </div>
-          {syncStats.shopify.total > 0 && (
-            <Progress 
-              value={(syncStats.shopify.current / syncStats.shopify.total) * 100} 
-              className="h-2 ml-8" 
-            />
-          )}
+          <Progress 
+            value={syncStats.shopify.percentage || 0} 
+            className="h-2 ml-8" 
+          />
         </div>
 
         <div className="space-y-2">
@@ -1611,12 +1609,10 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
               <div className="text-white/60 text-sm">{syncStats.shipping.status}</div>
             </div>
           </div>
-          {syncStats.shipping.total > 0 && (
-            <Progress 
-              value={(syncStats.shipping.current / syncStats.shipping.total) * 100} 
-              className="h-2 ml-8" 
-            />
-          )}
+          <Progress 
+            value={syncStats.shipping.percentage || 0} 
+            className="h-2 ml-8" 
+          />
         </div>
 
         <div className="space-y-2">
@@ -1632,12 +1628,10 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
               <div className="text-white/60 text-sm">{syncStats.ads.status}</div>
             </div>
           </div>
-          {syncStats.ads.total > 0 && (
-            <Progress 
-              value={(syncStats.ads.current / syncStats.ads.total) * 100} 
-              className="h-2 ml-8" 
-            />
-          )}
+          <Progress 
+            value={syncStats.ads.percentage || 0} 
+            className="h-2 ml-8" 
+          />
         </div>
 
         <div className="space-y-2">
@@ -1653,12 +1647,10 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
               <div className="text-white/60 text-sm">{syncStats.matching.status}</div>
             </div>
           </div>
-          {syncStats.matching.total > 0 && (
-            <Progress 
-              value={(syncStats.matching.current / syncStats.matching.total) * 100} 
-              className="h-2 ml-8" 
-            />
-          )}
+          <Progress 
+            value={syncStats.matching.percentage || 0} 
+            className="h-2 ml-8" 
+          />
         </div>
       </div>
 
@@ -1679,35 +1671,7 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
         </div>
       )}
 
-      {/* DEBUG: Botão de teste para Shopify Sync */}
-      <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-        <div className="text-yellow-400 font-medium mb-2 text-sm">🧪 Teste Shopify Sync</div>
-        <Button 
-          onClick={async () => {
-            try {
-              console.log('🧪 Testando endpoint /api/sync/shopify...');
-              const response = await apiRequest('POST', '/api/sync/shopify', {});
-              console.log('✅ Resposta do Shopify sync:', response);
-              toast({ 
-                title: 'Teste iniciado', 
-                description: 'Verifique os logs do console para o resultado'
-              });
-            } catch (error) {
-              console.error('❌ Erro no teste Shopify sync:', error);
-              toast({ 
-                title: 'Erro no teste', 
-                description: error instanceof Error ? error.message : 'Erro desconhecido',
-                variant: 'destructive'
-              });
-            }
-          }}
-          size="sm"
-          variant="outline"
-          className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
-        >
-          Testar Shopify Sync
-        </Button>
-      </div>
+
 
       {syncPhase === 'completed' && (
         <div className="text-center bg-green-500/10 border border-green-500/20 rounded-lg p-4">
