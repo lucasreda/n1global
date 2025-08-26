@@ -61,6 +61,21 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
   const profitPerUnitBRL = profitPerUnit * eurToBrlRate;
   const totalEstimatedProfitBRL = totalEstimatedProfit * eurToBrlRate;
 
+  // Format currency to Brazilian format (R$ 1.234,56)
+  const formatBRL = (value: number) => {
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const formatEUR = (value: number) => {
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
   // Update price if it exceeds maximum when cost changes
   useEffect(() => {
     if (formData.price > maxPrice && maxPrice > 0) {
@@ -313,8 +328,8 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
                     <div className="text-center p-3 bg-slate-800/50 rounded border border-slate-600/50">
                       <span className="text-xs text-slate-400 block mb-1">Lucro por Unidade</span>
                       <div className="space-y-1">
-                        <p className="font-bold text-xl text-white">R$ {profitPerUnitBRL.toFixed(2)}</p>
-                        <p className="text-sm text-slate-400">€{profitPerUnit.toFixed(2)}</p>
+                        <p className="font-bold text-xl text-white">R$ {formatBRL(profitPerUnitBRL)}</p>
+                        <p className="text-sm text-slate-400">€{formatEUR(profitPerUnit)}</p>
                       </div>
                     </div>
                     <div className="text-center p-3 bg-slate-800/50 rounded border border-slate-600/50">
@@ -329,11 +344,11 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
                       <>
                         <span className="text-sm text-emerald-300 block mb-2">🚀 Potencial de Lucro Total (Estoque Completo)</span>
                         <div className="space-y-1">
-                          <p className="font-bold text-3xl text-white">R$ {totalEstimatedProfitBRL.toFixed(2)}</p>
-                          <p className="text-lg text-emerald-300">€{totalEstimatedProfit.toFixed(2)}</p>
+                          <p className="font-bold text-3xl text-white">R$ {formatBRL(totalEstimatedProfitBRL)}</p>
+                          <p className="text-lg text-emerald-300">€{formatEUR(totalEstimatedProfit)}</p>
                         </div>
                         <div className="mt-3 pt-2 border-t border-emerald-500/30">
-                          <p className="text-xs text-emerald-400">{formData.initialStock} unidades × R$ {profitPerUnitBRL.toFixed(2)} lucro</p>
+                          <p className="text-xs text-emerald-400">{formData.initialStock} unidades × R$ {formatBRL(profitPerUnitBRL)} lucro</p>
                           <p className="text-xs text-slate-400">Taxa EUR/BRL: {eurToBrlRate}</p>
                         </div>
                       </>
