@@ -170,15 +170,14 @@ export default function InvestorSupplierLanding() {
                   key={id}
                   variant={activeTab === id ? 'default' : 'ghost'}
                   onClick={() => setActiveTab(id as any)}
-                  className={`flex items-center justify-center px-2 sm:px-6 py-3 text-xs sm:text-base flex-1 sm:flex-none min-h-[60px] sm:min-h-auto ${
+                  className={`flex flex-col sm:flex-row items-center justify-center px-2 sm:px-6 py-3 text-xs sm:text-base flex-1 sm:flex-none min-h-[60px] sm:min-h-auto whitespace-nowrap ${
                     activeTab === id 
                       ? 'bg-blue-600 text-white' 
                       : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
                   <Icon className="h-4 w-4 mb-1 sm:mb-0 sm:mr-2" />
-                  <span className="sm:hidden text-xs">{label.split(' ')[0]}</span>
-                  <span className="hidden sm:inline">{label}</span>
+                  <span className="text-xs sm:text-base">{label}</span>
                 </Button>
               ))}
             </div>
