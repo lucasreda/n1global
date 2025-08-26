@@ -160,7 +160,7 @@ export default function InvestorSupplierLanding() {
       <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-slate-700/50">
         <div className="container mx-auto">
           <div className="flex justify-center mb-8 sm:mb-12">
-            <div className="flex space-x-1 p-1 bg-slate-800/50 rounded-lg w-full max-w-md sm:w-auto">
+            <div className="flex space-x-1 sm:space-x-4 p-1 bg-slate-800/50 rounded-lg w-full max-w-md sm:w-auto">
               {[
                 { id: 'benefits', label: 'Benefícios', icon: CheckCircle },
                 { id: 'process', label: 'Como Funciona', icon: Zap },
@@ -170,15 +170,15 @@ export default function InvestorSupplierLanding() {
                   key={id}
                   variant={activeTab === id ? 'default' : 'ghost'}
                   onClick={() => setActiveTab(id as any)}
-                  className={`flex flex-col items-center justify-center px-2 sm:px-6 py-3 sm:py-3 text-xs sm:text-base flex-1 sm:flex-none min-h-[60px] sm:min-h-auto ${
+                  className={`flex items-center justify-center px-2 sm:px-6 py-3 text-xs sm:text-base flex-1 sm:flex-none min-h-[60px] sm:min-h-auto ${
                     activeTab === id 
                       ? 'bg-blue-600 text-white' 
                       : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
                   <Icon className="h-4 w-4 mb-1 sm:mb-0 sm:mr-2" />
-                  <span className="text-xs sm:text-base sm:inline">{label.split(' ')[0]}</span>
-                  <span className="hidden lg:inline">{label}</span>
+                  <span className="sm:hidden text-xs">{label.split(' ')[0]}</span>
+                  <span className="hidden sm:inline">{label}</span>
                 </Button>
               ))}
             </div>
