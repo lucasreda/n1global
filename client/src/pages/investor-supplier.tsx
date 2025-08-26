@@ -138,7 +138,7 @@ export default function InvestorSupplierLanding() {
                   key={id}
                   variant={activeTab === id ? 'default' : 'ghost'}
                   onClick={() => setActiveTab(id as any)}
-                  className={`flex flex-col items-center justify-center px-2 sm:px-6 py-2 sm:py-3 text-xs sm:text-base flex-1 sm:flex-none ${
+                  className={`flex flex-col items-center justify-center px-2 sm:px-6 py-3 sm:py-3 text-xs sm:text-base flex-1 sm:flex-none min-h-[60px] sm:min-h-auto ${
                     activeTab === id 
                       ? 'bg-blue-600 text-white' 
                       : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
