@@ -298,13 +298,9 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                               <div className="relative">
                                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  id="name"
-                                  name={field.name}
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  onBlur={field.onBlur}
+                                  {...field}
                                   placeholder="Seu nome"
-                                  className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
+                                  className="pl-10 h-12"
                                   data-testid="input-name"
                                 />
                               </div>
@@ -323,14 +319,10 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                               <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  id="email"
-                                  name={field.name}
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  onBlur={field.onBlur}
+                                  {...field}
                                   type="email"
                                   placeholder="seu@email.com"
-                                  className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
+                                  className="pl-10 h-12"
                                   data-testid="input-email-register"
                                 />
                               </div>
