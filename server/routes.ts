@@ -2662,6 +2662,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Sistema não configurado corretamente' });
       }
 
+      // Process image URL if provided
+      let processedImageUrl = null;
+      if (req.body.imageUrl) {
+        try {
+          const objectStorageService = new ObjectStorageService();
+          processedImageUrl = objectStorageService.normalizeObjectEntityPath(req.body.imageUrl);
+        } catch (error) {
+          console.error('Error processing image URL:', error);
+          // Continue without image if there's an error
+        }
+      }
+
       const productData = {
         ...req.body,
         supplierId: (req as any).user.id, // Set current user as supplier
@@ -2670,6 +2682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stock: req.body.initialStock || 0,
         price: req.body.price?.toString(),
         costPrice: req.body.costPrice?.toString(),
+        imageUrl: processedImageUrl, // Include processed image URL
       };
 
       const product = await storage.createSupplierProduct(productData);
