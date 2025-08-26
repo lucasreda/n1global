@@ -54,6 +54,27 @@ interface OnboardingStep {
   completed: boolean;
 }
 
+// Helper function to render text with gradient applied dynamically during typing
+function renderTextWithGradient(displayedText: string, textConfig: any, currentIndex: number) {
+  const { gradientStart, plain } = textConfig;
+  
+  if (currentIndex <= gradientStart) {
+    // Haven't reached gradient part yet
+    return <span>{displayedText}</span>;
+  }
+  
+  // Split text into before gradient and gradient parts
+  const beforeGradient = plain.slice(0, gradientStart);
+  const gradientPart = displayedText.slice(gradientStart);
+  
+  return (
+    <>
+      <span>{beforeGradient}</span>
+      <span className="gradient-text">{gradientPart}</span>
+    </>
+  );
+}
+
 export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const [operationName, setOperationName] = useState('');
@@ -89,24 +110,22 @@ export default function OnboardingPage() {
 
   // State for step 0 presentation
   const [showStep0, setShowStep0] = useState(true);
-  const [typedSegments, setTypedSegments] = useState<Array<{text: string, isGradient: boolean, isComplete: boolean}>>([]);
+  const [displayedText, setDisplayedText] = useState("");
+  const [currentCharIndex, setCurrentCharIndex] = useState(0);
   const [showCard, setShowCard] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
 
   const texts = [
     {
-      segments: [
-        { text: "Ter dados precisos da sua operação ", isGradient: false },
-        { text: "mudam o jogo", isGradient: true }
-      ]
+      plain: "Ter dados precisos da sua operação mudam o jogo",
+      html: "Ter dados precisos da sua operação <span class='gradient-text'>mudam o jogo</span>",
+      gradientStart: 40 // posição onde começa o gradiente
     },
     {
-      segments: [
-        { text: "Um sistema que ", isGradient: false },
-        { text: "unifica", isGradient: true },
-        { text: " tudo em um só lugar", isGradient: false }
-      ]
+      plain: "Um sistema que unifica tudo em um só lugar", 
+      html: "Um sistema que <span class='gradient-text'>unifica</span> tudo em um só lugar",
+      gradientStart: 15 // posição onde começa o gradiente
     }
   ];
 
@@ -133,58 +152,40 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!showStep0) return;
     
-    const currentSegments = texts[currentTextIndex].segments;
-    setTypedSegments([]);
+    const currentText = texts[currentTextIndex];
+    setDisplayedText("");
+    setCurrentCharIndex(0);
     setIsTypingComplete(false);
     
-    let segmentIndex = 0;
-    let charIndex = 0;
-    let allSegments: Array<{text: string, isGradient: boolean, isComplete: boolean}> = [];
-    
-    const typeNextChar = () => {
-      if (segmentIndex >= currentSegments.length) {
-        setIsTypingComplete(true);
-        // Wait 3 seconds after completing the text
-        setTimeout(() => {
-          if (currentTextIndex === 0) {
-            setCurrentTextIndex(1);
-          } else {
-            setTypedSegments([]);
-            setIsTypingComplete(false);
-            setTimeout(() => {
-              setShowCard(true);
-            }, 3000);
-          }
-        }, 3000);
-        return;
-      }
-      
-      const currentSegment = currentSegments[segmentIndex];
-      
-      if (charIndex < currentSegment.text.length) {
-        // Update current segment being typed
-        const typedText = currentSegment.text.slice(0, charIndex + 1);
-        const newSegments = [
-          ...allSegments,
-          { text: typedText, isGradient: currentSegment.isGradient, isComplete: false }
-        ];
-        setTypedSegments(newSegments);
-        charIndex++;
-        setTimeout(typeNextChar, 80);
-      } else {
-        // Complete current segment and move to next
-        allSegments.push({ 
-          text: currentSegment.text, 
-          isGradient: currentSegment.isGradient, 
-          isComplete: true 
-        });
-        segmentIndex++;
-        charIndex = 0;
-        setTimeout(typeNextChar, 80);
-      }
-    };
-    
-    typeNextChar();
+    const typewriterInterval = setInterval(() => {
+      setCurrentCharIndex(prev => {
+        const newIndex = prev + 1;
+        const textToShow = currentText.plain.slice(0, newIndex);
+        setDisplayedText(textToShow);
+        
+        if (newIndex >= currentText.plain.length) {
+          clearInterval(typewriterInterval);
+          setIsTypingComplete(true);
+          
+          // Wait 3 seconds after completing the text
+          setTimeout(() => {
+            if (currentTextIndex === 0) {
+              setCurrentTextIndex(1);
+            } else {
+              setDisplayedText("");
+              setIsTypingComplete(false);
+              setTimeout(() => {
+                setShowCard(true);
+              }, 3000);
+            }
+          }, 3000);
+        }
+        
+        return newIndex;
+      });
+    }, 80);
+
+    return () => clearInterval(typewriterInterval);
   }, [showStep0, currentTextIndex]);
 
   const handleContinueToStep1 = () => {
@@ -313,18 +314,11 @@ export default function OnboardingPage() {
           /* Step 0 - Presentation */
           <div className="flex flex-col items-center text-center">
             {/* Typewriting Text - Com margem superior adicional apenas para os textos */}
-            <div className="mb-6" style={{ marginTop: typedSegments.length > 0 ? '150px' : '0px' }}>
+            <div className="mb-6" style={{ marginTop: displayedText ? '150px' : '0px' }}>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[120px] flex items-center justify-center">
-                {typedSegments.length > 0 && (
+                {displayedText && (
                   <>
-                    {typedSegments.map((segment, index) => (
-                      <span
-                        key={index}
-                        className={segment.isGradient ? 'gradient-text' : ''}
-                      >
-                        {segment.text}
-                      </span>
-                    ))}
+                    {renderTextWithGradient(displayedText, texts[currentTextIndex], currentCharIndex)}
                     {!isTypingComplete && (
                       <span className="ml-2 animate-pulse">|</span>
                     )}
