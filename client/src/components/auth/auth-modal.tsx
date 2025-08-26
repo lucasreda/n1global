@@ -287,7 +287,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                   </Form>
                 ) : (
                   <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(handleRegister)} className="apple-form-container">
+                    <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-6">
                       <FormField
                         control={registerForm.control}
                         name="name"
