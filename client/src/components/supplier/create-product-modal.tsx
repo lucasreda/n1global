@@ -235,10 +235,10 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
           </div>
 
           {/* Pricing Section */}
-          <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className="space-y-4 p-4 bg-gradient-to-br from-slate-900/50 to-slate-800/50 border border-slate-700/50 rounded-lg backdrop-blur-sm">
             <div className="flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-blue-500" />
-              <h3 className="font-medium text-sm">Calculadora de Preços</h3>
+              <Calculator className="h-4 w-4 text-blue-400" />
+              <h3 className="font-medium text-sm text-slate-200">Calculadora de Preços B2B</h3>
             </div>
             
             <div>
@@ -298,24 +298,27 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
 
             {/* Profit Calculator */}
             {formData.costPrice > 0 && formData.price > 0 && (
-              <div className="bg-white dark:bg-gray-700 p-3 rounded border">
-                <h4 className="font-medium text-sm mb-2 flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  Análise de Lucro
+              <div className="bg-gradient-to-br from-emerald-900/30 to-green-900/30 border border-emerald-500/30 p-4 rounded-lg backdrop-blur-sm">
+                <h4 className="font-semibold text-base mb-3 flex items-center gap-2 text-emerald-300">
+                  <TrendingUp className="h-5 w-5" />
+                  💰 Análise de Rentabilidade
                 </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Lucro por unidade:</span>
-                    <p className="font-medium text-green-600">€{profitPerUnit.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Margem:</span>
-                    <p className="font-medium">{profitMargin.toFixed(1)}%</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-slate-800/50 rounded border border-slate-600/50">
+                      <span className="text-xs text-slate-400 block mb-1">Lucro por Unidade</span>
+                      <p className="font-bold text-lg text-emerald-400">€{profitPerUnit.toFixed(2)}</p>
+                    </div>
+                    <div className="text-center p-3 bg-slate-800/50 rounded border border-slate-600/50">
+                      <span className="text-xs text-slate-400 block mb-1">Margem de Lucro</span>
+                      <p className="font-bold text-lg text-blue-400">{profitMargin.toFixed(1)}%</p>
+                    </div>
                   </div>
                   {formData.initialStock > 0 && (
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">Lucro estimado (estoque total):</span>
-                      <p className="font-medium text-green-600 text-base">€{totalEstimatedProfit.toFixed(2)}</p>
+                    <div className="text-center p-4 bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-emerald-400/50 rounded-lg">
+                      <span className="text-sm text-emerald-300 block mb-1">🚀 Potencial de Lucro Total (Estoque Completo)</span>
+                      <p className="font-bold text-2xl text-emerald-300">€{totalEstimatedProfit.toFixed(2)}</p>
+                      <p className="text-xs text-emerald-400 mt-1">{formData.initialStock} unidades × €{profitPerUnit.toFixed(2)} lucro</p>
                     </div>
                   )}
                 </div>
