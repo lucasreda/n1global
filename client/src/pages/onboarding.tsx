@@ -60,7 +60,7 @@ function renderTextWithGradient(displayedText: string, textConfig: any, currentI
   
   if (currentIndex <= gradientStart) {
     // Haven't reached gradient part yet - handle line breaks
-    return displayedText.split('\n').map((line, index) => (
+    return displayedText.split('\n').map((line: string, index: number) => (
       <span key={index}>
         {line}
         {index < displayedText.split('\n').length - 1 && <br />}
@@ -485,7 +485,7 @@ export default function OnboardingPage() {
                       Sua operação está configurada e pronta para uso.
                     </p>
                     <Button 
-                      onClick={() => navigate('/')}
+                      onClick={() => setLocation('/')}
                       className="bg-green-600 hover:bg-green-700 text-white"
                       data-testid="button-finish-onboarding"
                     >
@@ -645,37 +645,166 @@ function OperationStep({ onComplete }: { onComplete: () => void }) {
 }
 
 function ShopifyStep({ onComplete }: { onComplete: () => void }) {
+  const [shopUrl, setShopUrl] = useState('');
+  const [accessToken, setAccessToken] = useState('');
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const testConnection = async () => {
+    if (!shopUrl || !accessToken) {
+      setErrorMessage('Por favor, preencha todos os campos');
+      setConnectionStatus('error');
+      return;
+    }
+
+    setIsTestingConnection(true);
+    setConnectionStatus('idle');
+    setErrorMessage('');
+
+    try {
+      const response = await fetch('/api/integrations/shopify/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          shopName: shopUrl.replace('.myshopify.com', ''),
+          accessToken
+        })
+      });
+
+      if (response.ok) {
+        setConnectionStatus('success');
+      } else {
+        const error = await response.json();
+        setErrorMessage(error.message || 'Erro ao conectar com a Shopify');
+        setConnectionStatus('error');
+      }
+    } catch (error) {
+      setErrorMessage('Erro de conexão. Verifique sua internet e tente novamente.');
+      setConnectionStatus('error');
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (connectionStatus !== 'success') {
+      setErrorMessage('É necessário testar e validar a conexão antes de continuar');
+      setConnectionStatus('error');
+      return;
+    }
+
+    // Save integration data
+    try {
+      const response = await fetch('/api/shopify/save-integration', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          shopUrl: shopUrl.replace('.myshopify.com', ''),
+          accessToken
+        })
+      });
+
+      if (response.ok) {
+        onComplete();
+      } else {
+        setErrorMessage('Erro ao salvar integração');
+        setConnectionStatus('error');
+      }
+    } catch (error) {
+      setErrorMessage('Erro ao salvar integração');
+      setConnectionStatus('error');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center">
         <ShoppingCart className="w-16 h-16 text-blue-400 mx-auto mb-4" />
         <h3 className="text-xl text-white mb-2">Integração Shopify</h3>
         <p className="text-white/60">
-          Conecte sua loja Shopify para sincronizar produtos automaticamente
+          Configure sua loja Shopify para sincronizar produtos automaticamente
         </p>
       </div>
 
-      <div className="text-center py-8">
-        <p className="text-white/80 mb-4">
-          Conecte sua loja Shopify para sincronizar produtos automaticamente
-        </p>
-        <p className="text-white/60 text-sm mb-6">
-          Você pode integrar agora ou configurar depois no dashboard
-        </p>
-        <div className="flex gap-4 justify-center">
-          <Button 
-            onClick={onComplete}
-            className="bg-gray-600 hover:bg-gray-700 text-white"
-            data-testid="button-skip-shopify"
+      <div className="space-y-4 max-w-md mx-auto">
+        <div>
+          <label className="block text-white/80 text-sm mb-2">
+            Nome da Loja (sem .myshopify.com)
+          </label>
+          <input
+            type="text"
+            value={shopUrl}
+            onChange={(e) => setShopUrl(e.target.value)}
+            placeholder="exemplo: minha-loja"
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
+            data-testid="input-shop-url"
+          />
+          <p className="text-white/40 text-xs mt-1">
+            Digite apenas o nome da loja (ex: "minha-loja" para minha-loja.myshopify.com)
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-white/80 text-sm mb-2">
+            Admin API Access Token
+          </label>
+          <input
+            type="password"
+            value={accessToken}
+            onChange={(e) => setAccessToken(e.target.value)}
+            placeholder="shpat_xxxxxxxxxxxxxxxxxxxxx"
+            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
+            data-testid="input-access-token"
+          />
+          <p className="text-white/40 text-xs mt-1">
+            Token de acesso da Admin API do Shopify
+          </p>
+        </div>
+
+        {connectionStatus === 'success' && (
+          <div className="flex items-center gap-2 text-green-400 text-sm">
+            <CheckCircle className="w-4 h-4" />
+            Conexão testada com sucesso!
+          </div>
+        )}
+
+        {connectionStatus === 'error' && errorMessage && (
+          <div className="text-red-400 text-sm">
+            {errorMessage}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <Button
+            onClick={testConnection}
+            disabled={isTestingConnection || !shopUrl || !accessToken}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600 disabled:cursor-not-allowed"
+            data-testid="button-test-connection"
           >
-            Integrar Depois
+            {isTestingConnection ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Testando Conexão...
+              </>
+            ) : (
+              'Testar Conexão'
+            )}
           </Button>
-          <Button 
-            onClick={onComplete}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            data-testid="button-connect-shopify"
+
+          <Button
+            onClick={handleComplete}
+            disabled={connectionStatus !== 'success'}
+            className="w-full bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-600 disabled:cursor-not-allowed"
+            data-testid="button-complete-shopify"
           >
-            Conectar Shopify
+            Continuar
           </Button>
         </div>
       </div>
