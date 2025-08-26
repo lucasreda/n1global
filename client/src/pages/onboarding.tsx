@@ -94,8 +94,8 @@ export default function OnboardingPage() {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
   const texts = [
-    "Ter dados precisos da sua operação mudam o jogo",
-    "Um sistema que unifica tudo em um só lugar"
+    "Ter dados precisos da sua operação <span class='gradient-text'>mudam o jogo</span>",
+    "Um sistema que <span class='gradient-text'>unifica</span> tudo em um só lugar"
   ];
 
   // Determine current step based on completed steps
@@ -282,7 +282,7 @@ export default function OnboardingPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[120px] flex items-center justify-center">
                 {displayedText && (
                   <>
-                    {displayedText}
+                    <span dangerouslySetInnerHTML={{ __html: displayedText }} />
                     <span className="ml-2 animate-pulse">|</span>
                   </>
                 )}
