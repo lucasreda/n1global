@@ -427,7 +427,7 @@ export default function OnboardingPage() {
         ) : (
           <>
             {/* Steps Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8" style={{ marginTop: '25px' }}>
               {steps.map((step, index) => {
                 const StepIcon = step.icon;
                 const isActive = currentStep === index + 1;
@@ -467,14 +467,7 @@ export default function OnboardingPage() {
               })}
             </div>
 
-            {/* Progress Bar */}
-            <div className="mb-8">
-              <div className="flex justify-between text-white/60 text-sm mb-2">
-                <span>Progresso do Onboarding</span>
-                <span>{Math.round(progressPercentage)}%</span>
-              </div>
-              <Progress value={progressPercentage} className="h-2" />
-            </div>
+
 
             {/* Current Step Content */}
             <Card className="bg-white/10 border-white/20">
