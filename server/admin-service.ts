@@ -29,8 +29,8 @@ export class AdminService {
           totalOrders: sql<number>`COUNT(${orders.id})`
         })
         .from(stores)
-        .leftJoin(operations, sql`${operations.storeId} = ${stores.id}`)
-        .leftJoin(orders, sql`${orders.storeId} = ${stores.id}`)
+        .leftJoin(operations, eq(operations.storeId, stores.id))
+        .leftJoin(orders, eq(orders.storeId, stores.id))
         .groupBy(stores.id, stores.name)
         .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
@@ -38,12 +38,12 @@ export class AdminService {
       // Get orders by country (monthly)
       const ordersByCountry = await db
         .select({
-          country: sql<string>`COALESCE(${orders.shippingCountry}, 'Não informado')`,
+          country: sql<string>`COALESCE(${orders.customerCountry}, 'Não informado')`,
           orders: sql<number>`COUNT(*)`
         })
         .from(orders)
         .where(sql`${orders.orderDate} >= CURRENT_DATE - INTERVAL '30 days'`)
-        .groupBy(sql`COALESCE(${orders.shippingCountry}, 'Não informado')`)
+        .groupBy(sql`COALESCE(${orders.customerCountry}, 'Não informado')`)
         .orderBy(desc(sql<number>`COUNT(*)`))
         .limit(10);
 
@@ -56,8 +56,12 @@ export class AdminService {
           todayOrders: sql<number>`COUNT(${orders.id})`
         })
         .from(stores)
-        .leftJoin(operations, sql`${operations.storeId} = ${stores.id}`)
-        .leftJoin(orders, sql`${orders.storeId} = ${stores.id} AND ${orders.dataSource} = 'shopify' AND DATE(${orders.orderDate}) = '${today}'`)
+        .leftJoin(operations, eq(operations.storeId, stores.id))
+        .leftJoin(orders, and(
+          eq(orders.storeId, stores.id),
+          eq(orders.dataSource, 'shopify'),
+          sql`DATE(${orders.orderDate}) = ${today}`
+        ))
         .groupBy(stores.id, stores.name)
         .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
