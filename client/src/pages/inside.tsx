@@ -1319,14 +1319,12 @@ function ProductsManager() {
                         <p className="font-medium text-white">
                           {formatCurrency(Number(product.price))}
                         </p>
-                        <p className="text-xs text-slate-500">Preço que fornecedor cobra</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-slate-400">Custo para Operações</p>
                         <p className="font-medium text-orange-400">
                           {formatCurrency(Number(product.price))}
                         </p>
-                        <p className="text-xs text-slate-500">O que operações pagam</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-slate-400">Custo Envio</p>
