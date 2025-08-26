@@ -98,12 +98,15 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
       imageUrl: uploadedImageUrl || formData.imageUrl
     };
 
+    console.log('Creating product with data:', productData);
     createProductMutation.mutate(productData);
   };
 
   const handleImageUpload = (imageUrl: string) => {
+    console.log('Image uploaded, URL received:', imageUrl);
     setUploadedImageUrl(imageUrl);
     setFormData(prev => ({ ...prev, imageUrl }));
+    console.log('Form data updated with imageUrl:', imageUrl);
   };
 
   const handleImageRemove = () => {

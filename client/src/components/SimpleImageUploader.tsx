@@ -4,6 +4,35 @@ import { ImageIcon, X, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
+// Helper function to convert GCS URL to local object path for display
+function convertGcsUrlToObjectPath(gcsUrl: string): string {
+  if (!gcsUrl.startsWith('https://storage.googleapis.com/')) {
+    return gcsUrl;
+  }
+  
+  try {
+    const url = new URL(gcsUrl);
+    const pathParts = url.pathname.split('/');
+    
+    // Extract bucket and object path
+    if (pathParts.length >= 3) {
+      const bucketName = pathParts[1];
+      const objectPath = pathParts.slice(2).join('/');
+      
+      // Check if it's in the private directory structure
+      if (objectPath.includes('/.private/uploads/')) {
+        const objectId = objectPath.split('/.private/uploads/')[1];
+        return `/objects/uploads/${objectId}`;
+      }
+    }
+    
+    return gcsUrl; // Return original if we can't convert
+  } catch (error) {
+    console.error('Error converting GCS URL:', error);
+    return gcsUrl;
+  }
+}
+
 interface SimpleImageUploaderProps {
   onImageUpload: (imageUrl: string) => void;
   currentImageUrl?: string;
@@ -62,9 +91,15 @@ export function SimpleImageUploader({ onImageUpload, currentImageUrl, onImageRem
         throw new Error('Falha no upload');
       }
 
-      // Extract the object path from the upload URL
+      // Extract the object path from the upload URL and convert to local path
       const uploadUrl = data.uploadURL;
-      onImageUpload(uploadUrl);
+      console.log('Upload successful, URL:', uploadUrl);
+      
+      // Convert GCS URL to local object path for immediate display
+      const objectPath = convertGcsUrlToObjectPath(uploadUrl);
+      console.log('Converted to object path:', objectPath);
+      
+      onImageUpload(uploadUrl); // Pass original URL for backend processing
 
       toast({
         title: "Imagem enviada!",
@@ -93,15 +128,25 @@ export function SimpleImageUploader({ onImageUpload, currentImageUrl, onImageRem
     onImageRemove?.();
   };
 
+  // Convert URL for display if needed
+  const displayImageUrl = currentImageUrl ? convertGcsUrlToObjectPath(currentImageUrl) : '';
+
   return (
     <div>
       <div className="space-y-3">
-        {currentImageUrl ? (
+        {displayImageUrl ? (
           <div className="relative inline-block">
             <img
-              src={currentImageUrl}
+              src={displayImageUrl}
               alt="Preview do produto"
               className="w-32 h-32 object-cover rounded-lg border"
+              onError={(e) => {
+                console.error('Image failed to load:', displayImageUrl);
+                // Try with original URL if conversion failed
+                if (displayImageUrl !== currentImageUrl) {
+                  (e.target as HTMLImageElement).src = currentImageUrl || '';
+                }
+              }}
             />
             <Button
               type="button"
