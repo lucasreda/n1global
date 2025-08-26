@@ -1277,10 +1277,8 @@ function ProductsManager() {
             </div>
           ) : (
             <div className="space-y-4">
-              {products.map((product) => {
-                console.log('Product data:', { id: product.id, name: product.name, imageUrl: product.imageUrl });
-                return (
-                  <div key={product.id} className="border border-white/20 rounded-lg p-4 bg-white/5 backdrop-blur-sm">
+              {products.map((product) => (
+                <div key={product.id} className="border border-white/20 rounded-lg p-4 bg-white/5 backdrop-blur-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4">
                       {/* Product Thumbnail */}
@@ -1291,12 +1289,10 @@ function ProductsManager() {
                             alt={product.name}
                             className="w-16 h-16 object-cover rounded-lg border border-white/20"
                             onError={(e) => {
-                              console.log('Image failed to load:', product.imageUrl);
                               e.currentTarget.style.display = 'none';
                               const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                               if (fallback) fallback.style.display = 'flex';
                             }}
-                            onLoad={() => console.log('Image loaded successfully:', product.imageUrl)}
                           />
                         ) : null}
                         <div 
@@ -1356,8 +1352,7 @@ function ProductsManager() {
                     <p className="text-sm text-slate-400 mt-2">{product.description}</p>
                   )}
                 </div>
-              );
-              })}
+              ))}
             </div>
           )}
         </CardContent>

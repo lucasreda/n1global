@@ -301,6 +301,7 @@ export class AdminService {
           price: products.price,
           costPrice: products.costPrice,
           shippingCost: products.shippingCost,
+          imageUrl: products.imageUrl,
           isActive: products.isActive,
           createdAt: products.createdAt
         })
