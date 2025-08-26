@@ -405,21 +405,22 @@ export default function OnboardingPage() {
                     <p className="text-white/70 text-base leading-relaxed mb-6 max-w-lg mx-auto">
                       Alimente a plataforma com informações da sua operação e obtenha insights precisos para decisões mais assertivas.
                     </p>
+                    
+                    {/* Botão Continuar - Dentro do card */}
+                    <div className="flex justify-center">
+                      <Button 
+                        onClick={handleContinueToStep1}
+                        size="lg"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 font-medium rounded-lg transition-colors duration-200"
+                        style={{ fontSize: '18px' }}
+                        data-testid="button-continue-step1"
+                      >
+                        <ArrowRight className="w-5 h-5 mr-2" />
+                        Começar Agora
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-                
-                {/* Botão Continuar - Padrão da aplicação */}
-                <div className="flex justify-center">
-                  <Button 
-                    onClick={handleContinueToStep1}
-                    size="lg"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 font-medium rounded-lg transition-colors duration-200"
-                    data-testid="button-continue-step1"
-                  >
-                    <ArrowRight className="w-5 h-5 mr-2" />
-                    Começar Agora
-                  </Button>
-                </div>
               </div>
             )}
           </div>
