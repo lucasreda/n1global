@@ -27,7 +27,17 @@ export default function InvestorSupplierLanding() {
   const [activeTab, setActiveTab] = useState<'benefits' | 'process' | 'roi'>('benefits');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen relative">
+      {/* Dark Background similar to login page */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary/20 to-background"></div>
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-20 w-80 h-80 bg-chart-1/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-chart-2/10 rounded-full blur-3xl"></div>
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10">
       {/* Header */}
       <header className="border-b border-slate-700/50 backdrop-blur-sm bg-slate-900/80">
         <div className="container mx-auto px-6 py-4">
@@ -396,6 +406,7 @@ export default function InvestorSupplierLanding() {
           </p>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
