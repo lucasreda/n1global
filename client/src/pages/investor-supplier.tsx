@@ -27,13 +27,13 @@ export default function InvestorSupplierLanding() {
   const [activeTab, setActiveTab] = useState<'benefits' | 'process' | 'roi'>('benefits');
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative overflow-x-hidden">
       {/* Dark Background similar to login page */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary/20 to-background"></div>
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-20 w-80 h-80 bg-chart-1/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-chart-2/10 rounded-full blur-3xl"></div>
+      <div className="absolute inset-0 opacity-20 overflow-hidden">
+        <div className="absolute top-10 left-4 sm:top-20 sm:left-20 w-64 h-64 sm:w-96 sm:h-96 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 right-4 sm:bottom-20 sm:right-20 w-48 h-48 sm:w-80 sm:h-80 bg-chart-1/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 sm:w-64 sm:h-64 bg-chart-2/10 rounded-full blur-3xl"></div>
       </div>
       
       {/* Content */}
@@ -69,7 +69,7 @@ export default function InvestorSupplierLanding() {
             Oportunidade Exclusiva para Produtores
           </Badge>
           
-          <h1 className="text-xl sm:text-3xl md:text-5xl font-bold text-white mb-6 sm:mb-8 leading-tight px-2">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-6 sm:mb-8 leading-tight px-2">
             Torne-se um{" "}
             <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-200 bg-clip-text text-transparent">
               Investidor de<br />Produtos
@@ -210,7 +210,7 @@ export default function InvestorSupplierLanding() {
           </div>
 
           {/* Tab Content */}
-          <div className="max-w-6xl mx-auto px-2 sm:px-0">
+          <div className="max-w-6xl mx-auto px-4 sm:px-0 overflow-hidden">
             {activeTab === 'benefits' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {[
@@ -390,7 +390,7 @@ export default function InvestorSupplierLanding() {
                       Timeline de Retorno do Investimento
                     </h3>
                     
-                    <div className="grid md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                       {[
                         { month: "Mês 1", percentage: "25%", description: "Primeiras vendas" },
                         { month: "Mês 2", percentage: "65%", description: "Aceleração das vendas" },
