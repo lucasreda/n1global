@@ -125,6 +125,37 @@ export default function InvestorSupplierLanding() {
         </div>
       </section>
 
+      {/* Social Proof */}
+      <section className="py-8 sm:py-12 px-4 sm:px-6">
+        <div className="container mx-auto">
+          <Card className="glassmorphism border-slate-600/50 bg-gradient-to-br from-blue-900/10 to-purple-900/10">
+            <CardContent className="p-6 sm:p-8">
+              <div className="text-center mb-6">
+                <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Resultados Comprovados da N1</h3>
+                <p className="text-slate-300 text-sm sm:text-base">Nossa plataforma já gerou resultados excepcionais</p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-blue-400 mb-2">+100.000</div>
+                  <div className="text-slate-300 text-sm sm:text-base">Pedidos por mês</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-2">+200 mi</div>
+                  <div className="text-slate-300 text-sm sm:text-base">Faturados em vendas</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-400 mb-2">+350</div>
+                  <div className="text-slate-300 text-sm sm:text-base">Afiliados de alto nível</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* Tab Navigation */}
       <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-slate-700/50">
         <div className="container mx-auto">
