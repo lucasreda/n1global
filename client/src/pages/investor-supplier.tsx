@@ -39,7 +39,7 @@ export default function InvestorSupplierLanding() {
       {/* Content */}
       <div className="relative z-10">
       {/* Header */}
-      <header className="border-b border-slate-700/50 backdrop-blur-sm bg-slate-900/80">
+      <header className="border-b border-slate-700/30 backdrop-blur-sm bg-transparent">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
