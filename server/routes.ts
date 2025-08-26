@@ -456,44 +456,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("🔄 PRODUCTION AUTO-SYNC INICIADO: usuário fresh sem operações, buscando outros usuários...");
         
         try {
-          // Primeiro, verificar todos os usuários fresh no banco
-          const allUsers = await db.execute(`SELECT id, email FROM users WHERE email LIKE '%fresh%'`);
+          // Buscar todos os usuários fresh
+          const allUsersResult = await db.execute(`SELECT id, email FROM users WHERE email LIKE '%fresh%'`);
+          const allUsers = Array.from(allUsersResult);
           console.log("👥 Todos usuários fresh no banco:", allUsers.length);
           
           // Buscar usuários fresh com operações
-          const allFreshUsers = await db.execute(`
-            SELECT u.id, u.email, COUNT(uoa.operation_id) as operations_count
+          const freshUsersResult = await db.execute(`
+            SELECT u.id, u.email, COUNT(uoa.operation_id)::int as operations_count
             FROM users u
             LEFT JOIN user_operation_access uoa ON u.id = uoa.user_id  
             WHERE u.email LIKE '%fresh%'
             GROUP BY u.id, u.email
             HAVING COUNT(uoa.operation_id) > 0
           `);
+          const allFreshUsers = Array.from(freshUsersResult);
           
           console.log("🔍 Usuários fresh COM operações encontrados:", allFreshUsers.length);
-          allFreshUsers.forEach((user: any) => {
+          for (const user of allFreshUsers) {
             console.log("  - User:", user.id, "Email:", user.email, "Operations:", user.operations_count);
-          });
+          }
           
           if (allFreshUsers.length > 0) {
             const sourceUser = allFreshUsers[0];
             console.log("📋 COPIANDO operações do usuário:", sourceUser.id, "para:", req.user.id);
             
-            // Primeiro, verificar operações do usuário fonte
-            const sourceOperations = await db.execute(`
+            // Verificar operações do usuário fonte
+            const sourceOpsResult = await db.execute(`
               SELECT operation_id FROM user_operation_access WHERE user_id = '${sourceUser.id}'
             `);
+            const sourceOperations = Array.from(sourceOpsResult);
             console.log("📋 Operações para copiar:", sourceOperations.length);
             
             // Copiar acessos do usuário fonte para usuário atual
-            const insertResult = await db.execute(`
-              INSERT INTO user_operation_access (user_id, operation_id)
-              SELECT '${req.user.id}', operation_id 
-              FROM user_operation_access 
-              WHERE user_id = '${sourceUser.id}'
-              ON CONFLICT DO NOTHING
-            `);
-            console.log("📋 Insert result:", insertResult);
+            for (const op of sourceOperations) {
+              await db.execute(`
+                INSERT INTO user_operation_access (user_id, operation_id)
+                VALUES ('${req.user.id}', '${op.operation_id}')
+                ON CONFLICT DO NOTHING
+              `);
+            }
+            console.log("📋 Operações copiadas com sucesso!");
             
             // Buscar operações novamente após sync
             operations = await storage.getUserOperations(req.user.id);
