@@ -667,16 +667,9 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/integrations/shopify/test', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          shopName: shopUrl.replace('.myshopify.com', ''),
-          accessToken
-        })
+      const response = await apiRequest('POST', '/api/integrations/shopify/test', {
+        shopName: shopUrl.replace('.myshopify.com', ''),
+        accessToken
       });
 
       if (response.ok) {
@@ -703,17 +696,10 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
 
     // Save integration data
     try {
-      const response = await fetch('/api/integrations/shopify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          operationId: operationId,
-          shopName: shopUrl.replace('.myshopify.com', ''),
-          accessToken
-        })
+      const response = await apiRequest('POST', '/api/integrations/shopify', {
+        operationId: operationId,
+        shopName: shopUrl.replace('.myshopify.com', ''),
+        accessToken
       });
 
       if (response.ok) {
