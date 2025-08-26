@@ -59,8 +59,8 @@ export default function InvestorSupplierLanding() {
       {/* Hero Section */}
       <section className="py-20 px-6">
         <div className="container mx-auto text-center">
-          <Badge className="mb-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-blue-300 border-blue-500/30">
-            <Star className="h-3 w-3 mr-1" />
+          <Badge className="mb-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border-blue-500/30">
+            <Star className="h-3 w-3 mr-1 text-white" />
             Oportunidade Exclusiva para Produtores
           </Badge>
           
