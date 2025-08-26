@@ -211,7 +211,7 @@ function SupplierHeader() {
                 {user?.name}
               </div>
               {user?.role === 'supplier' ? (
-                <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white text-xs font-medium px-2 py-1 shadow-sm">
+                <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 text-xs font-medium px-2 py-1 shadow-sm">
                   <Crown className="h-3 w-3 mr-1" />
                   Fornecedor
                 </Badge>
