@@ -59,8 +59,13 @@ function renderTextWithGradient(displayedText: string, textConfig: any, currentI
   const { gradientStart, plain } = textConfig;
   
   if (currentIndex <= gradientStart) {
-    // Haven't reached gradient part yet
-    return displayedText;
+    // Haven't reached gradient part yet - handle line breaks
+    return displayedText.split('\n').map((line, index) => (
+      <span key={index}>
+        {line}
+        {index < displayedText.split('\n').length - 1 && <br />}
+      </span>
+    ));
   }
   
   // Split text into before gradient and gradient parts
@@ -69,8 +74,20 @@ function renderTextWithGradient(displayedText: string, textConfig: any, currentI
   
   return (
     <span>
-      {beforeGradient}
-      <span className="gradient-text">{gradientPart}</span>
+      {beforeGradient.split('\n').map((line, index) => (
+        <span key={index}>
+          {line}
+          {index < beforeGradient.split('\n').length - 1 && <br />}
+        </span>
+      ))}
+      <span className="gradient-text">
+        {gradientPart.split('\n').map((line, index) => (
+          <span key={index}>
+            {line}
+            {index < gradientPart.split('\n').length - 1 && <br />}
+          </span>
+        ))}
+      </span>
     </span>
   );
 }
@@ -135,8 +152,8 @@ export default function OnboardingPage() {
   ];
 
   const cardTitleConfig = {
-    plain: "Quanto mais dados, mais inteligência",
-    gradientStart: 19 // posição onde começa "mais inteligência" (incluindo o "m")
+    plain: "Quanto mais dados,\nmais inteligência",
+    gradientStart: 20 // posição onde começa "mais inteligência" (incluindo o "m")
   };
 
   // Determine current step based on completed steps
@@ -375,7 +392,7 @@ export default function OnboardingPage() {
                       </div>
                     </div>
 
-                    <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-6 min-h-[60px] flex items-center justify-center">
+                    <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-6 min-h-[80px] flex items-center justify-center text-center">
                       {cardTitleText && (
                         <>
                           {renderTextWithGradient(cardTitleText, cardTitleConfig, cardTitleIndex)}
