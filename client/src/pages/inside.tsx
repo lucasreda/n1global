@@ -31,7 +31,9 @@ import {
   Shield,
   Briefcase,
   UserPlus,
-  Edit
+  Edit,
+  Trophy,
+  Globe
 } from "lucide-react";
 import logoImage from "@assets/INSIDE_1756100933599.png";
 
@@ -40,13 +42,20 @@ interface AdminStats {
   totalOperations: number;
   totalOrders: number;
   totalRevenue: number;
-  recentStores: Array<{
+  topStoresGlobal: Array<{
     id: string;
     name: string;
     operationsCount: number;
-    ordersCount: number;
-    revenue: number;
-    lastActivity: string;
+    totalOrders: number;
+  }>;
+  ordersByCountry: Array<{
+    country: string;
+    orders: number;
+  }>;
+  topStoresToday: Array<{
+    id: string;
+    name: string;
+    todayOrders: number;
   }>;
 }
 
@@ -492,38 +501,139 @@ export default function InsidePage() {
               </Card>
             </div>
 
-            {/* Recent Stores Activity */}
-            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-              <CardHeader>
-                <CardTitle className="text-slate-200">Atividade Recente das Lojas</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Últimas atividades por loja
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {adminStats?.recentStores?.map((store) => (
-                    <div key={store.id} className="flex items-center justify-between p-4 border border-slate-700 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-blue-400" />
+            {/* Analytics Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Top Lojas Globais */}
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+                <CardHeader>
+                  <CardTitle className="text-slate-200 flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-yellow-400" />
+                    Top Lojas Globais
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">
+                    Ranking por número total de pedidos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {adminStats?.topStoresGlobal?.map((store, index) => (
+                      <div key={store.id} className="flex items-center justify-between p-3 border border-slate-700/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                            index === 1 ? 'bg-gray-400/20 text-gray-300' :
+                            index === 2 ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-slate-600/20 text-slate-400'
+                          }`}>
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-white text-sm">{store.name}</p>
+                            <p className="text-xs text-slate-400">{store.operationsCount} operações</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-white">{store.name}</p>
-                          <p className="text-sm text-slate-400">
-                            {store.operationsCount} operações • {store.ordersCount} pedidos
-                          </p>
+                        <div className="text-right">
+                          <p className="font-bold text-white">{store.totalOrders}</p>
+                          <p className="text-xs text-slate-400">pedidos</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-white">{formatCurrency(store.revenue)}</p>
-                        <p className="text-sm text-slate-400">{formatDate(store.lastActivity)}</p>
+                    )) || (
+                      <div className="text-center py-4 text-slate-400">
+                        <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Carregando dados...</p>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pedidos por Países (Mensal) */}
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+                <CardHeader>
+                  <CardTitle className="text-slate-200 flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-blue-400" />
+                    Pedidos por Países
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">
+                    Distribuição mensal por país
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {adminStats?.ordersByCountry?.map((country, index) => (
+                      <div key={country.country} className="flex items-center justify-between p-3 border border-slate-700/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <span className="text-xs font-bold text-blue-400">
+                              {country.country.substring(0, 2).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-white text-sm">{country.country}</p>
+                            <p className="text-xs text-slate-400">
+                              {((country.orders / (adminStats?.ordersByCountry?.reduce((acc, c) => acc + c.orders, 0) || 1)) * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-white">{country.orders}</p>
+                          <p className="text-xs text-slate-400">pedidos</p>
+                        </div>
+                      </div>
+                    )) || (
+                      <div className="text-center py-4 text-slate-400">
+                        <Globe className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Carregando dados...</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Lojas do Dia */}
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+                <CardHeader>
+                  <CardTitle className="text-slate-200 flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-green-400" />
+                    Top Lojas do Dia
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">
+                    Ranking por pedidos Shopify hoje
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {adminStats?.topStoresToday?.map((store, index) => (
+                      <div key={store.id} className="flex items-center justify-between p-3 border border-slate-700/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            index === 0 ? 'bg-green-500/20 text-green-400' :
+                            index === 1 ? 'bg-emerald-500/20 text-emerald-400' :
+                            index === 2 ? 'bg-teal-500/20 text-teal-400' :
+                            'bg-slate-600/20 text-slate-400'
+                          }`}>
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium text-white text-sm">{store.name}</p>
+                            <p className="text-xs text-slate-400">Shopify</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-white">{store.todayOrders}</p>
+                          <p className="text-xs text-slate-400">hoje</p>
+                        </div>
+                      </div>
+                    )) || (
+                      <div className="text-center py-4 text-slate-400">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Carregando dados...</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Stores Tab */}

@@ -20,21 +20,46 @@ export class AdminService {
         .from(orders)
         .where(sql`${orders.status} = 'delivered'`);
       
-      // Get recent stores activity with aggregated data
-      const recentStores = await db
+      // Get top stores globally by total orders
+      const topStoresGlobal = await db
         .select({
           id: stores.id,
           name: stores.name,
           operationsCount: count(operations.id),
-          ordersCount: sql<number>`COUNT(${orders.id})`,
-          revenue: sql<number>`COALESCE(SUM(CASE WHEN ${orders.status} = 'delivered' THEN CAST(${orders.total} AS DECIMAL) ELSE 0 END), 0)`,
-          lastActivity: sql<string>`MAX(${orders.orderDate})`
+          totalOrders: sql<number>`COUNT(${orders.id})`
         })
         .from(stores)
         .leftJoin(operations, sql`${operations.storeId} = ${stores.id}`)
         .leftJoin(orders, sql`${orders.storeId} = ${stores.id}`)
         .groupBy(stores.id, stores.name)
-        .orderBy(desc(sql`MAX(${orders.orderDate})`))
+        .orderBy(desc(sql<number>`COUNT(${orders.id})`))
+        .limit(5);
+
+      // Get orders by country (monthly)
+      const ordersByCountry = await db
+        .select({
+          country: sql<string>`COALESCE(${orders.shippingCountry}, 'Não informado')`,
+          orders: sql<number>`COUNT(*)`
+        })
+        .from(orders)
+        .where(sql`${orders.orderDate} >= CURRENT_DATE - INTERVAL '30 days'`)
+        .groupBy(sql`COALESCE(${orders.shippingCountry}, 'Não informado')`)
+        .orderBy(desc(sql<number>`COUNT(*)`))
+        .limit(10);
+
+      // Get top stores today by Shopify orders
+      const today = new Date().toISOString().split('T')[0];
+      const topStoresToday = await db
+        .select({
+          id: stores.id,
+          name: stores.name,
+          todayOrders: sql<number>`COUNT(${orders.id})`
+        })
+        .from(stores)
+        .leftJoin(operations, sql`${operations.storeId} = ${stores.id}`)
+        .leftJoin(orders, sql`${orders.storeId} = ${stores.id} AND ${orders.dataSource} = 'shopify' AND DATE(${orders.orderDate}) = '${today}'`)
+        .groupBy(stores.id, stores.name)
+        .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
       
       return {
@@ -42,12 +67,18 @@ export class AdminService {
         totalOperations: operationsCount.count,
         totalOrders: ordersCount.count,
         totalRevenue: Number(revenueResult.totalRevenue) || 0,
-        recentStores: recentStores.map(store => ({
+        topStoresGlobal: topStoresGlobal.map(store => ({
           ...store,
           operationsCount: Number(store.operationsCount),
-          ordersCount: Number(store.ordersCount),
-          revenue: Number(store.revenue),
-          lastActivity: store.lastActivity || new Date().toISOString()
+          totalOrders: Number(store.totalOrders)
+        })),
+        ordersByCountry: ordersByCountry.map(country => ({
+          country: country.country,
+          orders: Number(country.orders)
+        })),
+        topStoresToday: topStoresToday.map(store => ({
+          ...store,
+          todayOrders: Number(store.todayOrders)
         }))
       };
     } catch (error) {
