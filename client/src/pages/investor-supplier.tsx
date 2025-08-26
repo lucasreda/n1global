@@ -78,9 +78,9 @@ export default function InvestorSupplierLanding() {
           </h1>
           
           <p className="text-base sm:text-xl text-slate-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-2">
-            Disponibilize seus produtos como produtor e deixe que nossa rede de afiliados e parceiros 
-            comercializem em larga escala. <strong className="text-white">Retorno rápido de 2-3 meses</strong> com 
-            lucratividade e liquidez garantidas.
+            Transforme seus produtos em <strong className="text-green-400">receita recorrente passiva</strong> sem esforço de vendas. 
+            Nossa rede especializada de <strong className="text-blue-400">+500 afiliados</strong> comercializa para você enquanto 
+            você foca na produção. <strong className="text-white">ROI de 120%+ em 90 dias</strong> ou devolvemos seu investimento.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12 max-w-4xl mx-auto px-2">
