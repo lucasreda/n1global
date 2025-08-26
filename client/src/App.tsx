@@ -192,7 +192,7 @@ function SupplierHeader() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="bg-gray-900/80 backdrop-blur-sm shadow-sm border-b border-gray-700/60">
+    <header className="bg-gray-900 shadow-sm border-b border-gray-700">
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
