@@ -1253,9 +1253,9 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
   const [syncPhase, setSyncPhase] = useState<'shopify' | 'shipping' | 'ads' | 'matching' | 'completed'>('shopify');
   const [syncStats, setSyncStats] = useState({
     shopify: { current: 0, total: 0, completed: false, status: 'Iniciando...', percentage: 0 },
-    shipping: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
+    shipping: { current: 0, total: 0, completed: false, started: false, status: 'Aguardando...', percentage: 0 },
     ads: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
-    matching: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 }
+    matching: { current: 0, total: 0, completed: false, started: false, status: 'Aguardando...', percentage: 0 }
   });
   const [overallProgress, setOverallProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -1287,9 +1287,9 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
     // Resetar o estado ao carregar o componente
     setSyncStats({
       shopify: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
-      shipping: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
+      shipping: { current: 0, total: 0, completed: false, started: false, status: 'Aguardando...', percentage: 0 },
       ads: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
-      matching: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 }
+      matching: { current: 0, total: 0, completed: false, started: false, status: 'Aguardando...', percentage: 0 }
     });
     setSyncPhase('shopify');
     setOverallProgress(0);
@@ -1332,46 +1332,45 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
               percentage: 100
             };
             
-            // Iniciar outras etapas quando Shopify completar
-            if (!prev.shipping.completed) {
+            // Iniciar outras etapas quando Shopify completar - SÓ UMA VEZ
+            if (!prev.shipping.completed && !prev.shipping.started) {
+              const finalShopifyCount = prev.shopify.current;
+              
+              // Marcar como iniciado para evitar recalculo
               newStats.shipping = {
                 current: 0,
                 total: 1187,
                 completed: false,
+                started: true,
                 status: 'Sincronizando transportadora...',
                 percentage: 0
               };
               
-              // Simular progresso da transportadora
-              setTimeout(() => {
+              // Progresso suave da transportadora
+              let shippingProgress = 0;
+              const shippingInterval = setInterval(() => {
+                shippingProgress += Math.random() * 15 + 10; // 10-25% por vez
+                if (shippingProgress >= 100) {
+                  shippingProgress = 100;
+                  clearInterval(shippingInterval);
+                }
+                
                 setSyncStats(prevStats => ({
                   ...prevStats,
                   shipping: {
-                    current: 600,
+                    current: Math.floor((shippingProgress / 100) * 1187),
                     total: 1187,
-                    completed: false,
-                    status: 'Carregando dados da transportadora...',
-                    percentage: 50
+                    completed: shippingProgress >= 100,
+                    started: true,
+                    status: shippingProgress >= 100 
+                      ? '1187 leads sincronizados'
+                      : `Carregando dados da transportadora... ${Math.floor(shippingProgress)}%`,
+                    percentage: Math.floor(shippingProgress)
                   }
                 }));
-              }, 1000);
+              }, 500);
               
-              setTimeout(() => {
-                setSyncStats(prevStats => ({
-                  ...prevStats,
-                  shipping: {
-                    current: 1187,
-                    total: 1187,
-                    completed: true,
-                    status: '1187 leads sincronizados',
-                    percentage: 100
-                  }
-                }));
-              }, 3000);
-            }
-            
-            // Iniciar campanhas publicitárias
-            if (!prev.ads.completed) {
+              // Iniciar campanhas após 2 segundos
               setTimeout(() => {
                 setSyncStats(prevStats => ({
                   ...prevStats,
@@ -1383,51 +1382,46 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
                     percentage: 100
                   }
                 }));
-              }, 4000);
-            }
-            
-            // Iniciar correspondência de dados
-            if (!prev.matching.completed) {
+              }, 2000);
+              
+              // Iniciar correspondência após 3 segundos com progresso suave
               setTimeout(() => {
                 setSyncStats(prevStats => ({
                   ...prevStats,
                   matching: {
                     current: 0,
-                    total: prev.shopify.current,
+                    total: finalShopifyCount,
                     completed: false,
-                    status: 'Fazendo correspondência de dados...',
+                    started: true,
+                    status: 'Iniciando correspondência de dados...',
                     percentage: 0
                   }
                 }));
                 
-                // Progresso da correspondência
-                setTimeout(() => {
+                // Progresso suave da correspondência
+                let matchingProgress = 0;
+                const matchingInterval = setInterval(() => {
+                  matchingProgress += Math.random() * 8 + 5; // 5-13% por vez
+                  if (matchingProgress >= 100) {
+                    matchingProgress = 100;
+                    clearInterval(matchingInterval);
+                  }
+                  
                   setSyncStats(prevStats => ({
                     ...prevStats,
                     matching: {
-                      current: Math.floor(prevStats.shopify.current * 0.7),
-                      total: prevStats.shopify.current,
-                      completed: false,
-                      status: 'Analisando correspondências...',
-                      percentage: 70
+                      current: Math.floor((matchingProgress / 100) * finalShopifyCount),
+                      total: finalShopifyCount,
+                      completed: matchingProgress >= 100,
+                      started: true,
+                      status: matchingProgress >= 100
+                        ? 'Correspondência completa - 0 matches encontrados'
+                        : `Analisando correspondências... ${Math.floor(matchingProgress)}%`,
+                      percentage: Math.floor(matchingProgress)
                     }
                   }));
-                }, 2000);
-                
-                // Finalizar correspondência
-                setTimeout(() => {
-                  setSyncStats(prevStats => ({
-                    ...prevStats,
-                    matching: {
-                      current: prevStats.shopify.current,
-                      total: prevStats.shopify.current,
-                      completed: true,
-                      status: 'Correspondência completa - 0 matches encontrados',
-                      percentage: 100
-                    }
-                  }));
-                }, 4000);
-              }, 5000);
+                }, 800);
+              }, 3000);
             }
           }
           
