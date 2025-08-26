@@ -192,7 +192,7 @@ function SupplierHeader() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="bg-gray-900 shadow-sm border-b border-gray-700">
+    <header className="!bg-gray-900 shadow-sm border-b border-gray-700" style={{ backgroundColor: '#111827' }}>
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -210,7 +210,12 @@ function SupplierHeader() {
               <div className="text-sm font-medium text-gray-300">
                 {user?.name}
               </div>
-
+              {user?.role === 'supplier' && (
+                <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 text-xs font-medium px-2 py-1 shadow-sm">
+                  <Crown className="h-3 w-3 mr-1" />
+                  Fornecedor
+                </Badge>
+              )}
             </div>
             <button
               onClick={logout}
@@ -258,7 +263,7 @@ function AppContent() {
             </div>
           ) : isSupplier ? (
             /* Supplier layout with header only */
-            <div className="min-h-screen bg-gray-900">
+            <div className="min-h-screen !bg-gray-900" style={{ backgroundColor: '#111827' }}>
               <SupplierHeader />
               <main className="p-6">
                 <Router />
