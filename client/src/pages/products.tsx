@@ -268,15 +268,36 @@ export default function ProductsPage() {
               {searchedProduct && (
                 <Card className="glassmorphism-light">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-white">{searchedProduct.name}</h3>
-                        <p className="text-sm text-gray-300">SKU: {searchedProduct.sku}</p>
-                        {searchedProduct.description && (
-                          <p className="text-sm text-gray-400 mt-1">{searchedProduct.description}</p>
-                        )}
+                    <div className="flex gap-4">
+                      {/* Product Thumbnail */}
+                      <div className="flex-shrink-0 w-16 h-16">
+                        {searchedProduct.imageUrl ? (
+                          <img
+                            src={searchedProduct.imageUrl}
+                            alt={searchedProduct.name}
+                            className="w-full h-full object-cover rounded-lg border border-gray-600"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-full h-full flex items-center justify-center bg-gray-800 rounded-lg border border-gray-600 ${searchedProduct.imageUrl ? 'hidden' : ''}`}>
+                          <Package className="h-6 w-6 text-gray-500" />
+                        </div>
                       </div>
-                      <Badge variant="default">Disponível</Badge>
+
+                      {/* Product Info */}
+                      <div className="flex-1 flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium text-white">{searchedProduct.name}</h3>
+                          <p className="text-sm text-gray-300">SKU: {searchedProduct.sku}</p>
+                          {searchedProduct.description && (
+                            <p className="text-sm text-gray-400 mt-1">{searchedProduct.description}</p>
+                          )}
+                        </div>
+                        <Badge variant="default">Disponível</Badge>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -349,39 +370,62 @@ export default function ProductsPage() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Product Info */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center space-y-1">
-                    <div className="text-lg font-bold text-orange-400">
-                      €{userProduct.customCostPrice || product.costPrice || "0.00"}
+                <div className="flex gap-4">
+                  {/* Product Thumbnail */}
+                  <div className="flex-shrink-0 w-24 h-24">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover rounded-lg border border-gray-600"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-full h-full flex items-center justify-center bg-gray-800 rounded-lg border border-gray-600 ${product.imageUrl ? 'hidden' : ''}`}>
+                      <Package className="h-8 w-8 text-gray-500" />
                     </div>
-                    <div className="text-xs text-gray-400">Preço B2B</div>
                   </div>
-                  <div className="text-center space-y-1">
-                    <div className="text-lg font-bold text-purple-400">
-                      €{userProduct.customShippingCost || product.shippingCost || "0.00"}
+
+                  {/* Product Details */}
+                  <div className="flex-1 space-y-4">
+                    {/* Product Info Grid */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center space-y-1">
+                        <div className="text-lg font-bold text-orange-400">
+                          €{userProduct.customCostPrice || product.costPrice || "0.00"}
+                        </div>
+                        <div className="text-xs text-gray-400">Preço B2B</div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <div className="text-lg font-bold text-purple-400">
+                          €{userProduct.customShippingCost || product.shippingCost || "0.00"}
+                        </div>
+                        <div className="text-xs text-gray-400">Valor de Envio</div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <div className="text-lg font-bold text-blue-400">
+                          {stockData[product.sku]?.availableStock ?? product.stock}
+                        </div>
+                        <div className="text-xs text-gray-400">Disponíveis</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-400">Valor de Envio</div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <div className="text-lg font-bold text-blue-400">
-                      {stockData[product.sku]?.availableStock ?? product.stock}
-                    </div>
-                    <div className="text-xs text-gray-400">Disponíveis</div>
+
+                    {product.description && (
+                      <div className="text-sm text-gray-300">
+                        {product.description}
+                      </div>
+                    )}
+
+                    {userProduct.linkedAt && (
+                      <div className="text-xs text-gray-400">
+                        Vinculado em: {new Date(userProduct.linkedAt).toLocaleDateString("pt-BR")}
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {product.description && (
-                  <div className="text-sm text-gray-300">
-                    {product.description}
-                  </div>
-                )}
-
-                {userProduct.linkedAt && (
-                  <div className="text-xs text-gray-400">
-                    Vinculado em: {new Date(userProduct.linkedAt).toLocaleDateString("pt-BR")}
-                  </div>
-                )}
               </CardContent>
             </Card>
           );
