@@ -263,7 +263,7 @@ export default function OnboardingPage() {
   const progressPercentage = (steps.filter(s => s.completed).length / steps.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-blue-950 to-purple-950 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Logo */}
         <div className="pt-4 pb-4">
