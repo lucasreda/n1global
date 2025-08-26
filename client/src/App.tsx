@@ -24,6 +24,7 @@ import Ads from "@/pages/ads";
 import Onboarding from "@/pages/onboarding";
 import InsidePage from "@/pages/inside";
 import SupplierDashboard from "@/pages/supplier";
+import InvestorSupplierLanding from "@/pages/investor-supplier";
 import NotFound from "@/pages/not-found";
 
 interface OnboardingStatus {
@@ -249,6 +250,11 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  // Public route for landing page
+  if (location === '/investor-supplier') {
+    return <InvestorSupplierLanding />;
   }
 
   return (
