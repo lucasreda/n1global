@@ -456,6 +456,31 @@ export default function InsidePage() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Shopify Orders Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-200">Pedidos Hoje</CardTitle>
+                  <Calendar className="h-4 w-4 text-cyan-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-white">{adminStats?.todayShopifyOrders?.toLocaleString() || 0}</div>
+                  <p className="text-xs text-slate-400">Pedidos Shopify de hoje</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-200">Pedidos no Mês</CardTitle>
+                  <ShoppingCart className="h-4 w-4 text-emerald-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-white">{adminStats?.monthShopifyOrders?.toLocaleString() || 0}</div>
+                  <p className="text-xs text-slate-400">Pedidos Shopify deste mês</p>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="bg-white/10 border-white/20 backdrop-blur-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -500,31 +525,6 @@ export default function InsidePage() {
                     {formatCurrency(adminStats?.totalRevenue || 0)}
                   </div>
                   <p className="text-xs text-slate-400">Receita consolidada</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Shopify Orders Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-200">Pedidos Hoje</CardTitle>
-                  <Calendar className="h-4 w-4 text-cyan-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white">{adminStats?.todayShopifyOrders?.toLocaleString() || 0}</div>
-                  <p className="text-xs text-slate-400">Pedidos Shopify de hoje</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-200">Pedidos no Mês</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-emerald-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white">{adminStats?.monthShopifyOrders?.toLocaleString() || 0}</div>
-                  <p className="text-xs text-slate-400">Pedidos Shopify deste mês</p>
                 </CardContent>
               </Card>
             </div>
