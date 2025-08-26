@@ -1317,7 +1317,7 @@ function ProductsManager() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-slate-400">Custo para Operações</p>
+                        <p className="text-sm text-slate-400">Custo para o Fornecedor</p>
                         <p className="font-medium text-orange-400">
                           {formatCurrency(Number(product.costPrice || 0))}
                         </p>
