@@ -9,6 +9,7 @@ interface RegisterCredentials {
   name: string;
   email: string;
   password: string;
+  role?: string;
 }
 
 interface User {
