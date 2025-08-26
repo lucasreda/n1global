@@ -119,15 +119,19 @@ export default function OnboardingPage() {
 
   // Typewriting effect for step 0
   useEffect(() => {
+    console.log("Typewriting useEffect called", { showStep0, currentTextIndex });
     if (!showStep0) return;
     
     let currentIndex = 0;
     const currentText = texts[currentTextIndex];
+    console.log("Starting typewriter for text:", currentText);
     setDisplayedText("");
     
     const typewriterInterval = setInterval(() => {
       if (currentIndex < currentText.length) {
-        setDisplayedText(currentText.slice(0, currentIndex + 1));
+        const newText = currentText.slice(0, currentIndex + 1);
+        console.log("Typing:", newText);
+        setDisplayedText(newText);
         currentIndex++;
       } else {
         clearInterval(typewriterInterval);
@@ -136,9 +140,11 @@ export default function OnboardingPage() {
         setTimeout(() => {
           if (currentTextIndex === 0) {
             // Clear text and show second text
+            console.log("Moving to second text");
             setCurrentTextIndex(1);
           } else {
             // Show card after second text
+            console.log("Showing card");
             setShowCard(true);
           }
         }, 3000);
@@ -146,7 +152,7 @@ export default function OnboardingPage() {
     }, 80);
 
     return () => clearInterval(typewriterInterval);
-  }, [showStep0, currentTextIndex, texts]);
+  }, [showStep0, currentTextIndex]);
 
   const handleContinueToStep1 = () => {
     setShowStep0(false);
