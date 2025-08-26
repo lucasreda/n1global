@@ -1432,7 +1432,7 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
                         method: 'POST',
                         headers: { 
                           'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                         }
                       }).then(response => {
                         if (response.ok) {
