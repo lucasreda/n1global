@@ -90,12 +90,20 @@ export default function OnboardingPage() {
   // State for step 0 presentation
   const [showStep0, setShowStep0] = useState(true);
   const [displayedText, setDisplayedText] = useState("");
+  const [finalText, setFinalText] = useState("");
   const [showCard, setShowCard] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
 
   const texts = [
-    "Ter dados precisos da sua operação <span class='gradient-text'>mudam o jogo</span>",
-    "Um sistema que <span class='gradient-text'>unifica</span> tudo em um só lugar"
+    {
+      plain: "Ter dados precisos da sua operação mudam o jogo",
+      html: "Ter dados precisos da sua operação <span class='gradient-text'>mudam o jogo</span>"
+    },
+    {
+      plain: "Um sistema que unifica tudo em um só lugar", 
+      html: "Um sistema que <span class='gradient-text'>unifica</span> tudo em um só lugar"
+    }
   ];
 
   // Determine current step based on completed steps
@@ -122,8 +130,10 @@ export default function OnboardingPage() {
     if (!showStep0) return;
     
     let currentIndex = 0;
-    const currentText = texts[currentTextIndex];
+    const currentText = texts[currentTextIndex].plain;
     setDisplayedText("");
+    setIsTypingComplete(false);
+    setFinalText("");
     
     const typewriterInterval = setInterval(() => {
       if (currentIndex < currentText.length) {
@@ -132,6 +142,8 @@ export default function OnboardingPage() {
         currentIndex++;
       } else {
         clearInterval(typewriterInterval);
+        setIsTypingComplete(true);
+        setFinalText(texts[currentTextIndex].html);
         
         // Wait 3 seconds after completing the text
         setTimeout(() => {
@@ -141,6 +153,8 @@ export default function OnboardingPage() {
           } else {
             // Hide second text and wait 3 seconds before showing card
             setDisplayedText("");
+            setFinalText("");
+            setIsTypingComplete(false);
             setTimeout(() => {
               setShowCard(true);
             }, 3000);
@@ -278,12 +292,18 @@ export default function OnboardingPage() {
           /* Step 0 - Presentation */
           <div className="flex flex-col items-center text-center">
             {/* Typewriting Text - Com margem superior adicional apenas para os textos */}
-            <div className="mb-6" style={{ marginTop: displayedText ? '150px' : '0px' }}>
+            <div className="mb-6" style={{ marginTop: displayedText || finalText ? '150px' : '0px' }}>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[120px] flex items-center justify-center">
-                {displayedText && (
+                {(displayedText || finalText) && (
                   <>
-                    <span dangerouslySetInnerHTML={{ __html: displayedText }} />
-                    <span className="ml-2 animate-pulse">|</span>
+                    {isTypingComplete && finalText ? (
+                      <span dangerouslySetInnerHTML={{ __html: finalText }} />
+                    ) : (
+                      <span>{displayedText}</span>
+                    )}
+                    {!isTypingComplete && (
+                      <span className="ml-2 animate-pulse">|</span>
+                    )}
                   </>
                 )}
               </h1>
