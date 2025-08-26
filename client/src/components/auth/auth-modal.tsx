@@ -300,7 +300,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                 <Input
                                   {...field}
                                   placeholder="Seu nome"
-                                  className="apple-input pl-10 h-12"
+                                  className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
                                   data-testid="input-name"
                                 />
                               </div>
@@ -322,7 +322,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                   {...field}
                                   type="email"
                                   placeholder="seu@email.com"
-                                  className="apple-input pl-10 h-12"
+                                  className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
                                   data-testid="input-email-register"
                                 />
                               </div>
@@ -344,7 +344,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                   {...field}
                                   type={showPassword ? "text" : "password"}
                                   placeholder="••••••••"
-                                  className="apple-input pl-10 pr-10 h-12"
+                                  className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
                                   data-testid="input-password-register"
                                 />
                                 <button
@@ -412,7 +412,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                   {...field}
                                   type={showPassword ? "text" : "password"}
                                   placeholder="••••••••"
-                                  className="apple-input pl-10 h-12"
+                                  className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
                                   data-testid="input-confirm-password"
                                 />
                               </div>
@@ -424,7 +424,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                       
                       <Button
                         type="submit"
-                        className="apple-button w-full h-12"
+                        className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-medium rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
                         disabled={registerForm.formState.isSubmitting}
                         data-testid="button-register"
                       >
