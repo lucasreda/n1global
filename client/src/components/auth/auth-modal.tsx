@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Check, X } from "lucide-react";
 import logoPath from "@assets/logo_1756142152045.png";
 
 const loginSchema = z.object({
@@ -18,9 +18,22 @@ const loginSchema = z.object({
 });
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+  name: z.string()
+    .min(2, "Nome deve ter no mínimo 2 caracteres")
+    .max(50, "Nome deve ter no máximo 50 caracteres")
+    .regex(/^[A-Za-zÀ-ÿ\s]+$/, "Nome deve conter apenas letras e espaços"),
+  email: z.string()
+    .email("Email inválido")
+    .min(5, "Email deve ter no mínimo 5 caracteres")
+    .max(100, "Email deve ter no máximo 100 caracteres"),
+  password: z.string()
+    .min(8, "Senha deve ter no mínimo 8 caracteres")
+    .max(128, "Senha deve ter no máximo 128 caracteres")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Senha deve conter ao menos: 1 letra minúscula, 1 maiúscula e 1 número"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -38,6 +51,19 @@ export function AuthModal({ isOpen }: AuthModalProps) {
   const { login, register } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  // Password strength checker
+  const checkPasswordStrength = (password: string) => {
+    const checks = {
+      length: password.length >= 8,
+      lowercase: /[a-z]/.test(password),
+      uppercase: /[A-Z]/.test(password),
+      number: /\d/.test(password),
+    };
+    
+    const score = Object.values(checks).filter(Boolean).length;
+    return { checks, score };
+  };
 
   const fullText = "Descomplicando suas vendas por todo o mundo.";
 
@@ -79,6 +105,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
@@ -260,7 +287,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                   </Form>
                 ) : (
                   <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-6">
+                    <form onSubmit={registerForm.handleSubmit(handleRegister)} className="apple-form-container">
                       <FormField
                         control={registerForm.control}
                         name="name"
@@ -273,7 +300,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                 <Input
                                   {...field}
                                   placeholder="Seu nome"
-                                  className="glassmorphism-light pl-10 h-12 text-foreground placeholder-muted-foreground border-border focus:border-primary transition-colors"
+                                  className="apple-input pl-10 h-12"
                                   data-testid="input-name"
                                 />
                               </div>
@@ -295,7 +322,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                   {...field}
                                   type="email"
                                   placeholder="seu@email.com"
-                                  className="glassmorphism-light pl-10 h-12 text-foreground placeholder-muted-foreground border-border focus:border-primary transition-colors"
+                                  className="apple-input pl-10 h-12"
                                   data-testid="input-email-register"
                                 />
                               </div>
@@ -317,7 +344,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                   {...field}
                                   type={showPassword ? "text" : "password"}
                                   placeholder="••••••••"
-                                  className="glassmorphism-light pl-10 pr-10 h-12 text-foreground placeholder-muted-foreground border-border focus:border-primary transition-colors"
+                                  className="apple-input pl-10 pr-10 h-12"
                                   data-testid="input-password-register"
                                 />
                                 <button
@@ -329,6 +356,67 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                                 </button>
                               </div>
                             </FormControl>
+                            
+                            {/* Password Strength Indicator */}
+                            {field.value && (
+                              <div className="mt-2 space-y-2">
+                                <div className="flex space-x-1">
+                                  {Array.from({length: 4}).map((_, i) => {
+                                    const { score } = checkPasswordStrength(field.value);
+                                    return (
+                                      <div
+                                        key={i}
+                                        className={`h-1.5 flex-1 rounded-full transition-colors ${
+                                          i < score 
+                                            ? score === 1 ? 'bg-red-500' 
+                                              : score === 2 ? 'bg-orange-500'
+                                              : score === 3 ? 'bg-yellow-500'
+                                              : 'bg-green-500'
+                                            : 'bg-gray-300 dark:bg-gray-600'
+                                        }`}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                                  {Object.entries(checkPasswordStrength(field.value).checks).map(([key, valid]) => (
+                                    <div key={key} className={`flex items-center space-x-1.5 ${valid ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
+                                      {valid ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                                      <span>
+                                        {key === 'length' ? '8+ caracteres' :
+                                         key === 'lowercase' ? 'Minúscula' :
+                                         key === 'uppercase' ? 'Maiúscula' :
+                                         'Número'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={registerForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-foreground">Confirmar Senha</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  {...field}
+                                  type={showPassword ? "text" : "password"}
+                                  placeholder="••••••••"
+                                  className="apple-input pl-10 h-12"
+                                  data-testid="input-confirm-password"
+                                />
+                              </div>
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -336,7 +424,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                       
                       <Button
                         type="submit"
-                        className="w-full h-12 bg-chart-2 hover:bg-chart-2/90 text-primary-foreground font-semibold transition-all duration-200 transform hover:scale-[1.02]"
+                        className="apple-button w-full h-12"
                         disabled={registerForm.formState.isSubmitting}
                         data-testid="button-register"
                       >
