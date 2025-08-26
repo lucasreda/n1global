@@ -288,49 +288,37 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                 ) : (
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-6">
-                      <FormField
-                        control={registerForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium text-foreground">Nome Completo</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  {...field}
-                                  placeholder="Seu nome"
-                                  className="pl-10 h-12"
-                                  data-testid="input-name"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Nome Completo</label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            {...registerForm.register("name")}
+                            placeholder="Seu nome"
+                            className="pl-10 h-12"
+                            data-testid="input-name"
+                          />
+                        </div>
+                        {registerForm.formState.errors.name && (
+                          <p className="text-sm text-destructive">{registerForm.formState.errors.name.message}</p>
                         )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium text-foreground">E-mail</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  {...field}
-                                  type="email"
-                                  placeholder="seu@email.com"
-                                  className="pl-10 h-12"
-                                  data-testid="input-email-register"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">E-mail</label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            {...registerForm.register("email")}
+                            type="email"
+                            placeholder="seu@email.com"
+                            className="pl-10 h-12"
+                            data-testid="input-email-register"
+                          />
+                        </div>
+                        {registerForm.formState.errors.email && (
+                          <p className="text-sm text-destructive">{registerForm.formState.errors.email.message}</p>
                         )}
-                      />
+                      </div>
                       <FormField
                         control={registerForm.control}
                         name="password"
