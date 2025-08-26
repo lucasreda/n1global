@@ -115,6 +115,11 @@ export default function OnboardingPage() {
   const [showCard, setShowCard] = useState(false);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
+  
+  // State for card title animation
+  const [cardTitleText, setCardTitleText] = useState("");
+  const [cardTitleIndex, setCardTitleIndex] = useState(0);
+  const [isCardTitleComplete, setIsCardTitleComplete] = useState(false);
 
   const texts = [
     {
@@ -128,6 +133,11 @@ export default function OnboardingPage() {
       gradientStart: 15 // posição onde começa o gradiente
     }
   ];
+
+  const cardTitleConfig = {
+    plain: "Quanto mais dados, mais inteligência",
+    gradientStart: 20 // posição onde começa "mais inteligência"
+  };
 
   // Determine current step based on completed steps
   const getCurrentStep = () => {
@@ -187,6 +197,32 @@ export default function OnboardingPage() {
 
     return () => clearInterval(typewriterInterval);
   }, [showStep0, currentTextIndex]);
+
+  // Typewriting effect for card title
+  useEffect(() => {
+    if (!showCard) return;
+    
+    setCardTitleText("");
+    setCardTitleIndex(0);
+    setIsCardTitleComplete(false);
+    
+    const cardTitleInterval = setInterval(() => {
+      setCardTitleIndex(prev => {
+        const newIndex = prev + 1;
+        const textToShow = cardTitleConfig.plain.slice(0, newIndex);
+        setCardTitleText(textToShow);
+        
+        if (newIndex >= cardTitleConfig.plain.length) {
+          clearInterval(cardTitleInterval);
+          setIsCardTitleComplete(true);
+        }
+        
+        return newIndex;
+      });
+    }, 60); // Slightly faster for card title
+
+    return () => clearInterval(cardTitleInterval);
+  }, [showCard]);
 
   const handleContinueToStep1 = () => {
     setShowStep0(false);
@@ -339,8 +375,15 @@ export default function OnboardingPage() {
                       </div>
                     </div>
 
-                    <h2 className="text-2xl font-semibold text-white mb-3">
-                      Quanto mais dados, mais inteligência
+                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 min-h-[80px] flex items-center justify-center">
+                      {cardTitleText && (
+                        <>
+                          {renderTextWithGradient(cardTitleText, cardTitleConfig, cardTitleIndex)}
+                          {!isCardTitleComplete && (
+                            <span className="ml-2 animate-pulse">|</span>
+                          )}
+                        </>
+                      )}
                     </h2>
                     <p className="text-white/70 text-base leading-relaxed mb-6 max-w-lg mx-auto">
                       Alimente a plataforma com informações da sua operação e obtenha insights precisos para decisões mais assertivas.
