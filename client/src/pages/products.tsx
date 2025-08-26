@@ -344,7 +344,7 @@ export default function ProductsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
-                      <CardTitle className="text-white">{product.name}</CardTitle>
+                      <CardTitle className="text-white" style={{ fontSize: '18px' }}>{product.name}</CardTitle>
                       <Badge variant={product.isActive ? "default" : "secondary"}>
                         {product.isActive ? "Ativo" : "Inativo"}
                       </Badge>
@@ -395,7 +395,7 @@ export default function ProductsPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center space-y-1">
                         <div className="text-lg font-bold text-orange-400">
-                          €{userProduct.customCostPrice || product.costPrice || "0.00"}
+                          €{product.price || "0.00"}
                         </div>
                         <div className="text-xs text-gray-400">Preço B2B</div>
                       </div>

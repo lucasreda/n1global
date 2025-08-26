@@ -22,6 +22,10 @@ The COD Dashboard is a modern full-stack web application designed for managing C
 ✓ **Post-Onboarding Redirect Fix**: Corrected redirect destination from '/dashboard' to '/' after onboarding completion to match application's root route structure
 ✓ **Critical Marketing Costs Data Isolation Fix**: Resolved major bug where marketing costs were being pulled from all operations instead of filtering by current operation - implemented proper storeId filtering through adAccounts relationship to ensure operation-specific cost display
 ✓ **Product Costs Fallback System Removed**: Eliminated fallback cost calculation system that was showing product and shipping costs even when no products were linked to the operation - now shows zero costs when no products are vinculados, providing accurate financial representation
+✓ **Product Card Enhancement**: Added product thumbnails (96x96px) to the left side of product cards with automatic fallback to package icon when images fail to load or don't exist
+✓ **Search Results Thumbnails**: Implemented consistent thumbnail display (64x64px) in product search results with same fallback system
+✓ **Typography Improvements**: Set "Produtos Vinculados" title to 20px and product names to 18px for better visual hierarchy
+✓ **B2B Price Display Fix**: Corrected Preço B2B field to show actual selling price (product.price) instead of cost price (product.costPrice), providing accurate pricing information for business operations
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
