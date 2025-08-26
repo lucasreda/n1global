@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Users, 
   Building2, 
@@ -22,7 +25,10 @@ import {
   Pencil,
   Trash2,
   LogOut,
-  User
+  User,
+  AlertTriangle,
+  Shield,
+  Briefcase
 } from "lucide-react";
 import logoImage from "@assets/INSIDE_1756100933599.png";
 
@@ -70,6 +76,24 @@ interface Product {
   createdAt: string;
 }
 
+interface SystemUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  onboardingCompleted: boolean;
+  createdAt: string;
+}
+
+interface SystemUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  onboardingCompleted: boolean;
+  createdAt: string;
+}
+
 export default function InsidePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStore, setSelectedStore] = useState<string>("all");
@@ -79,6 +103,11 @@ export default function InsidePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const pageSize = 20;
   
@@ -171,6 +200,59 @@ export default function InsidePage() {
     enabled: selectedStore !== "all"
   });
 
+  const { data: systemUsers, isLoading: usersLoading } = useQuery<SystemUser[]>({
+    queryKey: ['/api/admin/users'],
+    enabled: selectedTab === "users"
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao excluir usuário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      toast({
+        title: "Usuário excluído",
+        description: "O usuário foi removido com sucesso do sistema.",
+      });
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao excluir usuário",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteUser = (user: SystemUser) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteUser = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string = 'EUR') => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -253,7 +335,7 @@ export default function InsidePage() {
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white/10 border border-white/20 backdrop-blur-md">
+          <TabsList className="grid w-full grid-cols-5 bg-white/10 border border-white/20 backdrop-blur-md">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">
               Visão Geral
             </TabsTrigger>
@@ -265,6 +347,9 @@ export default function InsidePage() {
             </TabsTrigger>
             <TabsTrigger value="products" className="data-[state=active]:bg-blue-600">
               Produtos
+            </TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-blue-600">
+              Usuários
             </TabsTrigger>
           </TabsList>
 
@@ -581,8 +666,138 @@ export default function InsidePage() {
           <TabsContent value="products" className="space-y-6">
             <ProductsManager />
           </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Gerenciar Usuários
+                    </CardTitle>
+                    <CardDescription className="text-slate-400">
+                      Visualize e gerencie todas as contas de usuário do sistema
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {usersLoading ? (
+                  <div className="text-center py-8 text-slate-400">
+                    Carregando usuários...
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {systemUsers && systemUsers.length > 0 ? (
+                      systemUsers.map((user) => (
+                        <div key={user.id} className="bg-white/5 border border-white/20 rounded-lg p-6 hover:bg-white/10 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                {user.role === 'super_admin' ? (
+                                  <Shield className="h-6 w-6 text-blue-400" />
+                                ) : user.role === 'supplier' ? (
+                                  <Briefcase className="h-6 w-6 text-purple-400" />
+                                ) : (
+                                  <User className="h-6 w-6 text-green-400" />
+                                )}
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-white">{user.name}</h3>
+                                <p className="text-slate-400">{user.email}</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <Badge 
+                                    variant={user.role === 'super_admin' ? 'default' : 'secondary'}
+                                    className={
+                                      user.role === 'super_admin' 
+                                        ? 'bg-blue-600 text-white' 
+                                        : user.role === 'supplier'
+                                        ? 'bg-purple-600 text-white'
+                                        : 'bg-green-600 text-white'
+                                    }
+                                  >
+                                    {user.role === 'super_admin' ? 'Super Admin' : 
+                                     user.role === 'supplier' ? 'Supplier' : 
+                                     user.role === 'admin' ? 'Admin' : 'Usuário'}
+                                  </Badge>
+                                  <Badge 
+                                    variant={user.onboardingCompleted ? 'default' : 'destructive'}
+                                    className={user.onboardingCompleted ? 'bg-green-600 text-white' : 'bg-orange-600 text-white'}
+                                  >
+                                    {user.onboardingCompleted ? 'Configurado' : 'Pendente'}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="text-right text-sm text-slate-400">
+                                <p>Criado em</p>
+                                <p>{formatDate(user.createdAt)}</p>
+                              </div>
+                              <div className="flex space-x-2 ml-4">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteUser(user)}
+                                  disabled={deleteUserMutation.isPending}
+                                  className="h-8 w-8 p-0 text-slate-400 hover:text-red-400"
+                                  data-testid={`button-delete-user-${user.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-slate-400">
+                        Nenhum usuário encontrado
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete User Confirmation Modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Exclusão
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Tem certeza que deseja excluir o usuário <strong className="text-white">{userToDelete?.name}</strong>?
+              <br />
+              <span className="text-red-400 font-medium">Esta ação não pode ser desfeita.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteModal(false)}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteUser}
+              disabled={deleteUserMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteUserMutation.isPending ? 'Excluindo...' : 'Excluir Usuário'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

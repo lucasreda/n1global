@@ -2303,6 +2303,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes (super admin only)
+  // Admin users management routes
+  app.get("/api/admin/users", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const allUsers = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          onboardingCompleted: users.onboardingCompleted,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .orderBy(users.createdAt);
+
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/admin/users/:userId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      // Prevent deletion of current user
+      if (userId === req.user.id) {
+        return res.status(400).json({ message: "Você não pode excluir sua própria conta." });
+      }
+
+      // Delete user and related data
+      await db.delete(users).where(eq(users.id, userId));
+
+      res.json({ message: "Usuário excluído com sucesso" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
   app.get("/api/admin/stats", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const stats = await adminService.getGlobalStats();
