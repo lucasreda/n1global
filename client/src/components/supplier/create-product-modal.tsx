@@ -217,6 +217,18 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
             />
           </div>
 
+          {/* Image Upload Section */}
+          <div>
+            <Label>Imagem do Produto</Label>
+            <div className="mt-2">
+              <SimpleImageUploader
+                onImageUpload={handleImageUpload}
+                currentImageUrl={uploadedImageUrl}
+                onImageRemove={handleImageRemove}
+              />
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="description">Descrição</Label>
             <Textarea
@@ -362,18 +374,6 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Image Upload Section */}
-          <div>
-            <Label>Imagem do Produto</Label>
-            <div className="mt-2">
-              <SimpleImageUploader
-                onImageUpload={handleImageUpload}
-                currentImageUrl={uploadedImageUrl}
-                onImageRemove={handleImageRemove}
-              />
-            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
