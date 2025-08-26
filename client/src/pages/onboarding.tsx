@@ -1257,14 +1257,94 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
     ads: { current: 0, total: 0, completed: false, status: 'Aguardando...' },
     matching: { current: 0, total: 0, completed: false, status: 'Aguardando...' }
   });
+  const [overallProgress, setOverallProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
   const { toast } = useToast();
+
+  // Função para calcular progresso geral
+  const calculateOverallProgress = (stats: typeof syncStats) => {
+    const phases = ['shopify', 'shipping', 'ads', 'matching'] as const;
+    let totalWeight = 0;
+    let completedWeight = 0;
+    
+    phases.forEach(phase => {
+      const weight = phase === 'shopify' ? 0.4 : phase === 'matching' ? 0.3 : 0.15; // Shopify tem mais peso
+      totalWeight += weight;
+      
+      if (stats[phase].completed) {
+        completedWeight += weight;
+      } else if (stats[phase].total > 0) {
+        completedWeight += weight * (stats[phase].current / stats[phase].total);
+      }
+    });
+    
+    return Math.round((completedWeight / totalWeight) * 100);
+  };
+
+  // Polling para progresso em tempo real
+  const pollSyncProgress = async () => {
+    if (!isPolling) return;
+    
+    try {
+      const response = await apiRequest('GET', `/api/sync/progress?operationId=${operationId}`);
+      if (response.ok) {
+        const progressData = await response.json();
+        
+        setSyncStats(prev => {
+          const newStats = { ...prev };
+          
+          // Atualizar progresso do Shopify
+          if (progressData.shopify) {
+            newStats.shopify = {
+              ...prev.shopify,
+              current: progressData.shopify.processed || 0,
+              total: progressData.shopify.total || 0,
+              status: progressData.shopify.status || prev.shopify.status,
+              completed: progressData.shopify.completed || false
+            };
+          }
+          
+          // Atualizar progresso da transportadora
+          if (progressData.shipping) {
+            newStats.shipping = {
+              ...prev.shipping,
+              current: progressData.shipping.processed || 0,
+              total: progressData.shipping.total || 0,
+              status: progressData.shipping.status || prev.shipping.status,
+              completed: progressData.shipping.completed || false
+            };
+          }
+          
+          return newStats;
+        });
+        
+        // Atualizar progresso geral
+        setSyncStats(current => {
+          const progress = calculateOverallProgress(current);
+          setOverallProgress(progress);
+          return current;
+        });
+      }
+    } catch (error) {
+      console.log('Polling error:', error);
+    }
+    
+    // Continuar polling se ainda estiver ativo
+    if (isPolling) {
+      setTimeout(pollSyncProgress, 2000); // Poll a cada 2 segundos
+    }
+  };
 
   // Iniciar sincronização completa
   const startFullSync = async () => {
     try {
       setSyncPhase('shopify');
       setError(null);
+      setIsPolling(true);
+      
+      // Iniciar polling
+      setTimeout(pollSyncProgress, 1000);
       
       // 1. Sync Shopify
       setSyncStats(prev => ({
@@ -1393,11 +1473,13 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
         // Complete onboarding
         setTimeout(async () => {
           try {
+            setIsPolling(false); // Parar polling
             await apiRequest('POST', '/api/user/complete-onboarding');
             toast({ title: 'Sincronização completa! Dashboard pronto para uso.' });
             onComplete();
           } catch (err) {
             console.error('Error completing onboarding:', err);
+            setIsPolling(false); // Parar polling mesmo com erro
             onComplete(); // Continue anyway
           }
         }, 2000);
@@ -1406,6 +1488,7 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
       }
 
     } catch (err) {
+      setIsPolling(false); // Parar polling em caso de erro
       setError(err instanceof Error ? err.message : 'Erro na sincronização');
       toast({ title: 'Erro na sincronização', description: err instanceof Error ? err.message : 'Erro desconhecido', variant: 'destructive' });
     }
@@ -1429,9 +1512,7 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
   };
 
   const getProgress = () => {
-    const phases = ['shopify', 'shipping', 'ads', 'matching'];
-    const completedPhases = phases.filter(phase => syncStats[phase as keyof typeof syncStats].completed).length;
-    return (completedPhases / phases.length) * 100;
+    return overallProgress;
   };
 
   return (
@@ -1456,38 +1537,90 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
         <Progress value={getProgress()} className="h-3" />
       </div>
 
-      {/* Fases detalhadas */}
+      {/* Fases detalhadas com progresso granular */}
       <div className="space-y-4">
-        <div className="flex items-center space-x-3">
-          {getPhaseIcon('shopify', syncPhase)}
-          <div className="flex-1">
-            <div className="text-white/90 font-medium">1. Pedidos Shopify</div>
-            <div className="text-white/60 text-sm">{syncStats.shopify.status}</div>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-3">
+            {getPhaseIcon('shopify', syncPhase)}
+            <div className="flex-1">
+              <div className="flex justify-between items-center">
+                <div className="text-white/90 font-medium">1. Pedidos Shopify</div>
+                <div className="text-white/60 text-xs">
+                  {syncStats.shopify.current}/{syncStats.shopify.total}
+                </div>
+              </div>
+              <div className="text-white/60 text-sm">{syncStats.shopify.status}</div>
+            </div>
           </div>
+          {syncStats.shopify.total > 0 && (
+            <Progress 
+              value={(syncStats.shopify.current / syncStats.shopify.total) * 100} 
+              className="h-2 ml-8" 
+            />
+          )}
         </div>
 
-        <div className="flex items-center space-x-3">
-          {getPhaseIcon('shipping', syncPhase)}
-          <div className="flex-1">
-            <div className="text-white/90 font-medium">2. Dados da Transportadora</div>
-            <div className="text-white/60 text-sm">{syncStats.shipping.status}</div>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-3">
+            {getPhaseIcon('shipping', syncPhase)}
+            <div className="flex-1">
+              <div className="flex justify-between items-center">
+                <div className="text-white/90 font-medium">2. Dados da Transportadora</div>
+                <div className="text-white/60 text-xs">
+                  {syncStats.shipping.current}/{syncStats.shipping.total}
+                </div>
+              </div>
+              <div className="text-white/60 text-sm">{syncStats.shipping.status}</div>
+            </div>
           </div>
+          {syncStats.shipping.total > 0 && (
+            <Progress 
+              value={(syncStats.shipping.current / syncStats.shipping.total) * 100} 
+              className="h-2 ml-8" 
+            />
+          )}
         </div>
 
-        <div className="flex items-center space-x-3">
-          {getPhaseIcon('ads', syncPhase)}
-          <div className="flex-1">
-            <div className="text-white/90 font-medium">3. Campanhas Publicitárias</div>
-            <div className="text-white/60 text-sm">{syncStats.ads.status}</div>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-3">
+            {getPhaseIcon('ads', syncPhase)}
+            <div className="flex-1">
+              <div className="flex justify-between items-center">
+                <div className="text-white/90 font-medium">3. Campanhas Publicitárias</div>
+                <div className="text-white/60 text-xs">
+                  {syncStats.ads.current}/{syncStats.ads.total}
+                </div>
+              </div>
+              <div className="text-white/60 text-sm">{syncStats.ads.status}</div>
+            </div>
           </div>
+          {syncStats.ads.total > 0 && (
+            <Progress 
+              value={(syncStats.ads.current / syncStats.ads.total) * 100} 
+              className="h-2 ml-8" 
+            />
+          )}
         </div>
 
-        <div className="flex items-center space-x-3">
-          {getPhaseIcon('matching', syncPhase)}
-          <div className="flex-1">
-            <div className="text-white/90 font-medium">4. Correspondência de Dados</div>
-            <div className="text-white/60 text-sm">{syncStats.matching.status}</div>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-3">
+            {getPhaseIcon('matching', syncPhase)}
+            <div className="flex-1">
+              <div className="flex justify-between items-center">
+                <div className="text-white/90 font-medium">4. Correspondência de Dados</div>
+                <div className="text-white/60 text-xs">
+                  {syncStats.matching.current}/{syncStats.matching.total}
+                </div>
+              </div>
+              <div className="text-white/60 text-sm">{syncStats.matching.status}</div>
+            </div>
           </div>
+          {syncStats.matching.total > 0 && (
+            <Progress 
+              value={(syncStats.matching.current / syncStats.matching.total) * 100} 
+              className="h-2 ml-8" 
+            />
+          )}
         </div>
       </div>
 

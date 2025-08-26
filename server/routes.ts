@@ -2590,6 +2590,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get sync progress in real-time
+  app.get('/api/sync/progress', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const operationId = req.query.operationId as string;
+      
+      // Get current sync status from the database or cache
+      // For now we'll get basic stats, this could be improved with Redis cache
+      const orders = await storage.getOrdersByOperationId(operationId);
+      const totalOrders = orders.length;
+      
+      // Simulate progress based on actual data in DB
+      const shopifyOrders = orders.filter(o => o.id.startsWith('shopify_')).length;
+      const processedOrders = orders.filter(o => o.status !== 'pending').length;
+      
+      res.json({
+        shopify: {
+          processed: shopifyOrders,
+          total: totalOrders,
+          status: shopifyOrders > 0 ? `${shopifyOrders} pedidos sincronizados` : 'Sincronizando...',
+          completed: shopifyOrders === totalOrders
+        },
+        shipping: {
+          processed: processedOrders,
+          total: totalOrders,
+          status: processedOrders > 0 ? `${processedOrders} pedidos processados` : 'Aguardando...',
+          completed: processedOrders === totalOrders
+        },
+        ads: {
+          processed: 0,
+          total: 0,
+          status: 'Campanhas não configuradas',
+          completed: true
+        },
+        matching: {
+          processed: processedOrders,
+          total: totalOrders,
+          status: processedOrders > 0 ? `${processedOrders} matches realizados` : 'Aguardando...',
+          completed: processedOrders === totalOrders
+        }
+      });
+    } catch (error) {
+      console.error('Error getting sync progress:', error);
+      res.status(500).json({ error: 'Erro ao buscar progresso' });
+    }
+  });
+
   // Sync ads data (Facebook Ads)
   app.post('/api/sync/ads', authenticateToken, async (req, res) => {
     try {
