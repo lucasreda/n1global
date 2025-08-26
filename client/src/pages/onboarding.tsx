@@ -1428,11 +1428,19 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
                       console.log('🎯 SINCRONIZAÇÃO COMPLETA! Redirecionando para dashboard...');
                       
                       // Marcar onboarding como completo no servidor
-                      fetch('/api/users/onboarding-complete', {
+                      fetch('/api/user/complete-onboarding', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                      }).then(() => {
-                        // Redirecionar após marcar como completo
+                        headers: { 
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                      }).then(response => {
+                        if (response.ok) {
+                          console.log('✅ Onboarding marcado como completo no servidor');
+                        } else {
+                          console.error('❌ Erro ao marcar onboarding como completo:', response.status);
+                        }
+                        // Redirecionar após tentar marcar como completo
                         setTimeout(() => {
                           window.location.href = '/dashboard';
                         }, 2000); // 2 segundos para o usuário ver o sucesso
