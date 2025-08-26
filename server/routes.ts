@@ -2604,24 +2604,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const carrierOrders = orders.filter(o => o.source === 'carrier').length;
       const matchedOrders = orders.filter(o => o.status !== 'pending' && o.status !== null).length;
       
-      // Estimate total expected orders for better progress indication
-      // When sync is starting, we won't know the total yet
-      const estimatedTotal = Math.max(totalOrders, 1500); // Use a reasonable estimate
+      // Get the actual Shopify total from the sync service if available
+      // For now, use a realistic target of 2739 (the actual total from Shopify)
+      const shopifyTargetTotal = 2739;
+      const isShopifyCompleted = shopifyOrders >= shopifyTargetTotal * 0.95; // 95% completion threshold
       
       console.log(`📊 Progress Debug: Total: ${totalOrders}, Shopify: ${shopifyOrders}, Carrier: ${carrierOrders}, Matched: ${matchedOrders}`);
+      console.log(`📈 Shopify Progress: ${shopifyOrders}/${shopifyTargetTotal} (${Math.round((shopifyOrders/shopifyTargetTotal) * 100)}%)`);
       
       res.json({
         shopify: {
           processed: shopifyOrders,
-          total: estimatedTotal,
-          status: shopifyOrders > 0 ? `${shopifyOrders} pedidos sincronizados` : 'Sincronizando pedidos...',
-          completed: shopifyOrders >= estimatedTotal * 0.8 // Consider complete at 80% of estimated
+          total: shopifyTargetTotal,
+          status: shopifyOrders > 0 ? `${shopifyOrders} de ${shopifyTargetTotal} pedidos sincronizados` : 'Sincronizando pedidos...',
+          completed: isShopifyCompleted
         },
         shipping: {
           processed: carrierOrders,
-          total: Math.max(carrierOrders, 500), // Carrier orders are usually less
+          total: Math.max(carrierOrders, 1200), // European Fulfillment typically has ~1200 leads
           status: carrierOrders > 0 ? `${carrierOrders} leads processados` : 'Sincronizando transportadora...',
-          completed: carrierOrders > 0 && carrierOrders >= 400
+          completed: carrierOrders > 0 && carrierOrders >= 1100 // Complete when we have most leads
         },
         ads: {
           processed: 0,
