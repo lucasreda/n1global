@@ -76,7 +76,7 @@ export default function InvestorSupplierLanding() {
           
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-8 leading-tight">
             Torne-se um{" "}
-            <span className="bg-gradient-to-r from-blue-400 to-emerald-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-400 to-teal-200 bg-clip-text text-transparent">
               Investidor de<br />Produtos
             </span>{" "}
             no Ecossistema N1
@@ -116,7 +116,7 @@ export default function InvestorSupplierLanding() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/login">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-600 text-white px-8 py-3">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-8 py-3">
                 <Crown className="h-5 w-5 mr-2" />
                 Começar Como Investidor
                 <ArrowRight className="h-5 w-5 ml-2" />
@@ -372,7 +372,7 @@ export default function InvestorSupplierLanding() {
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <Link href="/login">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-600 text-white px-8 py-4 text-lg">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-teal-400 hover:from-blue-700 hover:to-teal-500 text-white px-8 py-4 text-lg">
                 <Crown className="h-5 w-5 mr-2" />
                 Começar Como Investidor Agora
                 <ArrowRight className="h-5 w-5 ml-2" />
