@@ -298,7 +298,11 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                               <div className="relative">
                                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  {...field}
+                                  id="name"
+                                  name={field.name}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
                                   placeholder="Seu nome"
                                   className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
                                   data-testid="input-name"
@@ -319,7 +323,11 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                               <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  {...field}
+                                  id="email"
+                                  name={field.name}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
                                   type="email"
                                   placeholder="seu@email.com"
                                   className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
@@ -341,7 +349,11 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                               <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  {...field}
+                                  id="password"
+                                  name={field.name}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
                                   type={showPassword ? "text" : "password"}
                                   placeholder="••••••••"
                                   className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
@@ -409,7 +421,11 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                               <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  {...field}
+                                  id="confirmPassword"
+                                  name={field.name}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
                                   type={showPassword ? "text" : "password"}
                                   placeholder="••••••••"
                                   className="bg-white/5 border border-white/10 rounded-xl pl-10 h-12 text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
