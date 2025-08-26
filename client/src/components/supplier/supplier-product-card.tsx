@@ -56,35 +56,42 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
     <Card className="h-fit" data-testid={`product-card-${product.sku}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              {product.name}
-            </CardTitle>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="text-xs">
-                {product.sku}
-              </Badge>
-              <Badge 
-                variant={product.type === 'fisico' ? 'default' : 'secondary'}
-                className="text-xs"
-              >
-                {product.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
-              </Badge>
+          <div className="flex items-start gap-3 flex-1">
+            {/* Product Image Thumbnail */}
+            {product.imageUrl ? (
+              <div className="flex-shrink-0">
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="w-12 h-12 object-cover rounded-lg border"
+                />
+              </div>
+            ) : (
+              <div className="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border flex items-center justify-center">
+                <Package className="h-5 w-5 text-gray-400" />
+              </div>
+            )}
+            
+            {/* Product Info */}
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-lg truncate">
+                {product.name}
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline" className="text-xs">
+                  {product.sku}
+                </Badge>
+                <Badge 
+                  variant={product.type === 'fisico' ? 'default' : 'secondary'}
+                  className="text-xs"
+                >
+                  {product.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
+                </Badge>
+              </div>
             </div>
           </div>
           
-          {/* Product Image */}
-          {product.imageUrl && (
-            <div className="ml-4">
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-16 h-16 object-cover rounded-lg border"
-              />
-            </div>
-          )}
-          <div className="flex gap-1">
+          <div className="flex gap-1 ml-2">
             <Button
               variant="ghost"
               size="sm"
