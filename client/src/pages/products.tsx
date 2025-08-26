@@ -266,39 +266,38 @@ export default function ProductsPage() {
 
               {/* Search Result */}
               {searchedProduct && (
-                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg">
-                  <CardContent className="p-6">
-                    <div className="flex gap-4">
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
                       {/* Product Thumbnail */}
-                      <div className="flex-shrink-0 w-20 h-20">
+                      <div className="flex-shrink-0 w-12 h-12">
                         {searchedProduct.imageUrl ? (
                           <img
                             src={searchedProduct.imageUrl}
                             alt={searchedProduct.name}
-                            className="w-full h-full object-cover rounded-xl shadow-md"
+                            className="w-full h-full object-cover rounded-lg"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                           />
                         ) : null}
-                        <div className={`w-full h-full flex items-center justify-center bg-white/5 rounded-xl shadow-md ${searchedProduct.imageUrl ? 'hidden' : ''}`}>
-                          <Package className="h-8 w-8 text-white/40" />
+                        <div className={`w-full h-full flex items-center justify-center bg-white/5 rounded-lg ${searchedProduct.imageUrl ? 'hidden' : ''}`}>
+                          <Package className="h-5 w-5 text-white/40" />
                         </div>
                       </div>
 
                       {/* Product Info */}
-                      <div className="flex-1 flex items-center justify-between">
-                        <div className="space-y-2">
-                          <h3 className="font-semibold text-white text-lg">{searchedProduct.name}</h3>
-                          <p className="text-sm text-white/60">SKU: {searchedProduct.sku}</p>
-                          {searchedProduct.description && (
-                            <p className="text-sm text-white/50 mt-2 leading-relaxed">{searchedProduct.description}</p>
-                          )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-white text-sm truncate">{searchedProduct.name}</h3>
+                            <p className="text-xs text-white/50">SKU: {searchedProduct.sku}</p>
+                          </div>
+                          <Badge className="bg-green-500/20 text-green-300 rounded-full px-3 py-1 text-xs ml-4">
+                            Disponível
+                          </Badge>
                         </div>
-                        <Badge className="bg-green-500/20 text-green-300 border-green-500/30 rounded-full px-4 py-2 font-medium">
-                          Disponível
-                        </Badge>
                       </div>
                     </div>
                   </CardContent>
@@ -341,100 +340,64 @@ export default function ProductsPage() {
         {userProducts.map((userProduct: UserProduct) => {
           const product = userProduct.product;
           return (
-            <Card key={userProduct.id} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:bg-white/8">
-              <CardContent className="p-8">
-                <div className="flex gap-6">
+            <Card key={userProduct.id} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl hover:bg-white/8 transition-all duration-200">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
                   {/* Product Thumbnail */}
-                  <div className="flex-shrink-0 w-28 h-28">
+                  <div className="flex-shrink-0 w-16 h-16">
                     {product.imageUrl ? (
                       <img
                         src={product.imageUrl}
                         alt={product.name}
-                        className="w-full h-full object-cover rounded-2xl shadow-lg"
+                        className="w-full h-full object-cover rounded-lg"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                           e.currentTarget.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
                     ) : null}
-                    <div className={`w-full h-full flex items-center justify-center bg-white/5 rounded-2xl shadow-lg ${product.imageUrl ? 'hidden' : ''}`}>
-                      <Package className="h-10 w-10 text-white/40" />
+                    <div className={`w-full h-full flex items-center justify-center bg-white/5 rounded-lg ${product.imageUrl ? 'hidden' : ''}`}>
+                      <Package className="h-6 w-6 text-white/40" />
                     </div>
                   </div>
 
-                  {/* Product Details */}
-                  <div className="flex-1 space-y-6">
-                    {/* Header */}
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3">
-                          <h3 className="text-white font-semibold" style={{ fontSize: '18px' }}>{product.name}</h3>
-                          <div className="flex space-x-2">
-                            <Badge 
-                              variant={product.isActive ? "default" : "secondary"}
-                              className={`${product.isActive 
-                                ? 'bg-green-500/20 text-green-300 border-green-500/30' 
-                                : 'bg-gray-500/20 text-gray-300 border-gray-500/30'
-                              } rounded-full px-3 py-1 text-xs font-medium`}
-                            >
-                              {product.isActive ? "Ativo" : "Inativo"}
-                            </Badge>
-                            <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 rounded-full px-3 py-1 text-xs font-medium">
-                              Vinculado
-                            </Badge>
-                          </div>
-                        </div>
-                        <p className="text-white/60 text-sm">
-                          SKU: {product.sku} • {stockData[product.sku]?.availableStock ?? product.stock} disponíveis
-                        </p>
-                      </div>
+                  {/* Product Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className="text-white font-medium text-base truncate" style={{ fontSize: '16px' }}>{product.name}</h3>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleUnlinkProduct(userProduct.productId)}
-                        className="bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20 hover:border-red-500/50 rounded-xl px-4 py-2 text-xs font-medium transition-all duration-200"
+                        className="text-white/40 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0 ml-2"
                         data-testid={`button-unlink-${product.id}`}
                       >
-                        <Unlink className="h-3 w-3 mr-2" />
-                        Desvincular
+                        <Unlink className="h-4 w-4" />
                       </Button>
                     </div>
-
-                    {/* Metrics */}
-                    <div className="grid grid-cols-3 gap-6">
-                      <div className="bg-white/5 rounded-xl p-4 text-center space-y-2 border border-white/10">
-                        <div className="text-2xl font-bold text-orange-300">
-                          €{product.price || "0.00"}
-                        </div>
-                        <div className="text-xs text-white/50 font-medium">Preço B2B</div>
-                      </div>
-                      <div className="bg-white/5 rounded-xl p-4 text-center space-y-2 border border-white/10">
-                        <div className="text-2xl font-bold text-purple-300">
-                          €{userProduct.customShippingCost || product.shippingCost || "0.00"}
-                        </div>
-                        <div className="text-xs text-white/50 font-medium">Valor de Envio</div>
-                      </div>
-                      <div className="bg-white/5 rounded-xl p-4 text-center space-y-2 border border-white/10">
-                        <div className="text-2xl font-bold text-blue-300">
-                          {stockData[product.sku]?.availableStock ?? product.stock}
-                        </div>
-                        <div className="text-xs text-white/50 font-medium">Disponíveis</div>
+                    
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-white/50 text-sm">SKU: {product.sku}</span>
+                      <span className="text-white/30">•</span>
+                      <span className="text-white/50 text-sm">{stockData[product.sku]?.availableStock ?? product.stock} disponíveis</span>
+                      <div className="flex gap-2 ml-auto">
+                        <Badge className={`${product.isActive ? 'bg-green-500/20 text-green-300' : 'bg-gray-500/20 text-gray-300'} rounded-full px-2 py-1 text-xs`}>
+                          {product.isActive ? "Ativo" : "Inativo"}
+                        </Badge>
                       </div>
                     </div>
 
-                    {/* Description */}
-                    {product.description && (
-                      <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                        <p className="text-white/70 text-sm leading-relaxed">{product.description}</p>
+                    {/* Inline Metrics */}
+                    <div className="flex items-center gap-6 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/50">B2B:</span>
+                        <span className="text-orange-300 font-medium">€{product.price || "0.00"}</span>
                       </div>
-                    )}
-
-                    {/* Meta info */}
-                    {userProduct.linkedAt && (
-                      <div className="text-xs text-white/40 font-medium">
-                        Vinculado em {new Date(userProduct.linkedAt).toLocaleDateString("pt-BR")}
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/50">Envio:</span>
+                        <span className="text-purple-300 font-medium">€{userProduct.customShippingCost || product.shippingCost || "0.00"}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -445,22 +408,20 @@ export default function ProductsPage() {
 
       {/* Empty State */}
       {userProducts.length === 0 && (
-        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="bg-white/5 rounded-2xl p-6 mb-6">
-              <Package className="h-16 w-16 text-white/40" />
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-3">Nenhum produto vinculado</h3>
-            <p className="text-white/60 mb-8 max-w-md leading-relaxed">
-              Busque e vincule produtos da base global para começar a gerenciar seu inventário
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Package className="h-12 w-12 text-white/30 mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">Nenhum produto vinculado</h3>
+            <p className="text-white/50 mb-6 text-sm">
+              Busque e vincule produtos da base global
             </p>
             <Button 
               onClick={() => setIsLinking(true)}
-              className="bg-blue-500/20 border-blue-500/30 text-blue-300 hover:bg-blue-500/30 hover:border-blue-500/50 rounded-xl px-6 py-3 font-medium transition-all duration-200"
+              className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200"
               data-testid="button-link-first-product"
             >
               <Link2 className="h-4 w-4 mr-2" />
-              Vincular Primeiro Produto
+              Vincular Produto
             </Button>
           </CardContent>
         </Card>
