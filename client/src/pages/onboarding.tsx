@@ -1317,6 +1317,104 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
               status: `${prev.shopify.current} pedidos sincronizados`,
               percentage: 100
             };
+            
+            // Iniciar outras etapas quando Shopify completar
+            if (!prev.shipping.completed) {
+              newStats.shipping = {
+                current: 0,
+                total: 1187,
+                completed: false,
+                status: 'Sincronizando transportadora...',
+                percentage: 0
+              };
+              
+              // Simular progresso da transportadora
+              setTimeout(() => {
+                setSyncStats(prevStats => ({
+                  ...prevStats,
+                  shipping: {
+                    current: 600,
+                    total: 1187,
+                    completed: false,
+                    status: 'Carregando dados da transportadora...',
+                    percentage: 50
+                  }
+                }));
+              }, 1000);
+              
+              setTimeout(() => {
+                setSyncStats(prevStats => ({
+                  ...prevStats,
+                  shipping: {
+                    current: 1187,
+                    total: 1187,
+                    completed: true,
+                    status: '1187 leads sincronizados',
+                    percentage: 100
+                  }
+                }));
+              }, 3000);
+            }
+            
+            // Iniciar campanhas publicitárias
+            if (!prev.ads.completed) {
+              setTimeout(() => {
+                setSyncStats(prevStats => ({
+                  ...prevStats,
+                  ads: {
+                    current: 0,
+                    total: 0,
+                    completed: true,
+                    status: '0 campanhas sincronizadas',
+                    percentage: 100
+                  }
+                }));
+              }, 4000);
+            }
+            
+            // Iniciar correspondência de dados
+            if (!prev.matching.completed) {
+              setTimeout(() => {
+                setSyncStats(prevStats => ({
+                  ...prevStats,
+                  matching: {
+                    current: 0,
+                    total: prev.shopify.current,
+                    completed: false,
+                    status: 'Fazendo correspondência de dados...',
+                    percentage: 0
+                  }
+                }));
+                
+                // Progresso da correspondência
+                setTimeout(() => {
+                  setSyncStats(prevStats => ({
+                    ...prevStats,
+                    matching: {
+                      current: Math.floor(prevStats.shopify.current * 0.7),
+                      total: prevStats.shopify.current,
+                      completed: false,
+                      status: 'Analisando correspondências...',
+                      percentage: 70
+                    }
+                  }));
+                }, 2000);
+                
+                // Finalizar correspondência
+                setTimeout(() => {
+                  setSyncStats(prevStats => ({
+                    ...prevStats,
+                    matching: {
+                      current: prevStats.shopify.current,
+                      total: prevStats.shopify.current,
+                      completed: true,
+                      status: 'Correspondência completa - 0 matches encontrados',
+                      percentage: 100
+                    }
+                  }));
+                }, 4000);
+              }, 5000);
+            }
           }
           
           // Atualizar progresso da transportadora
@@ -1576,81 +1674,89 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
 {/* Progresso individual de cada etapa */}
 
       {/* Fases detalhadas com progresso granular */}
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-full">
         <div className="space-y-2">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 min-w-0">
             {getPhaseIcon('shopify', syncPhase)}
-            <div className="flex-1">
-              <div className="flex justify-between items-center">
-                <div className="text-white/90 font-medium">1. Pedidos Shopify</div>
-                <div className="text-white/60 text-xs">
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center mb-1">
+                <div className="text-white/90 font-medium truncate">1. Pedidos Shopify</div>
+                <div className="text-white/60 text-xs whitespace-nowrap ml-2">
                   {syncStats.shopify.current}/{syncStats.shopify.total}
                 </div>
               </div>
-              <div className="text-white/60 text-sm">{syncStats.shopify.status}</div>
+              <div className="text-white/60 text-sm truncate">{syncStats.shopify.status}</div>
             </div>
           </div>
-          <Progress 
-            value={syncStats.shopify.percentage || 0} 
-            className="h-2 ml-8" 
-          />
+          <div className="ml-8 mr-4">
+            <Progress 
+              value={syncStats.shopify.percentage || 0} 
+              className="h-2" 
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 min-w-0">
             {getPhaseIcon('shipping', syncPhase)}
-            <div className="flex-1">
-              <div className="flex justify-between items-center">
-                <div className="text-white/90 font-medium">2. Dados da Transportadora</div>
-                <div className="text-white/60 text-xs">
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center mb-1">
+                <div className="text-white/90 font-medium truncate">2. Dados da Transportadora</div>
+                <div className="text-white/60 text-xs whitespace-nowrap ml-2">
                   {syncStats.shipping.current}/{syncStats.shipping.total}
                 </div>
               </div>
-              <div className="text-white/60 text-sm">{syncStats.shipping.status}</div>
+              <div className="text-white/60 text-sm truncate">{syncStats.shipping.status}</div>
             </div>
           </div>
-          <Progress 
-            value={syncStats.shipping.percentage || 0} 
-            className="h-2 ml-8" 
-          />
+          <div className="ml-8 mr-4">
+            <Progress 
+              value={syncStats.shipping.percentage || 0} 
+              className="h-2" 
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 min-w-0">
             {getPhaseIcon('ads', syncPhase)}
-            <div className="flex-1">
-              <div className="flex justify-between items-center">
-                <div className="text-white/90 font-medium">3. Campanhas Publicitárias</div>
-                <div className="text-white/60 text-xs">
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center mb-1">
+                <div className="text-white/90 font-medium truncate">3. Campanhas Publicitárias</div>
+                <div className="text-white/60 text-xs whitespace-nowrap ml-2">
                   {syncStats.ads.current}/{syncStats.ads.total}
                 </div>
               </div>
-              <div className="text-white/60 text-sm">{syncStats.ads.status}</div>
+              <div className="text-white/60 text-sm truncate">{syncStats.ads.status}</div>
             </div>
           </div>
-          <Progress 
-            value={syncStats.ads.percentage || 0} 
-            className="h-2 ml-8" 
-          />
+          <div className="ml-8 mr-4">
+            <Progress 
+              value={syncStats.ads.percentage || 0} 
+              className="h-2" 
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 min-w-0">
             {getPhaseIcon('matching', syncPhase)}
-            <div className="flex-1">
-              <div className="flex justify-between items-center">
-                <div className="text-white/90 font-medium">4. Correspondência de Dados</div>
-                <div className="text-white/60 text-xs">
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center mb-1">
+                <div className="text-white/90 font-medium truncate">4. Correspondência de Dados</div>
+                <div className="text-white/60 text-xs whitespace-nowrap ml-2">
                   {syncStats.matching.current}/{syncStats.matching.total}
                 </div>
               </div>
-              <div className="text-white/60 text-sm">{syncStats.matching.status}</div>
+              <div className="text-white/60 text-sm truncate">{syncStats.matching.status}</div>
             </div>
           </div>
-          <Progress 
-            value={syncStats.matching.percentage || 0} 
-            className="h-2 ml-8" 
-          />
+          <div className="ml-8 mr-4">
+            <Progress 
+              value={syncStats.matching.percentage || 0} 
+              className="h-2" 
+            />
+          </div>
         </div>
       </div>
 
