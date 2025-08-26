@@ -159,8 +159,9 @@ export default function InvestorSupplierLanding() {
       {/* Tab Navigation */}
       <section className="py-12 sm:py-16 px-4 sm:px-6 border-t border-slate-700/50">
         <div className="container mx-auto">
-          <div className="flex justify-center mb-8 sm:mb-12">
-            <div className="flex space-x-1 sm:space-x-4 p-1 bg-slate-800/50 rounded-lg w-full max-w-md sm:w-auto">
+          {/* Mobile Navigation */}
+          <div className="flex justify-center mb-8 sm:mb-12 sm:hidden">
+            <div className="flex space-x-1 p-1 bg-slate-800/50 rounded-lg w-full max-w-md">
               {[
                 { id: 'benefits', label: 'Benefícios', icon: CheckCircle },
                 { id: 'process', label: 'Como Funciona', icon: Zap },
@@ -170,14 +171,39 @@ export default function InvestorSupplierLanding() {
                   key={id}
                   variant={activeTab === id ? 'default' : 'ghost'}
                   onClick={() => setActiveTab(id as any)}
-                  className={`flex flex-col sm:flex-row items-center justify-center px-2 sm:px-6 py-3 text-xs sm:text-base flex-1 sm:flex-none min-h-[60px] sm:min-h-auto whitespace-nowrap ${
+                  className={`flex flex-col items-center justify-center px-2 py-3 text-xs flex-1 min-h-[60px] ${
                     activeTab === id 
                       ? 'bg-blue-600 text-white' 
                       : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
-                  <Icon className="h-4 w-4 mb-1 sm:mb-0 sm:mr-2" />
-                  <span className="text-xs sm:text-base">{label}</span>
+                  <Icon className="h-4 w-4 mb-1" />
+                  <span className="text-xs">{label.split(' ')[0]}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden sm:flex justify-center mb-8 sm:mb-12">
+            <div className="flex space-x-6 p-2 bg-slate-800/50 rounded-lg">
+              {[
+                { id: 'benefits', label: 'Benefícios', icon: CheckCircle },
+                { id: 'process', label: 'Como Funciona', icon: Zap },
+                { id: 'roi', label: 'ROI & Métricas', icon: BarChart3 }
+              ].map(({ id, label, icon: Icon }) => (
+                <Button
+                  key={id}
+                  variant={activeTab === id ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab(id as any)}
+                  className={`flex items-center px-6 py-3 text-base rounded-md transition-all duration-200 ${
+                    activeTab === id 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  }`}
+                >
+                  <Icon className="h-5 w-5 mr-3" />
+                  <span>{label}</span>
                 </Button>
               ))}
             </div>
