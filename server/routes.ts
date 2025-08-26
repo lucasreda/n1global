@@ -58,6 +58,89 @@ const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // ADMIN: Endpoint temporário para criar usuários administrativos em produção
+  app.post("/api/admin/create-system-users", async (req, res) => {
+    try {
+      console.log("🔧 CRIAÇÃO DE USUÁRIOS ADMINISTRATIVOS INICIADA");
+      
+      // Verificação de segurança simples
+      const { securityKey } = req.body;
+      if (securityKey !== "CREATE_ADMIN_USERS_2025_SECURE") {
+        return res.status(403).json({ error: "Chave de segurança inválida" });
+      }
+
+      const usersToCreate = [
+        {
+          name: 'Super Administrador',
+          email: 'admin@codashboard.com',
+          password: 'AdminCOD2025!@#',
+          role: 'super_admin'
+        },
+        {
+          name: 'Fornecedor Principal',
+          email: 'supplier@codashboard.com',
+          password: 'SupplierCOD2025!@#',
+          role: 'supplier'
+        }
+      ];
+
+      const results = [];
+
+      for (const userData of usersToCreate) {
+        // Verificar se já existe
+        const existingUser = await storage.getUserByEmail(userData.email);
+        if (existingUser) {
+          results.push({ 
+            email: userData.email, 
+            status: 'already_exists',
+            id: existingUser.id 
+          });
+          continue;
+        }
+
+        // Criar usuário
+        const hashedPassword = await bcrypt.hash(userData.password, 12);
+        const newUser = await storage.createUser({
+          name: userData.name,
+          email: userData.email,
+          password: hashedPassword,
+          role: userData.role,
+          onboardingCompleted: true
+        });
+
+        results.push({
+          email: userData.email,
+          status: 'created',
+          id: newUser.id,
+          role: newUser.role,
+          credentials: {
+            email: userData.email,
+            password: userData.password
+          }
+        });
+
+        console.log(`✅ Usuário criado: ${userData.email} (${userData.role})`);
+      }
+
+      console.log("🎉 Processo de criação de usuários concluído");
+      
+      res.json({
+        success: true,
+        message: "Usuários administrativos processados com sucesso",
+        users: results,
+        summary: `${results.filter(r => r.status === 'created').length} criados, ${results.filter(r => r.status === 'already_exists').length} já existiam`
+      });
+
+    } catch (error) {
+      console.error("❌ Erro na criação de usuários administrativos:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Erro interno do servidor",
+        details: error.message 
+      });
+    }
+  });
+
   // DEBUG: Rota para diagnóstico e sincronização manual
   app.get("/api/debug/sync-fresh", async (req, res) => {
     try {
