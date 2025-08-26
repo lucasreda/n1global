@@ -50,7 +50,7 @@ export interface IStorage {
   getUserLinkedProducts(userId: string, storeId: string): Promise<(UserProduct & { product: Product })[]>;
   unlinkProductFromUser(userId: string, productId: string): Promise<boolean>;
   updateUserProductCosts(userProductId: string, costs: Partial<Pick<UserProduct, 'customCostPrice' | 'customShippingCost' | 'customHandlingFee'>>): Promise<UserProduct | undefined>;
-  getUserProductBySku(sku: string, storeId: string): Promise<(UserProduct & { product: Product }) | undefined>;
+  getUserProductBySku(sku: string, storeId: string | null): Promise<(UserProduct & { product: Product }) | undefined>;
 
   // Supplier methods
   getProductsBySupplier(supplierId: string): Promise<Product[]>;
@@ -499,7 +499,11 @@ export class DatabaseStorage implements IStorage {
     return userProduct || undefined;
   }
 
-  async getUserProductBySku(sku: string, storeId: string): Promise<(UserProduct & { product: Product }) | undefined> {
+  async getUserProductBySku(sku: string, storeId: string | null): Promise<(UserProduct & { product: Product }) | undefined> {
+    if (!storeId) {
+      return undefined; // Cannot search without storeId
+    }
+    
     const result = await db
       .select({
         id: userProducts.id,

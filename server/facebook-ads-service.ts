@@ -411,17 +411,50 @@ export class FacebookAdsService {
     }, 0);
   }
 
-  async getMarketingCostsByPeriod(period: string = "last_30d"): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
-    // Buscar campanhas selecionadas e seus dados ao vivo para o período específico
-    const { campaigns } = await import("@shared/schema");
-    const { and, eq } = await import("drizzle-orm");
-    const selectedCampaigns = await db
-      .select()
-      .from(campaigns)
-      .where(and(
-        eq(campaigns.isSelected, true),
-        eq(campaigns.network, 'facebook')
-      ));
+  async getMarketingCostsByPeriod(period: string = "last_30d", storeId?: string | null): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
+    // Buscar campanhas selecionadas e seus dados ao vivo para o período específico, filtradas por store
+    const { campaigns, adAccounts } = await import("@shared/schema");
+    const { and, eq, inArray } = await import("drizzle-orm");
+    
+    let selectedCampaigns;
+    
+    if (storeId) {
+      // First get adAccount IDs for this store
+      const storeAdAccounts = await db
+        .select({ accountId: adAccounts.accountId })
+        .from(adAccounts)
+        .where(and(
+          eq(adAccounts.storeId, storeId),
+          eq(adAccounts.network, 'facebook'),
+          eq(adAccounts.isActive, true)
+        ));
+      
+      const accountIds = storeAdAccounts.map(acc => acc.accountId);
+      
+      if (accountIds.length === 0) {
+        console.log(`💰 Nenhuma conta Facebook encontrada para store ${storeId}`);
+        return { totalBRL: 0, totalEUR: 0, campaigns: [] };
+      }
+      
+      // Then get campaigns for those accounts
+      selectedCampaigns = await db
+        .select()
+        .from(campaigns)
+        .where(and(
+          eq(campaigns.isSelected, true),
+          eq(campaigns.network, 'facebook'),
+          inArray(campaigns.accountId, accountIds)
+        ));
+    } else {
+      // No store filter - get all selected campaigns
+      selectedCampaigns = await db
+        .select()
+        .from(campaigns)
+        .where(and(
+          eq(campaigns.isSelected, true),
+          eq(campaigns.network, 'facebook')
+        ));
+    }
     
     console.log(`💰 Calculando custos de marketing para ${selectedCampaigns.length} campanhas selecionadas (período: ${period})`);
     
