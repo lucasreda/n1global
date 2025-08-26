@@ -35,14 +35,17 @@ export class AdminService {
         .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
 
-      // Get orders by country (monthly)
+      // Get orders by country (monthly) - Shopify orders only
       const ordersByCountry = await db
         .select({
           country: sql<string>`COALESCE(${orders.customerCountry}, 'Não informado')`,
           orders: sql<number>`COUNT(*)`
         })
         .from(orders)
-        .where(sql`${orders.orderDate} >= CURRENT_DATE - INTERVAL '30 days'`)
+        .where(and(
+          sql`${orders.orderDate} >= CURRENT_DATE - INTERVAL '30 days'`,
+          eq(orders.dataSource, 'shopify')
+        ))
         .groupBy(sql`COALESCE(${orders.customerCountry}, 'Não informado')`)
         .orderBy(desc(sql<number>`COUNT(*)`))
         .limit(10);

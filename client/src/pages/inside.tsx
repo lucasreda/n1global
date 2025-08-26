@@ -556,7 +556,7 @@ export default function InsidePage() {
                     Pedidos por Países
                   </CardTitle>
                   <CardDescription className="text-slate-400">
-                    Distribuição mensal por país
+                    Pedidos Shopify por país (últimos 30 dias)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
