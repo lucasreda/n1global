@@ -1284,18 +1284,25 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
 
   // Polling para progresso em tempo real
   const pollSyncProgress = async () => {
-    if (!isPolling) return;
+    if (!isPolling) {
+      console.log('🛑 Polling parado, isPolling:', isPolling);
+      return;
+    }
+    
+    console.log('🔄 Fazendo polling para progresso, operationId:', operationId);
     
     try {
       const response = await apiRequest('GET', `/api/sync/progress?operationId=${operationId}`);
       if (response.ok) {
         const progressData = await response.json();
+        console.log('📊 Progress data received:', progressData);
         
         setSyncStats(prev => {
           const newStats = { ...prev };
           
           // Atualizar progresso do Shopify
           if (progressData.shopify) {
+            console.log('🛒 Updating Shopify progress:', progressData.shopify);
             newStats.shopify = {
               ...prev.shopify,
               current: progressData.shopify.processed || 0,
@@ -1307,6 +1314,7 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
           
           // Atualizar progresso da transportadora
           if (progressData.shipping) {
+            console.log('🚚 Updating shipping progress:', progressData.shipping);
             newStats.shipping = {
               ...prev.shipping,
               current: progressData.shipping.processed || 0,
@@ -1316,18 +1324,22 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
             };
           }
           
+          console.log('📈 New stats:', newStats);
           return newStats;
         });
         
         // Atualizar progresso geral
         setSyncStats(current => {
           const progress = calculateOverallProgress(current);
+          console.log('🎯 Overall progress calculated:', progress);
           setOverallProgress(progress);
           return current;
         });
+      } else {
+        console.error('❌ Progress API error:', response.status, response.statusText);
       }
     } catch (error) {
-      console.log('Polling error:', error);
+      console.error('💥 Polling error:', error);
     }
     
     // Continuar polling se ainda estiver ativo
