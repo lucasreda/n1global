@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { SimpleImageUploader } from "@/components/SimpleImageUploader";
 
 interface CreateProductModalProps {
   open: boolean;
@@ -24,10 +25,12 @@ interface ProductFormData {
   costPrice: number;
   initialStock: number;
   lowStock: number;
+  imageUrl?: string;
 }
 
 export function CreateProductModal({ open, onOpenChange, onProductCreated }: CreateProductModalProps) {
   const { toast } = useToast();
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [formData, setFormData] = useState<ProductFormData>({
     sku: '',
     name: '',
@@ -36,7 +39,8 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
     price: 0,
     costPrice: 0,
     initialStock: 0,
-    lowStock: 10
+    lowStock: 10,
+    imageUrl: ''
   });
 
   const createProductMutation = useMutation({
@@ -70,8 +74,10 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
       price: 0,
       costPrice: 0,
       initialStock: 0,
-      lowStock: 10
+      lowStock: 10,
+      imageUrl: ''
     });
+    setUploadedImageUrl("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -86,7 +92,23 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
       return;
     }
 
-    createProductMutation.mutate(formData);
+    // Include the uploaded image URL if available
+    const productData = {
+      ...formData,
+      imageUrl: uploadedImageUrl || formData.imageUrl
+    };
+
+    createProductMutation.mutate(productData);
+  };
+
+  const handleImageUpload = (imageUrl: string) => {
+    setUploadedImageUrl(imageUrl);
+    setFormData(prev => ({ ...prev, imageUrl }));
+  };
+
+  const handleImageRemove = () => {
+    setUploadedImageUrl("");
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
   };
 
   const handleInputChange = (field: keyof ProductFormData, value: string | number) => {
@@ -213,6 +235,17 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
             </div>
           </div>
 
+          {/* Image Upload Section */}
+          <div>
+            <Label>Imagem do Produto</Label>
+            <div className="mt-2">
+              <SimpleImageUploader
+                onImageUpload={handleImageUpload}
+                currentImageUrl={uploadedImageUrl}
+                onImageRemove={handleImageRemove}
+              />
+            </div>
+          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button 

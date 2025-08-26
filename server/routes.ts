@@ -12,6 +12,7 @@ import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 import { adminService } from "./admin-service";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -2467,6 +2468,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: 'Erro interno do servidor' });
       }
+    }
+  });
+
+  // Object Storage routes for product images
+  
+  // This endpoint is used to serve private objects that can be accessed publicly for product images
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error checking object access:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
+  // This endpoint is used to get the upload URL for a product image
+  app.post("/api/objects/upload", authenticateToken, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Endpoint for updating product image after upload
+  app.put("/api/supplier/products/:id/image", authenticateToken, requireSupplier, async (req, res) => {
+    if (!req.body.imageURL) {
+      return res.status(400).json({ error: "imageURL is required" });
+    }
+
+    try {
+      // Verify the product belongs to this supplier
+      const product = await storage.getProductById(req.params.id);
+      if (!product || product.supplierId !== (req as any).user.id) {
+        return res.status(404).json({ message: 'Produto não encontrado ou sem permissão para editar' });
+      }
+
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.imageURL);
+
+      // Update the product with the new image URL
+      const updatedProduct = await storage.updateSupplierProduct(req.params.id, {
+        imageUrl: objectPath
+      });
+
+      res.status(200).json({
+        objectPath: objectPath,
+        product: updatedProduct
+      });
+    } catch (error) {
+      console.error("Error setting product image:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
