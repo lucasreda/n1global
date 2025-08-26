@@ -1282,6 +1282,20 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
     return Math.round((completedWeight / totalWeight) * 100);
   };
 
+  // Resetar estado inicial para testar do zero
+  useEffect(() => {
+    // Resetar o estado ao carregar o componente
+    setSyncStats({
+      shopify: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
+      shipping: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
+      ads: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 },
+      matching: { current: 0, total: 0, completed: false, status: 'Aguardando...', percentage: 0 }
+    });
+    setSyncPhase('shopify');
+    setOverallProgress(0);
+    setError(null);
+  }, []);
+
   // Polling para progresso em tempo real
   const pollSyncProgress = async () => {
     if (!isPolling) {
