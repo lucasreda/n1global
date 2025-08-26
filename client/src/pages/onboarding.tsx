@@ -215,18 +215,7 @@ export default function OnboardingPage() {
             alt="COD Dashboard" 
             className="mb-8 h-8 w-auto"
           />
-          <div className="text-center">
-            <p className="text-xl text-white/80 mb-6">
-              Configure sua conta em 5 etapas simples
-            </p>
-            <Progress 
-              value={progressPercentage} 
-              className="w-full max-w-md mx-auto h-3"
-            />
-            <p className="text-white/60 mt-2">
-              {Math.round(progressPercentage)}% concluído
-            </p>
-          </div>
+
         </div>
 
         {/* Steps Overview */}
