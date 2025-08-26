@@ -69,6 +69,28 @@ export class AdminService {
         .groupBy(operations.id, operations.name, stores.name)
         .orderBy(desc(sql<number>`COUNT(${orders.id})`))
         .limit(5);
+
+      // Get total Shopify orders today (all operations)
+      const [todayOrdersResult] = await db
+        .select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.dataSource, 'shopify'),
+          sql`DATE(${orders.orderDate}) = ${today}`
+        ));
+
+      // Get total Shopify orders this month (all operations)
+      const [monthOrdersResult] = await db
+        .select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(orders)
+        .where(and(
+          eq(orders.dataSource, 'shopify'),
+          sql`DATE_TRUNC('month', ${orders.orderDate}) = DATE_TRUNC('month', CURRENT_DATE)`
+        ));
       
       return {
         totalUsers: usersCount.count,
@@ -90,7 +112,9 @@ export class AdminService {
           name: operation.name,
           storeName: operation.storeName,
           todayOrders: Number(operation.todayOrders)
-        }))
+        })),
+        todayShopifyOrders: Number(todayOrdersResult.count) || 0,
+        monthShopifyOrders: Number(monthOrdersResult.count) || 0
       };
     } catch (error) {
       console.error('❌ Error getting global stats:', error);
