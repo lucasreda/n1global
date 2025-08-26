@@ -74,7 +74,7 @@ export default function OnboardingPage() {
 
   // Set selected operation automatically if not set and operations are available
   useEffect(() => {
-    if (!selectedOperation && operations && operations.length > 0) {
+    if (!selectedOperation && operations && Array.isArray(operations) && operations.length > 0) {
       setSelectedOperation(operations[0].id);
     }
   }, [operations, selectedOperation, setSelectedOperation]);
@@ -87,6 +87,17 @@ export default function OnboardingPage() {
     step5_sync: false
   };
 
+  // State for step 0 presentation
+  const [showStep0, setShowStep0] = useState(true);
+  const [displayedText, setDisplayedText] = useState("");
+  const [showCard, setShowCard] = useState(false);
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+
+  const texts = [
+    "Ter dados precisos da sua operação mudam o jogo",
+    "Um sistema que unifica tudo em um só lugar"
+  ];
+
   // Determine current step based on completed steps
   const getCurrentStep = () => {
     if (!onboardingSteps.step1_operation) return 1;
@@ -98,6 +109,48 @@ export default function OnboardingPage() {
   };
 
   const currentStep = getCurrentStep();
+
+  // Hide step 0 if step 1 is completed
+  useEffect(() => {
+    if (onboardingSteps.step1_operation) {
+      setShowStep0(false);
+    }
+  }, [onboardingSteps.step1_operation]);
+
+  // Typewriting effect for step 0
+  useEffect(() => {
+    if (!showStep0) return;
+    
+    let currentIndex = 0;
+    const currentText = texts[currentTextIndex];
+    setDisplayedText("");
+    
+    const typewriterInterval = setInterval(() => {
+      if (currentIndex < currentText.length) {
+        setDisplayedText(currentText.slice(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        clearInterval(typewriterInterval);
+        
+        // Wait 3 seconds after completing the text
+        setTimeout(() => {
+          if (currentTextIndex === 0) {
+            // Clear text and show second text
+            setCurrentTextIndex(1);
+          } else {
+            // Show card after second text
+            setShowCard(true);
+          }
+        }, 3000);
+      }
+    }, 80);
+
+    return () => clearInterval(typewriterInterval);
+  }, [showStep0, currentTextIndex, texts]);
+
+  const handleContinueToStep1 = () => {
+    setShowStep0(false);
+  };
 
   // Auto-select currency when country changes
   const handleCountryChange = (countryCode: string) => {
@@ -215,218 +268,342 @@ export default function OnboardingPage() {
             alt="COD Dashboard" 
             className="mb-8 h-8 w-auto"
           />
-
         </div>
 
-        {/* Steps Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          {steps.map((step, index) => {
-            const StepIcon = step.icon;
-            const isActive = currentStep === index + 1;
-            const isCompleted = step.completed;
-            
-            return (
-              <Card 
-                key={step.id}
-                className={`relative ${
-                  isActive 
-                    ? 'bg-blue-600/20 border-blue-400 shadow-lg shadow-blue-500/25' 
-                    : isCompleted 
-                    ? 'bg-green-600/20 border-green-400'
-                    : 'bg-white/5 border-white/10'
-                }`}
-                data-testid={`step-card-${index + 1}`}
-              >
-                <CardContent className="p-4 text-center">
-                  <div className="flex justify-center mb-2">
-                    {isCompleted ? (
-                      <CheckCircle className="w-8 h-8 text-green-400" />
-                    ) : (
-                      <StepIcon className={`w-8 h-8 ${
-                        isActive ? 'text-blue-400' : 'text-white/60'
-                      }`} />
-                    )}
+        {showStep0 ? (
+          /* Step 0 - Presentation */
+          <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
+            {/* Typewriting Text */}
+            <div className="mb-12">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[200px] flex items-center justify-center">
+                {displayedText}
+                <span className="ml-2 animate-pulse">|</span>
+              </h1>
+            </div>
+
+            {/* Card */}
+            {showCard && (
+              <div className="animate-fade-in">
+                <Card className="bg-white/10 border-white/20 backdrop-blur-lg max-w-2xl mx-auto mb-8">
+                  <CardContent className="p-8 text-center">
+                    <h2 className="text-2xl font-bold text-white mb-4">
+                      Quanto mais dados, mais inteligência
+                    </h2>
+                    <p className="text-white/80 text-lg leading-relaxed mb-6">
+                      Alimente a plataforma com o máximo de informações sobre sua operação e obtenha uma inteligência de dados mais precisa.
+                    </p>
+                    <Button 
+                      onClick={handleContinueToStep1}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                      data-testid="button-continue-step1"
+                    >
+                      Continuar
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Steps Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+              {steps.map((step, index) => {
+                const StepIcon = step.icon;
+                const isActive = currentStep === index + 1;
+                const isCompleted = step.completed;
+                
+                return (
+                  <Card 
+                    key={step.id}
+                    className={`relative ${
+                      isActive 
+                        ? 'bg-blue-600/20 border-blue-400 shadow-lg shadow-blue-500/25' 
+                        : isCompleted 
+                        ? 'bg-green-600/20 border-green-400'
+                        : 'bg-white/5 border-white/10'
+                    }`}
+                    data-testid={`step-card-${index + 1}`}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <div className="flex justify-center mb-2">
+                        {isCompleted ? (
+                          <CheckCircle className="w-8 h-8 text-green-400" />
+                        ) : (
+                          <StepIcon className={`w-8 h-8 ${
+                            isActive ? 'text-blue-400' : 'text-white/60'
+                          }`} />
+                        )}
+                      </div>
+                      <h3 className="text-sm font-medium text-white mb-1">
+                        Etapa {index + 1}
+                      </h3>
+                      <p className="text-xs text-white/60">
+                        {step.title}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mb-8">
+              <div className="flex justify-between text-white/60 text-sm mb-2">
+                <span>Progresso do Onboarding</span>
+                <span>{Math.round(progressPercentage)}%</span>
+              </div>
+              <Progress value={progressPercentage} className="h-2" />
+            </div>
+
+            {/* Current Step Content */}
+            <Card className="bg-white/10 border-white/20">
+              <CardContent className="p-8">
+                {currentStep === 1 && <OperationStep onComplete={handleStepComplete} />}
+                {currentStep === 2 && <ShopifyStep onComplete={handleStepComplete} />}
+                {currentStep === 3 && <ShippingStep onComplete={handleStepComplete} />}
+                {currentStep === 4 && <AdAccountsStep onComplete={handleStepComplete} />}
+                {currentStep === 5 && <SyncStep onComplete={handleComplete} />}
+                {currentStep === 6 && (
+                  <div className="text-center">
+                    <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                    <h3 className="text-xl text-white mb-4">Configuração Concluída!</h3>
+                    <p className="text-white/60 mb-6">
+                      Sua operação está configurada e pronta para uso.
+                    </p>
+                    <Button 
+                      onClick={handleComplete}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      data-testid="button-finish-onboarding"
+                    >
+                      Ir para Dashboard
+                    </Button>
                   </div>
-                  <h3 className="text-sm font-medium text-white mb-1">
-                    Etapa {index + 1}
-                  </h3>
-                  <p className="text-xs text-white/60">
-                    {step.title}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
-        {/* Current Step Content */}
-        <Card className="bg-white/10 border-white/20 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white text-2xl">
-              {steps[currentStep - 1]?.title}
-            </CardTitle>
-            <p className="text-white/80">
-              {steps[currentStep - 1]?.description}
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Step 1: Create Operation */}
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="operation-name" className="text-white">
-                    Nome da Operação
-                  </Label>
-                  <Input
-                    id="operation-name"
-                    placeholder="Ex: Minha Loja Principal"
-                    value={operationName}
-                    onChange={(e) => setOperationName(e.target.value)}
-                    className="bg-white/10 border-white/20 text-white mt-2"
-                    data-testid="input-operation-name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="operation-country" className="text-white">
-                    País da Operação
-                  </Label>
-                  <Select onValueChange={handleCountryChange} value={selectedCountry}>
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white mt-2" data-testid="select-country">
-                      <SelectValue placeholder="Selecione um país" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {EUROPEAN_COUNTRIES.map((country) => (
-                        <SelectItem 
-                          key={country.code} 
-                          value={country.code}
-                          className="text-white hover:bg-gray-700"
-                          data-testid={`country-${country.code}`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="text-lg">{country.flag}</span>
-                            <span>{country.name}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="operation-currency" className="text-white">
-                    Moeda Padrão
-                  </Label>
-                  <Select onValueChange={setSelectedCurrency} value={selectedCurrency}>
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white mt-2" data-testid="select-currency">
-                      <SelectValue placeholder="Selecione uma moeda" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {EUROPEAN_CURRENCIES.map((currency) => (
-                        <SelectItem 
-                          key={currency.code} 
-                          value={currency.code}
-                          className="text-white hover:bg-gray-700"
-                          data-testid={`currency-${currency.code}`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="text-lg font-bold">{currency.symbol}</span>
-                            <span>{currency.name} ({currency.code})</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button 
-                  onClick={handleCreateOperation}
-                  disabled={createOperationMutation.isPending || !operationName.trim() || !selectedCountry || !selectedCurrency}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600"
-                  data-testid="button-create-operation"
+function OperationStep({ onComplete }: { onComplete: () => void }) {
+  const [operationName, setOperationName] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('');
+  const { toast } = useToast();
+
+  // Auto-select currency when country changes
+  const handleCountryChange = (countryCode: string) => {
+    setSelectedCountry(countryCode);
+    const country = EUROPEAN_COUNTRIES.find(c => c.code === countryCode);
+    if (country) {
+      setSelectedCurrency(country.currency);
+    }
+  };
+
+  const createOperationMutation = useMutation({
+    mutationFn: async (operationData: any) => {
+      const response = await apiRequest('POST', '/api/operations', operationData);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Operação criada com sucesso!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
+      onComplete();
+    },
+    onError: () => {
+      toast({ title: 'Erro ao criar operação', variant: 'destructive' });
+    }
+  });
+
+  const handleSubmit = () => {
+    if (!operationName || !selectedCountry || !selectedCurrency) {
+      toast({ title: 'Preencha todos os campos', variant: 'destructive' });
+      return;
+    }
+
+    createOperationMutation.mutate({
+      name: operationName,
+      country: selectedCountry,
+      currency: selectedCurrency
+    });
+  };
+
+  const canContinue = operationName && selectedCountry && selectedCurrency;
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <Package className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+        <h3 className="text-xl text-white mb-2">Criar Operação</h3>
+        <p className="text-white/60">
+          Configure sua primeira operação de vendas
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="operation-name" className="text-white">
+            Nome da Operação
+          </Label>
+          <Input
+            id="operation-name"
+            placeholder="Ex: Minha Loja Principal"
+            value={operationName}
+            onChange={(e) => setOperationName(e.target.value)}
+            className="bg-white/10 border-white/20 text-white mt-2"
+            data-testid="input-operation-name"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="operation-country" className="text-white">
+            País da Operação
+          </Label>
+          <Select onValueChange={handleCountryChange} value={selectedCountry}>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white mt-2" data-testid="select-country">
+              <SelectValue placeholder="Selecione um país" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-600">
+              {EUROPEAN_COUNTRIES.map((country) => (
+                <SelectItem 
+                  key={country.code} 
+                  value={country.code}
+                  className="text-white hover:bg-gray-700"
+                  data-testid={`country-${country.code}`}
                 >
-                  {createOperationMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Criando...
-                    </>
-                  ) : (
-                    'Continuar'
-                  )}
-                </Button>
-              </div>
-            )}
+                  <span className="flex items-center gap-2">
+                    <span className="text-lg">{country.flag}</span>
+                    <span>{country.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div>
+          <Label htmlFor="operation-currency" className="text-white">
+            Moeda Padrão
+          </Label>
+          <Select onValueChange={setSelectedCurrency} value={selectedCurrency}>
+            <SelectTrigger className="bg-white/10 border-white/20 text-white mt-2" data-testid="select-currency">
+              <SelectValue placeholder="Selecione uma moeda" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-600">
+              {EUROPEAN_CURRENCIES.map((currency) => (
+                <SelectItem 
+                  key={currency.code} 
+                  value={currency.code}
+                  className="text-white hover:bg-gray-700"
+                  data-testid={`currency-${currency.code}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-lg font-bold">{currency.symbol}</span>
+                    <span>{currency.name} ({currency.code})</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-            {/* Step 2: Shopify Integration */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
-                <div className="text-center py-8">
-                  <ShoppingCart className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-                  <p className="text-white/80 mb-4">
-                    Conecte sua loja Shopify para sincronizar produtos automaticamente
-                  </p>
-                  <p className="text-white/60 text-sm mb-6">
-                    Você pode integrar agora ou configurar depois no dashboard
-                  </p>
-                  <div className="flex gap-4 justify-center">
-                    <Button 
-                      onClick={() => handleStepComplete('step2_shopify', 3)}
-                      className="bg-gray-600 hover:bg-gray-700 text-white"
-                      data-testid="button-skip-shopify"
-                    >
-                      Integrar Depois
-                    </Button>
-                    <Button 
-                      onClick={() => handleStepComplete('step2_shopify', 3)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      data-testid="button-connect-shopify"
-                    >
-                      Conectar Shopify
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+      <Button 
+        onClick={handleSubmit}
+        disabled={!canContinue || createOperationMutation.isPending}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600"
+        data-testid="button-create-operation"
+      >
+        {createOperationMutation.isPending ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Criando...
+          </>
+        ) : (
+          'Continuar'
+        )}
+      </Button>
+    </div>
+  );
+}
 
-            {/* Step 3: Shipping Integration */}
-            {currentStep === 3 && (
-              <ShippingStep onComplete={() => handleStepComplete('step3_shipping', 4)} />
-            )}
+function ShopifyStep({ onComplete }: { onComplete: () => void }) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <ShoppingCart className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+        <h3 className="text-xl text-white mb-2">Integração Shopify</h3>
+        <p className="text-white/60">
+          Conecte sua loja Shopify para sincronizar produtos automaticamente
+        </p>
+      </div>
 
-            {/* Step 4: Ads Integration */}
-            {currentStep === 4 && (
-              <div className="space-y-4">
-                <div className="text-center py-8">
-                  <Target className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-                  <p className="text-white/80 mb-4">
-                    Conecte suas contas de anúncios para calcular custos de marketing
-                  </p>
-                  <p className="text-white/60 text-sm mb-6">
-                    Facebook Ads está disponível. Você pode configurar agora ou depois.
-                  </p>
-                  <div className="flex gap-4 justify-center">
-                    <Button 
-                      onClick={() => handleStepComplete('step4_ads', 5)}
-                      className="bg-gray-600 hover:bg-gray-700 text-white"
-                      data-testid="button-skip-ads"
-                    >
-                      Configurar Depois
-                    </Button>
-                    <Button 
-                      onClick={() => handleStepComplete('step4_ads', 5)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      data-testid="button-connect-ads"
-                    >
-                      Conectar Facebook Ads
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+      <div className="text-center py-8">
+        <p className="text-white/80 mb-4">
+          Conecte sua loja Shopify para sincronizar produtos automaticamente
+        </p>
+        <p className="text-white/60 text-sm mb-6">
+          Você pode integrar agora ou configurar depois no dashboard
+        </p>
+        <div className="flex gap-4 justify-center">
+          <Button 
+            onClick={onComplete}
+            className="bg-gray-600 hover:bg-gray-700 text-white"
+            data-testid="button-skip-shopify"
+          >
+            Integrar Depois
+          </Button>
+          <Button 
+            onClick={onComplete}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            data-testid="button-connect-shopify"
+          >
+            Conectar Shopify
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-            {/* Step 5: Final Sync */}
-            {currentStep === 5 && (
-              <SyncStep onComplete={() => setLocation('/')} />
-            )}
-          </CardContent>
-        </Card>
+function AdAccountsStep({ onComplete }: { onComplete: () => void }) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <Target className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+        <h3 className="text-xl text-white mb-2">Contas de Anúncios</h3>
+        <p className="text-white/60">
+          Conecte suas contas de anúncios para calcular custos de marketing
+        </p>
+      </div>
+
+      <div className="text-center py-8">
+        <p className="text-white/80 mb-4">
+          Conecte suas contas de anúncios para calcular custos de marketing
+        </p>
+        <p className="text-white/60 text-sm mb-6">
+          Facebook Ads está disponível. Você pode configurar agora ou depois.
+        </p>
+        <div className="flex gap-4 justify-center">
+          <Button 
+            onClick={onComplete}
+            className="bg-gray-600 hover:bg-gray-700 text-white"
+            data-testid="button-skip-ads"
+          >
+            Configurar Depois
+          </Button>
+          <Button 
+            onClick={onComplete}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            data-testid="button-connect-ads"
+          >
+            Conectar Facebook Ads
+          </Button>
+        </div>
       </div>
     </div>
   );
