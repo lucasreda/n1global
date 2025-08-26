@@ -2595,39 +2595,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const operationId = req.query.operationId as string;
       
-      // Get current sync status from the database or cache
-      // For now we'll get basic stats, this could be improved with Redis cache
+      // Get current sync status from the database
       const orders = await storage.getOrdersByOperationId(operationId);
       const totalOrders = orders.length;
       
-      // Simulate progress based on actual data in DB
-      const shopifyOrders = orders.filter(o => o.id.startsWith('shopify_')).length;
-      const processedOrders = orders.filter(o => o.status !== 'pending').length;
+      // Calculate real progress based on order source and status
+      const shopifyOrders = orders.filter(o => o.source === 'shopify').length;
+      const carrierOrders = orders.filter(o => o.source === 'carrier').length;
+      const matchedOrders = orders.filter(o => o.status !== 'pending' && o.status !== null).length;
+      
+      // Estimate total expected orders for better progress indication
+      // When sync is starting, we won't know the total yet
+      const estimatedTotal = Math.max(totalOrders, 1500); // Use a reasonable estimate
+      
+      console.log(`📊 Progress Debug: Total: ${totalOrders}, Shopify: ${shopifyOrders}, Carrier: ${carrierOrders}, Matched: ${matchedOrders}`);
       
       res.json({
         shopify: {
           processed: shopifyOrders,
-          total: totalOrders,
-          status: shopifyOrders > 0 ? `${shopifyOrders} pedidos sincronizados` : 'Sincronizando...',
-          completed: shopifyOrders === totalOrders
+          total: estimatedTotal,
+          status: shopifyOrders > 0 ? `${shopifyOrders} pedidos sincronizados` : 'Sincronizando pedidos...',
+          completed: shopifyOrders >= estimatedTotal * 0.8 // Consider complete at 80% of estimated
         },
         shipping: {
-          processed: processedOrders,
-          total: totalOrders,
-          status: processedOrders > 0 ? `${processedOrders} pedidos processados` : 'Aguardando...',
-          completed: processedOrders === totalOrders
+          processed: carrierOrders,
+          total: Math.max(carrierOrders, 500), // Carrier orders are usually less
+          status: carrierOrders > 0 ? `${carrierOrders} leads processados` : 'Sincronizando transportadora...',
+          completed: carrierOrders > 0 && carrierOrders >= 400
         },
         ads: {
           processed: 0,
           total: 0,
-          status: 'Campanhas não configuradas',
+          status: 'Campanhas não configuradas (opcional)',
           completed: true
         },
         matching: {
-          processed: processedOrders,
-          total: totalOrders,
-          status: processedOrders > 0 ? `${processedOrders} matches realizados` : 'Aguardando...',
-          completed: processedOrders === totalOrders
+          processed: matchedOrders,
+          total: Math.max(totalOrders, shopifyOrders),
+          status: matchedOrders > 0 ? `${matchedOrders} correspondências realizadas` : 'Fazendo correspondências...',
+          completed: matchedOrders > 0 && matchedOrders >= Math.max(totalOrders * 0.3, 100)
         }
       });
     } catch (error) {
