@@ -1407,19 +1407,46 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
                     clearInterval(matchingInterval);
                   }
                   
-                  setSyncStats(prevStats => ({
-                    ...prevStats,
-                    matching: {
-                      current: Math.floor((matchingProgress / 100) * finalShopifyCount),
-                      total: finalShopifyCount,
-                      completed: matchingProgress >= 100,
-                      started: true,
-                      status: matchingProgress >= 100
-                        ? 'Correspondência completa - 0 matches encontrados'
-                        : `Analisando correspondências... ${Math.floor(matchingProgress)}%`,
-                      percentage: Math.floor(matchingProgress)
+                  setSyncStats(prevStats => {
+                    const isCompleted = matchingProgress >= 100;
+                    const updatedStats = {
+                      ...prevStats,
+                      matching: {
+                        current: Math.floor((matchingProgress / 100) * finalShopifyCount),
+                        total: finalShopifyCount,
+                        completed: isCompleted,
+                        started: true,
+                        status: isCompleted
+                          ? 'Correspondência completa - 0 matches encontrados'
+                          : `Analisando correspondências... ${Math.floor(matchingProgress)}%`,
+                        percentage: Math.floor(matchingProgress)
+                      }
+                    };
+
+                    // Verificar se TODAS as etapas estão completas para redirecionar
+                    if (isCompleted && updatedStats.shopify.completed && updatedStats.shipping.completed && updatedStats.ads.completed) {
+                      console.log('🎯 SINCRONIZAÇÃO COMPLETA! Redirecionando para dashboard...');
+                      
+                      // Marcar onboarding como completo no servidor
+                      fetch('/api/users/onboarding-complete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                      }).then(() => {
+                        // Redirecionar após marcar como completo
+                        setTimeout(() => {
+                          window.location.href = '/dashboard';
+                        }, 2000); // 2 segundos para o usuário ver o sucesso
+                      }).catch(error => {
+                        console.error('Erro ao marcar onboarding como completo:', error);
+                        // Redirecionar mesmo se houver erro na marcação
+                        setTimeout(() => {
+                          window.location.href = '/dashboard';
+                        }, 2000);
+                      });
                     }
-                  }));
+
+                    return updatedStats;
+                  });
                 }, 800);
               }, 3000);
             }
