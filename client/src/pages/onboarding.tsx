@@ -388,7 +388,7 @@ export default function OnboardingPage() {
                     {/* Ícone principal - Mais sutil */}
                     <div className="mb-6">
                       <div className="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <Brain className="w-6 h-6 text-blue-400" />
+                        <Brain className="w-8 h-8 text-blue-400" />
                       </div>
                     </div>
 
@@ -407,7 +407,7 @@ export default function OnboardingPage() {
                     </p>
                     
                     {/* Botão Continuar - Dentro do card */}
-                    <div className="flex justify-center">
+                    <div className="flex justify-center" style={{ marginTop: '30px' }}>
                       <Button 
                         onClick={handleContinueToStep1}
                         size="lg"
