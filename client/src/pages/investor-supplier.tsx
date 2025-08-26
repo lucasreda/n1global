@@ -352,7 +352,7 @@ export default function InvestorSupplierLanding() {
       {/* CTA Final */}
       <section className="py-20 px-6 border-t border-slate-700/50 bg-gradient-to-br from-blue-900/20 to-purple-900/20">
         <div className="container mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             Pronto para Escalar sua Produção?
           </h2>
           <p className="text-xl text-slate-300 mb-12 max-w-3xl mx-auto">
