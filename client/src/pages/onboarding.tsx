@@ -289,56 +289,36 @@ export default function OnboardingPage() {
               </h1>
             </div>
 
-            {/* Card - Movido 50px para cima */}
+            {/* Card - Design minimalista e profissional */}
             {showCard && (
               <div className="animate-fade-in -mt-12">
-                <Card className="bg-white/10 border-white/20 backdrop-blur-lg max-w-3xl mx-auto mb-8 overflow-hidden">
-                  <CardContent className="p-10 text-center relative">
-                    {/* Elemento gráfico - Ícones de dados flutuando */}
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                      <div className="absolute top-4 left-8 text-blue-300/30 animate-bounce" style={{animationDelay: '0s'}}>
-                        <TrendingUp className="w-6 h-6" />
-                      </div>
-                      <div className="absolute top-12 right-12 text-purple-300/30 animate-bounce" style={{animationDelay: '1s'}}>
-                        <BarChart3 className="w-8 h-8" />
-                      </div>
-                      <div className="absolute bottom-16 left-16 text-green-300/30 animate-bounce" style={{animationDelay: '2s'}}>
-                        <Target className="w-7 h-7" />
-                      </div>
-                      <div className="absolute bottom-8 right-8 text-yellow-300/30 animate-bounce" style={{animationDelay: '1.5s'}}>
-                        <Zap className="w-6 h-6" />
+                <Card className="glassmorphism max-w-2xl mx-auto mb-8">
+                  <CardContent className="p-8 text-center">
+                    {/* Ícone principal - Mais sutil */}
+                    <div className="mb-6">
+                      <div className="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <Brain className="w-6 h-6 text-blue-400" />
                       </div>
                     </div>
 
-                    {/* Ícone principal */}
-                    <div className="relative z-10 mb-6">
-                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Brain className="w-8 h-8 text-white" />
-                      </div>
-                    </div>
-
-                    <h2 className="text-3xl font-bold text-white mb-4 relative z-10">
+                    <h2 className="text-2xl font-semibold text-white mb-3">
                       Quanto mais dados, mais inteligência
                     </h2>
-                    <p className="text-white/90 text-xl leading-relaxed mb-8 relative z-10 max-w-2xl mx-auto">
-                      <span className="text-blue-300 font-semibold">Transforme</span> cada informação da sua operação em{' '}
-                      <span className="text-purple-300 font-semibold">insights poderosos</span>.{' '}
-                      Nossa IA aprende com seus dados para entregar{' '}
-                      <span className="text-green-300 font-semibold">decisões mais precisas</span> e{' '}
-                      <span className="text-yellow-300 font-semibold">resultados excepcionais</span>.
+                    <p className="text-white/70 text-base leading-relaxed mb-6 max-w-lg mx-auto">
+                      Alimente a plataforma com informações da sua operação e obtenha insights precisos para decisões mais assertivas.
                     </p>
                   </CardContent>
                 </Card>
                 
-                {/* Botão Continuar - Separado e maior */}
+                {/* Botão Continuar - Padrão da aplicação */}
                 <div className="flex justify-center">
                   <Button 
                     onClick={handleContinueToStep1}
                     size="lg"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-4 text-xl font-semibold rounded-xl transition-all duration-300 hover:scale-105 shadow-2xl hover:shadow-blue-500/25"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 font-medium rounded-lg transition-colors duration-200"
                     data-testid="button-continue-step1"
                   >
-                    <ArrowRight className="w-6 h-6 mr-3" />
+                    <ArrowRight className="w-5 h-5 mr-2" />
                     Começar Agora
                   </Button>
                 </div>
