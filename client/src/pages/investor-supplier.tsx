@@ -78,9 +78,10 @@ export default function InvestorSupplierLanding() {
           </h1>
           
           <p className="text-base sm:text-xl text-slate-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-2">
-            Transforme seus produtos em receita recorrente enquanto nossa rede de afiliados especializados 
-            comercializa para você. <strong className="text-white">Foque apenas na produção</strong> e deixe as vendas conosco. 
-            Resultados consistentes em 2-3 meses com total transparência.
+            Transforme seus produtos em <strong className="text-white">receita recorrente</strong> enquanto nossa 
+            <strong className="text-white">rede de afiliados especializados</strong> comercializa para você. 
+            Foque apenas na <strong className="text-white">produção ou importação</strong> e deixe as vendas conosco. 
+            <strong className="text-white">Resultados consistentes</strong> com <strong className="text-white">total transparência</strong>.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12 max-w-4xl mx-auto px-2">
