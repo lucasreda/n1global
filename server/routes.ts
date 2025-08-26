@@ -290,12 +290,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shopify-first sync endpoint
+  app.post("/api/sync/shopify", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { ShopifySyncService } = await import("./shopify-sync-service");
+      const shopifySyncService = new ShopifySyncService();
+      
+      // CRITICAL: Get user's operation for data isolation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const currentOperation = userOperations[0];
+      
+      if (!currentOperation) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Nenhuma operação encontrada. Complete o onboarding primeiro." 
+        });
+      }
+      
+      const operationId = currentOperation.id;
+      
+      // Executar sincronização Shopify-first em background
+      shopifySyncService.syncOperation(operationId)
+        .then((result) => {
+          console.log(`✅ Shopify sync completed for operation ${operationId}:`, result);
+        })
+        .catch((error) => {
+          console.error(`❌ Shopify sync failed for operation ${operationId}:`, error);
+        });
+      
+      res.json({
+        success: true,
+        message: "Sincronização Shopify iniciada",
+        operationId: operationId
+      });
+    } catch (error) {
+      console.error("Shopify sync error:", error);
+      res.status(500).json({ message: "Failed to start Shopify sync" });
+    }
+  });
+
   // Real-time sync progress endpoint for better user experience
   app.get("/api/sync/progress", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      const operationId = req.query.operationId as string;
+      
+      // Se não tem operationId, retorna status vazio
+      if (!operationId) {
+        return res.json({
+          isRunning: false,
+          currentPage: 0,
+          totalPages: 0,
+          processedOrders: 0,
+          newOrders: 0,
+          updatedOrders: 0,
+          currentStep: "",
+          estimatedTimeRemaining: "",
+          startTime: null,
+          percentage: 0,
+          timeElapsed: 0
+        });
+      }
+
+      // Importar ambos os serviços
       const { smartSyncService } = await import("./smart-sync-service");
-      const progress = await smartSyncService.getSyncProgress();
-      res.json(progress);
+      const { ShopifySyncService } = await import("./shopify-sync-service");
+      
+      // Verificar progresso dos dois serviços
+      const smartSyncProgress = await smartSyncService.getSyncProgress();
+      const shopifyProgress = ShopifySyncService.getOperationProgress(operationId);
+      
+      // Se o Shopify sync está rodando, dar prioridade a ele
+      if (shopifyProgress.isRunning) {
+        return res.json({
+          ...shopifyProgress,
+          estimatedTimeRemaining: "",
+          timeElapsed: shopifyProgress.startTime ? 
+            Math.floor((Date.now() - shopifyProgress.startTime.getTime()) / 1000) : 0
+        });
+      }
+      
+      // Se o smart sync está rodando, retornar seus dados
+      if (smartSyncProgress.isRunning) {
+        return res.json({
+          ...smartSyncProgress,
+          timeElapsed: smartSyncProgress.startTime ? 
+            Math.floor((Date.now() - smartSyncProgress.startTime.getTime()) / 1000) : 0
+        });
+      }
+      
+      // Se nenhum está rodando, retornar status padrão
+      res.json({
+        isRunning: false,
+        currentPage: 0,
+        totalPages: 0,
+        processedOrders: 0,
+        newOrders: 0,
+        updatedOrders: 0,
+        currentStep: "",
+        estimatedTimeRemaining: "",
+        startTime: null,
+        percentage: 0,
+        timeElapsed: 0
+      });
     } catch (error) {
       console.error("Sync progress error:", error);
       res.status(500).json({ message: "Erro ao obter progresso da sincronização" });

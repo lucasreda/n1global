@@ -13,6 +13,75 @@ type ShopifyOrder = ShopifyServiceOrder;
  * 3. Atualiza status e tracking baseado na transportadora
  */
 export class ShopifySyncService {
+  // Tracking de progresso global para múltiplas operações
+  private static progressTracker = new Map<string, {
+    isRunning: boolean;
+    currentPage: number;
+    totalPages: number;
+    processedOrders: number;
+    totalOrders: number;
+    newOrders: number;
+    updatedOrders: number;
+    currentStep: string;
+    startTime: Date | null;
+    percentage: number;
+  }>();
+
+  /**
+   * Obtém o progresso atual para uma operação específica
+   */
+  static getOperationProgress(operationId: string) {
+    return ShopifySyncService.progressTracker.get(operationId) || {
+      isRunning: false,
+      currentPage: 0,
+      totalPages: 0,
+      processedOrders: 0,
+      totalOrders: 0,
+      newOrders: 0,
+      updatedOrders: 0,
+      currentStep: '',
+      startTime: null,
+      percentage: 0
+    };
+  }
+
+  /**
+   * Atualiza o progresso para uma operação específica
+   */
+  private updateProgress(operationId: string, updates: Partial<{
+    isRunning: boolean;
+    currentPage: number;
+    totalPages: number;
+    processedOrders: number;
+    totalOrders: number;
+    newOrders: number;
+    updatedOrders: number;
+    currentStep: string;
+    startTime: Date | null;
+    percentage: number;
+  }>) {
+    const current = ShopifySyncService.progressTracker.get(operationId) || {
+      isRunning: false,
+      currentPage: 0,
+      totalPages: 0,
+      processedOrders: 0,
+      totalOrders: 0,
+      newOrders: 0,
+      updatedOrders: 0,
+      currentStep: '',
+      startTime: null,
+      percentage: 0
+    };
+
+    const updated = { ...current, ...updates };
+    
+    // Calcular percentage se temos totalOrders
+    if (updated.totalOrders > 0) {
+      updated.percentage = Math.round((updated.processedOrders / updated.totalOrders) * 100);
+    }
+
+    ShopifySyncService.progressTracker.set(operationId, updated);
+  }
   
   /**
    * Executa sincronização completa para uma operação
@@ -73,6 +142,13 @@ export class ShopifySyncService {
   async importShopifyOrders(operationId: string): Promise<{ imported: number; updated: number }> {
     console.log(`📦 Importando pedidos do Shopify para operação ${operationId}`);
     
+    // Inicializar progresso
+    this.updateProgress(operationId, {
+      isRunning: true,
+      startTime: new Date(),
+      currentStep: 'Conectando com Shopify...'
+    });
+    
     // Busca integração Shopify
     console.log(`🔍 Buscando integração Shopify para operação: ${operationId}`);
     const integration = await shopifyService.getIntegration(operationId);
@@ -88,6 +164,10 @@ export class ShopifySyncService {
     
     // Primeiro, vamos verificar o total de pedidos na Shopify
     console.log(`🔍 Verificando total de pedidos na Shopify para ${normalizedShopName}...`);
+    this.updateProgress(operationId, {
+      currentStep: 'Verificando total de pedidos...'
+    });
+    
     const countResponse = await fetch(`https://${normalizedShopName}/admin/api/2023-10/orders/count.json?status=any`, {
       headers: {
         'X-Shopify-Access-Token': integration.accessToken,
@@ -98,6 +178,14 @@ export class ShopifySyncService {
     const countData = await countResponse.json();
     const totalShopifyOrders = countData.count || 0;
     console.log(`🎯 Total de pedidos na Shopify: ${totalShopifyOrders}`);
+    
+    // Calcular total de páginas esperadas
+    const totalPages = Math.ceil(totalShopifyOrders / 250);
+    this.updateProgress(operationId, {
+      totalOrders: totalShopifyOrders,
+      totalPages: totalPages,
+      currentStep: `Iniciando importação de ${totalShopifyOrders} pedidos...`
+    });
     
     // Busca TODOS os pedidos do Shopify usando paginação baseada em data
     let imported = 0;
@@ -115,6 +203,12 @@ export class ShopifySyncService {
       
       console.log(`\n📄 ========== PÁGINA ${pageCount} ==========`);
       console.log(`🔍 Buscando pedidos${lastCreatedAt ? ` criados antes de ${lastCreatedAt}` : ' (primeira página)'}`);
+      
+      // Atualizar progresso da página atual
+      this.updateProgress(operationId, {
+        currentPage: pageCount,
+        currentStep: `Processando página ${pageCount} de ${totalPages} (${imported + updated}/${totalShopifyOrders} pedidos)`
+      });
       
       const params: any = {
         limit: 250, // Máximo permitido pela Shopify API
@@ -172,6 +266,15 @@ export class ShopifySyncService {
               console.log(`🔄 Progresso: ${updated} pedidos atualizados...`);
             }
           }
+          
+          // Atualizar progresso a cada 50 pedidos processados para melhor UX
+          if ((imported + updated) % 50 === 0) {
+            this.updateProgress(operationId, {
+              processedOrders: imported + updated,
+              newOrders: imported,
+              updatedOrders: updated
+            });
+          }
         } catch (error) {
           console.error(`❌ Erro ao processar pedido ${shopifyOrder.name}:`, error);
         }
@@ -180,6 +283,14 @@ export class ShopifySyncService {
       console.log(`📊 Página ${pageCount} processada: ${newInThisPage} novos, ${updatedInThisPage} atualizados`);
       console.log(`📈 Total acumulado: ${imported} novos, ${updated} atualizados (${imported + updated} processados)`);
       console.log(`🎯 Progresso: ${imported + updated}/${totalShopifyOrders} pedidos (${((imported + updated) / totalShopifyOrders * 100).toFixed(1)}%)`);
+      
+      // Atualizar progresso após cada página
+      this.updateProgress(operationId, {
+        processedOrders: imported + updated,
+        newOrders: imported,
+        updatedOrders: updated,
+        currentStep: `Página ${pageCount} concluída: ${imported + updated}/${totalShopifyOrders} pedidos processados`
+      });
       
       // Configurar created_at_max para próxima página se ainda há mais páginas
       if (hasMorePages) {
@@ -219,6 +330,16 @@ export class ShopifySyncService {
     } else {
       console.log(`✅ SUCESSO: Todos os ${totalShopifyOrders} pedidos da Shopify foram processados com sucesso!`);
     }
+    
+    // Finalizar progresso
+    this.updateProgress(operationId, {
+      isRunning: false,
+      processedOrders: imported + updated,
+      newOrders: imported,
+      updatedOrders: updated,
+      currentStep: `Concluído: ${imported + updated} pedidos processados`,
+      percentage: 100
+    });
     
     return { imported, updated };
   }

@@ -1511,10 +1511,6 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
     if (operationId) {
       console.log('🚀 Iniciando polling automático para operationId:', operationId);
       setIsPolling(true);
-      // Iniciar polling imediatamente
-      setTimeout(() => {
-        pollSyncProgress();
-      }, 500);
     }
     
     // Cleanup - parar polling quando componente é desmontado
@@ -1523,6 +1519,18 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
       setIsPolling(false);
     };
   }, [operationId]);
+
+  // Iniciar polling quando isPolling se torna true
+  useEffect(() => {
+    if (isPolling && operationId) {
+      console.log('▶️ Iniciando loop de polling...');
+      // Iniciar polling imediatamente
+      const startPolling = () => {
+        pollSyncProgress();
+      };
+      setTimeout(startPolling, 500);
+    }
+  }, [isPolling, operationId]);
 
   // Também iniciar sync completo
   useEffect(() => {
@@ -1670,6 +1678,36 @@ function SyncStep({ operationId, onComplete }: { operationId: string, onComplete
           </Button>
         </div>
       )}
+
+      {/* DEBUG: Botão de teste para Shopify Sync */}
+      <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+        <div className="text-yellow-400 font-medium mb-2 text-sm">🧪 Teste Shopify Sync</div>
+        <Button 
+          onClick={async () => {
+            try {
+              console.log('🧪 Testando endpoint /api/sync/shopify...');
+              const response = await apiRequest('POST', '/api/sync/shopify', {});
+              console.log('✅ Resposta do Shopify sync:', response);
+              toast({ 
+                title: 'Teste iniciado', 
+                description: 'Verifique os logs do console para o resultado'
+              });
+            } catch (error) {
+              console.error('❌ Erro no teste Shopify sync:', error);
+              toast({ 
+                title: 'Erro no teste', 
+                description: error instanceof Error ? error.message : 'Erro desconhecido',
+                variant: 'destructive'
+              });
+            }
+          }}
+          size="sm"
+          variant="outline"
+          className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
+        >
+          Testar Shopify Sync
+        </Button>
+      </div>
 
       {syncPhase === 'completed' && (
         <div className="text-center bg-green-500/10 border border-green-500/20 rounded-lg p-4">
