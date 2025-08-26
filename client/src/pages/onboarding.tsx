@@ -477,7 +477,7 @@ export default function OnboardingPage() {
                   setCreatedOperationId(operationId);
                   handleStepComplete('step1_operation', 2);
                 }} />}
-                {currentStep === 2 && <ShopifyStep operationId={createdOperationId} onComplete={() => handleStepComplete('step2_shopify', 3)} />}
+                {currentStep === 2 && <ShopifyStep operationId={createdOperationId || selectedOperation || ''} onComplete={() => handleStepComplete('step2_shopify', 3)} />}
                 {currentStep === 3 && <ShippingStep onComplete={() => handleStepComplete('step3_shipping', 4)} />}
                 {currentStep === 4 && <AdAccountsStep onComplete={() => handleStepComplete('step4_ads', 5)} />}
                 {currentStep === 5 && <SyncStep onComplete={() => handleStepComplete('step5_sync', 6)} />}
@@ -655,6 +655,8 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
+  console.log('ShopifyStep received operationId:', operationId);
+
   const testConnection = async () => {
     if (!shopUrl || !accessToken) {
       setErrorMessage('Por favor, preencha todos os campos');
@@ -694,8 +696,15 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
       return;
     }
 
+    if (!operationId) {
+      setErrorMessage('Erro: ID da operação não encontrado. Tente reiniciar o processo.');
+      setConnectionStatus('error');
+      return;
+    }
+
     // Save integration data
     try {
+      console.log('Saving Shopify integration with operationId:', operationId);
       const response = await apiRequest('POST', '/api/integrations/shopify', {
         operationId: operationId,
         shopName: shopUrl.replace('.myshopify.com', ''),
@@ -705,10 +714,12 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
       if (response.ok) {
         onComplete();
       } else {
-        setErrorMessage('Erro ao salvar integração');
+        const error = await response.json();
+        setErrorMessage(error.message || 'Erro ao salvar integração');
         setConnectionStatus('error');
       }
     } catch (error) {
+      console.error('Error saving Shopify integration:', error);
       setErrorMessage('Erro ao salvar integração');
       setConnectionStatus('error');
     }
