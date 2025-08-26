@@ -266,20 +266,20 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Logo */}
-        <div className="pt-4 pb-8">
+        <div className="pt-4 pb-4">
           <img 
             src={logoImage} 
             alt="COD Dashboard" 
-            className="mb-8 h-8 w-auto"
+            className="h-8 w-auto"
           />
         </div>
 
         {showStep0 ? (
           /* Step 0 - Presentation */
-          <div className="min-h-[70vh] flex flex-col items-center text-center pt-8">
+          <div className="flex flex-col items-center text-center">
             {/* Typewriting Text */}
-            <div className="mb-8">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[200px] flex items-center justify-center">
+            <div className="mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[120px] flex items-center justify-center">
                 {displayedText && (
                   <>
                     {displayedText}
