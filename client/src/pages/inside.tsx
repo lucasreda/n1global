@@ -385,7 +385,7 @@ export default function InsidePage() {
   return (
     <div className="min-h-screen admin-background">
       {/* Header */}
-<div className="bg-gray-900/80 border-b border-gray-700/60 backdrop-blur-sm">
+      <div className="bg-black border-b border-gray-700/60 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo na esquerda */}
@@ -1280,6 +1280,25 @@ function ProductsManager() {
                 <div key={product.id} className="border border-white/20 rounded-lg p-4 bg-white/5 backdrop-blur-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4">
+                      {/* Product Thumbnail */}
+                      <div className="flex-shrink-0">
+                        {product.imageUrl ? (
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="w-16 h-16 object-cover rounded-lg border border-white/20"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className={`w-16 h-16 bg-white/10 border border-white/20 rounded-lg flex items-center justify-center ${product.imageUrl ? 'hidden' : 'flex'}`}
+                        >
+                          <Package className="h-8 w-8 text-slate-400" />
+                        </div>
+                      </div>
                       <div>
                         <p className="font-medium text-white">{product.name}</p>
                         <p className="text-sm text-slate-400">SKU: {product.sku}</p>
