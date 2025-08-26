@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Switch, Route } from "wouter";
-import { LogOut } from "lucide-react";
+import { LogOut, Crown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -209,9 +210,16 @@ function SupplierHeader() {
               <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {user?.name}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                {user?.role === 'supplier' ? 'Fornecedor' : user?.role}
-              </div>
+              {user?.role === 'supplier' ? (
+                <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white text-xs font-medium px-2 py-1 shadow-sm">
+                  <Crown className="h-3 w-3 mr-1" />
+                  Fornecedor
+                </Badge>
+              ) : (
+                <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                  {user?.role}
+                </div>
+              )}
             </div>
             <button
               onClick={logout}
