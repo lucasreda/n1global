@@ -396,15 +396,15 @@ export default function ProductsPage() {
 
                   {/* Metrics Grid */}
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+                    <div className="p-3 text-center">
                       <div className="text-lg font-semibold text-orange-300">€{product.price || "0.00"}</div>
                       <div className="text-xs text-white/50">Preço B2B</div>
                     </div>
-                    <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+                    <div className="p-3 text-center">
                       <div className="text-lg font-semibold text-purple-300">€{userProduct.customShippingCost || product.shippingCost || "0.00"}</div>
                       <div className="text-xs text-white/50">Envio</div>
                     </div>
-                    <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+                    <div className="p-3 text-center">
                       <div className="text-lg font-semibold text-blue-300">{stockData[product.sku]?.availableStock ?? product.stock}</div>
                       <div className="text-xs text-white/50">Stock</div>
                     </div>
@@ -412,7 +412,7 @@ export default function ProductsPage() {
 
                   {/* Description if available */}
                   {product.description && (
-                    <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div className="p-3">
                       <p className="text-white/70 text-sm">{product.description}</p>
                     </div>
                   )}
