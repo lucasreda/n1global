@@ -60,7 +60,7 @@ function renderTextWithGradient(displayedText: string, textConfig: any, currentI
   
   if (currentIndex <= gradientStart) {
     // Haven't reached gradient part yet
-    return <span>{displayedText}</span>;
+    return displayedText;
   }
   
   // Split text into before gradient and gradient parts
@@ -68,10 +68,10 @@ function renderTextWithGradient(displayedText: string, textConfig: any, currentI
   const gradientPart = displayedText.slice(gradientStart);
   
   return (
-    <>
-      <span>{beforeGradient}</span>
+    <span>
+      {beforeGradient}
       <span className="gradient-text">{gradientPart}</span>
-    </>
+    </span>
   );
 }
 
