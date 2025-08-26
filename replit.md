@@ -26,6 +26,8 @@ The COD Dashboard is a modern full-stack web application designed for managing C
 ✓ **Search Results Thumbnails**: Implemented consistent thumbnail display (64x64px) in product search results with same fallback system
 ✓ **Typography Improvements**: Set "Produtos Vinculados" title to 20px and product names to 18px for better visual hierarchy
 ✓ **B2B Price Display Fix**: Corrected Preço B2B field to show actual selling price (product.price) instead of cost price (product.costPrice), providing accurate pricing information for business operations
+✓ **Product Thumbnails Fix**: Resolved missing product images in inside dashboard by adding imageUrl field to admin service getAllProducts() method
+✓ **Cost Label Correction**: Updated "Custo para Operações" to "Custo para o Fornecedor" with correct costPrice display for better clarity
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
