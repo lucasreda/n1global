@@ -224,7 +224,7 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Produtos Vinculados</h1>
+        <h1 className="font-bold text-white" style={{ fontSize: '20px' }}>Produtos Vinculados</h1>
         <Dialog open={isLinking} onOpenChange={setIsLinking}>
           <DialogTrigger asChild>
             <Button className="glassmorphism-light text-white border-blue-600" data-testid="button-link-product">
