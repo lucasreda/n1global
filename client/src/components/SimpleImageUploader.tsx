@@ -20,8 +20,8 @@ function convertGcsUrlToObjectPath(gcsUrl: string): string {
       const objectPath = pathParts.slice(2).join('/');
       
       // Check if it's in the private directory structure
-      if (objectPath.includes('/.private/uploads/')) {
-        const objectId = objectPath.split('/.private/uploads/')[1];
+      if (objectPath.includes('.private/uploads/')) {
+        const objectId = objectPath.split('.private/uploads/')[1];
         return `/objects/uploads/${objectId}`;
       }
     }
@@ -97,6 +97,7 @@ export function SimpleImageUploader({ onImageUpload, currentImageUrl, onImageRem
       
       // Convert GCS URL to local object path for immediate display
       const objectPath = convertGcsUrlToObjectPath(uploadUrl);
+      console.log('Original URL:', uploadUrl);
       console.log('Converted to object path:', objectPath);
       
       onImageUpload(uploadUrl); // Pass original URL for backend processing
