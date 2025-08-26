@@ -276,9 +276,9 @@ export default function OnboardingPage() {
 
         {showStep0 ? (
           /* Step 0 - Presentation */
-          <div className="min-h-[70vh] flex flex-col items-center justify-center text-center">
+          <div className="min-h-[70vh] flex flex-col items-center text-center pt-8">
             {/* Typewriting Text */}
-            <div className="mb-12">
+            <div className="mb-8">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[200px] flex items-center justify-center">
                 {displayedText && (
                   <>
