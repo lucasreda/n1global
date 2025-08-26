@@ -322,19 +322,28 @@ export function CreateProductModal({ open, onOpenChange, onProductCreated }: Cre
                       <p className="font-bold text-xl text-blue-400">{profitMargin.toFixed(1)}%</p>
                     </div>
                   </div>
-                  {formData.initialStock > 0 && (
-                    <div className="text-center p-4 bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-emerald-400/50 rounded-lg">
-                      <span className="text-sm text-emerald-300 block mb-2">🚀 Potencial de Lucro Total (Estoque Completo)</span>
-                      <div className="space-y-1">
-                        <p className="font-bold text-3xl text-white">R$ {totalEstimatedProfitBRL.toFixed(2)}</p>
-                        <p className="text-lg text-emerald-300">€{totalEstimatedProfit.toFixed(2)}</p>
-                      </div>
-                      <div className="mt-3 pt-2 border-t border-emerald-500/30">
-                        <p className="text-xs text-emerald-400">{formData.initialStock} unidades × R$ {profitPerUnitBRL.toFixed(2)} lucro</p>
-                        <p className="text-xs text-slate-400">Taxa EUR/BRL: {eurToBrlRate}</p>
-                      </div>
-                    </div>
-                  )}
+                  
+                  {/* Always show stock analysis section, but with different content */}
+                  <div className="text-center p-4 bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-emerald-400/50 rounded-lg">
+                    {formData.initialStock > 0 ? (
+                      <>
+                        <span className="text-sm text-emerald-300 block mb-2">🚀 Potencial de Lucro Total (Estoque Completo)</span>
+                        <div className="space-y-1">
+                          <p className="font-bold text-3xl text-white">R$ {totalEstimatedProfitBRL.toFixed(2)}</p>
+                          <p className="text-lg text-emerald-300">€{totalEstimatedProfit.toFixed(2)}</p>
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-emerald-500/30">
+                          <p className="text-xs text-emerald-400">{formData.initialStock} unidades × R$ {profitPerUnitBRL.toFixed(2)} lucro</p>
+                          <p className="text-xs text-slate-400">Taxa EUR/BRL: {eurToBrlRate}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm text-slate-300 block mb-2">📦 Análise de Estoque</span>
+                        <p className="text-slate-400 text-sm">Defina o estoque inicial para ver o potencial de lucro total</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
