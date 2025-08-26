@@ -97,6 +97,7 @@ export default function OnboardingPage() {
   const [operationName, setOperationName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('');
+  const [createdOperationId, setCreatedOperationId] = useState<string>('');
   const { toast } = useToast();
   const { selectedOperation, setSelectedOperation } = useOperationStore();
 
@@ -472,8 +473,11 @@ export default function OnboardingPage() {
             {/* Current Step Content */}
             <Card className="bg-white/10 border-white/20">
               <CardContent className="p-8">
-                {currentStep === 1 && <OperationStep onComplete={() => handleStepComplete('step1_operation', 2)} />}
-                {currentStep === 2 && <ShopifyStep onComplete={() => handleStepComplete('step2_shopify', 3)} />}
+                {currentStep === 1 && <OperationStep onComplete={(operationId) => {
+                  setCreatedOperationId(operationId);
+                  handleStepComplete('step1_operation', 2);
+                }} />}
+                {currentStep === 2 && <ShopifyStep operationId={createdOperationId} onComplete={() => handleStepComplete('step2_shopify', 3)} />}
                 {currentStep === 3 && <ShippingStep onComplete={() => handleStepComplete('step3_shipping', 4)} />}
                 {currentStep === 4 && <AdAccountsStep onComplete={() => handleStepComplete('step4_ads', 5)} />}
                 {currentStep === 5 && <SyncStep onComplete={() => handleStepComplete('step5_sync', 6)} />}
@@ -502,7 +506,7 @@ export default function OnboardingPage() {
   );
 }
 
-function OperationStep({ onComplete }: { onComplete: () => void }) {
+function OperationStep({ onComplete }: { onComplete: (operationId: string) => void }) {
   const [operationName, setOperationName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('');
@@ -522,10 +526,10 @@ function OperationStep({ onComplete }: { onComplete: () => void }) {
       const response = await apiRequest('POST', '/api/operations', operationData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({ title: 'Operação criada com sucesso!' });
       queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
-      onComplete();
+      onComplete(data.id);
     },
     onError: () => {
       toast({ title: 'Erro ao criar operação', variant: 'destructive' });
@@ -644,7 +648,7 @@ function OperationStep({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function ShopifyStep({ onComplete }: { onComplete: () => void }) {
+function ShopifyStep({ operationId, onComplete }: { operationId: string, onComplete: () => void }) {
   const [shopUrl, setShopUrl] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -699,14 +703,15 @@ function ShopifyStep({ onComplete }: { onComplete: () => void }) {
 
     // Save integration data
     try {
-      const response = await fetch('/api/shopify/save-integration', {
+      const response = await fetch('/api/integrations/shopify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          shopUrl: shopUrl.replace('.myshopify.com', ''),
+          operationId: operationId,
+          shopName: shopUrl.replace('.myshopify.com', ''),
           accessToken
         })
       });
