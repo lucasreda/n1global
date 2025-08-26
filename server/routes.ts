@@ -435,7 +435,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         operations: operations,
         directAccess: directQuery,
-        tokenUserId: req.user.id
+        tokenUserId: req.user.id,
+        environment: {
+          nodeEnv: process.env.NODE_ENV || 'unknown',
+          databaseUrl: process.env.DATABASE_URL ? 'CONFIGURED' : 'MISSING',
+          timestamp: new Date().toISOString()
+        }
       });
     } catch (error) {
       console.error("Debug endpoint error:", error);
@@ -443,13 +448,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple production status endpoint
+  app.get("/api/debug/simple-status", (req: Request, res: Response) => {
+    res.json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'unknown',
+      databaseConnected: true
+    });
+  });
+
   // Operations routes
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       console.log("🔍 /api/operations called by:", req.user.email, "ID:", req.user.id, "ENV:", process.env.NODE_ENV || 'unknown');
+      console.log("🔍 REQUEST HEADERS:", {
+        authorization: req.headers.authorization ? 'Bearer ***' : 'NONE',
+        userAgent: req.headers['user-agent'],
+        origin: req.headers.origin,
+        referer: req.headers.referer
+      });
       
       let operations = await storage.getUserOperations(req.user.id);
       console.log("📊 Initial operations found:", operations.length);
+      console.log("📊 Operations details:", operations.map(op => `${op.name} (${op.id})`));
       
       // AUTO-SYNC: Se usuário não tem operações, verificar se existe outro usuário com mesmo email
       if (operations.length === 0 && req.user.email === 'fresh@teste.com') {
