@@ -8,6 +8,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
   // Order methods - limited interface for backward compatibility
   getOrders(limit?: number, offset?: number): Promise<Order[]>;
@@ -86,6 +87,16 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    
+    return user || undefined;
   }
 
   async getOrders(limit: number = 50, offset: number = 0): Promise<Order[]> {

@@ -480,7 +480,7 @@ export default function OnboardingPage() {
                 {currentStep === 2 && <ShopifyStep operationId={createdOperationId || selectedOperation || ''} onComplete={() => handleStepComplete('step2_shopify', 3)} />}
                 {currentStep === 3 && <ShippingStep onComplete={() => handleStepComplete('step3_shipping', 4)} />}
                 {currentStep === 4 && <AdAccountsStep onComplete={() => handleStepComplete('step4_ads', 5)} />}
-                {currentStep === 5 && <SyncStep onComplete={() => handleStepComplete('step5_sync', 6)} />}
+                {currentStep === 5 && <SyncStep operationId={createdOperationId || selectedOperation || ''} onComplete={() => handleStepComplete('step5_sync', 6)} />}
                 {currentStep === 6 && (
                   <div className="text-center">
                     <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
@@ -1249,117 +1249,246 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function SyncStep({ onComplete }: { onComplete: () => void }) {
-  const [syncStatus, setSyncStatus] = useState({
-    orders: { current: 0, total: 0, completed: false },
-    campaigns: { current: 0, total: 0, completed: false }
+function SyncStep({ operationId, onComplete }: { operationId: string, onComplete: () => void }) {
+  const [syncPhase, setSyncPhase] = useState<'shopify' | 'shipping' | 'ads' | 'matching' | 'completed'>('shopify');
+  const [syncStats, setSyncStats] = useState({
+    shopify: { current: 0, total: 0, completed: false, status: 'Iniciando...' },
+    shipping: { current: 0, total: 0, completed: false, status: 'Aguardando...' },
+    ads: { current: 0, total: 0, completed: false, status: 'Aguardando...' },
+    matching: { current: 0, total: 0, completed: false, status: 'Aguardando...' }
   });
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
-
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/onboarding/sync-data', {});
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setSyncStatus(data.status);
-      if (data.status.orders.completed && data.status.campaigns.completed) {
-        // Complete onboarding
-        completeOnboardingMutation.mutate();
-      } else if (retryCount < maxRetries) {
-        // Retry if not completed
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-          syncMutation.mutate();
-        }, 2000);
+  // Iniciar sincronização completa
+  const startFullSync = async () => {
+    try {
+      setSyncPhase('shopify');
+      setError(null);
+      
+      // 1. Sync Shopify
+      setSyncStats(prev => ({
+        ...prev,
+        shopify: { ...prev.shopify, status: 'Sincronizando pedidos da Shopify...' }
+      }));
+
+      const shopifyResponse = await apiRequest('POST', `/api/integrations/shopify/sync?operationId=${operationId}`);
+      if (shopifyResponse.ok) {
+        const shopifyData = await shopifyResponse.json();
+        setSyncStats(prev => ({
+          ...prev,
+          shopify: { 
+            current: shopifyData.ordersProcessed || 0, 
+            total: shopifyData.ordersProcessed || 0, 
+            completed: true, 
+            status: `${shopifyData.ordersProcessed || 0} pedidos sincronizados`
+          }
+        }));
+        setSyncPhase('shipping');
+      } else {
+        throw new Error('Erro na sincronização Shopify');
       }
-    },
-    onError: () => {
-      if (retryCount < maxRetries) {
-        toast({ title: `Tentativa ${retryCount + 1}/${maxRetries} falhou, tentando novamente...` });
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-          syncMutation.mutate();
+
+      // 2. Sync Shipping
+      setSyncStats(prev => ({
+        ...prev,
+        shipping: { ...prev.shipping, status: 'Sincronizando transportadora...' }
+      }));
+
+      const shippingResponse = await apiRequest('POST', `/api/sync/shipping?operationId=${operationId}`);
+      if (shippingResponse.ok) {
+        const shippingData = await shippingResponse.json();
+        setSyncStats(prev => ({
+          ...prev,
+          shipping: { 
+            current: shippingData.leadsProcessed || 0, 
+            total: shippingData.leadsProcessed || 0, 
+            completed: true, 
+            status: `${shippingData.leadsProcessed || 0} leads sincronizados`
+          }
+        }));
+        setSyncPhase('ads');
+      } else {
+        throw new Error('Erro na sincronização da transportadora');
+      }
+
+      // 3. Sync Ads
+      setSyncStats(prev => ({
+        ...prev,
+        ads: { ...prev.ads, status: 'Sincronizando campanhas publicitárias...' }
+      }));
+
+      const adsResponse = await apiRequest('POST', `/api/sync/ads?operationId=${operationId}`);
+      if (adsResponse.ok) {
+        const adsData = await adsResponse.json();
+        setSyncStats(prev => ({
+          ...prev,
+          ads: { 
+            current: adsData.campaignsProcessed || 0, 
+            total: adsData.campaignsProcessed || 0, 
+            completed: true, 
+            status: `${adsData.campaignsProcessed || 0} campanhas sincronizadas`
+          }
+        }));
+        setSyncPhase('matching');
+      } else {
+        // Ads sync é opcional, pode continuar mesmo se falhar
+        setSyncStats(prev => ({
+          ...prev,
+          ads: { 
+            current: 0, 
+            total: 0, 
+            completed: true, 
+            status: 'Campanhas não configuradas (opcional)'
+          }
+        }));
+        setSyncPhase('matching');
+      }
+
+      // 4. Match data
+      setSyncStats(prev => ({
+        ...prev,
+        matching: { ...prev.matching, status: 'Fazendo correspondência de dados...' }
+      }));
+
+      // Executar o smart sync para fazer os matches
+      const smartSyncResponse = await apiRequest('POST', `/api/smart-sync?operationId=${operationId}`);
+      if (smartSyncResponse.ok) {
+        const matchData = await smartSyncResponse.json();
+        setSyncStats(prev => ({
+          ...prev,
+          matching: { 
+            current: matchData.matchesFound || 0, 
+            total: matchData.totalProcessed || 0, 
+            completed: true, 
+            status: `${matchData.matchesFound || 0} correspondências encontradas`
+          }
+        }));
+        setSyncPhase('completed');
+        
+        // Complete onboarding
+        setTimeout(async () => {
+          try {
+            await apiRequest('POST', '/api/user/complete-onboarding');
+            toast({ title: 'Sincronização completa! Dashboard pronto para uso.' });
+            onComplete();
+          } catch (err) {
+            console.error('Error completing onboarding:', err);
+            onComplete(); // Continue anyway
+          }
         }, 2000);
       } else {
-        toast({ title: 'Erro na sincronização', variant: 'destructive' });
+        throw new Error('Erro no processamento de correspondências');
       }
-    }
-  });
 
-  const completeOnboardingMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/onboarding/complete', {});
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ title: 'Configuração concluída com sucesso!' });
-      setTimeout(() => onComplete(), 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro na sincronização');
+      toast({ title: 'Erro na sincronização', description: err instanceof Error ? err.message : 'Erro desconhecido', variant: 'destructive' });
     }
-  });
+  };
 
+  // Iniciar sync quando o componente é montado
   useEffect(() => {
-    // Start sync on component mount
-    syncMutation.mutate();
-  }, []);
+    if (operationId) {
+      startFullSync();
+    }
+  }, [operationId]);
 
-  const ordersProgress = syncStatus.orders.total > 0 
-    ? (syncStatus.orders.current / syncStatus.orders.total) * 100 
-    : 0;
-  
-  const campaignsProgress = syncStatus.campaigns.total > 0 
-    ? (syncStatus.campaigns.current / syncStatus.campaigns.total) * 100 
-    : 0;
+  const getPhaseIcon = (phase: string, currentPhase: string) => {
+    if (syncStats[phase as keyof typeof syncStats].completed) {
+      return <CheckCircle className="w-5 h-5 text-green-400" />;
+    } else if (phase === currentPhase) {
+      return <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>;
+    } else {
+      return <div className="w-5 h-5 rounded-full border-2 border-white/20"></div>;
+    }
+  };
 
-  const overallCompleted = syncStatus.orders.completed && syncStatus.campaigns.completed;
+  const getProgress = () => {
+    const phases = ['shopify', 'shipping', 'ads', 'matching'];
+    const completedPhases = phases.filter(phase => syncStats[phase as keyof typeof syncStats].completed).length;
+    return (completedPhases / phases.length) * 100;
+  };
 
   return (
     <div className="space-y-6">
       <div className="text-center">
         <Zap className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-        <h3 className="text-xl text-white mb-2">Sincronizando dados</h3>
+        <h3 className="text-xl text-white mb-2">Sincronização Completa</h3>
         <p className="text-white/60">
-          {overallCompleted 
-            ? 'Sincronização concluída!' 
-            : `Tentativa ${retryCount + 1}/${maxRetries + 1}`
+          {syncPhase === 'completed' 
+            ? 'Todos os dados foram sincronizados com sucesso!' 
+            : 'Sincronizando todos os dados da sua operação...'
           }
         </p>
       </div>
 
+      {/* Progress bar geral */}
+      <div className="space-y-2">
+        <div className="flex justify-between text-white/80 text-sm">
+          <span>Progresso Geral</span>
+          <span>{Math.round(getProgress())}%</span>
+        </div>
+        <Progress value={getProgress()} className="h-3" />
+      </div>
+
+      {/* Fases detalhadas */}
       <div className="space-y-4">
-        <div>
-          <div className="flex justify-between text-white/80 mb-2">
-            <span>Pedidos sincronizados</span>
-            <span>{syncStatus.orders.current}/{syncStatus.orders.total}</span>
+        <div className="flex items-center space-x-3">
+          {getPhaseIcon('shopify', syncPhase)}
+          <div className="flex-1">
+            <div className="text-white/90 font-medium">1. Pedidos Shopify</div>
+            <div className="text-white/60 text-sm">{syncStats.shopify.status}</div>
           </div>
-          <Progress value={ordersProgress} className="h-2" />
         </div>
 
-        <div>
-          <div className="flex justify-between text-white/80 mb-2">
-            <span>Campanhas sincronizadas</span>
-            <span>{syncStatus.campaigns.current}/{syncStatus.campaigns.total}</span>
+        <div className="flex items-center space-x-3">
+          {getPhaseIcon('shipping', syncPhase)}
+          <div className="flex-1">
+            <div className="text-white/90 font-medium">2. Dados da Transportadora</div>
+            <div className="text-white/60 text-sm">{syncStats.shipping.status}</div>
           </div>
-          <Progress value={campaignsProgress} className="h-2" />
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {getPhaseIcon('ads', syncPhase)}
+          <div className="flex-1">
+            <div className="text-white/90 font-medium">3. Campanhas Publicitárias</div>
+            <div className="text-white/60 text-sm">{syncStats.ads.status}</div>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {getPhaseIcon('matching', syncPhase)}
+          <div className="flex-1">
+            <div className="text-white/90 font-medium">4. Correspondência de Dados</div>
+            <div className="text-white/60 text-sm">{syncStats.matching.status}</div>
+          </div>
         </div>
       </div>
 
-      {syncMutation.isPending && (
-        <div className="flex items-center justify-center text-white/60">
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          Sincronizando...
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <div className="text-red-400 font-medium mb-2">Erro na Sincronização</div>
+          <div className="text-red-300 text-sm">{error}</div>
+          <Button 
+            onClick={() => {
+              setError(null);
+              startFullSync();
+            }}
+            className="mt-3 bg-red-600 hover:bg-red-700"
+            size="sm"
+          >
+            Tentar Novamente
+          </Button>
         </div>
       )}
 
-      {overallCompleted && (
-        <div className="text-center">
-          <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-          <p className="text-green-400 font-medium">
-            Configuração concluída! Redirecionando para o dashboard...
-          </p>
+      {syncPhase === 'completed' && (
+        <div className="text-center bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+          <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+          <div className="text-green-400 font-medium mb-1">Sincronização Concluída!</div>
+          <div className="text-green-300/80 text-sm">Redirecionando para o dashboard...</div>
         </div>
       )}
     </div>
