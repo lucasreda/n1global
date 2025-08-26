@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Label } from "@/components/ui/label";
 import { 
   Users, 
   Building2, 
@@ -28,7 +29,9 @@ import {
   User,
   AlertTriangle,
   Shield,
-  Briefcase
+  Briefcase,
+  UserPlus,
+  Edit
 } from "lucide-react";
 import logoImage from "@assets/INSIDE_1756100933599.png";
 
@@ -105,6 +108,9 @@ export default function InsidePage() {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -242,9 +248,91 @@ export default function InsidePage() {
     },
   });
 
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: { name: string; email: string; password: string; role: string }) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao criar usuário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      toast({
+        title: "Usuário criado",
+        description: "O usuário foi criado com sucesso.",
+      });
+      setShowCreateUserModal(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao criar usuário",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editUserMutation = useMutation({
+    mutationFn: async (userData: { id: string; name?: string; email?: string; password?: string; role?: string }) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/users/${userData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao editar usuário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      toast({
+        title: "Usuário atualizado",
+        description: "O usuário foi atualizado com sucesso.",
+      });
+      setShowEditUserModal(false);
+      setUserToEdit(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar usuário",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteUser = (user: SystemUser) => {
     setUserToDelete(user);
     setShowDeleteModal(true);
+  };
+
+  const handleEditUser = (user: SystemUser) => {
+    setUserToEdit(user);
+    setShowEditUserModal(true);
   };
 
   const confirmDeleteUser = () => {
@@ -681,6 +769,14 @@ export default function InsidePage() {
                       Visualize e gerencie todas as contas de usuário do sistema
                     </CardDescription>
                   </div>
+                  <Button 
+                    onClick={() => setShowCreateUserModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    data-testid="button-create-user"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Criar Usuário
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -740,6 +836,15 @@ export default function InsidePage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
+                                  onClick={() => handleEditUser(user)}
+                                  className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400"
+                                  data-testid={`button-edit-user-${user.id}`}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
                                   onClick={() => handleDeleteUser(user)}
                                   disabled={deleteUserMutation.isPending}
                                   className="h-8 w-8 p-0 text-slate-400 hover:text-red-400"
@@ -764,6 +869,28 @@ export default function InsidePage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create User Modal */}
+      <CreateUserModal 
+        open={showCreateUserModal}
+        onClose={() => setShowCreateUserModal(false)}
+        onSubmit={createUserMutation.mutate}
+        isLoading={createUserMutation.isPending}
+      />
+
+      {/* Edit User Modal */}
+      {userToEdit && (
+        <EditUserModal 
+          open={showEditUserModal}
+          onClose={() => {
+            setShowEditUserModal(false);
+            setUserToEdit(null);
+          }}
+          user={userToEdit}
+          onSubmit={editUserMutation.mutate}
+          isLoading={editUserMutation.isPending}
+        />
+      )}
 
       {/* Delete User Confirmation Modal */}
       <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
@@ -799,6 +926,274 @@ export default function InsidePage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Create User Modal Component
+function CreateUserModal({ 
+  open, 
+  onClose, 
+  onSubmit, 
+  isLoading 
+}: { 
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: { name: string; email: string; password: string; role: string }) => void;
+  isLoading: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user'
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.name && formData.email && formData.password) {
+      onSubmit(formData);
+    }
+  };
+
+  const handleClose = () => {
+    setFormData({ name: '', email: '', password: '', role: 'user' });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-blue-400">
+            <UserPlus className="h-5 w-5" />
+            Criar Novo Usuário
+          </DialogTitle>
+          <DialogDescription className="text-gray-300">
+            Adicione um novo usuário ao sistema. Todos os campos são obrigatórios.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name" className="text-sm text-slate-400">Nome</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+              placeholder="Nome completo do usuário"
+              required
+              data-testid="input-create-user-name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="email" className="text-sm text-slate-400">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+              placeholder="usuario@exemplo.com"
+              required
+              data-testid="input-create-user-email"
+            />
+          </div>
+          <div>
+            <Label htmlFor="password" className="text-sm text-slate-400">Senha</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+              placeholder="Senha do usuário"
+              required
+              data-testid="input-create-user-password"
+            />
+          </div>
+          <div>
+            <Label htmlFor="role" className="text-sm text-slate-400">Tipo de Usuário</Label>
+            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-create-user-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectItem value="user" className="text-white hover:bg-gray-700">Usuário</SelectItem>
+                <SelectItem value="admin" className="text-white hover:bg-gray-700">Admin</SelectItem>
+                <SelectItem value="supplier" className="text-white hover:bg-gray-700">Supplier</SelectItem>
+                <SelectItem value="super_admin" className="text-white hover:bg-gray-700">Super Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={handleClose}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit"
+              disabled={isLoading || !formData.name || !formData.email || !formData.password}
+              className="bg-blue-600 hover:bg-blue-700"
+              data-testid="button-submit-create-user"
+            >
+              {isLoading ? 'Criando...' : 'Criar Usuário'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit User Modal Component
+function EditUserModal({ 
+  open, 
+  onClose, 
+  user,
+  onSubmit, 
+  isLoading 
+}: { 
+  open: boolean;
+  onClose: () => void;
+  user: SystemUser;
+  onSubmit: (data: { id: string; name?: string; email?: string; password?: string; role?: string }) => void;
+  isLoading: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    name: user.name,
+    email: user.email,
+    password: '',
+    role: user.role
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name,
+        email: user.email,
+        password: '',
+        role: user.role
+      });
+    }
+  }, [user]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updateData: any = { id: user.id };
+    
+    if (formData.name !== user.name) updateData.name = formData.name;
+    if (formData.email !== user.email) updateData.email = formData.email;
+    if (formData.password) updateData.password = formData.password;
+    if (formData.role !== user.role) updateData.role = formData.role;
+    
+    // Só envia se há alguma mudança
+    if (Object.keys(updateData).length > 1) {
+      onSubmit(updateData);
+    }
+  };
+
+  const handleClose = () => {
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role
+    });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-blue-400">
+            <Edit className="h-5 w-5" />
+            Editar Usuário
+          </DialogTitle>
+          <DialogDescription className="text-gray-300">
+            Edite as informações do usuário <strong className="text-white">{user.name}</strong>. 
+            Deixe a senha em branco para não alterá-la.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="edit-name" className="text-sm text-slate-400">Nome</Label>
+            <Input
+              id="edit-name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+              placeholder="Nome completo do usuário"
+              required
+              data-testid="input-edit-user-name"
+            />
+          </div>
+          <div>
+            <Label htmlFor="edit-email" className="text-sm text-slate-400">Email</Label>
+            <Input
+              id="edit-email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+              placeholder="usuario@exemplo.com"
+              required
+              data-testid="input-edit-user-email"
+            />
+          </div>
+          <div>
+            <Label htmlFor="edit-password" className="text-sm text-slate-400">
+              Nova Senha (deixe em branco para não alterar)
+            </Label>
+            <Input
+              id="edit-password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+              placeholder="Nova senha (opcional)"
+              data-testid="input-edit-user-password"
+            />
+          </div>
+          <div>
+            <Label htmlFor="edit-role" className="text-sm text-slate-400">Tipo de Usuário</Label>
+            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-edit-user-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-600">
+                <SelectItem value="user" className="text-white hover:bg-gray-700">Usuário</SelectItem>
+                <SelectItem value="admin" className="text-white hover:bg-gray-700">Admin</SelectItem>
+                <SelectItem value="supplier" className="text-white hover:bg-gray-700">Supplier</SelectItem>
+                <SelectItem value="super_admin" className="text-white hover:bg-gray-700">Super Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={handleClose}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit"
+              disabled={isLoading || !formData.name || !formData.email}
+              className="bg-blue-600 hover:bg-blue-700"
+              data-testid="button-submit-edit-user"
+            >
+              {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

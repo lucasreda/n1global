@@ -2325,6 +2325,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/admin/users - Create new user (Super Admin only)
+  app.post("/api/admin/users", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { name, email, password, role } = req.body;
+
+      // Validação dos campos obrigatórios
+      if (!name || !email || !password) {
+        return res.status(400).json({ message: 'Nome, email e senha são obrigatórios.' });
+      }
+
+      // Validação do formato do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Formato de email inválido.' });
+      }
+
+      // Validação do role
+      const validRoles = ['user', 'admin', 'supplier', 'super_admin'];
+      if (role && !validRoles.includes(role)) {
+        return res.status(400).json({ message: 'Tipo de usuário inválido.' });
+      }
+
+      // Verificar se o email já existe
+      const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existingUser.length > 0) {
+        return res.status(400).json({ message: 'Este email já está em uso.' });
+      }
+
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Criar o usuário
+      const [newUser] = await db.insert(users).values({
+        name,
+        email,
+        password: hashedPassword,
+        role: role || 'user',
+        onboardingCompleted: role === 'super_admin' || role === 'supplier' // Skip onboarding for privileged users
+      }).returning({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        onboardingCompleted: users.onboardingCompleted,
+        createdAt: users.createdAt
+      });
+
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
+  // PUT /api/admin/users/:userId - Update user (Super Admin only)
+  app.put("/api/admin/users/:userId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { name, email, password, role } = req.body;
+
+      // Verificar se o usuário existe
+      const existingUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (existingUser.length === 0) {
+        return res.status(404).json({ message: 'Usuário não encontrado.' });
+      }
+
+      // Preparar dados para atualização
+      const updateData: any = {};
+
+      if (name !== undefined) {
+        if (!name.trim()) {
+          return res.status(400).json({ message: 'Nome não pode estar vazio.' });
+        }
+        updateData.name = name.trim();
+      }
+
+      if (email !== undefined) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          return res.status(400).json({ message: 'Formato de email inválido.' });
+        }
+
+        // Verificar se o email já existe (e não é do próprio usuário)
+        const existingEmailUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        if (existingEmailUser.length > 0 && existingEmailUser[0].id !== userId) {
+          return res.status(400).json({ message: 'Este email já está em uso.' });
+        }
+        updateData.email = email;
+      }
+
+      if (password !== undefined && password.trim()) {
+        // Hash da nova senha
+        updateData.password = await bcrypt.hash(password, 10);
+      }
+
+      if (role !== undefined) {
+        const validRoles = ['user', 'admin', 'supplier', 'super_admin'];
+        if (!validRoles.includes(role)) {
+          return res.status(400).json({ message: 'Tipo de usuário inválido.' });
+        }
+        updateData.role = role;
+        
+        // Update onboarding status for privileged users
+        if (role === 'super_admin' || role === 'supplier') {
+          updateData.onboardingCompleted = true;
+        }
+      }
+
+      // Atualizar o usuário
+      const [updatedUser] = await db.update(users)
+        .set(updateData)
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          onboardingCompleted: users.onboardingCompleted,
+          createdAt: users.createdAt
+        });
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+  });
+
   app.delete("/api/admin/users/:userId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { userId } = req.params;
