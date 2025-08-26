@@ -71,7 +71,7 @@ export default function InvestorSupplierLanding() {
           
           <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-6 sm:mb-8 leading-tight px-2">
             Torne-se um{" "}
-            <span className="bg-gradient-to-r from-blue-400 to-teal-200 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-200 bg-clip-text text-transparent">
               Investidor de<br />Produtos
             </span>{" "}
             no Ecossistema N1
