@@ -21,6 +21,7 @@ import {
   Globe,
   PieChart
 } from "lucide-react";
+import supplierLogo from "@assets/SUPPLIER_1756234627506.png";
 
 export default function InvestorSupplierLanding() {
   const [activeTab, setActiveTab] = useState<'benefits' | 'process' | 'roi'>('benefits');
@@ -31,11 +32,12 @@ export default function InvestorSupplierLanding() {
       <header className="border-b border-slate-700/50 backdrop-blur-sm bg-slate-900/80">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Crown className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white">N1 Ecosystem</span>
+            <div className="flex items-center">
+              <img 
+                src={supplierLogo} 
+                alt="N1 Ecosystem" 
+                className="h-8"
+              />
             </div>
             
             <div className="flex items-center space-x-4">
@@ -382,11 +384,12 @@ export default function InvestorSupplierLanding() {
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-slate-700/50 bg-slate-900/50">
         <div className="container mx-auto text-center">
-          <div className="flex items-center justify-center space-x-3 mb-4">
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <Crown className="h-3 w-3 text-white" />
-            </div>
-            <span className="text-white font-semibold">N1 Ecosystem</span>
+          <div className="flex items-center justify-center mb-4">
+            <img 
+              src={supplierLogo} 
+              alt="N1 Ecosystem" 
+              className="h-6"
+            />
           </div>
           <p className="text-slate-400 text-sm">
             © 2025 N1 Ecosystem. Plataforma de investimento em produtos para mercados europeus.
