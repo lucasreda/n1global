@@ -278,7 +278,7 @@ export default function OnboardingPage() {
           /* Step 0 - Presentation */
           <div className="flex flex-col items-center text-center">
             {/* Typewriting Text - Com margem superior adicional apenas para os textos */}
-            <div className="mb-6" style={{ marginTop: displayedText ? '100px' : '0px' }}>
+            <div className="mb-6" style={{ marginTop: displayedText ? '150px' : '0px' }}>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[120px] flex items-center justify-center">
                 {displayedText && (
                   <>
