@@ -90,25 +90,19 @@ export class ShopifyService {
    */
   async testConnection(shopName: string, accessToken: string): Promise<{ success: boolean; data?: ShopifyStore; error?: string }> {
     try {
-      // Limpa e valida o nome da loja
-      let cleanShopName = shopName.replace(/^https?:\/\//, '').replace(/\/$/, '').trim();
-      
-      // Se não termina com .myshopify.com, adiciona
-      if (!cleanShopName.includes('.myshopify.com')) {
-        cleanShopName = `${cleanShopName}.myshopify.com`;
-      }
+      const normalizedShopName = this.normalizeShopName(shopName);
       
       // Validação básica do formato
-      if (!cleanShopName.match(/^[a-zA-Z0-9\-]+\.myshopify\.com$/)) {
+      if (!normalizedShopName.match(/^[a-zA-Z0-9\-]+\.myshopify\.com$/)) {
         return {
           success: false,
           error: 'Formato inválido. Use: sua-loja.myshopify.com ou apenas sua-loja'
         };
       }
       
-      console.log(`🔗 Testando conexão Shopify: ${cleanShopName}`);
+      console.log(`🔗 Testando conexão Shopify: ${normalizedShopName}`);
       
-      const url = `https://${cleanShopName}/admin/api/2023-10/shop.json`;
+      const url = `https://${normalizedShopName}/admin/api/2023-10/shop.json`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -270,6 +264,21 @@ export class ShopifyService {
   }
 
   /**
+   * Normaliza o nome da loja Shopify para incluir .myshopify.com se necessário
+   */
+  private normalizeShopName(shopName: string): string {
+    if (!shopName) return shopName;
+    
+    // Se já tem um domínio completo, usar como está
+    if (shopName.includes('.')) {
+      return shopName;
+    }
+    
+    // Caso contrário, adicionar .myshopify.com
+    return `${shopName}.myshopify.com`;
+  }
+
+  /**
    * Busca pedidos da Shopify
    */
   async getOrders(shopName: string, accessToken: string, options: {
@@ -292,9 +301,10 @@ export class ShopifyService {
       if (options.page) params.append('page', options.page.toString());
       if (options.fields) params.append('fields', options.fields);
 
-      console.log(`🌐 Shopify API Request: https://${shopName}/admin/api/2023-10/orders.json?${params}`);
+      const normalizedShopName = this.normalizeShopName(shopName);
+      console.log(`🌐 Shopify API Request: https://${normalizedShopName}/admin/api/2023-10/orders.json?${params}`);
 
-      const response = await fetch(`https://${shopName}/admin/api/2023-10/orders.json?${params}`, {
+      const response = await fetch(`https://${normalizedShopName}/admin/api/2023-10/orders.json?${params}`, {
         headers: {
           'X-Shopify-Access-Token': accessToken,
           'Content-Type': 'application/json',
@@ -343,7 +353,8 @@ export class ShopifyService {
       if (options.since_id) params.append('since_id', options.since_id);
       if (options.status) params.append('status', options.status);
 
-      const response = await fetch(`https://${shopName}/admin/api/2023-10/products.json?${params}`, {
+      const normalizedShopName = this.normalizeShopName(shopName);
+      const response = await fetch(`https://${normalizedShopName}/admin/api/2023-10/products.json?${params}`, {
         headers: {
           'X-Shopify-Access-Token': accessToken,
           'Content-Type': 'application/json',

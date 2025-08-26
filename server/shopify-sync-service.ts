@@ -81,9 +81,14 @@ export class ShopifySyncService {
       throw new Error(`Integração Shopify não encontrada para operação ${operationId}`);
     }
     
+    // Normalizar nome da loja
+    const normalizedShopName = integration.shopName.includes('.') 
+      ? integration.shopName 
+      : `${integration.shopName}.myshopify.com`;
+    
     // Primeiro, vamos verificar o total de pedidos na Shopify
-    console.log(`🔍 Verificando total de pedidos na Shopify...`);
-    const countResponse = await fetch(`https://${integration.shopName}/admin/api/2023-10/orders/count.json?status=any`, {
+    console.log(`🔍 Verificando total de pedidos na Shopify para ${normalizedShopName}...`);
+    const countResponse = await fetch(`https://${normalizedShopName}/admin/api/2023-10/orders/count.json?status=any`, {
       headers: {
         'X-Shopify-Access-Token': integration.accessToken,
         'Content-Type': 'application/json',
