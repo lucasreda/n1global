@@ -83,8 +83,8 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     const hasUser = !!user;
     const hasAuth = isAuthenticated;
     const hasData = !isLoading && onboardingStatus !== undefined;
-    const isSupplier = user?.role === 'supplier';
-    const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted && !isSupplier;
+    const skipOnboarding = user?.role === 'supplier' || user?.role === 'super_admin';
+    const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted && !skipOnboarding;
     const notOnOnboardingPage = location !== '/onboarding';
     
     console.log('OnboardingGuard - Debug:', {
@@ -97,18 +97,18 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
       hasData,
       onboardingStatus,
       onboardingCompleted: onboardingStatus?.onboardingCompleted,
-      isSupplier,
+      skipOnboarding,
       needsOnboarding,
       location,
       queryEnabled: !!user && isAuthenticated,
       shouldRedirect: hasUser && hasAuth && needsOnboarding && notOnOnboardingPage
     });
 
-    // Se temos dados válidos e o usuário precisa fazer onboarding, mas não é supplier
-    if (hasData && onboardingStatus && onboardingStatus.onboardingCompleted === false && !isSupplier) {
+    // Se temos dados válidos e o usuário precisa fazer onboarding, mas não é supplier ou super_admin
+    if (hasData && onboardingStatus && onboardingStatus.onboardingCompleted === false && !skipOnboarding) {
       console.log('🚨 ONBOARDING REQUIRED - User needs to complete onboarding');
-    } else if (isSupplier) {
-      console.log('✅ SUPPLIER USER - Skipping onboarding');
+    } else if (skipOnboarding) {
+      console.log('✅ PRIVILEGED USER - Skipping onboarding (role:', user?.role, ')');
     }
 
     if (hasUser && hasAuth && needsOnboarding && notOnOnboardingPage) {

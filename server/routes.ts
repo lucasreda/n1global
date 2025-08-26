@@ -169,7 +169,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email já cadastrado" });
       }
 
-      const user = await storage.createUser(userData);
+      // Super admins and suppliers skip onboarding - mark as completed
+      const finalUserData = {
+        ...userData,
+        onboardingCompleted: userData.role === 'super_admin' || userData.role === 'supplier' ? true : false,
+        onboardingSteps: userData.role === 'super_admin' || userData.role === 'supplier' ? {
+          step1_operation: true,
+          step2_shopify: true,
+          step3_shipping: true,
+          step4_ads: true,
+          step5_sync: true
+        } : {
+          step1_operation: false,
+          step2_shopify: false,
+          step3_shipping: false,
+          step4_ads: false,
+          step5_sync: false
+        }
+      };
+
+      const user = await storage.createUser(finalUserData);
       
       const token = jwt.sign(
         { id: user.id, email: user.email, role: user.role },

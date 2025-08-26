@@ -147,6 +147,17 @@ export function AuthModal({ isOpen }: AuthModalProps) {
   const handleRegister = async (data: RegisterForm) => {
     try {
       await register(data.name, data.email, data.password, data.role);
+      
+      // Redirect based on user role after successful registration
+      const userRole = data.role;
+      if (userRole === 'super_admin') {
+        setLocation('/inside');
+      } else if (userRole === 'supplier') {
+        setLocation('/supplier');
+      } else {
+        setLocation('/');
+      }
+      
       toast({
         title: "Conta criada com sucesso!",
         description: "Bem-vindo ao COD Dashboard",
