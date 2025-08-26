@@ -108,30 +108,36 @@ export function Sidebar() {
           <Briefcase className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground font-medium">Operação</span>
         </div>
-        <Select value={selectedOperation} onValueChange={(value) => {
-          if (value === "add-new") {
-            setShowNewOperationDialog(true);
-            return;
-          }
-          handleOperationChange(value);
-        }}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecionar operação" />
-          </SelectTrigger>
-          <SelectContent>
-            {operations.map((operation: any) => (
-              <SelectItem key={operation.id} value={operation.id}>
-                {operation.name}
+        {operations.length > 0 ? (
+          <Select value={selectedOperation} onValueChange={(value) => {
+            if (value === "add-new") {
+              setShowNewOperationDialog(true);
+              return;
+            }
+            handleOperationChange(value);
+          }}>
+            <SelectTrigger className="w-full" data-testid="operation-selector">
+              <SelectValue placeholder="Selecionar operação" />
+            </SelectTrigger>
+            <SelectContent>
+              {operations.map((operation: any) => (
+                <SelectItem key={operation.id} value={operation.id} data-testid={`operation-${operation.id}`}>
+                  {operation.name}
+                </SelectItem>
+              ))}
+              <SelectItem value="add-new">
+                <div className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar Nova</span>
+                </div>
               </SelectItem>
-            ))}
-            <SelectItem value="add-new">
-              <div className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                <span>Adicionar Nova</span>
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="p-3 text-sm text-muted-foreground border rounded-md" data-testid="no-operations">
+            Carregando operações...
+          </div>
+        )}
       </div>
 
       <ul className="space-y-1" data-testid="nav-menu">

@@ -24,14 +24,24 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
+  console.log("🔐 Auth Debug:", {
+    hasAuthHeader: !!authHeader,
+    hasToken: !!token,
+    url: req.url,
+    method: req.method
+  });
+
   if (!token) {
+    console.log("❌ No token provided");
     return res.status(401).json({ message: "Token de acesso requerido" });
   }
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) {
+      console.log("❌ JWT verification failed:", err.message);
       return res.status(403).json({ message: "Token inválido" });
     }
+    console.log("✅ JWT verified for user:", user.email);
     req.user = user;
     next();
   });
@@ -456,6 +466,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       environment: process.env.NODE_ENV || 'unknown',
       databaseConnected: true
     });
+  });
+
+  // Emergency operations endpoint for fresh user (no auth required for debugging)
+  app.get("/api/debug/fresh-operations", async (req: Request, res: Response) => {
+    try {
+      // Find fresh user
+      const freshUsers = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name
+        })
+        .from(users)
+        .where(eq(users.email, 'fresh@teste.com'));
+
+      if (freshUsers.length === 0) {
+        return res.status(404).json({ message: "Fresh user not found" });
+      }
+
+      const freshUser = freshUsers[0];
+      
+      // Get operations for fresh user
+      const userOperations = await storage.getUserOperations(freshUser.id);
+      
+      res.json({
+        freshUserId: freshUser.id,
+        operationsCount: userOperations.length,
+        operations: userOperations.map(op => ({ id: op.id, name: op.name })),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // Operations routes
