@@ -53,126 +53,182 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
   };
 
   return (
-    <Card className="h-fit" data-testid={`product-card-${product.sku}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3 flex-1">
-            {/* Product Image Thumbnail */}
+    <Card className="overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200" data-testid={`product-card-${product.sku}`}>
+      {/* Header Section */}
+      <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-start gap-4">
+          {/* Product Image */}
+          <div className="flex-shrink-0">
             {product.imageUrl ? (
-              <div className="flex-shrink-0">
+              <div className="relative">
                 <img
                   src={product.imageUrl}
                   alt={product.name}
-                  className="w-12 h-12 object-cover rounded-lg border"
+                  className="w-16 h-16 object-cover rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm"
                 />
               </div>
             ) : (
-              <div className="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border flex items-center justify-center">
-                <Package className="h-5 w-5 text-gray-400" />
+              <div className="w-16 h-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center shadow-sm">
+                <Package className="h-6 w-6 text-gray-400" />
               </div>
             )}
-            
-            {/* Product Info */}
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg truncate">
+          </div>
+          
+          {/* Product Information */}
+          <div className="flex-1 min-w-0">
+            <div className="mb-3">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 leading-tight mb-1">
                 {product.name}
-              </CardTitle>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="outline" className="text-xs">
-                  {product.sku}
+              </h3>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs font-medium px-2 py-1">
+                  SKU: {product.sku}
                 </Badge>
                 <Badge 
                   variant={product.type === 'fisico' ? 'default' : 'secondary'}
-                  className="text-xs"
+                  className="text-xs font-medium px-2 py-1"
                 >
                   {product.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
                 </Badge>
               </div>
             </div>
+            
+            {/* Quick Price Info */}
+            <div className="flex items-center gap-4 text-sm">
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Preço B2B</span>
+                <div className="font-semibold text-green-600 dark:text-green-400">
+                  {formatCurrency(product.price)}
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Estoque</span>
+                <div className="font-semibold text-gray-900 dark:text-gray-100">
+                  {product.initialStock || 0}
+                </div>
+              </div>
+            </div>
           </div>
           
-          <div className="flex gap-1 ml-2">
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setShowEditModal(true)}
               disabled={deleteProductMutation.isPending}
               data-testid={`button-edit-${product.sku}`}
+              className="h-8 w-8 p-0"
             >
               <Edit3 className="h-4 w-4" />
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setShowDeleteDialog(true)}
               disabled={deleteProductMutation.isPending}
               data-testid={`button-delete-${product.sku}`}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 border-red-200 dark:border-red-800"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-4">
+      {/* Content Section */}
+      <div className="p-6">
+        {/* Description */}
         {product.description && (
-          <p className="text-sm text-muted-foreground">
-            {product.description}
-          </p>
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              {product.description}
+            </p>
+          </div>
         )}
 
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Preço B2B:</span>
-              <div className="font-medium">{formatCurrency(product.price)}</div>
-              <span className="text-xs text-muted-foreground">Para operações</span>
+        {/* Detailed Information Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* Pricing Information */}
+          <div className="space-y-3">
+            <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-3 border border-green-200 dark:border-green-800">
+              <div className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">
+                PREÇO B2B
+              </div>
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                {formatCurrency(product.price)}
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400">
+                Para operações
+              </div>
             </div>
+            
             {product.costPrice > 0 && (
-              <div>
-                <span className="text-muted-foreground">Custo Produção:</span>
-                <div className="font-medium">{formatCurrency(product.costPrice)}</div>
-                <span className="text-xs text-muted-foreground">Seu custo real</span>
+              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                <div className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                  CUSTO PRODUÇÃO
+                </div>
+                <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  {formatCurrency(product.costPrice)}
+                </div>
+                <div className="text-xs text-blue-600 dark:text-blue-400">
+                  Seu custo real
+                </div>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Estoque Inicial:</span>
-              <div className="font-medium flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" />
+          {/* Stock Information */}
+          <div className="space-y-3">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+              <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                ESTOQUE INICIAL
+              </div>
+              <div className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
                 {product.initialStock || 0}
               </div>
             </div>
-            <div>
-              <span className="text-muted-foreground">Estoque Baixo:</span>
-              <div className="font-medium text-orange-600">
+            
+            <div className="bg-orange-50 dark:bg-orange-950/30 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
+              <div className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">
+                ALERTA ESTOQUE
+              </div>
+              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
                 {product.lowStock || 10}
               </div>
             </div>
           </div>
+        </div>
 
-          {(product.shippingCost > 0) && (
-            <div className="text-sm">
-              <span className="text-muted-foreground">Custo Envio:</span>
-              <span className="font-medium ml-1">{formatCurrency(product.shippingCost)}</span>
-            </div>
-          )}
-
-          <div className="pt-2 border-t">
-            <div className="text-xs text-muted-foreground">
-              Criado em {new Date(product.createdAt).toLocaleDateString('pt-BR')}
-            </div>
-            {product.updatedAt !== product.createdAt && (
-              <div className="text-xs text-muted-foreground">
-                Atualizado em {new Date(product.updatedAt).toLocaleDateString('pt-BR')}
+        {/* Additional Costs */}
+        {product.shippingCost > 0 && (
+          <div className="mb-4">
+            <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+              <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">
+                CUSTO DE ENVIO
               </div>
+              <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                {formatCurrency(product.shippingCost)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Timestamps */}
+        <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>
+              Criado em {new Date(product.createdAt).toLocaleDateString('pt-BR')}
+            </span>
+            {product.updatedAt !== product.createdAt && (
+              <span>
+                Atualizado em {new Date(product.updatedAt).toLocaleDateString('pt-BR')}
+              </span>
             )}
           </div>
         </div>
-      </CardContent>
+      </div>
       
       {/* Edit Product Modal */}
       <EditProductModal
