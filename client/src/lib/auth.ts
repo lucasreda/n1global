@@ -26,7 +26,7 @@ interface AuthResponse {
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiRequest("POST", "/api/auth/login", credentials);
+    const response = await apiRequest("/api/auth/login", "POST", credentials);
     const data = await response.json();
     
     localStorage.setItem("auth_token", data.token);
@@ -36,7 +36,7 @@ export const authService = {
   },
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    const response = await apiRequest("POST", "/api/auth/register", credentials);
+    const response = await apiRequest("/api/auth/register", "POST", credentials);
     const data = await response.json();
     
     localStorage.setItem("auth_token", data.token);
@@ -46,7 +46,7 @@ export const authService = {
   },
 
   async getCurrentUser(): Promise<User> {
-    const response = await apiRequest("GET", "/api/auth/me");
+    const response = await apiRequest("/api/auth/me", "GET");
     return response.json();
   },
 
