@@ -22,7 +22,6 @@ const createProductSchema = z.object({
   type: z.enum(["fisico", "nutraceutico"]),
   price: z.coerce.number().min(0.01, "Preço deve ser maior que 0"),
   costPrice: z.coerce.number().min(0, "Custo deve ser maior ou igual a 0"),
-  shippingCost: z.coerce.number().min(0, "Custo de envio deve ser maior ou igual a 0"),
   initialStock: z.coerce.number().min(0, "Estoque deve ser maior ou igual a 0"),
   lowStock: z.coerce.number().min(0, "Alerta de estoque deve ser maior ou igual a 0"),
   imageUrl: z.string().url().optional().or(z.literal(""))
@@ -48,7 +47,6 @@ export default function SupplierCreateProduct() {
       type: "fisico",
       price: 0,
       costPrice: 0,
-      shippingCost: 0,
       initialStock: 0,
       lowStock: 10,
       imageUrl: ""
@@ -140,6 +138,53 @@ export default function SupplierCreateProduct() {
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Upload de Imagem */}
+            <div className="space-y-4 mb-6">
+              <Label className="text-sm font-medium">Imagem do Produto</Label>
+              <div className="flex items-center gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('image-upload')?.click()}
+                  className="flex items-center gap-2"
+                  data-testid="button-upload-image"
+                >
+                  <Upload className="h-4 w-4" />
+                  {imageFile ? 'Alterar Imagem' : 'Selecionar Imagem'}
+                </Button>
+                
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setImageFile(file);
+                      form.setValue('imageUrl', URL.createObjectURL(file));
+                    }
+                  }}
+                  className="hidden"
+                />
+                
+                {imageFile && (
+                  <span className="text-sm text-green-600">
+                    {imageFile.name} ({(imageFile.size / 1024 / 1024).toFixed(1)} MB)
+                  </span>
+                )}
+              </div>
+              
+              {form.watch('imageUrl') && (
+                <div className="mt-2">
+                  <img
+                    src={form.watch('imageUrl')}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded border"
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -318,69 +363,7 @@ export default function SupplierCreateProduct() {
               )}
             </div>
 
-            {/* Custo de Envio */}
-            <div className="space-y-2">
-              <Label htmlFor="shippingCost">Custo de Envio (€)</Label>
-              <Input
-                id="shippingCost"
-                type="number"
-                step="0.01"
-                {...form.register("shippingCost")}
-                placeholder="0.00"
-                data-testid="input-shipping-cost"
-              />
-              {form.formState.errors.shippingCost && (
-                <p className="text-sm text-red-500">{form.formState.errors.shippingCost.message}</p>
-              )}
-            </div>
 
-            {/* Upload de Imagem */}
-            <div className="space-y-4">
-              <Label className="text-sm font-medium">Imagem do Produto</Label>
-              <div className="flex items-center gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('image-upload')?.click()}
-                  className="flex items-center gap-2"
-                  data-testid="button-upload-image"
-                >
-                  <Upload className="h-4 w-4" />
-                  {imageFile ? 'Alterar Imagem' : 'Selecionar Imagem'}
-                </Button>
-                
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setImageFile(file);
-                      // Aqui você pode adicionar lógica para upload da imagem
-                      form.setValue('imageUrl', URL.createObjectURL(file));
-                    }
-                  }}
-                  className="hidden"
-                />
-                
-                {imageFile && (
-                  <span className="text-sm text-green-600">
-                    {imageFile.name} ({(imageFile.size / 1024 / 1024).toFixed(1)} MB)
-                  </span>
-                )}
-              </div>
-              
-              {form.watch('imageUrl') && (
-                <div className="mt-2">
-                  <img
-                    src={form.watch('imageUrl')}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded border"
-                  />
-                </div>
-              )}
-            </div>
 
             {/* Form Actions */}
             <div className="flex justify-end gap-4 pt-6 border-t">
