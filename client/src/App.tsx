@@ -265,6 +265,7 @@ function AppContent() {
   const { isAuthenticated, isLoading, checkAuth, user } = useAuth();
   const [location] = useLocation();
   const isSupplier = user?.role === 'supplier';
+  const isAdminFinanceiro = user?.role === 'admin_financeiro';
 
   useEffect(() => {
     checkAuth();
@@ -303,6 +304,11 @@ function AppContent() {
               <main className="p-6">
                 <Router />
               </main>
+            </div>
+          ) : isAdminFinanceiro ? (
+            /* Finance layout - fullscreen with own layout */
+            <div className="min-h-screen">
+              <Router />
             </div>
           ) : (
             /* Regular dashboard layout with sidebar */

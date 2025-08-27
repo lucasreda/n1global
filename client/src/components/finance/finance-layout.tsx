@@ -95,9 +95,9 @@ export function FinanceLayout({ children }: FinanceLayoutProps) {
               return (
                 <li key={item.href}>
                   <Link href={item.href}>
-                    <a
+                    <span
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer",
                         isActive
                           ? "bg-blue-600 text-white"
                           : "text-gray-300 hover:text-white hover:bg-gray-800"
@@ -105,7 +105,7 @@ export function FinanceLayout({ children }: FinanceLayoutProps) {
                     >
                       <Icon className="h-4 w-4" />
                       {item.label}
-                    </a>
+                    </span>
                   </Link>
                 </li>
               );
