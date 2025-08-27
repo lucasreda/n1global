@@ -77,6 +77,22 @@ export function FinanceLayout({ children }: FinanceLayoutProps) {
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = location === item.href || (item.href !== "/finance" && location.startsWith(item.href));
+              const isDisabled = item.href === "/finance/configuracoes";
+              
+              if (isDisabled) {
+                return (
+                  <div key={item.href}>
+                    <div 
+                      className="cursor-not-allowed transition-all duration-200 rounded-lg p-2 flex items-center gap-2 text-gray-500 opacity-50"
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {item.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
               
               return (
                 <Link key={item.href} href={item.href}>
