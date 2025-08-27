@@ -26,6 +26,7 @@ import { SupplierLayout } from "@/components/supplier/supplier-layout";
 
 interface WalletOrder {
   orderId: string;
+  shopifyOrderNumber?: string;
   orderDate: string;
   customerName: string;
   total: number;
@@ -76,15 +77,9 @@ export default function SupplierWallet() {
     }).format(amount);
   };
 
-  const formatOrderId = (orderId: string) => {
-    // Se é um ID do Shopify, extrair números e formatar
-    if (orderId.includes('shopify_')) {
-      const numbers = orderId.replace('shopify_', '');
-      return `#PD${numbers.slice(-3)}...`;
-    }
-    // Para outros formatos, usar os últimos dígitos
-    const numbers = orderId.replace(/\D/g, '');
-    return `#PD${numbers.slice(-3)}...`;
+  const getDisplayOrderId = (order: WalletOrder) => {
+    // Usar shopifyOrderNumber se disponível, senão usar orderId
+    return order.shopifyOrderNumber || `#${order.orderId.slice(-6)}`;
   };
 
   const formatBRL = (amount: number) => {
@@ -282,7 +277,7 @@ export default function SupplierWallet() {
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-white">{formatOrderId(order.orderId)}</span>
+                            <span className="font-medium text-white">{getDisplayOrderId(order)}</span>
                             <Badge className={getStatusColor(order.status)}>
                               {order.status}
                             </Badge>

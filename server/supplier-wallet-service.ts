@@ -11,6 +11,7 @@ import { eq, and, desc, sql, sum, inArray } from "drizzle-orm";
 
 export interface WalletOrder {
   orderId: string;
+  shopifyOrderNumber?: string;
   orderDate: string;
   customerName: string;
   total: number;
@@ -256,6 +257,7 @@ export class SupplierWalletService {
 
         availableOrders.push({
           orderId: order.id,
+          shopifyOrderNumber: order.shopifyOrderNumber || null,
           orderDate: order.orderDate?.toISOString() || order.createdAt?.toISOString() || new Date().toISOString(),
           customerName: order.customerName || 'Cliente não informado',
           total: supplierValueInOrder,
