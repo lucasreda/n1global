@@ -4,6 +4,9 @@
 The COD Dashboard is a modern full-stack web application designed for managing Cash on Delivery (COD) orders and providing business metric analysis. It features a comprehensive dashboard for order tracking, customer management, and performance monitoring with real-time data visualization, authentication, and integrations with shipping providers. The project aims to provide a robust solution for businesses to efficiently manage their COD operations and gain actionable insights.
 
 ## Recent Changes (August 27, 2025)
+✓ **Critical Wallet Calculation Fix**: Resolved supplier wallet calculation bug where totalToReceive was incorrectly summing order values instead of using B2B product prices multiplied by actual quantities
+✓ **Product Quantity Analysis**: Identified that 910 orders contain 926 total products (2 orders with multiple products + 14 products with quantity > 1), explaining the €200 difference
+✓ **Accurate Financial Calculation**: System now correctly calculates 926 products × €12.50 = €11.575,00 instead of incorrectly using 910 orders × order value
 ✓ **Dashboard Restructure Complete**: Transformed /inside dashboard into multi-page admin interface with dedicated routes
 ✓ **AdminLayout Implementation**: Created sidebar navigation with Dashboard, Pedidos, Lojas, Usuários, Produtos, and Global pages
 ✓ **Responsive Sidebar Design**: Compact 192px sidebar with minimalista Apple-style design and intuitive navigation

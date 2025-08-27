@@ -268,34 +268,7 @@ export class SupplierWalletService {
       }
     }
 
-    // Calcular estatísticas de produtos
-    let totalProductQuantity = 0;
-    let ordersWithMultipleProducts = 0;
-    let ordersWithQuantityGreaterThan1 = 0;
-    
-    for (const order of availableOrders) {
-      if (order.products && order.products.length > 1) {
-        ordersWithMultipleProducts++;
-      }
-      if (order.products) {
-        for (const product of order.products) {
-          totalProductQuantity += product.quantity;
-          if (product.quantity > 1) {
-            ordersWithQuantityGreaterThan1++;
-          }
-        }
-      }
-    }
 
-    console.log('📊 ANÁLISE DETALHADA:');
-    console.log(`- Pedidos processados: ${availableOrders.length}`);
-    console.log(`- Quantidade total de produtos: ${totalProductQuantity}`);
-    console.log(`- Pedidos com múltiplos produtos: ${ordersWithMultipleProducts}`);
-    console.log(`- Produtos com quantidade > 1: ${ordersWithQuantityGreaterThan1}`);
-    console.log(`- Total a receber: €${totalToReceive}`);
-    console.log(`- Esperado (910 × €12.50): €${910 * 12.5}`);
-    console.log(`- Esperado (${totalProductQuantity} × €12.50): €${totalProductQuantity * 12.5}`);
-    console.log(`- Diferença: €${totalToReceive - (totalProductQuantity * 12.5)}`);
 
     // Ordenar pedidos por data (mais recentes primeiro)
     availableOrders.sort((a, b) => 
