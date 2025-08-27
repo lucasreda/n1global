@@ -96,12 +96,20 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
                 src={product.imageUrl}
                 alt={product.name}
                 className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  console.error('Image failed to load:', product.imageUrl, 'for product:', product.name);
+                  target.style.display = 'none';
+                  target.nextElementSibling?.classList.remove('hidden');
+                }}
+                onLoad={() => {
+                  console.log('Image loaded successfully:', product.imageUrl, 'for product:', product.name);
+                }}
               />
-            ) : (
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                <Package className="h-5 w-5 text-gray-400" />
-              </div>
-            )}
+            ) : null}
+            <div className={`w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center ${product.imageUrl ? 'hidden' : ''}`}>
+              <Package className="h-5 w-5 text-gray-400" />
+            </div>
           </div>
           
           {/* Product Info */}
