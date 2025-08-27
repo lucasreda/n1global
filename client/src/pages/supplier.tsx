@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar, Crown } from "lucide-react";
+import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar, Crown, LayoutDashboard, FileText, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { CreateProductModal } from "@/components/supplier/create-product-modal";
 import { SupplierProductCard } from "@/components/supplier/supplier-product-card";
@@ -41,6 +41,7 @@ export default function SupplierDashboard() {
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [dateFilter, setDateFilter] = useState("current_month");
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'contracts' | 'wallet'>('dashboard');
 
   // Fetch supplier products (produtos globais criados por este supplier)
   const { data: supplierProducts = [], isLoading: isLoadingProducts, refetch: refetchProducts } = useQuery<SupplierProduct[]>({
@@ -79,18 +80,75 @@ export default function SupplierDashboard() {
   const hasProducts = supplierProducts && supplierProducts.length > 0;
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      {/* Page Title */}
-      <div className="p-6" style={{ marginTop: '-25px' }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Dashboard do Fornecedor
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Gerencie seus produtos globais e acompanhe pedidos em todas as operações
-            </p>
+    <div className="container mx-auto py-8">
+      <div className="flex gap-6">
+        {/* Sidebar Menu */}
+        <div className="flex-shrink-0 w-64">
+          <div className="grid grid-cols-1 gap-4">
+            {[
+              { 
+                id: 'dashboard', 
+                label: 'Dashboard', 
+                icon: LayoutDashboard,
+                active: activeSection === 'dashboard'
+              },
+              { 
+                id: 'contracts', 
+                label: 'Contratos', 
+                icon: FileText,
+                active: activeSection === 'contracts'
+              },
+              { 
+                id: 'wallet', 
+                label: 'Carteira', 
+                icon: Wallet,
+                active: activeSection === 'wallet'
+              }
+            ].map((item) => (
+              <Card 
+                key={item.id}
+                className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                  item.active 
+                    ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800' 
+                    : 'bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900'
+                }`}
+                onClick={() => setActiveSection(item.id as 'dashboard' | 'contracts' | 'wallet')}
+                data-testid={`menu-${item.id}`}
+              >
+                <CardContent className="p-6 text-center">
+                  <item.icon className={`h-8 w-8 mx-auto mb-3 ${
+                    item.active 
+                      ? 'text-blue-600 dark:text-blue-400' 
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`} />
+                  <h3 className={`text-sm font-medium ${
+                    item.active 
+                      ? 'text-blue-900 dark:text-blue-100' 
+                      : 'text-gray-900 dark:text-gray-100'
+                  }`}>
+                    {item.label}
+                  </h3>
+                </CardContent>
+              </Card>
+            ))}
           </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 space-y-6">
+          {activeSection === 'dashboard' && (
+            <>
+              {/* Page Title */}
+              <div className="p-6" style={{ marginTop: '-25px' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold">
+                      Dashboard do Fornecedor
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
+                      Gerencie seus produtos globais e acompanhe pedidos em todas as operações
+                    </p>
+                  </div>
 
           {/* Action buttons and Date Filter */}
           <div className="flex items-center space-x-3">
@@ -246,17 +304,50 @@ export default function SupplierDashboard() {
           )}
         </CardContent>
       </Card>
+            </>
+          )}
 
+          {activeSection === 'contracts' && (
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-4">Contratos</h1>
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Área de Contratos</h3>
+                  <p className="text-muted-foreground">
+                    Gerencie seus contratos e acordos comerciais.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-      {/* Modal de Criação de Produto */}
-      <CreateProductModal 
-        open={showCreateModal} 
-        onOpenChange={setShowCreateModal}
-        onProductCreated={() => {
-          refetchProducts();
-          setShowCreateModal(false);
-        }}
-      />
+          {activeSection === 'wallet' && (
+            <div className="p-6">
+              <h1 className="text-2xl font-bold mb-4">Carteira</h1>
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Carteira Digital</h3>
+                  <p className="text-muted-foreground">
+                    Acompanhe seus pagamentos e saldo disponível.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Modal de Criação de Produto */}
+          <CreateProductModal 
+            open={showCreateModal} 
+            onOpenChange={setShowCreateModal}
+            onProductCreated={() => {
+              refetchProducts();
+              setShowCreateModal(false);
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
