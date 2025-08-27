@@ -105,6 +105,7 @@ export class SupplierWalletService {
         sku: products.sku,
         name: products.name,
         costPrice: products.costPrice,
+        price: products.price, // Preço B2B
         storeId: products.storeId,
         id: products.id,
       })
@@ -235,9 +236,9 @@ export class SupplierWalletService {
 
       for (const orderProduct of supplierOrderProducts) {
         const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
-        if (supplierProduct && supplierProduct.costPrice) {
+        if (supplierProduct && supplierProduct.price) {
           const quantity = orderProduct.quantity || 1;
-          const unitPrice = parseFloat(supplierProduct.costPrice);
+          const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
           const totalProductValue = unitPrice * quantity;
           
           supplierValueInOrder += totalProductValue;
