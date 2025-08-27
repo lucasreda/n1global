@@ -19,8 +19,7 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  AlertCircle,
-  RefreshCw
+  AlertCircle
 } from "lucide-react";
 import { SupplierLayout } from "@/components/supplier/supplier-layout";
 
@@ -158,25 +157,14 @@ export default function SupplierWallet() {
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black rounded-lg ml-5 p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Wallet className="h-6 w-6 text-blue-400" />
-              </div>
-              <div>
-                <h1 className="font-semibold text-white" style={{ fontSize: '22px' }}>Minha Carteira</h1>
-                <p className="text-gray-400">{wallet.supplierName}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Wallet className="h-6 w-6 text-blue-400" />
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => refetch()}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar
-            </Button>
+            <div>
+              <h1 className="font-semibold text-white" style={{ fontSize: '22px' }}>Minha Carteira</h1>
+              <p className="text-gray-400">{wallet.supplierName}</p>
+            </div>
           </div>
 
         {/* Summary Cards */}
