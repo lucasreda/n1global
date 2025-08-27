@@ -69,6 +69,16 @@ export default function SupplierWallet() {
     queryKey: ["/api/supplier/wallet"],
   });
 
+  // Debug log para verificar os dados recebidos
+  console.log('🔍 FRONTEND DEBUG - Wallet data:', wallet);
+  
+  // Log adicional para verificar valores específicos
+  if (wallet) {
+    console.log('🔍 FRONTEND DEBUG - totalToReceive:', wallet.totalToReceive);
+    console.log('🔍 FRONTEND DEBUG - totalOrdersCount:', wallet.totalOrdersCount);
+    console.log('🔍 FRONTEND DEBUG - availableOrders length:', wallet.availableOrders.length);
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',

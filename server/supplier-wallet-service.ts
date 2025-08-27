@@ -291,19 +291,23 @@ export class SupplierWalletService {
         const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
         if (supplierProduct && supplierProduct.price) {
           const orderQuantity = orderProduct.quantity || 1;
-          const paidQuantity = paidQuantitiesBySku.get(orderProduct.sku) || 0;
-          const pendingQuantity = Math.max(0, orderQuantity - paidQuantity);
+          const totalPaidForThisSku = paidQuantitiesBySku.get(orderProduct.sku) || 0;
           
-          if (pendingQuantity > 0) {
+          // Para este pedido específico, calcular quantas unidades ainda estão pendentes
+          // Como não sabemos qual pedido específico foi pago, mostramos pendências proporcionalmente
+          const pendingRatio = Math.max(0, (totalQuantitiesBySku.get(orderProduct.sku) || 0) - totalPaidForThisSku) / (totalQuantitiesBySku.get(orderProduct.sku) || 1);
+          const pendingQuantityInThisOrder = Math.ceil(orderQuantity * pendingRatio);
+          
+          if (pendingQuantityInThisOrder > 0) {
             const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
-            const totalProductValue = unitPrice * pendingQuantity;
+            const totalProductValue = unitPrice * pendingQuantityInThisOrder;
             
             supplierValueInOrder += totalProductValue;
             
             orderProductDetails.push({
               sku: orderProduct.sku,
               name: supplierProduct.name,
-              quantity: pendingQuantity,
+              quantity: pendingQuantityInThisOrder,
               unitPrice,
               totalValue: totalProductValue,
             });
