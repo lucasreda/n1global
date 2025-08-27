@@ -241,6 +241,9 @@ export class SupplierWalletService {
           const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
           const totalProductValue = unitPrice * quantity;
           
+          // Log para depuração
+          console.log(`🧮 CÁLCULO: ${supplierProduct.name} - ${quantity} x €${unitPrice} = €${totalProductValue}`);
+          
           supplierValueInOrder += totalProductValue;
           
           orderProductDetails.push({
