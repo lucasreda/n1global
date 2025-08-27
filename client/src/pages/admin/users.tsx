@@ -245,7 +245,7 @@ export default function AdminUsers() {
             Gerencie todos os usuários do sistema
           </p>
         </div>
-        <Button onClick={() => setShowCreateUserModal(true)}>
+        <Button onClick={() => setShowCreateUserModal(true)} className="bg-white text-black hover:bg-gray-100">
           <UserPlus className="h-4 w-4 mr-2" />
           Novo Usuário
         </Button>

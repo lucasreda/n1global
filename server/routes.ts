@@ -2342,7 +2342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validação do role
-      const validRoles = ['user', 'admin', 'supplier', 'super_admin'];
+      const validRoles = ['user', 'admin', 'admin_financeiro', 'supplier', 'super_admin'];
       if (role && !validRoles.includes(role)) {
         return res.status(400).json({ message: 'Tipo de usuário inválido.' });
       }
@@ -2362,7 +2362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         password: hashedPassword,
         role: role || 'user',
-        onboardingCompleted: role === 'super_admin' || role === 'supplier' // Skip onboarding for privileged users
+        onboardingCompleted: role === 'super_admin' || role === 'supplier' || role === 'admin_financeiro' // Skip onboarding for privileged users
       }).returning({
         id: users.id,
         name: users.name,
