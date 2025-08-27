@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import financeLogo from "@assets/FINANCE_1756299410940.png";
 
 interface FinanceLayoutProps {
   children: ReactNode;
@@ -69,7 +70,11 @@ export function FinanceLayout({ children }: FinanceLayoutProps) {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-black border-b border-gray-800 z-50 flex items-center justify-between px-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white">COD Finance</h1>
+          <img 
+            src={financeLogo} 
+            alt="Finance Dashboard" 
+            className="h-8"
+          />
         </div>
         
         <div className="flex items-center gap-4">
