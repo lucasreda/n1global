@@ -245,8 +245,6 @@ export class SupplierWalletService {
           supplierValueInOrder += totalProductValue;
           totalToReceive += totalProductValue; // Somar ao total geral baseado no preço B2B
           
-          console.log(`🧮 CÁLCULO: ${supplierProduct.name} - ${quantity} x €${unitPrice} = €${totalProductValue}`);
-          
           orderProductDetails.push({
             sku: orderProduct.sku,
             name: supplierProduct.name,
@@ -269,6 +267,12 @@ export class SupplierWalletService {
         });
       }
     }
+
+    console.log('📊 TOTAL FINAL CALCULADO:');
+    console.log(`- Pedidos processados: ${availableOrders.length}`);
+    console.log(`- Total a receber: €${totalToReceive}`);
+    console.log(`- Esperado (910 × €12.50): €${910 * 12.5}`);
+    console.log(`- Diferença: €${totalToReceive - (910 * 12.5)}`);
 
     // Ordenar pedidos por data (mais recentes primeiro)
     availableOrders.sort((a, b) => 
