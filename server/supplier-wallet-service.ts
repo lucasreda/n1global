@@ -216,46 +216,6 @@ export class SupplierWalletService {
     const availableOrders: WalletOrder[] = [];
     let totalToReceive = 0;
 
-    // Primeiro, calcular total geral baseado em preços B2B
-    const productTotals = new Map<string, { quantity: number; unitPrice: number; name: string }>();
-
-    for (const order of allOrders) {
-      if (!order.products || paidOrderIds.has(order.id)) {
-        continue; // Pular se não tem produtos ou já foi pago
-      }
-
-      const orderProducts = Array.isArray(order.products) ? order.products : [];
-      const supplierOrderProducts = orderProducts.filter((product: any) => 
-        productSkus.includes(product.sku)
-      );
-
-      for (const orderProduct of supplierOrderProducts) {
-        const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
-        if (supplierProduct && supplierProduct.price) {
-          const quantity = orderProduct.quantity || 1;
-          const unitPrice = parseFloat(supplierProduct.price);
-          
-          if (!productTotals.has(orderProduct.sku)) {
-            productTotals.set(orderProduct.sku, {
-              quantity: 0,
-              unitPrice: unitPrice,
-              name: supplierProduct.name
-            });
-          }
-          
-          const current = productTotals.get(orderProduct.sku)!;
-          current.quantity += quantity;
-        }
-      }
-    }
-
-    // Calcular total a receber baseado nos totais por produto
-    for (const [sku, data] of productTotals) {
-      const totalValue = data.quantity * data.unitPrice;
-      totalToReceive += totalValue;
-      console.log(`🧮 TOTAL: ${data.name} - ${data.quantity} x €${data.unitPrice} = €${totalValue}`);
-    }
-
     // Processar pedidos individuais para listagem
     for (const order of allOrders) {
       if (!order.products || paidOrderIds.has(order.id)) {
@@ -283,6 +243,9 @@ export class SupplierWalletService {
           const totalProductValue = unitPrice * quantity;
           
           supplierValueInOrder += totalProductValue;
+          totalToReceive += totalProductValue; // Somar ao total geral baseado no preço B2B
+          
+          console.log(`🧮 CÁLCULO: ${supplierProduct.name} - ${quantity} x €${unitPrice} = €${totalProductValue}`);
           
           orderProductDetails.push({
             sku: orderProduct.sku,
