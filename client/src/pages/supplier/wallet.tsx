@@ -312,7 +312,7 @@ export default function SupplierWallet() {
                   ))}
                   {wallet.availableOrders.length > 5 && (
                     <p className="text-sm text-gray-400 text-center">
-                      +{wallet.availableOrders.length - 5} pedidos adicionais
+                      +{wallet.totalOrdersCount - 5} pedidos adicionais
                     </p>
                   )}
                 </div>
