@@ -195,12 +195,12 @@ export default function AdminStores() {
 
   const getTotalOperations = () => {
     if (!stores) return 0;
-    return stores.reduce((total, store) => total + store.operationsCount, 0);
+    return stores.reduce((total, store) => total + (store.operationsCount || 0), 0);
   };
 
   const getTotalOrders = () => {
     if (!stores) return 0;
-    return stores.reduce((total, store) => total + store.totalOrders, 0);
+    return stores.reduce((total, store) => total + (store.totalOrders || 0), 0);
   };
 
   return (
@@ -317,7 +317,7 @@ export default function AdminStores() {
                         <span className="font-medium">{store.operationsCount}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="font-medium">{store.totalOrders.toLocaleString()}</span>
+                        <span className="font-medium">{(store.totalOrders || 0).toLocaleString()}</span>
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant={store.isActive ? "default" : "secondary"}>
