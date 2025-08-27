@@ -123,6 +123,7 @@ export class SupplierWalletService {
         availableOrders: [],
         recentPayments: [],
         totalPaid: 0,
+        totalOrdersPaid: 0,
         averageOrderValue: 0,
       };
     }
@@ -151,6 +152,7 @@ export class SupplierWalletService {
         availableOrders: [],
         recentPayments: [],
         totalPaid: 0,
+        totalOrdersPaid: 0,
         averageOrderValue: 0,
       };
     }
@@ -180,6 +182,7 @@ export class SupplierWalletService {
         availableOrders: [],
         recentPayments: [],
         totalPaid: 0,
+        totalOrdersPaid: 0,
         averageOrderValue: 0,
       };
     }
@@ -196,10 +199,11 @@ export class SupplierWalletService {
         )
       );
 
-    // Buscar pedidos já pagos para este fornecedor
+    // Buscar itens já pagos para este fornecedor (por quantidade)
     const paidPaymentItems = await db
       .select({
-        orderId: supplierPaymentItems.orderId,
+        productSku: supplierPaymentItems.productSku,
+        paidQuantity: sql<number>`sum(${supplierPaymentItems.quantity})`,
       })
       .from(supplierPaymentItems)
       .leftJoin(supplierPayments, eq(supplierPaymentItems.paymentId, supplierPayments.id))
@@ -208,18 +212,53 @@ export class SupplierWalletService {
           eq(supplierPayments.supplierId, supplierId),
           eq(supplierPayments.status, 'paid')
         )
-      );
+      )
+      .groupBy(supplierPaymentItems.productSku);
 
-    const paidOrderIds = new Set(paidPaymentItems.map(item => item.orderId).filter(Boolean));
+    // Criar mapa de quantidades já pagas por SKU
+    const paidQuantitiesBySku = new Map<string, number>();
+    for (const item of paidPaymentItems) {
+      if (item.productSku && item.paidQuantity) {
+        paidQuantitiesBySku.set(item.productSku, item.paidQuantity);
+      }
+    }
 
     // Processar pedidos para identificar valores a receber
     const availableOrders: WalletOrder[] = [];
+    
+    // Calcular total de quantidades vendidas por SKU
+    const totalQuantitiesBySku = new Map<string, number>();
+    for (const order of allOrders) {
+      if (!order.products) continue;
+      
+      const orderProducts = Array.isArray(order.products) ? order.products : [];
+      for (const product of orderProducts) {
+        if (productSkus.includes(product.sku)) {
+          const current = totalQuantitiesBySku.get(product.sku) || 0;
+          totalQuantitiesBySku.set(product.sku, current + (product.quantity || 1));
+        }
+      }
+    }
+    
+    // Calcular valor total pendente baseado na diferença entre vendido e pago
     let totalToReceive = 0;
+    for (const [sku, totalSold] of totalQuantitiesBySku) {
+      const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
+      const pendingQuantity = Math.max(0, totalSold - paidQuantity);
+      
+      if (pendingQuantity > 0) {
+        const supplierProduct = supplierProducts.find(p => p.sku === sku);
+        if (supplierProduct && supplierProduct.price) {
+          const unitPrice = parseFloat(supplierProduct.price);
+          totalToReceive += unitPrice * pendingQuantity;
+        }
+      }
+    }
 
     // Processar pedidos individuais para listagem
     for (const order of allOrders) {
-      if (!order.products || paidOrderIds.has(order.id)) {
-        continue; // Pular se não tem produtos ou já foi pago
+      if (!order.products) {
+        continue; // Pular se não tem produtos
       }
 
       const orderProducts = Array.isArray(order.products) ? order.products : [];
@@ -238,20 +277,24 @@ export class SupplierWalletService {
       for (const orderProduct of supplierOrderProducts) {
         const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
         if (supplierProduct && supplierProduct.price) {
-          const quantity = orderProduct.quantity || 1;
-          const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
-          const totalProductValue = unitPrice * quantity;
+          const orderQuantity = orderProduct.quantity || 1;
+          const paidQuantity = paidQuantitiesBySku.get(orderProduct.sku) || 0;
+          const pendingQuantity = Math.max(0, orderQuantity - paidQuantity);
           
-          supplierValueInOrder += totalProductValue;
-          totalToReceive += totalProductValue; // Somar ao total geral baseado no preço B2B
-          
-          orderProductDetails.push({
-            sku: orderProduct.sku,
-            name: supplierProduct.name,
-            quantity,
-            unitPrice,
-            totalValue: totalProductValue,
-          });
+          if (pendingQuantity > 0) {
+            const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
+            const totalProductValue = unitPrice * pendingQuantity;
+            
+            supplierValueInOrder += totalProductValue;
+            
+            orderProductDetails.push({
+              sku: orderProduct.sku,
+              name: supplierProduct.name,
+              quantity: pendingQuantity,
+              unitPrice,
+              totalValue: totalProductValue,
+            });
+          }
         }
       }
 
@@ -313,7 +356,7 @@ export class SupplierWalletService {
         paidAt: payment.paidAt?.toISOString() || '',
         description: payment.description || '',
         status: payment.status,
-        referenceId: payment.referenceId || '',
+        referenceId: payment.referenceId || undefined,
         orderCount: quantityResult?.totalQuantity || 0,
       });
     }
