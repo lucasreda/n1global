@@ -145,8 +145,8 @@ export default function SupplierWallet() {
 
   return (
     <SupplierLayout activeSection="wallet">
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black p-6" style={{ marginLeft: '-16px', marginRight: '-16px', marginTop: '-32px' }}>
-        <div className="max-w-7xl mx-auto space-y-6" style={{ paddingTop: '32px', paddingLeft: '16px', paddingRight: '16px' }}>
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black rounded-lg ml-5 p-6">
+        <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
