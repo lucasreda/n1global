@@ -35,10 +35,15 @@ export default function FinanceDashboard() {
               <DollarSign className="h-4 w-4 text-yellow-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
-                {isLoading ? "Carregando..." : `€${stats?.pending.total.toFixed(2) || "0.00"}`}
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {isLoading ? "Carregando..." : `R$ ${((stats?.pending.total || 0) * 6.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                </div>
+                <div className="text-sm text-gray-400">
+                  €{stats?.pending.total.toFixed(2) || "0.00"}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-2">
                 {stats?.pending.count || 0} pagamentos pendentes
               </p>
             </CardContent>
@@ -50,10 +55,15 @@ export default function FinanceDashboard() {
               <TrendingUp className="h-4 w-4 text-blue-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {isLoading ? "Carregando..." : `€${stats?.approved.total.toFixed(2) || "0.00"}`}
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-blue-600">
+                  {isLoading ? "Carregando..." : `R$ ${((stats?.approved.total || 0) * 6.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                </div>
+                <div className="text-sm text-gray-400">
+                  €{stats?.approved.total.toFixed(2) || "0.00"}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-2">
                 {stats?.approved.count || 0} pagamentos aprovados
               </p>
             </CardContent>
@@ -65,10 +75,15 @@ export default function FinanceDashboard() {
               <CreditCard className="h-4 w-4 text-green-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {isLoading ? "Carregando..." : `€${stats?.paid.total.toFixed(2) || "0.00"}`}
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-green-600">
+                  {isLoading ? "Carregando..." : `R$ ${((stats?.paid.total || 0) * 6.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                </div>
+                <div className="text-sm text-gray-400">
+                  €{stats?.paid.total.toFixed(2) || "0.00"}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-2">
                 {stats?.paid.count || 0} pagamentos realizados
               </p>
             </CardContent>
@@ -80,10 +95,15 @@ export default function FinanceDashboard() {
               <TrendingDown className="h-4 w-4 text-red-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {isLoading ? "Carregando..." : `€${stats?.rejected.total.toFixed(2) || "0.00"}`}
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-red-600">
+                  {isLoading ? "Carregando..." : `R$ ${((stats?.rejected.total || 0) * 6.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                </div>
+                <div className="text-sm text-gray-400">
+                  €{stats?.rejected.total.toFixed(2) || "0.00"}
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-2">
                 {stats?.rejected.count || 0} pagamentos rejeitados
               </p>
             </CardContent>
