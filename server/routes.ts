@@ -3433,19 +3433,35 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   // Create new supplier payment
   app.post("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
     try {
+      console.log("💰 PAYMENT CREATION REQUEST:", {
+        userId: req.user.id,
+        paymentData: req.body
+      });
+
       const paymentData = req.body;
-      const { financeService } = await import("./finance-service");
+      const { FinanceService } = await import("./finance-service");
+      const financeService = new FinanceService();
       
+      console.log("💰 Getting user store ID...");
       // Get user's store ID
       const user = await storage.getUser(req.user.id);
+      console.log("💰 User found:", { userId: user?.id, storeId: user?.storeId });
+      
       if (!user?.storeId) {
         return res.status(400).json({ message: "Usuário não possui store associado" });
       }
 
+      console.log("💰 Creating payment...");
       const payment = await financeService.createSupplierPayment(paymentData, user.storeId);
+      console.log("💰 Payment created successfully:", payment.id);
+      
       res.json(payment);
     } catch (error) {
-      console.error("Error creating supplier payment:", error);
+      console.error("💰 Error creating supplier payment:", error);
+      console.error("💰 Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       res.status(500).json({ 
         message: error instanceof Error ? error.message : "Erro ao criar pagamento" 
       });
