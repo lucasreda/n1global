@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Package, Save } from "lucide-react";
+import { ArrowLeft, Package, Save, Upload, Calculator } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,9 +25,7 @@ const createProductSchema = z.object({
   shippingCost: z.coerce.number().min(0, "Custo de envio deve ser maior ou igual a 0"),
   initialStock: z.coerce.number().min(0, "Estoque deve ser maior ou igual a 0"),
   lowStock: z.coerce.number().min(0, "Alerta de estoque deve ser maior ou igual a 0"),
-  imageUrl: z.string().url().optional().or(z.literal("")),
-  videoUrl: z.string().url().optional().or(z.literal("")),
-  productUrl: z.string().url().optional().or(z.literal(""))
+  imageUrl: z.string().url().optional().or(z.literal(""))
 });
 
 type CreateProductForm = z.infer<typeof createProductSchema>;
@@ -37,6 +35,9 @@ export default function SupplierCreateProduct() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [profitMargin, setProfitMargin] = useState(0);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const form = useForm<CreateProductForm>({
     resolver: zodResolver(createProductSchema),
@@ -50,11 +51,30 @@ export default function SupplierCreateProduct() {
       shippingCost: 0,
       initialStock: 0,
       lowStock: 10,
-      imageUrl: "",
-      videoUrl: "",
-      productUrl: ""
+      imageUrl: ""
     }
   });
+
+  const costPrice = form.watch('costPrice');
+  const price = form.watch('price');
+
+  // Calculadora de margem de lucro
+  useEffect(() => {
+    if (costPrice > 0 && price > 0) {
+      const margin = ((price - costPrice) / price) * 100;
+      setProfitMargin(Math.max(0, margin));
+    } else {
+      setProfitMargin(0);
+    }
+  }, [costPrice, price]);
+
+  // Função para calcular preço baseado na margem desejada
+  const calculatePriceFromMargin = (desiredMargin: number) => {
+    if (costPrice > 0 && desiredMargin > 0 && desiredMargin < 100) {
+      const calculatedPrice = costPrice / (1 - desiredMargin / 100);
+      form.setValue('price', parseFloat(calculatedPrice.toFixed(2)));
+    }
+  };
 
   const createProductMutation = useMutation({
     mutationFn: async (data: CreateProductForm) => {
@@ -179,22 +199,7 @@ export default function SupplierCreateProduct() {
             {/* Pricing */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="price">Preço B2B (€) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  {...form.register("price")}
-                  placeholder="0.00"
-                  data-testid="input-price"
-                />
-                {form.formState.errors.price && (
-                  <p className="text-sm text-red-500">{form.formState.errors.price.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="costPrice">Custo de Produção (€)</Label>
+                <Label htmlFor="costPrice">Custo de Produção (€) *</Label>
                 <Input
                   id="costPrice"
                   type="number"
@@ -205,6 +210,29 @@ export default function SupplierCreateProduct() {
                 />
                 {form.formState.errors.costPrice && (
                   <p className="text-sm text-red-500">{form.formState.errors.costPrice.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="price" className="flex items-center gap-2">
+                  Preço B2B (€) *
+                  {profitMargin > 0 && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                      {profitMargin.toFixed(1)}% margem
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  {...form.register("price")}
+                  placeholder="0.00"
+                  data-testid="input-price"
+                  className={profitMargin > 0 ? "border-green-300 bg-green-50" : ""}
+                />
+                {form.formState.errors.price && (
+                  <p className="text-sm text-red-500">{form.formState.errors.price.message}</p>
                 )}
               </div>
 
@@ -255,49 +283,99 @@ export default function SupplierCreateProduct() {
               </div>
             </div>
 
-            {/* Media URLs */}
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">URL da Imagem</Label>
-                <Input
-                  id="imageUrl"
-                  type="url"
-                  {...form.register("imageUrl")}
-                  placeholder="https://exemplo.com/imagem.jpg"
-                  data-testid="input-image-url"
-                />
-                {form.formState.errors.imageUrl && (
-                  <p className="text-sm text-red-500">{form.formState.errors.imageUrl.message}</p>
-                )}
+            {/* Calculadora de Preço */}
+            <div className="space-y-4 p-4 bg-blue-50 rounded-lg border">
+              <div className="flex items-center gap-2 mb-2">
+                <Calculator className="h-4 w-4 text-blue-600" />
+                <Label className="text-sm font-medium text-blue-800">Calculadora de Margem</Label>
               </div>
+              
+              {costPrice > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-blue-700">Margem Atual</Label>
+                    <div className="px-3 py-2 bg-white rounded border text-sm font-medium">
+                      {profitMargin.toFixed(1)}%
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm text-blue-700">Preço para 30% margem</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => calculatePriceFromMargin(30)}
+                      className="w-full justify-start"
+                      data-testid="button-margin-30"
+                    >
+                      €{(costPrice / 0.7).toFixed(2)}
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm text-blue-700">Preço para 50% margem</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => calculatePriceFromMargin(50)}
+                      className="w-full justify-start"
+                      data-testid="button-margin-50"
+                    >
+                      €{(costPrice / 0.5).toFixed(2)}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="videoUrl">URL do Vídeo</Label>
-                <Input
-                  id="videoUrl"
-                  type="url"
-                  {...form.register("videoUrl")}
-                  placeholder="https://exemplo.com/video.mp4"
-                  data-testid="input-video-url"
+            {/* Upload de Imagem */}
+            <div className="space-y-4">
+              <Label className="text-sm font-medium">Imagem do Produto</Label>
+              <div className="flex items-center gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('image-upload')?.click()}
+                  className="flex items-center gap-2"
+                  data-testid="button-upload-image"
+                >
+                  <Upload className="h-4 w-4" />
+                  {imageFile ? 'Alterar Imagem' : 'Selecionar Imagem'}
+                </Button>
+                
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setImageFile(file);
+                      // Aqui você pode adicionar lógica para upload da imagem
+                      form.setValue('imageUrl', URL.createObjectURL(file));
+                    }
+                  }}
+                  className="hidden"
                 />
-                {form.formState.errors.videoUrl && (
-                  <p className="text-sm text-red-500">{form.formState.errors.videoUrl.message}</p>
+                
+                {imageFile && (
+                  <span className="text-sm text-green-600">
+                    {imageFile.name} ({(imageFile.size / 1024 / 1024).toFixed(1)} MB)
+                  </span>
                 )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="productUrl">URL da Página do Produto</Label>
-                <Input
-                  id="productUrl"
-                  type="url"
-                  {...form.register("productUrl")}
-                  placeholder="https://loja.com/produto"
-                  data-testid="input-product-url"
-                />
-                {form.formState.errors.productUrl && (
-                  <p className="text-sm text-red-500">{form.formState.errors.productUrl.message}</p>
-                )}
-              </div>
+              
+              {form.watch('imageUrl') && (
+                <div className="mt-2">
+                  <img
+                    src={form.watch('imageUrl')}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded border"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Form Actions */}
