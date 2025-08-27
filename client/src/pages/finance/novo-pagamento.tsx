@@ -92,9 +92,16 @@ export default function FinanceNovoPagamento() {
   // Mutation para criar pagamento
   const createPaymentMutation = useMutation({
     mutationFn: async (data: PaymentForm & { amount: number; orderIds: string[] }) => {
+      console.log("💰 CLIENT: Making API request with data:", data);
+      
+      // Get token from localStorage for debugging
+      const token = localStorage.getItem('auth_token');
+      console.log("💰 CLIENT: Using token:", token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+      
       return await apiRequest("/api/finance/supplier-payments", "POST", data);
     },
     onSuccess: () => {
+      console.log("💰 CLIENT: Payment created successfully");
       toast({
         title: "Pagamento criado",
         description: "O pagamento foi criado com sucesso e está aguardando aprovação.",
@@ -102,6 +109,7 @@ export default function FinanceNovoPagamento() {
       setLocation("/finance/pagamentos");
     },
     onError: (error) => {
+      console.log("💰 CLIENT: Payment creation failed:", error);
       toast({
         title: "Erro ao criar pagamento",
         description: error.message,
