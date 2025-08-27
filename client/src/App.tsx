@@ -34,6 +34,7 @@ import FinanceDashboard from "@/pages/finance/dashboard";
 import FinancePagamentos from "@/pages/finance/pagamentos";
 import FinanceNovoPagamento from "@/pages/finance/novo-pagamento";
 import SupplierDashboard from "@/pages/supplier";
+import SupplierWallet from "@/pages/supplier/wallet";
 import SupplierCreateProduct from "@/pages/supplier-create-product";
 import ProductSuccess from "@/pages/product-success";
 import InvestorSupplierLanding from "@/pages/investor-supplier";
@@ -200,6 +201,7 @@ function Router() {
         <Route path="/finance" component={isAdminFinanceiro ? FinanceDashboard : () => <NotFound />} />
         
         {/* Supplier Routes */}
+        <Route path="/supplier/wallet" component={isSupplier ? SupplierWallet : () => <NotFound />} />
         <Route path="/supplier/create-product" component={isSupplier ? SupplierCreateProduct : () => <NotFound />} />
         <Route path="/supplier/product-success" component={isSupplier ? ProductSuccess : () => <NotFound />} />
         <Route path="/supplier" component={isSupplier ? SupplierDashboard : () => <NotFound />} />

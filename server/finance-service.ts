@@ -104,12 +104,7 @@ export class FinanceService {
     const allOrders = await db
       .select()
       .from(orders)
-      .where(
-        and(
-          eq(orders.paymentStatus, 'paid'),
-          sql`${orders.products}::jsonb ? ANY(${productSkus})`
-        )
-      );
+      .where(eq(orders.paymentStatus, 'paid'));
 
     // Calcular valores dos pedidos e quais produtos de cada pedido pertencem ao fornecedor
     let totalOrdersValue = 0;

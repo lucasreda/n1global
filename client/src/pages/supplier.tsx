@@ -233,7 +233,13 @@ export default function SupplierDashboard() {
                     ? 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800' 
                     : 'bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900'
                 }`}
-                onClick={() => setActiveSection(item.id as 'dashboard' | 'contracts' | 'wallet')}
+                onClick={() => {
+                  if (item.id === 'wallet') {
+                    setLocation('/supplier/wallet');
+                  } else {
+                    setActiveSection(item.id as 'dashboard' | 'contracts' | 'wallet');
+                  }
+                }}
                 data-testid={`menu-${item.id}`}
               >
                 <CardContent className="p-2 text-center">

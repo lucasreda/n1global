@@ -3357,6 +3357,41 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Supplier Wallet routes
+  // Get supplier wallet information
+  app.get("/api/supplier/wallet", authenticateToken, requireSupplier, async (req: AuthRequest, res: Response) => {
+    try {
+      const { supplierWalletService } = await import("./supplier-wallet-service");
+      const wallet = await supplierWalletService.getSupplierWallet(req.user.id);
+      
+      if (!wallet) {
+        return res.status(404).json({ message: "Informações da wallet não encontradas" });
+      }
+      
+      res.json(wallet);
+    } catch (error) {
+      console.error("Error fetching supplier wallet:", error);
+      res.status(500).json({ message: "Erro ao buscar informações da wallet" });
+    }
+  });
+
+  // Get wallet summary (faster endpoint for overview)
+  app.get("/api/supplier/wallet/summary", authenticateToken, requireSupplier, async (req: AuthRequest, res: Response) => {
+    try {
+      const { supplierWalletService } = await import("./supplier-wallet-service");
+      const summary = await supplierWalletService.getWalletSummary(req.user.id);
+      
+      if (!summary) {
+        return res.status(404).json({ message: "Resumo da wallet não encontrado" });
+      }
+      
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching wallet summary:", error);
+      res.status(500).json({ message: "Erro ao buscar resumo da wallet" });
+    }
+  });
+
   // Finance routes - for admin_financeiro role
   const requireFinanceAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user || req.user.role !== 'admin_financeiro') {
@@ -3467,6 +3502,8 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
       res.status(500).json({ message: "Erro ao buscar estatísticas" });
     }
   });
+
+
 
   const httpServer = createServer(app);
   return httpServer;
