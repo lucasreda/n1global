@@ -192,7 +192,7 @@ export async function seedDatabase() {
       .limit(1);
 
     if (!existingFinanceAdmin) {
-      // Create finance admin user with default store
+      // Create finance admin user (sem storeId - é um usuário global)
       const hashedPassword = await bcrypt.hash("FinanceCOD2025!@#", 10);
       
       const [financeAdmin] = await db
@@ -202,7 +202,6 @@ export async function seedDatabase() {
           email: "finance@codashboard.com",
           password: hashedPassword,
           role: "admin_financeiro",
-          storeId: defaultStore.id, // Associate with default store
           onboardingCompleted: true,
         })
         .returning();
@@ -210,12 +209,12 @@ export async function seedDatabase() {
       console.log("✅ Finance admin created:", financeAdmin.email);
     } else {
       console.log("ℹ️  Finance admin already exists");
-      // Update existing finance admin to ensure it has storeId
+      // Remove storeId se existir - usuários financeiros são globais
       await db
         .update(users)
-        .set({ storeId: defaultStore.id })
+        .set({ storeId: null })
         .where(eq(users.email, "finance@codashboard.com"));
-      console.log("🔧 Finance admin storeId updated");
+      console.log("🔧 Finance admin storeId removed (global user)");
     }
 
     // ⚠️ CRITICAL: Clean and setup fresh user access to correct operations

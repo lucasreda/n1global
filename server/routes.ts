@@ -3455,18 +3455,16 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
       const { FinanceService } = await import("./finance-service");
       const financeService = new FinanceService();
       
-      console.log("💰 Getting user store ID...");
-      // Get user's store ID
-      const user = await storage.getUser(req.user.id);
-      console.log("💰 User found:", { userId: user?.id, storeId: user?.storeId });
-      
-      if (!user?.storeId) {
-        console.log("💰 ERROR: No store ID found for user");
-        return res.status(400).json({ message: "Usuário não possui store associado" });
-      }
-
       console.log("💰 Creating payment with data:", paymentData);
-      const payment = await financeService.createSupplierPayment(paymentData, user.storeId);
+      // Para usuários financeiros, não precisamos de storeId específico - use o store padrão
+      const [defaultStore] = await db.select().from((await import('@shared/schema')).stores).limit(1);
+      
+      if (!defaultStore) {
+        console.log("💰 ERROR: No default store found");
+        return res.status(500).json({ message: "Sistema não configurado corretamente" });
+      }
+      
+      const payment = await financeService.createSupplierPayment(paymentData, defaultStore.id);
       console.log("💰 Payment created successfully:", payment.id);
       
       res.json(payment);
