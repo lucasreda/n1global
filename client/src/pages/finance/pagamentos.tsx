@@ -20,10 +20,13 @@ import {
   Search,
   Filter,
   Download,
-  DollarSign
+  DollarSign,
+  Check
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface SupplierPayment {
   id: string;
@@ -59,9 +62,33 @@ const getStatusText = (status: string) => {
 };
 
 export default function FinancePagamentos() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   // Buscar pagamentos reais do banco de dados
   const { data: payments = [], isLoading } = useQuery<SupplierPayment[]>({
     queryKey: ["/api/finance/supplier-payments"],
+  });
+
+  // Mutation para dar baixa no pagamento
+  const markAsPaidMutation = useMutation({
+    mutationFn: async (paymentId: string) => {
+      return apiRequest(`/api/finance/supplier-payments/${paymentId}/mark-paid`, "PUT");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/finance/supplier-payments"] });
+      toast({
+        title: "Sucesso",
+        description: "Pagamento marcado como pago",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Falha ao marcar pagamento como pago",
+        variant: "destructive",
+      });
+    },
   });
 
   // Calcular totais dos pagamentos reais
@@ -180,18 +207,19 @@ export default function FinancePagamentos() {
                         <TableHead className="text-gray-300">Valor</TableHead>
                         <TableHead className="text-gray-300">Status</TableHead>
                         <TableHead className="text-gray-300">Vencimento</TableHead>
+                        <TableHead className="text-gray-300">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-gray-400 py-8">
+                          <TableCell colSpan={5} className="text-center text-gray-400 py-8">
                             Carregando pagamentos...
                           </TableCell>
                         </TableRow>
                       ) : payments.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-gray-400 py-8">
+                          <TableCell colSpan={5} className="text-center text-gray-400 py-8">
                             Nenhum pagamento encontrado
                           </TableCell>
                         </TableRow>
@@ -214,6 +242,23 @@ export default function FinancePagamentos() {
                           </TableCell>
                           <TableCell className="text-gray-300">
                             {new Date(payment.dueDate).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            {payment.status === 'pending' ? (
+                              <Button
+                                size="sm"
+                                onClick={() => markAsPaidMutation.mutate(payment.id)}
+                                disabled={markAsPaidMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <Check className="h-3 w-3 mr-1" />
+                                Dar Baixa
+                              </Button>
+                            ) : payment.status === 'paid' ? (
+                              <span className="text-green-500 text-sm">Pago</span>
+                            ) : (
+                              <span className="text-gray-400 text-sm">-</span>
+                            )}
                           </TableCell>
                         </TableRow>
                         ))

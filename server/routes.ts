@@ -3492,6 +3492,29 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  app.put("/api/finance/supplier-payments/:paymentId/mark-paid", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { paymentId } = req.params;
+      const { FinanceService } = await import("./finance-service");
+      const financeService = new FinanceService();
+      
+      console.log("💰 Marking payment as paid:", paymentId);
+      const updatedPayment = await financeService.updatePaymentStatus(paymentId, 'paid');
+      
+      if (!updatedPayment) {
+        return res.status(404).json({ message: "Pagamento não encontrado" });
+      }
+      
+      console.log("💰 Payment marked as paid successfully:", paymentId);
+      res.json(updatedPayment);
+    } catch (error) {
+      console.error("💰 Error marking payment as paid:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Erro ao marcar pagamento como pago" 
+      });
+    }
+  });
+
   // Get supplier payments with pagination
   app.get("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
     try {
