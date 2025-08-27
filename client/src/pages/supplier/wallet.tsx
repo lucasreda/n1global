@@ -371,54 +371,7 @@ export default function SupplierWallet() {
           </Card>
         </div>
 
-        {/* Estatísticas Detalhadas */}
-        {wallet.availableOrders.length > 0 && (
-          <Card className="bg-[#0f0f0f] border-[#252525]">
-            <CardHeader>
-              <CardTitle className="text-xl text-white">Análise Detalhada - Pedidos Pendentes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-700">
-                    <TableHead className="text-gray-300">Pedido</TableHead>
-                    <TableHead className="text-gray-300">Cliente</TableHead>
-                    <TableHead className="text-gray-300">Data</TableHead>
-                    <TableHead className="text-gray-300">Status</TableHead>
-                    <TableHead className="text-gray-300">Produtos</TableHead>
-                    <TableHead className="text-gray-300 text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {wallet.availableOrders.slice(0, 10).map((order) => (
-                    <TableRow key={order.orderId} className="border-gray-800">
-                      <TableCell className="font-medium text-white">
-                        #{order.orderId}
-                      </TableCell>
-                      <TableCell className="text-gray-300">
-                        {order.customerName}
-                      </TableCell>
-                      <TableCell className="text-gray-400">
-                        {formatDate(order.orderDate)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(order.status)}>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-gray-400">
-                        {order.products.length} produto(s)
-                      </TableCell>
-                      <TableCell className="text-right text-green-400 font-semibold">
-                        {formatCurrency(order.total)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
+
         </div>
       </div>
     </SupplierLayout>
