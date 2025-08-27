@@ -635,7 +635,9 @@ export const supplierPayments = pgTable("supplier_payments", {
   
   // Payment details
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  amountBRL: decimal("amount_brl", { precision: 12, scale: 2 }), // Amount in Brazilian Real
   currency: text("currency").notNull().default("EUR"),
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }), // EUR to BRL exchange rate
   description: text("description"),
   
   // Status tracking

@@ -27,7 +27,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ArrowLeft,
   Package, 
@@ -36,7 +36,8 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
-  FileText
+  FileText,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -44,6 +45,7 @@ const paymentSchema = z.object({
   supplierId: z.string().min(1, "Selecione um fornecedor"),
   paymentMethod: z.string().min(1, "Selecione o método de pagamento"),
   dueDate: z.string().min(1, "Data de vencimento é obrigatória"),
+  quantity: z.number().min(1, "Quantidade deve ser maior que 0"),
   description: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -66,6 +68,33 @@ export default function FinanceNovoPagamento() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  const [customQuantity, setCustomQuantity] = useState<number>(0);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const [loadingRate, setLoadingRate] = useState<boolean>(false);
+
+  // Função para buscar taxa de câmbio EUR->BRL
+  const fetchExchangeRate = async () => {
+    setLoadingRate(true);
+    try {
+      const response = await fetch('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=BRL');
+      const data = await response.json();
+      setExchangeRate(data.rates.BRL);
+    } catch (error) {
+      console.error('Erro ao buscar taxa de câmbio:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível buscar a taxa de câmbio atual",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingRate(false);
+    }
+  };
+
+  // Buscar taxa de câmbio ao carregar a página
+  useEffect(() => {
+    fetchExchangeRate();
+  }, []);
 
   const form = useForm<PaymentForm>({
     resolver: zodResolver(paymentSchema),
@@ -73,6 +102,7 @@ export default function FinanceNovoPagamento() {
       supplierId: "",
       paymentMethod: "",
       dueDate: "",
+      quantity: 0,
       description: "",
       notes: "",
     },
@@ -91,14 +121,37 @@ export default function FinanceNovoPagamento() {
 
   // Mutation para criar pagamento
   const createPaymentMutation = useMutation({
-    mutationFn: async (data: PaymentForm & { amount: number; orderIds: string[] }) => {
+    mutationFn: async (data: PaymentForm) => {
       console.log("💰 CLIENT: Making API request with data:", data);
       
-      // Get token from localStorage for debugging
-      const token = localStorage.getItem('auth_token');
-      console.log("💰 CLIENT: Using token:", token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+      if (!supplierBalance) {
+        throw new Error("Fornecedor não encontrado");
+      }
+
+      // Usar quantidade personalizada ou total disponível
+      const quantityToPay = data.quantity || supplierBalance.totalUnitsCount;
+      const amountEUR = quantityToPay * supplierBalance.unitB2BPrice;
+      const amountBRL = amountEUR * exchangeRate;
+
+      const paymentData = {
+        supplierId: data.supplierId,
+        amount: amountEUR,
+        amountBRL: amountBRL,
+        currency: "EUR",
+        description: data.description || `Pagamento para ${supplierBalance.supplierName}`,
+        paymentMethod: data.paymentMethod,
+        dueDate: new Date(data.dueDate),
+        notes: data.notes,
+        exchangeRate: exchangeRate,
+        items: [{
+          productSku: "Consolidado",
+          quantity: quantityToPay,
+          unitPrice: supplierBalance.unitB2BPrice,
+          totalAmount: amountEUR
+        }]
+      };
       
-      return await apiRequest("/api/finance/supplier-payments", "POST", data);
+      return await apiRequest("/api/finance/supplier-payments", "POST", paymentData);
     },
     onSuccess: () => {
       console.log("💰 CLIENT: Payment created successfully");
@@ -132,17 +185,17 @@ export default function FinanceNovoPagamento() {
       return;
     }
 
-    // Para agora, vamos passar um array vazio de orderIds pois removemos a lista detalhada
-    const orderIds: string[] = [];
-    
-    const paymentPayload = {
-      ...data,
-      amount: supplierBalance.pendingAmount,
-      orderIds,
-    };
-    
-    console.log("💰 CLIENT: Sending payment payload:", paymentPayload);
-    createPaymentMutation.mutate(paymentPayload);
+    if (!exchangeRate) {
+      toast({
+        title: "Taxa de câmbio indisponível",
+        description: "Não foi possível obter a taxa de câmbio. Tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("💰 CLIENT: Sending payment payload with custom quantity:", data.quantity);
+    createPaymentMutation.mutate(data);
   };
 
   const handleSupplierChange = (value: string) => {
@@ -225,6 +278,37 @@ export default function FinanceNovoPagamento() {
                     <p className="text-red-500 text-sm">{form.formState.errors.paymentMethod.message}</p>
                   )}
                 </div>
+
+                {/* Quantidade Personalizada */}
+                {supplierBalance && (
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity" className="text-gray-300">Quantidade de Unidades</Label>
+                    <div className="space-y-2">
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        max={supplierBalance.totalUnitsCount}
+                        {...form.register("quantity", { 
+                          setValueAs: (value) => value === "" ? 0 : parseInt(value) 
+                        })}
+                        placeholder={`Máximo: ${supplierBalance.totalUnitsCount} unidades`}
+                        className="bg-gray-800 border-gray-700 text-white"
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          setCustomQuantity(value);
+                          form.setValue("quantity", value);
+                        }}
+                      />
+                      <p className="text-xs text-gray-400">
+                        Deixe vazio para pagar todas as {supplierBalance.totalUnitsCount} unidades pendentes
+                      </p>
+                      {form.formState.errors.quantity && (
+                        <p className="text-red-500 text-sm">{form.formState.errors.quantity.message}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Data de Vencimento */}
                 <div className="space-y-2">
@@ -350,14 +434,49 @@ export default function FinanceNovoPagamento() {
                       <div className="flex items-center gap-2">
                         <AlertCircle className="h-5 w-5 text-yellow-500" />
                         <span className="text-lg font-semibold text-white">Valor Pendente</span>
+                        {exchangeRate > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={fetchExchangeRate}
+                            disabled={loadingRate}
+                            className="p-1 h-6 w-6"
+                          >
+                            <RefreshCw className={`h-3 w-3 text-gray-400 ${loadingRate ? 'animate-spin' : ''}`} />
+                          </Button>
+                        )}
                       </div>
                       <Badge className="bg-yellow-600 text-white">
-                        {supplierBalance.totalUnitsCount} unidades
+                        {customQuantity > 0 ? customQuantity : supplierBalance.totalUnitsCount} unidades
                       </Badge>
                     </div>
-                    <div className="text-2xl font-bold text-yellow-400 mt-2">
-                      €{supplierBalance.pendingAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
+                    
+                    {/* Cálculo baseado na quantidade selecionada */}
+                    {(() => {
+                      const quantity = customQuantity > 0 ? customQuantity : supplierBalance.totalUnitsCount;
+                      const amountEUR = quantity * supplierBalance.unitB2BPrice;
+                      const amountBRL = amountEUR * exchangeRate;
+                      
+                      return (
+                        <div className="mt-3 space-y-2">
+                          {/* Valor em BRL (destaque) */}
+                          <div className="text-3xl font-bold text-green-400">
+                            R$ {amountBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                          {/* Valor em EUR (menor) */}
+                          <div className="text-lg text-yellow-400">
+                            €{amountEUR.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                          {/* Taxa de câmbio */}
+                          {exchangeRate > 0 && (
+                            <div className="text-xs text-gray-400">
+                              Taxa: 1 EUR = R$ {exchangeRate.toFixed(4)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Resumo de Pedidos */}

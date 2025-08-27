@@ -197,10 +197,20 @@ export class FinanceService {
    * Cria um novo pagamento para fornecedor
    */
   async createSupplierPayment(
-    paymentData: InsertSupplierPayment & { orderIds: string[] },
+    paymentData: InsertSupplierPayment & { 
+      orderIds?: string[];
+      amountBRL?: number;
+      exchangeRate?: number;
+      items?: Array<{
+        productSku: string;
+        quantity: number;
+        unitPrice: number;
+        totalAmount: number;
+      }>;
+    },
     storeId: string
   ): Promise<SupplierPayment> {
-    const { orderIds, ...payment } = paymentData;
+    const { orderIds, items, ...payment } = paymentData;
 
     // Buscar balanço do fornecedor para validar
     const balance = await this.getSupplierBalance(payment.supplierId);
@@ -212,6 +222,8 @@ export class FinanceService {
     const processedPayment = {
       ...payment,
       dueDate: payment.dueDate ? new Date(payment.dueDate) : new Date(),
+      amountBRL: payment.amountBRL ? payment.amountBRL.toString() : undefined,
+      exchangeRate: payment.exchangeRate ? payment.exchangeRate.toString() : undefined,
     };
 
     // Criar o pagamento
@@ -220,20 +232,27 @@ export class FinanceService {
       .values({
         ...processedPayment,
         storeId,
-        amount: balance.pendingAmount.toString(),
       })
       .returning();
 
-    // Criar um item de pagamento consolidado (simplificado)
-    // Como removemos a lista detalhada de pedidos, criamos um item consolidado
-    const paymentItems: InsertSupplierPaymentItem[] = [{
-      paymentId: newPayment.id,
-      orderId: null, // Pagamento consolidado sem pedidos específicos
-      productSku: 'Consolidado',
-      quantity: balance.totalUnitsCount,
-      unitPrice: balance.unitB2BPrice.toString(),
-      totalAmount: balance.pendingAmount.toString(),
-    }];
+    // Criar itens de pagamento baseados nos itens fornecidos ou criar um consolidado
+    const paymentItems: InsertSupplierPaymentItem[] = items && items.length > 0 
+      ? items.map(item => ({
+          paymentId: newPayment.id,
+          orderId: null,
+          productSku: item.productSku,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice.toString(),
+          totalAmount: item.totalAmount.toString(),
+        }))
+      : [{
+          paymentId: newPayment.id,
+          orderId: null, // Pagamento consolidado sem pedidos específicos
+          productSku: 'Consolidado',
+          quantity: balance.totalUnitsCount,
+          unitPrice: balance.unitB2BPrice.toString(),
+          totalAmount: balance.pendingAmount.toString(),
+        }];
 
     await db.insert(supplierPaymentItems).values(paymentItems);
 
@@ -250,7 +269,9 @@ export class FinanceService {
         supplierId: supplierPayments.supplierId,
         supplierName: users.name,
         amount: supplierPayments.amount,
+        amountBRL: supplierPayments.amountBRL,
         currency: supplierPayments.currency,
+        exchangeRate: supplierPayments.exchangeRate,
         status: supplierPayments.status,
         paymentMethod: supplierPayments.paymentMethod,
         description: supplierPayments.description,
