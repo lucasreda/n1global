@@ -347,6 +347,20 @@ export class FinanceService {
       }
     }
 
+    // Calcular total pendente real baseado na soma das carteiras de todos os fornecedores
+    const suppliers = await this.getSuppliers();
+    let totalPendingFromWallets = 0;
+    
+    for (const supplier of suppliers) {
+      const balance = await this.getSupplierBalance(supplier.id);
+      if (balance) {
+        totalPendingFromWallets += balance.pendingAmount;
+      }
+    }
+
+    // Substituir o total pendente pelos valores reais das carteiras
+    result.pending.total = totalPendingFromWallets;
+
     return result;
   }
 }
