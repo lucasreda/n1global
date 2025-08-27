@@ -186,7 +186,7 @@ export default function AdminOrders() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -264,7 +264,7 @@ export default function AdminOrders() {
       </Card>
 
       {/* Orders Table */}
-      <Card>
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />

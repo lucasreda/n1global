@@ -223,7 +223,7 @@ export default function AdminStores() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Lojas</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -234,7 +234,7 @@ export default function AdminStores() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Lojas Ativas</CardTitle>
             <div className="h-4 w-4 rounded-full bg-green-400"></div>
@@ -245,7 +245,7 @@ export default function AdminStores() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Operações</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -256,7 +256,7 @@ export default function AdminStores() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Pedidos</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
@@ -269,7 +269,7 @@ export default function AdminStores() {
       </div>
 
       {/* Stores Table */}
-      <Card>
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />

@@ -124,7 +124,7 @@ export default function AdminProducts() {
 
       {/* Status Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
@@ -135,7 +135,7 @@ export default function AdminProducts() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
             <div className="h-4 w-4 rounded-full bg-yellow-400"></div>
@@ -146,7 +146,7 @@ export default function AdminProducts() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Aprovados</CardTitle>
             <div className="h-4 w-4 rounded-full bg-green-400"></div>
@@ -157,7 +157,7 @@ export default function AdminProducts() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rejeitados</CardTitle>
             <div className="h-4 w-4 rounded-full bg-red-400"></div>
@@ -170,7 +170,7 @@ export default function AdminProducts() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -224,7 +224,7 @@ export default function AdminProducts() {
       </Card>
 
       {/* Products Table */}
-      <Card>
+      <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
