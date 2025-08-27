@@ -379,7 +379,7 @@ export default function SupplierCreateProduct() {
                 type="submit"
                 disabled={createProductMutation.isPending}
                 data-testid="button-save-product"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-white [&>svg]:text-white"
               >
                 {createProductMutation.isPending ? (
                   <>
@@ -388,7 +388,7 @@ export default function SupplierCreateProduct() {
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4" />
+                    <Save className="h-4 w-4 text-white" />
                     Salvar Produto
                   </>
                 )}
