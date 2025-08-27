@@ -194,16 +194,16 @@ export default function SupplierWallet() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Pedidos Pagos (Pendentes de Recebimento)</p>
-                  <p className="text-2xl font-bold text-yellow-400">
+                  <p className="text-sm text-gray-400">Pendentes de Recebimento</p>
+                  <p className="text-2xl font-bold text-green-400">
                     {wallet.totalOrdersCount}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {wallet.totalOrdersPaid} já recebidos
                   </p>
                 </div>
-                <div className="p-3 bg-yellow-500/10 rounded-lg">
-                  <Clock className="h-6 w-6 text-yellow-400" />
+                <div className="p-3 bg-green-500/10 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-green-400" />
                 </div>
               </div>
             </CardContent>
