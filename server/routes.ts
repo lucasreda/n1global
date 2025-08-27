@@ -3430,9 +3430,24 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
-  // Create new supplier payment
+  // Create new supplier payment - CATCH ALL REQUESTS FIRST
+  app.all("/api/finance/supplier-payments", (req, res, next) => {
+    console.log("💰 INTERCEPTED REQUEST:", {
+      method: req.method,
+      url: req.url,
+      body: req.body,
+      headers: Object.keys(req.headers)
+    });
+    
+    if (req.method === 'POST') {
+      console.log("💰 This is our POST request for payment creation");
+    }
+    
+    next();
+  });
+
   app.post("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
-    console.log("💰 RECEIVED PAYMENT REQUEST - Body:", req.body);
+    console.log("💰 PAYMENT ENDPOINT REACHED - Body:", req.body);
     console.log("💰 User ID:", req.user?.id);
     
     try {
