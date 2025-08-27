@@ -58,13 +58,7 @@ interface SupplierBalance {
   paidAmount: number;
   pendingAmount: number;
   pendingOrdersCount: number;
-  pendingOrders: Array<{
-    orderId: string;
-    orderDate: string;
-    customerName: string;
-    total: number;
-    products: string[];
-  }>;
+  averageB2BPricePerOrder: number;
 }
 
 export default function FinanceNovoPagamento() {
@@ -350,41 +344,31 @@ export default function FinanceNovoPagamento() {
                     </div>
                   </div>
 
-                  {/* Lista de Pedidos Pendentes */}
-                  {supplierBalance.pendingOrders.length > 0 && (
-                    <div>
-                      <h4 className="text-lg font-semibold text-white mb-3">Pedidos Pendentes</h4>
-                      <div className="border border-gray-700 rounded-lg overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="border-gray-700 hover:bg-gray-800/50">
-                              <TableHead className="text-gray-300">Pedido</TableHead>
-                              <TableHead className="text-gray-300">Cliente</TableHead>
-                              <TableHead className="text-gray-300">Valor</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {supplierBalance.pendingOrders.map((order) => (
-                              <TableRow key={order.orderId} className="border-gray-700 hover:bg-gray-800/50">
-                                <TableCell>
-                                  <div>
-                                    <div className="font-medium text-white">{order.orderId}</div>
-                                    <div className="text-sm text-gray-400">
-                                      {new Date(order.orderDate).toLocaleDateString('pt-BR')}
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-gray-300">{order.customerName}</TableCell>
-                                <TableCell className="text-white font-medium">
-                                  €{order.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                  {/* Resumo de Pedidos */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-3">Resumo de Pagamento</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-gray-400">Total de Pedidos</span>
+                        </div>
+                        <div className="text-xl font-bold text-white">
+                          {supplierBalance.pendingOrdersCount}
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                        <div className="flex items-center gap-2">
+                          <Calculator className="h-4 w-4 text-green-500" />
+                          <span className="text-sm text-gray-400">Preço B2B Médio</span>
+                        </div>
+                        <div className="text-xl font-bold text-white">
+                          €{supplierBalance.averageB2BPricePerOrder.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">

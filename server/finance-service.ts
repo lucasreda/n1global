@@ -19,13 +19,7 @@ export interface SupplierBalance {
   paidAmount: number;
   pendingAmount: number;
   pendingOrdersCount: number;
-  pendingOrders: Array<{
-    orderId: string;
-    orderDate: string;
-    customerName: string;
-    total: number;
-    products: string[];
-  }>;
+  averageB2BPricePerOrder: number;
 }
 
 export interface SupplierSummary {
@@ -93,7 +87,7 @@ export class FinanceService {
         paidAmount: 0,
         pendingAmount: 0,
         pendingOrdersCount: 0,
-        pendingOrders: [],
+        averageB2BPricePerOrder: 0,
       };
     }
 
@@ -122,9 +116,9 @@ export class FinanceService {
 
     const paidOrderIds = new Set(paidPaymentItems.map(item => item.orderId).filter(Boolean));
 
-    // Calcular valores dos pedidos e quais produtos de cada pedido pertencem ao fornecedor
+    // Calcular valores dos pedidos que pertencem ao fornecedor
     let totalOrdersValue = 0;
-    const pendingOrders: SupplierBalance['pendingOrders'] = [];
+    let pendingOrdersCount = 0;
 
     for (const order of allOrders) {
       // Pular se o pedido já foi pago
@@ -142,7 +136,6 @@ export class FinanceService {
 
       // Calcular valor do fornecedor neste pedido baseado no preço B2B dos produtos
       let supplierValueInOrder = 0;
-      const productNames: string[] = [];
 
       for (const orderProduct of supplierOrderProducts) {
         const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
@@ -150,26 +143,18 @@ export class FinanceService {
           const quantity = orderProduct.quantity || 1;
           const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
           supplierValueInOrder += unitPrice * quantity;
-          productNames.push(supplierProduct.name);
         }
       }
 
       if (supplierValueInOrder > 0) {
         totalOrdersValue += supplierValueInOrder;
-
-        pendingOrders.push({
-          orderId: order.id,
-          orderDate: order.orderDate?.toISOString() || order.createdAt?.toISOString() || new Date().toISOString(),
-          customerName: order.customerName || 'Cliente não informado',
-          total: supplierValueInOrder,
-          products: productNames,
-        });
+        pendingOrdersCount++;
       }
     }
 
     console.log('📊 FINANCE SERVICE DEBUG:');
     console.log(`- Total orders processed: ${allOrders.length}`);
-    console.log(`- Pending orders: ${pendingOrders.length}`);
+    console.log(`- Pending orders: ${pendingOrdersCount}`);
     console.log(`- Total orders value: €${totalOrdersValue}`);
     console.log(`- Paid order IDs excluded: ${paidOrderIds.size}`);
 
@@ -188,6 +173,7 @@ export class FinanceService {
 
     const paidAmount = parseFloat(paidPayments[0]?.total || '0');
     const pendingAmount = Math.max(0, totalOrdersValue - paidAmount);
+    const averageB2BPricePerOrder = pendingOrdersCount > 0 ? totalOrdersValue / pendingOrdersCount : 0;
 
     return {
       supplierId,
@@ -196,10 +182,8 @@ export class FinanceService {
       totalOrdersValue,
       paidAmount,
       pendingAmount,
-      pendingOrdersCount: pendingOrders.length,
-      pendingOrders: pendingOrders.sort((a, b) => 
-        new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
-      ),
+      pendingOrdersCount,
+      averageB2BPricePerOrder,
     };
   }
 
