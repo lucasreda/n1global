@@ -161,7 +161,6 @@ export class FinanceService {
     console.log(`- Total orders processed: ${allOrders.length}`);
     console.log(`- Total units sold: ${totalUnitsCount}`);
     console.log(`- Total orders value: €${totalOrdersValue}`);
-    console.log(`- Paid order IDs excluded: ${paidOrderIds.size}`);
 
     // Calcular valor já pago para este fornecedor (em EUR)
     const paidPayments = await db
