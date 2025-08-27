@@ -27,6 +27,12 @@ const ADMIN_USERS = [
     email: 'supplier@codashboard.com', 
     password: 'SupplierCOD2025!@#',
     role: 'supplier'
+  },
+  {
+    name: 'Admin Financeiro',
+    email: 'finance@codashboard.com', 
+    password: 'FinanceCOD2025!@#',
+    role: 'admin_financeiro'
   }
 ];
 

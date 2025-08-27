@@ -30,6 +30,7 @@ import AdminProducts from "@/pages/admin/products";
 import AdminStores from "@/pages/admin/stores";
 import AdminGlobal from "@/pages/admin/global";
 import { AdminLayout } from "@/components/admin/admin-layout";
+import FinanceDashboard from "@/pages/finance/dashboard";
 import SupplierDashboard from "@/pages/supplier";
 import SupplierCreateProduct from "@/pages/supplier-create-product";
 import ProductSuccess from "@/pages/product-success";
@@ -165,6 +166,7 @@ function Router() {
   const isProductSeller = user?.role === 'product_seller';
   const isSuperAdmin = user?.role === 'super_admin';
   const isSupplier = user?.role === 'supplier';
+  const isAdminFinanceiro = user?.role === 'admin_financeiro';
 
   // Auto-redirect users based on role
   useEffect(() => {
@@ -172,8 +174,10 @@ function Router() {
       setLocation('/inside');
     } else if (isSupplier && location === '/') {
       setLocation('/supplier');
+    } else if (isAdminFinanceiro && location === '/') {
+      setLocation('/finance');
     }
-  }, [isSuperAdmin, isSupplier, location, setLocation]);
+  }, [isSuperAdmin, isSupplier, isAdminFinanceiro, location, setLocation]);
 
   return (
     <OnboardingGuard>
@@ -187,6 +191,9 @@ function Router() {
         <Route path="/inside/stores" component={isSuperAdmin ? () => <AdminLayout><AdminStores /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/global" component={isSuperAdmin ? () => <AdminLayout><AdminGlobal /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside" component={isSuperAdmin ? () => <AdminLayout><AdminDashboard /></AdminLayout> : () => <NotFound />} />
+        
+        {/* Finance Routes */}
+        <Route path="/finance" component={isAdminFinanceiro ? FinanceDashboard : () => <NotFound />} />
         
         {/* Supplier Routes */}
         <Route path="/supplier/create-product" component={isSupplier ? SupplierCreateProduct : () => <NotFound />} />
