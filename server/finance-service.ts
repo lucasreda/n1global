@@ -218,28 +218,18 @@ export class FinanceService {
       })
       .returning();
 
-    // Criar itens do pagamento para cada pedido
-    if (orderIds.length > 0) {
-      const paymentItems: InsertSupplierPaymentItem[] = [];
-      
-      for (const orderId of orderIds) {
-        const pendingOrder = balance.pendingOrders.find(o => o.orderId === orderId);
-        if (pendingOrder) {
-          paymentItems.push({
-            paymentId: newPayment.id,
-            orderId,
-            productSku: pendingOrder.products.join(', '), // Simplified for now
-            quantity: 1,
-            unitPrice: pendingOrder.total.toString(),
-            totalAmount: pendingOrder.total.toString(),
-          });
-        }
-      }
+    // Criar um item de pagamento consolidado (simplificado)
+    // Como removemos a lista detalhada de pedidos, criamos um item consolidado
+    const paymentItems: InsertSupplierPaymentItem[] = [{
+      paymentId: newPayment.id,
+      orderId: '', // Pagamento consolidado sem pedidos específicos
+      productSku: 'Consolidado',
+      quantity: balance.totalUnitsCount,
+      unitPrice: balance.unitB2BPrice.toString(),
+      totalAmount: balance.pendingAmount.toString(),
+    }];
 
-      if (paymentItems.length > 0) {
-        await db.insert(supplierPaymentItems).values(paymentItems);
-      }
-    }
+    await db.insert(supplierPaymentItems).values(paymentItems);
 
     return newPayment;
   }

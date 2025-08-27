@@ -120,7 +120,8 @@ export default function FinanceNovoPagamento() {
       return;
     }
 
-    const orderIds = supplierBalance.pendingOrders.map(order => order.orderId);
+    // Para agora, vamos passar um array vazio de orderIds pois removemos a lista detalhada
+    const orderIds: string[] = [];
     
     createPaymentMutation.mutate({
       ...data,
