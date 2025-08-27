@@ -296,12 +296,12 @@ export class SupplierWalletService {
       .orderBy(desc(supplierPayments.paidAt))
       .limit(10);
 
-    // Contar pedidos por pagamento
+    // Somar quantidade de unidades por pagamento
     const recentPayments: RecentPayment[] = [];
     for (const payment of recentPaymentsData) {
-      const [orderCountResult] = await db
+      const [quantityResult] = await db
         .select({
-          count: sql<number>`count(*)`,
+          totalQuantity: sql<number>`sum(${supplierPaymentItems.quantity})`,
         })
         .from(supplierPaymentItems)
         .where(eq(supplierPaymentItems.paymentId, payment.id));
@@ -314,7 +314,7 @@ export class SupplierWalletService {
         description: payment.description || '',
         status: payment.status,
         referenceId: payment.referenceId || '',
-        orderCount: orderCountResult?.count || 0,
+        orderCount: quantityResult?.totalQuantity || 0,
       });
     }
 

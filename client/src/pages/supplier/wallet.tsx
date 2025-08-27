@@ -349,7 +349,7 @@ export default function SupplierWallet() {
                             {formatCurrency(payment.amount)}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {payment.orderCount} pedido(s)
+                            {payment.orderCount} unidade(s)
                           </p>
                         </div>
                       </div>
