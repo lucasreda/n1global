@@ -242,27 +242,18 @@ export class SupplierWalletService {
     
     // Calcular valor total pendente baseado na diferença entre vendido e pago
     let totalToReceive = 0;
-    console.log('🔍 WALLET DEBUG - Total quantities by SKU:', Array.from(totalQuantitiesBySku.entries()));
-    console.log('🔍 WALLET DEBUG - Paid quantities by SKU:', Array.from(paidQuantitiesBySku.entries()));
-    
     for (const [sku, totalSold] of totalQuantitiesBySku) {
       const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
       const pendingQuantity = Math.max(0, totalSold - paidQuantity);
-      
-      console.log(`🔍 WALLET DEBUG - SKU ${sku}: sold=${totalSold}, paid=${paidQuantity}, pending=${pendingQuantity}`);
       
       if (pendingQuantity > 0) {
         const supplierProduct = supplierProducts.find(p => p.sku === sku);
         if (supplierProduct && supplierProduct.price) {
           const unitPrice = parseFloat(supplierProduct.price);
-          const productTotal = unitPrice * pendingQuantity;
-          console.log(`🔍 WALLET DEBUG - SKU ${sku}: price=${unitPrice}, productTotal=${productTotal}`);
-          totalToReceive += productTotal;
+          totalToReceive += unitPrice * pendingQuantity;
         }
       }
     }
-    
-    console.log('🔍 WALLET DEBUG - Final totalToReceive:', totalToReceive);
 
     // Processar pedidos individuais para listagem
     for (const order of allOrders) {
