@@ -374,12 +374,9 @@ export class SupplierWalletService {
         .from(supplierPaymentItems)
         .where(eq(supplierPaymentItems.paymentId, payment.id));
 
-      const amountBrl = payment.amountBrl ? parseFloat(payment.amountBrl) : 0;
-      console.log(`💰 DEBUG Payment: ID ${payment.id}, Amount BRL: ${amountBrl}, Raw: ${payment.amountBrl}`);
-      
       recentPayments.push({
         id: payment.id,
-        amount: amountBrl, // Usar valor em BRL
+        amount: payment.amountBrl ? parseFloat(payment.amountBrl) : 0, // Usar valor em BRL
         currency: 'BRL', // Forçar moeda para BRL já que estamos usando amountBrl
         paidAt: payment.paidAt?.toISOString() || '',
         description: payment.description || '',

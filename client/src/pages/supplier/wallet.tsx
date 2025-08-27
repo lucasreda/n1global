@@ -69,21 +69,13 @@ interface SupplierWallet {
 export default function SupplierWallet() {
   const queryClient = useQueryClient();
   
-  // Force clear cache on mount
-  React.useEffect(() => {
-    queryClient.removeQueries(["/api/supplier/wallet"]);
-  }, [queryClient]);
+
 
   const { data: wallet, isLoading, refetch } = useQuery<SupplierWallet>({
     queryKey: ["/api/supplier/wallet"],
   });
 
-  // Debug: log payment values
-  React.useEffect(() => {
-    if (wallet?.recentPayments) {
-      console.log('🔍 Frontend payments:', wallet.recentPayments);
-    }
-  }, [wallet]);
+
 
 
 
