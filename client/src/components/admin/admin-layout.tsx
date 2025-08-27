@@ -72,7 +72,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-black via-gray-900 to-gray-950 flex flex-col">
       {/* Header */}
       <div className="h-16 bg-black border-b border-gray-700 flex items-center px-6 relative z-50">
         <img 
@@ -85,7 +85,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-48 bg-gray-900/80 border-r border-gray-700 flex flex-col pt-4 backdrop-blur-sm">
+        <div className="w-48 bg-black/60 border-r border-gray-800 flex flex-col pt-4 backdrop-blur-sm">
           {/* Navigation */}
           <nav className="flex-1 px-3">
             <div className="space-y-1">
