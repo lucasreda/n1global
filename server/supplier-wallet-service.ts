@@ -215,11 +215,15 @@ export class SupplierWalletService {
       )
       .groupBy(supplierPaymentItems.productSku);
 
+    console.log('🔍 DEBUG - Raw paid items from DB:', paidPaymentItems);
+
     // Criar mapa de quantidades já pagas por SKU
     const paidQuantitiesBySku = new Map<string, number>();
     for (const item of paidPaymentItems) {
       if (item.productSku && item.paidQuantity) {
-        paidQuantitiesBySku.set(item.productSku, item.paidQuantity);
+        const quantity = typeof item.paidQuantity === 'string' ? parseInt(item.paidQuantity) : item.paidQuantity;
+        paidQuantitiesBySku.set(item.productSku, quantity);
+        console.log(`🔍 DEBUG - Setting paid quantity for ${item.productSku}: ${quantity}`);
       }
     }
 
@@ -242,18 +246,27 @@ export class SupplierWalletService {
     
     // Calcular valor total pendente baseado na diferença entre vendido e pago
     let totalToReceive = 0;
+    console.log('🔍 DEBUG - Total quantities sold:', Array.from(totalQuantitiesBySku.entries()));
+    console.log('🔍 DEBUG - Paid quantities:', Array.from(paidQuantitiesBySku.entries()));
+    
     for (const [sku, totalSold] of totalQuantitiesBySku) {
       const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
       const pendingQuantity = Math.max(0, totalSold - paidQuantity);
+      
+      console.log(`🔍 DEBUG - SKU ${sku}: sold=${totalSold}, paid=${paidQuantity}, pending=${pendingQuantity}`);
       
       if (pendingQuantity > 0) {
         const supplierProduct = supplierProducts.find(p => p.sku === sku);
         if (supplierProduct && supplierProduct.price) {
           const unitPrice = parseFloat(supplierProduct.price);
-          totalToReceive += unitPrice * pendingQuantity;
+          const productValue = unitPrice * pendingQuantity;
+          totalToReceive += productValue;
+          console.log(`🔍 DEBUG - Adding ${productValue} to total (${unitPrice} × ${pendingQuantity})`);
         }
       }
     }
+    
+    console.log('🔍 DEBUG - Final totalToReceive:', totalToReceive);
 
     // Processar pedidos individuais para listagem
     for (const order of allOrders) {
