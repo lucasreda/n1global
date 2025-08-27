@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar, Crown, LayoutDashboard, FileText, Wallet, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -63,6 +64,10 @@ export default function SupplierDashboard() {
   const [activeSection, setActiveSection] = useState<'dashboard' | 'contracts' | 'wallet'>('dashboard');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Modal states for contract actions
+  const [contractToSign, setContractToSign] = useState<SupplierContract | null>(null);
+  const [contractToReject, setContractToReject] = useState<SupplierContract | null>(null);
 
   // Fetch supplier products (produtos globais criados por este supplier)
   const { data: supplierProducts = [], isLoading: isLoadingProducts, refetch: refetchProducts } = useQuery<SupplierProduct[]>({
@@ -109,6 +114,7 @@ export default function SupplierDashboard() {
         description: "O contrato foi assinado com sucesso.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/supplier/contracts'] });
+      setContractToSign(null); // Close modal
     },
     onError: (error: Error) => {
       toast({
@@ -116,6 +122,7 @@ export default function SupplierDashboard() {
         description: error.message,
         variant: "destructive",
       });
+      setContractToSign(null); // Close modal
     }
   });
 
@@ -145,6 +152,7 @@ export default function SupplierDashboard() {
         variant: "destructive",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/supplier/contracts'] });
+      setContractToReject(null); // Close modal
     },
     onError: (error: Error) => {
       toast({
@@ -152,8 +160,22 @@ export default function SupplierDashboard() {
         description: error.message,
         variant: "destructive",
       });
+      setContractToReject(null); // Close modal
     }
   });
+
+  // Confirmation handlers
+  const handleSignContract = () => {
+    if (contractToSign) {
+      signContractMutation.mutate(contractToSign.id);
+    }
+  };
+
+  const handleRejectContract = () => {
+    if (contractToReject) {
+      rejectContractMutation.mutate(contractToReject.id);
+    }
+  };
 
   if (user?.role !== 'supplier') {
     return (
@@ -511,21 +533,21 @@ export default function SupplierDashboard() {
                               </p>
                               <div className="flex gap-3">
                                 <Button
-                                  onClick={() => signContractMutation.mutate(contract.id)}
+                                  onClick={() => setContractToSign(contract)}
                                   disabled={signContractMutation.isPending || rejectContractMutation.isPending}
                                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                                 >
                                   <CheckCircle className="h-4 w-4" />
-                                  {signContractMutation.isPending ? 'Assinando...' : 'Assinar Contrato'}
+                                  Assinar Contrato
                                 </Button>
                                 <Button
                                   variant="destructive"
-                                  onClick={() => rejectContractMutation.mutate(contract.id)}
+                                  onClick={() => setContractToReject(contract)}
                                   disabled={signContractMutation.isPending || rejectContractMutation.isPending}
                                   className="flex items-center gap-2"
                                 >
                                   <XCircle className="h-4 w-4" />
-                                  {rejectContractMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+                                  Rejeitar
                                 </Button>
                               </div>
                             </div>
@@ -582,6 +604,110 @@ export default function SupplierDashboard() {
 
         </div>
       </div>
+
+      {/* Sign Contract Confirmation Modal */}
+      <Dialog open={!!contractToSign} onOpenChange={() => setContractToSign(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Assinar Contrato
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza de que deseja assinar este contrato para o produto "{contractToSign?.productName}"?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {contractToSign && (
+            <div className="py-4">
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-medium">SKU:</span> {contractToSign.productSku}
+                </div>
+                <div>
+                  <span className="font-medium">Preço:</span> €{Number(contractToSign.productPrice).toFixed(2)}
+                </div>
+                <div>
+                  <span className="font-medium">Comissão:</span> {contractToSign.commissionRate}%
+                </div>
+                <div>
+                  <span className="font-medium">Prazo de Entrega:</span> {contractToSign.deliveryDays} dias úteis
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setContractToSign(null)}
+              disabled={signContractMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSignContract}
+              disabled={signContractMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {signContractMutation.isPending ? 'Assinando...' : 'Confirmar Assinatura'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Contract Confirmation Modal */}
+      <Dialog open={!!contractToReject} onOpenChange={() => setContractToReject(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-red-500" />
+              Rejeitar Contrato
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza de que deseja rejeitar este contrato para o produto "{contractToReject?.productName}"?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {contractToReject && (
+            <div className="py-4">
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-medium">SKU:</span> {contractToReject.productSku}
+                </div>
+                <div>
+                  <span className="font-medium">Preço:</span> €{Number(contractToReject.productPrice).toFixed(2)}
+                </div>
+                <div>
+                  <span className="font-medium">Comissão:</span> {contractToReject.commissionRate}%
+                </div>
+              </div>
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-700">
+                  <strong>Atenção:</strong> Esta ação não pode ser desfeita. Após rejeitar, não será possível assinar este contrato.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setContractToReject(null)}
+              disabled={rejectContractMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectContract}
+              disabled={rejectContractMutation.isPending}
+            >
+              {rejectContractMutation.isPending ? 'Rejeitando...' : 'Confirmar Rejeição'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
