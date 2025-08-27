@@ -95,7 +95,7 @@ export default function FinancePagamentos() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-white">Pagamentos</h1>
+            <h1 className="text-[22px] font-bold text-white">Pagamentos</h1>
             <p className="text-gray-400 mt-1">Gerencie pagamentos para fornecedores e afiliados</p>
           </div>
           <Button className="bg-blue-600 hover:bg-blue-700 text-white">
