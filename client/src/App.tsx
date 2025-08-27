@@ -23,6 +23,13 @@ import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Onboarding from "@/pages/onboarding";
 import InsidePage from "@/pages/inside";
+import AdminDashboard from "@/pages/admin/dashboard";
+import AdminOrders from "@/pages/admin/orders";
+import AdminUsers from "@/pages/admin/users";
+import AdminProducts from "@/pages/admin/products";
+import AdminStores from "@/pages/admin/stores";
+import AdminGlobal from "@/pages/admin/global";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import SupplierDashboard from "@/pages/supplier";
 import SupplierCreateProduct from "@/pages/supplier-create-product";
 import ProductSuccess from "@/pages/product-success";
@@ -172,10 +179,21 @@ function Router() {
     <OnboardingGuard>
       <Switch>
         <Route path="/onboarding" component={Onboarding} />
-        <Route path="/inside" component={isSuperAdmin ? InsidePage : () => <NotFound />} />
+        
+        {/* Admin Routes with Layout */}
+        <Route path="/inside/orders" component={isSuperAdmin ? () => <AdminLayout><AdminOrders /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/users" component={isSuperAdmin ? () => <AdminLayout><AdminUsers /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/products" component={isSuperAdmin ? () => <AdminLayout><AdminProducts /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/stores" component={isSuperAdmin ? () => <AdminLayout><AdminStores /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/global" component={isSuperAdmin ? () => <AdminLayout><AdminGlobal /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside" component={isSuperAdmin ? () => <AdminLayout><AdminDashboard /></AdminLayout> : () => <NotFound />} />
+        
+        {/* Supplier Routes */}
         <Route path="/supplier/create-product" component={isSupplier ? SupplierCreateProduct : () => <NotFound />} />
         <Route path="/supplier/product-success" component={isSupplier ? ProductSuccess : () => <NotFound />} />
         <Route path="/supplier" component={isSupplier ? SupplierDashboard : () => <NotFound />} />
+        
+        {/* Default Routes */}
         <Route path="/" component={isSupplier ? SupplierDashboard : isProductSeller ? SellerDashboard : Dashboard} />
         <Route path="/orders" component={Orders} />
         {!isProductSeller && <Route path="/analytics" component={Analytics} />}
@@ -266,8 +284,8 @@ function AppContent() {
       <AuthModal isOpen={!isAuthenticated} />
       {isAuthenticated && (
         <>
-          {/* Fullscreen layout for onboarding and inside page */}
-          {(location === '/onboarding' || location === '/inside') ? (
+          {/* Fullscreen layout for onboarding and inside pages */}
+          {(location === '/onboarding' || location.startsWith('/inside')) ? (
             <div className="min-h-screen">
               <Router />
             </div>
