@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar, Crown, LayoutDashboard, FileText, Wallet } from "lucide-react";
+import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar, Crown, LayoutDashboard, FileText, Wallet, CheckCircle, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { SupplierProductCard } from "@/components/supplier/supplier-product-card";
 
 // Types for API responses
@@ -60,6 +61,8 @@ export default function SupplierDashboard() {
   const [, setLocation] = useLocation();
   const [dateFilter, setDateFilter] = useState("current_month");
   const [activeSection, setActiveSection] = useState<'dashboard' | 'contracts' | 'wallet'>('dashboard');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch supplier products (produtos globais criados por este supplier)
   const { data: supplierProducts = [], isLoading: isLoadingProducts, refetch: refetchProducts } = useQuery<SupplierProduct[]>({
@@ -78,6 +81,78 @@ export default function SupplierDashboard() {
   const { data: supplierContracts = [], isLoading: isLoadingContracts } = useQuery<SupplierContract[]>({
     queryKey: ['/api/supplier/contracts'],
     enabled: !!user && user.role === 'supplier',
+  });
+
+  // Contract response mutations
+  const signContractMutation = useMutation({
+    mutationFn: async (contractId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/supplier/contracts/${contractId}/sign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao assinar contrato');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contrato assinado",
+        description: "O contrato foi assinado com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/supplier/contracts'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const rejectContractMutation = useMutation({
+    mutationFn: async (contractId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/supplier/contracts/${contractId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao rejeitar contrato');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contrato rejeitado",
+        description: "O contrato foi rejeitado.",
+        variant: "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/supplier/contracts'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   });
 
   if (user?.role !== 'supplier') {
@@ -427,6 +502,34 @@ export default function SupplierDashboard() {
                               )}
                             </div>
                           </div>
+
+                          {/* Action Buttons */}
+                          {contract.status === 'sent' && (
+                            <div className="border-t pt-4">
+                              <p className="text-sm text-muted-foreground mb-3">
+                                O que deseja fazer com este contrato?
+                              </p>
+                              <div className="flex gap-3">
+                                <Button
+                                  onClick={() => signContractMutation.mutate(contract.id)}
+                                  disabled={signContractMutation.isPending || rejectContractMutation.isPending}
+                                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                  {signContractMutation.isPending ? 'Assinando...' : 'Assinar Contrato'}
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  onClick={() => rejectContractMutation.mutate(contract.id)}
+                                  disabled={signContractMutation.isPending || rejectContractMutation.isPending}
+                                  className="flex items-center gap-2"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  {rejectContractMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Contract Content */}
                           <details className="border rounded p-3">

@@ -2965,6 +2965,94 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Sign contract endpoint
+  app.post('/api/supplier/contracts/:id/sign', authenticateToken, requireSupplier, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { db } = await import("./db");
+      const { productContracts } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Verify contract belongs to this supplier
+      const [contract] = await db.select()
+        .from(productContracts)
+        .where(and(
+          eq(productContracts.id, id),
+          eq(productContracts.supplierId, req.user.id)
+        ));
+
+      if (!contract) {
+        return res.status(404).json({ message: "Contrato não encontrado" });
+      }
+
+      if (contract.status !== 'sent') {
+        return res.status(400).json({ message: "Contrato já foi respondido anteriormente" });
+      }
+
+      // Update contract to signed status
+      const [updatedContract] = await db.update(productContracts)
+        .set({
+          status: 'signed',
+          respondedAt: new Date(),
+          viewedAt: contract.viewedAt || new Date() // Mark as viewed if not already
+        })
+        .where(eq(productContracts.id, id))
+        .returning();
+
+      res.json({
+        message: "Contrato assinado com sucesso",
+        contract: updatedContract
+      });
+    } catch (error) {
+      console.error("Sign contract error:", error);
+      res.status(500).json({ message: "Erro ao assinar contrato" });
+    }
+  });
+
+  // Reject contract endpoint
+  app.post('/api/supplier/contracts/:id/reject', authenticateToken, requireSupplier, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { db } = await import("./db");
+      const { productContracts } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Verify contract belongs to this supplier
+      const [contract] = await db.select()
+        .from(productContracts)
+        .where(and(
+          eq(productContracts.id, id),
+          eq(productContracts.supplierId, req.user.id)
+        ));
+
+      if (!contract) {
+        return res.status(404).json({ message: "Contrato não encontrado" });
+      }
+
+      if (contract.status !== 'sent') {
+        return res.status(400).json({ message: "Contrato já foi respondido anteriormente" });
+      }
+
+      // Update contract to rejected status
+      const [updatedContract] = await db.update(productContracts)
+        .set({
+          status: 'rejected',
+          respondedAt: new Date(),
+          viewedAt: contract.viewedAt || new Date() // Mark as viewed if not already
+        })
+        .where(eq(productContracts.id, id))
+        .returning();
+
+      res.json({
+        message: "Contrato rejeitado",
+        contract: updatedContract
+      });
+    } catch (error) {
+      console.error("Reject contract error:", error);
+      res.status(500).json({ message: "Erro ao rejeitar contrato" });
+    }
+  });
+
   // PUT /api/supplier/contracts/:id/view - Mark contract as viewed
   app.put('/api/supplier/contracts/:id/view', authenticateToken, requireSupplier, async (req: AuthRequest, res: Response) => {
     try {
