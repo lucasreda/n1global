@@ -79,7 +79,7 @@ export class FinanceService {
       .select({
         sku: products.sku,
         name: products.name,
-        costPrice: products.costPrice,
+        price: products.price, // Usar preço B2B para consistência com a carteira
       })
       .from(products)
       .where(eq(products.supplierId, supplierId));
@@ -106,11 +106,31 @@ export class FinanceService {
       .from(orders)
       .where(eq(orders.paymentStatus, 'paid'));
 
+    // Buscar IDs dos pedidos que já foram pagos para o fornecedor
+    const paidPaymentItems = await db
+      .select({
+        orderId: supplierPaymentItems.orderId,
+      })
+      .from(supplierPaymentItems)
+      .leftJoin(supplierPayments, eq(supplierPaymentItems.paymentId, supplierPayments.id))
+      .where(
+        and(
+          eq(supplierPayments.supplierId, supplierId),
+          eq(supplierPayments.status, 'paid')
+        )
+      );
+
+    const paidOrderIds = new Set(paidPaymentItems.map(item => item.orderId).filter(Boolean));
+
     // Calcular valores dos pedidos e quais produtos de cada pedido pertencem ao fornecedor
     let totalOrdersValue = 0;
     const pendingOrders: SupplierBalance['pendingOrders'] = [];
 
     for (const order of allOrders) {
+      // Pular se o pedido já foi pago
+      if (paidOrderIds.has(order.id)) {
+        continue;
+      }
       if (!order.products) continue;
 
       const orderProducts = Array.isArray(order.products) ? order.products : [];
@@ -120,16 +140,16 @@ export class FinanceService {
 
       if (supplierOrderProducts.length === 0) continue;
 
-      // Calcular valor do fornecedor neste pedido baseado no custo dos produtos
+      // Calcular valor do fornecedor neste pedido baseado no preço B2B dos produtos
       let supplierValueInOrder = 0;
       const productNames: string[] = [];
 
       for (const orderProduct of supplierOrderProducts) {
         const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
-        if (supplierProduct && supplierProduct.costPrice) {
+        if (supplierProduct && supplierProduct.price) {
           const quantity = orderProduct.quantity || 1;
-          const costPrice = parseFloat(supplierProduct.costPrice);
-          supplierValueInOrder += costPrice * quantity;
+          const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
+          supplierValueInOrder += unitPrice * quantity;
           productNames.push(supplierProduct.name);
         }
       }
