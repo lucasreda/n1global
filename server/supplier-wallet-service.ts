@@ -43,7 +43,7 @@ export interface SupplierWallet {
   
   // Valores pendentes
   totalToReceive: number;
-  totalOrdersCount: number; // Total de UNIDADES pendentes (não pedidos)
+  totalOrdersCount: number; // Total de PEDIDOS pendentes
   nextPaymentDate: string;
   
   // Pedidos disponíveis para receber
@@ -256,12 +256,9 @@ export class SupplierWalletService {
     let totalToReceive = 0;
     let totalPendingUnits = 0; // Total de unidades pendentes
     
-    console.log('🔍 DEBUG - Calculando unidades pendentes:');
     for (const [sku, totalSold] of Array.from(totalQuantitiesBySku.entries())) {
       const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
       const pendingQuantity = Math.max(0, totalSold - paidQuantity);
-      
-      console.log(`📦 SKU: ${sku} | Vendido: ${totalSold} | Pago: ${paidQuantity} | Pendente: ${pendingQuantity}`);
       
       if (pendingQuantity > 0) {
         totalPendingUnits += pendingQuantity;
@@ -272,9 +269,6 @@ export class SupplierWalletService {
         }
       }
     }
-    
-    console.log(`🔢 Total de unidades pendentes: ${totalPendingUnits}`);
-    console.log(`💰 Total a receber: €${totalToReceive}`);
 
     // Processar pedidos individuais para listagem (apenas pedidos elegíveis)
     for (const order of eligibleOrders) {
@@ -441,7 +435,7 @@ export class SupplierWalletService {
       supplierName: supplier.name,
       supplierEmail: supplier.email,
       totalToReceive,
-      totalOrdersCount: totalPendingUnits, // Total de UNIDADES pendentes, não pedidos
+      totalOrdersCount: availableOrders.length, // Total de PEDIDOS pendentes para exibição
       nextPaymentDate: nextPaymentDate.toISOString(),
       availableOrders,
       recentPayments,
