@@ -22,32 +22,12 @@ const navigationItems = [
   { 
     href: "/finance", 
     label: "Dashboard", 
-    icon: Home 
-  },
-  { 
-    href: "/finance/receitas", 
-    label: "Receitas", 
-    icon: DollarSign 
-  },
-  { 
-    href: "/finance/custos", 
-    label: "Custos", 
-    icon: TrendingUp 
-  },
-  { 
-    href: "/finance/relatorios", 
-    label: "Relatórios", 
-    icon: FileText 
+    icon: BarChart3 
   },
   { 
     href: "/finance/pagamentos", 
     label: "Pagamentos", 
     icon: CreditCard 
-  },
-  { 
-    href: "/finance/analytics", 
-    label: "Analytics", 
-    icon: BarChart3 
   },
   { 
     href: "/finance/configuracoes", 
