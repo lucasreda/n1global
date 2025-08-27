@@ -122,7 +122,11 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
             {/* Key Metrics Row */}
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                <span className={`w-2 h-2 rounded-full ${
+                  product.status === 'approved' ? 'bg-green-500' : 
+                  product.status === 'rejected' ? 'bg-red-500' : 
+                  'bg-yellow-500'
+                }`}></span>
                 <span className="font-medium text-gray-900 dark:text-gray-100">
                   {formatCurrency(product.price)}
                 </span>

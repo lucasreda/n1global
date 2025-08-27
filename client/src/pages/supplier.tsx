@@ -24,6 +24,7 @@ interface SupplierProduct {
   imageUrl?: string;
   videoUrl?: string;
   productUrl?: string;
+  status?: string; // pending, approved, rejected
   createdAt: string;
   updatedAt: string;
 }
@@ -188,7 +189,7 @@ export default function SupplierDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="metric-active-products">
-              {isLoadingProducts ? '-' : (supplierProducts?.length || 0)}
+              {isLoadingProducts ? '-' : (supplierProducts?.filter(p => p.status === 'approved').length || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               {hasProducts ? 'produtos no catálogo global' : 'nenhum produto cadastrado'}

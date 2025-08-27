@@ -41,8 +41,13 @@ export default function ProductSuccess() {
   }, []);
 
   // Se não há dados do produto, redireciona
+  useEffect(() => {
+    if (!showAnimation && !productData) {
+      setLocation('/supplier');
+    }
+  }, [showAnimation, productData, setLocation]);
+
   if (!showAnimation && !productData) {
-    setLocation('/supplier');
     return null;
   }
 
