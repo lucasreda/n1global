@@ -25,6 +25,7 @@ import Onboarding from "@/pages/onboarding";
 import InsidePage from "@/pages/inside";
 import SupplierDashboard from "@/pages/supplier";
 import SupplierCreateProduct from "@/pages/supplier-create-product";
+import ProductSuccess from "@/pages/product-success";
 import InvestorSupplierLanding from "@/pages/investor-supplier";
 import NotFound from "@/pages/not-found";
 
@@ -173,6 +174,7 @@ function Router() {
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/inside" component={isSuperAdmin ? InsidePage : () => <NotFound />} />
         <Route path="/supplier/create-product" component={isSupplier ? SupplierCreateProduct : () => <NotFound />} />
+        <Route path="/supplier/product-success" component={isSupplier ? ProductSuccess : () => <NotFound />} />
         <Route path="/supplier" component={isSupplier ? SupplierDashboard : () => <NotFound />} />
         <Route path="/" component={isSupplier ? SupplierDashboard : isProductSeller ? SellerDashboard : Dashboard} />
         <Route path="/orders" component={Orders} />

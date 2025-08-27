@@ -78,13 +78,28 @@ export default function SupplierCreateProduct() {
     mutationFn: async (data: CreateProductForm) => {
       return await apiRequest('/api/supplier/products', 'POST', data);
     },
-    onSuccess: () => {
-      toast({
-        title: "Produto criado com sucesso!",
-        description: "O produto foi adicionado ao catálogo global.",
-      });
+    onSuccess: (response: any) => {
+      // Save product data for success page
+      const productData = {
+        id: response.id || 'temp-id',
+        sku: form.getValues().sku,
+        name: form.getValues().name,
+        description: form.getValues().description,
+        type: form.getValues().type,
+        price: parseFloat(form.getValues().price.toString()),
+        costPrice: parseFloat(form.getValues().costPrice.toString()),
+        initialStock: form.getValues().initialStock,
+        lowStock: form.getValues().lowStock,
+        imageUrl: form.getValues().imageUrl || undefined,
+        status: 'pending' as const,
+      };
+      
+      sessionStorage.setItem('createdProduct', JSON.stringify(productData));
+      
+      // Redirect to success page
+      setLocation('/supplier/product-success');
+      
       queryClient.invalidateQueries({ queryKey: ['/api/supplier/products'] });
-      setLocation('/supplier');
     },
     onError: (error: any) => {
       toast({

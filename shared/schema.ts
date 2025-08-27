@@ -290,6 +290,7 @@ export const products = pgTable("products", {
   // Supplier information - for products created by suppliers
   supplierId: varchar("supplier_id").references(() => users.id), // Who created this global product
   initialStock: integer("initial_stock").default(0), // Initial stock set by supplier
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, approved, rejected - for supplier approval workflow
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

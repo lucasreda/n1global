@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Edit3, Package, TrendingUp, Trash2 } from "lucide-react";
+import { Edit3, Package, TrendingUp, Trash2, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EditProductModal } from "./edit-product-modal";
@@ -52,6 +52,38 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
     }).format(value);
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return (
+          <Badge variant="secondary" className="bg-yellow-900/50 text-yellow-400 border-yellow-700">
+            <Clock className="h-3 w-3 mr-1" />
+            Pendente
+          </Badge>
+        );
+      case 'approved':
+        return (
+          <Badge variant="secondary" className="bg-green-900/50 text-green-400 border-green-700">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Aprovado
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge variant="destructive" className="bg-red-900/50 text-red-400 border-red-700">
+            <XCircle className="h-3 w-3 mr-1" />
+            Rejeitado
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary">
+            {status}
+          </Badge>
+        );
+    }
+  };
+
   return (
     <Card className="border border-gray-200/60 dark:border-gray-700/60 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm" data-testid={`product-card-${product.sku}`}>
       <div className="p-4">
@@ -84,6 +116,7 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {product.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
               </span>
+              {getStatusBadge(product.status || 'pending')}
             </div>
             
             {/* Key Metrics Row */}
