@@ -30,6 +30,7 @@ interface WalletOrder {
   customerName: string;
   total: number;
   status: string;
+  daysSinceDelivery?: number;
   products: Array<{
     sku: string;
     name: string;
@@ -246,9 +247,10 @@ export default function SupplierWallet() {
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardHeader>
               <CardTitle className="text-white" style={{ fontSize: '20px' }}>Pendentes de Recebimento</CardTitle>
-              <p className="text-sm text-gray-400">
-                Pedidos já pagos pelos clientes, aguardando pagamento do financeiro
-              </p>
+              <div className="flex items-center gap-2 text-sm text-gray-400 mt-2">
+                <Clock className="h-4 w-4" />
+                <span>Pedidos elegíveis após 10 dias úteis da entrega</span>
+              </div>
             </CardHeader>
             <CardContent>
               {wallet.availableOrders.length === 0 ? (

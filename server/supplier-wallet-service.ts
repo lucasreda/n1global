@@ -188,7 +188,7 @@ export class SupplierWalletService {
     }
 
     // Buscar pedidos entregues das operações onde o fornecedor tem produtos vinculados
-    // (pedidos entregues são elegíveis para pagamento ao fornecedor)
+    // (pedidos entregues há pelo menos 10 dias úteis são elegíveis para pagamento)
     const allOrders = await db
       .select()
       .from(orders)
@@ -198,6 +198,17 @@ export class SupplierWalletService {
           inArray(orders.operationId, operationIds)
         )
       );
+
+    // Filtrar pedidos que foram entregues há pelo menos 10 dias úteis
+    const eligibleOrders = allOrders.filter(order => {
+      if (!order.lastStatusUpdate) return false;
+      
+      const deliveryDate = new Date(order.lastStatusUpdate);
+      const minEligibleDate = this.addBusinessDays(deliveryDate, 10);
+      const today = new Date();
+      
+      return today >= minEligibleDate;
+    });
 
     // Buscar itens já pagos para este fornecedor (por quantidade)
     const paidPaymentItems = await db
@@ -227,9 +238,9 @@ export class SupplierWalletService {
     // Processar pedidos para identificar valores a receber
     const availableOrders: WalletOrder[] = [];
     
-    // Calcular total de quantidades vendidas por SKU
+    // Calcular total de quantidades vendidas por SKU (apenas pedidos elegíveis)
     const totalQuantitiesBySku = new Map<string, number>();
-    for (const order of allOrders) {
+    for (const order of eligibleOrders) {
       if (!order.products) continue;
       
       const orderProducts = Array.isArray(order.products) ? order.products : [];
@@ -243,7 +254,7 @@ export class SupplierWalletService {
     
     // Calcular valor total pendente baseado na diferença entre vendido e pago
     let totalToReceive = 0;
-    for (const [sku, totalSold] of totalQuantitiesBySku) {
+    for (const [sku, totalSold] of Array.from(totalQuantitiesBySku.entries())) {
       const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
       const pendingQuantity = Math.max(0, totalSold - paidQuantity);
       
@@ -256,8 +267,8 @@ export class SupplierWalletService {
       }
     }
 
-    // Processar pedidos individuais para listagem
-    for (const order of allOrders) {
+    // Processar pedidos individuais para listagem (apenas pedidos elegíveis)
+    for (const order of eligibleOrders) {
       if (!order.products) {
         continue; // Pular se não tem produtos
       }
@@ -304,13 +315,19 @@ export class SupplierWalletService {
       }
 
       if (supplierValueInOrder > 0) {
+        // Calcular dias desde a entrega para exibição
+        const deliveryDate = new Date(order.lastStatusUpdate!);
+        const today = new Date();
+        const daysSinceDelivery = Math.floor((today.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24));
+        
         availableOrders.push({
           orderId: order.id,
-          shopifyOrderNumber: order.shopifyOrderNumber || null,
+          shopifyOrderNumber: order.shopifyOrderNumber || undefined,
           orderDate: order.orderDate?.toISOString() || order.createdAt?.toISOString() || new Date().toISOString(),
           customerName: order.customerName || 'Cliente não informado',
           total: supplierValueInOrder,
           status: order.status || 'confirmed',
+          daysSinceDelivery,
           products: orderProductDetails,
         });
       }
