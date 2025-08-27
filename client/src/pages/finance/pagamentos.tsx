@@ -93,12 +93,20 @@ export default function FinancePagamentos() {
     },
   });
 
-  // Calcular totais dos pagamentos reais
-  const totalPendente = payments
+  // Calcular totais dos pagamentos reais - prioritizando BRL
+  const totalPendenteBRL = payments
+    .filter(p => p.status === 'pending')
+    .reduce((sum, p) => sum + (p.amountBRL ? parseFloat(p.amountBRL) : parseFloat(p.amount) * 6.3), 0);
+  
+  const totalPendenteEUR = payments
     .filter(p => p.status === 'pending')
     .reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
-  const totalPago = payments
+  const totalPagoBRL = payments
+    .filter(p => p.status === 'paid')
+    .reduce((sum, p) => sum + (p.amountBRL ? parseFloat(p.amountBRL) : parseFloat(p.amount) * 6.3), 0);
+    
+  const totalPagoEUR = payments
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
@@ -125,8 +133,15 @@ export default function FinancePagamentos() {
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">€{totalPendente.toFixed(2)}</div>
-              <p className="text-xs text-gray-400">{payments.filter(p => p.status === 'pending').length} pagamentos aguardando</p>
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-green-400">
+                  R$ {totalPendenteBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+                <div className="text-sm text-gray-400">
+                  €{totalPendenteEUR.toFixed(2)}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">{payments.filter(p => p.status === 'pending').length} pagamentos aguardando</p>
             </CardContent>
           </Card>
 
@@ -136,8 +151,15 @@ export default function FinancePagamentos() {
               <DollarSign className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">€{totalPago.toFixed(2)}</div>
-              <p className="text-xs text-gray-400">{payments.filter(p => p.status === 'paid').length} pagamentos concluídos</p>
+              <div className="space-y-1">
+                <div className="text-2xl font-bold text-green-400">
+                  R$ {totalPagoBRL.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+                <div className="text-sm text-gray-400">
+                  €{totalPagoEUR.toFixed(2)}
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">{payments.filter(p => p.status === 'paid').length} pagamentos concluídos</p>
             </CardContent>
           </Card>
 
