@@ -57,7 +57,7 @@ interface SupplierBalance {
   totalOrdersValue: number;
   paidAmount: number;
   pendingAmount: number;
-  pendingOrdersCount: number;
+  totalUnitsCount: number;
   unitB2BPrice: number;
 }
 
@@ -336,7 +336,7 @@ export default function FinanceNovoPagamento() {
                         <span className="text-lg font-semibold text-white">Valor Pendente</span>
                       </div>
                       <Badge className="bg-yellow-600 text-white">
-                        {supplierBalance.pendingOrdersCount} pedidos
+                        {supplierBalance.totalUnitsCount} unidades
                       </Badge>
                     </div>
                     <div className="text-2xl font-bold text-yellow-400 mt-2">
@@ -350,11 +350,11 @@ export default function FinanceNovoPagamento() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-500" />
-                          <span className="text-sm text-gray-400">Total de Pedidos</span>
+                          <Package className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm text-gray-400">Unidades Vendidas</span>
                         </div>
                         <div className="text-xl font-bold text-white">
-                          {supplierBalance.pendingOrdersCount}
+                          {supplierBalance.totalUnitsCount}
                         </div>
                       </div>
                       

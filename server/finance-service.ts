@@ -18,7 +18,7 @@ export interface SupplierBalance {
   totalOrdersValue: number;
   paidAmount: number;
   pendingAmount: number;
-  pendingOrdersCount: number;
+  totalUnitsCount: number;
   unitB2BPrice: number;
 }
 
@@ -86,7 +86,7 @@ export class FinanceService {
         totalOrdersValue: 0,
         paidAmount: 0,
         pendingAmount: 0,
-        pendingOrdersCount: 0,
+        totalUnitsCount: 0,
         unitB2BPrice: 0,
       };
     }
@@ -116,9 +116,9 @@ export class FinanceService {
 
     const paidOrderIds = new Set(paidPaymentItems.map(item => item.orderId).filter(Boolean));
 
-    // Calcular valores dos pedidos que pertencem ao fornecedor
+    // Calcular valores e unidades vendidas dos pedidos que pertencem ao fornecedor
     let totalOrdersValue = 0;
-    let pendingOrdersCount = 0;
+    let totalUnitsCount = 0;
 
     for (const order of allOrders) {
       // Pular se o pedido já foi pago
@@ -134,8 +134,9 @@ export class FinanceService {
 
       if (supplierOrderProducts.length === 0) continue;
 
-      // Calcular valor do fornecedor neste pedido baseado no preço B2B dos produtos
+      // Calcular valor e unidades do fornecedor neste pedido
       let supplierValueInOrder = 0;
+      let unitsInOrder = 0;
 
       for (const orderProduct of supplierOrderProducts) {
         const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
@@ -143,18 +144,19 @@ export class FinanceService {
           const quantity = orderProduct.quantity || 1;
           const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
           supplierValueInOrder += unitPrice * quantity;
+          unitsInOrder += quantity;
         }
       }
 
       if (supplierValueInOrder > 0) {
         totalOrdersValue += supplierValueInOrder;
-        pendingOrdersCount++;
+        totalUnitsCount += unitsInOrder;
       }
     }
 
     console.log('📊 FINANCE SERVICE DEBUG:');
     console.log(`- Total orders processed: ${allOrders.length}`);
-    console.log(`- Pending orders: ${pendingOrdersCount}`);
+    console.log(`- Total units sold: ${totalUnitsCount}`);
     console.log(`- Total orders value: €${totalOrdersValue}`);
     console.log(`- Paid order IDs excluded: ${paidOrderIds.size}`);
 
@@ -186,7 +188,7 @@ export class FinanceService {
       totalOrdersValue,
       paidAmount,
       pendingAmount,
-      pendingOrdersCount,
+      totalUnitsCount,
       unitB2BPrice,
     };
   }
