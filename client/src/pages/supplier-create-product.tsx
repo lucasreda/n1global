@@ -87,7 +87,7 @@ export default function SupplierCreateProduct() {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="container mx-auto py-8 px-6">
       {/* Back button */}
       <div className="mb-4">
         <Button
