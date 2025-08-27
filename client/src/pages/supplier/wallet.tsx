@@ -68,6 +68,8 @@ interface SupplierWallet {
 export default function SupplierWallet() {
   const { data: wallet, isLoading, refetch } = useQuery<SupplierWallet>({
     queryKey: ["/api/supplier/wallet"],
+    staleTime: 0, // Always fetch fresh data
+    cacheTime: 0, // Don't cache
   });
 
 
