@@ -76,6 +76,17 @@ export default function SupplierWallet() {
     }).format(amount);
   };
 
+  const formatOrderId = (orderId: string) => {
+    // Se é um ID do Shopify, extrair números e formatar
+    if (orderId.includes('shopify_')) {
+      const numbers = orderId.replace('shopify_', '');
+      return `#PD${numbers.slice(-3)}...`;
+    }
+    // Para outros formatos, usar os últimos dígitos
+    const numbers = orderId.replace(/\D/g, '');
+    return `#PD${numbers.slice(-3)}...`;
+  };
+
   const formatBRL = (amount: number) => {
     // Conversão aproximada EUR para BRL (taxa padrão 5.5)
     const brlAmount = amount * 5.5;
@@ -271,7 +282,7 @@ export default function SupplierWallet() {
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-white">#{order.orderId}</span>
+                            <span className="font-medium text-white">{formatOrderId(order.orderId)}</span>
                             <Badge className={getStatusColor(order.status)}>
                               {order.status}
                             </Badge>
