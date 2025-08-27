@@ -154,7 +154,7 @@ export default function SupplierWallet() {
                 <Wallet className="h-6 w-6 text-blue-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-white">Minha Carteira</h1>
+                <h1 className="font-semibold text-white" style={{ fontSize: '22px' }}>Minha Carteira</h1>
                 <p className="text-gray-400">{wallet.supplierName}</p>
               </div>
             </div>
