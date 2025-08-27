@@ -72,75 +72,64 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col">
-        {/* Logo */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-3">
-            <img 
-              src={logoImage} 
-              alt="Inside Logo" 
-              className="w-8 h-8 object-contain"
-            />
-            <span className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Inside
-            </span>
-          </div>
-        </div>
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      {/* Header */}
+      <div className="h-16 bg-black border-b border-gray-800 flex items-center px-6 relative z-50">
+        <img 
+          src={logoImage} 
+          alt="Inside Logo" 
+          className="h-8 object-contain"
+        />
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4">
-          <div className="space-y-2">
-            {menuItems.map((item) => (
-              <Link key={item.id} href={item.path}>
-                <Card 
-                  className={`cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                    isActive(item.path)
-                      ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800' 
-                      : 'bg-transparent border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <div className="p-3 flex items-center gap-3">
-                    <item.icon className={`h-5 w-5 ${
+      {/* Main Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-48 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col pt-4">
+          {/* Navigation */}
+          <nav className="flex-1 px-3">
+            <div className="space-y-1">
+              {menuItems.map((item) => (
+                <Link key={item.id} href={item.path}>
+                  <div 
+                    className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2 ${
                       isActive(item.path)
-                        ? 'text-blue-600 dark:text-blue-400' 
-                        : 'text-gray-600 dark:text-gray-400'
-                    }`} />
-                    <span className={`font-medium ${
-                      isActive(item.path)
-                        ? 'text-blue-900 dark:text-blue-100' 
-                        : 'text-gray-900 dark:text-gray-100'
-                    }`}>
+                        ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="text-sm font-medium">
                       {item.label}
                     </span>
                   </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </nav>
+                </Link>
+              ))}
+            </div>
+          </nav>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-          <Button 
-            onClick={handleLogout}
-            variant="ghost" 
-            className="w-full justify-start text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            Sair
-          </Button>
+          {/* Logout */}
+          <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+            <Button 
+              onClick={handleLogout}
+              variant="ghost" 
+              size="sm"
+              className="w-full justify-start text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 p-2"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              <span className="text-sm">Sair</span>
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto p-6 max-w-full">
-            {children}
-          </div>
-        </main>
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <main className="flex-1 overflow-y-auto">
+            <div className="container mx-auto p-6 max-w-full">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );
