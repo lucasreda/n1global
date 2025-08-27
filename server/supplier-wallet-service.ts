@@ -97,11 +97,14 @@ export class SupplierWalletService {
     }
 
     // Buscar produtos do fornecedor
+    const { userProducts } = await import("@shared/schema");
     const supplierProducts = await db
       .select({
         sku: products.sku,
         name: products.name,
         costPrice: products.costPrice,
+        storeId: products.storeId,
+        id: products.id,
       })
       .from(products)
       .where(eq(products.supplierId, supplierId));
@@ -122,12 +125,72 @@ export class SupplierWalletService {
     }
 
     const productSkus = supplierProducts.map(p => p.sku);
+    const supplierProductIds = supplierProducts.map(p => p.id);
+    
+    // Buscar operações onde o fornecedor tem produtos vinculados através de userProducts
+    const linkedProducts = await db
+      .select({
+        productId: userProducts.productId,
+        storeId: userProducts.storeId,
+        userId: userProducts.userId,
+      })
+      .from(userProducts)
+      .where(sql`${userProducts.productId} = ANY(${supplierProductIds})`);
 
-    // Buscar todos os pedidos pagos que contém produtos do fornecedor
+    if (linkedProducts.length === 0) {
+      return {
+        supplierId,
+        supplierName: supplier.name,
+        supplierEmail: supplier.email,
+        totalToReceive: 0,
+        totalOrdersCount: 0,
+        nextPaymentDate: this.addBusinessDays(new Date(), 10).toISOString(),
+        availableOrders: [],
+        recentPayments: [],
+        totalPaid: 0,
+        averageOrderValue: 0,
+      };
+    }
+
+    // Obter operações dos usuários que têm produtos vinculados
+    const { userOperationAccess } = await import("@shared/schema");
+    const userIds = Array.from(new Set(linkedProducts.map(lp => lp.userId)));
+    
+    const operationAccesses = await db
+      .select({
+        operationId: userOperationAccess.operationId,
+        userId: userOperationAccess.userId,
+      })
+      .from(userOperationAccess)
+      .where(sql`${userOperationAccess.userId} = ANY(${userIds})`);
+
+    const operationIds = Array.from(new Set(operationAccesses.map(oa => oa.operationId)));
+
+    if (operationIds.length === 0) {
+      return {
+        supplierId,
+        supplierName: supplier.name,
+        supplierEmail: supplier.email,
+        totalToReceive: 0,
+        totalOrdersCount: 0,
+        nextPaymentDate: this.addBusinessDays(new Date(), 10).toISOString(),
+        availableOrders: [],
+        recentPayments: [],
+        totalPaid: 0,
+        averageOrderValue: 0,
+      };
+    }
+
+    // Buscar apenas pedidos pagos das operações onde o fornecedor tem produtos vinculados
     const allOrders = await db
       .select()
       .from(orders)
-      .where(eq(orders.paymentStatus, 'paid'));
+      .where(
+        and(
+          eq(orders.paymentStatus, 'paid'),
+          sql`${orders.operationId} = ANY(${operationIds})`
+        )
+      );
 
     // Buscar pedidos já pagos para este fornecedor
     const paidPaymentItems = await db
