@@ -76,12 +76,13 @@ export default function SupplierCreateProduct() {
 
   const createProductMutation = useMutation({
     mutationFn: async (data: CreateProductForm) => {
-      return await apiRequest('/api/supplier/products', 'POST', data);
+      const response = await apiRequest('POST', '/api/supplier/products', data);
+      return await response.json();
     },
-    onSuccess: (response: any) => {
+    onSuccess: (product: any) => {
       // Save product data for success page
       const productData = {
-        id: response.id || 'temp-id',
+        id: product.id || 'temp-id',
         sku: form.getValues().sku,
         name: form.getValues().name,
         description: form.getValues().description,
