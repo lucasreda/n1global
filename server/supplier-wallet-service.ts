@@ -7,7 +7,7 @@ import {
   supplierPaymentItems,
   type SupplierPayment
 } from "@shared/schema";
-import { eq, and, desc, sql, sum } from "drizzle-orm";
+import { eq, and, desc, sql, sum, inArray } from "drizzle-orm";
 
 export interface WalletOrder {
   orderId: string;
@@ -135,7 +135,7 @@ export class SupplierWalletService {
         userId: userProducts.userId,
       })
       .from(userProducts)
-      .where(sql`${userProducts.productId} = ANY(${supplierProductIds})`);
+      .where(inArray(userProducts.productId, supplierProductIds));
 
     if (linkedProducts.length === 0) {
       return {
@@ -162,7 +162,7 @@ export class SupplierWalletService {
         userId: userOperationAccess.userId,
       })
       .from(userOperationAccess)
-      .where(sql`${userOperationAccess.userId} = ANY(${userIds})`);
+      .where(inArray(userOperationAccess.userId, userIds));
 
     const operationIds = Array.from(new Set(operationAccesses.map(oa => oa.operationId)));
 
@@ -188,7 +188,7 @@ export class SupplierWalletService {
       .where(
         and(
           eq(orders.paymentStatus, 'paid'),
-          sql`${orders.operationId} = ANY(${operationIds})`
+          inArray(orders.operationId, operationIds)
         )
       );
 
