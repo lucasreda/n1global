@@ -175,6 +175,7 @@ export default function AdminUsers() {
     const roleColors = {
       'super_admin': 'bg-red-100 text-red-800',
       'admin': 'bg-purple-100 text-purple-800',
+      'admin_financeiro': 'bg-yellow-100 text-yellow-800',
       'store': 'bg-blue-100 text-blue-800',
       'supplier': 'bg-green-100 text-green-800',
     };
@@ -182,6 +183,7 @@ export default function AdminUsers() {
     const roleLabels = {
       'super_admin': 'Super Admin',
       'admin': 'Administrador',
+      'admin_financeiro': 'Administrador Financeiro',
       'store': 'Loja',
       'supplier': 'Fornecedor',
     };
@@ -199,6 +201,8 @@ export default function AdminUsers() {
         return <Shield className="h-4 w-4 text-red-600" />;
       case 'admin':
         return <Shield className="h-4 w-4 text-purple-600" />;
+      case 'admin_financeiro':
+        return <Briefcase className="h-4 w-4 text-yellow-600" />;
       case 'supplier':
         return <Briefcase className="h-4 w-4 text-green-600" />;
       default:
@@ -387,6 +391,7 @@ export default function AdminUsers() {
                 <SelectContent>
                   <SelectItem value="store">Loja</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
                   <SelectItem value="supplier">Fornecedor</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 </SelectContent>
@@ -455,6 +460,7 @@ export default function AdminUsers() {
                 <SelectContent>
                   <SelectItem value="store">Loja</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
                   <SelectItem value="supplier">Fornecedor</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 </SelectContent>
