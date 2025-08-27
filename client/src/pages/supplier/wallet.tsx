@@ -22,6 +22,7 @@ import {
   AlertCircle,
   RefreshCw
 } from "lucide-react";
+import { SupplierLayout } from "@/components/supplier/supplier-layout";
 
 interface WalletOrder {
   orderId: string;
@@ -143,29 +144,30 @@ export default function SupplierWallet() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Wallet className="h-6 w-6 text-blue-400" />
+    <SupplierLayout activeSection="wallet">
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black p-6" style={{ marginLeft: '-16px', marginRight: '-16px', marginTop: '-32px' }}>
+        <div className="max-w-7xl mx-auto space-y-6" style={{ paddingTop: '32px', paddingLeft: '16px', paddingRight: '16px' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Wallet className="h-6 w-6 text-blue-400" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold text-white">Minha Carteira</h1>
+                <p className="text-gray-400">{wallet.supplierName}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-white">Minha Carteira</h1>
-              <p className="text-gray-400">{wallet.supplierName}</p>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetch()}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => refetch()}
-            className="border-gray-700 text-gray-300 hover:bg-gray-800"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
-        </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -417,7 +419,8 @@ export default function SupplierWallet() {
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
-    </div>
+    </SupplierLayout>
   );
 }
