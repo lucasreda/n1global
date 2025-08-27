@@ -72,7 +72,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-black via-black to-gray-950 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-black via-black to-gray-950 flex flex-col admin-layout">
       {/* Header */}
       <div className="h-16 bg-black border-b border-gray-700 flex items-center px-6 relative z-50">
         <img 

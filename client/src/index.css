@@ -143,6 +143,69 @@
     animation: fadeIn 0.5s ease-in-out;
   }
   
+  /* Admin Input Styles - Isolated to /inside routes */
+  .admin-layout input[type="text"],
+  .admin-layout input[type="email"], 
+  .admin-layout input[type="password"],
+  .admin-layout input[type="search"],
+  .admin-layout input[type="number"],
+  .admin-layout textarea,
+  .admin-layout select {
+    background-color: #0f0f0f !important;
+    border-color: #252525 !important;
+    color: #ffffff !important;
+    border-width: 1px !important;
+  }
+  
+  .admin-layout input[type="text"]:focus,
+  .admin-layout input[type="email"]:focus, 
+  .admin-layout input[type="password"]:focus,
+  .admin-layout input[type="search"]:focus,
+  .admin-layout input[type="number"]:focus,
+  .admin-layout textarea:focus,
+  .admin-layout select:focus {
+    background-color: #0f0f0f !important;
+    border-color: #404040 !important;
+    ring-color: #404040 !important;
+    box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
+  }
+  
+  .admin-layout input::placeholder,
+  .admin-layout textarea::placeholder {
+    color: #666666 !important;
+  }
+  
+  /* Select components styling for admin */
+  .admin-layout [data-radix-select-trigger] {
+    background-color: #0f0f0f !important;
+    border-color: #252525 !important;
+    color: #ffffff !important;
+  }
+  
+  .admin-layout [data-radix-select-trigger]:focus {
+    border-color: #404040 !important;
+    box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
+  }
+  
+  /* Additional shadcn/ui component styling for admin */
+  .admin-layout [data-testid*="input"],
+  .admin-layout [class*="Input"],
+  .admin-layout .ui-input,
+  .admin-layout [role="textbox"] {
+    background-color: #0f0f0f !important;
+    border-color: #252525 !important;
+    color: #ffffff !important;
+  }
+  
+  .admin-layout [data-testid*="input"]:focus,
+  .admin-layout [class*="Input"]:focus,
+  .admin-layout .ui-input:focus,
+  .admin-layout [role="textbox"]:focus {
+    background-color: #0f0f0f !important;
+    border-color: #404040 !important;
+    box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
+  }
+  
   .gradient-text {
     background: linear-gradient(135deg, #60a5fa, #a78bfa, #34d399);
     background-clip: text;
