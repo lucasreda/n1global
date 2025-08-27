@@ -535,9 +535,9 @@ export default function SupplierDashboard() {
                                 <Button
                                   onClick={() => setContractToSign(contract)}
                                   disabled={signContractMutation.isPending || rejectContractMutation.isPending}
-                                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  <CheckCircle className="h-4 w-4 text-white" />
                                   Assinar Contrato
                                 </Button>
                                 <Button
@@ -648,7 +648,7 @@ export default function SupplierDashboard() {
             <Button
               onClick={handleSignContract}
               disabled={signContractMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 text-white"
             >
               {signContractMutation.isPending ? 'Assinando...' : 'Confirmar Assinatura'}
             </Button>
