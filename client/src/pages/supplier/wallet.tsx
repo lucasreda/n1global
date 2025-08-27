@@ -206,7 +206,7 @@ export default function SupplierWallet() {
             </div>
             <CardContent className="p-6">
               <div className="min-h-[64px] flex flex-col justify-center">
-                <p className="text-sm text-gray-400 mb-2">Pendentes de Recebimento</p>
+                <p className="text-sm text-gray-400 mb-2">A receber</p>
                 <p className="text-xl font-bold text-green-400 mb-1">
                   {wallet.totalOrdersCount}
                 </p>
@@ -255,7 +255,7 @@ export default function SupplierWallet() {
           {/* Pedidos Disponíveis */}
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardHeader>
-              <CardTitle className="text-white" style={{ fontSize: '20px' }}>Pendentes de Recebimento</CardTitle>
+              <CardTitle className="text-white" style={{ fontSize: '20px' }}>A Receber</CardTitle>
               <p className="text-sm text-gray-400">
                 Pedidos já pagos pelos clientes, aguardando pagamento do financeiro
               </p>
