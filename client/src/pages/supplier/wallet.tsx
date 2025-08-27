@@ -104,11 +104,28 @@ export default function SupplierWallet() {
     }).format(brlAmount);
   };
 
+  const formatBRLDirect = (amount: number) => {
+    // Formatar valor que já está em BRL (sem conversão)
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(amount);
+  };
+
   const formatEUR = (amount: number) => {
     return new Intl.NumberFormat('de-DE', {
       style: 'currency',
       currency: 'EUR'
     }).format(amount);
+  };
+
+  const formatEURFromBRL = (brlAmount: number) => {
+    // Converter BRL para EUR para exibição
+    const eurAmount = brlAmount / 6.3;
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(eurAmount);
   };
 
   const formatDate = (dateString: string) => {
@@ -238,10 +255,10 @@ export default function SupplierWallet() {
                 <p className="text-sm text-gray-400 mb-2">Total Recebido</p>
                 <div className="space-y-0.5">
                   <p className="text-xl font-bold text-purple-400">
-                    {formatBRL(wallet.totalPaid)}
+                    {formatBRLDirect(wallet.totalPaid)}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {formatEUR(wallet.totalPaid)}
+                    {formatEURFromBRL(wallet.totalPaid)}
                   </p>
                 </div>
               </div>
