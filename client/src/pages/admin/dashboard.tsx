@@ -53,55 +53,55 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-gray-800/40 backdrop-blur-sm border-gray-700/60 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-200">Total de Usuários</CardTitle>
+            <Users className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{adminStats?.totalUsers || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{adminStats?.totalUsers || 0}</div>
+            <p className="text-xs text-gray-400">
               usuários no sistema
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800/40 backdrop-blur-sm border-gray-700/60 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Operações</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-200">Operações</CardTitle>
+            <Building2 className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{adminStats?.totalOperations || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{adminStats?.totalOperations || 0}</div>
+            <p className="text-xs text-gray-400">
               operações ativas
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800/40 backdrop-blur-sm border-gray-700/60 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pedidos Totais</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-200">Pedidos Totais</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-gray-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{adminStats?.totalOrders || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{adminStats?.totalOrders || 0}</div>
+            <p className="text-xs text-gray-400">
               pedidos processados
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800/40 backdrop-blur-sm border-gray-700/60 text-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-gray-200">Receita Total</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-green-400">
               €{(adminStats?.totalRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-400">
               receita acumulada
             </p>
           </CardContent>
@@ -111,10 +111,10 @@ export default function AdminDashboard() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Stores Today */}
-        <Card>
+        <Card className="bg-gray-800/40 backdrop-blur-sm border-gray-700/60 text-white">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Trophy className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-lg text-white">
+              <Trophy className="h-5 w-5 text-yellow-400" />
               Top Lojas Hoje
             </CardTitle>
           </CardHeader>
@@ -133,18 +133,18 @@ export default function AdminDashboard() {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{store.storeName}</p>
-                        <p className="text-xs text-muted-foreground">{store.name}</p>
+                        <p className="font-medium text-sm text-white">{store.storeName}</p>
+                        <p className="text-xs text-gray-400">{store.name}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-sm">{store.todayOrders}</p>
-                      <p className="text-xs text-muted-foreground">pedidos</p>
+                      <p className="font-bold text-sm text-white">{store.todayOrders}</p>
+                      <p className="text-xs text-gray-400">pedidos</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-muted-foreground py-4">
+                <p className="text-center text-gray-400 py-4">
                   Nenhum pedido hoje
                 </p>
               )}
@@ -153,10 +153,10 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Top Stores Global */}
-        <Card>
+        <Card className="bg-gray-800/40 backdrop-blur-sm border-gray-700/60 text-white">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-lg text-white">
+              <TrendingUp className="h-5 w-5 text-green-400" />
               Top Lojas Global
             </CardTitle>
           </CardHeader>
@@ -175,18 +175,18 @@ export default function AdminDashboard() {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{store.storeName}</p>
-                        <p className="text-xs text-muted-foreground">{store.name}</p>
+                        <p className="font-medium text-sm text-white">{store.storeName}</p>
+                        <p className="text-xs text-gray-400">{store.name}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-sm">{store.totalOrders}</p>
-                      <p className="text-xs text-muted-foreground">pedidos</p>
+                      <p className="font-bold text-sm text-white">{store.totalOrders}</p>
+                      <p className="text-xs text-gray-400">pedidos</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-center text-muted-foreground py-4">
+                <p className="text-center text-gray-400 py-4">
                   Nenhuma loja encontrada
                 </p>
               )}
@@ -197,9 +197,9 @@ export default function AdminDashboard() {
 
       {/* Orders by Country */}
       {adminStats?.ordersByCountry && adminStats.ordersByCountry.length > 0 && (
-        <Card>
+        <Card className="bg-gray-800/40 backdrop-blur-sm border-gray-700/60 text-white">
           <CardHeader>
-            <CardTitle className="text-lg">Pedidos por País</CardTitle>
+            <CardTitle className="text-lg text-white">Pedidos por País</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -231,12 +231,12 @@ export default function AdminDashboard() {
                 };
                 
                 return (
-                  <div key={country.country} className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div key={country.country} className="text-center p-3 bg-gray-700/40 backdrop-blur-sm border border-gray-600/40 rounded-lg">
                     <div className="flex items-center justify-center gap-1 mb-1">
                       <span className="text-xl">{getCountryFlag(country.country)}</span>
-                      <p className="text-lg font-bold">{country.orders}</p>
+                      <p className="text-lg font-bold text-white">{country.orders}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{country.country}</p>
+                    <p className="text-sm text-gray-400">{country.country}</p>
                   </div>
                 );
               })}

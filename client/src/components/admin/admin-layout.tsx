@@ -72,9 +72,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex flex-col">
       {/* Header */}
-      <div className="h-16 bg-black border-b border-gray-800 flex items-center px-6 relative z-50">
+      <div className="h-16 bg-black border-b border-gray-700 flex items-center px-6 relative z-50">
         <img 
           src={logoImage} 
           alt="Inside Logo" 
@@ -85,7 +85,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
-        <div className="w-48 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col pt-4">
+        <div className="w-48 bg-gray-900/80 border-r border-gray-700 flex flex-col pt-4 backdrop-blur-sm">
           {/* Navigation */}
           <nav className="flex-1 px-3">
             <div className="space-y-1">
@@ -94,8 +94,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   <div 
                     className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2 ${
                       isActive(item.path)
-                        ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400' 
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        ? 'bg-gray-700/60 text-white border border-gray-600' 
+                        : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
@@ -109,12 +109,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* Logout */}
-          <div className="p-3 border-t border-gray-200 dark:border-gray-800">
+          <div className="p-3 border-t border-gray-700">
             <Button 
               onClick={handleLogout}
               variant="ghost" 
               size="sm"
-              className="w-full justify-start text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 p-2"
+              className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800/60 p-2"
             >
               <LogOut className="h-4 w-4 mr-2" />
               <span className="text-sm">Sair</span>
