@@ -3431,10 +3431,37 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   });
 
   // Create new supplier payment
-  app.post("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+  app.post("/api/finance/supplier-payments", async (req: Request, res: Response) => {
+    console.log("💰 RECEIVED PAYMENT REQUEST");
+    
+    // Apply middlewares manually with error handling
+    try {
+      await new Promise<void>((resolve, reject) => {
+        authenticateToken(req as AuthRequest, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch (authError) {
+      console.log("💰 AUTH FAILED:", authError);
+      return;
+    }
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        requireFinanceAdmin(req as AuthRequest, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    } catch (adminError) {
+      console.log("💰 ADMIN CHECK FAILED:", adminError);
+      return;
+    }
+
     try {
       console.log("💰 PAYMENT CREATION REQUEST:", {
-        userId: req.user.id,
+        userId: (req as AuthRequest).user.id,
         paymentData: req.body
       });
 
@@ -3444,7 +3471,7 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
       
       console.log("💰 Getting user store ID...");
       // Get user's store ID
-      const user = await storage.getUser(req.user.id);
+      const user = await storage.getUser((req as AuthRequest).user.id);
       console.log("💰 User found:", { userId: user?.id, storeId: user?.storeId });
       
       if (!user?.storeId) {
