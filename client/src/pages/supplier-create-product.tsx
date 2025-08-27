@@ -103,7 +103,7 @@ export default function SupplierCreateProduct() {
       </div>
 
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6" style={{ marginTop: '10px' }}>
         <h1 className="text-2xl font-bold">Criar Novo Produto</h1>
         <p className="text-muted-foreground">
           Adicione um novo produto ao seu catálogo global
