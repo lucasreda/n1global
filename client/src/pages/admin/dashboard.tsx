@@ -113,7 +113,7 @@ export default function AdminDashboard() {
         {/* Top Stores Today */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Trophy className="h-5 w-5" />
               Top Lojas Hoje
             </CardTitle>
@@ -155,7 +155,7 @@ export default function AdminDashboard() {
         {/* Top Stores Global */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="h-5 w-5" />
               Top Lojas Global
             </CardTitle>
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
       {adminStats?.ordersByCountry && adminStats.ordersByCountry.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Pedidos por País</CardTitle>
+            <CardTitle className="text-lg">Pedidos por País</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
