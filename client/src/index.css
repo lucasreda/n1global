@@ -144,30 +144,26 @@
   }
   
   /* Admin Input Styles - Isolated to /inside routes */
-  .admin-layout input[type="text"],
-  .admin-layout input[type="email"], 
-  .admin-layout input[type="password"],
-  .admin-layout input[type="search"],
-  .admin-layout input[type="number"],
+  .admin-layout input,
   .admin-layout textarea,
-  .admin-layout select {
+  .admin-layout select,
+  .admin-layout .input {
     background-color: #0f0f0f !important;
     border-color: #252525 !important;
     color: #ffffff !important;
     border-width: 1px !important;
+    --tw-ring-color: transparent !important;
   }
   
-  .admin-layout input[type="text"]:focus,
-  .admin-layout input[type="email"]:focus, 
-  .admin-layout input[type="password"]:focus,
-  .admin-layout input[type="search"]:focus,
-  .admin-layout input[type="number"]:focus,
+  .admin-layout input:focus,
   .admin-layout textarea:focus,
-  .admin-layout select:focus {
+  .admin-layout select:focus,
+  .admin-layout .input:focus {
     background-color: #0f0f0f !important;
     border-color: #404040 !important;
-    ring-color: #404040 !important;
+    outline: none !important;
     box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
+    --tw-ring-color: rgba(64, 64, 64, 0.2) !important;
   }
   
   .admin-layout input::placeholder,
@@ -176,34 +172,66 @@
   }
   
   /* Select components styling for admin */
-  .admin-layout [data-radix-select-trigger] {
+  .admin-layout [data-radix-select-trigger],
+  .admin-layout button[role="combobox"] {
     background-color: #0f0f0f !important;
     border-color: #252525 !important;
     color: #ffffff !important;
+    --tw-ring-color: transparent !important;
   }
   
-  .admin-layout [data-radix-select-trigger]:focus {
+  .admin-layout [data-radix-select-trigger]:focus,
+  .admin-layout button[role="combobox"]:focus {
     border-color: #404040 !important;
+    outline: none !important;
     box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
+    --tw-ring-color: rgba(64, 64, 64, 0.2) !important;
   }
   
-  /* Additional shadcn/ui component styling for admin */
-  .admin-layout [data-testid*="input"],
-  .admin-layout [class*="Input"],
-  .admin-layout .ui-input,
-  .admin-layout [role="textbox"] {
+  /* Force override all input-like elements in admin */
+  .admin-layout *[class*="input"],
+  .admin-layout *[class*="Input"],
+  .admin-layout *[data-testid*="input"],
+  .admin-layout *[role="textbox"],
+  .admin-layout *[role="searchbox"],
+  .admin-layout .input-field,
+  .admin-layout .form-input {
     background-color: #0f0f0f !important;
     border-color: #252525 !important;
     color: #ffffff !important;
+    --tw-ring-color: transparent !important;
   }
   
-  .admin-layout [data-testid*="input"]:focus,
-  .admin-layout [class*="Input"]:focus,
-  .admin-layout .ui-input:focus,
-  .admin-layout [role="textbox"]:focus {
+  .admin-layout *[class*="input"]:focus,
+  .admin-layout *[class*="Input"]:focus,
+  .admin-layout *[data-testid*="input"]:focus,
+  .admin-layout *[role="textbox"]:focus,
+  .admin-layout *[role="searchbox"]:focus,
+  .admin-layout .input-field:focus,
+  .admin-layout .form-input:focus {
     background-color: #0f0f0f !important;
     border-color: #404040 !important;
+    outline: none !important;
     box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
+    --tw-ring-color: rgba(64, 64, 64, 0.2) !important;
+  }
+  
+  /* Ultimate override - catch all inputs in admin layout */
+  .admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    background-color: #0f0f0f !important;
+    border: 1px solid #252525 !important;
+    color: #ffffff !important;
+    --tw-ring-shadow: none !important;
+    --tw-ring-offset-shadow: none !important;
+  }
+  
+  .admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+    background-color: #0f0f0f !important;
+    border: 1px solid #404040 !important;
+    color: #ffffff !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
+    --tw-ring-shadow: 0 0 0 2px rgba(64, 64, 64, 0.2) !important;
   }
   
   .gradient-text {
