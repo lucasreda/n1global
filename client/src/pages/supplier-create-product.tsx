@@ -88,8 +88,8 @@ export default function SupplierCreateProduct() {
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
-      {/* Header with back button */}
-      <div className="flex items-center gap-4 mb-6">
+      {/* Back button */}
+      <div className="mb-4">
         <Button
           variant="outline"
           size="sm"
@@ -100,12 +100,14 @@ export default function SupplierCreateProduct() {
           <ArrowLeft className="h-4 w-4" />
           Voltar para Dashboard
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Criar Novo Produto</h1>
-          <p className="text-muted-foreground">
-            Adicione um novo produto ao seu catálogo global
-          </p>
-        </div>
+      </div>
+
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Criar Novo Produto</h1>
+        <p className="text-muted-foreground">
+          Adicione um novo produto ao seu catálogo global
+        </p>
       </div>
 
       {/* Main Form */}
