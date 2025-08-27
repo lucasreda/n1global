@@ -109,13 +109,17 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
             <h3 className="font-medium text-gray-900 dark:text-gray-100 leading-snug mb-1">
               {product.name}
             </h3>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded">
                 {product.sku}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {product.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
               </span>
+            </div>
+            
+            {/* Status Badge */}
+            <div className="mb-2">
               {getStatusBadge(product.status || 'pending')}
             </div>
             
@@ -165,12 +169,14 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           </div>
         </div>
 
-        {/* Description */}
-        {product.description && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-            {product.description}
-          </p>
-        )}
+        {/* Description - Fixed height area */}
+        <div className="mb-4 h-10 flex items-start">
+          {product.description && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2">
+              {product.description}
+            </p>
+          )}
+        </div>
 
         {/* Details Grid */}
         <div className="grid grid-cols-2 gap-3 text-sm">
