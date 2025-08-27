@@ -167,8 +167,8 @@ export default function FinancePagamentos() {
         </div>
 
         {/* Payment Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Fornecedores */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* Fornecedores - Card mais largo */}
           <Card style={{ backgroundColor: '#0f0f0f', borderColor: '#252525' }}>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -283,7 +283,7 @@ export default function FinancePagamentos() {
             </CardContent>
           </Card>
 
-          {/* Afiliados */}
+          {/* Afiliados - Card em baixo */}
           <Card style={{ backgroundColor: '#0f0f0f', borderColor: '#252525' }}>
             <CardHeader>
               <div className="flex items-center justify-between">
