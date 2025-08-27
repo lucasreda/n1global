@@ -254,11 +254,17 @@ export class SupplierWalletService {
     
     // Calcular valor total pendente baseado na diferença entre vendido e pago
     let totalToReceive = 0;
+    let totalPendingUnits = 0; // DEBUG: contador de unidades pendentes
+    
+    console.log('🔍 DEBUG - Cálculo de unidades pendentes:');
     for (const [sku, totalSold] of Array.from(totalQuantitiesBySku.entries())) {
       const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
       const pendingQuantity = Math.max(0, totalSold - paidQuantity);
       
+      console.log(`  SKU: ${sku} | Vendido: ${totalSold} | Pago: ${paidQuantity} | Pendente: ${pendingQuantity}`);
+      
       if (pendingQuantity > 0) {
+        totalPendingUnits += pendingQuantity;
         const supplierProduct = supplierProducts.find(p => p.sku === sku);
         if (supplierProduct && supplierProduct.price) {
           const unitPrice = parseFloat(supplierProduct.price);
@@ -266,6 +272,8 @@ export class SupplierWalletService {
         }
       }
     }
+    
+    console.log(`🔍 DEBUG - Total unidades pendentes: ${totalPendingUnits}`);
 
     // Processar pedidos individuais para listagem (apenas pedidos elegíveis)
     for (const order of eligibleOrders) {
