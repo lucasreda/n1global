@@ -633,9 +633,11 @@ export default function AdminProducts() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          {product.status === 'approved' && (
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                           {product.status === 'pending' && (
                             <Button 
                               variant="outline" 
