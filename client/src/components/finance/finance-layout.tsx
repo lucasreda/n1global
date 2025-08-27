@@ -126,31 +126,15 @@ export function FinanceLayout({ children }: FinanceLayoutProps) {
           </div>
         </nav>
 
-        {/* User Info */}
+        {/* Logout */}
         <div className="p-3 border-t border-gray-700">
-          <div className="flex items-center gap-3 text-gray-300">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-medium">
-              {user?.profileImageUrl ? (
-                <img 
-                  src={user.profileImageUrl} 
-                  alt="Profile" 
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <span>
-                  {user?.firstName && user?.lastName 
-                    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-                    : user?.email 
-                      ? user.email.substring(0, 2).toUpperCase()
-                      : 'U'
-                  }
-                </span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.email}</p>
-            </div>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800/60 p-2 rounded-lg flex items-center gap-2 text-sm transition-all duration-200"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sair</span>
+          </button>
         </div>
       </aside>
 
