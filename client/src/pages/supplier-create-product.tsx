@@ -217,7 +217,7 @@ export default function SupplierCreateProduct() {
                 <Label htmlFor="price" className="flex items-center gap-2">
                   Preço B2B (€) *
                   {profitMargin > 0 && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                    <span className="text-xs bg-green-900/50 text-green-400 px-2 py-1 rounded border border-green-700">
                       {profitMargin.toFixed(1)}% margem
                     </span>
                   )}
@@ -229,7 +229,7 @@ export default function SupplierCreateProduct() {
                   {...form.register("price")}
                   placeholder="0.00"
                   data-testid="input-price"
-                  className={profitMargin > 0 ? "border-green-300 bg-green-50" : ""}
+                  className={profitMargin > 0 ? "border-green-700 bg-green-900/20" : ""}
                 />
                 {form.formState.errors.price && (
                   <p className="text-sm text-red-500">{form.formState.errors.price.message}</p>
@@ -284,29 +284,29 @@ export default function SupplierCreateProduct() {
             </div>
 
             {/* Calculadora de Preço */}
-            <div className="space-y-4 p-4 bg-blue-50 rounded-lg border">
+            <div className="space-y-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
               <div className="flex items-center gap-2 mb-2">
-                <Calculator className="h-4 w-4 text-blue-600" />
-                <Label className="text-sm font-medium text-blue-800">Calculadora de Margem</Label>
+                <Calculator className="h-4 w-4 text-blue-400" />
+                <Label className="text-sm font-medium text-gray-200">Calculadora de Margem</Label>
               </div>
               
               {costPrice > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm text-blue-700">Margem Atual</Label>
-                    <div className="px-3 py-2 bg-white rounded border text-sm font-medium">
+                    <Label className="text-sm text-gray-300">Margem Atual</Label>
+                    <div className="px-3 py-2 bg-gray-900 rounded border border-gray-600 text-sm font-medium text-gray-100">
                       {profitMargin.toFixed(1)}%
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-sm text-blue-700">Preço para 30% margem</Label>
+                    <Label className="text-sm text-gray-300">Preço para 30% margem</Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => calculatePriceFromMargin(30)}
-                      className="w-full justify-start"
+                      className="w-full justify-start bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600"
                       data-testid="button-margin-30"
                     >
                       €{(costPrice / 0.7).toFixed(2)}
@@ -314,13 +314,13 @@ export default function SupplierCreateProduct() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-sm text-blue-700">Preço para 50% margem</Label>
+                    <Label className="text-sm text-gray-300">Preço para 50% margem</Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => calculatePriceFromMargin(50)}
-                      className="w-full justify-start"
+                      className="w-full justify-start bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600"
                       data-testid="button-margin-50"
                     >
                       €{(costPrice / 0.5).toFixed(2)}
