@@ -56,9 +56,6 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
           Dashboard
         </h1>
-        <p className="text-muted-foreground mt-2">
-          Visão geral do sistema e métricas principais
-        </p>
       </div>
 
       {/* Stats Grid */}
