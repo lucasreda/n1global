@@ -194,16 +194,16 @@ export default function SupplierWallet() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Pedidos Pagos Acumulados</p>
-                  <p className="text-2xl font-bold text-blue-400">
-                    {wallet.totalOrdersPaid}
+                  <p className="text-sm text-gray-400">Pedidos Pagos (Pendentes de Recebimento)</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {wallet.totalOrdersCount}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {wallet.totalOrdersCount} pendentes
+                    {wallet.totalOrdersPaid} já recebidos
                   </p>
                 </div>
-                <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-blue-400" />
+                <div className="p-3 bg-yellow-500/10 rounded-lg">
+                  <Clock className="h-6 w-6 text-yellow-400" />
                 </div>
               </div>
             </CardContent>
@@ -251,9 +251,9 @@ export default function SupplierWallet() {
           {/* Pedidos Disponíveis */}
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardHeader>
-              <CardTitle className="text-xl text-white">Pedidos Disponíveis para Recebimento</CardTitle>
+              <CardTitle className="text-xl text-white">Pedidos Pagos - Pendentes de Recebimento</CardTitle>
               <p className="text-sm text-gray-400">
-                Pedidos confirmados aguardando processamento de pagamento
+                Pedidos já pagos pelos clientes, aguardando pagamento do financeiro
               </p>
             </CardHeader>
             <CardContent>
