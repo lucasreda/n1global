@@ -215,15 +215,12 @@ export class SupplierWalletService {
       )
       .groupBy(supplierPaymentItems.productSku);
 
-    console.log('🔍 DEBUG - Raw paid items from DB:', paidPaymentItems);
-
     // Criar mapa de quantidades já pagas por SKU
     const paidQuantitiesBySku = new Map<string, number>();
     for (const item of paidPaymentItems) {
       if (item.productSku && item.paidQuantity) {
         const quantity = typeof item.paidQuantity === 'string' ? parseInt(item.paidQuantity) : item.paidQuantity;
         paidQuantitiesBySku.set(item.productSku, quantity);
-        console.log(`🔍 DEBUG - Setting paid quantity for ${item.productSku}: ${quantity}`);
       }
     }
 
@@ -246,27 +243,18 @@ export class SupplierWalletService {
     
     // Calcular valor total pendente baseado na diferença entre vendido e pago
     let totalToReceive = 0;
-    console.log('🔍 DEBUG - Total quantities sold:', Array.from(totalQuantitiesBySku.entries()));
-    console.log('🔍 DEBUG - Paid quantities:', Array.from(paidQuantitiesBySku.entries()));
-    
     for (const [sku, totalSold] of totalQuantitiesBySku) {
       const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
       const pendingQuantity = Math.max(0, totalSold - paidQuantity);
-      
-      console.log(`🔍 DEBUG - SKU ${sku}: sold=${totalSold}, paid=${paidQuantity}, pending=${pendingQuantity}`);
       
       if (pendingQuantity > 0) {
         const supplierProduct = supplierProducts.find(p => p.sku === sku);
         if (supplierProduct && supplierProduct.price) {
           const unitPrice = parseFloat(supplierProduct.price);
-          const productValue = unitPrice * pendingQuantity;
-          totalToReceive += productValue;
-          console.log(`🔍 DEBUG - Adding ${productValue} to total (${unitPrice} × ${pendingQuantity})`);
+          totalToReceive += unitPrice * pendingQuantity;
         }
       }
     }
-    
-    console.log('🔍 DEBUG - Final totalToReceive:', totalToReceive);
 
     // Processar pedidos individuais para listagem
     for (const order of allOrders) {
@@ -393,10 +381,10 @@ export class SupplierWalletService {
 
     const totalPaid = parseFloat(totalPaidResult?.total || '0');
 
-    // Calcular total de pedidos já pagos
-    const [totalOrdersPaidResult] = await db
+    // Calcular total de unidades já pagas (não pedidos)
+    const [totalUnitsPaidResult] = await db
       .select({
-        count: sql<number>`count(distinct ${supplierPaymentItems.orderId})`,
+        totalUnits: sql<number>`sum(${supplierPaymentItems.quantity})`,
       })
       .from(supplierPaymentItems)
       .leftJoin(supplierPayments, eq(supplierPaymentItems.paymentId, supplierPayments.id))
@@ -407,7 +395,7 @@ export class SupplierWalletService {
         )
       );
 
-    const totalOrdersPaid = totalOrdersPaidResult?.count || 0;
+    const totalOrdersPaid = totalUnitsPaidResult?.totalUnits || 0;
 
     // Calcular próxima data de pagamento (10 dias úteis após o último pagamento)
     let nextPaymentDate: Date;

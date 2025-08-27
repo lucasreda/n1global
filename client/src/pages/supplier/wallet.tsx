@@ -69,15 +69,7 @@ export default function SupplierWallet() {
     queryKey: ["/api/supplier/wallet"],
   });
 
-  // Debug log para verificar os dados recebidos
-  console.log('🔍 FRONTEND DEBUG - Wallet data:', wallet);
-  
-  // Log adicional para verificar valores específicos
-  if (wallet) {
-    console.log('🔍 FRONTEND DEBUG - totalToReceive:', wallet.totalToReceive);
-    console.log('🔍 FRONTEND DEBUG - totalOrdersCount:', wallet.totalOrdersCount);
-    console.log('🔍 FRONTEND DEBUG - availableOrders length:', wallet.availableOrders.length);
-  }
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -204,12 +196,12 @@ export default function SupplierWallet() {
             </div>
             <CardContent className="p-6">
               <div className="min-h-[64px] flex flex-col justify-center">
-                <p className="text-sm text-gray-400 mb-2">A receber</p>
+                <p className="text-sm text-gray-400 mb-2">Unidades Pendentes</p>
                 <p className="text-xl font-bold text-green-400 mb-1">
-                  {wallet.totalOrdersCount}
+                  {Math.ceil((wallet.totalToReceive / 12.5))} un.
                 </p>
                 <p className="text-xs text-gray-500">
-                  {wallet.totalOrdersPaid} já recebidos
+                  {wallet.totalOrdersPaid} já pagas
                 </p>
               </div>
             </CardContent>
