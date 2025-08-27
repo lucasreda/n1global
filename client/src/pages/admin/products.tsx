@@ -329,7 +329,7 @@ function CostConfigurationModal({ product, open, onClose }: { product: Product; 
           <Button 
             onClick={() => approveMutation.mutate()}
             disabled={approveMutation.isPending}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+            className="flex items-center gap-2 text-white"
           >
             <CheckCircle className="h-4 w-4 text-white" />
             {approveMutation.isPending ? 'Aprovando...' : 'Aprovar Produto'}
