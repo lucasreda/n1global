@@ -253,7 +253,7 @@ export default function SupplierWallet() {
           {/* Pedidos Disponíveis */}
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardHeader>
-              <CardTitle className="text-xl text-white">Pedidos Pagos - Pendentes de Recebimento</CardTitle>
+              <CardTitle className="text-white" style={{ fontSize: '20px' }}>Pendentes de Recebimento</CardTitle>
               <p className="text-sm text-gray-400">
                 Pedidos já pagos pelos clientes, aguardando pagamento do financeiro
               </p>
