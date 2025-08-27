@@ -100,11 +100,11 @@ export class FinanceService {
     const productSkus = supplierProducts.map(p => p.sku);
 
     // Buscar todos os pedidos que contém produtos deste fornecedor
-    // Filtrar por status de pagamento para considerar apenas pedidos pagos
+    // Filtrar por status 'delivered' para considerar pedidos elegíveis para pagamento ao fornecedor
     const allOrders = await db
       .select()
       .from(orders)
-      .where(eq(orders.paymentStatus, 'paid'));
+      .where(eq(orders.status, 'delivered'));
 
     // Buscar IDs dos pedidos que já foram pagos para o fornecedor
     const paidPaymentItems = await db
@@ -165,6 +165,13 @@ export class FinanceService {
           products: productNames,
         });
       }
+    }
+
+    console.log('📊 FINANCE SERVICE DEBUG:');
+    console.log(`- Total orders processed: ${allOrders.length}`);
+    console.log(`- Pending orders: ${pendingOrders.length}`);
+    console.log(`- Total orders value: €${totalOrdersValue}`);
+    console.log(`- Paid order IDs excluded: ${paidOrderIds.size}`);
     }
 
     // Calcular valor já pago para este fornecedor
