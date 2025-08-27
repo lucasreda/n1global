@@ -3431,64 +3431,33 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   });
 
   // Create new supplier payment
-  app.post("/api/finance/supplier-payments", async (req: Request, res: Response) => {
-    console.log("💰 RECEIVED PAYMENT REQUEST");
+  app.post("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    console.log("💰 RECEIVED PAYMENT REQUEST - Body:", req.body);
+    console.log("💰 User ID:", req.user?.id);
     
-    // Apply middlewares manually with error handling
     try {
-      await new Promise<void>((resolve, reject) => {
-        authenticateToken(req as AuthRequest, res, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-    } catch (authError) {
-      console.log("💰 AUTH FAILED:", authError);
-      return;
-    }
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        requireFinanceAdmin(req as AuthRequest, res, (err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-    } catch (adminError) {
-      console.log("💰 ADMIN CHECK FAILED:", adminError);
-      return;
-    }
-
-    try {
-      console.log("💰 PAYMENT CREATION REQUEST:", {
-        userId: (req as AuthRequest).user.id,
-        paymentData: req.body
-      });
-
       const paymentData = req.body;
       const { FinanceService } = await import("./finance-service");
       const financeService = new FinanceService();
       
       console.log("💰 Getting user store ID...");
       // Get user's store ID
-      const user = await storage.getUser((req as AuthRequest).user.id);
+      const user = await storage.getUser(req.user.id);
       console.log("💰 User found:", { userId: user?.id, storeId: user?.storeId });
       
       if (!user?.storeId) {
+        console.log("💰 ERROR: No store ID found for user");
         return res.status(400).json({ message: "Usuário não possui store associado" });
       }
 
-      console.log("💰 Creating payment...");
+      console.log("💰 Creating payment with data:", paymentData);
       const payment = await financeService.createSupplierPayment(paymentData, user.storeId);
       console.log("💰 Payment created successfully:", payment.id);
       
       res.json(payment);
     } catch (error) {
       console.error("💰 Error creating supplier payment:", error);
-      console.error("💰 Error details:", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error("💰 Error stack:", error instanceof Error ? error.stack : 'No stack');
       res.status(500).json({ 
         message: error instanceof Error ? error.message : "Erro ao criar pagamento" 
       });
