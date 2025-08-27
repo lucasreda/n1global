@@ -1,3 +1,4 @@
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,16 @@ export default function SupplierWallet() {
     queryKey: ["/api/supplier/wallet"],
     staleTime: 0, // Always fetch fresh data
     cacheTime: 0, // Don't cache
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
+
+  // Debug: log payment values
+  React.useEffect(() => {
+    if (wallet?.recentPayments) {
+      console.log('🔍 Frontend payments:', wallet.recentPayments);
+    }
+  }, [wallet]);
 
 
 
