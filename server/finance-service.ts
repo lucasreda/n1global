@@ -208,11 +208,17 @@ export class FinanceService {
       throw new Error('Fornecedor não tem valores pendentes para pagamento');
     }
 
+    // Converter dueDate string para Date se necessário
+    const processedPayment = {
+      ...payment,
+      dueDate: payment.dueDate ? new Date(payment.dueDate) : new Date(),
+    };
+
     // Criar o pagamento
     const [newPayment] = await db
       .insert(supplierPayments)
       .values({
-        ...payment,
+        ...processedPayment,
         storeId,
         amount: balance.pendingAmount.toString(),
       })
