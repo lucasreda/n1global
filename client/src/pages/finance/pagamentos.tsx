@@ -33,7 +33,9 @@ interface SupplierPayment {
   supplierId: string;
   supplierName: string;
   amount: string;
+  amountBRL?: string;
   currency: string;
+  exchangeRate?: string;
   status: 'pending' | 'approved' | 'paid' | 'rejected' | 'cancelled';
   paymentMethod: string;
   description: string;
@@ -218,7 +220,20 @@ export default function FinancePagamentos() {
                               </div>
                             </TableCell>
                           <TableCell className="text-white font-medium">
-                            €{parseFloat(payment.amount).toFixed(2)}
+                            {payment.amountBRL ? (
+                              <div>
+                                <div className="text-green-400 font-bold">
+                                  R$ {parseFloat(payment.amountBRL).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  €{parseFloat(payment.amount).toFixed(2)}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-yellow-400">
+                                €{parseFloat(payment.amount).toFixed(2)}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusColor(payment.status)}>

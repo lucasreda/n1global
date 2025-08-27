@@ -86,8 +86,8 @@ export default function SupplierWallet() {
   };
 
   const formatBRL = (amount: number) => {
-    // Conversão aproximada EUR para BRL (taxa padrão 5.5)
-    const brlAmount = amount * 5.5;
+    // Conversão EUR para BRL usando taxa atual (aproximada 6.3)
+    const brlAmount = amount * 6.3;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'

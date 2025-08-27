@@ -521,6 +521,11 @@ export type InsertUserProduct = z.infer<typeof insertUserProductSchema>;
 export type LinkProductBySku = z.infer<typeof linkProductBySkuSchema>;
 
 export type SupplierPayment = typeof supplierPayments.$inferSelect;
+export type SupplierPaymentWithDetails = SupplierPayment & {
+  supplierName?: string;
+  amountBRL?: string;
+  exchangeRate?: string;
+};
 export type InsertSupplierPayment = z.infer<typeof insertSupplierPaymentSchema>;
 
 export type SupplierPaymentItem = typeof supplierPaymentItems.$inferSelect;
