@@ -59,6 +59,7 @@ interface SupplierWallet {
   availableOrders: WalletOrder[];
   recentPayments: RecentPayment[];
   totalPaid: number;
+  totalOrdersPaid: number;
   averageOrderValue: number;
 }
 
@@ -69,6 +70,22 @@ export default function SupplierWallet() {
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  };
+
+  const formatBRL = (amount: number) => {
+    // Conversão aproximada EUR para BRL (taxa padrão 5.5)
+    const brlAmount = amount * 5.5;
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(brlAmount);
+  };
+
+  const formatEUR = (amount: number) => {
+    return new Intl.NumberFormat('de-DE', {
       style: 'currency',
       currency: 'EUR'
     }).format(amount);
@@ -157,9 +174,14 @@ export default function SupplierWallet() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400">Total a Receber</p>
-                  <p className="text-2xl font-bold text-green-400">
-                    {formatCurrency(wallet.totalToReceive)}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold text-green-400">
+                      {formatBRL(wallet.totalToReceive)}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {formatEUR(wallet.totalToReceive)}
+                    </p>
+                  </div>
                 </div>
                 <div className="p-3 bg-green-500/10 rounded-lg">
                   <DollarSign className="h-6 w-6 text-green-400" />
@@ -172,13 +194,16 @@ export default function SupplierWallet() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Pedidos Pendentes</p>
+                  <p className="text-sm text-gray-400">Pedidos Pagos Acumulados</p>
                   <p className="text-2xl font-bold text-blue-400">
-                    {wallet.totalOrdersCount}
+                    {wallet.totalOrdersPaid}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {wallet.totalOrdersCount} pendentes
                   </p>
                 </div>
                 <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <Package className="h-6 w-6 text-blue-400" />
+                  <CheckCircle className="h-6 w-6 text-blue-400" />
                 </div>
               </div>
             </CardContent>
@@ -205,9 +230,14 @@ export default function SupplierWallet() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400">Total Recebido</p>
-                  <p className="text-2xl font-bold text-purple-400">
-                    {formatCurrency(wallet.totalPaid)}
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold text-purple-400">
+                      {formatBRL(wallet.totalPaid)}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {formatEUR(wallet.totalPaid)}
+                    </p>
+                  </div>
                 </div>
                 <div className="p-3 bg-purple-500/10 rounded-lg">
                   <TrendingUp className="h-6 w-6 text-purple-400" />

@@ -53,6 +53,7 @@ export interface SupplierWallet {
   
   // Estatísticas
   totalPaid: number;
+  totalOrdersPaid: number; // Total de pedidos já pagos
   averageOrderValue: number;
 }
 
@@ -326,6 +327,22 @@ export class SupplierWalletService {
 
     const totalPaid = parseFloat(totalPaidResult?.total || '0');
 
+    // Calcular total de pedidos já pagos
+    const [totalOrdersPaidResult] = await db
+      .select({
+        count: sql<number>`count(distinct ${supplierPaymentItems.orderId})`,
+      })
+      .from(supplierPaymentItems)
+      .leftJoin(supplierPayments, eq(supplierPaymentItems.paymentId, supplierPayments.id))
+      .where(
+        and(
+          eq(supplierPayments.supplierId, supplierId),
+          eq(supplierPayments.status, 'paid')
+        )
+      );
+
+    const totalOrdersPaid = totalOrdersPaidResult?.count || 0;
+
     // Calcular próxima data de pagamento (10 dias úteis após o último pagamento)
     let nextPaymentDate: Date;
     if (recentPayments.length > 0 && recentPayments[0].paidAt) {
@@ -349,6 +366,7 @@ export class SupplierWalletService {
       availableOrders,
       recentPayments,
       totalPaid,
+      totalOrdersPaid,
       averageOrderValue,
     };
   }
