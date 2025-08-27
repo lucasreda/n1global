@@ -196,61 +196,7 @@ export default function SupplierCreateProduct() {
               </Select>
             </div>
 
-            {/* Pricing */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="costPrice">Custo de Produção (€) *</Label>
-                <Input
-                  id="costPrice"
-                  type="number"
-                  step="0.01"
-                  {...form.register("costPrice")}
-                  placeholder="0.00"
-                  data-testid="input-cost-price"
-                />
-                {form.formState.errors.costPrice && (
-                  <p className="text-sm text-red-500">{form.formState.errors.costPrice.message}</p>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price" className="flex items-center gap-2">
-                  Preço B2B (€) *
-                  {profitMargin > 0 && (
-                    <span className="text-xs bg-green-900/50 text-green-400 px-2 py-1 rounded border border-green-700">
-                      {profitMargin.toFixed(1)}% margem
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  {...form.register("price")}
-                  placeholder="0.00"
-                  data-testid="input-price"
-                  className={profitMargin > 0 ? "border-green-700 bg-green-900/20" : ""}
-                />
-                {form.formState.errors.price && (
-                  <p className="text-sm text-red-500">{form.formState.errors.price.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="shippingCost">Custo de Envio (€)</Label>
-                <Input
-                  id="shippingCost"
-                  type="number"
-                  step="0.01"
-                  {...form.register("shippingCost")}
-                  placeholder="0.00"
-                  data-testid="input-shipping-cost"
-                />
-                {form.formState.errors.shippingCost && (
-                  <p className="text-sm text-red-500">{form.formState.errors.shippingCost.message}</p>
-                )}
-              </div>
-            </div>
 
             {/* Inventory */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -283,15 +229,57 @@ export default function SupplierCreateProduct() {
               </div>
             </div>
 
-            {/* Calculadora de Preço */}
+            {/* Calculadora de Preço e Margem */}
             <div className="space-y-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-4">
                 <Calculator className="h-4 w-4 text-blue-400" />
                 <Label className="text-sm font-medium text-gray-200">Calculadora de Margem</Label>
               </div>
               
+              {/* Campos de Preço */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="costPrice">Custo de Produção (€) *</Label>
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    step="0.01"
+                    {...form.register("costPrice")}
+                    placeholder="0.00"
+                    data-testid="input-cost-price"
+                  />
+                  {form.formState.errors.costPrice && (
+                    <p className="text-sm text-red-500">{form.formState.errors.costPrice.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="price" className="flex items-center gap-2">
+                    Preço B2B (€) *
+                    {profitMargin > 0 && (
+                      <span className="text-xs bg-green-900/50 text-green-400 px-2 py-1 rounded border border-green-700">
+                        {profitMargin.toFixed(1)}% margem
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    {...form.register("price")}
+                    placeholder="0.00"
+                    data-testid="input-price"
+                    className={profitMargin > 0 ? "border-green-700 bg-green-900/20" : ""}
+                  />
+                  {form.formState.errors.price && (
+                    <p className="text-sm text-red-500">{form.formState.errors.price.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Calculadora Automática */}
               {costPrice > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-600">
                   <div className="space-y-2">
                     <Label className="text-sm text-gray-300">Margem Atual</Label>
                     <div className="px-3 py-2 bg-gray-900 rounded border border-gray-600 text-sm font-medium text-gray-100">
@@ -300,7 +288,7 @@ export default function SupplierCreateProduct() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-sm text-gray-300">Preço para 30% margem</Label>
+                    <Label className="text-sm text-gray-300">Calcular para 30%</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -314,7 +302,7 @@ export default function SupplierCreateProduct() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-sm text-gray-300">Preço para 50% margem</Label>
+                    <Label className="text-sm text-gray-300">Calcular para 50%</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -327,6 +315,22 @@ export default function SupplierCreateProduct() {
                     </Button>
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* Custo de Envio */}
+            <div className="space-y-2">
+              <Label htmlFor="shippingCost">Custo de Envio (€)</Label>
+              <Input
+                id="shippingCost"
+                type="number"
+                step="0.01"
+                {...form.register("shippingCost")}
+                placeholder="0.00"
+                data-testid="input-shipping-cost"
+              />
+              {form.formState.errors.shippingCost && (
+                <p className="text-sm text-red-500">{form.formState.errors.shippingCost.message}</p>
               )}
             </div>
 
