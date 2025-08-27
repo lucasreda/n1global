@@ -1,8 +1,19 @@
 import { FinanceLayout } from "@/components/finance/finance-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, BarChart3, PieChart } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
+interface PaymentStats {
+  pending: { count: number; total: number };
+  approved: { count: number; total: number };
+  paid: { count: number; total: number };
+  rejected: { count: number; total: number };
+}
 
 export default function FinanceDashboard() {
+  const { data: stats, isLoading } = useQuery<PaymentStats>({
+    queryKey: ["/api/finance/payment-stats"],
+  });
   return (
     <FinanceLayout>
       <div className="space-y-6">
@@ -20,52 +31,60 @@ export default function FinanceDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-400" />
+              <CardTitle className="text-sm font-medium">Total Pendente</CardTitle>
+              <DollarSign className="h-4 w-4 text-yellow-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">€45.231</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {isLoading ? "Carregando..." : `€${stats?.pending.total.toFixed(2) || "0.00"}`}
+              </div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-500">+20.1%</span> vs mês anterior
+                {stats?.pending.count || 0} pagamentos pendentes
               </p>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Custos Totais</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">€28.456</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-red-500">+12.3%</span> vs mês anterior
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Aprovado</CardTitle>
               <TrendingUp className="h-4 w-4 text-blue-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">€16.775</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {isLoading ? "Carregando..." : `€${stats?.approved.total.toFixed(2) || "0.00"}`}
+              </div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-500">+32.4%</span> vs mês anterior
+                {stats?.approved.count || 0} pagamentos aprovados
               </p>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Margem de Lucro</CardTitle>
-              <BarChart3 className="h-4 w-4 text-purple-400" />
+              <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
+              <CreditCard className="h-4 w-4 text-green-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">37.1%</div>
+              <div className="text-2xl font-bold text-green-600">
+                {isLoading ? "Carregando..." : `€${stats?.paid.total.toFixed(2) || "0.00"}`}
+              </div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-500">+8.2%</span> vs mês anterior
+                {stats?.paid.count || 0} pagamentos realizados
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Rejeitado</CardTitle>
+              <TrendingDown className="h-4 w-4 text-red-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {isLoading ? "Carregando..." : `€${stats?.rejected.total.toFixed(2) || "0.00"}`}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.rejected.count || 0} pagamentos rejeitados
               </p>
             </CardContent>
           </Card>
