@@ -43,7 +43,7 @@ export interface SupplierWallet {
   
   // Valores pendentes
   totalToReceive: number;
-  totalOrdersCount: number;
+  totalOrdersCount: number; // Total de UNIDADES pendentes (não pedidos)
   nextPaymentDate: string;
   
   // Pedidos disponíveis para receber
@@ -435,7 +435,7 @@ export class SupplierWalletService {
       supplierName: supplier.name,
       supplierEmail: supplier.email,
       totalToReceive,
-      totalOrdersCount: availableOrders.length,
+      totalOrdersCount: totalPendingUnits, // Total de UNIDADES pendentes, não pedidos
       nextPaymentDate: nextPaymentDate.toISOString(),
       availableOrders,
       recentPayments,
