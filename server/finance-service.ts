@@ -163,10 +163,10 @@ export class FinanceService {
     console.log(`- Total orders value: €${totalOrdersValue}`);
     console.log(`- Paid order IDs excluded: ${paidOrderIds.size}`);
 
-    // Calcular valor já pago para este fornecedor
+    // Calcular valor já pago para este fornecedor (em EUR)
     const paidPayments = await db
       .select({
-        total: sum(supplierPayments.amount),
+        total: sum(supplierPayments.amount), // Manter EUR para consistência com totalOrdersValue
       })
       .from(supplierPayments)
       .where(
@@ -329,7 +329,7 @@ export class FinanceService {
       .select({
         status: supplierPayments.status,
         count: sql<number>`count(*)`,
-        total: sum(supplierPayments.amount),
+        total: sum(supplierPayments.amountBRL), // Usar valor em BRL
       })
       .from(supplierPayments)
       .groupBy(supplierPayments.status);

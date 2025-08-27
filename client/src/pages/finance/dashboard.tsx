@@ -4,10 +4,10 @@ import { DollarSign, TrendingUp, TrendingDown, CreditCard, BarChart3, PieChart }
 import { useQuery } from "@tanstack/react-query";
 
 interface PaymentStats {
-  pending: { count: number; total: number };
-  approved: { count: number; total: number };
-  paid: { count: number; total: number };
-  rejected: { count: number; total: number };
+  pending: { count: number; total: number }; // EUR
+  approved: { count: number; total: number }; // BRL
+  paid: { count: number; total: number }; // BRL  
+  rejected: { count: number; total: number }; // BRL
 }
 
 export default function FinanceDashboard() {
@@ -57,10 +57,10 @@ export default function FinanceDashboard() {
             <CardContent>
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-blue-600">
-                  {isLoading ? "Carregando..." : `R$ ${((stats?.approved.total || 0) * 6.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                  {isLoading ? "Carregando..." : `R$ ${(stats?.approved.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                 </div>
                 <div className="text-sm text-gray-400">
-                  €{stats?.approved.total.toFixed(2) || "0.00"}
+                  €{((stats?.approved.total || 0) / 6.3).toFixed(2)}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
@@ -77,10 +77,10 @@ export default function FinanceDashboard() {
             <CardContent>
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-green-600">
-                  {isLoading ? "Carregando..." : `R$ ${((stats?.paid.total || 0) * 6.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                  {isLoading ? "Carregando..." : `R$ ${(stats?.paid.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                 </div>
                 <div className="text-sm text-gray-400">
-                  €{stats?.paid.total.toFixed(2) || "0.00"}
+                  €{((stats?.paid.total || 0) / 6.3).toFixed(2)}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
@@ -97,10 +97,10 @@ export default function FinanceDashboard() {
             <CardContent>
               <div className="space-y-1">
                 <div className="text-2xl font-bold text-red-600">
-                  {isLoading ? "Carregando..." : `R$ ${((stats?.rejected.total || 0) * 6.3).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                  {isLoading ? "Carregando..." : `R$ ${(stats?.rejected.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                 </div>
                 <div className="text-sm text-gray-400">
-                  €{stats?.rejected.total.toFixed(2) || "0.00"}
+                  €{((stats?.rejected.total || 0) / 6.3).toFixed(2)}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
