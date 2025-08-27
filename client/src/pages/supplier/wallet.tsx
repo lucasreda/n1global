@@ -186,17 +186,15 @@ export default function SupplierWallet() {
               <DollarSign className="h-3 w-3 text-green-400/60" />
             </div>
             <CardContent className="p-6">
-              <div className="h-16">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-400 mb-2">Total a Receber</p>
-                  <div className="space-y-0.5">
-                    <p className="text-xl font-bold text-green-400">
-                      {formatBRL(wallet.totalToReceive)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatEUR(wallet.totalToReceive)}
-                    </p>
-                  </div>
+              <div className="min-h-[64px] flex flex-col justify-center">
+                <p className="text-sm text-gray-400 mb-2">Total a Receber</p>
+                <div className="space-y-0.5">
+                  <p className="text-xl font-bold text-green-400">
+                    {formatBRL(wallet.totalToReceive)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatEUR(wallet.totalToReceive)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -207,16 +205,14 @@ export default function SupplierWallet() {
               <Package className="h-3 w-3 text-green-400/60" />
             </div>
             <CardContent className="p-6">
-              <div className="h-16">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-400 mb-2">Pendentes de Recebimento</p>
-                  <p className="text-xl font-bold text-green-400 mb-1">
-                    {wallet.totalOrdersCount}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {wallet.totalOrdersPaid} já recebidos
-                  </p>
-                </div>
+              <div className="min-h-[64px] flex flex-col justify-center">
+                <p className="text-sm text-gray-400 mb-2">Pendentes de Recebimento</p>
+                <p className="text-xl font-bold text-green-400 mb-1">
+                  {wallet.totalOrdersCount}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {wallet.totalOrdersPaid} já recebidos
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -226,13 +222,11 @@ export default function SupplierWallet() {
               <Calendar className="h-3 w-3 text-blue-400/60" />
             </div>
             <CardContent className="p-6">
-              <div className="h-16">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-400 mb-2">Próximo Pagamento</p>
-                  <p className="text-xl font-bold text-blue-400">
-                    {formatDate(wallet.nextPaymentDate)}
-                  </p>
-                </div>
+              <div className="min-h-[64px] flex flex-col justify-center">
+                <p className="text-sm text-gray-400 mb-2">Próximo Pagamento</p>
+                <p className="text-xl font-bold text-blue-400">
+                  {formatDate(wallet.nextPaymentDate)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -242,17 +236,15 @@ export default function SupplierWallet() {
               <TrendingUp className="h-3 w-3 text-purple-400/60" />
             </div>
             <CardContent className="p-6">
-              <div className="h-16">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-400 mb-2">Total Recebido</p>
-                  <div className="space-y-0.5">
-                    <p className="text-xl font-bold text-purple-400">
-                      {formatBRL(wallet.totalPaid)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatEUR(wallet.totalPaid)}
-                    </p>
-                  </div>
+              <div className="min-h-[64px] flex flex-col justify-center">
+                <p className="text-sm text-gray-400 mb-2">Total Recebido</p>
+                <div className="space-y-0.5">
+                  <p className="text-xl font-bold text-purple-400">
+                    {formatBRL(wallet.totalPaid)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatEUR(wallet.totalPaid)}
+                  </p>
                 </div>
               </div>
             </CardContent>
