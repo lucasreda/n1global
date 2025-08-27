@@ -3357,6 +3357,117 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Finance routes - for admin_financeiro role
+  const requireFinanceAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user || req.user.role !== 'admin_financeiro') {
+      return res.status(403).json({ message: "Acesso negado: requer permissões de admin financeiro" });
+    }
+    next();
+  };
+
+  // Get all suppliers
+  app.get("/api/finance/suppliers", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { financeService } = await import("./finance-service");
+      const suppliers = await financeService.getSuppliers();
+      res.json(suppliers);
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+      res.status(500).json({ message: "Erro ao buscar fornecedores" });
+    }
+  });
+
+  // Get supplier balance and pending orders
+  app.get("/api/finance/supplier-balance/:supplierId", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { supplierId } = req.params;
+      const { financeService } = await import("./finance-service");
+      const balance = await financeService.getSupplierBalance(supplierId);
+      
+      if (!balance) {
+        return res.status(404).json({ message: "Fornecedor não encontrado" });
+      }
+      
+      res.json(balance);
+    } catch (error) {
+      console.error("Error fetching supplier balance:", error);
+      res.status(500).json({ message: "Erro ao calcular balanço do fornecedor" });
+    }
+  });
+
+  // Create new supplier payment
+  app.post("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const paymentData = req.body;
+      const { financeService } = await import("./finance-service");
+      
+      // Get user's store ID
+      const user = await storage.getUser(req.user.id);
+      if (!user?.storeId) {
+        return res.status(400).json({ message: "Usuário não possui store associado" });
+      }
+
+      const payment = await financeService.createSupplierPayment(paymentData, user.storeId);
+      res.json(payment);
+    } catch (error) {
+      console.error("Error creating supplier payment:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Erro ao criar pagamento" 
+      });
+    }
+  });
+
+  // Get supplier payments with pagination
+  app.get("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = parseInt(req.query.offset as string) || 0;
+      
+      const { financeService } = await import("./finance-service");
+      const payments = await financeService.getSupplierPayments(limit, offset);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      res.status(500).json({ message: "Erro ao buscar pagamentos" });
+    }
+  });
+
+  // Update payment status
+  app.patch("/api/finance/supplier-payments/:paymentId/status", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { paymentId } = req.params;
+      const { status } = req.body;
+      
+      if (!['pending', 'approved', 'paid', 'rejected', 'cancelled'].includes(status)) {
+        return res.status(400).json({ message: "Status inválido" });
+      }
+
+      const { financeService } = await import("./finance-service");
+      const updatedPayment = await financeService.updatePaymentStatus(
+        paymentId, 
+        status, 
+        req.user.id
+      );
+      
+      res.json(updatedPayment);
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      res.status(500).json({ message: "Erro ao atualizar status do pagamento" });
+    }
+  });
+
+  // Get payment statistics
+  app.get("/api/finance/payment-stats", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { financeService } = await import("./finance-service");
+      const stats = await financeService.getPaymentStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching payment stats:", error);
+      res.status(500).json({ message: "Erro ao buscar estatísticas" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

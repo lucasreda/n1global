@@ -224,7 +224,11 @@ export default function FinancePagamentos() {
                   <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800">
                     Ver Todos
                   </Button>
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button 
+                    size="sm" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => window.location.href = '/finance/pagamentos/novo'}
+                  >
                     Novo Pagamento
                   </Button>
                 </div>

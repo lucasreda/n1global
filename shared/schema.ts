@@ -470,6 +470,8 @@ export const insertProductContractSchema = createInsertSchema(productContracts).
   updatedAt: true,
 });
 
+
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -517,6 +519,12 @@ export type InsertProductContract = z.infer<typeof insertProductContractSchema>;
 export type UserProduct = typeof userProducts.$inferSelect;
 export type InsertUserProduct = z.infer<typeof insertUserProductSchema>;
 export type LinkProductBySku = z.infer<typeof linkProductBySkuSchema>;
+
+export type SupplierPayment = typeof supplierPayments.$inferSelect;
+export type InsertSupplierPayment = z.infer<typeof insertSupplierPaymentSchema>;
+
+export type SupplierPaymentItem = typeof supplierPaymentItems.$inferSelect;
+export type InsertSupplierPaymentItem = z.infer<typeof insertSupplierPaymentItemSchema>;
 
 // Relations
 export const storesRelations = relations(stores, ({ one, many }) => ({
@@ -617,6 +625,51 @@ export const facebookBusinessManagers = pgTable("facebook_business_managers", {
   lastSync: timestamp("last_sync"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Supplier Payments - Track payments to suppliers
+export const supplierPayments = pgTable("supplier_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplierId: varchar("supplier_id").notNull().references(() => users.id), // Supplier receiving payment
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Store making payment
+  
+  // Payment details
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  description: text("description"),
+  
+  // Status tracking
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'paid', 'rejected', 'cancelled'
+  paymentMethod: text("payment_method"), // 'bank_transfer', 'pix', 'paypal', 'other'
+  
+  // Date tracking
+  dueDate: timestamp("due_date"),
+  approvedAt: timestamp("approved_at"),
+  paidAt: timestamp("paid_at"),
+  
+  // Reference data
+  referenceId: text("reference_id"), // External payment reference
+  bankDetails: jsonb("bank_details"), // Bank account details for payment
+  notes: text("notes"),
+  
+  // Approval workflow
+  approvedBy: varchar("approved_by").references(() => users.id), // Finance admin who approved
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Supplier Payment Items - Track which orders/products are being paid
+export const supplierPaymentItems = pgTable("supplier_payment_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentId: varchar("payment_id").notNull().references(() => supplierPayments.id),
+  orderId: text("order_id").references(() => orders.id),
+  productSku: text("product_sku"),
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Ad Accounts - Unified table for Facebook and Google Ads
@@ -723,6 +776,20 @@ export const insertFacebookAdAccountSchema = createInsertSchema(facebookAdAccoun
   createdAt: true,
   updatedAt: true,
   lastSync: true,
+});
+
+// Supplier payment schemas
+export const insertSupplierPaymentSchema = createInsertSchema(supplierPayments).omit({
+  id: true,
+  approvedAt: true,
+  paidAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplierPaymentItemSchema = createInsertSchema(supplierPaymentItems).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types

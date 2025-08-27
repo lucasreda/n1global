@@ -32,6 +32,7 @@ import AdminGlobal from "@/pages/admin/global";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import FinanceDashboard from "@/pages/finance/dashboard";
 import FinancePagamentos from "@/pages/finance/pagamentos";
+import FinanceNovoPagamento from "@/pages/finance/novo-pagamento";
 import SupplierDashboard from "@/pages/supplier";
 import SupplierCreateProduct from "@/pages/supplier-create-product";
 import ProductSuccess from "@/pages/product-success";
@@ -194,6 +195,7 @@ function Router() {
         <Route path="/inside" component={isSuperAdmin ? () => <AdminLayout><AdminDashboard /></AdminLayout> : () => <NotFound />} />
         
         {/* Finance Routes */}
+        <Route path="/finance/pagamentos/novo" component={isAdminFinanceiro ? FinanceNovoPagamento : () => <NotFound />} />
         <Route path="/finance/pagamentos" component={isAdminFinanceiro ? FinancePagamentos : () => <NotFound />} />
         <Route path="/finance" component={isAdminFinanceiro ? FinanceDashboard : () => <NotFound />} />
         
