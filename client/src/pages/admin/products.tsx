@@ -1,17 +1,22 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Package,
   Search,
   Filter,
   Eye,
   Plus,
-  ImageIcon
+  ImageIcon,
+  CheckCircle,
+  FileText
 } from "lucide-react";
 
 interface Product {
@@ -20,7 +25,7 @@ interface Product {
   sku: string;
   price: number;
   costPrice: number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'contract_sent' | 'approved' | 'rejected';
   supplierId: string;
   supplierName: string;
   category?: string;
@@ -30,10 +35,184 @@ interface Product {
   updatedAt: string;
 }
 
+interface ProductApprovalModalProps {
+  product: Product;
+  open: boolean;
+  onClose: () => void;
+}
+
+// Modal component for product approval
+function ProductApprovalModal({ product, open, onClose }: ProductApprovalModalProps) {
+  const [deliveryDays, setDeliveryDays] = useState(30);
+  const [minimumOrder, setMinimumOrder] = useState(1);
+  const [commissionRate, setCommissionRate] = useState(15);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const sendContractMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/products/${product.id}/send-contract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          deliveryDays,
+          minimumOrder,
+          commissionRate
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao enviar contrato');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contrato enviado",
+        description: "O contrato foi enviado ao fornecedor com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-500" />
+            Aprovar Produto
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Product Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Nome do Produto</Label>
+              <div className="p-2 bg-muted rounded">{product.name}</div>
+            </div>
+            <div className="space-y-2">
+              <Label>SKU</Label>
+              <div className="p-2 bg-muted rounded">{product.sku}</div>
+            </div>
+            <div className="space-y-2">
+              <Label>Preço</Label>
+              <div className="p-2 bg-muted rounded">€{product.price}</div>
+            </div>
+            <div className="space-y-2">
+              <Label>Fornecedor</Label>
+              <div className="p-2 bg-muted rounded">{product.supplierName}</div>
+            </div>
+          </div>
+
+          {product.description && (
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <div className="p-2 bg-muted rounded text-sm">{product.description}</div>
+            </div>
+          )}
+
+          {product.imageUrl && (
+            <div className="space-y-2">
+              <Label>Imagem do Produto</Label>
+              <div className="w-32 h-32 border rounded overflow-hidden">
+                <img 
+                  src={product.imageUrl} 
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).nextElementSibling!.classList.remove('hidden');
+                  }}
+                />
+                <div className="hidden w-full h-full flex items-center justify-center bg-gray-100">
+                  <ImageIcon className="h-8 w-8 text-gray-400" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Contract Terms */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-4">Termos do Contrato</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="deliveryDays">Prazo de Entrega (dias)</Label>
+                <Input
+                  id="deliveryDays"
+                  type="number"
+                  value={deliveryDays}
+                  onChange={(e) => setDeliveryDays(Number(e.target.value))}
+                  min="1"
+                  max="365"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="minimumOrder">Pedido Mínimo</Label>
+                <Input
+                  id="minimumOrder"
+                  type="number"
+                  value={minimumOrder}
+                  onChange={(e) => setMinimumOrder(Number(e.target.value))}
+                  min="1"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
+                <Input
+                  id="commissionRate"
+                  type="number"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(Number(e.target.value))}
+                  min="0"
+                  max="50"
+                  step="0.5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={onClose} disabled={sendContractMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => sendContractMutation.mutate()}
+              disabled={sendContractMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {sendContractMutation.isPending ? 'Enviando...' : 'Enviar Contrato'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("all");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ['/api/admin/products', searchTerm, statusFilter, supplierFilter],
@@ -82,12 +261,14 @@ export default function AdminProducts() {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       'pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      'contract_sent': 'bg-blue-100 text-blue-800 border-blue-300',
       'approved': 'bg-green-100 text-green-800 border-green-300',
       'rejected': 'bg-red-100 text-red-800 border-red-300',
     };
     
     const statusLabels = {
       'pending': 'Pendente',
+      'contract_sent': 'Contrato Enviado',
       'approved': 'Aprovado',
       'rejected': 'Rejeitado',
     };
@@ -123,7 +304,7 @@ export default function AdminProducts() {
       </div>
 
       {/* Status Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -143,6 +324,17 @@ export default function AdminProducts() {
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{getStatusCount('pending')}</div>
             <p className="text-xs text-muted-foreground">aguardando aprovação</p>
+          </CardContent>
+        </Card>
+
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Contrato Enviado</CardTitle>
+            <div className="h-4 w-4 rounded-full bg-blue-400"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{getStatusCount('contract_sent')}</div>
+            <p className="text-xs text-muted-foreground">aguardando resposta</p>
           </CardContent>
         </Card>
 
@@ -200,6 +392,7 @@ export default function AdminProducts() {
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="contract_sent">Contrato Enviado</SelectItem>
                 <SelectItem value="approved">Aprovado</SelectItem>
                 <SelectItem value="rejected">Rejeitado</SelectItem>
               </SelectContent>
@@ -304,9 +497,22 @@ export default function AdminProducts() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {product.status === 'pending' && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedProduct(product)}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Aprovar
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -324,6 +530,15 @@ export default function AdminProducts() {
           )}
         </CardContent>
       </Card>
+
+      {/* Product Approval Modal */}
+      {selectedProduct && (
+        <ProductApprovalModal
+          product={selectedProduct}
+          open={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </div>
   );
 }

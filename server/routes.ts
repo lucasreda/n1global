@@ -2632,6 +2632,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Product approval routes
+  app.get("/api/admin/products/:id", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const product = await adminService.getProductById(id);
+      
+      if (!product) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      
+      res.json(product);
+    } catch (error) {
+      console.error("Get product error:", error);
+      res.status(500).json({ message: "Erro ao buscar produto" });
+    }
+  });
+
+  // Send contract for product approval
+  app.post("/api/admin/products/:id/send-contract", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { deliveryDays, minimumOrder, commissionRate } = req.body;
+      
+      // Get product details
+      const product = await adminService.getProductById(id);
+      if (!product) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      
+      if (product.status !== 'pending') {
+        return res.status(400).json({ message: "Produto deve estar pendente para enviar contrato" });
+      }
+      
+      // Generate contract content
+      const contractContent = `
+CONTRATO DE FORNECIMENTO DE PRODUTO
+
+Produto: ${product.name}
+SKU: ${product.sku}
+Preço: €${product.price}
+
+TERMOS E CONDIÇÕES:
+
+1. PRAZO DE ENTREGA
+   - Prazo máximo para entrega: ${deliveryDays || 30} dias úteis
+
+2. PEDIDO MÍNIMO
+   - Quantidade mínima por pedido: ${minimumOrder || 1} unidade(s)
+
+3. COMISSÃO
+   - Taxa de comissão da plataforma: ${commissionRate || '15.00'}%
+
+4. QUALIDADE
+   - O fornecedor garante que o produto atende aos padrões de qualidade estabelecidos
+   - Produtos com defeito serão devolvidos sem custo adicional
+
+5. PAGAMENTO
+   - Pagamento será realizado após confirmação de entrega
+   - Descontada a taxa de comissão da plataforma
+
+6. CANCELAMENTO
+   - Este contrato pode ser cancelado por qualquer uma das partes com aviso prévio de 30 dias
+
+Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecidos.
+      `;
+
+      // Create contract in database
+      const { db } = await import("./db");
+      const { productContracts } = await import("@shared/schema");
+      
+      const [contract] = await db.insert(productContracts).values({
+        productId: id,
+        supplierId: product.supplierId,
+        adminId: req.user.id,
+        contractContent: contractContent.trim(),
+        contractTerms: {
+          deliveryDays: deliveryDays || 30,
+          minimumOrder: minimumOrder || 1,
+          commissionRate: commissionRate || '15.00',
+          productName: product.name,
+          productSku: product.sku,
+          productPrice: product.price
+        },
+        deliveryDays: deliveryDays || 30,
+        minimumOrder: minimumOrder || 1,
+        commissionRate: commissionRate || '15.00'
+      }).returning();
+
+      // Update product status to contract_sent
+      await adminService.updateProductStatus(id, 'contract_sent');
+      
+      res.json({
+        message: "Contrato enviado com sucesso",
+        contract: contract
+      });
+    } catch (error) {
+      console.error("Send contract error:", error);
+      res.status(500).json({ message: "Erro ao enviar contrato" });
+    }
+  });
+
+  // Get contracts for admin
+  app.get("/api/admin/contracts", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { productContracts, products, users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const contracts = await db.select({
+        id: productContracts.id,
+        contractTitle: productContracts.contractTitle,
+        status: productContracts.status,
+        sentAt: productContracts.sentAt,
+        viewedAt: productContracts.viewedAt,
+        respondedAt: productContracts.respondedAt,
+        deliveryDays: productContracts.deliveryDays,
+        minimumOrder: productContracts.minimumOrder,
+        commissionRate: productContracts.commissionRate,
+        productName: products.name,
+        productSku: products.sku,
+        supplierName: users.name,
+        supplierEmail: users.email
+      })
+      .from(productContracts)
+      .leftJoin(products, eq(productContracts.productId, products.id))
+      .leftJoin(users, eq(productContracts.supplierId, users.id))
+      .orderBy(productContracts.sentAt);
+      
+      res.json(contracts);
+    } catch (error) {
+      console.error("Get admin contracts error:", error);
+      res.status(500).json({ message: "Erro ao buscar contratos" });
+    }
+  });
+
   // ===== SUPPLIER ROUTES =====
   
   // Middleware to verify supplier role
@@ -2792,6 +2927,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: 'Erro interno do servidor' });
       }
+    }
+  });
+
+  // GET /api/supplier/contracts - Get contracts for supplier
+  app.get('/api/supplier/contracts', authenticateToken, requireSupplier, async (req: AuthRequest, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { productContracts, products } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const contracts = await db.select({
+        id: productContracts.id,
+        contractTitle: productContracts.contractTitle,
+        contractContent: productContracts.contractContent,
+        contractTerms: productContracts.contractTerms,
+        status: productContracts.status,
+        sentAt: productContracts.sentAt,
+        viewedAt: productContracts.viewedAt,
+        respondedAt: productContracts.respondedAt,
+        deliveryDays: productContracts.deliveryDays,
+        minimumOrder: productContracts.minimumOrder,
+        commissionRate: productContracts.commissionRate,
+        productName: products.name,
+        productSku: products.sku,
+        productPrice: products.price
+      })
+      .from(productContracts)
+      .leftJoin(products, eq(productContracts.productId, products.id))
+      .where(eq(productContracts.supplierId, req.user.id))
+      .orderBy(productContracts.sentAt);
+      
+      res.json(contracts);
+    } catch (error) {
+      console.error("Get supplier contracts error:", error);
+      res.status(500).json({ message: "Erro ao buscar contratos" });
+    }
+  });
+
+  // PUT /api/supplier/contracts/:id/view - Mark contract as viewed
+  app.put('/api/supplier/contracts/:id/view', authenticateToken, requireSupplier, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { db } = await import("./db");
+      const { productContracts } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      const [contract] = await db.update(productContracts)
+        .set({ 
+          viewedAt: new Date(),
+          status: 'viewed'
+        })
+        .where(and(
+          eq(productContracts.id, id),
+          eq(productContracts.supplierId, req.user.id)
+        ))
+        .returning();
+
+      if (!contract) {
+        return res.status(404).json({ message: "Contrato não encontrado" });
+      }
+
+      res.json(contract);
+    } catch (error) {
+      console.error("Mark contract as viewed error:", error);
+      res.status(500).json({ message: "Erro ao marcar contrato como visualizado" });
     }
   });
 

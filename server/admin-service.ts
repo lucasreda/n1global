@@ -439,6 +439,86 @@ export class AdminService {
     }
   }
 
+  async getProductById(productId: string) {
+    try {
+      const [product] = await db
+        .select({
+          id: products.id,
+          storeId: products.storeId,
+          operationId: products.operationId,
+          sku: products.sku,
+          name: products.name,
+          description: products.description,
+          type: products.type,
+          price: products.price,
+          stock: products.stock,
+          lowStock: products.lowStock,
+          imageUrl: products.imageUrl,
+          videoUrl: products.videoUrl,
+          productUrl: products.productUrl,
+          isActive: products.isActive,
+          costPrice: products.costPrice,
+          shippingCost: products.shippingCost,
+          handlingFee: products.handlingFee,
+          marketingCost: products.marketingCost,
+          operationalCost: products.operationalCost,
+          profitMargin: products.profitMargin,
+          lastCostUpdate: products.lastCostUpdate,
+          providers: products.providers,
+          supplierId: products.supplierId,
+          initialStock: products.initialStock,
+          status: products.status,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+          supplierName: users.name
+        })
+        .from(products)
+        .leftJoin(users, eq(products.supplierId, users.id))
+        .where(eq(products.id, productId))
+        .limit(1);
+
+      if (!product) {
+        return null;
+      }
+
+      return {
+        ...product,
+        price: Number(product.price) || 0,
+        costPrice: Number(product.costPrice) || 0,
+        shippingCost: Number(product.shippingCost) || 0,
+        handlingFee: Number(product.handlingFee) || 0,
+        marketingCost: Number(product.marketingCost) || 0,
+        operationalCost: Number(product.operationalCost) || 0,
+        profitMargin: Number(product.profitMargin) || 0
+      };
+    } catch (error) {
+      console.error('❌ Error getting product by ID:', error);
+      throw error;
+    }
+  }
+
+  async updateProductStatus(productId: string, status: string) {
+    try {
+      const [updatedProduct] = await db
+        .update(products)
+        .set({ 
+          status,
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, productId))
+        .returning();
+
+      if (!updatedProduct) {
+        throw new Error('Product not found');
+      }
+
+      return updatedProduct;
+    } catch (error) {
+      console.error('❌ Error updating product status:', error);
+      throw error;
+    }
+  }
+
   async updateProduct(productId: string, productData: {
     sku?: string;
     name?: string;

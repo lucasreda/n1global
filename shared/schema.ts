@@ -290,7 +290,7 @@ export const products = pgTable("products", {
   // Supplier information - for products created by suppliers
   supplierId: varchar("supplier_id").references(() => users.id), // Who created this global product
   initialStock: integer("initial_stock").default(0), // Initial stock set by supplier
-  status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, approved, rejected - for supplier approval workflow
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, contract_sent, approved, rejected - for supplier approval workflow
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -315,6 +315,33 @@ export const userProducts = pgTable("user_products", {
   
   // Unique constraint to prevent duplicate user-product links
   isActive: boolean("is_active").notNull().default(true),
+});
+
+// Product contracts for supplier approval workflow
+export const productContracts = pgTable("product_contracts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id), // Links contract to product
+  supplierId: varchar("supplier_id").notNull().references(() => users.id), // Supplier who owns the product
+  adminId: varchar("admin_id").notNull().references(() => users.id), // Admin who sent the contract
+  
+  // Contract content
+  contractTitle: text("contract_title").notNull().default("Contrato de Fornecimento de Produto"),
+  contractContent: text("contract_content").notNull(), // Full contract text
+  contractTerms: jsonb("contract_terms"), // Structured terms and conditions
+  
+  // Status tracking
+  status: varchar("status", { length: 50 }).notNull().default("sent"), // sent, viewed, signed, rejected
+  sentAt: timestamp("sent_at").defaultNow(),
+  viewedAt: timestamp("viewed_at"),
+  respondedAt: timestamp("responded_at"),
+  
+  // Contract details
+  deliveryDays: integer("delivery_days").default(30), // Expected delivery timeframe
+  minimumOrder: integer("minimum_order").default(1), // Minimum order quantity
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default('15.00'), // Commission percentage
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Shipping providers configuration
@@ -435,6 +462,14 @@ export const linkProductBySkuSchema = z.object({
   customHandlingFee: z.number().optional(),
 });
 
+// Product contract schemas
+export const insertProductContractSchema = createInsertSchema(productContracts).omit({
+  id: true,
+  sentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -475,6 +510,9 @@ export type InsertProduct = z.infer<typeof insertProductSchema>;
 
 export type ShippingProvider = typeof shippingProviders.$inferSelect;
 export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema>;
+
+export type ProductContract = typeof productContracts.$inferSelect;
+export type InsertProductContract = z.infer<typeof insertProductContractSchema>;
 
 export type UserProduct = typeof userProducts.$inferSelect;
 export type InsertUserProduct = z.infer<typeof insertUserProductSchema>;
