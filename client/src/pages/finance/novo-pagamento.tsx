@@ -58,7 +58,7 @@ interface SupplierBalance {
   paidAmount: number;
   pendingAmount: number;
   pendingOrdersCount: number;
-  averageB2BPricePerOrder: number;
+  unitB2BPrice: number;
 }
 
 export default function FinanceNovoPagamento() {
@@ -361,10 +361,10 @@ export default function FinanceNovoPagamento() {
                       <div className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
                         <div className="flex items-center gap-2">
                           <Calculator className="h-4 w-4 text-green-500" />
-                          <span className="text-sm text-gray-400">Preço B2B Médio</span>
+                          <span className="text-sm text-gray-400">Preço B2B Unitário</span>
                         </div>
                         <div className="text-xl font-bold text-white">
-                          €{supplierBalance.averageB2BPricePerOrder.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          €{supplierBalance.unitB2BPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
                       </div>
                     </div>

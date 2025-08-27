@@ -19,7 +19,7 @@ export interface SupplierBalance {
   paidAmount: number;
   pendingAmount: number;
   pendingOrdersCount: number;
-  averageB2BPricePerOrder: number;
+  unitB2BPrice: number;
 }
 
 export interface SupplierSummary {
@@ -87,7 +87,7 @@ export class FinanceService {
         paidAmount: 0,
         pendingAmount: 0,
         pendingOrdersCount: 0,
-        averageB2BPricePerOrder: 0,
+        unitB2BPrice: 0,
       };
     }
 
@@ -173,7 +173,11 @@ export class FinanceService {
 
     const paidAmount = parseFloat(paidPayments[0]?.total || '0');
     const pendingAmount = Math.max(0, totalOrdersValue - paidAmount);
-    const averageB2BPricePerOrder = pendingOrdersCount > 0 ? totalOrdersValue / pendingOrdersCount : 0;
+    
+    // Pegar o preço B2B unitário fixo do primeiro produto (todos têm o mesmo preço)
+    const unitB2BPrice = supplierProducts.length > 0 && supplierProducts[0].price 
+      ? parseFloat(supplierProducts[0].price) 
+      : 0;
 
     return {
       supplierId,
@@ -183,7 +187,7 @@ export class FinanceService {
       paidAmount,
       pendingAmount,
       pendingOrdersCount,
-      averageB2BPricePerOrder,
+      unitB2BPrice,
     };
   }
 
