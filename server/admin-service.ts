@@ -369,9 +369,14 @@ export class AdminService {
           shippingCost: products.shippingCost,
           imageUrl: products.imageUrl,
           isActive: products.isActive,
-          createdAt: products.createdAt
+          status: products.status,
+          supplierId: products.supplierId,
+          supplierName: users.name,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt
         })
         .from(products)
+        .leftJoin(users, eq(products.supplierId, users.id))
         .orderBy(desc(products.createdAt));
 
       return productsList.map(product => ({
