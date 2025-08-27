@@ -184,6 +184,40 @@ export async function seedDatabase() {
       console.log("ℹ️  Super admin already exists");
     }
 
+    // Check if finance admin already exists
+    const [existingFinanceAdmin] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "finance@codashboard.com"))
+      .limit(1);
+
+    if (!existingFinanceAdmin) {
+      // Create finance admin user with default store
+      const hashedPassword = await bcrypt.hash("FinanceCOD2025!@#", 10);
+      
+      const [financeAdmin] = await db
+        .insert(users)
+        .values({
+          name: "Finance Admin",
+          email: "finance@codashboard.com",
+          password: hashedPassword,
+          role: "admin_financeiro",
+          storeId: defaultStore.id, // Associate with default store
+          onboardingCompleted: true,
+        })
+        .returning();
+      
+      console.log("✅ Finance admin created:", financeAdmin.email);
+    } else {
+      console.log("ℹ️  Finance admin already exists");
+      // Update existing finance admin to ensure it has storeId
+      await db
+        .update(users)
+        .set({ storeId: defaultStore.id })
+        .where(eq(users.email, "finance@codashboard.com"));
+      console.log("🔧 Finance admin storeId updated");
+    }
+
     // ⚠️ CRITICAL: Clean and setup fresh user access to correct operations
     const [freshUser] = await db
       .select()
