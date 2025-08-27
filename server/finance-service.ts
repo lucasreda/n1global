@@ -228,7 +228,7 @@ export class FinanceService {
     // Como removemos a lista detalhada de pedidos, criamos um item consolidado
     const paymentItems: InsertSupplierPaymentItem[] = [{
       paymentId: newPayment.id,
-      orderId: '', // Pagamento consolidado sem pedidos específicos
+      orderId: null, // Pagamento consolidado sem pedidos específicos
       productSku: 'Consolidado',
       quantity: balance.totalUnitsCount,
       unitPrice: balance.unitB2BPrice.toString(),
