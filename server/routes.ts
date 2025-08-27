@@ -2695,6 +2695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price: req.body.price?.toString(),
         costPrice: req.body.costPrice?.toString(),
         imageUrl: processedImageUrl, // Include processed image URL
+        status: 'pending', // New products start as pending for N1 verification
       };
 
       const product = await storage.createSupplierProduct(productData);
