@@ -82,6 +82,10 @@ export default function SupplierWallet() {
     return order.shopifyOrderNumber || `#${order.orderId.slice(-6)}`;
   };
 
+  const getFirstName = (fullName: string) => {
+    return fullName.split(' ')[0];
+  };
+
   const formatBRL = (amount: number) => {
     // Conversão aproximada EUR para BRL (taxa padrão 5.5)
     const brlAmount = amount * 5.5;
@@ -282,7 +286,7 @@ export default function SupplierWallet() {
                               {order.status}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-400">{order.customerName}</p>
+                          <p className="text-sm text-gray-400">{getFirstName(order.customerName)}</p>
                           <p className="text-xs text-gray-500">{formatDate(order.orderDate)}</p>
                         </div>
                         <div className="text-right">
