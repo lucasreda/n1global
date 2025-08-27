@@ -181,9 +181,12 @@ export default function SupplierWallet() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-[#0f0f0f] border-[#252525]">
+          <Card className="bg-[#0f0f0f] border-[#252525] relative">
+            <div className="absolute top-3 right-3">
+              <DollarSign className="h-3 w-3 text-green-400/60" />
+            </div>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between h-16">
+              <div className="h-16">
                 <div className="flex-1">
                   <p className="text-sm text-gray-400 mb-2">Total a Receber</p>
                   <div className="space-y-0.5">
@@ -195,16 +198,16 @@ export default function SupplierWallet() {
                     </p>
                   </div>
                 </div>
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-400" />
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#0f0f0f] border-[#252525]">
+          <Card className="bg-[#0f0f0f] border-[#252525] relative">
+            <div className="absolute top-3 right-3">
+              <Package className="h-3 w-3 text-green-400/60" />
+            </div>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between h-16">
+              <div className="h-16">
                 <div className="flex-1">
                   <p className="text-sm text-gray-400 mb-2">Pendentes de Recebimento</p>
                   <p className="text-xl font-bold text-green-400 mb-1">
@@ -214,32 +217,32 @@ export default function SupplierWallet() {
                     {wallet.totalOrdersPaid} já recebidos
                   </p>
                 </div>
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-400" />
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#0f0f0f] border-[#252525]">
+          <Card className="bg-[#0f0f0f] border-[#252525] relative">
+            <div className="absolute top-3 right-3">
+              <Calendar className="h-3 w-3 text-blue-400/60" />
+            </div>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between h-16">
+              <div className="h-16">
                 <div className="flex-1">
                   <p className="text-sm text-gray-400 mb-2">Próximo Pagamento</p>
                   <p className="text-xl font-bold text-blue-400">
                     {formatDate(wallet.nextPaymentDate)}
                   </p>
                 </div>
-                <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <Calendar className="h-5 w-5 text-blue-400" />
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-[#0f0f0f] border-[#252525]">
+          <Card className="bg-[#0f0f0f] border-[#252525] relative">
+            <div className="absolute top-3 right-3">
+              <TrendingUp className="h-3 w-3 text-purple-400/60" />
+            </div>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between h-16">
+              <div className="h-16">
                 <div className="flex-1">
                   <p className="text-sm text-gray-400 mb-2">Total Recebido</p>
                   <div className="space-y-0.5">
@@ -250,9 +253,6 @@ export default function SupplierWallet() {
                       {formatEUR(wallet.totalPaid)}
                     </p>
                   </div>
-                </div>
-                <div className="p-3 bg-purple-500/10 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-purple-400" />
                 </div>
               </div>
             </CardContent>
