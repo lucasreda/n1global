@@ -445,7 +445,7 @@ export default function SupplierDashboard() {
                     <Card key={contract.id}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="flex items-center gap-2" style={{ fontSize: '18px' }}>
+                          <CardTitle className="flex items-center gap-2" style={{ fontSize: '19px' }}>
                             <FileText className="h-5 w-5" />
                             {contract.productName}
                           </CardTitle>
