@@ -93,15 +93,16 @@ export default function FinancePagamentos() {
     },
   });
 
-  // Calcular totais dos pagamentos reais - prioritizando BRL
-  const totalPendenteBRL = payments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + (p.amountBRL ? parseFloat(p.amountBRL) : parseFloat(p.amount) * 6.3), 0);
-  
-  const totalPendenteEUR = payments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+  // Buscar estatísticas reais das carteiras dos fornecedores
+  const { data: paymentStats } = useQuery({
+    queryKey: ["/api/finance/payment-stats"],
+  });
 
+  // Usar valores reais das carteiras em vez dos pagamentos filtrados
+  const totalPendenteEUR = paymentStats?.pending?.total || 0;
+  const totalPendenteBRL = totalPendenteEUR * 6.3; // Conversão EUR -> BRL
+
+  // Calcular totais dos pagamentos já realizados
   const totalPagoBRL = payments
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + (p.amountBRL ? parseFloat(p.amountBRL) : parseFloat(p.amount) * 6.3), 0);
