@@ -203,12 +203,43 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {adminStats.ordersByCountry.map((country) => (
-                <div key={country.country} className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <p className="text-lg font-bold">{country.orders}</p>
-                  <p className="text-sm text-muted-foreground">{country.country}</p>
-                </div>
-              ))}
+              {adminStats.ordersByCountry.map((country) => {
+                const getCountryFlag = (countryName: string) => {
+                  const flags: { [key: string]: string } = {
+                    'Brazil': '🇧🇷',
+                    'Portugal': '🇵🇹',
+                    'Spain': '🇪🇸',
+                    'France': '🇫🇷',
+                    'Germany': '🇩🇪',
+                    'Italy': '🇮🇹',
+                    'United Kingdom': '🇬🇧',
+                    'Netherlands': '🇳🇱',
+                    'Belgium': '🇧🇪',
+                    'Austria': '🇦🇹',
+                    'Switzerland': '🇨🇭',
+                    'United States': '🇺🇸',
+                    'Canada': '🇨🇦',
+                    'Mexico': '🇲🇽',
+                    'Argentina': '🇦🇷',
+                    'Chile': '🇨🇱',
+                    'Colombia': '🇨🇴',
+                    'Peru': '🇵🇪',
+                    'Uruguay': '🇺🇾',
+                    'Ecuador': '🇪🇨'
+                  };
+                  return flags[countryName] || '🌍';
+                };
+                
+                return (
+                  <div key={country.country} className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <span className="text-xl">{getCountryFlag(country.country)}</span>
+                      <p className="text-lg font-bold">{country.orders}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{country.country}</p>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
