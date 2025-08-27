@@ -16,7 +16,8 @@ import {
   Plus,
   ImageIcon,
   CheckCircle,
-  FileText
+  FileText,
+  Settings
 } from "lucide-react";
 
 interface Product {
@@ -25,7 +26,7 @@ interface Product {
   sku: string;
   price: number;
   costPrice: number;
-  status: 'pending' | 'contract_sent' | 'approved' | 'rejected';
+  status: 'pending' | 'contract_sent' | 'contract_signed' | 'approved' | 'rejected';
   supplierId: string;
   supplierName: string;
   category?: string;
@@ -208,6 +209,137 @@ function ProductApprovalModal({ product, open, onClose }: ProductApprovalModalPr
   );
 }
 
+// Cost Configuration Modal Component
+function CostConfigurationModal({ product, open, onClose }: { product: Product; open: boolean; onClose: () => void }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [shippingCost, setShippingCost] = useState("0");
+  
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/products/${product.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          shippingCost: Number(shippingCost)
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao aprovar produto');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Produto aprovado",
+        description: "O produto foi aprovado e está ativo no sistema.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Configurar Custos
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <Settings className="h-5 w-5 text-blue-600 mt-0.5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-blue-900 mb-1">
+                  Configuração Final do Produto
+                </h4>
+                <p className="text-sm text-blue-700">
+                  O contrato para <strong>{product.name}</strong> foi assinado pelo fornecedor. 
+                  Configure o custo de envio e aprove o produto para ativá-lo no sistema.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="productInfo">Produto</Label>
+              <div className="text-sm text-muted-foreground">
+                {product.name} (SKU: {product.sku})
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="currentPrice">Preço de Venda</Label>
+              <div className="text-sm font-medium">
+                €{product.price.toFixed(2)}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="costPrice">Custo do Produto</Label>
+              <div className="text-sm font-medium">
+                €{product.costPrice.toFixed(2)}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="shippingCost">Custo de Envio *</Label>
+              <Input
+                id="shippingCost"
+                type="number"
+                value={shippingCost}
+                onChange={(e) => setShippingCost(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+              <p className="text-xs text-muted-foreground">
+                Configure o custo médio de envio para este produto
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose} disabled={approveMutation.isPending}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={() => approveMutation.mutate()}
+            disabled={approveMutation.isPending}
+            className="flex items-center gap-2"
+          >
+            <CheckCircle className="h-4 w-4" />
+            {approveMutation.isPending ? 'Aprovando...' : 'Aprovar Produto'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -262,6 +394,7 @@ export default function AdminProducts() {
     const statusColors = {
       'pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
       'contract_sent': 'bg-blue-100 text-blue-800 border-blue-300',
+      'contract_signed': 'bg-purple-100 text-purple-800 border-purple-300',
       'approved': 'bg-green-100 text-green-800 border-green-300',
       'rejected': 'bg-red-100 text-red-800 border-red-300',
     };
@@ -269,6 +402,7 @@ export default function AdminProducts() {
     const statusLabels = {
       'pending': 'Pendente',
       'contract_sent': 'Contrato Enviado',
+      'contract_signed': 'Contrato Assinado',
       'approved': 'Aprovado',
       'rejected': 'Rejeitado',
     };
@@ -393,6 +527,7 @@ export default function AdminProducts() {
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
                 <SelectItem value="contract_sent">Contrato Enviado</SelectItem>
+                <SelectItem value="contract_signed">Contrato Assinado</SelectItem>
                 <SelectItem value="approved">Aprovado</SelectItem>
                 <SelectItem value="rejected">Rejeitado</SelectItem>
               </SelectContent>
@@ -512,6 +647,17 @@ export default function AdminProducts() {
                               Aprovar
                             </Button>
                           )}
+                          {product.status === 'contract_signed' && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedProduct(product)}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <Settings className="h-4 w-4 mr-1" />
+                              Configurar Custos
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -532,8 +678,17 @@ export default function AdminProducts() {
       </Card>
 
       {/* Product Approval Modal */}
-      {selectedProduct && (
+      {selectedProduct && selectedProduct.status === 'pending' && (
         <ProductApprovalModal
+          product={selectedProduct}
+          open={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
+
+      {/* Cost Configuration Modal */}
+      {selectedProduct && selectedProduct.status === 'contract_signed' && (
+        <CostConfigurationModal
           product={selectedProduct}
           open={!!selectedProduct}
           onClose={() => setSelectedProduct(null)}

@@ -2999,6 +2999,14 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
         .where(eq(productContracts.id, id))
         .returning();
 
+      // Update product status to contract_signed
+      const { products } = await import("@shared/schema");
+      await db.update(products)
+        .set({
+          status: 'contract_signed'
+        })
+        .where(eq(products.id, contract.productId));
+
       res.json({
         message: "Contrato assinado com sucesso",
         contract: updatedContract
@@ -3050,6 +3058,49 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     } catch (error) {
       console.error("Reject contract error:", error);
       res.status(500).json({ message: "Erro ao rejeitar contrato" });
+    }
+  });
+
+  // Approve product with cost configuration endpoint
+  app.post('/api/admin/products/:id/approve', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { shippingCost } = req.body;
+      const { db } = await import("./db");
+      const { products } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      // Verify product exists and has contract_signed status
+      const [product] = await db.select()
+        .from(products)
+        .where(eq(products.id, id));
+
+      if (!product) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+
+      if (product.status !== 'contract_signed') {
+        return res.status(400).json({ message: "Produto deve ter contrato assinado para ser aprovado" });
+      }
+
+      // Update product with shipping cost and approved status
+      const [updatedProduct] = await db.update(products)
+        .set({
+          status: 'approved',
+          shippingCost: shippingCost ? shippingCost.toString() : "0",
+          lastCostUpdate: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, id))
+        .returning();
+
+      res.json({
+        message: "Produto aprovado com sucesso",
+        product: updatedProduct
+      });
+    } catch (error) {
+      console.error("Approve product error:", error);
+      res.status(500).json({ message: "Erro ao aprovar produto" });
     }
   });
 
