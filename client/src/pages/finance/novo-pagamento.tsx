@@ -111,7 +111,11 @@ export default function FinanceNovoPagamento() {
   });
 
   const onSubmit = (data: PaymentForm) => {
+    console.log("💰 CLIENT: Form submitted with data:", data);
+    console.log("💰 CLIENT: Supplier balance:", supplierBalance);
+    
     if (!supplierBalance || supplierBalance.pendingAmount <= 0) {
+      console.log("💰 CLIENT: No pending balance found");
       toast({
         title: "Valor inválido",
         description: "Não há valor pendente para este fornecedor.",
@@ -123,11 +127,14 @@ export default function FinanceNovoPagamento() {
     // Para agora, vamos passar um array vazio de orderIds pois removemos a lista detalhada
     const orderIds: string[] = [];
     
-    createPaymentMutation.mutate({
+    const paymentPayload = {
       ...data,
       amount: supplierBalance.pendingAmount,
       orderIds,
-    });
+    };
+    
+    console.log("💰 CLIENT: Sending payment payload:", paymentPayload);
+    createPaymentMutation.mutate(paymentPayload);
   };
 
   const handleSupplierChange = (value: string) => {
