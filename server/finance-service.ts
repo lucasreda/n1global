@@ -353,12 +353,19 @@ export class FinanceService {
     
     console.log(`🔍 Finance Stats: Encontrados ${suppliers.length} fornecedores`);
     
-    for (const supplier of suppliers) {
-      const balance = await this.getSupplierBalance(supplier.id);
-      console.log(`💰 Supplier ${supplier.name}: Balance = €${balance?.pendingAmount || 0}`);
-      if (balance) {
-        totalPendingFromWallets += balance.pendingAmount;
+    try {
+      for (const supplier of suppliers) {
+        console.log(`🔍 Processando fornecedor: ${supplier.name}`);
+        const balance = await this.getSupplierBalance(supplier.id);
+        console.log(`💰 Supplier ${supplier.name}: Balance = €${balance?.pendingAmount || 0}`);
+        if (balance) {
+          totalPendingFromWallets += balance.pendingAmount;
+        }
       }
+    } catch (error) {
+      console.error('❌ Erro ao calcular carteiras dos fornecedores:', error);
+      // Em caso de erro, usar o total dos pagamentos pendentes tradicionais
+      totalPendingFromWallets = result.pending.total;
     }
 
     console.log(`💵 Total pendente das carteiras: €${totalPendingFromWallets}`);
