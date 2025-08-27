@@ -76,7 +76,7 @@ export class FinanceService {
         price: products.price, // Usar preço B2B para consistência com a carteira
       })
       .from(products)
-      .where(eq(products.supplier_id, supplierId));
+      .where(eq(products.supplierId, supplierId));
 
     if (supplierProducts.length === 0) {
       return {
