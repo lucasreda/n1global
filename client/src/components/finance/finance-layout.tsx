@@ -73,7 +73,7 @@ export function FinanceLayout({ children }: FinanceLayoutProps) {
           <img 
             src={financeLogo} 
             alt="Finance Dashboard" 
-            className="h-8"
+            className="h-6"
           />
         </div>
         
