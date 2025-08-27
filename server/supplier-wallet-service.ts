@@ -182,13 +182,14 @@ export class SupplierWalletService {
       };
     }
 
-    // Buscar apenas pedidos pagos das operações onde o fornecedor tem produtos vinculados
+    // Buscar pedidos entregues das operações onde o fornecedor tem produtos vinculados
+    // (pedidos entregues são elegíveis para pagamento ao fornecedor)
     const allOrders = await db
       .select()
       .from(orders)
       .where(
         and(
-          eq(orders.paymentStatus, 'paid'),
+          eq(orders.status, 'delivered'),
           inArray(orders.operationId, operationIds)
         )
       );
