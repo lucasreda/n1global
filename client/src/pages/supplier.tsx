@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Package, TrendingUp, ArrowUpDown, ArrowDown, DollarSign, Calendar, Crown, LayoutDashboard, FileText, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { CreateProductModal } from "@/components/supplier/create-product-modal";
+import { useLocation } from "wouter";
 import { SupplierProductCard } from "@/components/supplier/supplier-product-card";
 
 // Types for API responses
@@ -39,7 +39,7 @@ interface SupplierMetrics {
 
 export default function SupplierDashboard() {
   const { user } = useAuth();
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [, setLocation] = useLocation();
   const [dateFilter, setDateFilter] = useState("current_month");
   const [activeSection, setActiveSection] = useState<'dashboard' | 'contracts' | 'wallet'>('dashboard');
 
@@ -171,7 +171,7 @@ export default function SupplierDashboard() {
               </Select>
             </div>
 
-            <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-product" className="text-white">
+            <Button onClick={() => setLocation('/supplier/create-product')} data-testid="button-create-product" className="text-white">
               <Plus className="h-4 w-4 mr-2" />
               {hasProducts ? 'Novo Produto' : 'Criar Primeiro Produto'}
             </Button>
@@ -296,7 +296,7 @@ export default function SupplierDashboard() {
               <p className="text-muted-foreground mb-4">
                 Comece criando seu primeiro produto global. Ele ficará disponível para todas as operações que quiserem vendê-lo.
               </p>
-              <Button onClick={() => setShowCreateModal(true)} data-testid="button-create-first-product">
+              <Button onClick={() => setLocation('/supplier/create-product')} data-testid="button-create-first-product">
                 <Plus className="h-4 w-4 mr-2" />
                 Criar Primeiro Produto
               </Button>
@@ -337,15 +337,7 @@ export default function SupplierDashboard() {
             </div>
           )}
 
-          {/* Modal de Criação de Produto */}
-          <CreateProductModal 
-            open={showCreateModal} 
-            onOpenChange={setShowCreateModal}
-            onProductCreated={() => {
-              refetchProducts();
-              setShowCreateModal(false);
-            }}
-          />
+
         </div>
       </div>
     </div>
