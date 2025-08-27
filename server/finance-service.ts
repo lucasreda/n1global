@@ -76,7 +76,7 @@ export class FinanceService {
         price: products.price, // Usar preço B2B para consistência com a carteira
       })
       .from(products)
-      .where(eq(products.supplierId, supplierId));
+      .where(eq(products.supplier_id, supplierId));
 
     if (supplierProducts.length === 0) {
       return {
@@ -351,12 +351,17 @@ export class FinanceService {
     const suppliers = await this.getSuppliers();
     let totalPendingFromWallets = 0;
     
+    console.log(`🔍 Finance Stats: Encontrados ${suppliers.length} fornecedores`);
+    
     for (const supplier of suppliers) {
       const balance = await this.getSupplierBalance(supplier.id);
+      console.log(`💰 Supplier ${supplier.name}: Balance = €${balance?.pendingAmount || 0}`);
       if (balance) {
         totalPendingFromWallets += balance.pendingAmount;
       }
     }
+
+    console.log(`💵 Total pendente das carteiras: €${totalPendingFromWallets}`);
 
     // Substituir o total pendente pelos valores reais das carteiras
     result.pending.total = totalPendingFromWallets;
