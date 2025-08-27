@@ -81,10 +81,10 @@ export default function SupplierDashboard() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex gap-6">
+      <div className="flex gap-4">
         {/* Sidebar Menu */}
-        <div className="flex-shrink-0 w-64">
-          <div className="grid grid-cols-1 gap-4">
+        <div className="flex-shrink-0 w-32">
+          <div className="grid grid-cols-1 gap-2">
             {[
               { 
                 id: 'dashboard', 
@@ -115,13 +115,13 @@ export default function SupplierDashboard() {
                 onClick={() => setActiveSection(item.id as 'dashboard' | 'contracts' | 'wallet')}
                 data-testid={`menu-${item.id}`}
               >
-                <CardContent className="p-6 text-center">
-                  <item.icon className={`h-8 w-8 mx-auto mb-3 ${
+                <CardContent className="p-3 text-center">
+                  <item.icon className={`h-5 w-5 mx-auto mb-1.5 ${
                     item.active 
                       ? 'text-blue-600 dark:text-blue-400' 
                       : 'text-gray-600 dark:text-gray-400'
                   }`} />
-                  <h3 className={`text-sm font-medium ${
+                  <h3 className={`text-xs font-medium ${
                     item.active 
                       ? 'text-blue-900 dark:text-blue-100' 
                       : 'text-gray-900 dark:text-gray-100'
