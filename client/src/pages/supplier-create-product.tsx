@@ -89,7 +89,7 @@ export default function SupplierCreateProduct() {
   return (
     <div className="container mx-auto py-8 px-6">
       {/* Back button */}
-      <div className="mb-4">
+      <div className="mb-4" style={{ marginTop: '-20px' }}>
         <Button
           variant="outline"
           size="sm"
