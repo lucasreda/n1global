@@ -2646,7 +2646,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/supplier/products', authenticateToken, requireSupplier, async (req, res) => {
     try {
       const products = await storage.getProductsBySupplier((req as any).user.id);
-      res.json(products);
+      
+      // Calculate profitability data for each product
+      const productsWithProfitability = await Promise.all(
+        products.map(async (product) => {
+          const productProfitability = await storage.getProductProfitability(product.id);
+          return {
+            ...product,
+            profitability: productProfitability
+          };
+        })
+      );
+      
+      res.json(productsWithProfitability);
     } catch (error) {
       console.error('Error fetching supplier products:', error);
       res.status(500).json({ message: 'Erro interno do servidor' });

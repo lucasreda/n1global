@@ -671,6 +671,76 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async getProductProfitability(productId: string): Promise<any> {
+    // Get product details
+    const product = await this.getProductById(productId);
+    if (!product) {
+      return {
+        totalOrders: 0,
+        deliveredOrders: 0,
+        totalProfit: 0,
+        profitMargin: 0,
+        totalRevenue: 0
+      };
+    }
+
+    // Get all orders that contain this product SKU
+    const allOrders = await db
+      .select({
+        id: orders.id,
+        status: orders.status,
+        products: orders.products,
+        orderDate: orders.orderDate
+      })
+      .from(orders);
+
+    // Filter orders containing this specific product SKU
+    const ordersWithProduct = allOrders.filter(order => {
+      if (!order.products || !Array.isArray(order.products)) return false;
+      return order.products.some((orderProduct: any) => 
+        orderProduct.sku === product.sku
+      );
+    });
+
+    const totalOrders = ordersWithProduct.length;
+    const deliveredOrders = ordersWithProduct.filter(o => o.status === 'delivered');
+
+    let totalRevenue = 0;
+    let totalQuantity = 0;
+
+    // Calculate revenue and quantity for delivered orders only
+    deliveredOrders.forEach(order => {
+      if (order.products && Array.isArray(order.products)) {
+        order.products.forEach((orderProduct: any) => {
+          if (orderProduct.sku === product.sku) {
+            const quantity = orderProduct.quantity || 0;
+            const revenue = (product.price || 0) * quantity;
+            totalRevenue += revenue;
+            totalQuantity += quantity;
+          }
+        });
+      }
+    });
+
+    // Calculate profit: (B2B Price - Cost Price) * Delivered Quantity
+    const costPrice = product.costPrice || 0;
+    const sellingPrice = product.price || 0;
+    const profitPerUnit = sellingPrice - costPrice;
+    const totalProfit = profitPerUnit * totalQuantity;
+    
+    // Calculate profit margin percentage
+    const profitMargin = sellingPrice > 0 ? (profitPerUnit / sellingPrice) * 100 : 0;
+
+    return {
+      totalOrders,
+      deliveredOrders: deliveredOrders.length,
+      totalQuantity,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      totalProfit: Math.round(totalProfit * 100) / 100,
+      profitMargin: Math.round(profitMargin * 100) / 100
+    };
+  }
+
   // Date range utility function (copied from dashboard-service.ts)
   private getDateRange(period: string): { from: Date; to: Date } {
     const now = new Date();

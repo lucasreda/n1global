@@ -146,7 +146,7 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           
           {product.costPrice > 0 && (
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Custo</span>
+              <span className="text-gray-500 dark:text-gray-400">Custo para o Fornecedor</span>
               <div className="font-medium text-gray-900 dark:text-gray-100">
                 {formatCurrency(product.costPrice)}
               </div>
@@ -179,6 +179,46 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
             </>
           )}
         </div>
+
+        {/* Profitability Section */}
+        {(product as any).profitability && (
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+              Rentabilidade
+            </h4>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Pedidos Totais</span>
+                <div className="font-medium text-gray-900 dark:text-gray-100">
+                  {(product as any).profitability.totalOrders}
+                </div>
+              </div>
+              
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Entregues</span>
+                <div className="font-medium text-green-600 dark:text-green-400">
+                  {(product as any).profitability.deliveredOrders}
+                </div>
+              </div>
+              
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Lucro Total</span>
+                <div className="font-medium text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency((product as any).profitability.totalProfit)}
+                </div>
+              </div>
+              
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Margem</span>
+                <div className="font-medium text-blue-600 dark:text-blue-400">
+                  {(product as any).profitability.profitMargin.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-800">
