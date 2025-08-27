@@ -347,7 +347,7 @@ export class SupplierWalletService {
     const recentPaymentsData = await db
       .select({
         id: supplierPayments.id,
-        amountBrl: supplierPayments.amountBrl, // Usar valor em BRL
+        amountBrl: supplierPayments.amountBRL, // Usar valor em BRL
         exchangeRate: supplierPayments.exchangeRate,
         paidAt: supplierPayments.paidAt,
         description: supplierPayments.description,
@@ -389,7 +389,7 @@ export class SupplierWalletService {
     // Calcular total já pago (em BRL)
     const [totalPaidResult] = await db
       .select({
-        total: sum(supplierPayments.amountBrl), // Somar valores em BRL
+        total: sum(supplierPayments.amountBRL), // Somar valores em BRL
       })
       .from(supplierPayments)
       .where(
