@@ -37,6 +37,23 @@ interface SupplierMetrics {
   totalProfit: number;
 }
 
+interface SupplierContract {
+  id: string;
+  contractTitle: string;
+  contractContent: string;
+  contractTerms: any;
+  status: 'sent' | 'viewed' | 'signed' | 'rejected';
+  sentAt: string;
+  viewedAt?: string;
+  respondedAt?: string;
+  deliveryDays: number;
+  minimumOrder: number;
+  commissionRate: string;
+  productName: string;
+  productSku: string;
+  productPrice: string;
+}
+
 
 export default function SupplierDashboard() {
   const { user } = useAuth();
@@ -54,6 +71,12 @@ export default function SupplierDashboard() {
   // Fetch supplier metrics (orders, deliveries, returns)  
   const { data: supplierMetrics, isLoading: isLoadingMetrics } = useQuery<SupplierMetrics>({
     queryKey: [`/api/supplier/metrics?period=${dateFilter}`],
+    enabled: !!user && user.role === 'supplier',
+  });
+
+  // Fetch supplier contracts
+  const { data: supplierContracts = [], isLoading: isLoadingContracts } = useQuery<SupplierContract[]>({
+    queryKey: ['/api/supplier/contracts'],
     enabled: !!user && user.role === 'supplier',
   });
 
@@ -311,15 +334,130 @@ export default function SupplierDashboard() {
           {activeSection === 'contracts' && (
             <div className="p-6">
               <h1 className="text-2xl font-bold mb-4">Contratos</h1>
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Área de Contratos</h3>
-                  <p className="text-muted-foreground">
-                    Gerencie seus contratos e acordos comerciais.
-                  </p>
-                </CardContent>
-              </Card>
+              
+              {isLoadingContracts ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Carregando contratos...</p>
+                  </CardContent>
+                </Card>
+              ) : supplierContracts.length > 0 ? (
+                <div className="space-y-4">
+                  {supplierContracts.map((contract) => (
+                    <Card key={contract.id}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            {contract.productName}
+                          </CardTitle>
+                          <Badge 
+                            variant={
+                              contract.status === 'signed' ? 'default' : 
+                              contract.status === 'rejected' ? 'destructive' : 
+                              contract.status === 'viewed' ? 'secondary' : 
+                              'outline'
+                            }
+                          >
+                            {contract.status === 'sent' && 'Enviado'}
+                            {contract.status === 'viewed' && 'Visualizado'}
+                            {contract.status === 'signed' && 'Assinado'}
+                            {contract.status === 'rejected' && 'Rejeitado'}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* Product Details */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">SKU</p>
+                              <p className="font-medium">{contract.productSku}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Preço</p>
+                              <p className="font-medium">€{Number(contract.productPrice).toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Comissão</p>
+                              <p className="font-medium">{contract.commissionRate}%</p>
+                            </div>
+                          </div>
+
+                          {/* Contract Terms */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Prazo de Entrega</p>
+                              <p className="font-medium">{contract.deliveryDays} dias úteis</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Pedido Mínimo</p>
+                              <p className="font-medium">{contract.minimumOrder} unidade(s)</p>
+                            </div>
+                          </div>
+
+                          {/* Timeline */}
+                          <div className="border-t pt-4">
+                            <p className="text-sm text-muted-foreground mb-2">Status do Contrato:</p>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-sm">
+                                  Enviado em {new Date(contract.sentAt).toLocaleDateString('pt-BR')}
+                                </span>
+                              </div>
+                              {contract.viewedAt && (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                  <span className="text-sm">
+                                    Visualizado em {new Date(contract.viewedAt).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              )}
+                              {contract.respondedAt && (
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    contract.status === 'signed' ? 'bg-green-500' : 'bg-red-500'
+                                  }`}></div>
+                                  <span className="text-sm">
+                                    Respondido em {new Date(contract.respondedAt).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Contract Content */}
+                          <details className="border rounded p-3">
+                            <summary className="cursor-pointer text-sm font-medium">
+                              Ver Contrato Completo
+                            </summary>
+                            <div className="mt-3 pt-3 border-t">
+                              <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
+                                {contract.contractContent}
+                              </pre>
+                            </div>
+                          </details>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Nenhum Contrato</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Você ainda não possui contratos enviados.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Contratos aparecerão aqui quando seus produtos forem aprovados pelo administrador.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
 
