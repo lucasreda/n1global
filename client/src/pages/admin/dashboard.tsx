@@ -51,13 +51,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-          Dashboard
-        </h1>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
