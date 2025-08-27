@@ -171,20 +171,20 @@ export default function SupplierWallet() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Total a Receber</p>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-green-400">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-400 mb-2">Total a Receber</p>
+                  <div className="space-y-0.5">
+                    <p className="text-xl font-bold text-green-400">
                       {formatBRL(wallet.totalToReceive)}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {formatEUR(wallet.totalToReceive)}
                     </p>
                   </div>
                 </div>
                 <div className="p-3 bg-green-500/10 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-green-400" />
+                  <DollarSign className="h-5 w-5 text-green-400" />
                 </div>
               </div>
             </CardContent>
@@ -192,18 +192,18 @@ export default function SupplierWallet() {
 
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Pendentes de Recebimento</p>
-                  <p className="text-2xl font-bold text-green-400">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-400 mb-2">Pendentes de Recebimento</p>
+                  <p className="text-xl font-bold text-green-400 mb-1">
                     {wallet.totalOrdersCount}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500">
                     {wallet.totalOrdersPaid} já recebidos
                   </p>
                 </div>
                 <div className="p-3 bg-green-500/10 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-green-400" />
+                  <DollarSign className="h-5 w-5 text-green-400" />
                 </div>
               </div>
             </CardContent>
@@ -211,15 +211,15 @@ export default function SupplierWallet() {
 
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Próximo Pagamento</p>
-                  <p className="text-lg font-semibold text-yellow-400">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-400 mb-2">Próximo Pagamento</p>
+                  <p className="text-xl font-bold text-blue-400">
                     {formatDate(wallet.nextPaymentDate)}
                   </p>
                 </div>
-                <div className="p-3 bg-yellow-500/10 rounded-lg">
-                  <Calendar className="h-6 w-6 text-yellow-400" />
+                <div className="p-3 bg-blue-500/10 rounded-lg">
+                  <Calendar className="h-5 w-5 text-blue-400" />
                 </div>
               </div>
             </CardContent>
@@ -227,20 +227,20 @@ export default function SupplierWallet() {
 
           <Card className="bg-[#0f0f0f] border-[#252525]">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Total Recebido</p>
-                  <div className="space-y-1">
-                    <p className="text-2xl font-bold text-purple-400">
+              <div className="flex items-center justify-between h-16">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-400 mb-2">Total Recebido</p>
+                  <div className="space-y-0.5">
+                    <p className="text-xl font-bold text-purple-400">
                       {formatBRL(wallet.totalPaid)}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {formatEUR(wallet.totalPaid)}
                     </p>
                   </div>
                 </div>
                 <div className="p-3 bg-purple-500/10 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-purple-400" />
+                  <TrendingUp className="h-5 w-5 text-purple-400" />
                 </div>
               </div>
             </CardContent>
