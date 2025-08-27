@@ -100,10 +100,11 @@ export class FinanceService {
       .from(orders)
       .where(eq(orders.status, 'delivered'));
 
-    // Buscar IDs dos pedidos que já foram pagos para o fornecedor
+    // Buscar quantidades já pagas por SKU para este fornecedor
     const paidPaymentItems = await db
       .select({
-        orderId: supplierPaymentItems.orderId,
+        productSku: supplierPaymentItems.productSku,
+        paidQuantity: sql<number>`sum(${supplierPaymentItems.quantity})`,
       })
       .from(supplierPaymentItems)
       .leftJoin(supplierPayments, eq(supplierPaymentItems.paymentId, supplierPayments.id))
@@ -112,45 +113,47 @@ export class FinanceService {
           eq(supplierPayments.supplierId, supplierId),
           eq(supplierPayments.status, 'paid')
         )
-      );
+      )
+      .groupBy(supplierPaymentItems.productSku);
 
-    const paidOrderIds = new Set(paidPaymentItems.map(item => item.orderId).filter(Boolean));
-
-    // Calcular valores e unidades vendidas dos pedidos que pertencem ao fornecedor
-    let totalOrdersValue = 0;
-    let totalUnitsCount = 0;
-
-    for (const order of allOrders) {
-      // Pular se o pedido já foi pago
-      if (paidOrderIds.has(order.id)) {
-        continue;
+    // Criar mapa de quantidades já pagas por SKU
+    const paidQuantitiesBySku = new Map<string, number>();
+    for (const item of paidPaymentItems) {
+      if (item.productSku && item.paidQuantity) {
+        const quantity = typeof item.paidQuantity === 'string' ? parseInt(item.paidQuantity) : item.paidQuantity;
+        paidQuantitiesBySku.set(item.productSku, quantity);
       }
+    }
+
+    // Calcular total de quantidades vendidas por SKU primeiro
+    const totalQuantitiesBySku = new Map<string, number>();
+    for (const order of allOrders) {
       if (!order.products) continue;
-
+      
       const orderProducts = Array.isArray(order.products) ? order.products : [];
-      const supplierOrderProducts = orderProducts.filter((product: any) => 
-        productSkus.includes(product.sku)
-      );
-
-      if (supplierOrderProducts.length === 0) continue;
-
-      // Calcular valor e unidades do fornecedor neste pedido
-      let supplierValueInOrder = 0;
-      let unitsInOrder = 0;
-
-      for (const orderProduct of supplierOrderProducts) {
-        const supplierProduct = supplierProducts.find(p => p.sku === orderProduct.sku);
-        if (supplierProduct && supplierProduct.price) {
-          const quantity = orderProduct.quantity || 1;
-          const unitPrice = parseFloat(supplierProduct.price); // Usar preço B2B
-          supplierValueInOrder += unitPrice * quantity;
-          unitsInOrder += quantity;
+      for (const product of orderProducts) {
+        if (productSkus.includes(product.sku)) {
+          const current = totalQuantitiesBySku.get(product.sku) || 0;
+          totalQuantitiesBySku.set(product.sku, current + (product.quantity || 1));
         }
       }
+    }
 
-      if (supplierValueInOrder > 0) {
-        totalOrdersValue += supplierValueInOrder;
-        totalUnitsCount += unitsInOrder;
+    // Calcular valores pendentes baseado na diferença entre vendido e pago
+    let totalOrdersValue = 0;
+    let totalUnitsCount = 0;
+    
+    for (const [sku, totalSold] of Array.from(totalQuantitiesBySku.entries())) {
+      const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
+      const pendingQuantity = Math.max(0, totalSold - paidQuantity);
+      
+      if (pendingQuantity > 0) {
+        totalUnitsCount += pendingQuantity;
+        const supplierProduct = supplierProducts.find(p => p.sku === sku);
+        if (supplierProduct && supplierProduct.price) {
+          const unitPrice = parseFloat(supplierProduct.price);
+          totalOrdersValue += unitPrice * pendingQuantity;
+        }
       }
     }
 
