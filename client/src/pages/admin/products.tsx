@@ -265,17 +265,17 @@ function CostConfigurationModal({ product, open, onClose }: { product: Product; 
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+          <div className="border rounded-md p-4" style={{ backgroundColor: '#0f0f0f', borderColor: '#252525' }}>
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
-                <Settings className="h-5 w-5 text-blue-600 mt-0.5" />
+                <Settings className="h-5 w-5 text-blue-400 mt-0.5" />
               </div>
               <div>
-                <h4 className="text-sm font-medium text-blue-900 mb-1">
+                <h4 className="text-sm font-medium text-white mb-1">
                   Configuração Final do Produto
                 </h4>
-                <p className="text-sm text-blue-700">
-                  O contrato para <strong>{product.name}</strong> foi assinado pelo fornecedor. 
+                <p className="text-sm text-gray-300">
+                  O contrato para <strong className="text-white">{product.name}</strong> foi assinado pelo fornecedor. 
                   Configure o custo de envio e aprove o produto para ativá-lo no sistema.
                 </p>
               </div>
