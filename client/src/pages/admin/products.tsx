@@ -431,8 +431,8 @@ export default function AdminProducts() {
             Gerencie todos os produtos do sistema
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
+        <Button className="text-white">
+          <Plus className="h-4 w-4 mr-2 text-white" />
           Novo Produto
         </Button>
       </div>
