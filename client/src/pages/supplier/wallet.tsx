@@ -128,7 +128,7 @@ export default function SupplierWallet() {
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
-            <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+            <Wallet className="h-8 w-8 animate-pulse text-gray-400" />
           </div>
         </div>
       </div>
