@@ -350,7 +350,7 @@ export default function SupplierWallet() {
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-semibold text-green-400">
-                            {formatCurrency(payment.amount)}
+                            {formatBRL(payment.amount)}
                           </p>
                           <p className="text-xs text-gray-400">
                             {payment.orderCount} unidade(s)

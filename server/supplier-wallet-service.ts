@@ -256,12 +256,9 @@ export class SupplierWalletService {
     let totalToReceive = 0;
     let totalPendingUnits = 0; // DEBUG: contador de unidades pendentes
     
-    console.log('🔍 DEBUG - Cálculo de unidades pendentes:');
     for (const [sku, totalSold] of Array.from(totalQuantitiesBySku.entries())) {
       const paidQuantity = paidQuantitiesBySku.get(sku) || 0;
       const pendingQuantity = Math.max(0, totalSold - paidQuantity);
-      
-      console.log(`  SKU: ${sku} | Vendido: ${totalSold} | Pago: ${paidQuantity} | Pendente: ${pendingQuantity}`);
       
       if (pendingQuantity > 0) {
         totalPendingUnits += pendingQuantity;
@@ -272,8 +269,6 @@ export class SupplierWalletService {
         }
       }
     }
-    
-    console.log(`🔍 DEBUG - Total unidades pendentes: ${totalPendingUnits}`);
 
     // Processar pedidos individuais para listagem (apenas pedidos elegíveis)
     for (const order of eligibleOrders) {
@@ -352,8 +347,8 @@ export class SupplierWalletService {
     const recentPaymentsData = await db
       .select({
         id: supplierPayments.id,
-        amount: supplierPayments.amount,
-        currency: supplierPayments.currency,
+        amountBrl: supplierPayments.amountBrl, // Usar valor em BRL
+        exchangeRate: supplierPayments.exchangeRate,
         paidAt: supplierPayments.paidAt,
         description: supplierPayments.description,
         status: supplierPayments.status,
@@ -381,8 +376,8 @@ export class SupplierWalletService {
 
       recentPayments.push({
         id: payment.id,
-        amount: parseFloat(payment.amount),
-        currency: payment.currency,
+        amount: parseFloat(payment.amountBrl), // Usar valor em BRL
+        currency: 'BRL', // Forçar moeda para BRL já que estamos usando amountBrl
         paidAt: payment.paidAt?.toISOString() || '',
         description: payment.description || '',
         status: payment.status,
@@ -391,10 +386,10 @@ export class SupplierWalletService {
       });
     }
 
-    // Calcular total já pago
+    // Calcular total já pago (em BRL)
     const [totalPaidResult] = await db
       .select({
-        total: sum(supplierPayments.amount),
+        total: sum(supplierPayments.amountBrl), // Somar valores em BRL
       })
       .from(supplierPayments)
       .where(
