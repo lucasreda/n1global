@@ -3446,6 +3446,21 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     next();
   });
 
+  app.get("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { FinanceService } = await import("./finance-service");
+      const financeService = new FinanceService();
+      
+      const payments = await financeService.getSupplierPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("💰 Error fetching supplier payments:", error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Erro ao buscar pagamentos" 
+      });
+    }
+  });
+
   app.post("/api/finance/supplier-payments", authenticateToken, requireFinanceAdmin, async (req: AuthRequest, res: Response) => {
     console.log("💰 PAYMENT ENDPOINT REACHED - Body:", req.body);
     console.log("💰 User ID:", req.user?.id);

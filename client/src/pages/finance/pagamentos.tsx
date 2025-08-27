@@ -22,51 +22,21 @@ import {
   Download,
   DollarSign
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
-interface Payment {
+interface SupplierPayment {
   id: string;
-  type: 'supplier' | 'affiliate';
-  recipient: string;
-  amount: number;
-  status: 'pending' | 'approved' | 'paid' | 'rejected';
-  date: string;
-  dueDate: string;
+  supplierId: string;
+  supplierName: string;
+  amount: string;
+  currency: string;
+  status: 'pending' | 'approved' | 'paid' | 'rejected' | 'cancelled';
+  paymentMethod: string;
   description: string;
+  dueDate: string;
+  createdAt: string;
 }
-
-// Mock data para fornecedores
-const supplierPayments: Payment[] = [
-  {
-    id: "PAY-001",
-    type: "supplier",
-    recipient: "TechSupply Co.",
-    amount: 15000.00,
-    status: "pending",
-    date: "2025-08-26",
-    dueDate: "2025-09-05",
-    description: "Pagamento produtos eletrônicos - Lote #342"
-  },
-  {
-    id: "PAY-002",
-    type: "supplier",
-    recipient: "Fashion World Ltd.",
-    amount: 8750.50,
-    status: "approved",
-    date: "2025-08-25",
-    dueDate: "2025-09-03",
-    description: "Roupas femininas - Coleção Outono"
-  },
-  {
-    id: "PAY-003",
-    type: "supplier",
-    recipient: "Home & Garden Inc.",
-    amount: 12300.75,
-    status: "paid",
-    date: "2025-08-20",
-    dueDate: "2025-08-30",
-    description: "Produtos para casa - Pedido #1847"
-  }
-];
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -89,6 +59,24 @@ const getStatusText = (status: string) => {
 };
 
 export default function FinancePagamentos() {
+  // Buscar pagamentos reais do banco de dados
+  const { data: payments = [], isLoading } = useQuery<SupplierPayment[]>({
+    queryKey: ["/api/finance/supplier-payments"],
+  });
+
+  // Calcular totais dos pagamentos reais
+  const totalPendente = payments
+    .filter(p => p.status === 'pending')
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+  const totalAprovado = payments
+    .filter(p => p.status === 'approved')
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+  const totalPago = payments
+    .filter(p => p.status === 'paid')
+    .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
   return (
     <FinanceLayout>
       <div className="space-y-6">
@@ -112,8 +100,8 @@ export default function FinancePagamentos() {
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">R$ 23.750,50</div>
-              <p className="text-xs text-gray-400">3 pagamentos aguardando</p>
+              <div className="text-2xl font-bold text-white">€{totalPendente.toFixed(2)}</div>
+              <p className="text-xs text-gray-400">{payments.filter(p => p.status === 'pending').length} pagamentos aguardando</p>
             </CardContent>
           </Card>
 
@@ -123,8 +111,8 @@ export default function FinancePagamentos() {
               <CheckCircle className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">R$ 8.750,50</div>
-              <p className="text-xs text-gray-400">1 pagamento aprovado</p>
+              <div className="text-2xl font-bold text-white">€{totalAprovado.toFixed(2)}</div>
+              <p className="text-xs text-gray-400">{payments.filter(p => p.status === 'approved').length} pagamentos aprovados</p>
             </CardContent>
           </Card>
 
@@ -134,19 +122,19 @@ export default function FinancePagamentos() {
               <DollarSign className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">R$ 45.800,25</div>
-              <p className="text-xs text-gray-400">+12% vs mês anterior</p>
+              <div className="text-2xl font-bold text-white">€{totalPago.toFixed(2)}</div>
+              <p className="text-xs text-gray-400">{payments.filter(p => p.status === 'paid').length} pagamentos concluídos</p>
             </CardContent>
           </Card>
 
           <Card style={{ backgroundColor: '#0f0f0f', borderColor: '#252525' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-300">Fornecedores Ativos</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-300">Total de Pagamentos</CardTitle>
               <Package className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">12</div>
-              <p className="text-xs text-gray-400">3 novos este mês</p>
+              <div className="text-2xl font-bold text-white">{payments.length}</div>
+              <p className="text-xs text-gray-400">Todos os pagamentos criados</p>
             </CardContent>
           </Card>
         </div>
@@ -195,16 +183,29 @@ export default function FinancePagamentos() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {supplierPayments.map((payment) => (
-                        <TableRow key={payment.id} className="border-gray-700 hover:bg-gray-800/50">
-                          <TableCell>
-                            <div>
-                              <div className="font-medium text-white">{payment.recipient}</div>
-                              <div className="text-sm text-gray-400">{payment.description}</div>
-                            </div>
+                      {isLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-gray-400 py-8">
+                            Carregando pagamentos...
                           </TableCell>
+                        </TableRow>
+                      ) : payments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-gray-400 py-8">
+                            Nenhum pagamento encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        payments.map((payment) => (
+                          <TableRow key={payment.id} className="border-gray-700 hover:bg-gray-800/50">
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-white">{payment.supplierName || 'Fornecedor não encontrado'}</div>
+                                <div className="text-sm text-gray-400">{payment.description || 'Sem descrição'}</div>
+                              </div>
+                            </TableCell>
                           <TableCell className="text-white font-medium">
-                            R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            €{parseFloat(payment.amount).toFixed(2)}
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusColor(payment.status)}>
@@ -215,7 +216,8 @@ export default function FinancePagamentos() {
                             {new Date(payment.dueDate).toLocaleDateString('pt-BR')}
                           </TableCell>
                         </TableRow>
-                      ))}
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
