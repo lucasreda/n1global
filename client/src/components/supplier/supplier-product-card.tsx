@@ -87,8 +87,8 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
   return (
     <Card className="border border-gray-200/60 dark:border-gray-700/60 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-300 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm h-full flex flex-col" data-testid={`product-card-${product.sku}`}>
       <div className="p-4 flex-1 flex flex-col">
-        {/* Header - Fixed height */}
-        <div className="flex items-start gap-3 mb-4 h-16">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-4">
           {/* Product Image */}
           <div className="flex-shrink-0">
             {product.imageUrl ? (
@@ -105,17 +105,40 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           </div>
           
           {/* Product Info */}
-          <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
-            <div>
-              <h3 className="font-medium text-gray-900 dark:text-gray-100 leading-tight mb-1 line-clamp-1">
-                {product.name}
-              </h3>
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded">
-                  {product.sku}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-gray-900 dark:text-gray-100 leading-tight mb-1">
+              {product.name}
+            </h3>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded">
+                {product.sku}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {product.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
+              </span>
+            </div>
+            
+            {/* Status Badge */}
+            <div className="mb-2">
+              {getStatusBadge(product.status || 'pending')}
+            </div>
+
+            {/* Key Metrics Row */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1">
+                <span className={`w-2 h-2 rounded-full ${
+                  product.status === 'approved' ? 'bg-green-500' : 
+                  product.status === 'rejected' ? 'bg-red-500' : 
+                  'bg-yellow-500'
+                }`}></span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatCurrency(product.price)}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {product.type === 'fisico' ? 'Físico' : 'Nutracêutico'}
+              </div>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-600 dark:text-gray-300">
+                  {product.initialStock || 0}
                 </span>
               </div>
             </div>
@@ -146,41 +169,17 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           </div>
         </div>
 
-        {/* Status Badge - Fixed position */}
-        <div className="mb-3">
-          {getStatusBadge(product.status || 'pending')}
-        </div>
-
-        {/* Key Metrics Row - Fixed height */}
-        <div className="flex items-center gap-4 text-sm mb-4 h-6">
-          <div className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${
-              product.status === 'approved' ? 'bg-green-500' : 
-              product.status === 'rejected' ? 'bg-red-500' : 
-              'bg-yellow-500'
-            }`}></span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {formatCurrency(product.price)}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-gray-400" />
-            <span className="text-gray-600 dark:text-gray-300">
-              {product.initialStock || 0}
-            </span>
-          </div>
-        </div>
-
-        {/* Description - Fixed height area */}
-        <div className="mb-4 h-10 flex items-start">
-          {product.description ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2">
+        {/* Description - Flexible height */}
+        {product.description && (
+          <div className="mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
               {product.description}
             </p>
-          ) : (
-            <div className="h-full"></div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Bottom section - Always at the end */}
+        <div className="mt-auto">
 
         {/* Details Grid */}
         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -267,20 +266,21 @@ export function SupplierProductCard({ product, onUpdate }: SupplierProductCardPr
           </div>
         )}
 
-        {/* Footer */}
-        <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex justify-between items-center text-xs text-gray-400">
-            <span>
-              {new Date(product.createdAt).toLocaleDateString('pt-BR')}
-            </span>
-            {product.updatedAt !== product.createdAt && (
+          {/* Footer */}
+          <div className="pt-3 mt-3 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex justify-between items-center text-xs text-gray-400">
               <span>
-                Atualizado {new Date(product.updatedAt).toLocaleDateString('pt-BR')}
+                {new Date(product.createdAt).toLocaleDateString('pt-BR')}
               </span>
-            )}
+              {product.updatedAt !== product.createdAt && (
+                <span>
+                  Atualizado {new Date(product.updatedAt).toLocaleDateString('pt-BR')}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        </div> {/* Closes bottom section */}
+      </div> {/* Closes main card content */}
       
       {/* Edit Product Modal */}
       <EditProductModal
