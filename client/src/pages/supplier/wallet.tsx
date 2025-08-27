@@ -11,7 +11,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Wallet,
   Calendar,
@@ -67,12 +67,15 @@ interface SupplierWallet {
 }
 
 export default function SupplierWallet() {
+  const queryClient = useQueryClient();
+  
+  // Force clear cache on mount
+  React.useEffect(() => {
+    queryClient.removeQueries(["/api/supplier/wallet"]);
+  }, [queryClient]);
+
   const { data: wallet, isLoading, refetch } = useQuery<SupplierWallet>({
     queryKey: ["/api/supplier/wallet"],
-    staleTime: 0, // Always fetch fresh data
-    cacheTime: 0, // Don't cache
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
   });
 
   // Debug: log payment values
@@ -362,7 +365,7 @@ export default function SupplierWallet() {
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-semibold text-green-400">
-                            {formatBRL(payment.amount)}
+                            R$ {payment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-gray-400">
                             {payment.orderCount} unidade(s)
