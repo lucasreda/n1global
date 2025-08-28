@@ -26,18 +26,23 @@ import { SiGoogle } from "react-icons/si";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import facebookIcon from "@assets/meta-icon_1756415603759.png";
+import facebookIconMini from "@assets/metamini_1756416312919.png";
 import googleAdsIcon from "@assets/gadsicon_1756416065444.png";
 import googleAdsIconMini from "@assets/gadsmini_1756416199452.png";
 
 // Componentes customizados para os ícones
-const FacebookIcon = ({ size }: { size?: number }) => (
-  <img 
-    src={facebookIcon} 
-    alt="Meta" 
-    className="object-contain"
-    style={{ width: size || 40, height: size || 40 }}
-  />
-);
+const FacebookIcon = ({ size }: { size?: number }) => {
+  // Use o ícone mini para tamanhos pequenos (até 24px) e o grande para botões
+  const iconSrc = (size || 40) <= 24 ? facebookIconMini : facebookIcon;
+  return (
+    <img 
+      src={iconSrc} 
+      alt="Meta" 
+      className="object-contain"
+      style={{ width: size || 40, height: size || 40 }}
+    />
+  );
+};
 
 const GoogleAdsIcon = ({ size }: { size?: number }) => {
   // Use o ícone mini para tamanhos pequenos (até 24px) e o grande para botões
