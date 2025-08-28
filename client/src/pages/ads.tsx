@@ -378,7 +378,7 @@ export default function Ads() {
                   className="h-24 flex items-center justify-center border border-gray-300 hover:border-gray-400"
                   style={{ backgroundColor: '#f8f8f8' }}
                 >
-                  <GoogleAdsIcon size={160} />
+                  <GoogleAdsIcon size={190} />
                 </Button>
               </div>
             </DialogContent>
