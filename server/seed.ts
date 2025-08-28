@@ -380,7 +380,7 @@ export async function seedDatabase() {
             poolId: poolId,
             type: "return_payment",
             amount: "3437.50",
-            description: "Rendimento mensal - Janeiro",
+            description: "Janeiro",
             paymentStatus: "completed",
             processedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
           },
@@ -390,7 +390,7 @@ export async function seedDatabase() {
             poolId: poolId,
             type: "return_payment",
             amount: "3781.25",
-            description: "Rendimento mensal - Fevereiro",
+            description: "Fevereiro",
             paymentStatus: "completed",
             processedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
           }
