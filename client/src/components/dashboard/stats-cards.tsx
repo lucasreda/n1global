@@ -70,6 +70,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     return ((current - previous) / previous * 100).toFixed(1);
   };
 
+  // Debug da imagem Shopify
+  console.log('Shopify icon path:', shopifyIcon);
+
   // Novos cards especiais
   const specialStats = [
     {
@@ -344,7 +347,16 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center ${!isDisabled && 'group-hover:scale-110'} transition-transform duration-300`}>
                   {isImage ? (
-                    <img src={IconComponent as string} alt="Shopify" className="w-8 h-8 object-contain" />
+                    <img 
+                      src={IconComponent as string} 
+                      alt="Shopify" 
+                      className="w-8 h-8 object-contain"
+                      onError={(e) => {
+                        console.error('Erro ao carregar imagem Shopify:', e);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                      onLoad={() => console.log('Imagem Shopify carregada com sucesso')}
+                    />
                   ) : (
                     React.createElement(IconComponent as any, { className: `${stat.iconColor} w-6 h-6` })
                   )}
