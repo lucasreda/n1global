@@ -15,6 +15,7 @@ import {
   PiggyBank
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import investmentLogo from "@assets/Investment_1756400581219.png";
 
 interface InvestmentLayoutProps {
   children: React.ReactNode;
@@ -99,7 +100,7 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
             <Link href="/investment">
               <div className="flex items-center cursor-pointer">
                 <img 
-                  src="/attached_assets/Investment_1756400581219.png"
+                  src={investmentLogo}
                   alt="Investment Logo" 
                   className="h-8 object-contain"
                 />
