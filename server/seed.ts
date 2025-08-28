@@ -317,7 +317,7 @@ export async function seedDatabase() {
           totalValue: "10000000.00", // R$10,000,000
           totalInvested: "825000.00", // R$825,000 invested
           monthlyReturn: "0.08", // 8% monthly
-          yearlyReturn: "0.30", // 30% yearly
+          yearlyReturn: "1.51", // 151% yearly (compound calculation)
           minInvestment: "27500.00", // R$27,500 minimum
           riskLevel: "medium",
           investmentStrategy: "Investimento em operações COD de alto volume com margens consistentes. Diversificação em múltiplos países europeus e categorias de produtos."
