@@ -303,7 +303,7 @@ export default function Ads() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Anúncios Facebook</h1>
+            <h1 className="text-2xl font-bold text-white">Anúncios Meta</h1>
             <p className="text-gray-400">Gerencie campanhas e custos de marketing</p>
           </div>
         </div>
@@ -411,7 +411,7 @@ export default function Ads() {
               <div className="space-y-4 py-4">
                 <div className="space-y-1">
                   <Label htmlFor="accountId" className="text-sm text-gray-300">
-                    {selectedNetwork === 'facebook' ? 'ID da Conta Facebook' : 'Customer ID Google Ads'}
+                    {selectedNetwork === 'facebook' ? 'ID da Conta Meta' : 'Customer ID Google Ads'}
                   </Label>
                   <Input
                     id="accountId"
@@ -455,13 +455,13 @@ export default function Ads() {
                 {selectedNetwork === 'facebook' ? (
                   <>
                     <div className="space-y-1">
-                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Facebook</Label>
+                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Meta</Label>
                       <Input
                         id="accessToken"
                         value={newAccount.accessToken}
                         onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
                         className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="EAAxxxxxx... (token real do Facebook)"
+                        placeholder="EAAxxxxxx... (token real do Meta)"
                         type="password"
                         required
                       />
@@ -474,7 +474,7 @@ export default function Ads() {
                         value={newAccount.appId}
                         onChange={(e) => setNewAccount(prev => ({ ...prev, appId: e.target.value }))}
                         className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="ID da aplicação Facebook"
+                        placeholder="ID da aplicação Meta"
                       />
                     </div>
 
