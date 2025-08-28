@@ -86,35 +86,37 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
     <div className="min-h-screen bg-[#020817]">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 bg-black border-b border-[#252525] z-50">
-        <div className="flex items-center justify-between px-0 md:px-4 h-16">
-          <Link href="/investment">
-            <div className="flex items-center cursor-pointer pl-4 md:pl-0">
-              <img 
-                src={investmentLogo}
-                alt="Investment Logo" 
-                className="h-7 object-contain"
-              />
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-2 pr-4 md:pr-0">
-            <div className="hidden md:flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white font-medium">
-                  {getUserInitials(user?.name, user?.email)}
-                </span>
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/investment">
+              <div className="flex items-center cursor-pointer">
+                <img 
+                  src={investmentLogo}
+                  alt="Investment Logo" 
+                  className="h-7 object-contain"
+                />
               </div>
-              <span className="text-sm text-gray-300">{user?.email}</span>
+            </Link>
+
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-white font-medium">
+                    {getUserInitials(user?.name, user?.email)}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-300">{user?.email}</span>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
           </div>
         </div>
       </header>
