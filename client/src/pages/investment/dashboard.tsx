@@ -13,6 +13,7 @@ import {
   ArrowDownRight,
   Activity
 } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from "@tanstack/react-query";
 
 interface InvestorDashboardData {
@@ -44,6 +45,22 @@ export default function InvestmentDashboard() {
   const { data: dashboardData, isLoading } = useQuery<InvestorDashboardData>({
     queryKey: ["/api/investment/dashboard"],
   });
+
+  // Dados fictícios para o gráfico de recebimentos mensais
+  const monthlyReturnsData = [
+    { month: 'Jun', returns: 580, cumulative: 580 },
+    { month: 'Jul', returns: 625, cumulative: 1205 },
+    { month: 'Ago', returns: 687, cumulative: 1892 },
+    { month: 'Set', returns: 712, cumulative: 2604 },
+    { month: 'Out', returns: 695, cumulative: 3299 },
+    { month: 'Nov', returns: 743, cumulative: 4042 },
+    { month: 'Dez', returns: 778, cumulative: 4820 },
+    { month: 'Jan', returns: 825, cumulative: 5645 },
+    { month: 'Fev', returns: 862, cumulative: 6507 },
+    { month: 'Mar', returns: 798, cumulative: 7305 },
+    { month: 'Abr', returns: 891, cumulative: 8196 },
+    { month: 'Mai', returns: 934, cumulative: 9130 }
+  ];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -115,6 +132,82 @@ export default function InvestmentDashboard() {
             Acompanhe seus investimentos e performance em tempo real
           </p>
         </div>
+
+        {/* Monthly Returns Chart */}
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-white">Recebimentos Mensais</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Evolução dos rendimentos nos últimos 12 meses
+                </p>
+              </div>
+              <TrendingUp className="h-5 w-5 text-green-400" />
+            </div>
+          </CardHeader>
+          <CardContent className="pb-6">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyReturnsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#252525" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="#9CA3AF"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="#9CA3AF"
+                    fontSize={12}
+                    tickLine={false}
+                    tickFormatter={(value) => `€${value}`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1F2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#F9FAFB'
+                    }}
+                    formatter={(value: number, name: string) => [
+                      `€${value.toLocaleString()}`, 
+                      name === 'returns' ? 'Recebimento' : 'Acumulado'
+                    ]}
+                    labelStyle={{ color: '#D1D5DB' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="returns" 
+                    stroke="#10B981" 
+                    strokeWidth={3}
+                    dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: '#10B981', strokeWidth: 2 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="cumulative" 
+                    stroke="#3B82F6" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    activeDot={{ r: 4, stroke: '#3B82F6', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                <span className="text-gray-300">Recebimento Mensal</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-0.5 bg-blue-400 rounded-full"></div>
+                <span className="text-gray-300">Total Acumulado</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Main Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
