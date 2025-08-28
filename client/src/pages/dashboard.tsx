@@ -193,11 +193,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
       {/* Header with Euro Rate, Complete Sync Button, and Date Filter */}
-      <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
+      <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         {/* Euro Exchange Rate */}
-        <div className="flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-3 py-2 w-fit">
+        <div className="flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-2 sm:px-3 py-2 w-fit max-w-full">
           <span className="text-green-400 font-medium text-sm">
             € {metrics?.exchangeRates?.EUR ? (metrics.exchangeRates.EUR).toFixed(2).replace('.', ',') : '6,40'}
           </span>
@@ -220,10 +220,10 @@ export default function Dashboard() {
           </Button>
 
           {/* Date Filter */}
-          <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2">
+          <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full">
             <Calendar className="text-gray-400" size={14} />
             <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-full sm:w-32 lg:w-36 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0">
+              <SelectTrigger className="w-24 sm:w-28 lg:w-32 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0 min-w-0">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent className="glassmorphism border-gray-600">

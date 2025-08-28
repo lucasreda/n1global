@@ -25,13 +25,13 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 export function ChartsSection({ revenueData, distributionData, isLoading = false }: ChartsSectionProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 animate-fade-in">
       {/* Revenue Chart */}
-      <div className="glassmorphism rounded-2xl p-6" data-testid="chart-revenue">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-white">Receita por Período</h3>
+      <div className="w-full glassmorphism rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-hidden" data-testid="chart-revenue">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
+          <h3 className="text-base sm:text-lg font-semibold text-white">Receita por Período</h3>
           <Select defaultValue="7days">
-            <SelectTrigger className="glassmorphism-light border-0 w-40 text-gray-200">
+            <SelectTrigger className="glassmorphism-light border-0 w-full sm:w-36 lg:w-40 text-gray-200 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="glassmorphism border-0">
@@ -42,7 +42,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </Select>
         </div>
         
-        <div className="h-48 sm:h-64">
+        <div className="w-full h-40 sm:h-48 lg:h-64 overflow-hidden">
           {!isLoading && revenueData && revenueData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData}>
@@ -94,15 +94,15 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       </div>
 
       {/* Distribution Chart */}
-      <div className="glassmorphism rounded-2xl p-4 sm:p-6 lg:p-8 min-h-[350px] sm:min-h-[400px]" data-testid="chart-distribution">
-        <div className="mb-6 sm:mb-8">
-          <h3 className="text-base sm:text-lg font-semibold text-white">Distribuição de Status</h3>
+      <div className="w-full glassmorphism rounded-xl sm:rounded-2xl p-4 sm:p-6 min-h-[320px] sm:min-h-[350px] lg:min-h-[400px] overflow-hidden" data-testid="chart-distribution">
+        <div className="mb-4 sm:mb-6">
+          <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-white">Distribuição de Status</h3>
         </div>
         
-        <div className="flex flex-col gap-6 sm:gap-8">
+        <div className="flex flex-col gap-4 sm:gap-6">
           {/* Chart Section */}
-          <div className="flex justify-center">
-            <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 relative">
+          <div className="flex justify-center w-full">
+            <div className="w-40 h-40 sm:w-48 sm:h-48 lg:w-56 lg:h-56 relative flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
