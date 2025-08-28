@@ -7,6 +7,17 @@ import { Settings, CheckCircle, AlertCircle, Package, Truck, Globe, Store } from
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { authenticatedApiRequest } from "@/lib/auth";
+import shopifyIcon from "@assets/shopify_1756413996883.webp";
+
+// Componente customizado para o ícone do Shopify
+const ShopifyIcon = ({ className, size }: { className?: string; size?: number }) => (
+  <img 
+    src={shopifyIcon} 
+    alt="Shopify" 
+    className={className}
+    style={{ width: size || 20, height: size || 20 }}
+  />
+);
 
 export default function Integrations() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
@@ -43,7 +54,7 @@ export default function Integrations() {
       name: "Shopify Store",
       status: getShopifyStatus(),
       description: "Integração com loja Shopify para importar pedidos e produtos",
-      icon: Package,
+      icon: ShopifyIcon,
       color: "green",
       hasPanel: true,
     },
