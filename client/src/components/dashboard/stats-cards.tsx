@@ -71,7 +71,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   };
 
   // Novos cards especiais
-  const specialStats = [
+  const topCards = [
     {
       title: "Pedidos Shopify",
       value: shopifyOrders.toLocaleString(),
@@ -94,18 +94,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       hoverBg: "group-hover:bg-orange-600/30",
       growth: calculateGrowth(avgCPA, avgCPA * 1.1), // Menor é melhor para CPA
       testId: "card-avg-cpa"
-    },
-    {
-      title: "Em Breve",
-      value: "---",
-      subtitle: `Funcionalidade bloqueada`,
-      icon: Lock,
-      iconBg: "bg-gray-600/20",
-      iconColor: "text-gray-400",
-      hoverBg: "group-hover:bg-gray-600/30",
-      growth: "0",
-      testId: "card-coming-soon",
-      disabled: true
     }
   ];
 
@@ -302,8 +290,48 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Hero Metric */}
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 animate-fade-in">
+      {/* Top Cards - Shopify and CPA above Profit */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {topCards.map((stat, index) => {
+          const IconComponent = stat.icon;
+          const isImage = stat.isImage;
+          
+          return (
+            <div
+              key={index}
+              className={`glassmorphism rounded-2xl p-4 transition-all duration-300 border hover:scale-[1.02] group cursor-pointer border-gray-500/20 hover:border-gray-400/40 ${stat.hoverBg}`}
+              data-testid={stat.testId}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                  {isImage ? (
+                    <img 
+                      src={IconComponent as string} 
+                      alt="Shopify" 
+                      className="w-8 h-8 object-contain"
+                    />
+                  ) : (
+                    React.createElement(IconComponent as any, { className: `${stat.iconColor} w-6 h-6` })
+                  )}
+                </div>
+                <div className={`text-xs px-2 py-1 rounded-full ${
+                  parseFloat(String(stat.growth)) > 0 ? 'bg-green-500/20 text-green-400' : 
+                  parseFloat(String(stat.growth)) < 0 ? 'bg-red-500/20 text-red-400' : 
+                  'bg-gray-500/20 text-gray-400'
+                }`}>
+                  {parseFloat(String(stat.growth)) > 0 ? '+' : ''}{stat.growth}%
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-1">{stat.value}</h3>
+              <p className="text-gray-300 text-sm font-medium">{stat.title}</p>
+              <p className="text-gray-400 text-xs mt-1">{stat.subtitle}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Hero Metric - Profit */}
       <div className="glassmorphism rounded-3xl p-6 bg-gradient-to-br from-green-500/15 via-emerald-500/10 to-green-600/15 border-2 border-green-400/25 hover:border-green-400/40 transition-all duration-500 group relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         <div className="relative z-10 text-center">
@@ -324,48 +352,81 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         </div>
       </div>
 
-      {/* Special Cards - Shopify, CPA, Coming Soon */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        {specialStats.map((stat, index) => {
-          const IconComponent = stat.icon;
-          const isDisabled = stat.disabled;
-          const isImage = stat.isImage;
-          
-          return (
-            <div
-              key={index}
-              className={`glassmorphism rounded-2xl p-4 transition-all duration-300 border ${
-                isDisabled 
-                  ? 'opacity-60 border-gray-600/20 cursor-not-allowed' 
-                  : 'hover:scale-[1.02] group cursor-pointer border-gray-500/20 hover:border-gray-400/40'
-              } ${stat.hoverBg}`}
-              data-testid={stat.testId}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center ${!isDisabled && 'group-hover:scale-110'} transition-transform duration-300`}>
-                  {isImage ? (
-                    <img 
-                      src={IconComponent as string} 
-                      alt="Shopify" 
-                      className="w-8 h-8 object-contain"
-                    />
-                  ) : (
-                    React.createElement(IconComponent as any, { className: `${stat.iconColor} w-6 h-6` })
-                  )}
+      {/* Secondary Metrics - Revenue Card */}
+      {secondaryMetrics.map((metric, index) => {
+        const IconComponent = metric.icon;
+        return (
+          <div key={index} className="glassmorphism rounded-2xl p-4 sm:p-6 hover:scale-[1.01] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <IconComponent className="text-blue-400 w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                {!isDisabled && (
-                  <div className={`text-xs px-2 py-1 rounded-full ${
-                    parseFloat(String(stat.growth)) > 0 ? 'bg-green-500/20 text-green-400' : 
-                    parseFloat(String(stat.growth)) < 0 ? 'bg-red-500/20 text-red-400' : 
-                    'bg-gray-500/20 text-gray-400'
-                  }`}>
-                    {parseFloat(String(stat.growth)) > 0 ? '+' : ''}{stat.growth}%
-                  </div>
-                )}
+                <div>
+                  <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white break-words">{metric.value}</h3>
+                  <p className="text-gray-300 text-sm sm:text-base lg:text-lg font-medium">{metric.title}</p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-white mb-1">{stat.value}</h3>
-              <p className="text-gray-300 text-sm font-medium">{stat.title}</p>
-              <p className="text-gray-400 text-xs mt-1">{stat.subtitle}</p>
+              <div className="text-left sm:text-right">
+                <div className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 mb-2 w-fit">
+                  Principal
+                </div>
+                <p className="text-sm text-gray-400">{metric.subtitle}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Tertiary Metrics - Medium Cards */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {tertiaryMetrics.map((metric, index) => {
+          const IconComponent = metric.icon;
+          const colorClasses = {
+            green: "border-green-500/15 hover:border-green-400/30 bg-gradient-to-br from-green-500/5 to-green-600/5",
+            teal: "border-teal-500/15 hover:border-teal-400/30 bg-gradient-to-br from-teal-500/5 to-teal-600/5", 
+            amber: "border-amber-500/15 hover:border-amber-400/30 bg-gradient-to-br from-amber-500/5 to-amber-600/5"
+          };
+          const iconClasses = {
+            green: "bg-green-500/20 text-green-400",
+            teal: "bg-teal-500/20 text-teal-400",
+            amber: "bg-amber-500/20 text-amber-400"
+          };
+          return (
+            <div key={index} className={`glassmorphism rounded-xl p-5 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border ${colorClasses[metric.color as keyof typeof colorClasses]}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className={`w-12 h-12 ${iconClasses[metric.color as keyof typeof iconClasses]} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className="w-6 h-6" />
+                </div>
+              </div>
+              <h4 className="text-xl font-bold text-white mb-1">{metric.value}</h4>
+              <p className="text-gray-300 text-sm">{metric.title}</p>
+              <p className="text-xs text-gray-400 mt-1">{metric.subtitle}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Quaternary Metrics - Small Cards */}
+      <div className="w-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+        {quaternaryMetrics.map((metric, index) => {
+          const IconComponent = metric.icon;
+          const colorClasses = {
+            purple: "bg-purple-500/15 text-purple-400",
+            indigo: "bg-indigo-500/15 text-indigo-400",
+            orange: "bg-orange-500/15 text-orange-400",
+            red: "bg-red-500/15 text-red-400"
+          };
+          return (
+            <div key={index} className="glassmorphism rounded-xl p-3 sm:p-4 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-gray-500/10 hover:border-gray-400/30">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 ${colorClasses[metric.color as keyof typeof colorClasses]} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+              </div>
+              <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{metric.value}</h5>
+              <p className="text-gray-400 text-xs mb-1">{metric.title}</p>
+              <p className="text-xs text-gray-400 opacity-80 leading-tight">{metric.subtitle}</p>
             </div>
           );
         })}
