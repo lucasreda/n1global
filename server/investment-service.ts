@@ -593,17 +593,17 @@ export class InvestmentService {
     // Get investment data for each investor
     const investorsWithData = await Promise.all(
       investors.map(async (investor) => {
-        const investmentSummary = await db
+        // Get all investments for this investor
+        const investorInvestments = await db
           .select({
-            totalInvested: sum(investments.amount),
-            poolCount: count(investments.id)
+            amount: investments.amount,
+            id: investments.id
           })
           .from(investments)
-          .where(eq(investments.investorId, investor.id))
-          .groupBy(investments.investorId);
+          .where(eq(investments.investorId, investor.id));
 
-        const totalInvested = investmentSummary.length > 0 ? parseFloat(investmentSummary[0].totalInvested || '0') : 0;
-        const poolCount = investmentSummary.length > 0 ? parseInt(investmentSummary[0].poolCount?.toString() || '0') : 0;
+        const totalInvested = investorInvestments.reduce((sum, inv) => sum + parseFloat(inv.amount), 0);
+        const poolCount = investorInvestments.length;
 
         // Get latest transaction
         const latestTransaction = await db
