@@ -291,9 +291,10 @@ export default function InvestmentDashboard() {
                         Fundo de Operações COD
                       </p>
                     </div>
-                    <div className="text-right">
-                      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${getRiskColor(dashboardData.poolPerformance.riskLevel)} bg-gray-900 border border-gray-700`}>
-                        Risco Baixo
+                    <div className="text-right flex-shrink-0">
+                      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs whitespace-nowrap ${getRiskColor(dashboardData.poolPerformance.riskLevel)} bg-gray-900 border border-gray-700`}>
+                        <span className="hidden sm:inline">Risco Baixo</span>
+                        <span className="sm:hidden">Baixo</span>
                       </div>
                     </div>
                   </div>
