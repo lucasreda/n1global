@@ -561,11 +561,14 @@ export default function Ads() {
             <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
             
             {/* Breakdown por rede */}
-            {allSelectedCampaigns.length > 0 && (
+            {filteredCampaigns && filteredCampaigns.length > 0 && (
               <div className="mt-3 space-y-2">
                 {(() => {
-                  const metaCampaigns = allSelectedCampaigns.filter(c => c.network === 'facebook');
-                  const googleCampaigns = allSelectedCampaigns.filter(c => c.network === 'google');
+                  // Usar campanhas selecionadas se houver, senão usar todas as filtradas
+                  const campaignsToAnalyze = allSelectedCampaigns.length > 0 ? allSelectedCampaigns : filteredCampaigns;
+                  
+                  const metaCampaigns = campaignsToAnalyze.filter(c => c.network === 'facebook');
+                  const googleCampaigns = campaignsToAnalyze.filter(c => c.network === 'google');
                   
                   const metaSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent), 0);
                   const googleSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent), 0);
