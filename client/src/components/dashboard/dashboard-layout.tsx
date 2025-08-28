@@ -23,7 +23,7 @@ export function DashboardLayout({ children, exchangeRate }: DashboardLayoutProps
   return (
     <div className="flex flex-col min-h-screen w-full overflow-x-hidden">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 flex items-center justify-between px-3 z-50">
+      <div className="lg:hidden h-14 flex items-center justify-between px-3">
         {/* Logo - Left */}
         <div className="flex-shrink-0">
           <img 
@@ -68,7 +68,7 @@ export function DashboardLayout({ children, exchangeRate }: DashboardLayoutProps
         </div>
       </div>
 
-      <div className="flex flex-1 pt-14 lg:pt-0">
+      <div className="flex flex-1">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block fixed left-0 top-0 h-full w-64 z-40">
           <Sidebar />
