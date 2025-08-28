@@ -102,7 +102,7 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
                 <img 
                   src={investmentLogo}
                   alt="Investment Logo" 
-                  className="h-6 object-contain"
+                  className="h-8 object-contain"
                 />
               </div>
             </Link>
