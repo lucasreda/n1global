@@ -170,62 +170,76 @@ export default function Orders() {
       />
 
       {/* Filters */}
-      <div className="glassmorphism rounded-2xl p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-              <Input
-                placeholder="Buscar por nome, telefone ou cidade..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-80 glassmorphism-light border-gray-600 text-white placeholder:text-gray-400"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48 glassmorphism-light border-gray-600 text-white">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="glassmorphism border-gray-600">
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="delivered">Entregues</SelectItem>
-                <SelectItem value="in transit">Em trânsito</SelectItem>
-                <SelectItem value="shipped">Enviados</SelectItem>
-                <SelectItem value="confirmed">Confirmados</SelectItem>
-                <SelectItem value="cancelled">Cancelados</SelectItem>
-                <SelectItem value="pending">Pendentes</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="glassmorphism rounded-2xl p-4 sm:p-6">
+        <div className="flex flex-col gap-4">
+          {/* Search Bar - Full width on mobile */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <Input
+              placeholder="Buscar por nome, telefone ou cidade..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-full glassmorphism-light border-gray-600 text-white placeholder:text-gray-400"
+            />
           </div>
-          <div className="flex items-center space-x-4">
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-48 glassmorphism-light border-gray-600 text-white">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent className="glassmorphism border-gray-600">
-                <SelectItem value="1">Hoje</SelectItem>
-                <SelectItem value="7">Últimos 7 dias</SelectItem>
-                <SelectItem value="30">Últimos 30 dias</SelectItem>
-                <SelectItem value="90">Últimos 3 meses</SelectItem>
-                <SelectItem value="365">Último ano</SelectItem>
-                <SelectItem value="all">Todos os períodos</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button 
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0"
-              data-testid="button-sync-shopify-carrier"
-            >
-              {syncMutation.isPending ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Zap className="w-4 h-4 mr-2" />
-              )}
-              {syncMutation.isPending ? "Sincronizando..." : "Sync Shopify + Transportadora + Ads"}
-            </Button>
-            <div className="text-sm text-gray-300">
-              {totalOrders} pedidos encontrados
+          
+          {/* Filters Row */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            {/* Status and Date filters */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48 glassmorphism-light border-gray-600 text-white">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="glassmorphism border-gray-600">
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="delivered">Entregues</SelectItem>
+                  <SelectItem value="in transit">Em trânsito</SelectItem>
+                  <SelectItem value="shipped">Enviados</SelectItem>
+                  <SelectItem value="confirmed">Confirmados</SelectItem>
+                  <SelectItem value="cancelled">Cancelados</SelectItem>
+                  <SelectItem value="pending">Pendentes</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-full sm:w-48 glassmorphism-light border-gray-600 text-white">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent className="glassmorphism border-gray-600">
+                  <SelectItem value="1">Hoje</SelectItem>
+                  <SelectItem value="7">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30">Últimos 30 dias</SelectItem>
+                  <SelectItem value="90">Últimos 3 meses</SelectItem>
+                  <SelectItem value="365">Último ano</SelectItem>
+                  <SelectItem value="all">Todos os períodos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Sync button and count */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <Button 
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 whitespace-nowrap"
+                data-testid="button-sync-shopify-carrier"
+              >
+                {syncMutation.isPending ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Zap className="w-4 h-4 mr-2" />
+                )}
+                <span className="hidden sm:inline">
+                  {syncMutation.isPending ? "Sincronizando..." : "Sync Shopify + Transportadora + Ads"}
+                </span>
+                <span className="sm:hidden">
+                  {syncMutation.isPending ? "Sincronizando..." : "Sync"}
+                </span>
+              </Button>
+              <div className="text-sm text-gray-300 text-center sm:text-left">
+                {totalOrders} pedidos encontrados
+              </div>
             </div>
           </div>
         </div>
@@ -246,7 +260,108 @@ export default function Orders() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile Card Layout */}
+            <div className="block md:hidden space-y-4">
+              {orders.length === 0 ? (
+                <div className="py-8 text-center">
+                  <div className="space-y-4">
+                    <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-md mx-auto">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                        <span className="text-blue-400 font-medium text-sm">💡 Dica</span>
+                      </div>
+                      <p className="text-blue-300 text-xs">
+                        Se você fez a sincronização do Shopify, verifique se está na operação correta. 
+                        Use o seletor de "Operação" no canto superior esquerdo da barra lateral para trocar para a operação "Dss" onde estão os pedidos importados.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                orders.map((order: any) => (
+                  <div key={order.id} className="glassmorphism-light rounded-xl p-4 space-y-3">
+                    {/* Header with REF and Status */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
+                          <span className="text-xs font-bold text-blue-400">📦</span>
+                        </div>
+                        <div className="font-mono text-blue-400">
+                          {(() => {
+                            if (order.shopifyOrderNumber) {
+                              return order.shopifyOrderNumber;
+                            }
+                            if (order.id && order.id.startsWith('shopify_')) {
+                              return `#${order.id.replace('shopify_', '')}`;
+                            }
+                            return order.refS || order.n_lead || order.id;
+                          })()}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge 
+                          className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium border-0",
+                            getDeliveryStatusVariant(order.deliveryStatus || order.status)
+                          )}
+                        >
+                          {order.deliveryStatus || order.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {/* Customer Info */}
+                    <div>
+                      <div className="text-white font-medium">{order.customerName || order.name || '-'}</div>
+                      <div className="text-gray-400 text-sm font-mono">{order.customerPhone || order.phone || '-'}</div>
+                      <div className="text-gray-400 text-sm">{order.customerCity || order.city || '-'}</div>
+                    </div>
+                    
+                    {/* Values */}
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-gray-400">Valor:</span>
+                        <div className="text-white font-semibold">{formatAmount(order.total || order.amount || order.lead_value)}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">B2B:</span>
+                        <div className="text-orange-400 font-semibold">€{parseFloat(order.productCost || '0').toFixed(2)}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Tracking and Actions */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-600/30">
+                      <div className="text-sm">
+                        <span className="text-gray-400">Tracking: </span>
+                        <span className="text-blue-400 font-mono">{order.trackingNumber || '-'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewOrder(order.id)}
+                          className="text-blue-400 hover:text-blue-300 transition-colors p-2 h-auto"
+                        >
+                          <Eye size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditOrder(order.id)}
+                          className="text-gray-400 hover:text-gray-300 transition-colors p-2 h-auto"
+                        >
+                          <Edit size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Table Layout */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-600/30">
