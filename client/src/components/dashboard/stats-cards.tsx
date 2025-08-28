@@ -1,6 +1,7 @@
+import React from "react";
 import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock } from "lucide-react";
-import { SiShopify } from "react-icons/si";
 import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
+import shopifyIcon from "@assets/shopify_1756413996883.webp";
 
 interface StatsCardsProps {
   metrics: any;
@@ -75,12 +76,13 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       title: "Pedidos Shopify",
       value: shopifyOrders.toLocaleString(),
       subtitle: `Pedidos importados`,
-      icon: SiShopify,
+      icon: shopifyIcon,
       iconBg: "bg-green-600/20",
       iconColor: "text-green-400",
       hoverBg: "group-hover:bg-green-600/30",
       growth: calculateGrowth(shopifyOrders),
-      testId: "card-shopify-orders"
+      testId: "card-shopify-orders",
+      isImage: true
     },
     {
       title: "CPA Médio",
@@ -327,6 +329,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         {specialStats.map((stat, index) => {
           const IconComponent = stat.icon;
           const isDisabled = stat.disabled;
+          const isImage = stat.isImage;
           
           return (
             <div
@@ -340,15 +343,19 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center ${!isDisabled && 'group-hover:scale-110'} transition-transform duration-300`}>
-                  <IconComponent className={`${stat.iconColor} w-6 h-6`} />
+                  {isImage ? (
+                    <img src={IconComponent as string} alt="Shopify" className="w-8 h-8 object-contain" />
+                  ) : (
+                    React.createElement(IconComponent as any, { className: `${stat.iconColor} w-6 h-6` })
+                  )}
                 </div>
                 {!isDisabled && (
                   <div className={`text-xs px-2 py-1 rounded-full ${
-                    parseFloat(stat.growth) > 0 ? 'bg-green-500/20 text-green-400' : 
-                    parseFloat(stat.growth) < 0 ? 'bg-red-500/20 text-red-400' : 
+                    parseFloat(String(stat.growth)) > 0 ? 'bg-green-500/20 text-green-400' : 
+                    parseFloat(String(stat.growth)) < 0 ? 'bg-red-500/20 text-red-400' : 
                     'bg-gray-500/20 text-gray-400'
                   }`}>
-                    {parseFloat(stat.growth) > 0 ? '+' : ''}{stat.growth}%
+                    {parseFloat(String(stat.growth)) > 0 ? '+' : ''}{stat.growth}%
                   </div>
                 )}
               </div>
