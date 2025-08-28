@@ -125,11 +125,11 @@ export default function InvestmentDashboard() {
       <div className="space-y-6">
         {/* Page Header */}
         <div>
-          <h1 className="font-bold tracking-tight text-gray-900 dark:text-gray-100" style={{ fontSize: '22px' }}>
-            Dashboard de Investimentos
+          <h1 className="font-medium tracking-tight text-gray-900 dark:text-gray-100 text-lg md:text-xl">
+            Dashboard
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Acompanhe seus investimentos e performance em tempo real
+          <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm mt-1">
+            Portfolio Overview
           </p>
         </div>
 
