@@ -19,7 +19,7 @@ export function MobileBottomNav() {
   };
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-sm border-t border-gray-700">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-gray-700 shadow-sm">
       <div className="flex items-center justify-around px-2 py-2">
         {navigationItems.map((item) => {
           const IconComponent = item.icon;
