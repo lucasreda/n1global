@@ -83,7 +83,17 @@ export default function AdminInvestmentPools() {
   });
 
   const createPoolMutation = useMutation({
-    mutationFn: (data: PoolFormData) => apiRequest("/api/admin-investment/pools", "POST", data),
+    mutationFn: (data: PoolFormData) => {
+      // Transform data to match backend expectations
+      const transformedData = {
+        ...data,
+        monthlyReturnRate: data.monthlyReturn,
+        yearlyReturnRate: data.yearlyReturn
+      };
+      delete (transformedData as any).monthlyReturn;
+      delete (transformedData as any).yearlyReturn;
+      return apiRequest("/api/admin-investment/pools", "POST", transformedData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin-investment/pools"] });
       setAddDialogOpen(false);
@@ -103,8 +113,17 @@ export default function AdminInvestmentPools() {
   });
 
   const updatePoolMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PoolFormData }) => 
-      apiRequest(`/api/admin-investment/pools/${id}`, "PUT", data),
+    mutationFn: ({ id, data }: { id: string; data: PoolFormData }) => {
+      // Transform data to match backend expectations
+      const transformedData = {
+        ...data,
+        monthlyReturnRate: data.monthlyReturn,
+        yearlyReturnRate: data.yearlyReturn
+      };
+      delete (transformedData as any).monthlyReturn;
+      delete (transformedData as any).yearlyReturn;
+      return apiRequest(`/api/admin-investment/pools/${id}`, "PUT", transformedData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin-investment/pools"] });
       setEditDialogOpen(false);
