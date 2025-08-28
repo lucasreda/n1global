@@ -314,7 +314,7 @@ export async function seedDatabase() {
         .values({
           name: "COD Operations Fund I",
           description: "Fundo de investimento focado em operações Cash on Delivery na Europa, com retorno mensal consistente baseado nas margens das operações.",
-          totalValue: "1375000.00", // R$1,375,000
+          totalValue: "10000000.00", // R$10,000,000
           totalInvested: "825000.00", // R$825,000 invested
           monthlyReturn: "0.025", // 2.5% monthly
           yearlyReturn: "0.30", // 30% yearly
