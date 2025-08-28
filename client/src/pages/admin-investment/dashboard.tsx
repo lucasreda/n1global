@@ -13,6 +13,7 @@ import {
   Eye
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { AdminInvestmentLayout } from "@/components/admin/admin-investment-layout";
 
 interface AdminInvestmentDashboardData {
   totalPools: number;
@@ -93,29 +94,25 @@ export default function AdminInvestmentDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center h-96">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
-          </div>
+      <AdminInvestmentLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
         </div>
-      </div>
+      </AdminInvestmentLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Admin de Investimentos</h1>
-            <p className="text-gray-400 mt-1">Gerencie pools e monitore investimentos</p>
-          </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Building2 className="h-4 w-4 mr-2" />
-            Nova Pool
-          </Button>
+    <AdminInvestmentLayout>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div>
+          <h1 className="font-medium tracking-tight text-gray-900 dark:text-gray-100 text-lg md:text-xl">
+            Dashboard
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm mt-1">
+            Gerencie pools e monitore investimentos
+          </p>
         </div>
 
         {/* Métricas Principais */}
@@ -311,6 +308,6 @@ export default function AdminInvestmentDashboard() {
           </Card>
         </div>
       </div>
-    </div>
+    </AdminInvestmentLayout>
   );
 }
