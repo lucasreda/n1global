@@ -174,60 +174,60 @@ export default function InvestmentDashboard() {
         {/* Main Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Investido</CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-400">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Total Investido</span>
+                <DollarSign className="h-3 w-3 text-gray-500" />
+              </div>
+              <div className="text-xl font-semibold text-white mb-1">
                 {isLoading ? "..." : formatCurrency(dashboardData?.totalInvested || 0)}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-gray-500">
                 Principal aplicado
               </p>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valor Atual</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-400">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Valor Atual</span>
+                <TrendingUp className="h-3 w-3 text-green-400" />
+              </div>
+              <div className="text-xl font-semibold text-green-400 mb-1">
                 {isLoading ? "..." : formatCurrency(dashboardData?.currentValue || 0)}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Valor atualizado do portfolio
+              <p className="text-xs text-gray-500">
+                Portfolio atualizado
               </p>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rentabilidade</CardTitle>
-              <BarChart3 className="h-4 w-4 text-purple-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-400">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Rentabilidade</span>
+                <BarChart3 className="h-3 w-3 text-gray-500" />
+              </div>
+              <div className="text-xl font-semibold text-white mb-1">
                 {isLoading ? "..." : formatPercentage(dashboardData?.returnRate || 0)}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-gray-500">
                 {formatCurrency(dashboardData?.totalReturns || 0)} em ganhos
               </p>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Próximo Pagamento</CardTitle>
-              <Calendar className="h-4 w-4 text-yellow-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-400">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">Próximo Pagamento</span>
+                <Calendar className="h-3 w-3 text-gray-500" />
+              </div>
+              <div className="text-xl font-semibold text-white mb-1">
                 {isLoading ? "..." : formatCurrency(dashboardData?.nextPaymentAmount || 0)}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-gray-500">
                 {dashboardData?.nextPaymentDate ? formatDate(dashboardData.nextPaymentDate) : 'Próximo mês'}
               </p>
             </CardContent>
