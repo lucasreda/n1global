@@ -325,7 +325,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Special Cards - Shopify, CPA, Coming Soon */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {specialStats.map((stat, index) => {
           const IconComponent = stat.icon;
           const isDisabled = stat.disabled;
@@ -433,15 +433,15 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Quaternary Metrics - Small Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-purple-500/10 hover:border-purple-400/25 flex flex-col justify-between">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-purple-500/10 hover:border-purple-400/25 flex flex-col justify-between">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <Target className="text-purple-400 w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
+              <Target className="text-purple-400 w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(marketingCostsBRL)}</h5>
+            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(marketingCostsBRL)}</h5>
             <p className="text-gray-400 text-xs mb-1">Custos Marketing</p>
             <p className="text-xs text-purple-400 opacity-80 leading-tight">
               {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
@@ -449,40 +449,40 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-indigo-500/10 hover:border-indigo-400/25 flex flex-col justify-between">
+        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-indigo-500/10 hover:border-indigo-400/25 flex flex-col justify-between">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <Calculator className="text-indigo-400 w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
+              <Calculator className="text-indigo-400 w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(productCostsBRL)}</h5>
+            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(productCostsBRL)}</h5>
             <p className="text-gray-400 text-xs mb-1">Custos Produtos</p>
             <p className="text-xs text-indigo-400 opacity-80 leading-tight">{formatCurrencyEUR(productCosts)}</p>
           </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-orange-500/10 hover:border-orange-400/25 flex flex-col justify-between">
+        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-orange-500/10 hover:border-orange-400/25 flex flex-col justify-between">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-orange-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <Truck className="text-orange-400 w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
+              <Truck className="text-orange-400 w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
+            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
             <p className="text-gray-400 text-xs mb-1">Custos Envio</p>
             <p className="text-xs text-orange-400 opacity-80 leading-tight">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
           </div>
         </div>
         
-        <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-red-500/10 hover:border-red-400/25 flex flex-col justify-between">
+        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-red-500/10 hover:border-red-400/25 flex flex-col justify-between">
           <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-red-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-              <XCircle className="text-red-400 w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
+              <XCircle className="text-red-400 w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{cancelledOrders.toLocaleString()}</h5>
+            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{cancelledOrders.toLocaleString()}</h5>
             <p className="text-gray-400 text-xs mb-1">Cancelados</p>
             <p className="text-xs text-red-400 opacity-80 leading-tight">Perdidos</p>
           </div>
@@ -490,51 +490,51 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Receita Paga - Seção Detalhada */}
-      <div className="glassmorphism rounded-2xl p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-white flex items-center">
-            <DollarSign className="mr-3 text-blue-400" size={24} />
+      <div className="glassmorphism rounded-xl sm:rounded-2xl p-4 sm:p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6 mb-4 sm:mb-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center">
+            <DollarSign className="mr-2 sm:mr-3 text-blue-400" size={20} />
             Análise da Receita Paga
           </h3>
-          <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium">
+          <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium w-fit">
             Apenas Pedidos Entregues
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-400 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="text-center bg-white/5 rounded-lg p-4">
+            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-400 mb-2">
               {formatCurrencyBRL(totalRevenueBRL)}
             </div>
-            <div className="text-lg text-gray-300 mb-1">
+            <div className="text-sm sm:text-base lg:text-lg text-gray-300 mb-1">
               {formatCurrencyEUR(totalRevenueEUR)}
             </div>
-            <div className="text-sm text-gray-400">Receita Total em BRL/EUR</div>
+            <div className="text-xs sm:text-sm text-gray-400">Receita Total em BRL/EUR</div>
           </div>
           
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-400 mb-2">
+          <div className="text-center bg-white/5 rounded-lg p-4">
+            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-400 mb-2">
               {deliveredOrders}
             </div>
-            <div className="text-lg text-gray-300 mb-1">
+            <div className="text-sm sm:text-base lg:text-lg text-gray-300 mb-1">
               {deliveryRate.toFixed(1)}% de sucesso
             </div>
-            <div className="text-sm text-gray-400">Pedidos Entregues</div>
+            <div className="text-xs sm:text-sm text-gray-400">Pedidos Entregues</div>
           </div>
           
-          <div className="text-center">
-            <div className="text-3xl font-bold text-cyan-400 mb-2">
+          <div className="text-center bg-white/5 rounded-lg p-4 sm:col-span-2 lg:col-span-1">
+            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-400 mb-2">
               {formatCurrencyEUR(averageOrderValue)}
             </div>
-            <div className="text-lg text-gray-300 mb-1">
+            <div className="text-sm sm:text-base lg:text-lg text-gray-300 mb-1">
               {formatCurrencyBRL(averageOrderValue * 6.373034330924346)}
             </div>
-            <div className="text-sm text-gray-400">Ticket Médio por Pedido</div>
+            <div className="text-xs sm:text-sm text-gray-400">Ticket Médio por Pedido</div>
           </div>
         </div>
         
-        <div className="mt-6 pt-4 border-t border-blue-500/20">
-          <div className="flex flex-wrap justify-between items-center text-sm">
+        <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-blue-500/20">
+          <div className="flex flex-col gap-2 sm:gap-0 sm:flex-row sm:justify-between sm:items-center text-xs sm:text-sm">
             <div className="text-gray-300">
               <span className="text-blue-400 font-medium">Conversão:</span> {((deliveredOrders / totalOrders) * 100).toFixed(1)}% dos pedidos geraram receita
             </div>

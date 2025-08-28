@@ -193,9 +193,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header with Euro Rate, Complete Sync Button, and Date Filter */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         {/* Euro Exchange Rate */}
         <div className="flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-3 py-2 w-fit">
           <span className="text-green-400 font-medium text-sm">
@@ -205,25 +205,25 @@ export default function Dashboard() {
         </div>
 
         {/* Action buttons and Date Filter */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {/* Complete Sync Button */}
           <Button
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
             variant="outline"
             size="sm"
-            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 w-full sm:w-auto"
+            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm"
             data-testid="button-complete-sync"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
           </Button>
 
           {/* Date Filter */}
           <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2">
-            <Calendar className="text-gray-400" size={16} />
+            <Calendar className="text-gray-400" size={14} />
             <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-full sm:w-36 bg-transparent border-0 text-gray-300 text-sm h-auto p-0">
+              <SelectTrigger className="w-full sm:w-32 lg:w-36 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent className="glassmorphism border-gray-600">
