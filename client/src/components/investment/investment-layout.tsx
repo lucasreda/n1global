@@ -30,7 +30,7 @@ const sidebarItems = [
   },
   {
     icon: PiggyBank,
-    label: "Meus Investimentos",
+    label: "Investimentos",
     href: "/investment/investments"
   },
   {
