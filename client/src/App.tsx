@@ -38,6 +38,8 @@ import SupplierWallet from "@/pages/supplier/wallet";
 import SupplierCreateProduct from "@/pages/supplier-create-product";
 import ProductSuccess from "@/pages/product-success";
 import InvestorSupplierLanding from "@/pages/investor-supplier";
+import InvestmentDashboard from "@/pages/investment/dashboard";
+import InvestmentsPage from "@/pages/investment/investments";
 import NotFound from "@/pages/not-found";
 
 interface OnboardingStatus {
@@ -170,6 +172,7 @@ function Router() {
   const isSuperAdmin = user?.role === 'super_admin';
   const isSupplier = user?.role === 'supplier';
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
+  const isInvestor = user?.role === 'investor';
 
   // Auto-redirect users based on role
   useEffect(() => {
@@ -179,6 +182,8 @@ function Router() {
       setLocation('/supplier');
     } else if (isAdminFinanceiro && location === '/') {
       setLocation('/finance');
+    } else if (isInvestor && location === '/') {
+      setLocation('/investment');
     }
   }, [isSuperAdmin, isSupplier, isAdminFinanceiro, location, setLocation]);
 
@@ -205,6 +210,10 @@ function Router() {
         <Route path="/supplier/create-product" component={isSupplier ? SupplierCreateProduct : () => <NotFound />} />
         <Route path="/supplier/product-success" component={isSupplier ? ProductSuccess : () => <NotFound />} />
         <Route path="/supplier" component={isSupplier ? SupplierDashboard : () => <NotFound />} />
+        
+        {/* Investment Routes */}
+        <Route path="/investment/investments" component={isInvestor ? InvestmentsPage : () => <NotFound />} />
+        <Route path="/investment" component={isInvestor ? InvestmentDashboard : () => <NotFound />} />
         
         {/* Default Routes */}
         <Route path="/" component={isSupplier ? SupplierDashboard : isProductSeller ? SellerDashboard : Dashboard} />
@@ -272,6 +281,7 @@ function AppContent() {
   const [location] = useLocation();
   const isSupplier = user?.role === 'supplier';
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
+  const isInvestor = user?.role === 'investor';
 
   useEffect(() => {
     checkAuth();
@@ -313,6 +323,11 @@ function AppContent() {
             </div>
           ) : isAdminFinanceiro ? (
             /* Finance layout - fullscreen with own layout */
+            <div className="min-h-screen">
+              <Router />
+            </div>
+          ) : isInvestor ? (
+            /* Investment layout - fullscreen with own layout */
             <div className="min-h-screen">
               <Router />
             </div>

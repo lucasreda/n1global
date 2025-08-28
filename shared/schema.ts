@@ -12,7 +12,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro'
+  role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor'
   storeId: varchar("store_id"), // For product_seller role - links to parent store
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingSteps: jsonb("onboarding_steps").$type<{
@@ -679,6 +679,145 @@ export const supplierPaymentItems = pgTable("supplier_payment_items", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Investment Pool - Main investment fund/pool
+export const investmentPools = pgTable("investment_pools", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "COD Operations Fund I"
+  description: text("description"),
+  totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull().default("0"), // Total pool value in EUR
+  totalInvested: decimal("total_invested", { precision: 15, scale: 2 }).notNull().default("0"), // Total invested by all investors
+  monthlyReturn: decimal("monthly_return", { precision: 5, scale: 4 }).default("0"), // Monthly return percentage
+  yearlyReturn: decimal("yearly_return", { precision: 5, scale: 4 }).default("0"), // Yearly return percentage
+  status: text("status").notNull().default("active"), // 'active', 'closed', 'paused'
+  minInvestment: decimal("min_investment", { precision: 10, scale: 2 }).notNull().default("1000"), // Minimum investment in EUR
+  currency: text("currency").notNull().default("EUR"),
+  
+  // Risk profile
+  riskLevel: text("risk_level").notNull().default("medium"), // 'low', 'medium', 'high'
+  investmentStrategy: text("investment_strategy"), // Description of investment strategy
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investor Profiles - Extended profile information for investors
+export const investorProfiles = pgTable("investor_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  
+  // Personal information
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  birthDate: timestamp("birth_date"),
+  nationality: text("nationality"),
+  
+  // Contact information
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  country: text("country"),
+  
+  // Investment profile
+  riskTolerance: text("risk_tolerance").default("medium"), // 'conservative', 'medium', 'aggressive'
+  investmentExperience: text("investment_experience").default("beginner"), // 'beginner', 'intermediate', 'experienced'
+  investmentGoals: text("investment_goals"), // 'capital_growth', 'income', 'balanced'
+  monthlyIncomeRange: text("monthly_income_range"), // '0-2k', '2k-5k', '5k-10k', '10k+'
+  
+  // Bank information for payments
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  routingNumber: text("routing_number"),
+  accountHolderName: text("account_holder_name"),
+  
+  // Verification status
+  kycStatus: text("kyc_status").default("pending"), // 'pending', 'verified', 'rejected'
+  kycDocuments: jsonb("kyc_documents"), // Array of document URLs/references
+  verifiedAt: timestamp("verified_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investments - Individual investor positions in pools
+export const investments = pgTable("investments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  poolId: varchar("pool_id").notNull().references(() => investmentPools.id),
+  
+  // Investment details
+  totalInvested: decimal("total_invested", { precision: 12, scale: 2 }).notNull().default("0"), // Total amount invested
+  currentValue: decimal("current_value", { precision: 12, scale: 2 }).notNull().default("0"), // Current investment value
+  totalReturns: decimal("total_returns", { precision: 12, scale: 2 }).notNull().default("0"), // Total returns earned
+  totalPaidOut: decimal("total_paid_out", { precision: 12, scale: 2 }).notNull().default("0"), // Total paid out to investor
+  
+  // Performance metrics
+  returnRate: decimal("return_rate", { precision: 5, scale: 4 }).default("0"), // Overall return rate
+  monthlyReturn: decimal("monthly_return", { precision: 5, scale: 4 }).default("0"), // Last month return
+  
+  // Status
+  status: text("status").notNull().default("active"), // 'active', 'withdrawn', 'closed'
+  
+  // Investment dates
+  firstInvestmentDate: timestamp("first_investment_date"),
+  lastTransactionDate: timestamp("last_transaction_date"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investment Transactions - All deposits, withdrawals, and returns
+export const investmentTransactions = pgTable("investment_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investmentId: varchar("investment_id").notNull().references(() => investments.id),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  poolId: varchar("pool_id").notNull().references(() => investmentPools.id),
+  
+  // Transaction details
+  type: text("type").notNull(), // 'deposit', 'withdrawal', 'return_payment', 'fee'
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  
+  // Payment details
+  paymentMethod: text("payment_method"), // 'bank_transfer', 'pix', 'wire_transfer'
+  paymentReference: text("payment_reference"), // External reference from bank/payment provider
+  paymentStatus: text("payment_status").default("pending"), // 'pending', 'completed', 'failed', 'cancelled'
+  
+  // Description and metadata
+  description: text("description"),
+  metadata: jsonb("metadata"), // Additional transaction data
+  
+  // Processing information
+  processedAt: timestamp("processed_at"),
+  processedBy: varchar("processed_by").references(() => users.id), // Admin who processed
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Pool Performance History - Track pool performance over time
+export const poolPerformanceHistory = pgTable("pool_performance_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull().references(() => investmentPools.id),
+  
+  // Performance metrics for the period
+  period: text("period").notNull(), // 'daily', 'weekly', 'monthly'
+  periodDate: timestamp("period_date").notNull(), // Date of the performance record
+  
+  // Financial metrics
+  totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull(),
+  totalInvested: decimal("total_invested", { precision: 15, scale: 2 }).notNull(),
+  returnRate: decimal("return_rate", { precision: 5, scale: 4 }).notNull(),
+  benchmarkReturn: decimal("benchmark_return", { precision: 5, scale: 4 }), // CDI or other benchmark
+  
+  // Additional metrics
+  numberOfInvestors: integer("number_of_investors").default(0),
+  newInvestments: decimal("new_investments", { precision: 12, scale: 2 }).default("0"),
+  withdrawals: decimal("withdrawals", { precision: 12, scale: 2 }).default("0"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Ad Accounts - Unified table for Facebook and Google Ads
 export const adAccounts = pgTable("ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -799,6 +938,40 @@ export const insertSupplierPaymentItemSchema = createInsertSchema(supplierPaymen
   createdAt: true,
 });
 
+// Investment schemas
+export const insertInvestmentPoolSchema = createInsertSchema(investmentPools).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvestorProfileSchema = createInsertSchema(investorProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  verifiedAt: true,
+});
+
+export const insertInvestmentSchema = createInsertSchema(investments).omit({
+  id: true,
+  firstInvestmentDate: true,
+  lastTransactionDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvestmentTransactionSchema = createInsertSchema(investmentTransactions).omit({
+  id: true,
+  processedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPoolPerformanceHistorySchema = createInsertSchema(poolPerformanceHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type FacebookBusinessManager = typeof facebookBusinessManagers.$inferSelect;
 export type InsertFacebookBusinessManager = z.infer<typeof insertFacebookBusinessManagerSchema>;
@@ -814,3 +987,19 @@ export type InsertFacebookCampaign = z.infer<typeof insertFacebookCampaignSchema
 
 export type FacebookAdAccount = typeof facebookAdAccounts.$inferSelect;
 export type InsertFacebookAdAccount = z.infer<typeof insertFacebookAdAccountSchema>;
+
+// Investment types
+export type InvestmentPool = typeof investmentPools.$inferSelect;
+export type InsertInvestmentPool = z.infer<typeof insertInvestmentPoolSchema>;
+
+export type InvestorProfile = typeof investorProfiles.$inferSelect;
+export type InsertInvestorProfile = z.infer<typeof insertInvestorProfileSchema>;
+
+export type Investment = typeof investments.$inferSelect;
+export type InsertInvestment = z.infer<typeof insertInvestmentSchema>;
+
+export type InvestmentTransaction = typeof investmentTransactions.$inferSelect;
+export type InsertInvestmentTransaction = z.infer<typeof insertInvestmentTransactionSchema>;
+
+export type PoolPerformanceHistory = typeof poolPerformanceHistory.$inferSelect;
+export type InsertPoolPerformanceHistory = z.infer<typeof insertPoolPerformanceHistorySchema>;

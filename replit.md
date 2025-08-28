@@ -3,16 +3,22 @@
 ## Overview
 The COD Dashboard is a modern full-stack web application designed for managing Cash on Delivery (COD) orders and providing business metric analysis. It features a comprehensive dashboard for order tracking, customer management, and performance monitoring with real-time data visualization, authentication, and integrations with shipping providers. The project aims to provide a robust solution for businesses to efficiently manage their COD operations and gain actionable insights.
 
-## Recent Changes (August 27, 2025)
+## Recent Changes (August 28, 2025)
+✓ **Investment Management System**: Implemented comprehensive investor dashboard with portfolio tracking, analytics, and payment management
+✓ **New Investor Role**: Added 'investor' role to user system with dedicated authentication and route protection
+✓ **Investment Database Schema**: Created complete database structure with investment pools, investor profiles, investments, transactions, and performance history tables
+✓ **Investment Dashboard**: Full-featured dashboard showing total invested, current value, returns, next payments, and pool performance
+✓ **Investment Service**: Backend service handling portfolio calculations, performance metrics, opportunities, and transaction management
+✓ **Investment Layout**: Apple-style sidebar navigation with Dashboard, Investments, Analytics, Payments, Notifications, and Settings
+✓ **Sample Data**: Created demo investor account (investor@codashboard.com) with €25,000 investment showing 10% returns
+✓ **API Routes**: Complete REST API for investment operations including dashboard data, opportunities, portfolio distribution, and transactions
+✓ **Investment Simulator**: Built-in simulator for calculating returns based on initial amount, monthly contributions, and time periods
+✓ **Multi-role Support**: Updated routing and layouts to support investor accounts alongside existing supplier, finance, and admin roles
+
+## Previous Changes (August 27, 2025)
 ✓ **Critical Wallet Calculation Fix**: Resolved supplier wallet calculation bug where totalToReceive was incorrectly summing order values instead of using B2B product prices multiplied by actual quantities
 ✓ **Product Quantity Analysis**: Identified that 910 orders contain 926 total products (2 orders with multiple products + 14 products with quantity > 1), explaining the €200 difference
 ✓ **Accurate Financial Calculation**: System now correctly calculates 926 products × €12.50 = €11.575,00 instead of incorrectly using 910 orders × order value
-✓ **Dashboard Restructure Complete**: Transformed /inside dashboard into multi-page admin interface with dedicated routes
-✓ **AdminLayout Implementation**: Created sidebar navigation with Dashboard, Pedidos, Lojas, Usuários, Produtos, and Global pages
-✓ **Responsive Sidebar Design**: Compact 192px sidebar with minimalista Apple-style design and intuitive navigation
-✓ **Header Integration**: Added fixed black header with logo positioned above sidebar for proper visual hierarchy
-✓ **Individual Admin Pages**: Each section now has dedicated functionality with full CRUD operations and data visualization
-✓ **Route Protection**: All admin routes properly protected with super_admin role verification
 
 ## Previous Changes (August 26, 2025)
 ✓ **Operations Access Issue Resolved**: Fixed critical frontend rendering problem where operations were not displaying despite being loaded correctly

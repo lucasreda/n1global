@@ -3566,7 +3566,161 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Investment routes - accessible by investor role
+  const requireInvestor = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user || req.user.role !== 'investor') {
+      return res.status(403).json({ message: "Acesso negado: requer permissões de investidor" });
+    }
+    next();
+  };
 
+  // Get investor dashboard data
+  app.get("/api/investment/dashboard", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const dashboardData = await investmentService.getInvestorDashboard(req.user.id);
+      res.json(dashboardData);
+    } catch (error) {
+      console.error("Error fetching investment dashboard:", error);
+      res.status(500).json({ message: "Erro ao buscar dados do dashboard" });
+    }
+  });
+
+  // Get investment opportunities
+  app.get("/api/investment/opportunities", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const opportunities = await investmentService.getInvestmentOpportunities(req.user.id);
+      res.json(opportunities);
+    } catch (error) {
+      console.error("Error fetching investment opportunities:", error);
+      res.status(500).json({ message: "Erro ao buscar oportunidades de investimento" });
+    }
+  });
+
+  // Get portfolio distribution
+  app.get("/api/investment/portfolio", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const portfolio = await investmentService.getPortfolioDistribution(req.user.id);
+      res.json(portfolio);
+    } catch (error) {
+      console.error("Error fetching portfolio distribution:", error);
+      res.status(500).json({ message: "Erro ao buscar distribuição do portfolio" });
+    }
+  });
+
+  // Get performance history for analytics
+  app.get("/api/investment/performance", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { period = 'monthly' } = req.query;
+      const { investmentService } = await import("./investment-service");
+      const performance = await investmentService.getPerformanceHistory(req.user.id, period as 'daily' | 'monthly' | 'yearly');
+      res.json(performance);
+    } catch (error) {
+      console.error("Error fetching performance history:", error);
+      res.status(500).json({ message: "Erro ao buscar histórico de performance" });
+    }
+  });
+
+  // Create new investment
+  app.post("/api/investment/invest", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { poolId, amount } = req.body;
+      
+      if (!poolId || !amount || amount <= 0) {
+        return res.status(400).json({ message: "Pool ID e valor são obrigatórios" });
+      }
+      
+      const { investmentService } = await import("./investment-service");
+      const investment = await investmentService.createInvestment(req.user.id, poolId, parseFloat(amount));
+      
+      res.status(201).json(investment);
+    } catch (error) {
+      console.error("Error creating investment:", error);
+      if (error.message.includes('Minimum investment') || error.message.includes('not found')) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Erro ao criar investimento" });
+    }
+  });
+
+  // Create investment transaction
+  app.post("/api/investment/transactions", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentId, type, amount, description, paymentMethod } = req.body;
+      
+      if (!investmentId || !type || !amount) {
+        return res.status(400).json({ message: "Investment ID, tipo e valor são obrigatórios" });
+      }
+      
+      const { investmentService } = await import("./investment-service");
+      const transaction = await investmentService.createInvestmentTransaction(
+        req.user.id,
+        investmentId,
+        type,
+        parseFloat(amount),
+        description,
+        paymentMethod
+      );
+      
+      res.status(201).json(transaction);
+    } catch (error) {
+      console.error("Error creating investment transaction:", error);
+      if (error.message.includes('not found')) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Erro ao criar transação" });
+    }
+  });
+
+  // Get investor profile
+  app.get("/api/investment/profile", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const profile = await investmentService.getInvestorProfile(req.user.id);
+      res.json(profile || {});
+    } catch (error) {
+      console.error("Error fetching investor profile:", error);
+      res.status(500).json({ message: "Erro ao buscar perfil do investidor" });
+    }
+  });
+
+  // Update investor profile
+  app.put("/api/investment/profile", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const profile = await investmentService.upsertInvestorProfile(req.user.id, req.body);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error updating investor profile:", error);
+      res.status(500).json({ message: "Erro ao atualizar perfil do investidor" });
+    }
+  });
+
+  // Investment simulator
+  app.post("/api/investment/simulator", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { initialAmount, monthlyContribution, monthlyReturnRate, months } = req.body;
+      
+      if (!initialAmount || !monthlyContribution || !monthlyReturnRate || !months) {
+        return res.status(400).json({ message: "Todos os parâmetros são obrigatórios" });
+      }
+      
+      const { investmentService } = await import("./investment-service");
+      const simulation = investmentService.simulateReturns(
+        parseFloat(initialAmount),
+        parseFloat(monthlyContribution),
+        parseFloat(monthlyReturnRate),
+        parseInt(months)
+      );
+      
+      res.json(simulation);
+    } catch (error) {
+      console.error("Error running investment simulation:", error);
+      res.status(500).json({ message: "Erro ao executar simulação" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

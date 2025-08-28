@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { users, products, shippingProviders, stores, operations, userOperationAccess } from "@shared/schema";
 import bcrypt from "bcryptjs";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 
 export async function seedDatabase() {
   try {
@@ -217,6 +217,33 @@ export async function seedDatabase() {
       console.log("🔧 Finance admin storeId removed (global user)");
     }
 
+    // Check if investor user already exists
+    const [existingInvestor] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "investor@codashboard.com"))
+      .limit(1);
+
+    if (!existingInvestor) {
+      // Create investor user
+      const hashedPassword = await bcrypt.hash("InvestorCOD2025!@#", 10);
+      
+      const [investor] = await db
+        .insert(users)
+        .values({
+          name: "João Investidor",
+          email: "investor@codashboard.com",
+          password: hashedPassword,
+          role: "investor",
+          onboardingCompleted: true,
+        })
+        .returning();
+      
+      console.log("✅ Investor created:", investor.email);
+    } else {
+      console.log("ℹ️  Investor already exists");
+    }
+
     // ⚠️ CRITICAL: Clean and setup fresh user access to correct operations
     const [freshUser] = await db
       .select()
@@ -267,6 +294,116 @@ export async function seedDatabase() {
         .where(eq(userOperationAccess.userId, freshUser.id));
       console.log("🔍 SEED VERIFICATION - Access count:", verifyAccess.length);
       console.log("🔍 SEED VERIFICATION - Access details:", verifyAccess.map(a => a.operationId));
+    }
+
+    // Create investment pool and sample data for investor
+    const { investmentPools, investments, investmentTransactions } = await import("@shared/schema");
+    
+    // Check if investment pool exists
+    const [existingPool] = await db
+      .select()
+      .from(investmentPools)
+      .where(eq(investmentPools.name, "COD Operations Fund I"))
+      .limit(1);
+
+    let poolId;
+    if (!existingPool) {
+      // Create investment pool
+      const [pool] = await db
+        .insert(investmentPools)
+        .values({
+          name: "COD Operations Fund I",
+          description: "Fundo de investimento focado em operações Cash on Delivery na Europa, com retorno mensal consistente baseado nas margens das operações.",
+          totalValue: "250000.00", // €250,000
+          totalInvested: "150000.00", // €150,000 invested
+          monthlyReturn: "0.025", // 2.5% monthly
+          yearlyReturn: "0.30", // 30% yearly
+          minInvestment: "5000.00", // €5,000 minimum
+          riskLevel: "medium",
+          investmentStrategy: "Investimento em operações COD de alto volume com margens consistentes. Diversificação em múltiplos países europeus e categorias de produtos."
+        })
+        .returning();
+      
+      poolId = pool.id;
+      console.log("✅ Investment pool created:", pool.name);
+    } else {
+      poolId = existingPool.id;
+      console.log("ℹ️  Investment pool already exists");
+    }
+
+    // Create sample investment for the investor
+    if (existingInvestor) {
+      const [existingInvestment] = await db
+        .select()
+        .from(investments)
+        .where(and(
+          eq(investments.investorId, existingInvestor.id),
+          eq(investments.poolId, poolId)
+        ))
+        .limit(1);
+
+      if (!existingInvestment) {
+        // Create investment record
+        const [investment] = await db
+          .insert(investments)
+          .values({
+            investorId: existingInvestor.id,
+            poolId: poolId,
+            totalInvested: "25000.00", // €25,000 invested
+            currentValue: "27500.00", // €27,500 current value (10% gain)
+            totalReturns: "2500.00", // €2,500 in returns
+            returnRate: "0.10", // 10% return rate
+            monthlyReturn: "0.025", // 2.5% monthly
+            firstInvestmentDate: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000), // 6 months ago
+            lastTransactionDate: new Date()
+          })
+          .returning();
+
+        console.log("✅ Sample investment created for investor");
+
+        // Create sample transactions
+        const transactions = [
+          {
+            investmentId: investment.id,
+            investorId: existingInvestor.id,
+            poolId: poolId,
+            type: "deposit",
+            amount: "25000.00",
+            description: "Investimento inicial",
+            paymentMethod: "bank_transfer",
+            paymentStatus: "completed",
+            processedAt: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000)
+          },
+          {
+            investmentId: investment.id,
+            investorId: existingInvestor.id,
+            poolId: poolId,
+            type: "return_payment",
+            amount: "625.00",
+            description: "Rendimento mensal - Janeiro",
+            paymentStatus: "completed",
+            processedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+          },
+          {
+            investmentId: investment.id,
+            investorId: existingInvestor.id,
+            poolId: poolId,
+            type: "return_payment",
+            amount: "687.50",
+            description: "Rendimento mensal - Fevereiro",
+            paymentStatus: "completed",
+            processedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
+          }
+        ];
+
+        for (const txData of transactions) {
+          await db
+            .insert(investmentTransactions)
+            .values(txData);
+        }
+
+        console.log("✅ Sample transactions created");
+      }
     }
 
     console.log("🌱 Database seeding completed!");
