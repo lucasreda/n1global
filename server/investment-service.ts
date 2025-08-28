@@ -583,7 +583,12 @@ export class InvestmentService {
         name: users.name,
         email: users.email,
         createdAt: users.createdAt,
-        profile: investorProfiles,
+        profileId: investorProfiles.id,
+        firstName: investorProfiles.firstName,
+        lastName: investorProfiles.lastName,
+        phone: investorProfiles.phone,
+        riskTolerance: investorProfiles.riskTolerance,
+        investmentExperience: investorProfiles.investmentExperience,
       })
       .from(users)
       .leftJoin(investorProfiles, eq(users.id, investorProfiles.userId))
@@ -623,7 +628,18 @@ export class InvestmentService {
         const totalReturns = currentValue - totalInvested;
 
         return {
-          ...investor,
+          id: investor.id,
+          name: investor.name,
+          email: investor.email,
+          createdAt: investor.createdAt,
+          profile: investor.profileId ? {
+            id: investor.profileId,
+            firstName: investor.firstName,
+            lastName: investor.lastName,
+            phone: investor.phone,
+            riskTolerance: investor.riskTolerance,
+            investmentExperience: investor.investmentExperience,
+          } : null,
           totalInvested,
           currentValue,
           totalReturns,
