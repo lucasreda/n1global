@@ -73,10 +73,6 @@ export default function InvestmentDashboard() {
     return `${(rate * 100).toFixed(2)}%`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
   const calculateInvestmentTime = () => {
     // Assumindo que o investimento começou há 6 meses (baseado no seed)
     const monthsInvested = 6;
