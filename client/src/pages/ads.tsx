@@ -25,16 +25,16 @@ import {
 import { SiGoogle } from "react-icons/si";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import facebookIcon from "@assets/face-icon_1756415089553.png";
-import googleAdsIcon from "@assets/gads_1756415093788.png";
+import facebookIcon from "@assets/meta-icon_1756415603759.png";
+import googleAdsIcon from "@assets/g-adsi-icon_1756415633788.png";
 
 // Componentes customizados para os ícones
 const FacebookIcon = ({ size }: { size?: number }) => (
   <img 
     src={facebookIcon} 
-    alt="Facebook" 
+    alt="Meta" 
     className="object-contain"
-    style={{ width: size || 24, height: size || 24 }}
+    style={{ width: size || 40, height: size || 40 }}
   />
 );
 
@@ -43,7 +43,7 @@ const GoogleAdsIcon = ({ size }: { size?: number }) => (
     src={googleAdsIcon} 
     alt="Google Ads" 
     className="object-contain"
-    style={{ width: size || 24, height: size || 24 }}
+    style={{ width: size || 40, height: size || 40 }}
   />
 );
 
@@ -365,10 +365,9 @@ export default function Ads() {
                     setNetworkSelectOpen(false);
                     setDialogOpen(true);
                   }}
-                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 text-white"
+                  className="h-20 flex items-center justify-center bg-blue-600 hover:bg-blue-700 border border-blue-500"
                 >
-                  <FacebookIcon size={28} />
-                  <span className="text-sm font-medium text-white">Facebook Ads</span>
+                  <FacebookIcon size={48} />
                 </Button>
                 <Button
                   onClick={() => {
@@ -376,10 +375,10 @@ export default function Ads() {
                     setNetworkSelectOpen(false);
                     setDialogOpen(true);
                   }}
-                  className="h-20 flex flex-col items-center justify-center space-y-2 bg-red-600 hover:bg-red-700 border border-red-500 text-white"
+                  className="h-20 flex items-center justify-center border border-gray-300 hover:border-gray-400"
+                  style={{ backgroundColor: '#f8f8f8' }}
                 >
-                  <GoogleAdsIcon size={28} />
-                  <span className="text-sm font-medium text-white">Google Ads</span>
+                  <GoogleAdsIcon size={48} />
                 </Button>
               </div>
             </DialogContent>
