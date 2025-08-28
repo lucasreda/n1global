@@ -567,24 +567,19 @@ export default function Ads() {
                   // Usar campanhas selecionadas se houver, senão usar todas as filtradas
                   const campaignsToAnalyze = allSelectedCampaigns.length > 0 ? allSelectedCampaigns : filteredCampaigns;
                   
-                  // Debug para entender os dados
-                  console.log('DEBUG Campaigns:', {
-                    total: campaignsToAnalyze.length,
-                    campaigns: campaignsToAnalyze.map(c => ({ network: c.network, amountSpent: c.amountSpent }))
+                  // Identificar Meta Ads e Google Ads por rede
+                  const metaCampaigns = campaignsToAnalyze.filter(c => {
+                    // Se tem network específico, usar isso
+                    if (c.network === 'facebook') return true;
+                    if (c.network === 'google') return false;
+                    // Se não tem network definido, assumir que é Meta (padrão atual)
+                    return !c.network;
                   });
                   
-                  const metaCampaigns = campaignsToAnalyze.filter(c => c.network === 'facebook');
                   const googleCampaigns = campaignsToAnalyze.filter(c => c.network === 'google');
                   
                   const metaSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
                   const googleSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
-                  
-                  console.log('DEBUG Breakdown:', {
-                    metaCampaigns: metaCampaigns.length,
-                    googleCampaigns: googleCampaigns.length,
-                    metaSpent,
-                    googleSpent
-                  });
                   
                   // Sempre mostrar Meta se tiver campanhas (já que vemos que tem campanhas Meta nos logs)
                   const hasAnySpending = metaSpent > 0 || googleSpent > 0;
