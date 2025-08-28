@@ -74,6 +74,25 @@ export default function InvestmentDashboard() {
   };
 
   const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
+  const calculateInvestmentTime = () => {
+    // Assumindo que o investimento começou há 6 meses (baseado no seed)
+    const monthsInvested = 6;
+    if (monthsInvested < 12) {
+      return `${monthsInvested} meses`;
+    } else {
+      const years = Math.floor(monthsInvested / 12);
+      const remainingMonths = monthsInvested % 12;
+      if (remainingMonths === 0) {
+        return `${years} ano${years > 1 ? 's' : ''}`;
+      }
+      return `${years} ano${years > 1 ? 's' : ''} e ${remainingMonths} meses`;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
@@ -218,12 +237,17 @@ export default function InvestmentDashboard() {
                   <BarChart3 className="h-3 w-3 text-blue-400" />
                 </div>
               </div>
-              <div className="text-2xl font-semibold text-white mb-1">
-                {isLoading ? "..." : formatPercentage(dashboardData?.returnRate || 0)}
+              <div className="space-y-2">
+                <div className="text-2xl font-semibold text-white">
+                  {isLoading ? "..." : formatPercentage(dashboardData?.returnRate || 0)}
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-500">{calculateInvestmentTime()}</span>
+                  <span className="text-green-400 font-medium">
+                    {formatCurrency(dashboardData?.totalReturns || 0)}
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-gray-500">
-                {formatCurrency(dashboardData?.totalReturns || 0)} em ganhos
-              </p>
             </CardContent>
           </Card>
 
