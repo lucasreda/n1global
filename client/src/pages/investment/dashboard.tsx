@@ -279,24 +279,28 @@ export default function InvestmentDashboard() {
                   </div>
                   
                   {/* Metrics Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Valor Total</p>
-                      <p className="text-lg font-semibold text-white whitespace-nowrap">
-                        {formatCurrency(dashboardData.poolPerformance.totalValue)}
-                      </p>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Valor Total</p>
+                        <p className="text-lg font-semibold text-white whitespace-nowrap">
+                          {formatCurrency(dashboardData.poolPerformance.totalValue)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Mensal</p>
-                      <p className="text-lg font-semibold text-green-400">
-                        +{formatPercentage(dashboardData.poolPerformance.monthlyReturn / 100)}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Anual</p>
-                      <p className="text-lg font-semibold text-blue-400">
-                        +{formatPercentage(dashboardData.poolPerformance.yearlyReturn / 100)}
-                      </p>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Mensal</p>
+                        <p className="text-lg font-semibold text-green-400">
+                          +{formatPercentage(dashboardData.poolPerformance.monthlyReturn / 100)}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Anual</p>
+                        <p className="text-lg font-semibold text-blue-400">
+                          +{formatPercentage(dashboardData.poolPerformance.yearlyReturn / 100)}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
