@@ -122,15 +122,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log("🔑 Login attempt:", req.body);
       const { email, password } = loginSchema.parse(req.body);
       
       const user = await storage.getUserByEmail(email);
+      console.log("👤 User found:", user ? "YES" : "NO", user?.email);
       if (!user) {
+        console.log("❌ User not found for email:", email);
         return res.status(401).json({ message: "Credenciais inválidas" });
       }
 
       const validPassword = await bcrypt.compare(password, user.password);
+      console.log("🔐 Password valid:", validPassword);
       if (!validPassword) {
+        console.log("❌ Invalid password for user:", email);
         return res.status(401).json({ message: "Credenciais inválidas" });
       }
 
