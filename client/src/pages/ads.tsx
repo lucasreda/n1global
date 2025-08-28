@@ -26,7 +26,7 @@ import { SiGoogle } from "react-icons/si";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import facebookIcon from "@assets/meta-icon_1756415603759.png";
-import googleAdsIcon from "@assets/g-adsi-icon_1756415633788.png";
+import googleAdsIcon from "@assets/gadsicon_1756416065444.png";
 
 // Componentes customizados para os ícones
 const FacebookIcon = ({ size }: { size?: number }) => (
