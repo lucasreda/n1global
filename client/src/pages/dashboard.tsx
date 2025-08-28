@@ -205,25 +205,12 @@ export default function Dashboard() {
         </div>
 
         {/* Action buttons and Date Filter */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-          {/* Complete Sync Button */}
-          <Button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            variant="outline"
-            size="sm"
-            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm"
-            data-testid="button-complete-sync"
-          >
-            <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
-          </Button>
-
-          {/* Date Filter */}
-          <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
+          {/* Date Filter - Left on mobile */}
+          <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-2 sm:px-3 py-2 min-w-0">
             <Calendar className="text-gray-400" size={14} />
             <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-24 sm:w-28 lg:w-32 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0 min-w-0">
+              <SelectTrigger className="w-20 sm:w-24 lg:w-32 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0 min-w-0">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent className="glassmorphism border-gray-600">
@@ -237,6 +224,19 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Complete Sync Button - Right on mobile */}
+          <Button
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            variant="outline"
+            size="sm"
+            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
+            data-testid="button-complete-sync"
+          >
+            <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
+          </Button>
         </div>
       </div>
       
