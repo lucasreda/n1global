@@ -15,7 +15,7 @@ const ShopifyIcon = ({ className, size }: { className?: string; size?: number })
     src={shopifyIcon} 
     alt="Shopify" 
     className={className}
-    style={{ width: size || 24, height: size || 24 }}
+    style={{ width: size || 30, height: size || 30 }}
   />
 );
 
