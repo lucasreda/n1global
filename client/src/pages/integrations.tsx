@@ -14,7 +14,7 @@ const ShopifyIcon = ({ className, size }: { className?: string; size?: number })
   <img 
     src={shopifyIcon} 
     alt="Shopify" 
-    className={className}
+    className={`${className} object-contain`}
     style={{ width: size || 30, height: size || 30 }}
   />
 );
