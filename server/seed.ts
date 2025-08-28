@@ -316,7 +316,7 @@ export async function seedDatabase() {
           description: "Fundo de investimento focado em operações Cash on Delivery na Europa, com retorno mensal consistente baseado nas margens das operações.",
           totalValue: "10000000.00", // R$10,000,000
           totalInvested: "825000.00", // R$825,000 invested
-          monthlyReturn: "0.025", // 2.5% monthly
+          monthlyReturn: "0.08", // 8% monthly
           yearlyReturn: "0.30", // 30% yearly
           minInvestment: "27500.00", // R$27,500 minimum
           riskLevel: "medium",
@@ -353,7 +353,7 @@ export async function seedDatabase() {
             currentValue: "151250.00", // R$151,250 current value (10% gain)
             totalReturns: "13750.00", // R$13,750 in returns
             returnRate: "0.10", // 10% return rate
-            monthlyReturn: "0.025", // 2.5% monthly
+            monthlyReturn: "0.08", // 8% monthly
             firstInvestmentDate: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000), // 6 months ago
             lastTransactionDate: new Date()
           })
