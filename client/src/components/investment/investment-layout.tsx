@@ -97,11 +97,12 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
             </Button>
             
             <Link href="/investment">
-              <div className="flex items-center gap-3 cursor-pointer">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-white">Investment</span>
+              <div className="flex items-center cursor-pointer">
+                <img 
+                  src="/attached_assets/Investment_1756400581219.png"
+                  alt="Investment Logo" 
+                  className="h-8 object-contain"
+                />
               </div>
             </Link>
           </div>
