@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import facebookIcon from "@assets/meta-icon_1756415603759.png";
 import googleAdsIcon from "@assets/gadsicon_1756416065444.png";
+import googleAdsIconMini from "@assets/gadsmini_1756416199452.png";
 
 // Componentes customizados para os ícones
 const FacebookIcon = ({ size }: { size?: number }) => (
@@ -38,14 +39,18 @@ const FacebookIcon = ({ size }: { size?: number }) => (
   />
 );
 
-const GoogleAdsIcon = ({ size }: { size?: number }) => (
-  <img 
-    src={googleAdsIcon} 
-    alt="Google Ads" 
-    className="object-contain"
-    style={{ width: size || 40, height: size || 40 }}
-  />
-);
+const GoogleAdsIcon = ({ size }: { size?: number }) => {
+  // Use o ícone mini para tamanhos pequenos (até 24px) e o grande para botões
+  const iconSrc = (size || 40) <= 24 ? googleAdsIconMini : googleAdsIcon;
+  return (
+    <img 
+      src={iconSrc} 
+      alt="Google Ads" 
+      className="object-contain"
+      style={{ width: size || 40, height: size || 40 }}
+    />
+  );
+};
 
 interface Campaign {
   id: string;
