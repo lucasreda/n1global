@@ -57,7 +57,7 @@ export function FinanceLayout({ children }: FinanceLayoutProps) {
           />
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           {/* Profile Picture or Initials */}
           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
             {user?.profileImageUrl ? (
