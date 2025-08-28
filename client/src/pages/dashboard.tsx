@@ -196,8 +196,8 @@ export default function Dashboard() {
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
       {/* Header with Euro Rate, Complete Sync Button, and Date Filter */}
       <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
-        {/* Euro Exchange Rate */}
-        <div className="flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-2 sm:px-3 py-2 w-fit max-w-full">
+        {/* Euro Exchange Rate - Hidden on mobile */}
+        <div className="hidden lg:flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-2 sm:px-3 py-2 w-fit max-w-full">
           <span className="text-green-400 font-medium text-sm">
             € {metrics?.exchangeRates?.EUR ? (metrics.exchangeRates.EUR).toFixed(2).replace('.', ',') : '6,40'}
           </span>
