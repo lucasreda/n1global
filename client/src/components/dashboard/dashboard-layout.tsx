@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useLocation } from 'wouter';
 import { Sidebar } from './sidebar';
+import logoImage from '@assets/n1-lblue_1756418570079.png';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  exchangeRate?: number;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, exchangeRate }: DashboardLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [location] = useLocation();
 
@@ -19,14 +21,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [location]);
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block fixed left-0 top-0 h-full w-64 z-40">
-        <Sidebar />
-      </div>
-
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-3 left-3 z-50">
+    <div className="flex flex-col min-h-screen w-full overflow-x-hidden">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 flex items-center px-3 z-50">
+        {/* Menu Button */}
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button 
@@ -48,14 +46,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </SheetContent>
         </Sheet>
+
+        {/* Logo - Centralized on screen */}
+        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <img 
+            src={logoImage} 
+            alt="Logo" 
+            className="h-7 w-auto object-contain"
+          />
+        </div>
+
+        {/* Currency Badge */}
+        <div className="ml-auto flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-2 py-1">
+          <span className="text-green-400 font-medium text-xs">
+            € {exchangeRate ? exchangeRate.toFixed(2).replace('.', ',') : '6,40'}
+          </span>
+          <span className="text-gray-400 text-xs">BRL</span>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <main className="w-full min-w-0 flex-1 lg:ml-64 p-3 sm:p-4 lg:p-6 pt-14 sm:pt-16 lg:pt-6 overflow-x-hidden">
-        <div className="w-full max-w-full overflow-x-hidden">
-          {children}
+      <div className="flex flex-1 pt-14 lg:pt-0">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block fixed left-0 top-0 h-full w-64 z-40">
+          <Sidebar />
         </div>
-      </main>
+
+        {/* Main Content */}
+        <main className="w-full min-w-0 flex-1 lg:ml-64 p-3 sm:p-4 lg:p-6 overflow-x-hidden">
+          <div className="w-full max-w-full overflow-x-hidden">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

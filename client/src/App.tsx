@@ -288,6 +288,25 @@ function SupplierHeader() {
   );
 }
 
+function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNode }) {
+  const { data: metrics } = useQuery({
+    queryKey: ["/api/dashboard/metrics", "30"],
+    queryFn: async () => {
+      const response = await fetch("/api/dashboard/metrics?period=30d");
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const exchangeRate = metrics?.exchangeRates?.EUR || 5.8;
+
+  return (
+    <DashboardLayout exchangeRate={exchangeRate}>
+      {children}
+    </DashboardLayout>
+  );
+}
+
 function AppContent() {
   const { isAuthenticated, isLoading, checkAuth, user } = useAuth();
   const [location] = useLocation();
@@ -351,9 +370,9 @@ function AppContent() {
             </div>
           ) : (
             /* Regular dashboard layout with sidebar */
-            <DashboardLayout>
+            <DashboardLayoutWithExchangeRate>
               <Router />
-            </DashboardLayout>
+            </DashboardLayoutWithExchangeRate>
           )}
         </>
       )}
