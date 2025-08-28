@@ -249,6 +249,11 @@ export default function InvestmentDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pool Performance */}
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+            <CardHeader>
+              <CardTitle className="text-white" style={{ fontSize: '20px' }}>
+                Performance do Pool
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-6">
               {isLoading ? (
                 <div className="flex items-center justify-center h-32">
