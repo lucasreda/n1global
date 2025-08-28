@@ -559,6 +559,42 @@ export default function Ads() {
           <CardContent>
             <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString(), 'BRL')}</div>
             <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
+            
+            {/* Breakdown por rede */}
+            {allSelectedCampaigns.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {(() => {
+                  const metaCampaigns = allSelectedCampaigns.filter(c => c.network === 'facebook');
+                  const googleCampaigns = allSelectedCampaigns.filter(c => c.network === 'google');
+                  
+                  const metaSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent), 0);
+                  const googleSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent), 0);
+                  
+                  return (
+                    <>
+                      {metaCampaigns.length > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-2">
+                            <FacebookIcon size={12} />
+                            <span className="text-gray-300">Meta Ads</span>
+                          </div>
+                          <span className="text-blue-400 font-medium">{formatCurrency(metaSpent.toString(), 'BRL')}</span>
+                        </div>
+                      )}
+                      {googleCampaigns.length > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-2">
+                            <GoogleAdsIcon size={12} />
+                            <span className="text-gray-300">Google Ads</span>
+                          </div>
+                          <span className="text-red-400 font-medium">{formatCurrency(googleSpent.toString(), 'BRL')}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </CardContent>
         </Card>
 
