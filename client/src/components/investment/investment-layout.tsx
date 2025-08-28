@@ -127,7 +127,7 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
           fixed left-0 top-16 h-[calc(100vh-4rem)] bg-black/60 border-r border-gray-800 z-40 transition-transform duration-300 ease-in-out backdrop-blur-sm
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0 md:static md:h-[calc(100vh-4rem)]
-          w-48
+          ${sidebarOpen ? 'w-full' : 'w-48'} md:w-48
         `}>
           <div className="flex flex-col h-full">
             <nav className="flex-1 pt-4">
@@ -140,7 +140,7 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
                     <Link key={item.href} href={item.href}>
                       <div
                         className={`
-                          cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2
+                          cursor-pointer transition-all duration-200 rounded-lg p-3 md:p-2 flex items-center gap-3 md:gap-2
                           ${isActive 
                             ? 'bg-gray-700/60 text-white border border-gray-600' 
                             : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
@@ -148,8 +148,8 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
                         `}
                         onClick={() => setSidebarOpen(false)}
                       >
-                        <Icon className="h-4 w-4" />
-                        <span className="text-sm font-medium">
+                        <Icon className="h-6 w-6 md:h-4 md:w-4" />
+                        <span className="text-base md:text-sm font-medium">
                           {item.label}
                         </span>
                       </div>
@@ -163,9 +163,9 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
             <div className="p-3 border-t border-gray-700">
               <button
                 onClick={handleLogout}
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800/60 p-2 rounded-lg flex items-center gap-2 text-sm transition-all duration-200"
+                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800/60 p-3 md:p-2 rounded-lg flex items-center gap-3 md:gap-2 text-base md:text-sm transition-all duration-200"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-6 w-6 md:h-4 md:w-4" />
                 <span>Sair</span>
               </button>
             </div>
