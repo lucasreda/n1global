@@ -47,7 +47,7 @@ const poolFormSchema = z.object({
   monthlyReturn: z.number().min(0, "Retorno mensal deve ser positivo"),
   yearlyReturn: z.number().min(0, "Retorno anual deve ser positivo"),
   riskLevel: z.enum(["low", "medium", "high"]),
-  minInvestment: z.number().min(100, "Investimento mínimo deve ser pelo menos €100"),
+  minInvestment: z.number().min(100, "Investimento mínimo deve ser pelo menos R$100"),
   status: z.enum(["active", "paused", "closed"])
 });
 
@@ -146,7 +146,7 @@ export default function AdminInvestmentPools() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'BRL'
     }).format(amount);
   };
 
@@ -296,7 +296,7 @@ export default function AdminInvestmentPools() {
                       name="totalValue"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Valor Total (€)</FormLabel>
+                          <FormLabel>Valor Total (R$)</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
@@ -334,7 +334,7 @@ export default function AdminInvestmentPools() {
                       name="minInvestment"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Investimento Mín. (€)</FormLabel>
+                          <FormLabel>Investimento Mín. (R$)</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
@@ -556,7 +556,7 @@ export default function AdminInvestmentPools() {
                     name="totalValue"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Valor Total (€)</FormLabel>
+                        <FormLabel>Valor Total (R$)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
@@ -594,7 +594,7 @@ export default function AdminInvestmentPools() {
                     name="minInvestment"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Investimento Mín. (€)</FormLabel>
+                        <FormLabel>Investimento Mín. (R$)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 

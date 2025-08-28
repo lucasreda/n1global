@@ -684,13 +684,13 @@ export const investmentPools = pgTable("investment_pools", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // e.g., "COD Operations Fund I"
   description: text("description"),
-  totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull().default("0"), // Total pool value in EUR
+  totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull().default("0"), // Total pool value in BRL
   totalInvested: decimal("total_invested", { precision: 15, scale: 2 }).notNull().default("0"), // Total invested by all investors
   monthlyReturn: decimal("monthly_return", { precision: 5, scale: 4 }).default("0"), // Monthly return percentage
   yearlyReturn: decimal("yearly_return", { precision: 5, scale: 4 }).default("0"), // Yearly return percentage
   status: text("status").notNull().default("active"), // 'active', 'closed', 'paused'
-  minInvestment: decimal("min_investment", { precision: 10, scale: 2 }).notNull().default("1000"), // Minimum investment in EUR
-  currency: text("currency").notNull().default("EUR"),
+  minInvestment: decimal("min_investment", { precision: 10, scale: 2 }).notNull().default("1000"), // Minimum investment in BRL
+  currency: text("currency").notNull().default("BRL"),
   
   // Risk profile
   riskLevel: text("risk_level").notNull().default("medium"), // 'low', 'medium', 'high'
