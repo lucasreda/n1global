@@ -87,7 +87,26 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 bg-black border-b border-[#252525] z-50">
         <div className="flex items-center justify-between px-4 h-16">
-          <div className="flex items-center gap-4">
+          <Link href="/investment">
+            <div className="flex items-center cursor-pointer">
+              <img 
+                src={investmentLogo}
+                alt="Investment Logo" 
+                className="h-7 object-contain"
+              />
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-xs text-white font-medium">
+                  {getUserInitials(user?.name, user?.email)}
+                </span>
+              </div>
+              <span className="text-sm text-gray-300">{user?.email}</span>
+            </div>
+            
             <Button
               variant="ghost"
               size="icon"
@@ -96,25 +115,6 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
             >
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            
-            <Link href="/investment">
-              <div className="flex items-center cursor-pointer">
-                <img 
-                  src={investmentLogo}
-                  alt="Investment Logo" 
-                  className="h-7 object-contain"
-                />
-              </div>
-            </Link>
-          </div>
-
-          <div className="hidden md:flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-xs text-white font-medium">
-                {getUserInitials(user?.name, user?.email)}
-              </span>
-            </div>
-            <span className="text-sm text-gray-300">{user?.email}</span>
           </div>
         </div>
       </header>
