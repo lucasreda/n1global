@@ -136,7 +136,7 @@ export default function Integrations() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-lg bg-${integration.color}-500/20 flex items-center justify-center`}>
-                      <IconComponent className={`text-${integration.color}-400`} size={20} />
+                      <IconComponent className={`text-${integration.color}-400`} size={integration.id === 'shopify' ? 32 : 20} />
                     </div>
                     <div>
                       <h4 className="text-white font-medium">{integration.name}</h4>
