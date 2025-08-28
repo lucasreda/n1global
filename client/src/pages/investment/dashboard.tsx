@@ -173,13 +173,16 @@ export default function InvestmentDashboard() {
 
         {/* Main Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Total Investido</span>
-                <DollarSign className="h-3 w-3 text-gray-500" />
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-blue-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total Investido</span>
+                <div className="p-1.5 rounded-full bg-blue-500/10">
+                  <DollarSign className="h-3 w-3 text-blue-400" />
+                </div>
               </div>
-              <div className="text-xl font-semibold text-white mb-1">
+              <div className="text-2xl font-semibold text-white mb-1">
                 {isLoading ? "..." : formatCurrency(dashboardData?.totalInvested || 0)}
               </div>
               <p className="text-xs text-gray-500">
@@ -188,13 +191,16 @@ export default function InvestmentDashboard() {
             </CardContent>
           </Card>
 
-          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Valor Atual</span>
-                <TrendingUp className="h-3 w-3 text-green-400" />
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-green-500/50 to-green-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Valor Atual</span>
+                <div className="p-1.5 rounded-full bg-green-500/10">
+                  <TrendingUp className="h-3 w-3 text-green-400" />
+                </div>
               </div>
-              <div className="text-xl font-semibold text-green-400 mb-1">
+              <div className="text-2xl font-semibold text-green-400 mb-1">
                 {isLoading ? "..." : formatCurrency(dashboardData?.currentValue || 0)}
               </div>
               <p className="text-xs text-gray-500">
@@ -203,13 +209,16 @@ export default function InvestmentDashboard() {
             </CardContent>
           </Card>
 
-          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Rentabilidade</span>
-                <BarChart3 className="h-3 w-3 text-gray-500" />
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-blue-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Rentabilidade</span>
+                <div className="p-1.5 rounded-full bg-blue-500/10">
+                  <BarChart3 className="h-3 w-3 text-blue-400" />
+                </div>
               </div>
-              <div className="text-xl font-semibold text-white mb-1">
+              <div className="text-2xl font-semibold text-white mb-1">
                 {isLoading ? "..." : formatPercentage(dashboardData?.returnRate || 0)}
               </div>
               <p className="text-xs text-gray-500">
@@ -218,13 +227,16 @@ export default function InvestmentDashboard() {
             </CardContent>
           </Card>
 
-          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Próximo Pagamento</span>
-                <Calendar className="h-3 w-3 text-gray-500" />
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-blue-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Próximo Pagamento</span>
+                <div className="p-1.5 rounded-full bg-blue-500/10">
+                  <Calendar className="h-3 w-3 text-blue-400" />
+                </div>
               </div>
-              <div className="text-xl font-semibold text-white mb-1">
+              <div className="text-2xl font-semibold text-white mb-1">
                 {isLoading ? "..." : formatCurrency(dashboardData?.nextPaymentAmount || 0)}
               </div>
               <p className="text-xs text-gray-500">
