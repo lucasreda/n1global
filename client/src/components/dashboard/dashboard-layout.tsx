@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useLocation } from 'wouter';
 import { Sidebar } from './sidebar';
+import { MobileBottomNav } from './mobile-bottom-nav';
 import logoImage from '@assets/n1-lblue_1756418570079.png';
 
 interface DashboardLayoutProps {
@@ -75,12 +76,15 @@ export function DashboardLayout({ children, exchangeRate }: DashboardLayoutProps
         </div>
 
         {/* Main Content */}
-        <main className="w-full min-w-0 flex-1 lg:ml-64 p-3 sm:p-4 lg:p-6 overflow-x-hidden">
+        <main className="w-full min-w-0 flex-1 lg:ml-64 p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6 overflow-x-hidden">
           <div className="w-full max-w-full overflow-x-hidden">
             {children}
           </div>
         </main>
       </div>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }
