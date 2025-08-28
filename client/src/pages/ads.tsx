@@ -564,7 +564,25 @@ export default function Ads() {
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
-              <Facebook className="w-4 h-4 text-blue-500" />
+              {(() => {
+                const metaAccounts = adAccounts?.filter(a => a.network === 'facebook') || [];
+                const googleAccounts = adAccounts?.filter(a => a.network === 'google') || [];
+                
+                if (metaAccounts.length > 0 && googleAccounts.length > 0) {
+                  return (
+                    <>
+                      <FacebookIcon size={16} />
+                      <GoogleAdsIcon size={16} />
+                    </>
+                  );
+                } else if (metaAccounts.length > 0) {
+                  return <FacebookIcon size={16} />;
+                } else if (googleAccounts.length > 0) {
+                  return <GoogleAdsIcon size={16} />;
+                } else {
+                  return <Globe className="w-4 h-4 text-gray-400" />;
+                }
+              })()}
               <span>Contas Conectadas</span>
             </CardTitle>
           </CardHeader>
@@ -573,20 +591,53 @@ export default function Ads() {
             <p className="text-gray-400 text-sm">
               {adAccounts?.filter(a => a.isActive).length || 0} ativas
             </p>
+            
+            {/* Estatísticas por plataforma */}
             {adAccounts && adAccounts.length > 0 && (
               <div className="mt-3 space-y-2">
-                {adAccounts.slice(0, 3).map((account) => (
-                  <div key={account.id} className="flex items-center space-x-2 text-xs">
-                    <Facebook className="w-3 h-3 text-blue-400" />
-                    <span className="text-gray-300 truncate">{account.name}</span>
-                    <span className="text-green-400">●</span>
-                  </div>
-                ))}
-                {adAccounts.length > 3 && (
-                  <div className="text-xs text-gray-400">
-                    +{adAccounts.length - 3} mais contas
-                  </div>
-                )}
+                {(() => {
+                  const metaAccounts = adAccounts.filter(a => a.network === 'facebook');
+                  const googleAccounts = adAccounts.filter(a => a.network === 'google');
+                  
+                  return (
+                    <>
+                      {metaAccounts.length > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-2">
+                            <FacebookIcon size={12} />
+                            <span className="text-gray-300">Meta Ads</span>
+                          </div>
+                          <span className="text-blue-400 font-medium">{metaAccounts.length}</span>
+                        </div>
+                      )}
+                      {googleAccounts.length > 0 && (
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-2">
+                            <GoogleAdsIcon size={12} />
+                            <span className="text-gray-300">Google Ads</span>
+                          </div>
+                          <span className="text-red-400 font-medium">{googleAccounts.length}</span>
+                        </div>
+                      )}
+                      
+                      {/* Lista de contas mais compacta */}
+                      <div className="mt-3 pt-2 border-t border-gray-600">
+                        {adAccounts.slice(0, 2).map((account) => (
+                          <div key={account.id} className="flex items-center space-x-2 text-xs py-1">
+                            <NetworkIcon network={account.network as 'facebook' | 'google'} size={12} />
+                            <span className="text-gray-300 truncate flex-1">{account.name}</span>
+                            <span className="text-green-400 text-[10px]">●</span>
+                          </div>
+                        ))}
+                        {adAccounts.length > 2 && (
+                          <div className="text-xs text-gray-400 text-center pt-1">
+                            +{adAccounts.length - 2} mais
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </CardContent>
