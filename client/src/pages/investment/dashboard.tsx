@@ -346,14 +346,16 @@ export default function InvestmentDashboard() {
                         <p className={`text-sm font-medium ${
                           transaction.type === 'deposit' ? 'text-green-400' : 
                           transaction.type === 'withdrawal' ? 'text-red-400' : 
-                          'text-blue-400'
+                          'text-white'
                         }`}>
                           {transaction.type === 'withdrawal' ? '-' : '+'}
                           {formatCurrency(transaction.amount)}
                         </p>
-                        <Badge variant="outline" className={getStatusColor(transaction.status)}>
-                          {transaction.status}
-                        </Badge>
+                        {transaction.type === 'deposit' && (
+                          <Badge variant="outline" className={getStatusColor(transaction.status)}>
+                            {transaction.status}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   ))}
