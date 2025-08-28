@@ -86,9 +86,9 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
     <div className="min-h-screen bg-[#020817]">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 bg-black border-b border-[#252525] z-50">
-        <div className="flex items-center justify-between px-4 h-16">
+        <div className="flex items-center justify-between px-0 md:px-4 h-16">
           <Link href="/investment">
-            <div className="flex items-center cursor-pointer">
+            <div className="flex items-center cursor-pointer pl-4 md:pl-0">
               <img 
                 src={investmentLogo}
                 alt="Investment Logo" 
@@ -97,7 +97,7 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pr-4 md:pr-0">
             <div className="hidden md:flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-xs text-white font-medium">
