@@ -290,6 +290,7 @@ function AppContent() {
   const isSupplier = user?.role === 'supplier';
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
   const isInvestor = user?.role === 'investor';
+  const isAdminInvestimento = user?.role === 'admin_investimento';
 
   useEffect(() => {
     checkAuth();
@@ -336,6 +337,11 @@ function AppContent() {
             </div>
           ) : isInvestor ? (
             /* Investment layout - fullscreen with own layout */
+            <div className="min-h-screen">
+              <Router />
+            </div>
+          ) : isAdminInvestimento ? (
+            /* Admin Investment layout - fullscreen with own layout */
             <div className="min-h-screen">
               <Router />
             </div>
