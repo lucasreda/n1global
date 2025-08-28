@@ -567,31 +567,52 @@ export default function Ads() {
                   // Usar campanhas selecionadas se houver, senão usar todas as filtradas
                   const campaignsToAnalyze = allSelectedCampaigns.length > 0 ? allSelectedCampaigns : filteredCampaigns;
                   
+                  // Debug para entender os dados
+                  console.log('DEBUG Campaigns:', {
+                    total: campaignsToAnalyze.length,
+                    campaigns: campaignsToAnalyze.map(c => ({ network: c.network, amountSpent: c.amountSpent }))
+                  });
+                  
                   const metaCampaigns = campaignsToAnalyze.filter(c => c.network === 'facebook');
                   const googleCampaigns = campaignsToAnalyze.filter(c => c.network === 'google');
                   
-                  const metaSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent), 0);
-                  const googleSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent), 0);
+                  const metaSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
+                  const googleSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
+                  
+                  console.log('DEBUG Breakdown:', {
+                    metaCampaigns: metaCampaigns.length,
+                    googleCampaigns: googleCampaigns.length,
+                    metaSpent,
+                    googleSpent
+                  });
+                  
+                  // Sempre mostrar Meta se tiver campanhas (já que vemos que tem campanhas Meta nos logs)
+                  const hasAnySpending = metaSpent > 0 || googleSpent > 0;
                   
                   return (
                     <>
-                      {metaCampaigns.length > 0 && (
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center space-x-2">
-                            <FacebookIcon size={12} />
-                            <span className="text-gray-300">Meta Ads</span>
-                          </div>
-                          <span className="text-blue-400 font-medium">{formatCurrency(metaSpent.toString(), 'BRL')}</span>
-                        </div>
-                      )}
-                      {googleCampaigns.length > 0 && (
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center space-x-2">
-                            <GoogleAdsIcon size={12} />
-                            <span className="text-gray-300">Google Ads</span>
-                          </div>
-                          <span className="text-red-400 font-medium">{formatCurrency(googleSpent.toString(), 'BRL')}</span>
-                        </div>
+                      {/* Sempre mostrar breakdown se há campanhas, mesmo com gasto zero */}
+                      {hasAnySpending && (
+                        <>
+                          {metaCampaigns.length > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center space-x-2">
+                                <FacebookIcon size={12} />
+                                <span className="text-gray-300">Meta Ads</span>
+                              </div>
+                              <span className="text-blue-400 font-medium">{formatCurrency(metaSpent.toString(), 'BRL')}</span>
+                            </div>
+                          )}
+                          {googleCampaigns.length > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center space-x-2">
+                                <GoogleAdsIcon size={12} />
+                                <span className="text-gray-300">Google Ads</span>
+                              </div>
+                              <span className="text-red-400 font-medium">{formatCurrency(googleSpent.toString(), 'BRL')}</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </>
                   );
