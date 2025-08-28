@@ -33,10 +33,13 @@ export async function apiRequest(
   });
 
   if (res.status === 401 || res.status === 403) {
-    // Token expired or invalid, clear auth
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
+    // Only redirect if this is an authenticated request that failed
+    // Don't redirect on login failures
+    if (url !== "/api/auth/login" && localStorage.getItem("auth_token")) {
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+      window.location.href = "/";
+    }
   }
 
   await throwIfResNotOk(res);
@@ -71,10 +74,13 @@ export const getQueryFn: <T>(options: {
     }
 
     if (res.status === 401 || res.status === 403) {
-      // Token expired or invalid, clear auth
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("user");
-      window.location.href = "/";
+      // Only redirect if this is an authenticated request that failed
+      // Don't redirect on login failures
+      if (url !== "/api/auth/login" && localStorage.getItem("auth_token")) {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user");
+        window.location.href = "/";
+      }
     }
 
     await throwIfResNotOk(res);
