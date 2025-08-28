@@ -116,13 +116,13 @@ export default function AdminInvestmentDashboard() {
         </div>
 
         {/* Métricas Principais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Total em Pools</p>
-                  <p className="text-xl md:text-2xl font-bold text-white break-words">
+                  <p className="text-lg md:text-xl font-bold text-white whitespace-nowrap overflow-hidden">
                     {formatCurrency(dashboardData?.totalValue || 0)}
                   </p>
                 </div>
@@ -138,7 +138,7 @@ export default function AdminInvestmentDashboard() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Investidores Ativos</p>
-                  <p className="text-xl md:text-2xl font-bold text-white break-words">
+                  <p className="text-xl md:text-2xl font-bold text-white">
                     {dashboardData?.totalInvestors || 0}
                   </p>
                 </div>
@@ -154,7 +154,7 @@ export default function AdminInvestmentDashboard() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Pools Ativas</p>
-                  <p className="text-xl md:text-2xl font-bold text-white break-words">
+                  <p className="text-xl md:text-2xl font-bold text-white">
                     {dashboardData?.totalPools || 0}
                   </p>
                 </div>
@@ -170,7 +170,7 @@ export default function AdminInvestmentDashboard() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Retorno Mensal</p>
-                  <p className="text-xl md:text-2xl font-bold text-white break-words">
+                  <p className="text-lg md:text-xl font-bold text-white whitespace-nowrap overflow-hidden">
                     {formatCurrency(dashboardData?.monthlyReturns || 0)}
                   </p>
                 </div>
