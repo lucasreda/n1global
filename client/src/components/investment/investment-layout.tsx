@@ -124,13 +124,13 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
       <div className="flex pt-16">
         {/* Sidebar */}
         <aside className={`
-          fixed left-0 top-16 h-[calc(100vh-4rem)] bg-[#0f0f0f] border-r border-[#252525] z-40 transition-transform duration-300 ease-in-out
+          fixed left-0 top-16 h-[calc(100vh-4rem)] bg-black/60 border-r border-gray-800 z-40 transition-transform duration-300 ease-in-out backdrop-blur-sm
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0 md:static md:h-[calc(100vh-4rem)]
           w-48
         `}>
           <div className="flex flex-col h-full">
-            <nav className="flex-1 py-6">
+            <nav className="flex-1 pt-4">
               <div className="space-y-1 px-3">
                 {sidebarItems.map((item) => {
                   const Icon = item.icon;
@@ -138,19 +138,21 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
                   
                   return (
                     <Link key={item.href} href={item.href}>
-                      <button
+                      <div
                         className={`
-                          w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors
+                          cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2
                           ${isActive 
-                            ? 'bg-blue-600 text-white' 
-                            : 'text-gray-400 hover:text-white hover:bg-[#252525]'
+                            ? 'bg-gray-700/60 text-white border border-gray-600' 
+                            : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
                           }
                         `}
                         onClick={() => setSidebarOpen(false)}
                       >
-                        <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
-                        {item.label}
-                      </button>
+                        <Icon className="h-4 w-4" />
+                        <span className="text-sm font-medium">
+                          {item.label}
+                        </span>
+                      </div>
                     </Link>
                   );
                 })}
@@ -158,15 +160,14 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
             </nav>
 
             {/* User section at bottom */}
-            <div className="border-t border-[#252525] p-3">
-              <Button
+            <div className="p-3 border-t border-gray-700">
+              <button
                 onClick={handleLogout}
-                variant="ghost"
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#252525] rounded-lg"
+                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800/60 p-2 rounded-lg flex items-center gap-2 text-sm transition-all duration-200"
               >
                 <LogOut className="h-4 w-4" />
-                Sair
-              </Button>
+                <span>Sair</span>
+              </button>
             </div>
           </div>
         </aside>
