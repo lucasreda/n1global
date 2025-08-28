@@ -85,7 +85,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       isImage: true
     },
     {
-      title: "CPA Médio",
+      title: "CPA Anúncios",
       value: formatCurrencyBRL(avgCPA),
       subtitle: `Custo por aquisição`,
       icon: Target,
