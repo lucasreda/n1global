@@ -122,6 +122,7 @@ export default function Ads() {
   const [networkSelectOpen, setNetworkSelectOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState<'facebook' | 'google'>('facebook');
   const [bmDialogOpen, setBmDialogOpen] = useState(false);
+  const [accountsModalOpen, setAccountsModalOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
   const [newAccount, setNewAccount] = useState({
@@ -630,9 +631,12 @@ export default function Ads() {
                           </div>
                         ))}
                         {adAccounts.length > 2 && (
-                          <div className="text-xs text-gray-400 text-center pt-1">
+                          <button 
+                            onClick={() => setAccountsModalOpen(true)}
+                            className="text-xs text-blue-400 hover:text-blue-300 text-center pt-1 w-full cursor-pointer transition-colors"
+                          >
                             +{adAccounts.length - 2} mais
-                          </div>
+                          </button>
                         )}
                       </div>
                     </>
@@ -792,6 +796,103 @@ export default function Ads() {
           </CardContent>
         </Card>
       ) : null}
+
+      {/* Modal de Todas as Contas Conectadas */}
+      <Dialog open={accountsModalOpen} onOpenChange={setAccountsModalOpen}>
+        <DialogContent className="glassmorphism border-gray-700 max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center space-x-2">
+              <FacebookIcon size={20} />
+              <GoogleAdsIcon size={20} />
+              <span>Todas as Contas Conectadas</span>
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Visualize todas as suas contas de anúncios conectadas
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {adAccounts && adAccounts.length > 0 ? (
+              <>
+                {/* Contas Meta */}
+                {(() => {
+                  const metaAccounts = adAccounts.filter(a => a.network === 'facebook');
+                  return metaAccounts.length > 0 ? (
+                    <div>
+                      <h3 className="text-sm font-medium text-white flex items-center space-x-2 mb-3">
+                        <FacebookIcon size={16} />
+                        <span>Meta Ads ({metaAccounts.length})</span>
+                      </h3>
+                      <div className="space-y-2">
+                        {metaAccounts.map((account) => (
+                          <div key={account.id} className="glassmorphism-light rounded-lg p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <FacebookIcon size={16} />
+                                <div>
+                                  <h4 className="text-white text-sm font-medium">{account.name}</h4>
+                                  <p className="text-gray-400 text-xs">ID: {account.accountId}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <span className="text-xs text-gray-400">{account.currency}</span>
+                                <span className={`w-2 h-2 rounded-full ${account.isActive ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                                <span className={`text-xs ${account.isActive ? 'text-green-400' : 'text-red-400'}`}>
+                                  {account.isActive ? 'Ativa' : 'Inativa'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* Contas Google Ads */}
+                {(() => {
+                  const googleAccounts = adAccounts.filter(a => a.network === 'google');
+                  return googleAccounts.length > 0 ? (
+                    <div>
+                      <h3 className="text-sm font-medium text-white flex items-center space-x-2 mb-3">
+                        <GoogleAdsIcon size={16} />
+                        <span>Google Ads ({googleAccounts.length})</span>
+                      </h3>
+                      <div className="space-y-2">
+                        {googleAccounts.map((account) => (
+                          <div key={account.id} className="glassmorphism-light rounded-lg p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <GoogleAdsIcon size={16} />
+                                <div>
+                                  <h4 className="text-white text-sm font-medium">{account.name}</h4>
+                                  <p className="text-gray-400 text-xs">ID: {account.accountId}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <span className="text-xs text-gray-400">{account.currency}</span>
+                                <span className={`w-2 h-2 rounded-full ${account.isActive ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                                <span className={`text-xs ${account.isActive ? 'text-green-400' : 'text-red-400'}`}>
+                                  {account.isActive ? 'Ativa' : 'Inativa'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Globe className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-400">Nenhuma conta conectada</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
