@@ -365,9 +365,9 @@ export default function Ads() {
                     setNetworkSelectOpen(false);
                     setDialogOpen(true);
                   }}
-                  className="h-20 flex items-center justify-center bg-blue-600 hover:bg-blue-700 border border-blue-500"
+                  className="h-32 flex items-center justify-center bg-blue-600 hover:bg-blue-700 border border-blue-500"
                 >
-                  <FacebookIcon size={48} />
+                  <FacebookIcon size={80} />
                 </Button>
                 <Button
                   onClick={() => {
@@ -375,10 +375,10 @@ export default function Ads() {
                     setNetworkSelectOpen(false);
                     setDialogOpen(true);
                   }}
-                  className="h-20 flex items-center justify-center border border-gray-300 hover:border-gray-400"
+                  className="h-32 flex items-center justify-center border border-gray-300 hover:border-gray-400"
                   style={{ backgroundColor: '#f8f8f8' }}
                 >
-                  <GoogleAdsIcon size={48} />
+                  <GoogleAdsIcon size={80} />
                 </Button>
               </div>
             </DialogContent>
