@@ -577,27 +577,23 @@ export class InvestmentService {
    * Get all investors for admin view
    */
   async getAllInvestors() {
+    // First get basic investor users
     const investors = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        email: users.email,
-        createdAt: users.createdAt,
-        profileId: investorProfiles.id,
-        firstName: investorProfiles.firstName,
-        lastName: investorProfiles.lastName,
-        phone: investorProfiles.phone,
-        riskTolerance: investorProfiles.riskTolerance,
-        investmentExperience: investorProfiles.investmentExperience,
-      })
+      .select()
       .from(users)
-      .leftJoin(investorProfiles, eq(users.id, investorProfiles.userId))
       .where(eq(users.role, 'investor'))
       .orderBy(desc(users.createdAt));
 
     // Get investment data for each investor
     const investorsWithData = await Promise.all(
       investors.map(async (investor) => {
+        // Get profile data separately
+        const profile = await db
+          .select()
+          .from(investorProfiles)
+          .where(eq(investorProfiles.userId, investor.id))
+          .limit(1);
+
         // Get all investments for this investor
         const investorInvestments = await db
           .select({
@@ -632,14 +628,7 @@ export class InvestmentService {
           name: investor.name,
           email: investor.email,
           createdAt: investor.createdAt,
-          profile: investor.profileId ? {
-            id: investor.profileId,
-            firstName: investor.firstName,
-            lastName: investor.lastName,
-            phone: investor.phone,
-            riskTolerance: investor.riskTolerance,
-            investmentExperience: investor.investmentExperience,
-          } : null,
+          profile: profile.length > 0 ? profile[0] : null,
           totalInvested,
           currentValue,
           totalReturns,
