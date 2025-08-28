@@ -236,63 +236,65 @@ export default function InvestmentDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Pool Performance */}
-          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
-                <PieChart className="h-5 w-5" />
-                Performance do Pool
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center h-32">
-                  <p className="text-gray-400">Carregando...</p>
-                </div>
-              ) : dashboardData?.poolPerformance ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">
+          <div className="lg:col-span-2 space-y-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-gray-500">Loading...</p>
+              </div>
+            ) : dashboardData?.poolPerformance ? (
+              <>
+                {/* Pool Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-white">
                       {dashboardData.poolPerformance.poolName}
                     </h3>
-                    <Badge className={getRiskColor(dashboardData.poolPerformance.riskLevel)}>
-                      Risco {dashboardData.poolPerformance.riskLevel.charAt(0).toUpperCase() + dashboardData.poolPerformance.riskLevel.slice(1)}
-                    </Badge>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      COD Operations Fund
+                    </p>
                   </div>
-                  
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-400">Valor Total</p>
-                      <p className="text-xl font-bold text-white">
-                        {formatCurrency(dashboardData.poolPerformance.totalValue)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Retorno Mensal</p>
-                      <p className="text-xl font-bold text-green-400">
-                        {formatPercentage(dashboardData.poolPerformance.monthlyReturn / 100)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Retorno Anual</p>
-                      <p className="text-xl font-bold text-blue-400">
-                        {formatPercentage(dashboardData.poolPerformance.yearlyReturn / 100)}
-                      </p>
+                  <div className="text-right">
+                    <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${getRiskColor(dashboardData.poolPerformance.riskLevel)} bg-gray-900 border border-gray-700`}>
+                      Low Risk
                     </div>
                   </div>
+                </div>
+                
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Total Value</p>
+                    <p className="text-lg font-semibold text-white">
+                      {formatCurrency(dashboardData.poolPerformance.totalValue)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Monthly</p>
+                    <p className="text-lg font-semibold text-green-400">
+                      +{formatPercentage(dashboardData.poolPerformance.monthlyReturn / 100)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Annual</p>
+                    <p className="text-lg font-semibold text-blue-400">
+                      +{formatPercentage(dashboardData.poolPerformance.yearlyReturn / 100)}
+                    </p>
+                  </div>
+                </div>
 
-                  <div className="mt-6">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                      Ver Detalhes Completos
-                    </Button>
-                  </div>
+                {/* Action */}
+                <div className="pt-2">
+                  <button className="text-xs text-gray-400 hover:text-white transition-colors">
+                    View Details →
+                  </button>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">Nenhum investimento ativo</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-sm">No active investment</p>
+              </div>
+            )}
+          </div>
 
           {/* Recent Transactions */}
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
