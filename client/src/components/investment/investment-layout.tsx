@@ -86,7 +86,7 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
     <div className="min-h-screen bg-[#020817]">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 bg-black border-b border-[#252525] z-50">
-        <div className="container mx-auto px-4">
+        <div className="px-6">
           <div className="flex items-center justify-between h-16">
             <Link href="/investment">
               <div className="flex items-center cursor-pointer">
