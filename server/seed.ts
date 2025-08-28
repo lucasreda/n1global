@@ -331,13 +331,20 @@ export async function seedDatabase() {
       console.log("ℹ️  Investment pool already exists");
     }
 
+    // Get investor if exists (to fix reference issue)
+    const [investor] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "investor@codashboard.com"))
+      .limit(1);
+
     // Create sample investment for the investor
-    if (existingInvestor) {
+    if (investor) {
       const [existingInvestment] = await db
         .select()
         .from(investments)
         .where(and(
-          eq(investments.investorId, existingInvestor.id),
+          eq(investments.investorId, investor.id),
           eq(investments.poolId, poolId)
         ))
         .limit(1);
@@ -347,7 +354,7 @@ export async function seedDatabase() {
         const [investment] = await db
           .insert(investments)
           .values({
-            investorId: existingInvestor.id,
+            investorId: investor.id,
             poolId: poolId,
             totalInvested: "1000000.00", // R$1,000,000 invested
             currentValue: "1586874.32", // R$1,586,874.32 current value (58.7% gain over 6 months)
@@ -365,7 +372,7 @@ export async function seedDatabase() {
         const transactions = [
           {
             investmentId: investment.id,
-            investorId: existingInvestor.id,
+            investorId: investor.id,
             poolId: poolId,
             type: "deposit",
             amount: "1000000.00",
@@ -376,7 +383,7 @@ export async function seedDatabase() {
           },
           {
             investmentId: investment.id,
-            investorId: existingInvestor.id,
+            investorId: investor.id,
             poolId: poolId,
             type: "return_payment",
             amount: "25000.00",
@@ -386,7 +393,7 @@ export async function seedDatabase() {
           },
           {
             investmentId: investment.id,
-            investorId: existingInvestor.id,
+            investorId: investor.id,
             poolId: poolId,
             type: "return_payment",
             amount: "27500.00",

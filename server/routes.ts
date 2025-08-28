@@ -3566,6 +3566,21 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Utility endpoint for reinitializing investor data in production
+  app.get("/reinitialize", (req: Request, res: Response) => {
+    const fs = require('fs');
+    const path = require('path');
+    const htmlPath = path.join(__dirname, '..', 'reinitialize.html');
+    
+    if (fs.existsSync(htmlPath)) {
+      const html = fs.readFileSync(htmlPath, 'utf8');
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    } else {
+      res.status(404).send('Reinitialize page not found');
+    }
+  });
+
   // Investment routes - accessible by investor role
   const requireInvestor = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user || req.user.role !== 'investor') {
@@ -3620,6 +3635,140 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     } catch (error) {
       console.error("Error fetching performance history:", error);
       res.status(500).json({ message: "Erro ao buscar histórico de performance" });
+    }
+  });
+
+  // Reinitialize investor data (for production deployment)
+  app.post("/api/investment/reinitialize", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { db } = await import("./db");
+      const { investmentPools, investments, investmentTransactions } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+
+      console.log("🔄 Reinicializando dados do investidor:", req.user.email);
+
+      // Check if investment pool exists
+      const [existingPool] = await db
+        .select()
+        .from(investmentPools)
+        .where(eq(investmentPools.name, "COD Operations Fund I"))
+        .limit(1);
+
+      let poolId;
+      if (!existingPool) {
+        // Create investment pool
+        const [pool] = await db
+          .insert(investmentPools)
+          .values({
+            name: "COD Operations Fund I",
+            description: "Fundo de investimento focado em operações Cash on Delivery na Europa, com retorno mensal consistente baseado nas margens das operações.",
+            totalValue: "10000000.00", // R$10,000,000
+            totalInvested: "1000000.00", // R$1,000,000 invested
+            monthlyReturn: "0.08", // 8% monthly
+            yearlyReturn: "1.51", // 151% yearly (compound calculation)
+            minInvestment: "27500.00", // R$27,500 minimum
+            riskLevel: "medium",
+            investmentStrategy: "Investimento em operações COD de alto volume com margens consistentes. Diversificação em múltiplos países europeus e categorias de produtos."
+          })
+          .returning();
+        
+        poolId = pool.id;
+        console.log("✅ Investment pool criado:", pool.name);
+      } else {
+        poolId = existingPool.id;
+        console.log("ℹ️  Investment pool já existe");
+      }
+
+      // Check for existing investment
+      const [existingInvestment] = await db
+        .select()
+        .from(investments)
+        .where(and(
+          eq(investments.investorId, req.user.id),
+          eq(investments.poolId, poolId)
+        ))
+        .limit(1);
+
+      if (!existingInvestment) {
+        // Create investment record
+        const [investment] = await db
+          .insert(investments)
+          .values({
+            investorId: req.user.id,
+            poolId: poolId,
+            totalInvested: "1000000.00", // R$1,000,000 invested
+            currentValue: "1586874.32", // R$1,586,874.32 current value (58.7% gain over 6 months)
+            totalReturns: "586874.32", // R$586,874.32 in returns
+            returnRate: "0.587", // 58.7% return rate
+            monthlyReturn: "0.08", // 8% monthly
+            firstInvestmentDate: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000), // 6 months ago
+            lastTransactionDate: new Date()
+          })
+          .returning();
+
+        // Create sample transactions
+        const transactions = [
+          {
+            investmentId: investment.id,
+            investorId: req.user.id,
+            poolId: poolId,
+            type: "deposit",
+            amount: "1000000.00",
+            description: "Investimento inicial",
+            paymentMethod: "bank_transfer",
+            paymentStatus: "completed",
+            processedAt: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000)
+          },
+          {
+            investmentId: investment.id,
+            investorId: req.user.id,
+            poolId: poolId,
+            type: "return_payment",
+            amount: "25000.00",
+            description: "Janeiro",
+            paymentStatus: "completed",
+            processedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+          },
+          {
+            investmentId: investment.id,
+            investorId: req.user.id,
+            poolId: poolId,
+            type: "return_payment",
+            amount: "27500.00",
+            description: "Fevereiro",
+            paymentStatus: "completed",
+            processedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
+          }
+        ];
+
+        for (const txData of transactions) {
+          await db
+            .insert(investmentTransactions)
+            .values(txData);
+        }
+
+        console.log("✅ Dados do investidor reinicializados com sucesso");
+        res.json({ 
+          success: true, 
+          message: "Dados do investidor reinicializados com sucesso",
+          investment: {
+            totalInvested: "1000000.00",
+            currentValue: "1586874.32",
+            totalReturns: "586874.32",
+            returnRate: "0.587"
+          }
+        });
+      } else {
+        console.log("ℹ️  Investimento já existe para este usuário");
+        res.json({ 
+          success: true, 
+          message: "Dados do investidor já existem",
+          existing: true
+        });
+      }
+    } catch (error) {
+      console.error("❌ Erro ao reinicializar dados do investidor:", error);
+      res.status(500).json({ message: "Erro ao reinicializar dados do investidor" });
     }
   });
 
