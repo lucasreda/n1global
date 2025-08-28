@@ -182,7 +182,7 @@ export default function Ads() {
     onSuccess: () => {
       toast({
         title: "Conta adicionada",
-        description: `Conta do ${selectedNetwork === 'facebook' ? 'Facebook Ads' : 'Google Ads'} configurada com sucesso`,
+        description: `Conta do ${selectedNetwork === 'facebook' ? 'Meta Ads' : 'Google Ads'} configurada com sucesso`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/ad-accounts"] });
       setDialogOpen(false);
@@ -200,7 +200,7 @@ export default function Ads() {
     onError: () => {
       toast({
         title: "Erro",
-        description: "Falha ao configurar conta do Facebook Ads",
+        description: "Falha ao configurar conta do Meta Ads",
         variant: "destructive",
       });
     },
@@ -321,7 +321,7 @@ export default function Ads() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Anúncios</h1>
-          <p className="text-sm text-gray-400">Campanhas Facebook Ads e Google Ads</p>
+          <p className="text-sm text-gray-400">Campanhas Meta Ads e Google Ads</p>
         </div>
         <div className="flex items-center space-x-3">
           <select
@@ -401,11 +401,11 @@ export default function Ads() {
                 <DialogTitle className="text-white flex items-center">
                   <NetworkIcon network={selectedNetwork} size={20} />
                   <span className="ml-2">
-                    Configurar {selectedNetwork === 'facebook' ? 'Facebook Ads' : 'Google Ads'}
+                    Configurar {selectedNetwork === 'facebook' ? 'Meta Ads' : 'Google Ads'}
                   </span>
                 </DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Adicione suas credenciais reais do {selectedNetwork === 'facebook' ? 'Facebook' : 'Google'} para sincronizar campanhas
+                  Adicione suas credenciais reais do {selectedNetwork === 'facebook' ? 'Meta' : 'Google'} para sincronizar campanhas
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -600,7 +600,7 @@ export default function Ads() {
             <Facebook className="w-16 h-16 text-blue-500 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">Nenhuma conta conectada</h3>
             <p className="text-gray-400 mb-6">
-              Configure sua primeira conta do Facebook Ads para começar a importar campanhas
+              Configure sua primeira conta do Meta Ads para começar a importar campanhas
             </p>
             <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="w-4 h-4 mr-2" />
@@ -708,7 +708,7 @@ export default function Ads() {
             <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">Nenhuma campanha encontrada</h3>
             <p className="text-gray-400 mb-6">
-              Sincronize suas campanhas do Facebook Ads para começar
+              Sincronize suas campanhas do Meta Ads para começar
             </p>
             <Button 
               onClick={() => syncCampaignsMutation.mutate()}
@@ -728,7 +728,7 @@ export default function Ads() {
               {selectedAccountId === "all" ? "Nenhuma campanha encontrada" : "Nenhuma campanha na conta selecionada"}
             </h3>
             <p className="text-gray-400 mb-6">
-              Sincronize suas campanhas do Facebook Ads para começar
+              Sincronize suas campanhas do Meta Ads para começar
             </p>
             <Button 
               onClick={() => syncCampaignsMutation.mutate()}
