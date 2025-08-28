@@ -119,56 +119,64 @@ export default function AdminInvestmentDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Total em Pools</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-xl md:text-2xl font-bold text-white break-words">
                     {formatCurrency(dashboardData?.totalValue || 0)}
                   </p>
                 </div>
-                <DollarSign className="h-8 w-8 text-blue-400" />
+                <div className="flex-shrink-0">
+                  <DollarSign className="h-8 w-8 text-blue-400" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Investidores Ativos</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-xl md:text-2xl font-bold text-white break-words">
                     {dashboardData?.totalInvestors || 0}
                   </p>
                 </div>
-                <Users className="h-8 w-8 text-green-400" />
+                <div className="flex-shrink-0">
+                  <Users className="h-8 w-8 text-green-400" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Pools Ativas</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-xl md:text-2xl font-bold text-white break-words">
                     {dashboardData?.totalPools || 0}
                   </p>
                 </div>
-                <Building2 className="h-8 w-8 text-purple-400" />
+                <div className="flex-shrink-0">
+                  <Building2 className="h-8 w-8 text-purple-400" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-gray-400">Retorno Mensal</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-xl md:text-2xl font-bold text-white break-words">
                     {formatCurrency(dashboardData?.monthlyReturns || 0)}
                   </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-yellow-400" />
+                <div className="flex-shrink-0">
+                  <TrendingUp className="h-8 w-8 text-yellow-400" />
+                </div>
               </div>
             </CardContent>
           </Card>
