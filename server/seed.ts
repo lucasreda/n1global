@@ -314,11 +314,11 @@ export async function seedDatabase() {
         .values({
           name: "COD Operations Fund I",
           description: "Fundo de investimento focado em operações Cash on Delivery na Europa, com retorno mensal consistente baseado nas margens das operações.",
-          totalValue: "250000.00", // €250,000
-          totalInvested: "150000.00", // €150,000 invested
+          totalValue: "1375000.00", // R$1,375,000
+          totalInvested: "825000.00", // R$825,000 invested
           monthlyReturn: "0.025", // 2.5% monthly
           yearlyReturn: "0.30", // 30% yearly
-          minInvestment: "5000.00", // €5,000 minimum
+          minInvestment: "27500.00", // R$27,500 minimum
           riskLevel: "medium",
           investmentStrategy: "Investimento em operações COD de alto volume com margens consistentes. Diversificação em múltiplos países europeus e categorias de produtos."
         })
@@ -349,9 +349,9 @@ export async function seedDatabase() {
           .values({
             investorId: existingInvestor.id,
             poolId: poolId,
-            totalInvested: "25000.00", // €25,000 invested
-            currentValue: "27500.00", // €27,500 current value (10% gain)
-            totalReturns: "2500.00", // €2,500 in returns
+            totalInvested: "137500.00", // R$137,500 invested
+            currentValue: "151250.00", // R$151,250 current value (10% gain)
+            totalReturns: "13750.00", // R$13,750 in returns
             returnRate: "0.10", // 10% return rate
             monthlyReturn: "0.025", // 2.5% monthly
             firstInvestmentDate: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000), // 6 months ago
@@ -368,7 +368,7 @@ export async function seedDatabase() {
             investorId: existingInvestor.id,
             poolId: poolId,
             type: "deposit",
-            amount: "25000.00",
+            amount: "137500.00",
             description: "Investimento inicial",
             paymentMethod: "bank_transfer",
             paymentStatus: "completed",
@@ -379,7 +379,7 @@ export async function seedDatabase() {
             investorId: existingInvestor.id,
             poolId: poolId,
             type: "return_payment",
-            amount: "625.00",
+            amount: "3437.50",
             description: "Rendimento mensal - Janeiro",
             paymentStatus: "completed",
             processedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -389,7 +389,7 @@ export async function seedDatabase() {
             investorId: existingInvestor.id,
             poolId: poolId,
             type: "return_payment",
-            amount: "687.50",
+            amount: "3781.25",
             description: "Rendimento mensal - Fevereiro",
             paymentStatus: "completed",
             processedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)

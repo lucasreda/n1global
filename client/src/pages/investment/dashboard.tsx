@@ -48,24 +48,24 @@ export default function InvestmentDashboard() {
 
   // Dados fictícios para o gráfico de recebimentos mensais
   const monthlyReturnsData = [
-    { month: 'Jun', returns: 580, cumulative: 580 },
-    { month: 'Jul', returns: 625, cumulative: 1205 },
-    { month: 'Ago', returns: 687, cumulative: 1892 },
-    { month: 'Set', returns: 712, cumulative: 2604 },
-    { month: 'Out', returns: 695, cumulative: 3299 },
-    { month: 'Nov', returns: 743, cumulative: 4042 },
-    { month: 'Dez', returns: 778, cumulative: 4820 },
-    { month: 'Jan', returns: 825, cumulative: 5645 },
-    { month: 'Fev', returns: 862, cumulative: 6507 },
-    { month: 'Mar', returns: 798, cumulative: 7305 },
-    { month: 'Abr', returns: 891, cumulative: 8196 },
-    { month: 'Mai', returns: 934, cumulative: 9130 }
+    { month: 'Jun', returns: 3190, cumulative: 3190 },
+    { month: 'Jul', returns: 3438, cumulative: 6628 },
+    { month: 'Ago', returns: 3779, cumulative: 10407 },
+    { month: 'Set', returns: 3916, cumulative: 14323 },
+    { month: 'Out', returns: 3823, cumulative: 18146 },
+    { month: 'Nov', returns: 4087, cumulative: 22233 },
+    { month: 'Dez', returns: 4279, cumulative: 26512 },
+    { month: 'Jan', returns: 4538, cumulative: 31050 },
+    { month: 'Fev', returns: 4741, cumulative: 35791 },
+    { month: 'Mar', returns: 4389, cumulative: 40180 },
+    { month: 'Abr', returns: 4901, cumulative: 45081 },
+    { month: 'Mai', returns: 5137, cumulative: 50218 }
   ];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'BRL'
     }).format(amount);
   };
 
@@ -155,7 +155,7 @@ export default function InvestmentDashboard() {
                     fontSize: '12px',
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
                   }}
-                  formatter={(value: number) => [`€${value.toLocaleString()}`, '']}
+                  formatter={(value: number) => [`R$${value.toLocaleString()}`, '']}
                   labelStyle={{ color: '#9CA3AF', fontSize: '11px' }}
                 />
                 <Line 

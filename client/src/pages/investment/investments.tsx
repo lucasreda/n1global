@@ -52,8 +52,8 @@ export default function InvestmentsPage() {
   const [investOpen, setInvestOpen] = useState(false);
   const [selectedPool, setSelectedPool] = useState<InvestmentOpportunity | null>(null);
   const [simulatorParams, setSimulatorParams] = useState({
-    initialAmount: 5000,
-    monthlyContribution: 500,
+    initialAmount: 27500,
+    monthlyContribution: 2750,
     months: 12
   });
 
@@ -68,7 +68,7 @@ export default function InvestmentsPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'EUR'
+      currency: 'BRL'
     }).format(amount);
   };
 
