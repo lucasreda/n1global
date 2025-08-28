@@ -195,11 +195,11 @@ export default function AdminInvestmentPools() {
     editForm.reset({
       name: pool.name,
       description: pool.description || "",
-      totalValue: pool.totalValue,
-      monthlyReturn: pool.monthlyReturn,
-      yearlyReturn: pool.yearlyReturn,
+      totalValue: Number(pool.totalValue),
+      monthlyReturn: Number(pool.monthlyReturn),
+      yearlyReturn: Number(pool.yearlyReturn),
       riskLevel: pool.riskLevel as "low" | "medium" | "high",
-      minInvestment: pool.minInvestment,
+      minInvestment: Number(pool.minInvestment),
       status: pool.status as "active" | "paused" | "closed"
     });
     setEditDialogOpen(true);
