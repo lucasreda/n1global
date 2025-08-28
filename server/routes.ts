@@ -3871,6 +3871,86 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Admin Investment middleware
+  const requireAdminInvestimento = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (req.user?.role !== 'admin_investimento') {
+      return res.status(403).json({ message: "Acesso negado. Apenas admins de investimento podem acessar esta funcionalidade" });
+    }
+    next();
+  };
+
+  // Admin Investment Dashboard
+  app.get("/api/admin-investment/dashboard", authenticateToken, requireAdminInvestimento, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const dashboardData = await investmentService.getAdminDashboard();
+      res.json(dashboardData);
+    } catch (error) {
+      console.error("Error fetching admin investment dashboard:", error);
+      res.status(500).json({ message: "Erro ao buscar dados do dashboard administrativo" });
+    }
+  });
+
+  // Get all investment pools (admin view)
+  app.get("/api/admin-investment/pools", authenticateToken, requireAdminInvestimento, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const pools = await investmentService.getAllPools();
+      res.json(pools);
+    } catch (error) {
+      console.error("Error fetching investment pools:", error);
+      res.status(500).json({ message: "Erro ao buscar pools de investimento" });
+    }
+  });
+
+  // Get all investors
+  app.get("/api/admin-investment/investors", authenticateToken, requireAdminInvestimento, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const investors = await investmentService.getAllInvestors();
+      res.json(investors);
+    } catch (error) {
+      console.error("Error fetching investors:", error);
+      res.status(500).json({ message: "Erro ao buscar investidores" });
+    }
+  });
+
+  // Get all transactions (admin view)
+  app.get("/api/admin-investment/transactions", authenticateToken, requireAdminInvestimento, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const transactions = await investmentService.getAllTransactions();
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ message: "Erro ao buscar transações" });
+    }
+  });
+
+  // Create new investment pool
+  app.post("/api/admin-investment/pools", authenticateToken, requireAdminInvestimento, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const pool = await investmentService.createPool(req.body);
+      res.status(201).json(pool);
+    } catch (error) {
+      console.error("Error creating investment pool:", error);
+      res.status(500).json({ message: "Erro ao criar pool de investimento" });
+    }
+  });
+
+  // Update investment pool
+  app.put("/api/admin-investment/pools/:id", authenticateToken, requireAdminInvestimento, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const pool = await investmentService.updatePool(req.params.id, req.body);
+      res.json(pool);
+    } catch (error) {
+      console.error("Error updating investment pool:", error);
+      res.status(500).json({ message: "Erro ao atualizar pool de investimento" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

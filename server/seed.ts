@@ -244,6 +244,33 @@ export async function seedDatabase() {
       console.log("ℹ️  Investor already exists");
     }
 
+    // Check if investment admin already exists
+    const [existingInvestmentAdmin] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "admin.investment@codashboard.com"))
+      .limit(1);
+
+    if (!existingInvestmentAdmin) {
+      // Create investment admin user
+      const hashedPassword = await bcrypt.hash("AdminInvest2025!@#", 10);
+      
+      const [investmentAdmin] = await db
+        .insert(users)
+        .values({
+          name: "Admin Investimentos",
+          email: "admin.investment@codashboard.com",
+          password: hashedPassword,
+          role: "admin_investimento",
+          onboardingCompleted: true,
+        })
+        .returning();
+      
+      console.log("✅ Investment admin created:", investmentAdmin.email);
+    } else {
+      console.log("ℹ️  Investment admin already exists");
+    }
+
     // ⚠️ CRITICAL: Clean and setup fresh user access to correct operations
     const [freshUser] = await db
       .select()

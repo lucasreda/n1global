@@ -40,6 +40,7 @@ import ProductSuccess from "@/pages/product-success";
 import InvestorSupplierLanding from "@/pages/investor-supplier";
 import InvestmentDashboard from "@/pages/investment/dashboard";
 import InvestmentsPage from "@/pages/investment/investments";
+import AdminInvestmentDashboard from "@/pages/admin-investment/dashboard";
 import NotFound from "@/pages/not-found";
 
 interface OnboardingStatus {
@@ -99,7 +100,7 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     const hasUser = !!user;
     const hasAuth = isAuthenticated;
     const hasData = !isLoading && onboardingStatus !== undefined;
-    const skipOnboarding = user?.role === 'supplier' || user?.role === 'super_admin';
+    const skipOnboarding = user?.role === 'supplier' || user?.role === 'super_admin' || user?.role === 'admin_financeiro' || user?.role === 'investor' || user?.role === 'admin_investimento';
     const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted && !skipOnboarding;
     const notOnOnboardingPage = location !== '/onboarding';
     
@@ -174,6 +175,8 @@ function Router() {
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
   const isInvestor = user?.role === 'investor';
 
+  const isAdminInvestimento = user?.role === 'admin_investimento';
+
   // Auto-redirect users based on role
   useEffect(() => {
     if (isSuperAdmin && location === '/') {
@@ -184,8 +187,10 @@ function Router() {
       setLocation('/finance');
     } else if (isInvestor && location === '/') {
       setLocation('/investment');
+    } else if (isAdminInvestimento && location === '/') {
+      setLocation('/admin-investment');
     }
-  }, [isSuperAdmin, isSupplier, isAdminFinanceiro, location, setLocation]);
+  }, [isSuperAdmin, isSupplier, isAdminFinanceiro, isInvestor, isAdminInvestimento, location, setLocation]);
 
   return (
     <OnboardingGuard>
@@ -214,6 +219,9 @@ function Router() {
         {/* Investment Routes */}
         <Route path="/investment/investments" component={isInvestor ? InvestmentsPage : () => <NotFound />} />
         <Route path="/investment" component={isInvestor ? InvestmentDashboard : () => <NotFound />} />
+        
+        {/* Admin Investment Routes */}
+        <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
         
         {/* Default Routes */}
         <Route path="/" component={isSupplier ? SupplierDashboard : isProductSeller ? SellerDashboard : Dashboard} />

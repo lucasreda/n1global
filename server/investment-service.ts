@@ -471,6 +471,236 @@ export class InvestmentService {
 
     return results;
   }
+
+  /**
+   * Get admin dashboard data (all pools, investors, summary)
+   */
+  async getAdminDashboard() {
+    // Get all pools
+    const pools = await db
+      .select({
+        id: investmentPools.id,
+        name: investmentPools.name,
+        totalValue: investmentPools.totalValue,
+        totalInvested: investmentPools.totalInvested,
+        monthlyReturn: investmentPools.monthlyReturn,
+        riskLevel: investmentPools.riskLevel,
+        status: investmentPools.status,
+      })
+      .from(investmentPools);
+
+    // Get investor count per pool
+    const poolsWithInvestorCount = await Promise.all(
+      pools.map(async (pool) => {
+        const investorCount = await db
+          .select({ count: count() })
+          .from(investments)
+          .where(eq(investments.poolId, pool.id));
+
+        return {
+          ...pool,
+          totalValue: parseFloat(pool.totalValue),
+          totalInvested: parseFloat(pool.totalInvested),
+          monthlyReturn: parseFloat(pool.monthlyReturn),
+          investorCount: investorCount[0]?.count || 0,
+        };
+      })
+    );
+
+    // Get total metrics
+    const totalPools = pools.length;
+    const totalValue = pools.reduce((sum, pool) => sum + parseFloat(pool.totalValue), 0);
+    const totalInvested = pools.reduce((sum, pool) => sum + parseFloat(pool.totalInvested), 0);
+    const monthlyReturns = totalValue - totalInvested;
+
+    // Get total investors count
+    const totalInvestorsResult = await db
+      .select({ count: count() })
+      .from(investorProfiles);
+    const totalInvestors = totalInvestorsResult[0]?.count || 0;
+
+    // Get recent transactions
+    const recentTransactions = await db
+      .select({
+        id: investmentTransactions.id,
+        investorName: users.name,
+        poolName: investmentPools.name,
+        type: investmentTransactions.type,
+        amount: investmentTransactions.amount,
+        date: investmentTransactions.createdAt,
+        status: investmentTransactions.paymentStatus,
+      })
+      .from(investmentTransactions)
+      .innerJoin(investments, eq(investmentTransactions.investmentId, investments.id))
+      .innerJoin(investmentPools, eq(investments.poolId, investmentPools.id))
+      .innerJoin(users, eq(investments.investorId, users.id))
+      .orderBy(desc(investmentTransactions.createdAt))
+      .limit(10);
+
+    const formattedTransactions = recentTransactions.map(tx => ({
+      ...tx,
+      amount: parseFloat(tx.amount),
+      date: tx.date?.toISOString() || new Date().toISOString(),
+    }));
+
+    return {
+      totalPools,
+      totalInvestors,
+      totalInvested,
+      totalValue,
+      monthlyReturns,
+      activeInvestments: totalInvestors, // All active for now
+      pendingInvestments: 0, // Could be refined later
+      pools: poolsWithInvestorCount,
+      recentTransactions: formattedTransactions,
+    };
+  }
+
+  /**
+   * Get all pools for admin view
+   */
+  async getAllPools() {
+    const pools = await db
+      .select()
+      .from(investmentPools)
+      .orderBy(desc(investmentPools.createdAt));
+
+    return pools.map(pool => ({
+      ...pool,
+      totalValue: parseFloat(pool.totalValue),
+      totalInvested: parseFloat(pool.totalInvested),
+      monthlyReturnRate: parseFloat(pool.monthlyReturn || '0'),
+    }));
+  }
+
+  /**
+   * Get all investors for admin view
+   */
+  async getAllInvestors() {
+    const investors = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        createdAt: users.createdAt,
+        profile: investorProfiles,
+      })
+      .from(users)
+      .leftJoin(investorProfiles, eq(users.id, investorProfiles.userId))
+      .where(eq(users.role, 'investor'))
+      .orderBy(desc(users.createdAt));
+
+    return investors;
+  }
+
+  /**
+   * Get all transactions for admin view
+   */
+  async getAllTransactions() {
+    const transactions = await db
+      .select({
+        id: investmentTransactions.id,
+        investorName: users.name,
+        poolName: investmentPools.name,
+        type: investmentTransactions.type,
+        amount: investmentTransactions.amount,
+        description: investmentTransactions.description,
+        paymentMethod: investmentTransactions.paymentMethod,
+        paymentStatus: investmentTransactions.paymentStatus,
+        createdAt: investmentTransactions.createdAt,
+      })
+      .from(investmentTransactions)
+      .innerJoin(investments, eq(investmentTransactions.investmentId, investments.id))
+      .innerJoin(investmentPools, eq(investments.poolId, investmentPools.id))
+      .innerJoin(users, eq(investments.investorId, users.id))
+      .orderBy(desc(investmentTransactions.createdAt));
+
+    return transactions.map(tx => ({
+      ...tx,
+      amount: parseFloat(tx.amount),
+    }));
+  }
+
+  /**
+   * Create new investment pool (admin only)
+   */
+  async createPool(poolData: {
+    name: string;
+    description?: string;
+    totalValue: number;
+    monthlyReturnRate: number;
+    riskLevel: string;
+    minInvestment?: number;
+    status?: string;
+  }) {
+    const [pool] = await db
+      .insert(investmentPools)
+      .values({
+        name: poolData.name,
+        description: poolData.description,
+        totalValue: poolData.totalValue.toString(),
+        totalInvested: '0',
+        monthlyReturn: poolData.monthlyReturnRate.toString(),
+        minInvestment: poolData.minInvestment?.toString() || '1000',
+        riskLevel: poolData.riskLevel,
+        status: poolData.status || 'active',
+      })
+      .returning();
+
+    return {
+      ...pool,
+      totalValue: parseFloat(pool.totalValue),
+      totalInvested: parseFloat(pool.totalInvested),
+      monthlyReturnRate: parseFloat(pool.monthlyReturn || '0'),
+      minInvestment: parseFloat(pool.minInvestment),
+    };
+  }
+
+  /**
+   * Update investment pool (admin only)
+   */
+  async updatePool(poolId: string, updateData: Partial<{
+    name: string;
+    description: string;
+    totalValue: number;
+    monthlyReturnRate: number;
+    riskLevel: string;
+    minInvestment: number;
+    status: string;
+  }>) {
+    const updates: any = {};
+    
+    // Copy safe string fields
+    if (updateData.name !== undefined) updates.name = updateData.name;
+    if (updateData.description !== undefined) updates.description = updateData.description;
+    if (updateData.riskLevel !== undefined) updates.riskLevel = updateData.riskLevel;
+    if (updateData.status !== undefined) updates.status = updateData.status;
+    
+    // Convert numbers to strings for database
+    if (updateData.totalValue !== undefined) {
+      updates.totalValue = updateData.totalValue.toString();
+    }
+    if (updateData.monthlyReturnRate !== undefined) {
+      updates.monthlyReturn = updateData.monthlyReturnRate.toString();
+    }
+    if (updateData.minInvestment !== undefined) {
+      updates.minInvestment = updateData.minInvestment.toString();
+    }
+
+    const [pool] = await db
+      .update(investmentPools)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(investmentPools.id, poolId))
+      .returning();
+
+    return {
+      ...pool,
+      totalValue: parseFloat(pool.totalValue),
+      totalInvested: parseFloat(pool.totalInvested),
+      monthlyReturnRate: parseFloat(pool.monthlyReturn || '0'),
+      minInvestment: parseFloat(pool.minInvestment),
+    };
+  }
 }
 
 export const investmentService = new InvestmentService();
