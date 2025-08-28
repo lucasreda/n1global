@@ -208,10 +208,10 @@ export default function AdminInvestmentPools() {
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
               <Button 
-                className="bg-blue-600 hover:bg-blue-700" 
+                className="bg-blue-600 hover:bg-blue-700 text-white" 
                 data-testid="button-add-pool"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2 text-white" />
                 Nova Pool
               </Button>
             </DialogTrigger>
