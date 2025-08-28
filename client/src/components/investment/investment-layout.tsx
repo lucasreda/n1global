@@ -163,7 +163,7 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
             <div className="p-3 border-t border-gray-700">
               <button
                 onClick={handleLogout}
-                className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800/60 p-3 md:p-2 rounded-lg flex items-center gap-3 md:gap-2 text-base md:text-sm transition-all duration-200"
+                className="w-full justify-end md:justify-start text-gray-300 hover:text-white hover:bg-gray-800/60 p-3 md:p-2 rounded-lg flex items-center gap-3 md:gap-2 text-base md:text-sm transition-all duration-200"
               >
                 <LogOut className="h-6 w-6 md:h-4 md:w-4" />
                 <span>Sair</span>
