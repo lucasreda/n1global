@@ -292,7 +292,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 animate-fade-in">
       {/* Top Cards - Shopify and CPA above Profit */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div className="w-full grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {topCards.map((stat, index) => {
           const IconComponent = stat.icon;
           const isImage = stat.isImage;
