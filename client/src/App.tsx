@@ -7,7 +7,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthModal } from "@/components/auth/auth-modal";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -351,12 +351,9 @@ function AppContent() {
             </div>
           ) : (
             /* Regular dashboard layout with sidebar */
-            <div className="flex min-h-screen">
-              <Sidebar />
-              <main className="ml-64 flex-1 p-6">
-                <Router />
-              </main>
-            </div>
+            <DashboardLayout>
+              <Router />
+            </DashboardLayout>
           )}
         </>
       )}

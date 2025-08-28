@@ -83,7 +83,7 @@ export function Sidebar() {
   };
 
   return (
-    <nav className="fixed left-0 top-0 h-full w-64 rounded-lg border bg-card text-card-foreground shadow-sm p-6 z-40 animate-slide-up">
+    <nav className="h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm p-6 animate-slide-up flex flex-col">
       <div className="flex justify-center mb-8">
         <img 
           src="/logo.png" 
@@ -140,7 +140,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <ul className="space-y-1" data-testid="nav-menu">
+      <ul className="space-y-1 flex-1" data-testid="nav-menu">
         {navigation.map((item) => {
           const isActive = location === item.href;
           return (
@@ -164,8 +164,8 @@ export function Sidebar() {
         })}
       </ul>
 
-      <div className="absolute bottom-6 left-6 right-6">
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-4">
+      <div className="mt-auto">
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-4 mt-6">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 gradient-success rounded-full flex items-center justify-center">
               <span className="text-xs font-bold text-foreground" data-testid="text-user-initials">
