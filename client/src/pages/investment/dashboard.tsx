@@ -279,10 +279,10 @@ export default function InvestmentDashboard() {
                   </div>
                   
                   {/* Metrics Grid */}
-                  <div className="grid grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500 uppercase tracking-wider">Valor Total</p>
-                      <p className="text-lg font-semibold text-white">
+                      <p className="text-lg font-semibold text-white whitespace-nowrap">
                         {formatCurrency(dashboardData.poolPerformance.totalValue)}
                       </p>
                     </div>
