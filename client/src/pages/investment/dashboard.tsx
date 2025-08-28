@@ -134,9 +134,9 @@ export default function InvestmentDashboard() {
         </div>
 
         {/* Monthly Returns Chart */}
-        <div className="mb-2">
+        <div className="mb-2 w-full md:w-1/2">
           <h3 className="text-sm font-medium text-gray-400 mb-4">Recebimentos Mensais</h3>
-          <div className="h-48">
+          <div className="h-32 md:h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={monthlyReturnsData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                 <XAxis 
