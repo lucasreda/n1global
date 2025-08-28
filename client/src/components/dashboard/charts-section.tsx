@@ -42,7 +42,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </Select>
         </div>
         
-        <div className="h-64">
+        <div className="h-48 sm:h-64">
           {!isLoading && revenueData && revenueData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData}>
@@ -94,15 +94,15 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       </div>
 
       {/* Distribution Chart */}
-      <div className="glassmorphism rounded-2xl p-8 min-h-[400px]" data-testid="chart-distribution">
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-white">Distribuição de Status</h3>
+      <div className="glassmorphism rounded-2xl p-4 sm:p-6 lg:p-8 min-h-[350px] sm:min-h-[400px]" data-testid="chart-distribution">
+        <div className="mb-6 sm:mb-8">
+          <h3 className="text-base sm:text-lg font-semibold text-white">Distribuição de Status</h3>
         </div>
         
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6 sm:gap-8">
           {/* Chart Section */}
           <div className="flex justify-center">
-            <div className="w-64 h-64 relative">
+            <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -145,7 +145,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
               {/* Center total */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white">
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
                     {distributionData.reduce((sum, item) => sum + item.value, 0)}
                   </div>
                   <div className="text-xs text-gray-400">Total</div>
@@ -156,22 +156,22 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           
           {/* Legend Section */}
           <div className="w-full">
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {distributionData.map((item) => (
-                <div key={item.name} className="glassmorphism-light rounded-lg p-4 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-5 h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                <div key={item.name} className="glassmorphism-light rounded-lg p-3 sm:p-4 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                    <div className="flex items-center space-x-3 sm:space-x-4">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: item.color }}></div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-white font-medium text-base block">{item.name}</span>
-                        <div className="text-sm text-gray-400 mt-1">{item.description}</div>
+                        <span className="text-white font-medium text-sm sm:text-base block">{item.name}</span>
+                        <div className="text-xs sm:text-sm text-gray-400 mt-1">{item.description}</div>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-4">
-                      <div className="text-white font-bold text-xl" data-testid={`percentage-${item.name.toLowerCase()}`}>
+                    <div className="text-left sm:text-right flex-shrink-0">
+                      <div className="text-white font-bold text-lg sm:text-xl" data-testid={`percentage-${item.name.toLowerCase()}`}>
                         {item.percentage}%
                       </div>
-                      <div className="text-sm text-gray-400">
+                      <div className="text-xs sm:text-sm text-gray-400">
                         {item.value} pedidos
                       </div>
                     </div>

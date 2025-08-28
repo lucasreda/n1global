@@ -310,15 +310,15 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="w-16 h-16 bg-gradient-to-br from-green-500/30 to-emerald-600/30 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
             <DollarSign className="text-green-400 w-8 h-8" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-green-400 mb-2" data-testid="value-card-profit">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-400 mb-2" data-testid="value-card-profit">
             {formatCurrencyBRL(totalProfitBRL)}
           </h1>
-          <p className="text-lg text-gray-300 mb-4" data-testid="label-card-profit">Lucro Total</p>
-          <div className="flex justify-center items-center space-x-4 text-sm">
+          <p className="text-base sm:text-lg text-gray-300 mb-4" data-testid="label-card-profit">Lucro Total</p>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 text-sm">
             <div className={`px-3 py-1 rounded-full ${profitMargin >= 0 ? "text-green-400 bg-green-400/20" : "text-red-400 bg-red-400/20"}`}>
               {profitMargin >= 0 ? "+" : ""}{profitMargin.toFixed(1)}% margem
             </div>
-            <div className="text-gray-400">•</div>
+            <div className="text-gray-400 hidden sm:block">•</div>
             <div className="text-green-400">{roi.toFixed(1)}% ROI</div>
           </div>
         </div>
@@ -372,22 +372,22 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Revenue Card - Full Width */}
-      <div className="glassmorphism rounded-2xl p-6 hover:scale-[1.01] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5 mb-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="glassmorphism rounded-2xl p-4 sm:p-6 hover:scale-[1.01] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <BarChart3 className="text-blue-400 w-8 h-8" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <BarChart3 className="text-blue-400 w-6 h-6 sm:w-8 sm:h-8" />
             </div>
             <div>
-              <h3 className="text-3xl md:text-4xl font-bold text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
-              <p className="text-gray-300 text-lg font-medium">Receita Total Paga</p>
+              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white break-words">{formatCurrencyBRL(totalRevenueBRL)}</h3>
+              <p className="text-gray-300 text-sm sm:text-base lg:text-lg font-medium">Receita Total Paga</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 mb-2">
+          <div className="text-left sm:text-right">
+            <div className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 mb-2 w-fit">
               Principal
             </div>
-            <p className="text-lg text-blue-400 font-medium">{formatCurrencyEUR(totalRevenueEUR)}</p>
+            <p className="text-base sm:text-lg text-blue-400 font-medium">{formatCurrencyEUR(totalRevenueEUR)}</p>
             <div className="text-sm text-gray-400">
               {deliveredOrders} pedidos entregues
             </div>
@@ -433,7 +433,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Quaternary Metrics - Small Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <div className="glassmorphism rounded-lg p-4 min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-purple-500/10 hover:border-purple-400/25 flex flex-col justify-between">
           <div className="flex-shrink-0">
             <div className="w-10 h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
@@ -441,7 +441,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyBRL(marketingCostsBRL)}</h5>
+            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(marketingCostsBRL)}</h5>
             <p className="text-gray-400 text-xs mb-1">Custos Marketing</p>
             <p className="text-xs text-purple-400 opacity-80 leading-tight">
               {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
@@ -456,9 +456,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyBRL(productCostsBRL)}</h5>
+            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(productCostsBRL)}</h5>
             <p className="text-gray-400 text-xs mb-1">Custos Produtos</p>
-            <p className="text-xs text-indigo-400 opacity-80 leading-tight whitespace-nowrap">{formatCurrencyEUR(productCosts)}</p>
+            <p className="text-xs text-indigo-400 opacity-80 leading-tight">{formatCurrencyEUR(productCosts)}</p>
           </div>
         </div>
         
@@ -469,9 +469,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
+            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
             <p className="text-gray-400 text-xs mb-1">Custos Envio</p>
-            <p className="text-xs text-orange-400 opacity-80 leading-tight whitespace-nowrap">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
+            <p className="text-xs text-orange-400 opacity-80 leading-tight">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
           </div>
         </div>
         
@@ -482,7 +482,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div className="flex-grow">
-            <h5 className="text-base font-bold text-white mb-1 leading-tight whitespace-nowrap">{cancelledOrders.toLocaleString()}</h5>
+            <h5 className="text-sm sm:text-base font-bold text-white mb-1 leading-tight">{cancelledOrders.toLocaleString()}</h5>
             <p className="text-gray-400 text-xs mb-1">Cancelados</p>
             <p className="text-xs text-red-400 opacity-80 leading-tight">Perdidos</p>
           </div>
