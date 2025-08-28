@@ -124,9 +124,9 @@ export function InvestmentLayout({ children }: InvestmentLayoutProps) {
       <div className="flex pt-16">
         {/* Sidebar */}
         <aside className={`
-          fixed left-0 top-16 h-[calc(100vh-4rem)] bg-black/60 border-r border-gray-800 z-40 transition-transform duration-300 ease-in-out backdrop-blur-sm
+          fixed left-0 top-16 bottom-0 bg-black/60 border-r border-gray-800 z-40 transition-transform duration-300 ease-in-out backdrop-blur-sm
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:translate-x-0 md:static md:h-[calc(100vh-4rem)]
+          md:translate-x-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)]
           ${sidebarOpen ? 'w-full' : 'w-48'} md:w-48
         `}>
           <div className="flex flex-col h-full">
