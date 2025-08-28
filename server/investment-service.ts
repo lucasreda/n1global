@@ -501,7 +501,7 @@ export class InvestmentService {
           ...pool,
           totalValue: parseFloat(pool.totalValue),
           totalInvested: parseFloat(pool.totalInvested),
-          monthlyReturn: parseFloat(pool.monthlyReturn),
+          monthlyReturn: parseFloat(pool.monthlyReturn || '0'),
           investorCount: investorCount[0]?.count || 0,
         };
       })
@@ -590,7 +590,53 @@ export class InvestmentService {
       .where(eq(users.role, 'investor'))
       .orderBy(desc(users.createdAt));
 
-    return investors;
+    // Get investment data for each investor
+    const investorsWithData = await Promise.all(
+      investors.map(async (investor) => {
+        const investmentSummary = await db
+          .select({
+            totalInvested: sum(investments.amount),
+            poolCount: count(investments.id)
+          })
+          .from(investments)
+          .where(eq(investments.investorId, investor.id))
+          .groupBy(investments.investorId);
+
+        const totalInvested = investmentSummary.length > 0 ? parseFloat(investmentSummary[0].totalInvested || '0') : 0;
+        const poolCount = investmentSummary.length > 0 ? parseInt(investmentSummary[0].poolCount?.toString() || '0') : 0;
+
+        // Get latest transaction
+        const latestTransaction = await db
+          .select({
+            amount: investmentTransactions.amount,
+            type: investmentTransactions.type,
+            createdAt: investmentTransactions.createdAt,
+          })
+          .from(investmentTransactions)
+          .innerJoin(investments, eq(investmentTransactions.investmentId, investments.id))
+          .where(eq(investments.investorId, investor.id))
+          .orderBy(desc(investmentTransactions.createdAt))
+          .limit(1);
+
+        // Calculate current value (assuming 10% growth for demo)
+        const currentValue = totalInvested * 1.1;
+        const totalReturns = currentValue - totalInvested;
+
+        return {
+          ...investor,
+          totalInvested,
+          currentValue,
+          totalReturns,
+          poolCount,
+          latestTransaction: latestTransaction.length > 0 ? {
+            ...latestTransaction[0],
+            amount: parseFloat(latestTransaction[0].amount)
+          } : null
+        };
+      })
+    );
+
+    return investorsWithData;
   }
 
   /**

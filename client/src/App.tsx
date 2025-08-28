@@ -42,6 +42,7 @@ import InvestmentDashboard from "@/pages/investment/dashboard";
 import InvestmentsPage from "@/pages/investment/investments";
 import AdminInvestmentDashboard from "@/pages/admin-investment/dashboard";
 import AdminInvestmentPools from "@/pages/admin-investment/pools";
+import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
 import NotFound from "@/pages/not-found";
 
 interface OnboardingStatus {
@@ -223,6 +224,7 @@ function Router() {
         
         {/* Admin Investment Routes */}
         <Route path="/admin-investment/pools" component={isAdminInvestimento ? AdminInvestmentPools : () => <NotFound />} />
+        <Route path="/admin-investment/investors" component={isAdminInvestimento ? AdminInvestmentInvestors : () => <NotFound />} />
         <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
         
         {/* Default Routes */}
