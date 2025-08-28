@@ -25,6 +25,27 @@ import {
 import { SiGoogle } from "react-icons/si";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import facebookIcon from "@assets/face-icon_1756415089553.png";
+import googleAdsIcon from "@assets/gads_1756415093788.png";
+
+// Componentes customizados para os ícones
+const FacebookIcon = ({ size }: { size?: number }) => (
+  <img 
+    src={facebookIcon} 
+    alt="Facebook" 
+    className="object-contain"
+    style={{ width: size || 24, height: size || 24 }}
+  />
+);
+
+const GoogleAdsIcon = ({ size }: { size?: number }) => (
+  <img 
+    src={googleAdsIcon} 
+    alt="Google Ads" 
+    className="object-contain"
+    style={{ width: size || 24, height: size || 24 }}
+  />
+);
 
 interface Campaign {
   id: string;
@@ -78,9 +99,9 @@ interface AdAccount {
 const NetworkIcon = ({ network, size = 16 }: { network: 'facebook' | 'google'; size?: number }) => {
   switch (network) {
     case 'facebook':
-      return <Facebook size={size} className="text-blue-600" />;
+      return <FacebookIcon size={size} />;
     case 'google':
-      return <SiGoogle size={size} className="text-red-500" />;
+      return <GoogleAdsIcon size={size} />;
     default:
       return <Globe size={size} className="text-gray-500" />;
   }
@@ -346,7 +367,7 @@ export default function Ads() {
                   }}
                   className="h-20 flex flex-col items-center justify-center space-y-2 bg-blue-600 hover:bg-blue-700 border border-blue-500 text-white"
                 >
-                  <Facebook size={24} className="text-white" />
+                  <FacebookIcon size={28} />
                   <span className="text-sm font-medium text-white">Facebook Ads</span>
                 </Button>
                 <Button
@@ -357,7 +378,7 @@ export default function Ads() {
                   }}
                   className="h-20 flex flex-col items-center justify-center space-y-2 bg-red-600 hover:bg-red-700 border border-red-500 text-white"
                 >
-                  <SiGoogle size={24} className="text-white" />
+                  <GoogleAdsIcon size={28} />
                   <span className="text-sm font-medium text-white">Google Ads</span>
                 </Button>
               </div>
