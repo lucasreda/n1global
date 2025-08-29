@@ -7,6 +7,7 @@ import { Settings, CheckCircle, AlertCircle, Package, Truck, Globe, Store } from
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { authenticatedApiRequest } from "@/lib/auth";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
 
 // Componente customizado para o ícone do Shopify
@@ -21,9 +22,10 @@ const ShopifyIcon = ({ className, size }: { className?: string; size?: number })
 
 export default function Integrations() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
+  const { selectedOperation } = useCurrentOperation();
 
-  // Buscar o operationId atual
-  const operationId = localStorage.getItem("current_operation_id");
+  // Usar a operação atual do hook
+  const operationId = selectedOperation;
 
   // Buscar status da integração Shopify
   const { data: shopifyIntegration } = useQuery({
