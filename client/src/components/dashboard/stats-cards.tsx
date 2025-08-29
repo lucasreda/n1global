@@ -322,7 +322,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <img 
               src={n1MiniIcon} 
               alt="N1" 
-              className="absolute bottom-2 right-2 w-6 h-6 object-contain opacity-60"
+              className="absolute bottom-2 right-2 w-5 h-5 object-contain opacity-60"
             />
           </div>
         </div>
@@ -463,7 +463,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <img 
               src={n1MiniIcon} 
               alt="N1" 
-              className="absolute bottom-2 right-2 w-6 h-6 object-contain opacity-60"
+              className="absolute bottom-2 right-2 w-5 h-5 object-contain opacity-60"
             />
           </div>
           
