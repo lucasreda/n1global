@@ -141,14 +141,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   // Métricas secundárias
   const secondaryMetrics = [
     {
-      title: "Confirmados",
-      value: confirmedOrders.toLocaleString(),
-      subtitle: "Processando",
-      icon: CheckSquare,
-      color: "cyan",
-      testId: "card-confirmed-orders"
-    },
-    {
       title: "Custos Envio",
       value: formatCurrencyBRL(shippingCostsBRL),
       subtitle: shippingCosts > 0 ? formatCurrencyEUR(shippingCosts) : "Sem custos",
@@ -263,25 +255,29 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="grid grid-cols-4 gap-1 mt-4">
               <div className="text-center">
-                <h4 className="text-xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-sm text-gray-500">Transportadora</p>
+                <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Transportadora</p>
               </div>
               <div className="text-center">
-                <h4 className="text-xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-                <p className="text-sm text-gray-500">Entregues</p>
+                <h4 className="text-lg font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Entregues</p>
               </div>
               <div className="text-center">
-                <h4 className="text-xl font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
-                <p className="text-sm text-gray-500">Retornados</p>
+                <h4 className="text-lg font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Retornados</p>
+              </div>
+              <div className="text-center">
+                <h4 className="text-lg font-bold text-cyan-400 mb-1">{confirmedOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Confirmados</p>
               </div>
             </div>
           </div>
         </div>
         
         {/* Mobile - Cards secundários na linha seguinte */}
-        <div className="grid grid-cols-3 gap-2 sm:hidden">
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
           {secondaryMetrics.map((metric, index) => {
             const IconComponent = metric.icon;
             return (
@@ -306,7 +302,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         </div>
         
         {/* Desktop layout - todos na mesma linha */}
-        <div className="hidden sm:grid gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
+        <div className="hidden sm:grid gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
           {/* Card Combinado de Pedidos e Entregues - Desktop: 40% */}
           <div 
             className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
@@ -325,18 +321,22 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="grid grid-cols-4 gap-2 mt-4">
               <div className="text-center">
-                <h4 className="text-xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-sm text-gray-500">Transportadora</p>
+                <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Transportadora</p>
               </div>
               <div className="text-center">
-                <h4 className="text-xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-                <p className="text-sm text-gray-500">Entregues</p>
+                <h4 className="text-lg font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Entregues</p>
               </div>
               <div className="text-center">
-                <h4 className="text-xl font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
-                <p className="text-sm text-gray-500">Retornados</p>
+                <h4 className="text-lg font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Retornados</p>
+              </div>
+              <div className="text-center">
+                <h4 className="text-lg font-bold text-cyan-400 mb-1">{confirmedOrders.toLocaleString()}</h4>
+                <p className="text-xs text-gray-500">Confirmados</p>
               </div>
             </div>
           </div>
