@@ -276,7 +276,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
             <div className="mb-2">
               <p className="text-sm font-medium text-gray-400">Pedidos por Dia</p>
-              <div className="h-[106px] mt-1">
+              <div className="h-[116px] mt-1">
                 {ordersTimelineData && ordersTimelineData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={ordersTimelineData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
