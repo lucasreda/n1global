@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Play, Clock, Database, Activity, CheckCircle2 } from "lucide-react";
+import { RefreshCw, Play, Database, Activity, CheckCircle2 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -142,7 +142,7 @@ export function SyncStatus() {
         {/* Last Sync Info */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Clock className="h-4 w-4 text-gray-400" />
+            <RefreshCw className="h-4 w-4 text-gray-400" />
             <span className="text-sm text-gray-300">Última sincronização:</span>
           </div>
           <span className="text-sm text-white font-medium" data-testid="last-sync-time">
