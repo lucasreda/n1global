@@ -199,7 +199,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                   </div>
                   <div>
                     <p className={`text-sm font-medium ${isNegativeProfit ? 'text-red-300' : 'text-gray-400'}`}>{metric.title}</p>
-                    <h3 className="text-2xl font-bold mt-1 text-white">{metric.value}</h3>
+                    <h3 className="text-lg font-semibold mt-1 text-white">{metric.value}</h3>
                   </div>
                 </div>
                 {metric.isProfit ? (
