@@ -791,7 +791,7 @@ export class InvestmentService {
       .limit(12); // Last 12 months
 
     // Get pool statistics
-    const poolStats = await db
+    const poolStatsResult = await db
       .select({
         totalInvestors: count(),
         totalInvested: sum(investments.totalInvested),
@@ -800,6 +800,13 @@ export class InvestmentService {
       })
       .from(investments)
       .where(eq(investments.poolId, pool.id));
+    
+    const poolStats = poolStatsResult[0] || {
+      totalInvestors: 0,
+      totalInvested: null,
+      avgInvestment: null,
+      totalReturns: null,
+    };
 
     return {
       pool: {
@@ -832,10 +839,10 @@ export class InvestmentService {
         date: perf.date.toISOString(),
       })),
       statistics: {
-        totalInvestors: Number(poolStats[0]?.totalInvestors || 0),
-        totalInvested: parseFloat(poolStats[0]?.totalInvested || '0'),
-        avgInvestment: parseFloat(poolStats[0]?.avgInvestment || '0'),
-        totalReturns: parseFloat(poolStats[0]?.totalReturns || '0'),
+        totalInvestors: Number(poolStats.totalInvestors || 0),
+        totalInvested: parseFloat(poolStats.totalInvested || '0'),
+        avgInvestment: parseFloat(poolStats.avgInvestment || '0'),
+        totalReturns: parseFloat(poolStats.totalReturns || '0'),
       }
     };
   }
