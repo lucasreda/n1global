@@ -277,7 +277,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <p className="text-sm text-gray-500">Entregues</p>
             </div>
             <div className="text-center">
-              <h4 className="text-2xl font-bold text-amber-500 mb-1">{returnedOrders.toLocaleString()}</h4>
+              <h4 className="text-2xl font-bold mb-1" style={{color: '#f59e0b'}}>{returnedOrders.toLocaleString()}</h4>
               <p className="text-sm text-gray-500">Retornados</p>
             </div>
           </div>
