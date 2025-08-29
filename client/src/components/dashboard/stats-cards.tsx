@@ -205,7 +205,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         {/* Mobile: Pedidos Shopify em linha própria */}
         <div className="sm:hidden">
           <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
@@ -216,7 +216,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
               </div>
             </div>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-center flex-1 h-full">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento Shopify</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
@@ -328,7 +328,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           
           {/* Pedidos Shopify - 1/3 */}
           <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
@@ -339,7 +339,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
               </div>
             </div>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-center flex-1 h-full">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento Shopify</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
