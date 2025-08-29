@@ -243,64 +243,129 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Métricas Secundárias com Card Combinado */}
-      <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
-        {/* Card Combinado de Pedidos e Entregues - Ocupa 40% */}
-        <div 
-          className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
-          data-testid="card-orders-delivered"
-          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-        >
-          <div className="flex items-center justify-between mb-3 -mt-1">
-            <ShoppingCart className="w-4 h-4 text-slate-400" />
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-[#4ade80]" />
-              <div className="px-2 py-1 rounded-md text-xs font-medium bg-[#4ade80]/10 text-[#4ade80]">
-                {deliveryRate.toFixed(1)}%
+      <div className="space-y-4">
+        {/* Mobile layout - Card transportadora em linha própria */}
+        <div className="sm:hidden">
+          <div 
+            className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
+            data-testid="card-orders-delivered"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+          >
+            <div className="flex items-center justify-between mb-3 -mt-1">
+              <ShoppingCart className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-[#4ade80]" />
+                <div className="px-2 py-1 rounded-md text-xs font-medium bg-[#4ade80]/10 text-[#4ade80]">
+                  {deliveryRate.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="text-center">
+                <h4 className="text-xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
+                <p className="text-sm text-gray-500">Transportadora</p>
+              </div>
+              <div className="text-center">
+                <h4 className="text-xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
+                <p className="text-sm text-gray-500">Entregues</p>
+              </div>
+              <div className="text-center">
+                <h4 className="text-xl font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
+                <p className="text-sm text-gray-500">Retornados</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Mobile - Cards secundários na linha seguinte */}
+        <div className="grid grid-cols-3 gap-2 sm:hidden">
+          {secondaryMetrics.map((metric, index) => {
+            const IconComponent = metric.icon;
+            return (
+              <div 
+                key={index}
+                className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+                style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+                onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+                data-testid={metric.testId}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <IconComponent className={`w-4 h-4 ${getIconColors(metric.color)}`} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-1">{metric.value}</h4>
+                  <p className="text-xs font-medium text-gray-400">{metric.title}</p>
+                  <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Desktop layout - todos na mesma linha */}
+        <div className="hidden sm:grid gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
+          {/* Card Combinado de Pedidos e Entregues - Desktop: 40% */}
+          <div 
+            className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
+            data-testid="card-orders-delivered"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+          >
+            <div className="flex items-center justify-between mb-3 -mt-1">
+              <ShoppingCart className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-[#4ade80]" />
+                <div className="px-2 py-1 rounded-md text-xs font-medium bg-[#4ade80]/10 text-[#4ade80]">
+                  {deliveryRate.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="text-center">
+                <h4 className="text-xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
+                <p className="text-sm text-gray-500">Transportadora</p>
+              </div>
+              <div className="text-center">
+                <h4 className="text-xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
+                <p className="text-sm text-gray-500">Entregues</p>
+              </div>
+              <div className="text-center">
+                <h4 className="text-xl font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
+                <p className="text-sm text-gray-500">Retornados</p>
               </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <div className="text-center">
-              <h4 className="text-xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-              <p className="text-sm text-gray-500">Transportadora</p>
-            </div>
-            <div className="text-center">
-              <h4 className="text-xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-              <p className="text-sm text-gray-500">Entregues</p>
-            </div>
-            <div className="text-center">
-              <h4 className="text-xl font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
-              <p className="text-sm text-gray-500">Retornados</p>
-            </div>
-          </div>
+          {/* Cards Secundários - Desktop: cada um ocupa 20% */}
+          {secondaryMetrics.map((metric, index) => {
+            const IconComponent = metric.icon;
+            return (
+              <div 
+                key={index}
+                className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+                style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+                onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+                data-testid={metric.testId}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <IconComponent className={`w-4 h-4 ${getIconColors(metric.color)}`} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-1">{metric.value}</h4>
+                  <p className="text-xs font-medium text-gray-400">{metric.title}</p>
+                  <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        {/* Cards Secundários - Cada um ocupa 20% */}
-        {secondaryMetrics.map((metric, index) => {
-          const IconComponent = metric.icon;
-          return (
-            <div 
-              key={index}
-              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
-              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-              data-testid={metric.testId}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <IconComponent className={`w-4 h-4 ${getIconColors(metric.color)}`} />
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold text-white mb-1">{metric.value}</h4>
-                <p className="text-xs font-medium text-gray-400">{metric.title}</p>
-                <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
-              </div>
-            </div>
-          );
-        })}
       </div>
 
       {/* Cards de Receita, Custos e Lucro */}
