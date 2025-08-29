@@ -201,12 +201,17 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                   </div>
                 </div>
                 {metric.isProfit ? (
-                  <div className={`px-3 py-2 rounded-lg text-lg font-bold ${
-                    isNegativeProfit 
-                      ? 'bg-red-500/20 text-red-300 border border-red-400/30' 
-                      : 'bg-[#4ade80]/20 text-[#4ade80] border border-[#4ade80]/30'
-                  }`}>
-                    {profitMargin.toFixed(1)}%
+                  <div className="text-right">
+                    <p className={`text-xs font-medium mb-1 ${isNegativeProfit ? 'text-red-400' : 'text-gray-400'}`}>
+                      % Lucro
+                    </p>
+                    <div className={`px-2 py-1 rounded-md text-sm font-semibold ${
+                      isNegativeProfit 
+                        ? 'bg-red-500/10 text-red-300' 
+                        : 'bg-[#4ade80]/10 text-[#4ade80]'
+                    }`}>
+                      {profitMargin.toFixed(1)}%
+                    </div>
                   </div>
                 ) : (
                   <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
