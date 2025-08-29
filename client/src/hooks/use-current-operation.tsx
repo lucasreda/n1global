@@ -71,31 +71,12 @@ export function useCurrentOperation() {
     console.log("🗄️ Previous operation:", selectedOperation);
     console.log("🆕 New operation:", operationId);
     
-    // Clear cache FIRST, then update state
-    console.log("🧹 Clearing query cache...");
-    queryClient.clear();
-    
-    // Update state and localStorage
-    setSelectedOperation(operationId);
+    // Update localStorage immediately
     localStorage.setItem("current_operation_id", operationId);
     
-    console.log("✅ Operation changed and cache cleared!");
-    
-    // Force immediate invalidation of all queries after state update
-    setTimeout(() => {
-      console.log("🔄 Force invalidating all queries for operation:", operationId);
-      queryClient.invalidateQueries();
-      
-      // Force specific queries to refetch with new operation ID
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/ad-accounts"], 
-        type: 'active'
-      });
-      queryClient.refetchQueries({ 
-        queryKey: ["/api/campaigns"], 
-        type: 'active'
-      });
-    }, 150);
+    // Force page reload to ensure clean state
+    console.log("🔄 Forcing page reload for operation change...");
+    window.location.reload();
   };
 
   return {
