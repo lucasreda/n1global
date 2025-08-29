@@ -28,10 +28,11 @@ export default function Integrations() {
   const operationId = selectedOperation;
 
   // Buscar status da integração Shopify
-  const { data: shopifyIntegration } = useQuery({
+  const { data: shopifyIntegration, refetch: refetchShopify } = useQuery({
     queryKey: ["/api/integrations/shopify", operationId],
     queryFn: async () => {
       if (!operationId) return null;
+      console.log("🔄 Fetching Shopify integration for operation:", operationId);
       try {
         const response = await authenticatedApiRequest("GET", `/api/integrations/shopify?operationId=${operationId}`);
         if (response.status === 404) return null;
@@ -41,6 +42,7 @@ export default function Integrations() {
       }
     },
     enabled: !!operationId,
+    staleTime: 0, // Always refetch when operation changes
   });
 
   // Determinar status real da integração Shopify
