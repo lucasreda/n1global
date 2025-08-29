@@ -256,7 +256,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <div className="flex items-center space-x-3">
               <ShoppingCart className="w-5 h-5 text-slate-400" />
               <div>
-                <h3 className="text-lg font-semibold text-white">Pedidos & Entregas</h3>
+                <h3 className="text-lg font-semibold text-white">Pedidos Shopify</h3>
                 <p className="text-sm text-gray-400">Status dos pedidos</p>
               </div>
             </div>
