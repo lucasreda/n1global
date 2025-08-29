@@ -128,7 +128,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   // Métricas principais
   const primaryMetrics = [
     {
-      title: "Pedidos Shopify",
+      title: "Pedidos",
       value: shopifyOrders.toLocaleString(),
       subtitle: "Importados da plataforma",
       icon: () => <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />,
@@ -202,7 +202,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
     <div className="space-y-4 lg:space-y-6">
       {/* Métricas Principais */}
       <div className="space-y-3 lg:space-y-6">
-        {/* Mobile: Pedidos Shopify em linha própria */}
+        {/* Mobile: Pedidos em linha própria */}
         <div className="sm:hidden">
           <div 
             className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col"
@@ -218,12 +218,12 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
             <div className="flex justify-between items-start mb-2">
               <div>
-                <p className="text-sm font-medium text-gray-400">Faturamento Shopify</p>
+                <p className="text-sm font-medium text-gray-400">Faturamento</p>
                 <h3 className="text-xl font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
                 <p className="text-sm text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-400">Pedidos Shopify</p>
+                <p className="text-sm font-medium text-gray-400">Pedidos</p>
                 <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
               </div>
             </div>
@@ -326,7 +326,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
           </div>
           
-          {/* Pedidos Shopify - 1/3 */}
+          {/* Pedidos - 1/3 */}
           <div 
             className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col h-[180px]"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
@@ -341,12 +341,12 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
             <div className="flex justify-between items-start mb-2">
               <div>
-                <p className="text-sm font-medium text-gray-400">Faturamento Shopify</p>
+                <p className="text-sm font-medium text-gray-400">Faturamento</p>
                 <h3 className="text-xl font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
                 <p className="text-sm text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-400">Pedidos Shopify</p>
+                <p className="text-sm font-medium text-gray-400">Pedidos</p>
                 <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
               </div>
             </div>
