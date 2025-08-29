@@ -156,11 +156,13 @@ export default function Ads() {
   });
 
   // Fetch Ad Accounts (Facebook + Google)
-  const { data: adAccounts, isLoading: accountsLoading } = useQuery({
+  const { data: adAccounts, isLoading: accountsLoading, refetch: refetchAccounts } = useQuery({
     queryKey: ["/api/ad-accounts", selectedOperation],
     queryFn: async () => {
-      console.log("🔍 Fetching ad accounts for operation:", selectedOperation);
-      const response = await authenticatedApiRequest("GET", `/api/ad-accounts?operationId=${selectedOperation}`);
+      // Use fresh operation ID from localStorage to avoid state timing issues
+      const currentOperationId = localStorage.getItem("current_operation_id") || selectedOperation;
+      console.log("🔍 Fetching ad accounts for operation:", currentOperationId);
+      const response = await authenticatedApiRequest("GET", `/api/ad-accounts?operationId=${currentOperationId}`);
       const data = await response.json() as AdAccount[];
       console.log("📋 Ad accounts received:", data.length, "accounts");
       return data;
@@ -169,11 +171,13 @@ export default function Ads() {
   });
 
   // Fetch Campaigns (Facebook + Google)
-  const { data: campaigns, isLoading: campaignsLoading } = useQuery({
+  const { data: campaigns, isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery({
     queryKey: ["/api/campaigns", selectedPeriod, selectedOperation],
     queryFn: async () => {
-      console.log("🎯 Fetching campaigns for operation:", selectedOperation, "period:", selectedPeriod);
-      const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true&operationId=${selectedOperation}`);
+      // Use fresh operation ID from localStorage to avoid state timing issues
+      const currentOperationId = localStorage.getItem("current_operation_id") || selectedOperation;
+      console.log("🎯 Fetching campaigns for operation:", currentOperationId, "period:", selectedPeriod);
+      const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true&operationId=${currentOperationId}`);
       const data = await response.json() as Campaign[];
       console.log("📊 Campaigns received:", data.length, "campaigns");
       return data;
