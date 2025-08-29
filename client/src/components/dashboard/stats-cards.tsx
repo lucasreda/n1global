@@ -11,27 +11,28 @@ interface StatsCardsProps {
 export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        {/* Profit Card Loading */}
-        <div className="glassmorphism rounded-3xl p-8 animate-pulse">
-          <div className="flex items-center justify-between mb-6">
-            <div className="w-16 h-16 bg-gray-600/50 rounded-2xl"></div>
-            <div className="w-24 h-6 bg-gray-600/50 rounded-full"></div>
-          </div>
-          <div className="w-40 h-8 bg-gray-600/50 rounded mb-2"></div>
-          <div className="w-24 h-5 bg-gray-600/50 rounded"></div>
-        </div>
-        
+      <div className="space-y-6">
         {/* Main Cards Loading */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {[...Array(9)].map((_, i) => (
-            <div key={i} className="glassmorphism rounded-2xl p-6 animate-pulse">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 animate-pulse">
               <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-gray-600/50 rounded-xl"></div>
+                <div className="w-12 h-12 bg-gray-600/50 rounded-lg"></div>
                 <div className="w-16 h-4 bg-gray-600/50 rounded"></div>
               </div>
-              <div className="w-20 h-7 bg-gray-600/50 rounded mb-2"></div>
-              <div className="w-24 h-4 bg-gray-600/50 rounded"></div>
+              <div className="w-32 h-8 bg-gray-600/50 rounded mb-2"></div>
+              <div className="w-20 h-4 bg-gray-600/50 rounded"></div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Secondary Cards Loading */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 animate-pulse">
+              <div className="w-8 h-8 bg-gray-600/50 rounded mb-3"></div>
+              <div className="w-16 h-6 bg-gray-600/50 rounded mb-1"></div>
+              <div className="w-12 h-3 bg-gray-600/50 rounded"></div>
             </div>
           ))}
         </div>
@@ -57,227 +58,82 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const averageOrderValue = metrics?.averageOrderValue || 0;
   
   // Novos cálculos para os cards especiais
-  const shopifyOrders = metrics?.shopifyOrders || 0; // Pedidos Shopify específicos
-  const avgCPA = shopifyOrders > 0 ? (marketingCostsBRL / shopifyOrders) : 0; // CPA médio em BRL
+  const shopifyOrders = metrics?.shopifyOrders || 0;
+  const avgCPA = shopifyOrders > 0 ? (marketingCostsBRL / shopifyOrders) : 0;
 
   // Calcular valores em BRL
   const totalProfitBRL = metrics?.totalProfitBRL || 0;
-  const totalRevenueEUR = revenue; // mantém o valor EUR original  
+  const totalRevenueEUR = revenue;
   const totalRevenueBRL = metrics?.totalRevenueBRL || 0;
 
-  const calculateGrowth = (current: number, previous: number = current * 0.9) => {
-    if (previous === 0) return 0;
+  const calculateGrowth = (current: number, previous: number = current * 0.9): string => {
+    if (previous === 0) return "0";
     return ((current - previous) / previous * 100).toFixed(1);
   };
 
-  // Novos cards especiais
-  const topCards = [
-    {
-      title: "Pedidos Shopify",
-      value: shopifyOrders.toLocaleString(),
-      subtitle: `Pedidos importados`,
-      icon: shopifyIcon,
-      iconBg: "bg-green-600/20",
-      iconColor: "text-green-400",
-      hoverBg: "group-hover:bg-green-600/30",
-      growth: calculateGrowth(shopifyOrders),
-      testId: "card-shopify-orders",
-      isImage: true
-    },
-    {
-      title: "CPA Anúncios",
-      value: formatCurrencyBRL(avgCPA),
-      subtitle: `Custo por aquisição`,
-      icon: Target,
-      iconBg: "bg-orange-600/20",
-      iconColor: "text-orange-400",
-      hoverBg: "group-hover:bg-orange-600/30",
-      growth: calculateGrowth(avgCPA, avgCPA * 1.1), // Menor é melhor para CPA
-      testId: "card-avg-cpa"
-    }
-  ];
-
-  const stats = [
-    {
-      title: "Total de Pedidos",
-      value: totalOrders.toLocaleString(),
-      subtitle: `Todos os status`,
-      icon: ShoppingCart,
-      iconBg: "bg-blue-600/20",
-      iconColor: "text-blue-400",
-      hoverBg: "group-hover:bg-blue-600/30",
-      growth: calculateGrowth(totalOrders),
-      testId: "card-total-orders"
-    },
-    {
-      title: "Pedidos Entregues", 
-      value: deliveredOrders.toLocaleString(),
-      icon: CheckCircle,
-      iconBg: "bg-green-600/20",
-      iconColor: "text-green-400",
-      hoverBg: "group-hover:bg-green-600/30",
-      growth: calculateGrowth(deliveredOrders),
-      testId: "card-delivered-orders"
-    },
-    {
-      title: "Pedidos Cancelados",
-      value: cancelledOrders.toLocaleString(),
-      icon: XCircle,
-      iconBg: "bg-red-600/20",
-      iconColor: "text-red-400",
-      hoverBg: "group-hover:bg-red-600/30",
-      growth: calculateGrowth(cancelledOrders, cancelledOrders * 1.1),
-      testId: "card-cancelled-orders"
-    },
-    {
-      title: "Pedidos Retornados",
-      value: returnedOrders.toLocaleString(),
-      icon: RotateCcw,
-      iconBg: "bg-amber-600/20",
-      iconColor: "text-amber-400",
-      hoverBg: "group-hover:bg-amber-600/30",
-      growth: calculateGrowth(returnedOrders, returnedOrders * 1.1),
-      testId: "card-returned-orders"
-    },
-    {
-      title: "Pedidos Confirmados",
-      value: confirmedOrders.toLocaleString(),
-      icon: CheckSquare,
-      iconBg: "bg-teal-600/20",
-      iconColor: "text-teal-400",
-      hoverBg: "group-hover:bg-teal-600/30",
-      growth: calculateGrowth(confirmedOrders, confirmedOrders * 0.9),
-      testId: "card-confirmed-orders"
-    },
-    {
-      title: "Receita Paga",
-      value: formatCurrencyBRL(totalRevenueBRL),
-      subtitle: formatCurrencyEUR(revenue),
-      icon: DollarSign,
-      iconBg: "bg-purple-600/20",
-      iconColor: "text-purple-400",
-      hoverBg: "group-hover:bg-purple-600/30",
-      growth: calculateGrowth(totalRevenueBRL),
-      testId: "card-paid-revenue"
-    },
-    {
-      title: "Custo de Produtos",
-      value: formatCurrencyBRL(productCostsBRL),
-      subtitle: formatCurrencyEUR(productCosts),
-      icon: Calculator,
-      iconBg: "bg-orange-600/20",
-      iconColor: "text-orange-400",
-      hoverBg: "group-hover:bg-orange-600/30",
-      growth: calculateGrowth(productCostsBRL, productCostsBRL * 1.1),
-      testId: "card-product-costs"
-    },
-    {
-      title: "Custo Marketing",
-      value: formatCurrencyBRL(marketingCostsBRL),
-      subtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : undefined,
-      icon: TrendingUp,
-      iconBg: "bg-pink-600/20",
-      iconColor: "text-pink-400",
-      hoverBg: "group-hover:bg-pink-600/30",
-      growth: calculateGrowth(marketingCostsBRL),
-      testId: "card-marketing-costs"
-    },
-    {
-      title: "% de Entregados",
-      value: `${deliveryRate.toFixed(1)}%`,
-      icon: Target,
-      iconBg: "bg-cyan-600/20",
-      iconColor: "text-cyan-400",
-      hoverBg: "group-hover:bg-cyan-600/30",
-      growth: calculateGrowth(deliveryRate, deliveryRate * 0.9),
-      testId: "card-delivery-rate"
-    },
-    {
-      title: "ROI",
-      value: `${roi.toFixed(1)}%`,
-      icon: BarChart3,
-      iconBg: "bg-indigo-600/20",
-      iconColor: "text-indigo-400",
-      hoverBg: "group-hover:bg-indigo-600/30",
-      growth: calculateGrowth(roi, roi * 0.85),
-      testId: "card-roi"
-    },
-  ];
-
-  // Definir dados por prioridade e tamanho
+  // Métricas principais
   const primaryMetrics = [
     {
-      title: "Lucro Total",
-      value: formatCurrencyBRL(totalProfitBRL),
-      subtitle: `${formatCurrencyEUR(totalProfit)} • ${profitMargin.toFixed(1)}% margem`,
-      icon: DollarSign,
-      color: "green",
-      size: "hero"
-    }
-  ];
-
-  const secondaryMetrics = [
-    {
-      title: "💰 Receita Paga",
+      title: "Receita Paga",
       value: formatCurrencyBRL(totalRevenueBRL),
       subtitle: `${formatCurrencyEUR(totalRevenueEUR)} • ${deliveredOrders} entregas`,
       icon: DollarSign,
       color: "blue",
-      size: "large"
+      growth: calculateGrowth(totalRevenueBRL),
+      testId: "card-paid-revenue"
+    },
+    {
+      title: "Lucro Total",
+      value: formatCurrencyBRL(totalProfitBRL),
+      subtitle: `${profitMargin.toFixed(1)}% margem • ${roi.toFixed(1)}% ROI`,
+      icon: TrendingUp,
+      color: "green",
+      growth: calculateGrowth(totalProfitBRL),
+      testId: "card-total-profit"
     }
   ];
 
-  const tertiaryMetrics = [
+  // Métricas secundárias
+  const secondaryMetrics = [
     {
-      title: "ROI",
-      value: `${roi.toFixed(1)}%`,
-      subtitle: "Retorno",
-      icon: TrendingUp,
-      color: "green",
-      size: "medium"
+      title: "Pedidos",
+      value: totalOrders.toLocaleString(),
+      subtitle: "Total",
+      icon: ShoppingCart,
+      color: "slate",
+      testId: "card-total-orders"
     },
     {
-      title: "Pedidos Confirmados",
+      title: "Entregues",
+      value: deliveredOrders.toLocaleString(),
+      subtitle: `${deliveryRate.toFixed(1)}%`,
+      icon: CheckCircle,
+      color: "emerald",
+      testId: "card-delivered-orders"
+    },
+    {
+      title: "Confirmados",
       value: confirmedOrders.toLocaleString(),
       subtitle: "Processando",
       icon: CheckSquare,
-      color: "teal",
-      size: "medium"
+      color: "cyan",
+      testId: "card-confirmed-orders"
     },
     {
-      title: "Pedidos Retornados",
+      title: "Retornados",
       value: returnedOrders.toLocaleString(),
       subtitle: "Devoluções",
       icon: RotateCcw,
       color: "amber",
-      size: "medium"
-    }
-  ];
-
-  const quaternaryMetrics = [
+      testId: "card-returned-orders"
+    },
     {
-      title: "Custos Marketing",
+      title: "Marketing",
       value: formatCurrencyBRL(marketingCostsBRL),
-      subtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas selecionadas",
+      subtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas",
       icon: Target,
       color: "purple",
-      size: "small"
-    },
-    {
-      title: "Custos Produtos",
-      value: formatCurrencyEUR(productCosts),
-      subtitle: "Entregues apenas",
-      icon: Calculator,
-      color: "indigo",
-      size: "small"
-    },
-    {
-      title: "Custos Envio",
-      value: formatCurrencyEUR(metrics?.totalShippingCosts || 0),
-      subtitle: "Entregues + Retornados",
-      icon: Truck,
-      color: "orange",
-      size: "small"
+      testId: "card-marketing-costs"
     },
     {
       title: "Cancelados",
@@ -285,301 +141,136 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       subtitle: "Perdidos",
       icon: XCircle,
       color: "red",
-      size: "small"
+      testId: "card-cancelled-orders"
     }
   ];
 
+  const getIconColors = (color: string) => {
+    const colors = {
+      blue: "text-blue-500",
+      green: "text-emerald-500", 
+      slate: "text-slate-400",
+      emerald: "text-emerald-500",
+      cyan: "text-cyan-500",
+      amber: "text-amber-500",
+      purple: "text-purple-500",
+      red: "text-red-500"
+    };
+    return colors[color as keyof typeof colors] || "text-gray-500";
+  };
+
+  const getGrowthStyle = (growth: string) => {
+    const value = parseFloat(growth);
+    if (value > 0) return "text-emerald-500 bg-emerald-500/10";
+    if (value < 0) return "text-red-500 bg-red-500/10";
+    return "text-gray-400 bg-gray-500/10";
+  };
+
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Top Cards - Shopify and CPA above Profit */}
-      <div className="w-full grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        {topCards.map((stat, index) => {
-          const IconComponent = stat.icon;
-          const isImage = stat.isImage;
-          
+    <div className="space-y-6">
+      {/* Métricas Principais */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {primaryMetrics.map((metric, index) => {
+          const IconComponent = metric.icon;
           return (
-            <div
+            <div 
               key={index}
-              className={`glassmorphism rounded-2xl p-4 transition-all duration-300 border hover:scale-[1.02] group cursor-pointer border-gray-500/20 hover:border-gray-400/40 ${stat.hoverBg}`}
-              data-testid={stat.testId}
+              className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:bg-white/[0.07] transition-all duration-300"
+              data-testid={metric.testId}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                  {isImage ? (
-                    <img 
-                      src={IconComponent as string} 
-                      alt="Shopify" 
-                      className="w-8 h-8 object-contain"
-                    />
-                  ) : (
-                    React.createElement(IconComponent as any, { className: `${stat.iconColor} w-6 h-6` })
-                  )}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <IconComponent className={`w-5 h-5 ${getIconColors(metric.color)}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">{metric.title}</p>
+                    <h3 className="text-2xl font-bold text-white mt-1">{metric.value}</h3>
+                  </div>
                 </div>
-                <div className={`text-xs px-2 py-1 rounded-full ${
-                  parseFloat(String(stat.growth)) > 0 ? 'bg-green-500/20 text-green-400' : 
-                  parseFloat(String(stat.growth)) < 0 ? 'bg-red-500/20 text-red-400' : 
-                  'bg-gray-500/20 text-gray-400'
-                }`}>
-                  {parseFloat(String(stat.growth)) > 0 ? '+' : ''}{stat.growth}%
+                <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
+                  {parseFloat(metric.growth) > 0 ? '+' : ''}{metric.growth}%
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-white mb-1">{stat.value}</h3>
-              <p className="text-gray-300 text-sm font-medium">{stat.title}</p>
-              <p className="text-gray-400 text-xs mt-1">{stat.subtitle}</p>
+              <p className="text-sm text-gray-500">{metric.subtitle}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Primary Metrics - Revenue and Profit on Same Row */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        {/* Revenue Card - Left Side */}
-        <div className="glassmorphism rounded-2xl p-4 sm:p-6 hover:scale-[1.01] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <DollarSign className="text-blue-400 w-6 h-6 sm:w-8 sm:h-8" />
+      {/* Métricas Secundárias */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {secondaryMetrics.map((metric, index) => {
+          const IconComponent = metric.icon;
+          return (
+            <div 
+              key={index}
+              className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-white/[0.07] transition-all duration-300"
+              data-testid={metric.testId}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <IconComponent className={`w-4 h-4 ${getIconColors(metric.color)}`} />
               </div>
               <div>
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white break-words">{formatCurrencyBRL(totalRevenueBRL)}</h3>
-                <p className="text-gray-300 text-sm sm:text-base font-medium">💰 Receita Paga</p>
+                <h4 className="text-lg font-semibold text-white mb-1">{metric.value}</h4>
+                <p className="text-xs font-medium text-gray-400">{metric.title}</p>
+                <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
               </div>
-            </div>
-            <div className="text-left">
-              <div className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 mb-2 w-fit">
-                Principal
-              </div>
-              <p className="text-sm text-gray-400">{formatCurrencyEUR(totalRevenueEUR)} • {deliveredOrders} entregas</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Profit Card - Right Side */}
-        <div className="glassmorphism rounded-2xl p-4 sm:p-6 bg-gradient-to-br from-green-500/15 via-emerald-500/10 to-green-600/15 border-2 border-green-400/25 hover:border-green-400/40 transition-all duration-500 group relative overflow-hidden hover:scale-[1.01]">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div className="relative z-10">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/30 to-emerald-600/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <DollarSign className="text-green-400 w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-green-400 break-words" data-testid="value-card-profit">
-                    {formatCurrencyBRL(totalProfitBRL)}
-                  </h3>
-                  <p className="text-gray-300 text-sm sm:text-base font-medium" data-testid="label-card-profit">Lucro Total</p>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
-                <div className={`px-3 py-1 rounded-full w-fit ${profitMargin >= 0 ? "text-green-400 bg-green-400/20" : "text-red-400 bg-red-400/20"}`}>
-                  {profitMargin >= 0 ? "+" : ""}{profitMargin.toFixed(1)}% margem
-                </div>
-                <div className="text-green-400">{roi.toFixed(1)}% ROI</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tertiary Metrics - Medium Cards */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {tertiaryMetrics.map((metric, index) => {
-          const IconComponent = metric.icon;
-          const colorClasses = {
-            green: "border-green-500/15 hover:border-green-400/30 bg-gradient-to-br from-green-500/5 to-green-600/5",
-            teal: "border-teal-500/15 hover:border-teal-400/30 bg-gradient-to-br from-teal-500/5 to-teal-600/5", 
-            amber: "border-amber-500/15 hover:border-amber-400/30 bg-gradient-to-br from-amber-500/5 to-amber-600/5"
-          };
-          const iconClasses = {
-            green: "bg-green-500/20 text-green-400",
-            teal: "bg-teal-500/20 text-teal-400",
-            amber: "bg-amber-500/20 text-amber-400"
-          };
-          return (
-            <div key={index} className={`glassmorphism rounded-xl p-5 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border ${colorClasses[metric.color as keyof typeof colorClasses]}`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-12 h-12 ${iconClasses[metric.color as keyof typeof iconClasses]} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                  <IconComponent className="w-6 h-6" />
-                </div>
-              </div>
-              <h4 className="text-xl font-bold text-white mb-1">{metric.value}</h4>
-              <p className="text-gray-300 text-sm">{metric.title}</p>
-              <p className="text-xs text-gray-400 mt-1">{metric.subtitle}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Quaternary Metrics - Small Cards */}
-      <div className="w-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
-        {quaternaryMetrics.map((metric, index) => {
-          const IconComponent = metric.icon;
-          const colorClasses = {
-            purple: "bg-purple-500/15 text-purple-400",
-            indigo: "bg-indigo-500/15 text-indigo-400",
-            orange: "bg-orange-500/15 text-orange-400",
-            red: "bg-red-500/15 text-red-400"
-          };
-          return (
-            <div key={index} className="glassmorphism rounded-xl p-3 sm:p-4 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-gray-500/10 hover:border-gray-400/30">
-              <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className={`w-8 h-8 sm:w-10 sm:h-10 ${colorClasses[metric.color as keyof typeof colorClasses]} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-              </div>
-              <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{metric.value}</h5>
-              <p className="text-gray-400 text-xs mb-1">{metric.title}</p>
-              <p className="text-xs text-gray-400 opacity-80 leading-tight">{metric.subtitle}</p>
+      {/* Card de Shopify e CPA */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-white/[0.07] transition-all duration-300" data-testid="card-shopify-orders">
+          <div className="flex items-center justify-between mb-3">
+            <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
+            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(shopifyOrders))}`}>
+              {parseFloat(calculateGrowth(shopifyOrders)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders)}%
             </div>
-          );
-        })}
-      </div>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-1">{shopifyOrders.toLocaleString()}</h4>
+            <p className="text-xs font-medium text-gray-400">Pedidos Shopify</p>
+            <p className="text-xs text-gray-500 mt-1">Importados</p>
+          </div>
+        </div>
 
-      {/* Tertiary Metrics - Medium Cards */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <div className="glassmorphism rounded-xl p-5 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-green-500/15 hover:border-green-400/30 bg-gradient-to-br from-green-500/5 to-green-600/5">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-white/[0.07] transition-all duration-300" data-testid="card-avg-cpa">
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <TrendingUp className="text-green-400 w-6 h-6" />
+            <Target className="w-4 h-4 text-orange-500" />
+            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
+              {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
             </div>
           </div>
-          <h4 className="text-xl font-bold text-white mb-1">{roi.toFixed(1)}%</h4>
-          <p className="text-gray-300 text-sm">ROI</p>
-          <p className="text-xs text-green-400 mt-1">Retorno</p>
-        </div>
-        
-        <div className="glassmorphism rounded-xl p-5 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-teal-500/15 hover:border-teal-400/30 bg-gradient-to-br from-teal-500/5 to-teal-600/5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 bg-teal-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <CheckSquare className="text-teal-400 w-6 h-6" />
-            </div>
-          </div>
-          <h4 className="text-xl font-bold text-white mb-1">{confirmedOrders.toLocaleString()}</h4>
-          <p className="text-gray-300 text-sm">Pedidos Confirmados</p>
-          <p className="text-xs text-teal-400 mt-1">Processando</p>
-        </div>
-        
-        <div className="glassmorphism rounded-xl p-5 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-amber-500/15 hover:border-amber-400/30 bg-gradient-to-br from-amber-500/5 to-amber-600/5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 bg-amber-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <RotateCcw className="text-amber-400 w-6 h-6" />
-            </div>
-          </div>
-          <h4 className="text-xl font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
-          <p className="text-gray-300 text-sm">Pedidos Retornados</p>
-          <p className="text-xs text-amber-400 mt-1">Devoluções</p>
-        </div>
-      </div>
-
-      {/* Quaternary Metrics - Small Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
-        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-purple-500/10 hover:border-purple-400/25 flex flex-col justify-between">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
-              <Target className="text-purple-400 w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(marketingCostsBRL)}</h5>
-            <p className="text-gray-400 text-xs mb-1">Custos Marketing</p>
-            <p className="text-xs text-purple-400 opacity-80 leading-tight">
-              {marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}
-            </p>
-          </div>
-        </div>
-        
-        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-indigo-500/10 hover:border-indigo-400/25 flex flex-col justify-between">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
-              <Calculator className="text-indigo-400 w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(productCostsBRL)}</h5>
-            <p className="text-gray-400 text-xs mb-1">Custos Produtos</p>
-            <p className="text-xs text-indigo-400 opacity-80 leading-tight">{formatCurrencyEUR(productCosts)}</p>
-          </div>
-        </div>
-        
-        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-orange-500/10 hover:border-orange-400/25 flex flex-col justify-between">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
-              <Truck className="text-orange-400 w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{formatCurrencyBRL(metrics?.totalShippingCostsBRL || 0)}</h5>
-            <p className="text-gray-400 text-xs mb-1">Custos Envio</p>
-            <p className="text-xs text-orange-400 opacity-80 leading-tight">{formatCurrencyEUR(metrics?.totalShippingCosts || 0)}</p>
-          </div>
-        </div>
-        
-        <div className="glassmorphism rounded-lg p-3 sm:p-4 min-h-[120px] sm:min-h-[140px] hover:scale-105 transition-all duration-300 group cursor-pointer border border-red-500/10 hover:border-red-400/25 flex flex-col justify-between">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-500/15 rounded-lg flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform duration-300">
-              <XCircle className="text-red-400 w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h5 className="text-xs sm:text-sm lg:text-base font-bold text-white mb-1 leading-tight">{cancelledOrders.toLocaleString()}</h5>
-            <p className="text-gray-400 text-xs mb-1">Cancelados</p>
-            <p className="text-xs text-red-400 opacity-80 leading-tight">Perdidos</p>
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(avgCPA)}</h4>
+            <p className="text-xs font-medium text-gray-400">CPA Anúncios</p>
+            <p className="text-xs text-gray-500 mt-1">Custo por aquisição</p>
           </div>
         </div>
       </div>
 
-      {/* Receita Paga - Seção Detalhada */}
-      <div className="glassmorphism rounded-xl sm:rounded-2xl p-4 sm:p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6 mb-4 sm:mb-6">
-          <h3 className="text-lg sm:text-xl font-semibold text-white flex items-center">
-            <DollarSign className="mr-2 sm:mr-3 text-blue-400" size={20} />
-            Análise da Receita Paga
-          </h3>
-          <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium w-fit">
-            Apenas Pedidos Entregues
+      {/* Insights Section */}
+      <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Resumo da Operação</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-white">{formatCurrencyBRL(totalRevenueBRL)}</p>
+            <p className="text-sm text-gray-400">Receita Total</p>
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div className="text-center bg-white/5 rounded-lg p-4">
-            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-400 mb-2">
-              {formatCurrencyBRL(totalRevenueBRL)}
-            </div>
-            <div className="text-sm sm:text-base lg:text-lg text-gray-300 mb-1">
-              {formatCurrencyEUR(totalRevenueEUR)}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-400">Receita Total em BRL/EUR</div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-emerald-400">{formatCurrencyBRL(totalProfitBRL)}</p>
+            <p className="text-sm text-gray-400">Lucro Líquido</p>
           </div>
-          
-          <div className="text-center bg-white/5 rounded-lg p-4">
-            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-400 mb-2">
-              {deliveredOrders}
-            </div>
-            <div className="text-sm sm:text-base lg:text-lg text-gray-300 mb-1">
-              {deliveryRate.toFixed(1)}% de sucesso
-            </div>
-            <div className="text-xs sm:text-sm text-gray-400">Pedidos Entregues</div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-blue-400">{deliveryRate.toFixed(1)}%</p>
+            <p className="text-sm text-gray-400">Taxa de Entrega</p>
           </div>
-          
-          <div className="text-center bg-white/5 rounded-lg p-4 sm:col-span-2 lg:col-span-1">
-            <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-cyan-400 mb-2">
-              {formatCurrencyEUR(averageOrderValue)}
-            </div>
-            <div className="text-sm sm:text-base lg:text-lg text-gray-300 mb-1">
-              {formatCurrencyBRL(averageOrderValue * 6.373034330924346)}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-400">Ticket Médio por Pedido</div>
-          </div>
-        </div>
-        
-        <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-blue-500/20">
-          <div className="flex flex-col gap-2 sm:gap-0 sm:flex-row sm:justify-between sm:items-center text-xs sm:text-sm">
-            <div className="text-gray-300">
-              <span className="text-blue-400 font-medium">Conversão:</span> {((deliveredOrders / totalOrders) * 100).toFixed(1)}% dos pedidos geraram receita
-            </div>
-            <div className="text-gray-300">
-              <span className="text-green-400 font-medium">Performance:</span> {formatCurrencyBRL(totalRevenueBRL / totalOrders)} receita por pedido total
-            </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-purple-400">{roi.toFixed(1)}%</p>
+            <p className="text-sm text-gray-400">Retorno (ROI)</p>
           </div>
         </div>
       </div>
