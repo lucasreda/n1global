@@ -222,7 +222,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
                 <p className="text-sm text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
-              <div className="text-right">
+              <div>
                 <p className="text-sm font-medium text-gray-400">Pedidos Shopify</p>
                 <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
               </div>
@@ -345,7 +345,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
                 <p className="text-sm text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
-              <div className="text-right">
+              <div>
                 <p className="text-sm font-medium text-gray-400">Pedidos Shopify</p>
                 <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
               </div>
