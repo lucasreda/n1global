@@ -9,16 +9,25 @@ import shopifyIcon from "@assets/shopify_1756413996883.webp";
 interface StatsCardsProps {
   metrics: any;
   isLoading: boolean;
+  period?: string;
 }
 
-export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
+export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProps) {
   const operationId = localStorage.getItem("current_operation_id");
+  
+  // Converter período para formato da API
+  const apiPeriod = period === "1" ? "1d" : 
+                    period === "7" ? "7d" : 
+                    period === "90" ? "90d" : 
+                    period === "365" ? "365d" :
+                    period === "current_month" ? "current_month" :
+                    period === "all" ? "all" : "30d";
   
   // Buscar dados de pedidos diários
   const { data: ordersTimelineData } = useQuery({
-    queryKey: ["/api/dashboard/revenue-chart", operationId, "7d"],
+    queryKey: ["/api/dashboard/revenue-chart", operationId, apiPeriod],
     queryFn: async () => {
-      const url = `/api/dashboard/revenue-chart?period=7d${operationId ? `&operationId=${operationId}` : ''}`;
+      const url = `/api/dashboard/revenue-chart?period=${apiPeriod}${operationId ? `&operationId=${operationId}` : ''}`;
       const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },

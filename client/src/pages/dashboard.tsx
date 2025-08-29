@@ -242,7 +242,7 @@ export default function Dashboard() {
         </div>
       </div>
       
-      <StatsCards metrics={metrics} isLoading={metricsLoading} />
+      <StatsCards metrics={metrics} isLoading={metricsLoading} period={dateFilter} />
       
       <ChartsSection 
         revenueData={revenueData || []}
