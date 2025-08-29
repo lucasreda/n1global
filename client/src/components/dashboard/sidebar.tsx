@@ -83,7 +83,7 @@ export function Sidebar() {
   };
 
   return (
-    <nav className="h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm p-6 animate-slide-up flex flex-col">
+    <nav className="h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm p-4 sm:p-6 animate-slide-up flex flex-col">
       <div className="flex justify-center mb-8">
         <img 
           src="/logo.png" 
@@ -164,8 +164,8 @@ export function Sidebar() {
         })}
       </ul>
 
-      <div className="mt-auto">
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-4 mt-6">
+      <div className="mt-auto pb-2">
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-4 mt-3 sm:mt-6">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 gradient-success rounded-full flex items-center justify-center">
               <span className="text-xs font-bold text-foreground" data-testid="text-user-initials">
