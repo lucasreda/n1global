@@ -344,7 +344,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <TrendingUp className={`w-4 h-4 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-[#4ade80]'}`} />
           </div>
           <div>
-            <h3 className={`text-lg font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h3>
+            <h3 className={`text-xl font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h3>
             <p className={`text-xs font-medium ${totalProfitBRL < 0 ? 'text-red-300' : 'text-[#4ade80]'}`}>Lucro Total</p>
             <p className={`text-xs mt-1 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-green-300'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
           </div>
