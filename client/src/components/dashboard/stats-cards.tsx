@@ -259,7 +259,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-400">Pedidos & Entregas</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{totalOrders.toLocaleString()} pedidos</h3>
+                <h3 className="text-lg font-semibold mt-1 text-white">{totalOrders.toLocaleString()}</h3>
               </div>
             </div>
             <div className="flex items-center space-x-2">
