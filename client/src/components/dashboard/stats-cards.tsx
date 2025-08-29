@@ -258,7 +258,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                 <ShoppingCart className="w-5 h-5 text-slate-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-400">Pedidos Transportadora</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
