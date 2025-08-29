@@ -1,319 +1,211 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { authenticatedApiRequest } from "@/lib/auth";
-import { useCurrentOperation } from "@/hooks/use-current-operation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  Facebook, 
-  Settings, 
-  RefreshCw, 
-  DollarSign, 
-  Eye, 
-  MousePointer, 
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Plus,
-  Target,
-  Globe
-} from "lucide-react";
-import { SiGoogle } from "react-icons/si";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import facebookIcon from "@assets/meta-icon_1756415603759.png";
-import facebookIconMini from "@assets/metamini_1756416312919.png";
-import googleAdsIcon from "@assets/gadsicon_1756416065444.png";
-import googleAdsIconMini from "@assets/gadsmini_1756416199452.png";
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCurrentOperation } from '@/hooks/use-current-operation';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { RefreshCw, Target, DollarSign, TrendingUp, Plus, Globe, Filter, X, Users, BarChart3, CheckCircle2, Circle } from 'lucide-react';
+import { FacebookIcon, GoogleAdsIcon, NetworkIcon } from '@/components/ui/social-icons';
 
-// Componentes customizados para os ícones
-const FacebookIcon = ({ size }: { size?: number }) => {
-  // Use o ícone mini para tamanhos pequenos (até 24px) e o grande para botões
-  const iconSrc = (size || 40) <= 24 ? facebookIconMini : facebookIcon;
-  return (
-    <img 
-      src={iconSrc} 
-      alt="Meta" 
-      className="object-contain"
-      style={{ width: size || 40, height: size || 40 }}
-    />
-  );
-};
-
-const GoogleAdsIcon = ({ size }: { size?: number }) => {
-  // Use o ícone mini para tamanhos pequenos (até 24px) e o grande para botões
-  const iconSrc = (size || 40) <= 24 ? googleAdsIconMini : googleAdsIcon;
-  return (
-    <img 
-      src={iconSrc} 
-      alt="Google Ads" 
-      className="object-contain"
-      style={{ width: size || 40, height: size || 40 }}
-    />
-  );
-};
-
-interface Campaign {
+type Campaign = {
   id: string;
-  campaignId: string;
-  network: 'facebook' | 'google';
   name: string;
   status: string;
-  objective?: string; // Facebook
-  campaignType?: string; // Google
-  dailyBudget: string;
-  lifetimeBudget: string;
-  amountSpent: string; // Valor em BRL
-  originalAmountSpent?: string; // Valor original
-  originalCurrency?: string; // Moeda original
+  accountId: string;
+  network: 'facebook' | 'google';
+  amountSpent: string;
   impressions: number;
   clicks: number;
-  cpm: string;
-  cpc: string;
-  ctr: string;
-  isSelected: boolean;
-  startTime: string;
-  endTime: string;
-  lastSync: string;
-  accountId?: string;
-  accountName?: string;
-}
-
-interface FacebookBusinessManager {
-  id: string;
-  businessId: string;
-  name: string;
-  isActive: boolean;
-  lastSync: string;
-}
-
-interface AdAccount {
-  id: string;
-  network: 'facebook' | 'google';
-  accountId: string;
-  name: string;
-  businessManagerId?: string;
-  managerId?: string; // For Google Ads
-  isActive: boolean;
-  currency: string;
-  baseCurrency: string;
-  timezone: string;
-  lastSync: string;
-}
-
-// Network Icon Component
-const NetworkIcon = ({ network, size = 16 }: { network: 'facebook' | 'google'; size?: number }) => {
-  switch (network) {
-    case 'facebook':
-      return <FacebookIcon size={size} />;
-    case 'google':
-      return <GoogleAdsIcon size={size} />;
-    default:
-      return <Globe size={size} className="text-gray-500" />;
-  }
+  ctr: number;
+  isSelected?: boolean;
+  originalAmountSpent?: string;
+  originalCurrency?: string;
 };
 
-export default function Ads() {
+type AdAccount = {
+  id: string;
+  accountId: string;
+  name: string;
+  network: 'facebook' | 'google';
+  accessToken: string;
+  businessManagerId?: string;
+  isActive: boolean;
+  currency: string;
+};
+
+type SyncInfo = {
+  lastSync: string;
+  isRunning: boolean;
+  progress: number;
+};
+
+const formatCurrency = (value: string | number, currency: string = 'BRL') => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return `${currency} 0,00`;
+  
+  if (currency === 'BRL') {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(numValue);
+  }
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency
+  }).format(numValue);
+};
+
+const formatOriginalCurrency = (value: string | undefined, currency: string | undefined) => {
+  if (!value || !currency || value === '0' || parseFloat(value) === 0) return null;
+  return formatCurrency(value, currency);
+};
+
+const formatPercentage = (value: number) => {
+  return `${(value * 100).toFixed(2)}%`;
+};
+
+const getStatusBadge = (status: string) => {
+  const statusMap = {
+    'ACTIVE': { label: 'Ativa', variant: 'default' as const, color: 'bg-green-500' },
+    'PAUSED': { label: 'Pausada', variant: 'secondary' as const, color: 'bg-yellow-500' },
+    'ARCHIVED': { label: 'Arquivada', variant: 'destructive' as const, color: 'bg-gray-500' },
+  };
+  
+  const config = statusMap[status as keyof typeof statusMap] || { label: status, variant: 'outline' as const, color: 'bg-gray-500' };
+  
+  return (
+    <Badge variant={config.variant} className="text-xs">
+      <span className={`w-2 h-2 rounded-full mr-1 ${config.color}`}></span>
+      {config.label}
+    </Badge>
+  );
+};
+
+export default function AdsPage() {
+  const { currentOperation } = useCurrentOperation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [selectedPeriod, setSelectedPeriod] = useState('last_7d');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [networkSelectOpen, setNetworkSelectOpen] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState<'facebook' | 'google'>('facebook');
-  const [bmDialogOpen, setBmDialogOpen] = useState(false);
-  const [accountsModalOpen, setAccountsModalOpen] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const [accountsDialogOpen, setAccountsDialogOpen] = useState(false);
+  
   const [newAccount, setNewAccount] = useState({
-    accountId: "",
-    name: "",
-    accessToken: "",
-    appId: "",
-    appSecret: "",
-    businessManagerId: "",
-    baseCurrency: "BRL"
+    accountId: '',
+    name: '',
+    accessToken: '',
+    businessManagerId: ''
   });
-  const [newBusinessManager, setNewBusinessManager] = useState({
-    businessId: "",
-    name: "",
-    accessToken: ""
+
+  // Fetch accounts
+  const { data: adAccounts, isLoading: accountsLoading } = useQuery({
+    queryKey: ['/api/ads/accounts', currentOperation?.id],
+    enabled: !!currentOperation?.id
   });
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { selectedOperation } = useCurrentOperation();
+
+  // Fetch campaigns
+  const { data: campaigns, isLoading: campaignsLoading } = useQuery({
+    queryKey: ['/api/ads/campaigns', currentOperation?.id, selectedPeriod],
+    enabled: !!currentOperation?.id && !!adAccounts?.length
+  });
 
   // Fetch sync info
-  const { data: syncInfo } = useQuery({
-    queryKey: ["/api/facebook/sync-info", selectedOperation],
-    queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/facebook/sync-info");
-      return response.json() as Promise<{ lastSync: string | null; canAutoSync: boolean; nextAutoSync: string | null }>;
-    },
-    refetchInterval: 60000, // Refetch every minute
-    enabled: !!selectedOperation,
+  const { data: syncInfo } = useQuery<SyncInfo>({
+    queryKey: ['/api/ads/sync-info', currentOperation?.id],
+    enabled: !!currentOperation?.id,
+    refetchInterval: 5000
   });
 
-  // Fetch Ad Accounts (Facebook + Google)
-  const { data: adAccounts, isLoading: accountsLoading, refetch: refetchAccounts } = useQuery({
-    queryKey: ["/api/ad-accounts", selectedOperation],
-    queryFn: async () => {
-      // Use fresh operation ID from localStorage to avoid state timing issues
-      const currentOperationId = localStorage.getItem("current_operation_id") || selectedOperation;
-      console.log("🔍 Fetching ad accounts for operation:", currentOperationId);
-      const response = await authenticatedApiRequest("GET", `/api/ad-accounts?operationId=${currentOperationId}`);
-      const data = await response.json() as AdAccount[];
-      console.log("📋 Ad accounts received:", data.length, "accounts");
-      return data;
-    },
-    enabled: !!selectedOperation,
-  });
-
-  // Fetch Campaigns (Facebook + Google)
-  const { data: campaigns, isLoading: campaignsLoading, refetch: refetchCampaigns } = useQuery({
-    queryKey: ["/api/campaigns", selectedPeriod, selectedOperation],
-    queryFn: async () => {
-      // Use fresh operation ID from localStorage to avoid state timing issues
-      const currentOperationId = localStorage.getItem("current_operation_id") || selectedOperation;
-      console.log("🎯 Fetching campaigns for operation:", currentOperationId, "period:", selectedPeriod);
-      const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true&operationId=${currentOperationId}`);
-      const data = await response.json() as Campaign[];
-      console.log("📊 Campaigns received:", data.length, "campaigns");
-      return data;
-    },
-    enabled: !!selectedOperation && (adAccounts?.length || 0) >= 0,
-  });
-
-  // Add new ad account
-  const addAccountMutation = useMutation({
-    mutationFn: async (accountData: any) => {
-      const response = await authenticatedApiRequest("POST", "/api/ad-accounts", {
-        ...accountData,
-        network: selectedNetwork,
-        operationId: selectedOperation
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Conta adicionada",
-        description: `Conta do ${selectedNetwork === 'facebook' ? 'Meta Ads' : 'Google Ads'} configurada com sucesso`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/ad-accounts", selectedOperation] });
-      setDialogOpen(false);
-      setNetworkSelectOpen(false);
-      setNewAccount({
-        accountId: "",
-        name: "",
-        accessToken: "",
-        appId: "",
-        appSecret: "",
-        businessManagerId: "",
-        baseCurrency: "BRL"
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Erro",
-        description: "Falha ao configurar conta do Meta Ads",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Sync campaigns from Facebook
   const syncCampaignsMutation = useMutation({
     mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", "/api/facebook/sync-period", { period: selectedPeriod });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Sincronização concluída",
-        description: `${data.synced || 0} campanhas sincronizadas`,
+      const response = await fetch(`/api/ads/sync?operationId=${currentOperation?.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod, selectedOperation] });
-    },
-    onError: () => {
-      toast({
-        title: "Erro na sincronização",
-        description: "Falha ao sincronizar campanhas do Facebook",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Toggle campaign selection
-  const toggleCampaignMutation = useMutation({
-    mutationFn: async ({ campaignId, isSelected }: { campaignId: string; isSelected: boolean }) => {
-      const response = await authenticatedApiRequest("PATCH", `/api/campaigns/${campaignId}`, {
-        isSelected: !isSelected,
-        operationId: selectedOperation
-      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao sincronizar campanhas');
+      }
+      
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod, selectedOperation] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ads/campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ads/sync-info'] });
       toast({
-        title: "Campanha atualizada",
-        description: "Seleção da campanha alterada",
+        title: "Sincronização iniciada",
+        description: "As campanhas estão sendo sincronizadas...",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar campanha",
+        title: "Erro na sincronização",
+        description: error.message,
         variant: "destructive",
       });
-    },
+    }
   });
 
-  const getStatusBadge = (status: string) => {
-    const statusMap = {
-      "ACTIVE": { label: "Ativa", variant: "default" as const, color: "text-green-400" },
-      "PAUSED": { label: "Pausada", variant: "secondary" as const, color: "text-yellow-400" },
-      "DELETED": { label: "Deletada", variant: "destructive" as const, color: "text-red-400" },
-      "ARCHIVED": { label: "Arquivada", variant: "outline" as const, color: "text-gray-400" },
-    };
-    const config = statusMap[status as keyof typeof statusMap] || statusMap.ACTIVE;
-    return <Badge variant={config.variant} className={config.color}>{config.label}</Badge>;
-  };
+  const addAccountMutation = useMutation({
+    mutationFn: async (account: typeof newAccount) => {
+      const response = await fetch(`/api/ads/accounts?operationId=${currentOperation?.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...account,
+          network: selectedNetwork
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao adicionar conta');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ads/accounts'] });
+      setDialogOpen(false);
+      setNewAccount({ accountId: '', name: '', accessToken: '', businessManagerId: '' });
+      toast({
+        title: "Conta adicionada",
+        description: "A conta foi conectada com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao conectar conta",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
-  const formatCurrency = (amount: string, currency: string = 'BRL') => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: currency,
-    }).format(parseFloat(amount || "0"));
-  };
-
-  const formatOriginalCurrency = (originalAmount?: string, originalCurrency?: string) => {
-    if (!originalAmount || !originalCurrency || originalCurrency === 'BRL') return null;
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: originalCurrency,
-    }).format(parseFloat(originalAmount));
-  };
-
-  const formatPercentage = (value: string) => {
-    return `${parseFloat(value || "0").toFixed(2)}%`;
-  };
-
-  // Filtrar campanhas por conta selecionada para exibição
+  // Filter campaigns based on selected account
   const filteredCampaigns = campaigns?.filter(campaign => {
     if (selectedAccountId === "all") return true;
     return campaign.accountId === selectedAccountId;
   }) || [];
 
-  // Campanhas selecionadas de TODAS as contas (não filtradas)
+  // Selected campaigns from ALL accounts (unfiltered)
   const allSelectedCampaigns = campaigns?.filter(c => c.isSelected) || [];
   
-  // Campanhas selecionadas da conta filtrada (para exibir no contador)
+  // Selected campaigns from filtered account (for display in counter)
   const filteredSelectedCampaigns = filteredCampaigns.filter(c => c.isSelected) || [];
   
-  // Gasto total de TODAS as campanhas selecionadas (sempre em BRL para consolidação)
+  // Total spent from ALL selected campaigns (always in BRL for consolidation)
   const totalSpent = allSelectedCampaigns.reduce((sum, c) => sum + parseFloat((c as any).amountSpentBRL || c.amountSpent || "0"), 0);
 
   if (accountsLoading) {
@@ -321,7 +213,7 @@ export default function Ads() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Anúncios Meta</h1>
+            <h1 className="text-2xl font-bold text-white">Anúncios</h1>
             <p className="text-gray-400">Gerencie campanhas e custos de marketing</p>
           </div>
         </div>
@@ -336,223 +228,91 @@ export default function Ads() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Anúncios</h1>
-          <p className="text-sm text-gray-400">Campanhas Meta Ads e Google Ads</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5"
-          >
-            <option value="today">Hoje</option>
-            <option value="yesterday">Ontem</option>
-            <option value="last_7d">Últimos 7 dias</option>
-            <option value="last_30d">Últimos 30 dias</option>
-            <option value="this_month">Este mês</option>
-            <option value="last_month">Mês passado</option>
-            <option value="this_quarter">Este trimestre</option>
-          </select>
-          <div className="flex items-center space-x-2">
-            {syncInfo?.lastSync && (
-              <span className="text-xs text-gray-400">
-                Último sync: {new Date(syncInfo.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-            <Button
-              onClick={() => syncCampaignsMutation.mutate()}
-              disabled={syncCampaignsMutation.isPending || !adAccounts?.length}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8"
-              data-testid="button-sync-campaigns"
-            >
-              <RefreshCw className={`w-3 h-3 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-              Sync
-            </Button>
+      {/* Header - Mobile responsive */}
+      <div className="space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-xl lg:text-2xl font-bold text-white">Anúncios</h1>
+            <p className="text-sm text-gray-400">Campanhas Meta Ads e Google Ads</p>
           </div>
-          {/* Network Selection Dialog */}
-          <Dialog open={networkSelectOpen} onOpenChange={setNetworkSelectOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 h-8" data-testid="button-add-account">
-                <Plus className="w-3 h-3 mr-2" />
-                Conta
+          
+          {/* Mobile: Layout vertical */}
+          <div className="flex flex-col sm:flex-row gap-3 lg:flex-row lg:items-center lg:space-x-3">
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-2 h-10"
+            >
+              <option value="today">Hoje</option>
+              <option value="yesterday">Ontem</option>
+              <option value="last_7d">Últimos 7 dias</option>
+              <option value="last_30d">Últimos 30 dias</option>
+              <option value="this_month">Este mês</option>
+              <option value="last_month">Mês passado</option>
+              <option value="this_quarter">Este trimestre</option>
+            </select>
+            
+            <div className="flex items-center gap-2">
+              {syncInfo?.lastSync && (
+                <span className="text-xs text-gray-400 hidden sm:block">
+                  Último sync: {new Date(syncInfo.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              <Button
+                onClick={() => syncCampaignsMutation.mutate()}
+                disabled={syncCampaignsMutation.isPending || !adAccounts?.length}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 h-10 flex-1 sm:flex-none"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
+                Sync
               </Button>
-            </DialogTrigger>
-            <DialogContent className="glassmorphism border-gray-700 max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-white">Selecionar Rede de Anúncios</DialogTitle>
-                <DialogDescription className="text-gray-400">
-                  Escolha a plataforma de anúncios que deseja configurar
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-6">
-                <Button
-                  onClick={() => {
-                    setSelectedNetwork('facebook');
-                    setNetworkSelectOpen(false);
-                    setDialogOpen(true);
-                  }}
-                  className="h-24 flex items-center justify-center bg-blue-600 hover:bg-blue-700 border border-blue-500"
-                >
-                  <FacebookIcon size={120} />
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedNetwork('google');
-                    setNetworkSelectOpen(false);
-                    setDialogOpen(true);
-                  }}
-                  className="h-24 flex items-center justify-center border border-gray-300 hover:border-gray-400"
-                  style={{ backgroundColor: '#f8f8f8' }}
-                >
-                  <GoogleAdsIcon size={180} />
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {/* Account Configuration Dialog */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogContent className="glassmorphism border-gray-700 max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-white flex items-center">
-                  <NetworkIcon network={selectedNetwork} size={20} />
-                  <span className="ml-2">
-                    Configurar {selectedNetwork === 'facebook' ? 'Meta Ads' : 'Google Ads'}
-                  </span>
-                </DialogTitle>
-                <DialogDescription className="text-gray-400">
-                  Adicione suas credenciais reais do {selectedNetwork === 'facebook' ? 'Meta' : 'Google'} para sincronizar campanhas
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-1">
-                  <Label htmlFor="accountId" className="text-sm text-gray-300">
-                    {selectedNetwork === 'facebook' ? 'ID da Conta Meta' : 'Customer ID Google Ads'}
-                  </Label>
-                  <Input
-                    id="accountId"
-                    value={newAccount.accountId}
-                    onChange={(e) => setNewAccount(prev => ({ ...prev, accountId: e.target.value }))}
-                    className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder={selectedNetwork === 'facebook' ? '1234567890 (sem act_)' : '123-456-7890'}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="name" className="text-sm text-gray-300">Nome da Conta</Label>
-                  <Input
-                    id="name"
-                    value={newAccount.name}
-                    onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
-                    className="bg-gray-800 border-gray-600 text-white h-9"
-                    placeholder="Nome descritivo para identificar"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="currency" className="text-sm text-gray-300">Moeda da Conta</Label>
-                  <select
-                    id="currency"
-                    value={newAccount.baseCurrency || 'BRL'}
-                    onChange={(e) => setNewAccount(prev => ({ ...prev, baseCurrency: e.target.value }))}
-                    className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-2 h-9 w-full"
-                  >
-                    <option value="BRL">BRL - Real Brasileiro</option>
-                    <option value="USD">USD - Dólar Americano</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="GBP">GBP - Libra Esterlina</option>
-                    <option value="CAD">CAD - Dólar Canadense</option>
-                    <option value="AUD">AUD - Dólar Australiano</option>
-                  </select>
-                </div>
-
-                {selectedNetwork === 'facebook' ? (
-                  <>
-                    <div className="space-y-1">
-                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Meta</Label>
-                      <Input
-                        id="accessToken"
-                        value={newAccount.accessToken}
-                        onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
-                        className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="EAAxxxxxx... (token real do Meta)"
-                        type="password"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="appId" className="text-sm text-gray-300">App ID</Label>
-                      <Input
-                        id="appId"
-                        value={newAccount.appId}
-                        onChange={(e) => setNewAccount(prev => ({ ...prev, appId: e.target.value }))}
-                        className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="ID da aplicação Meta"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="appSecret" className="text-sm text-gray-300">App Secret</Label>
-                      <Input
-                        id="appSecret"
-                        value={newAccount.appSecret}
-                        onChange={(e) => setNewAccount(prev => ({ ...prev, appSecret: e.target.value }))}
-                        className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="Chave secreta da aplicação"
-                        type="password"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-1">
-                      <Label htmlFor="accessToken" className="text-sm text-gray-300">Access Token do Google Ads</Label>
-                      <Input
-                        id="accessToken"
-                        value={newAccount.accessToken}
-                        onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
-                        className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="Token OAuth2 do Google Ads"
-                        type="password"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="managerId" className="text-sm text-gray-300">Manager Account ID (opcional)</Label>
-                      <Input
-                        id="managerId"
-                        value={newAccount.businessManagerId}
-                        onChange={(e) => setNewAccount(prev => ({ ...prev, businessManagerId: e.target.value }))}
-                        className="bg-gray-800 border-gray-600 text-white h-9"
-                        placeholder="ID da conta gerenciadora Google Ads"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-              <DialogFooter>
-                <Button 
-                  onClick={() => addAccountMutation.mutate(newAccount)}
-                  disabled={addAccountMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {addAccountMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
-                  Conectar Conta
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              
+              <Dialog open={networkSelectOpen} onOpenChange={setNetworkSelectOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 h-10 flex-1 sm:flex-none">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Conta
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="glassmorphism border-gray-700 max-w-md mx-4">
+                  <DialogHeader>
+                    <DialogTitle className="text-white">Selecionar Rede de Anúncios</DialogTitle>
+                    <DialogDescription className="text-gray-400">
+                      Escolha a plataforma de anúncios que deseja configurar
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-2 gap-4 py-6">
+                    <Button
+                      onClick={() => {
+                        setSelectedNetwork('facebook');
+                        setNetworkSelectOpen(false);
+                        setDialogOpen(true);
+                      }}
+                      className="h-24 flex items-center justify-center bg-blue-600 hover:bg-blue-700 border border-blue-500"
+                    >
+                      <FacebookIcon size={48} />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setSelectedNetwork('google');
+                        setNetworkSelectOpen(false);
+                        setDialogOpen(true);
+                      }}
+                      className="h-24 flex items-center justify-center border border-gray-300 hover:border-gray-400"
+                      style={{ backgroundColor: '#f8f8f8' }}
+                    >
+                      <GoogleAdsIcon size={48} />
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Summary Cards - Mobile responsive grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
@@ -575,337 +335,211 @@ export default function Ads() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString(), 'BRL')}</div>
-            <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
-            
-            {/* Breakdown por rede */}
-            {filteredCampaigns && filteredCampaigns.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {(() => {
-                  // Usar campanhas selecionadas se houver, senão usar todas as filtradas
-                  const campaignsToAnalyze = allSelectedCampaigns.length > 0 ? allSelectedCampaigns : filteredCampaigns;
-                  
-                  // Identificar Meta Ads e Google Ads por rede
-                  const metaCampaigns = campaignsToAnalyze.filter(c => {
-                    // Se tem network específico, usar isso
-                    if (c.network === 'facebook') return true;
-                    if (c.network === 'google') return false;
-                    // Se não tem network definido, assumir que é Meta (padrão atual)
-                    return !c.network;
-                  });
-                  
-                  const googleCampaigns = campaignsToAnalyze.filter(c => c.network === 'google');
-                  
-                  const metaSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
-                  const googleSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
-                  
-                  // Sempre mostrar Meta se tiver campanhas (já que vemos que tem campanhas Meta nos logs)
-                  const hasAnySpending = metaSpent > 0 || googleSpent > 0;
-                  
-                  return (
-                    <>
-                      {/* Sempre mostrar breakdown se há campanhas, mesmo com gasto zero */}
-                      {hasAnySpending && (
-                        <>
-                          {metaCampaigns.length > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <div className="flex items-center space-x-2">
-                                <FacebookIcon size={12} />
-                                <span className="text-gray-300">Meta Ads</span>
-                              </div>
-                              <span className="text-blue-400 font-medium">{formatCurrency(metaSpent.toString(), 'BRL')}</span>
-                            </div>
-                          )}
-                          {googleCampaigns.length > 0 && (
-                            <div className="flex items-center justify-between text-xs">
-                              <div className="flex items-center space-x-2">
-                                <GoogleAdsIcon size={12} />
-                                <span className="text-gray-300">Google Ads</span>
-                              </div>
-                              <span className="text-red-400 font-medium">{formatCurrency(googleSpent.toString(), 'BRL')}</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            )}
+            <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas selecionadas</p>
           </CardContent>
         </Card>
 
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
-              {(() => {
-                const metaAccounts = adAccounts?.filter(a => a.network === 'facebook') || [];
-                const googleAccounts = adAccounts?.filter(a => a.network === 'google') || [];
-                
-                if (metaAccounts.length > 0 && googleAccounts.length > 0) {
-                  return (
-                    <>
-                      <FacebookIcon size={16} />
-                      <GoogleAdsIcon size={16} />
-                    </>
-                  );
-                } else if (metaAccounts.length > 0) {
-                  return <FacebookIcon size={16} />;
-                } else if (googleAccounts.length > 0) {
-                  return <GoogleAdsIcon size={16} />;
-                } else {
-                  return <Globe className="w-4 h-4 text-gray-400" />;
-                }
-              })()}
-              <span>Contas Conectadas</span>
+              <TrendingUp className="w-4 h-4 text-purple-400" />
+              <span>Performance</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-500">{adAccounts?.length || 0}</div>
-            <p className="text-gray-400 text-sm">
-              {adAccounts?.filter(a => a.isActive).length || 0} ativas
-            </p>
-            
-            {/* Estatísticas por plataforma */}
-            {adAccounts && adAccounts.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {(() => {
-                  const metaAccounts = adAccounts.filter(a => a.network === 'facebook');
-                  const googleAccounts = adAccounts.filter(a => a.network === 'google');
-                  
-                  return (
-                    <>
-                      {metaAccounts.length > 0 && (
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center space-x-2">
-                            <FacebookIcon size={12} />
-                            <span className="text-gray-300">Meta Ads</span>
-                          </div>
-                          <span className="text-blue-400 font-medium">{metaAccounts.length}</span>
-                        </div>
-                      )}
-                      {googleAccounts.length > 0 && (
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center space-x-2">
-                            <GoogleAdsIcon size={12} />
-                            <span className="text-gray-300">Google Ads</span>
-                          </div>
-                          <span className="text-red-400 font-medium">{googleAccounts.length}</span>
-                        </div>
-                      )}
-                      
-                      {/* Lista de contas mais compacta */}
-                      <div className="mt-3 pt-2 border-t border-gray-600">
-                        {adAccounts.slice(0, 2).map((account) => (
-                          <div key={account.id} className="flex items-center space-x-2 text-xs py-1">
-                            <NetworkIcon network={account.network as 'facebook' | 'google'} size={12} />
-                            <span className="text-gray-300 truncate flex-1">{account.name}</span>
-                            <span className="text-green-400 text-[10px]">●</span>
-                          </div>
-                        ))}
-                        {adAccounts.length > 2 && (
-                          <button 
-                            onClick={() => setAccountsModalOpen(true)}
-                            className="text-xs text-blue-400 hover:text-blue-300 text-center pt-1 w-full cursor-pointer transition-colors"
-                          >
-                            +{adAccounts.length - 2} mais
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
+            <div className="text-lg font-bold text-purple-400">
+              {filteredCampaigns.length > 0 ? 
+                formatPercentage(filteredCampaigns.reduce((sum, c) => sum + c.ctr, 0) / filteredCampaigns.length) : 
+                '0%'
+              }
+            </div>
+            <p className="text-gray-400 text-sm">CTR médio</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* No accounts state */}
-      {!adAccounts?.length && (
+      {/* Campaign Management - Mobile friendly */}
+      {filteredCampaigns && filteredCampaigns.length > 0 && (
         <Card className="glassmorphism border-gray-700">
-          <CardContent className="text-center py-12">
-            <Facebook className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Nenhuma conta conectada</h3>
-            <p className="text-gray-400 mb-6">
-              Configure sua primeira conta do Meta Ads para começar a importar campanhas
-            </p>
-            <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Primeira Conta
-            </Button>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-white">Campanhas</CardTitle>
+                <p className="text-gray-400 text-sm">Gerencie suas campanhas ativas</p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white w-full sm:w-48">
+                    <SelectValue placeholder="Filtrar por conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as Contas</SelectItem>
+                    {adAccounts?.map((account: AdAccount) => (
+                      <SelectItem key={account.id} value={account.accountId}>
+                        {account.name} ({account.network})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button
+                  onClick={() => setAccountsDialogOpen(true)}
+                  variant="outline"
+                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Contas ({adAccounts?.length || 0})
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Mobile: Stack layout, Desktop: Grid layout */}
+            <div className="space-y-3 lg:space-y-4">
+              {filteredCampaigns.map((campaign) => (
+                <div key={campaign.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <NetworkIcon network={campaign.network as 'facebook' | 'google'} size={16} />
+                        <h4 className="text-sm font-medium text-white truncate">{campaign.name}</h4>
+                      </div>
+                      {getStatusBadge(campaign.status)}
+                    </div>
+                    
+                    {/* Mobile: Stack layout, Desktop: Grid layout */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                      <div className="flex justify-between sm:block">
+                        <span className="text-gray-400">Gasto:</span>
+                        <div className="text-right sm:text-left">
+                          <div className="text-white font-medium">{formatCurrency(campaign.amountSpent, 'BRL')}</div>
+                          {campaign.originalCurrency && campaign.originalCurrency !== 'BRL' && formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency) && (
+                            <div className="text-gray-500 text-xs">
+                              {formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-between sm:block">
+                        <span className="text-gray-400">Impressões:</span>
+                        <span className="text-white font-medium">{campaign.impressions.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between sm:block">
+                        <span className="text-gray-400">Cliques:</span>
+                        <span className="text-white font-medium">{campaign.clicks.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between sm:block">
+                        <span className="text-gray-400">CTR:</span>
+                        <span className="text-white font-medium">{formatPercentage(campaign.ctr)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Campaigns List */}
-      {filteredCampaigns?.length ? (
-        <Card className="glassmorphism border-gray-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-white flex items-center space-x-2">
-              <Facebook className="w-4 h-4 text-blue-500" />
-              <span>Campanhas {selectedAccountId !== "all" && `- ${adAccounts?.find(acc => acc.accountId === selectedAccountId)?.name}`}</span>
-            </CardTitle>
-            <CardDescription className="text-sm text-gray-400 mb-3">
-              Selecione campanhas para incluir no dashboard
-            </CardDescription>
-            <div className="mb-4">
-              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                  <SelectValue placeholder="Selecionar conta" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-600">
-                  <SelectItem value="all" className="text-white">
-                    <div className="flex items-center gap-2">
-                      <Globe size={16} className="text-gray-400" />
-                      <span>Todas as contas</span>
-                    </div>
-                  </SelectItem>
-                  {adAccounts?.map((account) => (
-                    <SelectItem key={account.id} value={account.accountId} className="text-white">
-                      <div className="flex items-center gap-2">
-                        <NetworkIcon network={account.network as 'facebook' | 'google'} size={16} />
-                        <span>{account.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {campaignsLoading ? (
-                [...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 glassmorphism-light" />
-                ))
-              ) : (
-                filteredCampaigns.map((campaign) => (
-                  <div
-                    key={campaign.id}
-                    className={`glassmorphism-light rounded-lg p-3 border transition-all duration-200 ${
-                      campaign.isSelected 
-                        ? 'border-blue-400/50 bg-blue-500/10' 
-                        : 'border-gray-600 hover:border-gray-500'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3 flex-1">
-                        <Switch
-                          checked={campaign.isSelected}
-                          onCheckedChange={() => toggleCampaignMutation.mutate({
-                            campaignId: campaign.id,
-                            isSelected: campaign.isSelected
-                          })}
-                          className="scale-75"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <NetworkIcon network={campaign.network as 'facebook' | 'google'} size={16} />
-                            <h4 className="text-sm font-medium text-white truncate">{campaign.name}</h4>
-                            {getStatusBadge(campaign.status)}
-                          </div>
-                          <div className="grid grid-cols-4 gap-3 text-xs">
-                            <div>
-                              <span className="text-gray-400">Gasto: </span>
-                              <div className="flex flex-col">
-                                <span className="text-white font-medium">{formatCurrency(campaign.amountSpent, 'BRL')}</span>
-                                {campaign.originalCurrency && campaign.originalCurrency !== 'BRL' && formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency) && (
-                                  <span className="text-gray-500 text-xs">
-                                    {formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Impressões: </span>
-                              <span className="text-white font-medium">{campaign.impressions.toLocaleString()}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Cliques: </span>
-                              <span className="text-white font-medium">{campaign.clicks.toLocaleString()}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">CTR: </span>
-                              <span className="text-white font-medium">{formatPercentage(campaign.ctr)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : adAccounts?.length ? (
-        <Card className="glassmorphism border-gray-700">
-          <CardContent className="text-center py-12">
-            <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">Nenhuma campanha encontrada</h3>
-            <p className="text-gray-400 mb-6">
-              Sincronize suas campanhas do Meta Ads para começar
-            </p>
-            <Button 
-              onClick={() => syncCampaignsMutation.mutate()}
-              disabled={syncCampaignsMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-              Sincronizar Campanhas
-            </Button>
-          </CardContent>
-        </Card>
-      ) : adAccounts?.length ? (
-        <Card className="glassmorphism border-gray-700">
-          <CardContent className="text-center py-12">
-            <Facebook className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">
-              {selectedAccountId === "all" ? "Nenhuma campanha encontrada" : "Nenhuma campanha na conta selecionada"}
-            </h3>
-            <p className="text-gray-400 mb-6">
-              Sincronize suas campanhas do Meta Ads para começar
-            </p>
-            <Button 
-              onClick={() => syncCampaignsMutation.mutate()}
-              disabled={syncCampaignsMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncCampaignsMutation.isPending ? 'animate-spin' : ''}`} />
-              Sincronizar Campanhas
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* Modal de Todas as Contas Conectadas */}
-      <Dialog open={accountsModalOpen} onOpenChange={setAccountsModalOpen}>
-        <DialogContent className="glassmorphism border-gray-700 max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Add Account Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="glassmorphism border-gray-700 max-w-md mx-4">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center space-x-2">
-              <FacebookIcon size={20} />
-              <GoogleAdsIcon size={20} />
-              <span>Todas as Contas Conectadas</span>
+            <DialogTitle className="text-white">
+              Conectar Conta {selectedNetwork === 'facebook' ? 'Meta' : 'Google Ads'}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Visualize todas as suas contas de anúncios conectadas
+              Insira as credenciais da sua conta {selectedNetwork === 'facebook' ? 'Meta Business' : 'Google Ads'}
             </DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-4 py-4">
+            <div className="space-y-1">
+              <Label htmlFor="accountId" className="text-sm text-gray-300">ID da Conta</Label>
+              <Input
+                id="accountId"
+                value={newAccount.accountId}
+                onChange={(e) => setNewAccount(prev => ({ ...prev, accountId: e.target.value }))}
+                className="bg-gray-800 border-gray-600 text-white h-9"
+                placeholder={selectedNetwork === 'facebook' ? "ID da conta do Facebook Ads" : "ID da conta do Google Ads"}
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="name" className="text-sm text-gray-300">Nome da Conta</Label>
+              <Input
+                id="name"
+                value={newAccount.name}
+                onChange={(e) => setNewAccount(prev => ({ ...prev, name: e.target.value }))}
+                className="bg-gray-800 border-gray-600 text-white h-9"
+                placeholder="Nome para identificar a conta"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="accessToken" className="text-sm text-gray-300">Token de Acesso</Label>
+              <Input
+                id="accessToken"
+                value={newAccount.accessToken}
+                onChange={(e) => setNewAccount(prev => ({ ...prev, accessToken: e.target.value }))}
+                className="bg-gray-800 border-gray-600 text-white h-9"
+                placeholder={selectedNetwork === 'facebook' ? "Token de acesso do Facebook" : "Token OAuth2 do Google Ads"}
+                type="password"
+                required
+              />
+            </div>
+
+            {selectedNetwork === 'google' && (
+              <div className="space-y-1">
+                <Label htmlFor="managerId" className="text-sm text-gray-300">Manager Account ID (opcional)</Label>
+                <Input
+                  id="managerId"
+                  value={newAccount.businessManagerId}
+                  onChange={(e) => setNewAccount(prev => ({ ...prev, businessManagerId: e.target.value }))}
+                  className="bg-gray-800 border-gray-600 text-white h-9"
+                  placeholder="ID da conta gerenciadora Google Ads"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => addAccountMutation.mutate(newAccount)}
+              disabled={addAccountMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {addAccountMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
+              Conectar Conta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Accounts Dialog */}
+      <Dialog open={accountsDialogOpen} onOpenChange={setAccountsDialogOpen}>
+        <DialogContent className="glassmorphism border-gray-700 max-w-2xl mx-4">
+          <DialogHeader>
+            <DialogTitle className="text-white">Contas Conectadas</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Gerencie suas contas de anúncios conectadas
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-96 overflow-y-auto">
             {adAccounts && adAccounts.length > 0 ? (
-              <>
-                {/* Contas Meta */}
+              <div className="space-y-4">
+                {/* Meta Ads Accounts */}
                 {(() => {
-                  const metaAccounts = adAccounts.filter(a => a.network === 'facebook');
-                  return metaAccounts.length > 0 ? (
+                  const facebookAccounts = adAccounts.filter(a => a.network === 'facebook');
+                  return facebookAccounts.length > 0 ? (
                     <div>
                       <h3 className="text-sm font-medium text-white flex items-center space-x-2 mb-3">
                         <FacebookIcon size={16} />
-                        <span>Meta Ads ({metaAccounts.length})</span>
+                        <span>Meta Ads ({facebookAccounts.length})</span>
                       </h3>
                       <div className="space-y-2">
-                        {metaAccounts.map((account) => (
+                        {facebookAccounts.map((account) => (
                           <div key={account.id} className="glassmorphism-light rounded-lg p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
@@ -930,7 +564,7 @@ export default function Ads() {
                   ) : null;
                 })()}
 
-                {/* Contas Google Ads */}
+                {/* Google Ads Accounts */}
                 {(() => {
                   const googleAccounts = adAccounts.filter(a => a.network === 'google');
                   return googleAccounts.length > 0 ? (
@@ -964,7 +598,7 @@ export default function Ads() {
                     </div>
                   ) : null;
                 })()}
-              </>
+              </div>
             ) : (
               <div className="text-center py-8">
                 <Globe className="w-12 h-12 text-gray-400 mx-auto mb-3" />
