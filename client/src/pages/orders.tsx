@@ -185,7 +185,7 @@ export default function Orders() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="glassmorphism border-gray-600">
-                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="all">Status: Todos</SelectItem>
                   <SelectItem value="delivered">Entregues</SelectItem>
                   <SelectItem value="in transit">Em trânsito</SelectItem>
                   <SelectItem value="shipped">Enviados</SelectItem>
@@ -205,7 +205,7 @@ export default function Orders() {
                   <SelectItem value="30">30 dias</SelectItem>
                   <SelectItem value="90">3 meses</SelectItem>
                   <SelectItem value="365">1 ano</SelectItem>
-                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="all">Período: Todos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
