@@ -77,7 +77,7 @@ export function SyncStatus() {
 
   if (isLoading) {
     return (
-      <Card className="glassmorphism">
+      <Card className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
         <CardHeader>
           <div className="flex items-center space-x-2">
             <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />
@@ -89,7 +89,7 @@ export function SyncStatus() {
   }
 
   return (
-    <Card className="glassmorphism" data-testid="sync-status-card">
+    <Card className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="sync-status-card">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
