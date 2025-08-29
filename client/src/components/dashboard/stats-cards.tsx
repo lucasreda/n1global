@@ -361,9 +361,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         >
           <div className="flex items-center justify-between mb-3">
             <TrendingUp className={`w-4 h-4 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-[#4ade80]'}`} />
-            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(totalProfitBRL))}`}>
-              {parseFloat(calculateGrowth(totalProfitBRL)) > 0 ? '+' : ''}{calculateGrowth(totalProfitBRL)}%
-            </div>
           </div>
           <div>
             <h3 className={`text-lg font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h3>
