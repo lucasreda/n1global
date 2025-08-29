@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Filter, RefreshCw, Download } from "lucide-react";
+import { Calendar, Filter, RefreshCw } from "lucide-react";
 
 export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("30");
@@ -234,7 +234,7 @@ export default function Dashboard() {
             className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
             data-testid="button-complete-sync"
           >
-            <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
             <span className="hidden sm:inline">
               {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
             </span>
