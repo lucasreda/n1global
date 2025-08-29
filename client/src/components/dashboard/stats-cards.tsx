@@ -298,7 +298,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
           >
             <div className="flex items-center justify-between mb-3 -mt-1">
-              <ShoppingCart className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center space-x-2">
+                <ShoppingCart className="w-4 h-4 text-slate-400" />
+                <p className="text-sm font-medium text-gray-400">Pedidos Transportadora</p>
+              </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-[#4ade80]" />
                 <div className="px-2 py-1 rounded-md text-xs font-medium bg-[#4ade80]/10 text-[#4ade80]">
@@ -360,7 +363,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
           >
             <div className="flex items-center justify-between mb-3 -mt-1">
-              <ShoppingCart className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center space-x-2">
+                <ShoppingCart className="w-4 h-4 text-slate-400" />
+                <p className="text-sm font-medium text-gray-400">Pedidos Transportadora</p>
+              </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-[#4ade80]" />
                 <div className="px-2 py-1 rounded-md text-xs font-medium bg-[#4ade80]/10 text-[#4ade80]">
