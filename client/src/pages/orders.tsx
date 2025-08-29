@@ -261,7 +261,7 @@ export default function Orders() {
                     <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
                     <div className="glassmorphism-light rounded-xl p-4 max-w-lg mx-auto">
                       <p className="text-gray-300 text-sm text-center">
-                        Se você fez a integração do Shopify, faça a sincronia completa novamente caso não veja seus pedidos.
+                        Se você fez a integração da Shopify, faça a sincronia completa novamente caso não veja seus pedidos.
                       </p>
                     </div>
                   </div>
@@ -375,7 +375,7 @@ export default function Orders() {
                           <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
                           <div className="glassmorphism-light rounded-xl p-4 max-w-lg mx-auto">
                             <p className="text-gray-300 text-sm text-center">
-                              Se você fez a integração do Shopify, faça a sincronia completa novamente caso não veja seus pedidos.
+                              Se você fez a integração da Shopify, faça a sincronia completa novamente caso não veja seus pedidos.
                             </p>
                           </div>
                         </div>
@@ -404,7 +404,7 @@ export default function Orders() {
                                   return order.shopifyOrderNumber;
                                 }
                                 
-                                // 2. Se é pedido Shopify sem order_number, formata o ID
+                                // 2. Se é pedida Shopify sem order_number, formata o ID
                                 if (order.id && order.id.startsWith('shopify_')) {
                                   return `#${order.id.replace('shopify_', '')}`;
                                 }
