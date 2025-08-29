@@ -1,5 +1,5 @@
-import React from "react";
-import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock } from "lucide-react";
+import React, { useState } from "react";
+import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock, Eye, EyeOff } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -13,6 +13,7 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProps) {
+  const [isOrdersVisible, setIsOrdersVisible] = useState(true);
   const operationId = localStorage.getItem("current_operation_id");
   
   // Converter período para formato da API
@@ -223,8 +224,18 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <p className="text-base text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-400">Pedidos</p>
-                <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-400">Pedidos</p>
+                  <button 
+                    onClick={() => setIsOrdersVisible(!isOrdersVisible)}
+                    className="text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    {isOrdersVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                </div>
+                <h3 className={`text-[22px] font-bold mt-1 text-white ${!isOrdersVisible ? 'blur-sm select-none' : ''}`}>
+                  {shopifyOrders.toLocaleString()}
+                </h3>
                 <div className={`px-2 py-1 rounded-md text-xs font-medium mt-2 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
                   {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
                 </div>
@@ -349,8 +360,18 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <p className="text-base text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-400">Pedidos</p>
-                <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-400">Pedidos</p>
+                  <button 
+                    onClick={() => setIsOrdersVisible(!isOrdersVisible)}
+                    className="text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    {isOrdersVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                </div>
+                <h3 className={`text-[22px] font-bold mt-1 text-white ${!isOrdersVisible ? 'blur-sm select-none' : ''}`}>
+                  {shopifyOrders.toLocaleString()}
+                </h3>
                 <div className={`px-2 py-1 rounded-md text-xs font-medium mt-1 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
                   {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
                 </div>
