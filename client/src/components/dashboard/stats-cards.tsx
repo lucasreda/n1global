@@ -266,7 +266,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         <div className="hidden sm:grid gap-3 lg:gap-6" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
           {/* Gráfico de Pedidos Diários - 1/3 */}
           <div 
-            className="group"
+            className="group pt-1"
             data-testid="card-daily-orders"
           >
             <div className="flex items-center justify-between mb-4">
