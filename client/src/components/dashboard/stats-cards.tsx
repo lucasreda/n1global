@@ -297,7 +297,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                   <IconComponent className={`w-4 h-4 ${getIconColors(metric.color)}`} />
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-white mb-1">{metric.value}</h4>
+                  <h4 className="text-base font-semibold text-white mb-1">{metric.value}</h4>
                   <p className="text-xs font-medium text-gray-400">{metric.title}</p>
                 </div>
               </div>
