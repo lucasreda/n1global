@@ -265,7 +265,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex-shrink-0">
-                <BarChart3 className="w-4 h-4 text-slate-400" />
+                <BarChart3 className="w-5 h-5 text-slate-400" />
               </div>
             </div>
             <div className="mb-2">
