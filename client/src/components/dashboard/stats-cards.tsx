@@ -246,20 +246,14 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
         {/* Card Combinado de Pedidos e Entregues - Ocupa 40% */}
         <div 
-          className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
+          className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
           data-testid="card-orders-delivered"
           style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
           onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
           onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <ShoppingCart className="w-5 h-5 text-slate-400" />
-              </div>
-              <div>
-              </div>
-            </div>
+            <ShoppingCart className="w-4 h-4 text-slate-400" />
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-[#4ade80]" />
               <div className="px-2 py-1 rounded-md text-xs font-medium bg-[#4ade80]/10 text-[#4ade80]">
