@@ -200,9 +200,19 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                     <h3 className="text-2xl font-bold mt-1 text-white">{metric.value}</h3>
                   </div>
                 </div>
-                <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
-                  {parseFloat(metric.growth) > 0 ? '+' : ''}{metric.growth}%
-                </div>
+                {metric.isProfit ? (
+                  <div className={`px-3 py-2 rounded-lg text-lg font-bold ${
+                    isNegativeProfit 
+                      ? 'bg-red-500/20 text-red-300 border border-red-400/30' 
+                      : 'bg-[#4ade80]/20 text-[#4ade80] border border-[#4ade80]/30'
+                  }`}>
+                    {profitMargin.toFixed(1)}%
+                  </div>
+                ) : (
+                  <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
+                    {parseFloat(metric.growth) > 0 ? '+' : ''}{metric.growth}%
+                  </div>
+                )}
               </div>
               <p className={`text-sm ${isNegativeProfit ? 'text-red-400' : 'text-gray-500'}`}>{metric.subtitle}</p>
             </div>
