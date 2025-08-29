@@ -207,15 +207,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
               data-testid={metric.testId}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    <IconComponent className={`w-5 h-5 ${isNegativeProfit ? 'text-red-400' : getIconColors(metric.color)}`} />
-                  </div>
-                  <div>
-                    <p className={`text-sm font-medium ${isNegativeProfit ? 'text-red-300' : 'text-gray-400'}`}>{metric.title}</p>
-                    <h3 className="text-lg font-semibold mt-1 text-white">{metric.value}</h3>
-                  </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex-shrink-0">
+                  <IconComponent className={`w-5 h-5 ${isNegativeProfit ? 'text-red-400' : getIconColors(metric.color)}`} />
                 </div>
                 {metric.isProfit ? (
                   <div className="text-right">
@@ -235,6 +229,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                     {parseFloat(metric.growth) > 0 ? '+' : ''}{metric.growth}%
                   </div>
                 )}
+              </div>
+              <div className="mb-4">
+                <p className={`text-sm font-medium ${isNegativeProfit ? 'text-red-300' : 'text-gray-400'}`}>{metric.title}</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{metric.value}</h3>
               </div>
               <p className={`text-sm ${isNegativeProfit ? 'text-red-400' : 'text-gray-500'}`}>{metric.subtitle}</p>
             </div>
