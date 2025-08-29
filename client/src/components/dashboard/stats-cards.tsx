@@ -335,7 +335,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
             <div className="mb-2">
               <p className="text-sm font-medium text-gray-400">Pedidos Shopify</p>
-              <h3 className="text-xl font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
+              <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
             </div>
             <p className="text-sm text-gray-500">Importados da plataforma</p>
           </div>
