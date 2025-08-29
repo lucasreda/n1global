@@ -220,10 +220,12 @@ export default function Orders() {
             {/* Sync button and count */}
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
               <Button 
+                variant="outline"
+                size="sm"
                 onClick={() => syncMutation.mutate()}
                 disabled={syncMutation.isPending}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 whitespace-nowrap h-9 text-sm px-3"
-                data-testid="button-sync-shopify-carrier"
+                className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 whitespace-nowrap flex-1"
+                data-testid="button-sync-complete"
               >
                 {syncMutation.isPending ? (
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -231,10 +233,10 @@ export default function Orders() {
                   <Zap className="w-4 h-4 mr-2" />
                 )}
                 <span className="hidden sm:inline">
-                  {syncMutation.isPending ? "Sincronizando..." : "Sync Shopify + Transportadora + Ads"}
+                  {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
                 </span>
                 <span className="sm:hidden">
-                  {syncMutation.isPending ? "Sincronizando..." : "Sync"}
+                  {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
                 </span>
               </Button>
               <div className="text-xs text-gray-300 text-center sm:text-left whitespace-nowrap">
