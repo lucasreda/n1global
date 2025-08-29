@@ -89,7 +89,7 @@ export function Sidebar() {
         <img 
           src={logoImage} 
           alt="COD Dashboard Logo" 
-          className="w-[105px] h-auto object-contain"
+          className="w-[110px] h-auto object-contain"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
             const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
