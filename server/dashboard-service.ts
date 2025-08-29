@@ -719,6 +719,26 @@ export class DashboardService {
       whereConditions.push(eq(orders.provider, provider));
     }
     
+    console.log(`📊 Chart will use same period: ${period}`);
+    
+    // First, let's see what orders we have in this period
+    const debugOrders = await db
+      .select({
+        date: sql<string>`DATE(${orders.orderDate})`,
+        orderDate: orders.orderDate,
+        total: orders.total,
+        status: orders.status,
+        orderNumber: orders.orderNumber
+      })
+      .from(orders)
+      .where(and(...whereConditions))
+      .orderBy(orders.orderDate);
+      
+    console.log(`🔍 Found ${debugOrders.length} orders for chart in period ${period}:`);
+    debugOrders.slice(0, 5).forEach(order => {
+      console.log(`   ${order.date} - Order ${order.orderNumber}: €${order.total} (${order.status})`);
+    });
+
     // Group by date
     const revenueData = await db
       .select({
@@ -730,6 +750,8 @@ export class DashboardService {
       .where(and(...whereConditions))
       .groupBy(sql`DATE(${orders.orderDate})`)
       .orderBy(sql`DATE(${orders.orderDate})`);
+    
+    console.log(`📊 Revenue data grouped by date:`, revenueData.map(r => ({ date: r.date, revenue: r.revenue, orders: r.orderCount })));
     
     return revenueData.map(row => ({
       date: row.date,
