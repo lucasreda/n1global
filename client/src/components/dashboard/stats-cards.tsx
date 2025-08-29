@@ -76,6 +76,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const revenue = metrics?.totalRevenue || 0;
   const productCosts = metrics?.totalProductCosts || 0;
   const productCostsBRL = metrics?.totalProductCostsBRL || 0;
+  const shippingCosts = metrics?.totalShippingCosts || 0;
+  const shippingCostsBRL = metrics?.totalShippingCostsBRL || 0;
   const marketingCosts = metrics?.marketingCosts || 0;
   const marketingCostsBRL = metrics?.marketingCostsBRL || 0;
   const marketingCostsEUR = metrics?.marketingCostsEUR || 0;
@@ -147,12 +149,12 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       testId: "card-confirmed-orders"
     },
     {
-      title: "Retornados",
-      value: returnedOrders.toLocaleString(),
-      subtitle: "Devoluções",
-      icon: RotateCcw,
+      title: "Custos Envio",
+      value: formatCurrencyBRL(shippingCostsBRL),
+      subtitle: shippingCosts > 0 ? formatCurrencyEUR(shippingCosts) : "Sem custos",
+      icon: Truck,
       color: "amber",
-      testId: "card-returned-orders"
+      testId: "card-shipping-costs"
     },
     {
       title: "Cancelados",
