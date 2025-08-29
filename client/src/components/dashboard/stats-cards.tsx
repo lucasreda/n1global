@@ -9,6 +9,7 @@ import facebookIcon from "@assets/meta-icon_1756415603759.png";
 import facebookIconMini from "@assets/metamini_1756416312919.png";
 import googleAdsIcon from "@assets/gadsicon_1756416065444.png";
 import googleAdsIconMini from "@assets/gadsmini_1756416199452.png";
+import n1MiniIcon from "@assets/n1-mini_1756458815716.png";
 
 interface StatsCardsProps {
   metrics: any;
@@ -280,7 +281,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         {/* Mobile: Pedidos em linha própria */}
         <div className="sm:hidden">
           <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col"
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col relative"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
@@ -317,6 +318,12 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 )}
               </div>
             </div>
+            {/* Ícone no canto inferior direito */}
+            <img 
+              src={n1MiniIcon} 
+              alt="N1" 
+              className="absolute bottom-2 right-2 w-6 h-6 object-contain opacity-60"
+            />
           </div>
         </div>
         
@@ -415,7 +422,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           
           {/* Pedidos - 1/3 */}
           <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col h-[180px]"
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col h-[180px] relative"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
@@ -452,6 +459,12 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 )}
               </div>
             </div>
+            {/* Ícone no canto inferior direito */}
+            <img 
+              src={n1MiniIcon} 
+              alt="N1" 
+              className="absolute bottom-2 right-2 w-6 h-6 object-contain opacity-60"
+            />
           </div>
           
           {/* CPA & Marketing - 1/3 */}
