@@ -30,27 +30,38 @@ export default function Integrations() {
   // Usar a operação atual do hook
   const operationId = selectedOperation;
 
-  // Buscar status da integração Shopify com key única por operação
-  const { data: shopifyIntegration } = useQuery({
-    queryKey: ["shopify-integration", operationId, Date.now()], // Add timestamp to force new query
-    queryFn: async () => {
-      if (!operationId) return null;
-      console.log("🔄 Fetching Shopify integration for operation:", operationId);
+  // State for shopify integration data
+  const [shopifyData, setShopifyData] = useState(null);
+
+  // Fetch shopify integration when operation changes
+  useEffect(() => {
+    const fetchShopifyIntegration = async () => {
+      if (!selectedOperation) {
+        setShopifyData(null);
+        return;
+      }
+      
+      console.log("🔄 Fetching Shopify integration for operation:", selectedOperation);
       try {
-        const response = await authenticatedApiRequest("GET", `/api/integrations/shopify?operationId=${operationId}`);
-        if (response.status === 404) return null;
+        const response = await authenticatedApiRequest("GET", `/api/integrations/shopify?operationId=${selectedOperation}`);
+        if (response.status === 404) {
+          console.log("📋 No Shopify integration found for", selectedOperation);
+          setShopifyData(null);
+          return;
+        }
         const data = await response.json();
-        console.log("📋 Shopify integration data for", operationId, ":", data?.id || "not found");
-        return data;
+        console.log("📋 Shopify integration found for", selectedOperation, ":", data?.id);
+        setShopifyData(data);
       } catch (error) {
         console.error("❌ Error fetching Shopify integration:", error);
-        return null;
+        setShopifyData(null);
       }
-    },
-    enabled: !!operationId,
-    staleTime: 0,
-    gcTime: 0, // Don't cache at all
-  });
+    };
+
+    fetchShopifyIntegration();
+  }, [selectedOperation]);
+
+  const shopifyIntegration = shopifyData;
 
   // Determinar status real da integração Shopify
   const getShopifyStatus = () => {
