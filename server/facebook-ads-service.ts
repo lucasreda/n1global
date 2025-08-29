@@ -437,8 +437,10 @@ export class FacebookAdsService {
       
       const accountIds = storeAdAccounts.map(acc => acc.accountId);
       
+      console.log(`🔍 Debug: storeId ${storeId} - Encontradas ${storeAdAccounts.length} contas, accountIds: [${accountIds.join(', ')}]`);
+      
       if (accountIds.length === 0) {
-        console.log(`💰 Nenhuma conta Facebook encontrada para store ${storeId}`);
+        console.log(`💰 Nenhuma conta Facebook encontrada para store ${storeId} - retornando custos zero`);
         return { totalBRL: 0, totalEUR: 0, campaigns: [] };
       }
       
