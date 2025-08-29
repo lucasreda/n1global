@@ -233,12 +233,14 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                     {isOrdersVisible ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 </div>
-                <h3 className={`text-[22px] font-bold mt-1 text-white ${!isOrdersVisible ? 'blur-sm select-none' : ''}`}>
+                <h3 className={`text-[22px] font-bold mt-1 text-white ${!isOrdersVisible ? 'blur-xl select-none' : ''}`}>
                   {shopifyOrders.toLocaleString()}
                 </h3>
-                <div className={`px-2 py-1 rounded-md text-xs font-medium mt-2 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
-                  {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
-                </div>
+                {isOrdersVisible && (
+                  <div className={`px-2 py-1 rounded-md text-xs font-medium mt-2 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
+                    {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -369,12 +371,14 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                     {isOrdersVisible ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 </div>
-                <h3 className={`text-[22px] font-bold mt-1 text-white ${!isOrdersVisible ? 'blur-sm select-none' : ''}`}>
+                <h3 className={`text-[22px] font-bold mt-1 text-white ${!isOrdersVisible ? 'blur-xl select-none' : ''}`}>
                   {shopifyOrders.toLocaleString()}
                 </h3>
-                <div className={`px-2 py-1 rounded-md text-xs font-medium mt-1 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
-                  {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
-                </div>
+                {isOrdersVisible && (
+                  <div className={`px-2 py-1 rounded-md text-xs font-medium mt-1 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
+                    {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
+                  </div>
+                )}
               </div>
             </div>
           </div>
