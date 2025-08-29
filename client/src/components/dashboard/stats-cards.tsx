@@ -197,7 +197,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                   </div>
                   <div>
                     <p className={`text-sm font-medium ${isNegativeProfit ? 'text-red-300' : 'text-gray-400'}`}>{metric.title}</p>
-                    <h3 className={`text-2xl font-bold mt-1 ${isNegativeProfit ? 'text-red-200' : 'text-white'}`}>{metric.value}</h3>
+                    <h3 className="text-2xl font-bold mt-1 text-white">{metric.value}</h3>
                   </div>
                 </div>
                 <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
