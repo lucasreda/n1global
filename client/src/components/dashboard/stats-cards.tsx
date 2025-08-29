@@ -291,7 +291,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         {/* Mobile layout - Card transportadora em linha própria */}
         <div className="sm:hidden">
           <div 
-            className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
+            className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
             data-testid="card-orders-delivered"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
