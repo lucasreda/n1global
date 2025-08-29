@@ -291,7 +291,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         {/* Mobile layout - Card transportadora em linha própria */}
         <div className="sm:hidden">
           <div 
-            className="group backdrop-blur-sm rounded-xl p-8 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
             data-testid="card-orders-delivered"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
@@ -310,7 +310,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-2" style={{marginTop: '-8px'}}>
+            <div className="grid grid-cols-3 gap-2">
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Pedidos N1</p>
