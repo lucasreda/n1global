@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 
 export const DSS_OPERATION_ID = 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4';
 
 export function useCurrentOperation() {
   const [selectedOperation, setSelectedOperation] = useState<string>("");
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
 
   // Fetch user operations with fallback for production auth issues
   const { data: operations = [], isLoading, error } = useQuery<{id: string, name: string, description?: string}[]>({
@@ -86,6 +88,12 @@ export function useCurrentOperation() {
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
     queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
     queryClient.invalidateQueries({ queryKey: ['/api/integrations/shopify'] });
+    
+    // Redirect to dashboard after operation change
+    if (location !== "/") {
+      console.log("🚀 Redirecting to dashboard after operation change");
+      setLocation("/");
+    }
     
     console.log("✅ Operation changed successfully without reload");
   };
