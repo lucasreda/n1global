@@ -26,9 +26,38 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           ))}
         </div>
         
+        {/* Combined Orders Card Loading */}
+        <div className="w-full">
+          <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 bg-gray-600/50 rounded"></div>
+                <div>
+                  <div className="w-32 h-5 bg-gray-600/50 rounded mb-2"></div>
+                  <div className="w-24 h-3 bg-gray-600/50 rounded"></div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-5 h-5 bg-gray-600/50 rounded"></div>
+                <div className="w-12 h-6 bg-gray-600/50 rounded"></div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="text-center">
+                <div className="w-16 h-8 bg-gray-600/50 rounded mb-1 mx-auto"></div>
+                <div className="w-24 h-4 bg-gray-600/50 rounded mx-auto"></div>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-8 bg-gray-600/50 rounded mb-1 mx-auto"></div>
+                <div className="w-20 h-4 bg-gray-600/50 rounded mx-auto"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         {/* Secondary Cards Loading */}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2 sm:gap-4">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
               <div className="w-8 h-8 bg-gray-600/50 rounded mb-3"></div>
               <div className="w-16 h-6 bg-gray-600/50 rounded mb-1"></div>
@@ -110,22 +139,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
 
   // Métricas secundárias
   const secondaryMetrics = [
-    {
-      title: "Pedidos",
-      value: totalOrders.toLocaleString(),
-      subtitle: "Total",
-      icon: ShoppingCart,
-      color: "slate",
-      testId: "card-total-orders"
-    },
-    {
-      title: "Entregues",
-      value: deliveredOrders.toLocaleString(),
-      subtitle: `${deliveryRate.toFixed(1)}%`,
-      icon: CheckCircle,
-      color: "emerald",
-      testId: "card-delivered-orders"
-    },
     {
       title: "Confirmados",
       value: confirmedOrders.toLocaleString(),
@@ -228,6 +241,44 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           );
         })}
+      </div>
+
+      {/* Card Combinado de Pedidos e Entregues */}
+      <div className="w-full">
+        <div 
+          className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300" 
+          data-testid="card-orders-delivered"
+          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <ShoppingCart className="w-5 h-5 text-slate-400" />
+              <div>
+                <h3 className="text-lg font-semibold text-white">Pedidos & Entregas</h3>
+                <p className="text-sm text-gray-400">Status dos pedidos</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-[#4ade80]" />
+              <div className="px-3 py-1 rounded-md text-sm font-semibold bg-[#4ade80]/10 text-[#4ade80]">
+                {deliveryRate.toFixed(1)}%
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div className="text-center">
+              <h4 className="text-2xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
+              <p className="text-sm text-gray-400">Total de Pedidos</p>
+            </div>
+            <div className="text-center">
+              <h4 className="text-2xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
+              <p className="text-sm text-gray-400">Entregues</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Métricas Secundárias */}
