@@ -266,7 +266,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                   <span className="text-gray-400 mx-1">|</span>
                   <span className="text-white">{returnedOrders.toLocaleString()}</span>
                 </div>
-                <p className="text-xs text-gray-500">Entregues|Retorn</p>
+                <p className="text-xs text-gray-500">Entregues|Retornados</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-cyan-400 mb-1">{confirmedOrders.toLocaleString()}</h4>
@@ -332,7 +332,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                   <span className="text-gray-400 mx-1">|</span>
                   <span className="text-white">{returnedOrders.toLocaleString()}</span>
                 </div>
-                <p className="text-xs text-gray-500">Entregues|Retorn</p>
+                <p className="text-xs text-gray-500">Entregues|Retornados</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-cyan-400 mb-1">{confirmedOrders.toLocaleString()}</h4>
