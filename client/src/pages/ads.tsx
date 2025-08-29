@@ -159,8 +159,11 @@ export default function Ads() {
   const { data: adAccounts, isLoading: accountsLoading } = useQuery({
     queryKey: ["/api/ad-accounts", selectedOperation],
     queryFn: async () => {
+      console.log("🔍 Fetching ad accounts for operation:", selectedOperation);
       const response = await authenticatedApiRequest("GET", `/api/ad-accounts?operationId=${selectedOperation}`);
-      return response.json() as Promise<AdAccount[]>;
+      const data = await response.json() as AdAccount[];
+      console.log("📋 Ad accounts received:", data.length, "accounts");
+      return data;
     },
     enabled: !!selectedOperation,
   });
@@ -169,8 +172,11 @@ export default function Ads() {
   const { data: campaigns, isLoading: campaignsLoading } = useQuery({
     queryKey: ["/api/campaigns", selectedPeriod, selectedOperation],
     queryFn: async () => {
+      console.log("🎯 Fetching campaigns for operation:", selectedOperation, "period:", selectedPeriod);
       const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true&operationId=${selectedOperation}`);
-      return response.json() as Promise<Campaign[]>;
+      const data = await response.json() as Campaign[];
+      console.log("📊 Campaigns received:", data.length, "campaigns");
+      return data;
     },
     enabled: !!selectedOperation && (adAccounts?.length || 0) >= 0,
   });
