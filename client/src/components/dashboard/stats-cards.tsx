@@ -362,7 +362,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
           >
-            <div className="flex items-center justify-between mb-3" style={{marginTop: '-2px'}}>
+            <div className="flex items-center justify-between mb-3" style={{marginTop: '-3px'}}>
               <div className="flex items-center space-x-2">
                 <ShoppingCart className="w-4 h-4 text-slate-400" />
                 <p className="text-sm font-medium text-gray-400">Pedidos Transportadora</p>
