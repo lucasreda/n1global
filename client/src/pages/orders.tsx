@@ -49,12 +49,19 @@ export default function Orders() {
             'X-Operation-Id': operationToUse
           }
         });
+        
+        if (!response.ok) {
+          console.error("❌ API response not ok:", response.status);
+          return { data: [], total: 0, totalPages: 0, currentPage: 1 };
+        }
+        
         const data = await response.json();
         console.log("✅ Orders fetched successfully:", data.total || data.length || 'unknown count');
         return data;
       } catch (error) {
         console.error("❌ Orders fetch error:", error);
-        throw error;
+        // Return empty state instead of throwing to prevent unhandled rejection
+        return { data: [], total: 0, totalPages: 0, currentPage: 1 };
       }
     },
     enabled: !!selectedOperation, // Only run when we have an operation selected
