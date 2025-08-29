@@ -159,7 +159,7 @@ export default function Ads() {
   const { data: adAccounts, isLoading: accountsLoading } = useQuery({
     queryKey: ["/api/ad-accounts", selectedOperation],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/ad-accounts");
+      const response = await authenticatedApiRequest("GET", `/api/ad-accounts?operationId=${selectedOperation}`);
       return response.json() as Promise<AdAccount[]>;
     },
     enabled: !!selectedOperation,
@@ -169,10 +169,10 @@ export default function Ads() {
   const { data: campaigns, isLoading: campaignsLoading } = useQuery({
     queryKey: ["/api/campaigns", selectedPeriod, selectedOperation],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true`);
+      const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true&operationId=${selectedOperation}`);
       return response.json() as Promise<Campaign[]>;
     },
-    enabled: !!selectedOperation && (adAccounts?.length || 0) > 0,
+    enabled: !!selectedOperation && (adAccounts?.length || 0) >= 0,
   });
 
   // Add new ad account
@@ -180,7 +180,8 @@ export default function Ads() {
     mutationFn: async (accountData: any) => {
       const response = await authenticatedApiRequest("POST", "/api/ad-accounts", {
         ...accountData,
-        network: selectedNetwork
+        network: selectedNetwork,
+        operationId: selectedOperation
       });
       return response.json();
     },
@@ -236,8 +237,9 @@ export default function Ads() {
   // Toggle campaign selection
   const toggleCampaignMutation = useMutation({
     mutationFn: async ({ campaignId, isSelected }: { campaignId: string; isSelected: boolean }) => {
-      const response = await authenticatedApiRequest("PATCH", `/api/facebook/campaigns/${campaignId}`, {
-        isSelected: !isSelected
+      const response = await authenticatedApiRequest("PATCH", `/api/campaigns/${campaignId}`, {
+        isSelected: !isSelected,
+        operationId: selectedOperation
       });
       return response.json();
     },

@@ -2010,13 +2010,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
       
-      // Get storeId from middleware context for data isolation
-      const storeId = (req as any).storeId;
+      // Get operation from query parameter for data isolation
+      const operationId = req.query.operationId as string;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
       
       const accounts = await db
         .select()
         .from(adAccounts)
-        .where(eq(adAccounts.storeId, storeId));
+        .where(eq(adAccounts.operationId, operationId));
         
       res.json(accounts);
     } catch (error) {
@@ -2031,10 +2035,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { insertAdAccountSchema, adAccounts } = await import("@shared/schema");
       const { db } = await import("./db");
       
-      // Get storeId from middleware context for data isolation
+      // Get storeId from middleware context and operationId from body
       const storeId = (req as any).storeId;
+      const { operationId, ...accountDataRaw } = req.body;
       
-      const accountData = insertAdAccountSchema.parse(req.body);
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      const accountData = insertAdAccountSchema.parse(accountDataRaw);
       
       // Validate network type
       if (!['facebook', 'google'].includes(accountData.network)) {
@@ -2079,7 +2088,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .insert(adAccounts)
         .values({
           ...accountData,
-          storeId // Associate account with store for data isolation
+          storeId, // Associate account with store for data isolation
+          operationId // Associate account with specific operation
         })
         .returning();
         
@@ -2097,8 +2107,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq, and, inArray } = await import("drizzle-orm");
       
-      // Get storeId from middleware context for data isolation
+      // Get operation from query parameter for data isolation
+      const operationId = req.query.operationId as string;
       const storeId = (req as any).storeId;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
       
       const period = req.query.period as string || 'last_30d';
       const autoSync = req.query.autoSync === 'true';
@@ -2108,31 +2123,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           // Sync Facebook Ads
           const { facebookAdsService } = await import("./facebook-ads-service");
-          await facebookAdsService.syncCampaigns(period, storeId);
+          await facebookAdsService.syncCampaigns(period, storeId, operationId);
           
           // Sync Google Ads
           const { googleAdsService } = await import("./google-ads-service");
-          await googleAdsService.syncCampaigns(period, storeId);
+          await googleAdsService.syncCampaigns(period, storeId, operationId);
         } catch (error) {
           console.error('Auto-sync failed:', error);
         }
       }
       
-      // CRITICAL: Only get campaigns from accounts belonging to this store
-      const storeAccounts = await db
+      // CRITICAL: Only get campaigns from accounts belonging to this operation
+      const operationAccounts = await db
         .select()
         .from(adAccounts)
-        .where(eq(adAccounts.storeId, storeId));
+        .where(eq(adAccounts.operationId, operationId));
       
-      const storeAccountIds = storeAccounts.map(acc => acc.accountId);
+      const operationAccountIds = operationAccounts.map(acc => acc.accountId);
       
-      if (storeAccountIds.length === 0) {
+      if (operationAccountIds.length === 0) {
         return res.json([]);
       }
       
       // Use Facebook Ads service to get campaigns with live data for the specific period
       const { facebookAdsService } = await import("./facebook-ads-service");
-      const campaignsWithLiveData = await facebookAdsService.getCampaignsWithPeriod(period, storeId);
+      const campaignsWithLiveData = await facebookAdsService.getCampaignsWithPeriod(period, storeId, operationId);
       
       res.json(campaignsWithLiveData);
     } catch (error) {
@@ -2150,16 +2165,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq, and, inArray } = await import("drizzle-orm");
       
-      // Get storeId from middleware context for data isolation
-      const storeId = (req as any).storeId;
+      // Get operationId from request body for data isolation
+      const operationId = req.body.operationId as string;
       
-      // CRITICAL: Verify campaign belongs to user's store before updating
-      const storeAccountIds = await db
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      // CRITICAL: Verify campaign belongs to user's operation before updating
+      const operationAccountIds = await db
         .select({ accountId: adAccounts.accountId })
         .from(adAccounts)
-        .where(eq(adAccounts.storeId, storeId));
+        .where(eq(adAccounts.operationId, operationId));
       
-      const accountIds = storeAccountIds.map(acc => acc.accountId);
+      const accountIds = operationAccountIds.map(acc => acc.accountId);
       
       const [updatedCampaign] = await db
         .update(campaigns)

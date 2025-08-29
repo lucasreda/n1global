@@ -99,8 +99,8 @@ export class FacebookAdsService {
     return campaigns;
   }
 
-  async getCampaignsWithPeriod(datePeriod: string = "last_30d", storeId?: string): Promise<any[]> {
-    // CRITICAL: Use unified adAccounts table with store isolation
+  async getCampaignsWithPeriod(datePeriod: string = "last_30d", storeId?: string, operationId?: string): Promise<any[]> {
+    // CRITICAL: Use unified adAccounts table with operation isolation
     const { adAccounts } = await import("@shared/schema");
     const { and } = await import("drizzle-orm");
     
@@ -109,8 +109,11 @@ export class FacebookAdsService {
       eq(adAccounts.isActive, true)
     ];
     
-    // Add store isolation if storeId provided
-    if (storeId) {
+    // Add operation isolation if operationId provided (preferred)
+    if (operationId) {
+      whereConditions.push(eq(adAccounts.operationId, operationId));
+    } else if (storeId) {
+      // Fallback to store isolation for backward compatibility
       whereConditions.push(eq(adAccounts.storeId, storeId));
     }
     
@@ -212,8 +215,8 @@ export class FacebookAdsService {
     return campaignsWithLiveData;
   }
 
-  async syncCampaigns(datePeriod: string = "last_30d", storeId?: string): Promise<{ synced: number; errors?: string[] }> {
-    // CRITICAL: Use unified adAccounts table with store isolation
+  async syncCampaigns(datePeriod: string = "last_30d", storeId?: string, operationId?: string): Promise<{ synced: number; errors?: string[] }> {
+    // CRITICAL: Use unified adAccounts table with operation isolation
     const { adAccounts } = await import("@shared/schema");
     const { and } = await import("drizzle-orm");
     
@@ -222,8 +225,11 @@ export class FacebookAdsService {
       eq(adAccounts.isActive, true)
     ];
     
-    // Add store isolation if storeId provided
-    if (storeId) {
+    // Add operation isolation if operationId provided (preferred)
+    if (operationId) {
+      whereConditions.push(eq(adAccounts.operationId, operationId));
+    } else if (storeId) {
+      // Fallback to store isolation for backward compatibility
       whereConditions.push(eq(adAccounts.storeId, storeId));
     }
     

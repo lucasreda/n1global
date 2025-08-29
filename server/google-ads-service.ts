@@ -64,21 +64,24 @@ class GoogleAdsService {
   /**
    * Sincroniza campanhas do Google Ads - similar ao Facebook
    */
-  async syncCampaigns(period: string = "last_30d", storeId?: string): Promise<number> {
+  async syncCampaigns(period: string = "last_30d", storeId?: string, operationId?: string): Promise<number> {
     try {
       if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
         console.log('⚠️ Google Ads credenciais não configuradas, pulando sincronização');
         return 0;
       }
 
-      // Buscar contas Google Ads ativas com isolamento por loja
+      // Buscar contas Google Ads ativas com isolamento por operação
       let whereConditions = [
         eq(adAccounts.network, 'google'),
         eq(adAccounts.isActive, true)
       ];
       
-      // Add store isolation if storeId provided
-      if (storeId) {
+      // Add operation isolation if operationId provided (preferred)
+      if (operationId) {
+        whereConditions.push(eq(adAccounts.operationId, operationId));
+      } else if (storeId) {
+        // Fallback to store isolation for backward compatibility
         whereConditions.push(eq(adAccounts.storeId, storeId));
       }
       

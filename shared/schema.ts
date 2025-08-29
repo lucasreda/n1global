@@ -822,6 +822,7 @@ export const poolPerformanceHistory = pgTable("pool_performance_history", {
 export const adAccounts = pgTable("ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   storeId: varchar("store_id").notNull().references(() => stores.id), // CRITICAL: Link to store for isolation
+  operationId: varchar("operation_id").references(() => operations.id), // Link to specific operation for isolation
   network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
   accountId: varchar("account_id", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
