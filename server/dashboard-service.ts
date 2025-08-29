@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { orders, dashboardMetrics, products, stores, type InsertDashboardMetrics } from "@shared/schema";
-import { eq, and, or, gte, lte, sql, count, sum, avg, isNotNull } from "drizzle-orm";
+import { eq, and, or, gte, lte, sql, count, sum, avg, isNotNull, notEq } from "drizzle-orm";
 import { storage } from "./storage"; // CRITICAL: Import storage
 import { FacebookAdsService } from "./facebook-ads-service";
 import { currencyService } from "./currency-service";
@@ -712,7 +712,7 @@ export class DashboardService {
       eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
       gte(orders.orderDate, dateRange.from),
       lte(orders.orderDate, dateRange.to),
-      eq(orders.status, 'delivered') // Only count delivered orders for revenue
+      notEq(orders.status, 'cancelled') // Count all orders except cancelled
     ];
     
     if (provider) {

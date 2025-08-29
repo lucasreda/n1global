@@ -84,7 +84,7 @@ export default function Dashboard() {
 
   // Fetch revenue chart data
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ["/api/dashboard/revenue-chart", dateFilter, operationId],
+    queryKey: ["/api/dashboard/revenue-chart", dateFilter, operationId, "v2"],
     queryFn: async () => {
       const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : '30d';
       const url = operationId 
@@ -96,6 +96,9 @@ export default function Dashboard() {
       console.log(`📈 Revenue chart data received:`, data);
       return data;
     },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: true,
   });
 
   // Calculate distribution data with 3 meaningful categories
