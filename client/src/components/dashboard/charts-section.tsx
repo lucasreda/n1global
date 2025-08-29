@@ -30,16 +30,9 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-revenue">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
           <h3 className="text-base sm:text-lg font-semibold text-white">Receita por Período</h3>
-          <Select defaultValue="7days">
-            <SelectTrigger className="glassmorphism-light border-0 w-full sm:w-36 lg:w-40 text-gray-200 text-xs sm:text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="glassmorphism border-0">
-              <SelectItem value="7days">Últimos 7 dias</SelectItem>
-              <SelectItem value="30days">Últimos 30 dias</SelectItem>
-              <SelectItem value="3months">Últimos 3 meses</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="text-xs sm:text-sm text-gray-400">
+            Dados sincronizados com período selecionado
+          </div>
         </div>
         
         <div className="w-full h-40 sm:h-48 lg:h-64 overflow-hidden">
@@ -54,7 +47,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis 
-                  dataKey="name" 
+                  dataKey="date" 
                   stroke="#9CA3AF" 
                   fontSize={12}
                 />
@@ -74,7 +67,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                 />
                 <Area 
                   type="monotone" 
-                  dataKey="value" 
+                  dataKey="revenue" 
                   stroke="#3B82F6" 
                   strokeWidth={2}
                   fillOpacity={1} 

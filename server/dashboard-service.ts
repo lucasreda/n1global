@@ -184,6 +184,7 @@ export class DashboardService {
     
     console.log(`📅 Calculating metrics for period: ${period}, operation: ${currentOperation.name} (${currentOperation.id})`);
     console.log(`📅 Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
+    console.log(`📊 Chart will use same period: ${period}`);
     
     // CRITICAL: Use operationId instead of storeId for data isolation + DATE FILTERING
     let whereConditions = [
@@ -687,7 +688,7 @@ export class DashboardService {
     return { from, to };
   }
   
-  async getRevenueOverTime(period: '7d' | '30d' | '90d' = '30d', provider?: string, req?: any, operationId?: string) {
+  async getRevenueOverTime(period: string = '30d', provider?: string, req?: any, operationId?: string) {
     const dateRange = this.getDateRange(period);
     
     // CRITICAL: Get operation context for data isolation
@@ -737,7 +738,7 @@ export class DashboardService {
     }));
   }
   
-  async getOrdersByStatus(period: '7d' | '30d' | '90d' = '30d', provider?: string, req?: any) {
+  async getOrdersByStatus(period: string = '30d', provider?: string, req?: any) {
     const dateRange = this.getDateRange(period);
     
     // CRITICAL: Get operation context for data isolation

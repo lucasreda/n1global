@@ -90,8 +90,11 @@ export default function Dashboard() {
       const url = operationId 
         ? `/api/dashboard/revenue-chart?period=${period}&operationId=${operationId}`
         : `/api/dashboard/revenue-chart?period=${period}`;
+      console.log(`📊 Fetching revenue chart data for period: ${period}`, url);
       const response = await authenticatedApiRequest("GET", url);
-      return response.json();
+      const data = await response.json();
+      console.log(`📈 Revenue chart data received:`, data);
+      return data;
     },
   });
 
