@@ -362,7 +362,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
           >
-            <div className="flex items-center justify-between mb-1 -mt-2">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <ShoppingCart className="w-4 h-4 text-slate-400" />
                 <p className="text-sm font-medium text-gray-400">Pedidos Transportadora</p>
@@ -375,17 +375,17 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-4" style={{position: 'relative', top: '0px'}}>
+            <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <h4 className="text-lg font-bold text-white" style={{marginTop: '-2px', marginBottom: '-1px'}}>{totalOrders.toLocaleString()}</h4>
+                <h4 className="text-lg font-semibold text-white mb-1">{totalOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Pedidos N1</p>
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-bold text-white" style={{marginTop: '-2px', marginBottom: '-1px'}}>{confirmedOrders.toLocaleString()}</h4>
+                <h4 className="text-lg font-semibold text-white mb-1">{confirmedOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Confirmados</p>
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-bold text-[#4ade80]" style={{marginTop: '-2px', marginBottom: '-1px'}}>{deliveredOrders.toLocaleString()}</h4>
+                <h4 className="text-lg font-semibold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Entregues</p>
               </div>
             </div>
