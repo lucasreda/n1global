@@ -320,9 +320,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         >
           <div className="flex items-center justify-between mb-3">
             <DollarSign className="w-4 h-4 text-blue-500" />
-            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(totalRevenueBRL))}`}>
-              {parseFloat(calculateGrowth(totalRevenueBRL)) > 0 ? '+' : ''}{calculateGrowth(totalRevenueBRL)}%
-            </div>
           </div>
           <div>
             <h3 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
