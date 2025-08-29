@@ -351,7 +351,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               <div>
                 <p className="text-sm font-medium text-gray-400">Pedidos</p>
                 <h3 className="text-[22px] font-bold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
-                <div className={`px-2 py-1 rounded-md text-xs font-medium mt-2 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
+                <div className={`px-2 py-1 rounded-md text-xs font-medium mt-8 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
                   {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
                 </div>
               </div>
