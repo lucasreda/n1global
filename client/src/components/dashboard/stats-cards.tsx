@@ -322,7 +322,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <DollarSign className="w-4 h-4 text-blue-500" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
+            <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
             <p className="text-xs font-medium text-gray-400">Receita Paga</p>
             <p className="text-xs text-gray-500 mt-1">{formatCurrencyEUR(totalRevenueEUR)} • {deliveredOrders} entregas</p>
           </div>
