@@ -13,7 +13,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
     return (
       <div className="space-y-4 lg:space-y-6">
         {/* Main Cards Loading */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 lg:gap-6">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
               <div className="flex items-center justify-between mb-4">
@@ -27,7 +27,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         </div>
         
         {/* Secondary Cards Loading */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2 sm:gap-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
               <div className="w-8 h-8 bg-gray-600/50 rounded mb-3"></div>
@@ -177,7 +177,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Métricas Principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 lg:gap-6">
         {primaryMetrics.map((metric, index) => {
           const IconComponent = metric.icon;
           const isNegativeProfit = metric.isProfit && metric.isNegative;
@@ -231,7 +231,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Métricas Secundárias */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2 sm:gap-4">
         {secondaryMetrics.map((metric, index) => {
           const IconComponent = metric.icon;
           return (
@@ -257,7 +257,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Cards de Receita e Lucro */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2 sm:gap-4">
         <div 
           className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
           data-testid="card-paid-revenue"
