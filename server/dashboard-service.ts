@@ -511,6 +511,21 @@ export class DashboardService {
     // Get store context for user product lookup
     const storeId = await this.getStoreId(req);
     
+    // Check if there are any products linked to this store (operations are store-based)
+    const linkedProducts = await storage.getUserLinkedProducts(req.user.id, storeId);
+    if (!linkedProducts || linkedProducts.length === 0) {
+      console.log(`💰 Nenhum produto vinculado à operação ${currentOperation.name} - retornando custos zero`);
+      return {
+        totalProductCosts: 0,
+        totalProductCostsBRL: 0,
+        totalShippingCosts: 0,
+        totalShippingCostsBRL: 0,
+        totalCombinedCosts: 0,
+        totalCombinedCostsBRL: 0,
+        totalQuantity: 0
+      };
+    }
+    
     // Process each delivered order to calculate costs based on linked products
     for (const order of deliveredOrders) {
       if (!order.products) continue;
@@ -524,10 +539,13 @@ export class DashboardService {
         const sku = productInfo?.sku || productInfo?.product_sku;
         if (!sku) continue;
         
-        // Find linked product by SKU for this store
+        // Find linked product by SKU for this store AND operation
         const linkedProduct = await storage.getUserProductBySku(sku, storeId);
         
-        if (linkedProduct) {
+        // IMPORTANT: Only apply costs if product is linked to THIS specific operation
+        const isLinkedToOperation = linkedProduct && linkedProduct.operationId === currentOperation.id;
+        
+        if (linkedProduct && isLinkedToOperation) {
           // Para dashboard: usar CUSTO REAL do fornecedor, não o preço B2B
           // customCostPrice = Preço B2B (€12.50), product.costPrice = Custo real fornecedor (€10.00)
           const productCost = parseFloat(linkedProduct.product.costPrice || "0"); // Sempre usar custo real
@@ -538,8 +556,9 @@ export class DashboardService {
           
           console.log(`💰 Order ${order.id}: SKU ${sku} - Product: €${productCost}, Shipping: €${shippingCost}`);
         } else {
-          // Sem produto vinculado - não adicionar custos (valor = 0)
-          console.log(`💰 Order ${order.id}: SKU ${sku} - Nenhum produto vinculado, custos = €0`);
+          // Sem produto vinculado à esta operação - não adicionar custos (valor = 0)
+          const reason = !linkedProduct ? "Produto não encontrado" : "Produto não vinculado à esta operação";
+          console.log(`💰 Order ${order.id}: SKU ${sku} - ${reason}, custos = €0`);
         }
       }
       
