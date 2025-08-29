@@ -71,13 +71,21 @@ export function useCurrentOperation() {
     console.log("🗄️ Previous operation:", selectedOperation);
     console.log("🆕 New operation:", operationId);
     
+    // Clear cache FIRST, then update state
+    console.log("🧹 Clearing query cache...");
+    queryClient.clear();
+    
+    // Update state and localStorage
     setSelectedOperation(operationId);
     localStorage.setItem("current_operation_id", operationId);
     
-    // Clear all queries to force fresh data for new operation
-    console.log("🧹 Clearing query cache...");
-    queryClient.clear();
-    console.log("✅ Cache cleared!");
+    console.log("✅ Operation changed and cache cleared!");
+    
+    // Force immediate invalidation of all queries after state update
+    setTimeout(() => {
+      console.log("🔄 Force invalidating all queries for operation:", operationId);
+      queryClient.invalidateQueries();
+    }, 100);
   };
 
   return {
