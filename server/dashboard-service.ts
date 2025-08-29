@@ -9,7 +9,23 @@ export class DashboardService {
   private facebookAdsService = new FacebookAdsService();
   private defaultStoreId: string | null = null;
 
-  private async getStoreId(req?: any): Promise<string | null> {
+  private async getStoreId(req?: any, operationId?: string): Promise<string | null> {
+    // Se há um operationId específico, buscar o storeId dessa operação
+    if (operationId) {
+      const { operations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [operation] = await db
+        .select({ storeId: operations.storeId })
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+      
+      if (operation) {
+        console.log(`🎯 Using storeId from operation ${operationId}: ${operation.storeId}`);
+        return operation.storeId;
+      }
+    }
+
     // Se há um storeId no request context (vem do middleware), use ele
     if (req?.storeId) {
       return req.storeId;
@@ -49,7 +65,7 @@ export class DashboardService {
       const totalRevenueBRL = await currencyService.convertToBRL(Number(cached.totalRevenue || 0), 'EUR');
       
       // Calculate costs dynamically
-      const storeId = await this.getStoreId(req);
+      const storeId = await this.getStoreId(req, operationId);
       const productCosts = await this.calculateProductCosts(period, provider);
       const marketingCosts = await this.getMarketingCosts(period, storeId);
       
@@ -283,7 +299,7 @@ export class DashboardService {
     const totalCombinedCostsBRL = productCosts.totalCombinedCostsBRL; // BRL value (product + shipping)
     
     // Calculate marketing costs from selected Facebook campaigns based on period
-    const storeId = await this.getStoreId(req);
+    const storeId = await this.getStoreId(req, operationId);
     const marketingCosts = await this.getMarketingCosts(period, storeId);
     
     // Calculate confirmed orders (total - unpacked)
