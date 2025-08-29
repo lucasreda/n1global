@@ -183,6 +183,7 @@ export class DashboardService {
     }
     
     console.log(`📅 Calculating metrics for period: ${period}, operation: ${currentOperation.name} (${currentOperation.id})`);
+    console.log(`📅 Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
     
     // CRITICAL: Use operationId instead of storeId for data isolation + DATE FILTERING
     let whereConditions = [
@@ -653,8 +654,8 @@ export class DashboardService {
         from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
         break;
       case '7d':
-        // Últimos 7 dias
-        from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        // Últimos 7 dias - usar dias completos em vez de 168 horas exatas
+        from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
         break;
       case '30d':
         // Últimos 30 dias - incluir toda a data para pegar mais dados históricos
