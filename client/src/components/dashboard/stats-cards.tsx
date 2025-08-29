@@ -260,10 +260,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         <div className="hidden sm:grid gap-3 lg:gap-6" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
           {/* Gráfico de Pedidos Diários - 1/3 */}
           <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
-            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            className="group p-4"
             data-testid="card-daily-orders"
           >
             <div className="flex items-center justify-between mb-3">
