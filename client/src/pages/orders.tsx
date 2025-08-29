@@ -259,14 +259,10 @@ export default function Orders() {
                 <div className="py-8 text-center">
                   <div className="space-y-4">
                     <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-md mx-auto">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span className="text-blue-400 font-medium text-sm">💡 Dica</span>
-                      </div>
-                      <p className="text-blue-300 text-xs">
+                    <div className="glassmorphism-light rounded-xl p-4 max-w-lg mx-auto">
+                      <p className="text-gray-300 text-sm text-center">
                         Se você fez a sincronização do Shopify, verifique se está na operação correta. 
-                        Use o seletor de "Operação" no canto superior esquerdo da barra lateral para trocar para a operação "Dss" onde estão os pedidos importados.
+                        Use o seletor de <span className="text-blue-400 font-medium">"Operação"</span> na barra lateral.
                       </p>
                     </div>
                   </div>
@@ -378,14 +374,10 @@ export default function Orders() {
                       <td colSpan={12} className="py-8 text-center">
                         <div className="space-y-4">
                           <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
-                          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 max-w-md mx-auto">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                              <span className="text-blue-400 font-medium text-sm">💡 Dica</span>
-                            </div>
-                            <p className="text-blue-300 text-xs">
+                          <div className="glassmorphism-light rounded-xl p-4 max-w-lg mx-auto">
+                            <p className="text-gray-300 text-sm text-center">
                               Se você fez a sincronização do Shopify, verifique se está na operação correta. 
-                              Use o seletor de "Operação" no canto superior esquerdo da barra lateral para trocar para a operação "Dss" onde estão os pedidos importados.
+                              Use o seletor de <span className="text-blue-400 font-medium">"Operação"</span> na barra lateral.
                             </p>
                           </div>
                         </div>
