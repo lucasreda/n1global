@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -141,34 +142,37 @@ export default function Ads() {
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedOperation } = useCurrentOperation();
 
   // Fetch sync info
   const { data: syncInfo } = useQuery({
-    queryKey: ["/api/facebook/sync-info"],
+    queryKey: ["/api/facebook/sync-info", selectedOperation],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", "/api/facebook/sync-info");
       return response.json() as Promise<{ lastSync: string | null; canAutoSync: boolean; nextAutoSync: string | null }>;
     },
     refetchInterval: 60000, // Refetch every minute
+    enabled: !!selectedOperation,
   });
 
   // Fetch Ad Accounts (Facebook + Google)
   const { data: adAccounts, isLoading: accountsLoading } = useQuery({
-    queryKey: ["/api/ad-accounts"],
+    queryKey: ["/api/ad-accounts", selectedOperation],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", "/api/ad-accounts");
       return response.json() as Promise<AdAccount[]>;
     },
+    enabled: !!selectedOperation,
   });
 
   // Fetch Campaigns (Facebook + Google)
   const { data: campaigns, isLoading: campaignsLoading } = useQuery({
-    queryKey: ["/api/campaigns", selectedPeriod],
+    queryKey: ["/api/campaigns", selectedPeriod, selectedOperation],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", `/api/campaigns?period=${selectedPeriod}&autoSync=true`);
       return response.json() as Promise<Campaign[]>;
     },
-    enabled: (adAccounts?.length || 0) > 0,
+    enabled: !!selectedOperation && (adAccounts?.length || 0) > 0,
   });
 
   // Add new ad account
@@ -185,7 +189,7 @@ export default function Ads() {
         title: "Conta adicionada",
         description: `Conta do ${selectedNetwork === 'facebook' ? 'Meta Ads' : 'Google Ads'} configurada com sucesso`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/ad-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ad-accounts", selectedOperation] });
       setDialogOpen(false);
       setNetworkSelectOpen(false);
       setNewAccount({
@@ -218,7 +222,7 @@ export default function Ads() {
         title: "Sincronização concluída",
         description: `${data.synced || 0} campanhas sincronizadas`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns", selectedPeriod] });
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod, selectedOperation] });
     },
     onError: () => {
       toast({
@@ -238,8 +242,8 @@ export default function Ads() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/facebook/campaigns", selectedPeriod] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns", selectedPeriod, selectedOperation] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
       toast({
         title: "Campanha atualizada",
         description: "Seleção da campanha alterada",
