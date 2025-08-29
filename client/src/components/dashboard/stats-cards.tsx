@@ -266,7 +266,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         <div className="hidden sm:grid gap-3 lg:gap-6" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
           {/* Gráfico de Pedidos Diários - 1/3 */}
           <div 
-            className="group p-4"
+            className="group p-4 h-[180px]"
             data-testid="card-daily-orders"
           >
             <div className="flex items-center justify-between mb-4">
@@ -276,7 +276,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
             <div className="mb-2">
               <p className="text-sm font-medium text-gray-400">Pedidos por Dia</p>
-              <div className="h-32 mt-1">
+              <div className="h-24 mt-1">
                 {ordersTimelineData && ordersTimelineData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={ordersTimelineData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
@@ -328,7 +328,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           
           {/* Pedidos Shopify - 1/3 */}
           <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col"
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 flex flex-col h-[180px]"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
@@ -354,7 +354,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           
           {/* CPA & Marketing - 1/3 */}
           <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 h-[180px]"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
