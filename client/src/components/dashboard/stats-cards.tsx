@@ -299,7 +299,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-1">{metric.value}</h4>
                   <p className="text-xs font-medium text-gray-400">{metric.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
                 </div>
               </div>
             );
@@ -360,7 +359,6 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-1">{metric.value}</h4>
                   <p className="text-xs font-medium text-gray-400">{metric.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
                 </div>
               </div>
             );
