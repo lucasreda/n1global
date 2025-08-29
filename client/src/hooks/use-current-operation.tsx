@@ -62,8 +62,8 @@ export function useCurrentOperation() {
     setSelectedOperation(operationId);
     localStorage.setItem("current_operation_id", operationId);
     
-    // Invalidate all dashboard-related queries
-    queryClient.invalidateQueries();
+    // Invalidate all queries to force fresh data for new operation
+    queryClient.clear();
   };
 
   return {
