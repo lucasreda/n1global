@@ -668,93 +668,122 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         </div>
       </div>
 
-      {/* Resumo da Operação - Minimalista */}
-      <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 lg:p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
-        <div className="flex items-center gap-2 mb-6">
-          <Globe className="w-5 h-5 text-gray-400" />
-          <h3 className="text-lg font-semibold text-white">Resumo da Operação</h3>
-        </div>
+      {/* Resumo da Operação - Seguindo padrão dos cards */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Globe className="w-5 h-5 text-slate-400" />
+          Resumo da Operação
+        </h3>
         
-        {/* Métricas Principais - Design Minimalista */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {/* Grid seguindo mesmo padrão dos outros cards */}
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2 sm:gap-4">
           {/* Performance Marketing - ROI */}
-          <div className="text-center">
-            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-              <TrendingUp className="w-5 h-5 text-gray-400 mx-auto mb-3" />
-              <p className="text-2xl font-bold text-white mb-1">{roi.toFixed(1)}%</p>
-              <p className="text-xs text-gray-400">ROI</p>
+          <div 
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-roi"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <TrendingUp className="w-4 h-4 text-slate-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-1">{roi.toFixed(1)}%</h3>
+              <p className="text-sm font-medium text-gray-400">Performance Marketing (ROI)</p>
             </div>
           </div>
-          
+
           {/* Ticket Médio */}
-          <div className="text-center">
-            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-              <Calculator className="w-5 h-5 text-gray-400 mx-auto mb-3" />
-              <p className="text-2xl font-bold text-white mb-1">{formatCurrencyEUR(averageOrderValue)}</p>
-              <p className="text-xs text-gray-400">Ticket Médio</p>
+          <div 
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-ticket-medio"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <Calculator className="w-4 h-4 text-slate-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyEUR(averageOrderValue)}</h3>
+              <p className="text-sm font-medium text-gray-400">Ticket Médio</p>
+              <p className="text-sm text-gray-500 mt-1">{formatCurrencyBRL(averageOrderValue * 5.8)}</p>
             </div>
           </div>
-          
+
           {/* Taxa de Entrega */}
-          <div className="text-center">
-            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-              <CheckCircle className="w-5 h-5 text-gray-400 mx-auto mb-3" />
-              <p className="text-2xl font-bold text-white mb-1">{deliveryRate.toFixed(1)}%</p>
-              <p className="text-xs text-gray-400">Taxa Entrega</p>
+          <div 
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-taxa-entrega"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <CheckCircle className="w-4 h-4 text-slate-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-1">{deliveryRate.toFixed(1)}%</h3>
+              <p className="text-sm font-medium text-gray-400">Taxa de Entrega</p>
+              <p className="text-sm text-gray-500 mt-1">{deliveredOrders} de {totalOrders} pedidos</p>
             </div>
           </div>
-          
+
           {/* Margem de Lucro */}
-          <div className="text-center">
-            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
-              <Percent className="w-5 h-5 text-gray-400 mx-auto mb-3" />
-              <p className="text-2xl font-bold text-white mb-1">{profitMargin.toFixed(1)}%</p>
-              <p className="text-xs text-gray-400">Margem Lucro</p>
+          <div 
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-margem-lucro"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <Percent className="w-4 h-4 text-slate-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-1">{profitMargin.toFixed(1)}%</h3>
+              <p className="text-sm font-medium text-gray-400">Margem de Lucro</p>
             </div>
           </div>
-        </div>
-        
-        {/* Indicadores Adicionais - Layout Simplificado */}
-        <div className="border-t border-white/10 pt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Taxa Sucesso</span>
-              <span className="text-sm font-semibold text-white">
-                {totalOrders > 0 ? `${(deliveredOrders / totalOrders * 100).toFixed(1)}%` : '0.0%'}
-              </span>
+
+          {/* CPA Médio */}
+          <div 
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-cpa-medio"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <DollarSign className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Pedidos Confirmados</span>
-              <span className="text-sm font-semibold text-white">
-                {confirmedOrders.toLocaleString()}
-              </span>
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(avgCPA)}</h3>
+              <p className="text-sm font-medium text-gray-400">CPA Médio</p>
+              <p className="text-sm text-gray-500 mt-1">Custo por aquisição</p>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Taxa Cancelamento</span>
-              <span className="text-sm font-semibold text-white">
+          </div>
+
+          {/* Taxa de Cancelamento */}
+          <div 
+            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-taxa-cancelamento"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <XCircle className="w-4 h-4 text-slate-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-1">
                 {totalOrders > 0 ? `${(cancelledOrders / totalOrders * 100).toFixed(1)}%` : '0.0%'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">CPA Médio</span>
-              <span className="text-sm font-semibold text-white">
-                {formatCurrencyBRL(avgCPA)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Marketing Total</span>
-              <span className="text-sm font-semibold text-white">
-                {formatCurrencyBRL(marketingCostsBRL)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400">Tempo Médio Processo*</span>
-              <span className="text-sm font-semibold text-white">
-                N/A
-              </span>
+              </h3>
+              <p className="text-sm font-medium text-gray-400">Taxa Cancelamento</p>
+              <p className="text-sm text-gray-500 mt-1">{cancelledOrders} cancelados</p>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-4 text-center">* Tempo médio será calculado quando dados de entrega estiverem disponíveis</p>
         </div>
       </div>
     </div>
