@@ -112,29 +112,23 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       growth: calculateGrowth(shopifyOrders),
       testId: "card-shopify-orders",
       isProfit: false,
-      isNegative: false
+      isNegative: false,
+      isSingle: false
     },
     {
-      title: "CPA Anúncios",
+      title: "CPA & Marketing",
       value: formatCurrencyBRL(avgCPA),
       subtitle: "Custo por aquisição",
       icon: Target,
       color: "orange",
       growth: calculateGrowth(avgCPA, avgCPA * 1.1),
-      testId: "card-avg-cpa",
+      testId: "card-cpa-marketing",
       isProfit: false,
-      isNegative: false
-    },
-    {
-      title: "Marketing",
-      value: formatCurrencyBRL(marketingCostsBRL),
-      subtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas",
-      icon: Target,
-      color: "purple",
-      growth: calculateGrowth(marketingCostsBRL),
-      testId: "card-marketing-costs",
-      isProfit: false,
-      isNegative: false
+      isNegative: false,
+      isCombined: true,
+      marketingValue: formatCurrencyBRL(marketingCostsBRL),
+      marketingSubtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas",
+      isSingle: false
     }
   ];
 
@@ -183,55 +177,113 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Métricas Principais */}
-      <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 lg:gap-6">
-        {primaryMetrics.map((metric, index) => {
-          const IconComponent = metric.icon;
-          const isNegativeProfit = metric.isProfit && metric.isNegative;
-          
-          return (
-            <div 
-              key={index}
-              className={`group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 ${
-                isNegativeProfit 
-                  ? 'bg-red-900/20 border border-red-400/50 hover:bg-red-900/30' 
-                  : 'bg-black/20 border border-white/10 hover:bg-black/30'
-              }`}
-              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-              data-testid={metric.testId}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex-shrink-0">
-                  <IconComponent className={`w-5 h-5 ${isNegativeProfit ? 'text-red-400' : getIconColors(metric.color)}`} />
-                </div>
-                {metric.isProfit ? (
-                  <div className="text-right">
-                    <p className={`text-xs font-medium mb-1 ${isNegativeProfit ? 'text-red-400' : 'text-gray-400'}`}>
-                      % Lucro
-                    </p>
-                    <div className={`px-2 py-1 rounded-md text-sm font-semibold ${
-                      isNegativeProfit 
-                        ? 'bg-red-500/10 text-red-300' 
-                        : 'bg-[#4ade80]/10 text-[#4ade80]'
-                    }`}>
-                      {profitMargin.toFixed(1)}%
-                    </div>
-                  </div>
-                ) : (index === 0 || index === 2) ? null : (
-                  <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
-                    {parseFloat(metric.growth) > 0 ? '+' : ''}{metric.growth}%
-                  </div>
-                )}
+      <div className="space-y-3 lg:space-y-6">
+        {/* Mobile: Pedidos Shopify em linha própria */}
+        <div className="sm:hidden">
+          <div 
+            className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-shopify-orders"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-shrink-0">
+                <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
               </div>
-              <div className="mb-2">
-                <p className={`text-sm font-medium ${isNegativeProfit ? 'text-red-300' : 'text-gray-400'}`}>{metric.title}</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{metric.value}</h3>
-              </div>
-              <p className={`text-sm ${isNegativeProfit ? 'text-red-400' : 'text-gray-500'}`}>{metric.subtitle}</p>
             </div>
-          );
-        })}
+            <div className="mb-2">
+              <p className="text-sm font-medium text-gray-400">Pedidos Shopify</p>
+              <h3 className="text-lg font-semibold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
+            </div>
+            <p className="text-sm text-gray-500">Importados da plataforma</p>
+          </div>
+        </div>
+        
+        {/* Mobile: CPA & Marketing em linha própria ocupando tela inteira */}
+        <div className="sm:hidden">
+          <div 
+            className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-cpa-marketing"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-shrink-0">
+                <Target className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
+                {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(avgCPA)}</h3>
+                <p className="text-sm text-gray-500">Custo por aquisição</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-400">Marketing</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(marketingCostsBRL)}</h3>
+                <p className="text-sm text-gray-500">{marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Desktop: Layout horizontal */}
+        <div className="hidden sm:grid gap-3 lg:gap-6" style={{gridTemplateColumns: '1fr 2fr'}}>
+          {/* Pedidos Shopify - 1/3 */}
+          <div 
+            className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-shopify-orders"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-shrink-0">
+                <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
+              </div>
+            </div>
+            <div className="mb-2">
+              <p className="text-sm font-medium text-gray-400">Pedidos Shopify</p>
+              <h3 className="text-lg font-semibold mt-1 text-white">{shopifyOrders.toLocaleString()}</h3>
+            </div>
+            <p className="text-sm text-gray-500">Importados da plataforma</p>
+          </div>
+          
+          {/* CPA & Marketing - 2/3 */}
+          <div 
+            className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-cpa-marketing"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-shrink-0">
+                <Target className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
+                {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(avgCPA)}</h3>
+                <p className="text-sm text-gray-500">Custo por aquisição</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-400">Marketing</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(marketingCostsBRL)}</h3>
+                <p className="text-sm text-gray-500">{marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Métricas Secundárias com Card Combinado */}
