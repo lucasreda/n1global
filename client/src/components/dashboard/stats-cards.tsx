@@ -246,36 +246,38 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: '50% 16% 16% 16%'}}>
         {/* Card Combinado de Pedidos e Entregues - Ocupa 50% */}
         <div 
-          className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300" 
+          className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
           data-testid="card-orders-delivered"
           style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
           onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
           onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-3">
-              <ShoppingCart className="w-5 h-5 text-slate-400" />
+              <div className="flex-shrink-0">
+                <ShoppingCart className="w-5 h-5 text-slate-400" />
+              </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Pedidos Shopify</h3>
-                <p className="text-sm text-gray-400">Status dos pedidos</p>
+                <p className="text-sm font-medium text-gray-400">Pedidos & Entregas</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{totalOrders.toLocaleString()} pedidos</h3>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle className="w-5 h-5 text-[#4ade80]" />
-              <div className="px-3 py-1 rounded-md text-sm font-semibold bg-[#4ade80]/10 text-[#4ade80]">
+              <div className="px-2 py-1 rounded-md text-xs font-medium bg-[#4ade80]/10 text-[#4ade80]">
                 {deliveryRate.toFixed(1)}%
               </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-6 mt-4">
             <div className="text-center">
               <h4 className="text-2xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-              <p className="text-sm text-gray-400">Total de Pedidos</p>
+              <p className="text-sm text-gray-500">Total de Pedidos</p>
             </div>
             <div className="text-center">
               <h4 className="text-2xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-              <p className="text-sm text-gray-400">Entregues</p>
+              <p className="text-sm text-gray-500">Entregues</p>
             </div>
           </div>
         </div>
