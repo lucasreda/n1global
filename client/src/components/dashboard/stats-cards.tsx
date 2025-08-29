@@ -260,17 +260,17 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         <div className="hidden sm:grid gap-3 lg:gap-6" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
           {/* Gráfico de Pedidos Diários - 1/3 */}
           <div 
-            className="group p-4"
+            className="group"
             data-testid="card-daily-orders"
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex-shrink-0">
                 <BarChart3 className="w-4 h-4 text-slate-400" />
               </div>
             </div>
             <div className="mb-2">
-              <h3 className="text-sm font-medium text-gray-400 mb-4">Pedidos por Dia</h3>
-              <div className="h-32">
+              <p className="text-sm font-medium text-gray-400">Pedidos por Dia</p>
+              <div className="h-32 mt-4">
                 {ordersTimelineData && ordersTimelineData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={ordersTimelineData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
