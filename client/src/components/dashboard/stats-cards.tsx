@@ -304,8 +304,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         })}
       </div>
 
-      {/* Cards de Receita e Lucro */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2 sm:gap-4">
+      {/* Cards de Receita, Custos e Lucro */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2 sm:gap-4">
         <div 
           className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
           data-testid="card-paid-revenue"
@@ -323,6 +323,26 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <h3 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
             <p className="text-xs font-medium text-gray-400">Receita Paga</p>
             <p className="text-xs text-gray-500 mt-1">{formatCurrencyEUR(totalRevenueEUR)} • {deliveredOrders} entregas</p>
+          </div>
+        </div>
+
+        <div 
+          className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
+          data-testid="card-product-costs"
+          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <Calculator className="w-4 h-4 text-orange-500" />
+            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(productCostsBRL))}`}>
+              {parseFloat(calculateGrowth(productCostsBRL)) > 0 ? '+' : ''}{calculateGrowth(productCostsBRL)}%
+            </div>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(productCostsBRL)}</h3>
+            <p className="text-xs font-medium text-gray-400">Custos Produto</p>
+            <p className="text-xs text-gray-500 mt-1">{formatCurrencyEUR(productCosts)} • Fornecedores</p>
           </div>
         </div>
 
