@@ -148,9 +148,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   const getIconColors = (color: string) => {
     const colors = {
       blue: "text-blue-500",
-      green: "text-emerald-500", 
+      green: "text-[#4ade80]", 
       slate: "text-slate-400",
-      emerald: "text-emerald-500",
+      emerald: "text-[#4ade80]",
       cyan: "text-cyan-500",
       amber: "text-amber-500",
       purple: "text-purple-500",
@@ -161,7 +161,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
 
   const getGrowthStyle = (growth: string) => {
     const value = parseFloat(growth);
-    if (value > 0) return "text-emerald-500 bg-emerald-500/10";
+    if (value > 0) return "text-[#4ade80] bg-[#4ade80]/10";
     if (value < 0) return "text-red-500 bg-red-500/10";
     return "text-gray-400 bg-gray-500/10";
   };
@@ -261,7 +261,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <p className="text-sm text-gray-400">Receita Total</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-emerald-400">{formatCurrencyBRL(totalProfitBRL)}</p>
+            <p className="text-2xl font-bold text-[#4ade80]">{formatCurrencyBRL(totalProfitBRL)}</p>
             <p className="text-sm text-gray-400">Lucro Líquido</p>
           </div>
           <div className="text-center">
