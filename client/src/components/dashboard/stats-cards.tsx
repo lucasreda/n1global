@@ -331,52 +331,55 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         })}
       </div>
 
-      {/* Hero Metric - Profit */}
-      <div className="glassmorphism rounded-3xl p-6 bg-gradient-to-br from-green-500/15 via-emerald-500/10 to-green-600/15 border-2 border-green-400/25 hover:border-green-400/40 transition-all duration-500 group relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        <div className="relative z-10 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500/30 to-emerald-600/30 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-            <DollarSign className="text-green-400 w-8 h-8" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-400 mb-2" data-testid="value-card-profit">
-            {formatCurrencyBRL(totalProfitBRL)}
-          </h1>
-          <p className="text-base sm:text-lg text-gray-300 mb-4" data-testid="label-card-profit">Lucro Total</p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4 text-sm">
-            <div className={`px-3 py-1 rounded-full ${profitMargin >= 0 ? "text-green-400 bg-green-400/20" : "text-red-400 bg-red-400/20"}`}>
-              {profitMargin >= 0 ? "+" : ""}{profitMargin.toFixed(1)}% margem
+      {/* Primary Metrics - Revenue and Profit on Same Row */}
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Revenue Card - Left Side */}
+        <div className="glassmorphism rounded-2xl p-4 sm:p-6 hover:scale-[1.01] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <DollarSign className="text-blue-400 w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white break-words">{formatCurrencyBRL(totalRevenueBRL)}</h3>
+                <p className="text-gray-300 text-sm sm:text-base font-medium">💰 Receita Paga</p>
+              </div>
             </div>
-            <div className="text-gray-400 hidden sm:block">•</div>
-            <div className="text-green-400">{roi.toFixed(1)}% ROI</div>
+            <div className="text-left">
+              <div className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 mb-2 w-fit">
+                Principal
+              </div>
+              <p className="text-sm text-gray-400">{formatCurrencyEUR(totalRevenueEUR)} • {deliveredOrders} entregas</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Profit Card - Right Side */}
+        <div className="glassmorphism rounded-2xl p-4 sm:p-6 bg-gradient-to-br from-green-500/15 via-emerald-500/10 to-green-600/15 border-2 border-green-400/25 hover:border-green-400/40 transition-all duration-500 group relative overflow-hidden hover:scale-[1.01]">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="relative z-10">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500/30 to-emerald-600/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <DollarSign className="text-green-400 w-6 h-6 sm:w-8 sm:h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-green-400 break-words" data-testid="value-card-profit">
+                    {formatCurrencyBRL(totalProfitBRL)}
+                  </h3>
+                  <p className="text-gray-300 text-sm sm:text-base font-medium" data-testid="label-card-profit">Lucro Total</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
+                <div className={`px-3 py-1 rounded-full w-fit ${profitMargin >= 0 ? "text-green-400 bg-green-400/20" : "text-red-400 bg-red-400/20"}`}>
+                  {profitMargin >= 0 ? "+" : ""}{profitMargin.toFixed(1)}% margem
+                </div>
+                <div className="text-green-400">{roi.toFixed(1)}% ROI</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Secondary Metrics - Revenue Card */}
-      {secondaryMetrics.map((metric, index) => {
-        const IconComponent = metric.icon;
-        return (
-          <div key={index} className="glassmorphism rounded-2xl p-4 sm:p-6 hover:scale-[1.01] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5 mb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <IconComponent className="text-blue-400 w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-                <div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white break-words">{metric.value}</h3>
-                  <p className="text-gray-300 text-sm sm:text-base lg:text-lg font-medium">{metric.title}</p>
-                </div>
-              </div>
-              <div className="text-left sm:text-right">
-                <div className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 mb-2 w-fit">
-                  Principal
-                </div>
-                <p className="text-sm text-gray-400">{metric.subtitle}</p>
-              </div>
-            </div>
-          </div>
-        );
-      })}
 
       {/* Tertiary Metrics - Medium Cards */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -432,33 +435,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         })}
       </div>
 
-      {/* Revenue Card - Full Width */}
-      <div className="glassmorphism rounded-2xl p-4 sm:p-6 hover:scale-[1.01] transition-all duration-300 group cursor-pointer border border-blue-500/20 hover:border-blue-400/40 bg-gradient-to-br from-blue-500/10 to-blue-600/5 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 mb-4 sm:mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-              <BarChart3 className="text-blue-400 w-6 h-6 sm:w-8 sm:h-8" />
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white break-words">{formatCurrencyBRL(totalRevenueBRL)}</h3>
-              <p className="text-gray-300 text-sm sm:text-base lg:text-lg font-medium">Receita Total Paga</p>
-            </div>
-          </div>
-          <div className="text-left sm:text-right">
-            <div className="text-xs px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 mb-2 w-fit">
-              Principal
-            </div>
-            <p className="text-base sm:text-lg text-blue-400 font-medium">{formatCurrencyEUR(totalRevenueEUR)}</p>
-            <div className="text-sm text-gray-400">
-              {deliveredOrders} pedidos entregues
-            </div>
-          </div>
-        </div>
-      </div>
-
-
       {/* Tertiary Metrics - Medium Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <div className="glassmorphism rounded-xl p-5 hover:scale-[1.02] transition-all duration-300 group cursor-pointer border border-green-500/15 hover:border-green-400/30 bg-gradient-to-br from-green-500/5 to-green-600/5">
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
