@@ -362,7 +362,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(avgCPA)}</h3>
                 <p className="text-sm text-gray-500">Custo por aquisição</p>
               </div>
-              <div className="text-right">
+              <div>
                 <p className="text-sm font-medium text-gray-400">Marketing</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(marketingCostsBRL)}</h3>
                 <p className="text-sm text-gray-500">{marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}</p>
