@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { queryClient } from '@/lib/queryClient';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const DSS_OPERATION_ID = 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4';
 
 export function useCurrentOperation() {
   const [selectedOperation, setSelectedOperation] = useState<string>("");
+  const queryClient = useQueryClient();
 
   // Fetch user operations with fallback for production auth issues
   const { data: operations = [], isLoading, error } = useQuery<{id: string, name: string, description?: string}[]>({
