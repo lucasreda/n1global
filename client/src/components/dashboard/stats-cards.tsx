@@ -668,111 +668,93 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         </div>
       </div>
 
-      {/* Resumo da Operação - Melhorado */}
+      {/* Resumo da Operação - Minimalista */}
       <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 lg:p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
         <div className="flex items-center gap-2 mb-6">
-          <Globe className="w-5 h-5 text-blue-400" />
+          <Globe className="w-5 h-5 text-gray-400" />
           <h3 className="text-lg font-semibold text-white">Resumo da Operação</h3>
         </div>
         
-        {/* Métricas Principais */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Métricas Principais - Design Minimalista */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Performance Marketing - ROI */}
           <div className="text-center">
-            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-lg p-4 mb-2">
-              <TrendingUp className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-blue-400">{roi.toFixed(1)}%</p>
+            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+              <TrendingUp className="w-5 h-5 text-gray-400 mx-auto mb-3" />
+              <p className="text-2xl font-bold text-white mb-1">{roi.toFixed(1)}%</p>
               <p className="text-xs text-gray-400">ROI</p>
             </div>
           </div>
           
           {/* Ticket Médio */}
           <div className="text-center">
-            <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 rounded-lg p-4 mb-2">
-              <Calculator className="w-6 h-6 text-green-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-400">{formatCurrencyEUR(averageOrderValue)}</p>
+            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+              <Calculator className="w-5 h-5 text-gray-400 mx-auto mb-3" />
+              <p className="text-2xl font-bold text-white mb-1">{formatCurrencyEUR(averageOrderValue)}</p>
               <p className="text-xs text-gray-400">Ticket Médio</p>
             </div>
           </div>
           
           {/* Taxa de Entrega */}
           <div className="text-center">
-            <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-lg p-4 mb-2">
-              <CheckCircle className="w-6 h-6 text-purple-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-purple-400">{deliveryRate.toFixed(1)}%</p>
+            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+              <CheckCircle className="w-5 h-5 text-gray-400 mx-auto mb-3" />
+              <p className="text-2xl font-bold text-white mb-1">{deliveryRate.toFixed(1)}%</p>
               <p className="text-xs text-gray-400">Taxa Entrega</p>
             </div>
           </div>
           
           {/* Margem de Lucro */}
           <div className="text-center">
-            <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 rounded-lg p-4 mb-2">
-              <Percent className="w-6 h-6 text-orange-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-orange-400">{profitMargin.toFixed(1)}%</p>
+            <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+              <Percent className="w-5 h-5 text-gray-400 mx-auto mb-3" />
+              <p className="text-2xl font-bold text-white mb-1">{profitMargin.toFixed(1)}%</p>
               <p className="text-xs text-gray-400">Margem Lucro</p>
             </div>
           </div>
         </div>
         
-        {/* Indicadores Adicionais */}
-        <div className="border-t border-white/10 pt-4">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-              <span className="text-sm text-gray-400 flex items-center gap-2">
-                <CheckSquare className="w-4 h-4" />
-                Taxa Sucesso
-              </span>
+        {/* Indicadores Adicionais - Layout Simplificado */}
+        <div className="border-t border-white/10 pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Taxa Sucesso</span>
               <span className="text-sm font-semibold text-white">
                 {totalOrders > 0 ? `${(deliveredOrders / totalOrders * 100).toFixed(1)}%` : '0.0%'}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-              <span className="text-sm text-gray-400 flex items-center gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Pedidos Confirmados
-              </span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Pedidos Confirmados</span>
               <span className="text-sm font-semibold text-white">
                 {confirmedOrders.toLocaleString()}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-              <span className="text-sm text-gray-400 flex items-center gap-2">
-                <XCircle className="w-4 h-4" />
-                Taxa Cancelamento
-              </span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Taxa Cancelamento</span>
               <span className="text-sm font-semibold text-white">
                 {totalOrders > 0 ? `${(cancelledOrders / totalOrders * 100).toFixed(1)}%` : '0.0%'}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-              <span className="text-sm text-gray-400 flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                CPA Médio
-              </span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">CPA Médio</span>
               <span className="text-sm font-semibold text-white">
                 {formatCurrencyBRL(avgCPA)}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-              <span className="text-sm text-gray-400 flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                Marketing Total
-              </span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Marketing Total</span>
               <span className="text-sm font-semibold text-white">
                 {formatCurrencyBRL(marketingCostsBRL)}
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-              <span className="text-sm text-gray-400 flex items-center gap-2">
-                <Truck className="w-4 h-4" />
-                Tempo Médio Processo*
-              </span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Tempo Médio Processo*</span>
               <span className="text-sm font-semibold text-white">
                 N/A
               </span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-2">* Tempo médio será calculado quando dados de entrega estiverem disponíveis</p>
+          <p className="text-xs text-gray-500 mt-4 text-center">* Tempo médio será calculado quando dados de entrega estiverem disponíveis</p>
         </div>
       </div>
     </div>
