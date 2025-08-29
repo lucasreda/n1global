@@ -216,7 +216,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
               </div>
             </div>
-            <div className="flex justify-between items-center flex-1 h-full">
+            <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento Shopify</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
@@ -339,7 +339,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
               </div>
             </div>
-            <div className="flex justify-between items-center flex-1 h-full">
+            <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento Shopify</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
