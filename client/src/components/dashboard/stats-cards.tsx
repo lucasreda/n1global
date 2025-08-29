@@ -333,7 +333,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           className={`backdrop-blur-sm rounded-lg p-4 transition-all duration-300 ${
             totalProfitBRL < 0 
               ? 'bg-red-900/20 border border-red-400/50 hover:bg-red-900/30' 
-              : 'bg-black/20 border border-white/10 hover:bg-black/30'
+              : 'bg-green-900/20 border border-[#4ade80]/50 hover:bg-green-900/30'
           }`}
           data-testid="card-total-profit"
           style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
@@ -345,8 +345,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           </div>
           <div>
             <h3 className={`text-lg font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h3>
-            <p className={`text-xs font-medium ${totalProfitBRL < 0 ? 'text-red-300' : 'text-gray-400'}`}>Lucro Total</p>
-            <p className={`text-xs mt-1 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-gray-500'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
+            <p className={`text-xs font-medium ${totalProfitBRL < 0 ? 'text-red-300' : 'text-[#4ade80]'}`}>Lucro Total</p>
+            <p className={`text-xs mt-1 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-green-300'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
           </div>
         </div>
       </div>
