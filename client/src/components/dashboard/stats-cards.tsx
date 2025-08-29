@@ -252,7 +252,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
           onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
         >
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <ShoppingCart className="w-5 h-5 text-slate-400" />
