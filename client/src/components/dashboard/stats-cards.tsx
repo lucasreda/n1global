@@ -258,7 +258,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <div className="grid grid-cols-4 gap-1 mt-4">
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Transportadora</p>
+                <p className="text-xs text-gray-500">Pedidos N1</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
@@ -324,7 +324,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <div className="grid grid-cols-4 gap-2 mt-4">
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Transportadora</p>
+                <p className="text-xs text-gray-500">Pedidos N1</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
