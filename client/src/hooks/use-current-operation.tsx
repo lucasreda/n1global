@@ -85,6 +85,7 @@ export function useCurrentOperation() {
     queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
     queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
     queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/integrations/shopify'] });
     
     console.log("✅ Operation changed successfully without reload");
   };
