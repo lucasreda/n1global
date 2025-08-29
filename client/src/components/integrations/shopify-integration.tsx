@@ -8,6 +8,7 @@ import { Loader2, CheckCircle, XCircle, RefreshCw, Store, ShoppingCart, Package 
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 
 interface ShopifyIntegration {
   id: string;
@@ -33,7 +34,7 @@ export function ShopifyIntegration() {
   const [isConfiguring, setIsConfiguring] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const operationId = localStorage.getItem("current_operation_id");
+  const { selectedOperation: operationId } = useCurrentOperation();
 
   // Buscar integração existente
   const { data: integration, isLoading } = useQuery<ShopifyIntegration | null>({

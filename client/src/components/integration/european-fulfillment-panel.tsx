@@ -15,6 +15,7 @@ import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Package, Send, Eye, AlertCircle, Settings } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 
 const createLeadSchema = z.object({
   customerName: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
@@ -36,62 +37,66 @@ export function EuropeanFulfillmentPanel() {
   const [activeTab, setActiveTab] = useState("test");
   const [showCredentialsForm, setShowCredentialsForm] = useState(false);
   const { toast } = useToast();
+  const { selectedOperation: operationId } = useCurrentOperation();
 
   // Test connection query
   const { data: connectionTest, isLoading: testLoading } = useQuery({
-    queryKey: ["/api/integrations/european-fulfillment/test"],
+    queryKey: ["/api/integrations/european-fulfillment/test", operationId],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/test");
       return response.json();
     },
+    enabled: !!operationId,
   });
 
   // Get countries (filtered to Italy)
   const { data: countries } = useQuery({
-    queryKey: ["/api/integrations/european-fulfillment/countries"],
+    queryKey: ["/api/integrations/european-fulfillment/countries", operationId],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/countries");
       return response.json();
     },
-    enabled: connectionTest?.connected,
+    enabled: connectionTest?.connected && !!operationId,
   });
 
   // Get stores
   const { data: stores, isLoading: storesLoading } = useQuery({
-    queryKey: ["/api/integrations/european-fulfillment/stores"],
+    queryKey: ["/api/integrations/european-fulfillment/stores", operationId],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/stores");
       return response.json();
     },
-    enabled: connectionTest?.connected,
+    enabled: connectionTest?.connected && !!operationId,
   });
 
   // Get leads from API (Italy specific)
   const { data: apiLeads, isLoading: apiLeadsLoading } = useQuery({
-    queryKey: ["/api/integrations/european-fulfillment/leads", "ITALY"],
+    queryKey: ["/api/integrations/european-fulfillment/leads", "ITALY", operationId],
     queryFn: async () => {
       const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/leads?country=ITALY");
       return response.json();
     },
-    enabled: connectionTest?.connected,
+    enabled: connectionTest?.connected && !!operationId,
   });
 
   // Get fulfillment leads
   const { data: leads, isLoading: leadsLoading } = useQuery({
-    queryKey: ["/api/fulfillment-leads"],
+    queryKey: ["/api/fulfillment-leads", operationId],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/fulfillment-leads");
+      const response = await authenticatedApiRequest("GET", `/api/fulfillment-leads?operationId=${operationId}`);
       return response.json();
     },
+    enabled: !!operationId,
   });
 
   // Get products
   const { data: products } = useQuery({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/products", operationId],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/products");
+      const response = await authenticatedApiRequest("GET", `/api/products?operationId=${operationId}`);
       return response.json();
     },
+    enabled: !!operationId,
   });
 
   // Create lead mutation
