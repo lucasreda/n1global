@@ -255,18 +255,18 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="grid grid-cols-4 gap-1 mt-4">
+            <div className="grid grid-cols-3 gap-2 mt-4">
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Pedidos N1</p>
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Entregues</p>
-              </div>
-              <div className="text-center">
-                <h4 className="text-lg font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Retornados</p>
+                <div className="text-lg font-bold mb-1">
+                  <span className="text-[#4ade80]">{deliveredOrders.toLocaleString()}</span>
+                  <span className="text-gray-400 mx-1">|</span>
+                  <span className="text-white">{returnedOrders.toLocaleString()}</span>
+                </div>
+                <p className="text-xs text-gray-500">Entregues|Retorn</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-cyan-400 mb-1">{confirmedOrders.toLocaleString()}</h4>
@@ -321,18 +321,18 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="grid grid-cols-4 gap-2 mt-4">
+            <div className="grid grid-cols-3 gap-4 mt-4">
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Pedidos N1</p>
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Entregues</p>
-              </div>
-              <div className="text-center">
-                <h4 className="text-lg font-bold text-white mb-1">{returnedOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Retornados</p>
+                <div className="text-lg font-bold mb-1">
+                  <span className="text-[#4ade80]">{deliveredOrders.toLocaleString()}</span>
+                  <span className="text-gray-400 mx-1">|</span>
+                  <span className="text-white">{returnedOrders.toLocaleString()}</span>
+                </div>
+                <p className="text-xs text-gray-500">Entregues|Retorn</p>
               </div>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-cyan-400 mb-1">{confirmedOrders.toLocaleString()}</h4>
