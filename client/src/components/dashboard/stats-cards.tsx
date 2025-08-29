@@ -307,7 +307,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-2 mt-0">
+            <div className="grid grid-cols-3 gap-2 mt-0" style={{transform: 'translateY(-3px)'}}>
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Pedidos N1</p>
