@@ -271,7 +271,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           <div className="grid grid-cols-3 gap-4 mt-4">
             <div className="text-center">
               <h4 className="text-2xl font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-              <p className="text-sm text-gray-500">Total de Pedidos</p>
+              <p className="text-sm text-gray-500">Pedidos Transportadora</p>
             </div>
             <div className="text-center">
               <h4 className="text-2xl font-bold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
