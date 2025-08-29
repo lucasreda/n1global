@@ -15,7 +15,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         {/* Main Cards Loading */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 animate-pulse">
+            <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 animate-pulse shadow-lg shadow-blue-500/20">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-gray-600/50 rounded-lg"></div>
                 <div className="w-16 h-4 bg-gray-600/50 rounded"></div>
@@ -29,7 +29,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         {/* Secondary Cards Loading */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 animate-pulse">
+            <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 animate-pulse shadow-lg shadow-blue-500/20">
               <div className="w-8 h-8 bg-gray-600/50 rounded mb-3"></div>
               <div className="w-16 h-6 bg-gray-600/50 rounded mb-1"></div>
               <div className="w-12 h-3 bg-gray-600/50 rounded"></div>
@@ -175,7 +175,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           return (
             <div 
               key={index}
-              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:bg-black/30 transition-all duration-300"
+              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:bg-black/30 transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
               data-testid={metric.testId}
             >
               <div className="flex items-start justify-between mb-4">
@@ -205,7 +205,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           return (
             <div 
               key={index}
-              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
               data-testid={metric.testId}
             >
               <div className="flex items-center justify-between mb-3">
@@ -223,7 +223,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
 
       {/* Card de Shopify e CPA */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" data-testid="card-shopify-orders">
+        <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30" data-testid="card-shopify-orders">
           <div className="flex items-center justify-between mb-3">
             <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
             <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(shopifyOrders))}`}>
@@ -237,7 +237,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           </div>
         </div>
 
-        <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" data-testid="card-avg-cpa">
+        <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30" data-testid="card-avg-cpa">
           <div className="flex items-center justify-between mb-3">
             <Target className="w-4 h-4 text-orange-500" />
             <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
@@ -253,7 +253,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Insights Section */}
-      <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+      <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 shadow-lg shadow-blue-500/20">
         <h3 className="text-lg font-semibold text-white mb-4">Resumo da Operação</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="text-center">
