@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, CheckCircle, Clock, Loader2, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, RefreshCw, Loader2, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface CompleteSyncStatus {
@@ -85,7 +85,7 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete }: CompleteSync
     if (pollingInterval) return;
 
     fetchSyncStatus(); // Buscar imediatamente
-    const interval = setInterval(fetchSyncStatus, 1000); // A cada segundo
+    const interval = setInterval(fetchSyncStatus, 1000) as unknown as number; // A cada segundo
     setPollingInterval(interval);
   };
 
@@ -119,7 +119,7 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete }: CompleteSync
       case 'connecting':
         return <Loader2 className="h-6 w-6 animate-spin text-blue-500" />;
       case 'syncing':
-        return <Clock className="h-6 w-6 text-blue-500" />;
+        return <RefreshCw className="h-6 w-6 text-blue-500 animate-spin" />;
       case 'retrying':
         return <AlertCircle className="h-6 w-6 text-yellow-500" />;
       case 'completed':
