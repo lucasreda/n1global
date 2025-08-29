@@ -27,9 +27,9 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         </div>
         
         {/* Combined Secondary Cards Loading */}
-        <div className="grid grid-cols-4 gap-2 sm:gap-4">
-          {/* Combined Orders Card Loading - 2 colunas */}
-          <div className="col-span-2 bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+        <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: '50% 16% 16% 16%'}}>
+          {/* Combined Orders Card Loading - 50% */}
+          <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-5 h-5 bg-gray-600/50 rounded"></div>
@@ -55,7 +55,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           
-          {/* Secondary Cards Loading - 1 coluna cada */}
+          {/* Secondary Cards Loading - 16% cada */}
           {[...Array(3)].map((_, i) => (
             <div key={i} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
               <div className="w-8 h-8 bg-gray-600/50 rounded mb-3"></div>
@@ -243,10 +243,10 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Métricas Secundárias com Card Combinado */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-4">
-        {/* Card Combinado de Pedidos e Entregues - Ocupa 2 colunas (50%) */}
+      <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: '50% 16% 16% 16%'}}>
+        {/* Card Combinado de Pedidos e Entregues - Ocupa 50% */}
         <div 
-          className="col-span-2 bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300" 
+          className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300" 
           data-testid="card-orders-delivered"
           style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
           onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
@@ -280,7 +280,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           </div>
         </div>
 
-        {/* Cards Secundários - Cada um ocupa 1 coluna */}
+        {/* Cards Secundários - Cada um ocupa 16% */}
         {secondaryMetrics.map((metric, index) => {
           const IconComponent = metric.icon;
           return (
