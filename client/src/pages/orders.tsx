@@ -224,7 +224,7 @@ export default function Orders() {
                 size="sm"
                 onClick={() => syncMutation.mutate()}
                 disabled={syncMutation.isPending}
-                className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 whitespace-nowrap flex-1"
+                className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap flex-1"
                 data-testid="button-sync-complete"
               >
                 {syncMutation.isPending ? (
