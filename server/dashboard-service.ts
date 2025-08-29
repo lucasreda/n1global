@@ -67,7 +67,7 @@ export class DashboardService {
       // Calculate costs dynamically
       const storeId = await this.getStoreId(req, operationId);
       const productCosts = await this.calculateProductCosts(period, provider);
-      const marketingCosts = await this.getMarketingCosts(period, storeId);
+      const marketingCosts = await this.getMarketingCosts(period, storeId, operationId);
       
       const totalProfit = Number(cached.totalRevenue || 0) - productCosts.totalProductCosts - marketingCosts.fallbackValue;
       const totalProfitBRL = await currencyService.convertToBRL(totalProfit, 'EUR');
@@ -300,7 +300,7 @@ export class DashboardService {
     
     // Calculate marketing costs from selected Facebook campaigns based on period
     const storeId = await this.getStoreId(req, operationId);
-    const marketingCosts = await this.getMarketingCosts(period, storeId);
+    const marketingCosts = await this.getMarketingCosts(period, storeId, operationId);
     
     // Calculate confirmed orders (total - unpacked)
     const unpackedOrders = statusCounts
@@ -567,11 +567,11 @@ export class DashboardService {
     };
   }
 
-  private async getMarketingCosts(period: string = '30d', storeId?: string | null): Promise<{ totalBRL: number; totalEUR: number; fallbackValue: number }> {
+  private async getMarketingCosts(period: string = '30d', storeId?: string | null, operationId?: string | null): Promise<{ totalBRL: number; totalEUR: number; fallbackValue: number }> {
     try {
       // Convert dashboard period to Facebook period format
       const fbPeriod = this.convertPeriodToFacebookFormat(period);
-      const marketingData = await this.facebookAdsService.getMarketingCostsByPeriod(fbPeriod, storeId);
+      const marketingData = await this.facebookAdsService.getMarketingCostsByPeriod(fbPeriod, storeId, operationId);
       
       return {
         totalBRL: marketingData.totalBRL,

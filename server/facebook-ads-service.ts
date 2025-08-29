@@ -417,15 +417,44 @@ export class FacebookAdsService {
     }, 0);
   }
 
-  async getMarketingCostsByPeriod(period: string = "last_30d", storeId?: string | null): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
-    // Buscar campanhas selecionadas e seus dados ao vivo para o período específico, filtradas por store
+  async getMarketingCostsByPeriod(period: string = "last_30d", storeId?: string | null, operationId?: string | null): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
+    // Buscar campanhas selecionadas e seus dados ao vivo para o período específico, filtradas por operação ou store
     const { campaigns, adAccounts } = await import("@shared/schema");
-    const { and, eq, inArray } = await import("drizzle-orm");
+    const { and, eq, inArray, isNull } = await import("drizzle-orm");
     
     let selectedCampaigns;
     
-    if (storeId) {
-      // First get adAccount IDs for this store
+    if (operationId) {
+      // First get adAccount IDs for this operation (preferred method)
+      const operationAdAccounts = await db
+        .select({ accountId: adAccounts.accountId })
+        .from(adAccounts)
+        .where(and(
+          eq(adAccounts.operationId, operationId),
+          eq(adAccounts.network, 'facebook'),
+          eq(adAccounts.isActive, true)
+        ));
+      
+      const accountIds = operationAdAccounts.map(acc => acc.accountId);
+      
+      console.log(`🔍 Debug: operationId ${operationId} - Encontradas ${operationAdAccounts.length} contas, accountIds: [${accountIds.join(', ')}]`);
+      
+      if (accountIds.length === 0) {
+        console.log(`💰 Nenhuma conta Facebook encontrada para operação ${operationId} - retornando custos zero`);
+        return { totalBRL: 0, totalEUR: 0, campaigns: [] };
+      }
+      
+      // Then get campaigns for those accounts
+      selectedCampaigns = await db
+        .select()
+        .from(campaigns)
+        .where(and(
+          eq(campaigns.isSelected, true),
+          eq(campaigns.network, 'facebook'),
+          inArray(campaigns.accountId, accountIds)
+        ));
+    } else if (storeId) {
+      // Fallback: get adAccount IDs for this store (but prefer operationId)
       const storeAdAccounts = await db
         .select({ accountId: adAccounts.accountId })
         .from(adAccounts)
@@ -437,7 +466,7 @@ export class FacebookAdsService {
       
       const accountIds = storeAdAccounts.map(acc => acc.accountId);
       
-      console.log(`🔍 Debug: storeId ${storeId} - Encontradas ${storeAdAccounts.length} contas, accountIds: [${accountIds.join(', ')}]`);
+      console.log(`🔍 Debug fallback: storeId ${storeId} - Encontradas ${storeAdAccounts.length} contas, accountIds: [${accountIds.join(', ')}]`);
       
       if (accountIds.length === 0) {
         console.log(`💰 Nenhuma conta Facebook encontrada para store ${storeId} - retornando custos zero`);
@@ -454,7 +483,7 @@ export class FacebookAdsService {
           inArray(campaigns.accountId, accountIds)
         ));
     } else {
-      // No store filter - get all selected campaigns
+      // No filter - get all selected campaigns
       selectedCampaigns = await db
         .select()
         .from(campaigns)
