@@ -219,7 +219,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento</p>
-                <h3 className="text-xl font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
+                <h3 className="text-[22px] font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
                 <p className="text-sm text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
               <div>
@@ -342,7 +342,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex justify-between items-start mb-2">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento</p>
-                <h3 className="text-xl font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
+                <h3 className="text-[22px] font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
                 <p className="text-sm text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
               </div>
               <div>
