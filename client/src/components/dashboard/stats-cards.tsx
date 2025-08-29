@@ -269,7 +269,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div>
-            <h4 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h4>
+            <h3 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
             <p className="text-xs font-medium text-gray-400">Receita Paga</p>
             <p className="text-xs text-gray-500 mt-1">{formatCurrencyEUR(totalRevenueEUR)} • {deliveredOrders} entregas</p>
           </div>
@@ -293,7 +293,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             </div>
           </div>
           <div>
-            <h4 className={`text-lg font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h4>
+            <h3 className={`text-lg font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h3>
             <p className={`text-xs font-medium ${totalProfitBRL < 0 ? 'text-red-300' : 'text-gray-400'}`}>Lucro Total</p>
             <p className={`text-xs mt-1 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-gray-500'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
           </div>
