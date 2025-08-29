@@ -237,7 +237,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                   {shopifyOrders.toLocaleString()}
                 </h3>
                 {isOrdersVisible && (
-                  <div className={`px-2 py-1 rounded-md text-xs font-medium mt-2 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
+                  <div className={`px-2 py-1 rounded-md text-xs font-medium w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`} style={{marginTop: '-2px'}}>
                     {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
                   </div>
                 )}
@@ -375,7 +375,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                   {shopifyOrders.toLocaleString()}
                 </h3>
                 {isOrdersVisible && (
-                  <div className={`px-2 py-1 rounded-md text-xs font-medium mt-1 w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`}>
+                  <div className={`px-2 py-1 rounded-md text-xs font-medium w-fit ${getGrowthStyle(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0))}`} style={{marginTop: '-2px'}}>
                     {parseFloat(calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders, metrics?.previousPeriodOrders || 0)}%
                   </div>
                 )}
