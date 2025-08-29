@@ -243,7 +243,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Métricas Secundárias com Card Combinado */}
-      <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: '40% 20% 20% 20%'}}>
+      <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
         {/* Card Combinado de Pedidos e Entregues - Ocupa 40% */}
         <div 
           className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
