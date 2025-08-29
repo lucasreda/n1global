@@ -1,5 +1,8 @@
 import React from "react";
 import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { authenticatedApiRequest } from "@/lib/auth";
 import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
 
@@ -9,6 +12,18 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
+  const operationId = localStorage.getItem("current_operation_id");
+  
+  // Buscar dados de pedidos diários
+  const { data: ordersTimelineData } = useQuery({
+    queryKey: ["/api/dashboard/revenue-chart", operationId, "7d"],
+    queryFn: async () => {
+      const url = `/api/dashboard/revenue-chart?period=7d${operationId ? `&operationId=${operationId}` : ''}`;
+      const response = await authenticatedApiRequest("GET", url);
+      return response.json();
+    },
+    enabled: !!operationId
+  });
   if (isLoading) {
     return (
       <div className="space-y-4 lg:space-y-6">
@@ -233,7 +248,72 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         </div>
         
         {/* Desktop: Layout horizontal */}
-        <div className="hidden sm:grid gap-3 lg:gap-6" style={{gridTemplateColumns: '1fr 2fr'}}>
+        <div className="hidden sm:grid gap-3 lg:gap-6" style={{gridTemplateColumns: '1fr 1fr 1fr'}}>
+          {/* Gráfico de Pedidos Diários - 1/3 */}
+          <div 
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-daily-orders"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex-shrink-0">
+                <BarChart3 className="w-4 h-4 text-slate-400" />
+              </div>
+            </div>
+            <div className="mb-2">
+              <h3 className="text-sm font-medium text-gray-400 mb-4">Pedidos por Dia</h3>
+              <div className="h-32">
+                {ordersTimelineData && ordersTimelineData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={ordersTimelineData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#6B7280"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getDate()}/${date.getMonth() + 1}`;
+                        }}
+                      />
+                      <YAxis hide />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1F2937', 
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                        }}
+                        formatter={(value: number) => [`${value} pedidos`, '']}
+                        labelStyle={{ color: '#9CA3AF', fontSize: '11px' }}
+                        labelFormatter={(label) => {
+                          const date = new Date(label);
+                          return date.toLocaleDateString('pt-BR');
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="orders" 
+                        stroke="#10B981" 
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 3, stroke: '#10B981', strokeWidth: 1, fill: '#10B981' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500 text-xs">Carregando...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
           {/* Pedidos Shopify - 1/3 */}
           <div 
             className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
@@ -254,7 +334,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <p className="text-sm text-gray-500">Importados da plataforma</p>
           </div>
           
-          {/* CPA & Marketing - 2/3 */}
+          {/* CPA & Marketing - 1/3 */}
           <div 
             className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
@@ -270,7 +350,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                 {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-3">
               <div>
                 <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
                 <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(avgCPA)}</h3>
