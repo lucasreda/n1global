@@ -163,8 +163,8 @@ export default function Orders() {
       />
 
       {/* Filters */}
-      <div className="glassmorphism rounded-2xl p-4 sm:p-6">
-        <div className="flex flex-col gap-4">
+      <div className="glassmorphism rounded-xl p-3 sm:p-4">
+        <div className="flex flex-col gap-2 sm:gap-3">
           {/* Search Bar - Full width on mobile */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -172,20 +172,20 @@ export default function Orders() {
               placeholder="Buscar por nome, telefone ou cidade..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full glassmorphism-light border-gray-600 text-white placeholder:text-gray-400"
+              className="pl-10 w-full h-9 glassmorphism-light border-gray-600 text-white placeholder:text-gray-400"
             />
           </div>
           
           {/* Filters Row */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
             {/* Status and Date filters */}
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+            <div className="flex flex-col sm:flex-row gap-2 flex-1">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-48 glassmorphism-light border-gray-600 text-white">
+                <SelectTrigger className="w-full sm:w-40 h-9 glassmorphism-light border-gray-600 text-white text-sm">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="glassmorphism border-gray-600">
-                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="delivered">Entregues</SelectItem>
                   <SelectItem value="in transit">Em trânsito</SelectItem>
                   <SelectItem value="shipped">Enviados</SelectItem>
@@ -196,26 +196,26 @@ export default function Orders() {
               </Select>
               
               <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-full sm:w-48 glassmorphism-light border-gray-600 text-white">
+                <SelectTrigger className="w-full sm:w-36 h-9 glassmorphism-light border-gray-600 text-white text-sm">
                   <SelectValue placeholder="Período" />
                 </SelectTrigger>
                 <SelectContent className="glassmorphism border-gray-600">
                   <SelectItem value="1">Hoje</SelectItem>
-                  <SelectItem value="7">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30">Últimos 30 dias</SelectItem>
-                  <SelectItem value="90">Últimos 3 meses</SelectItem>
-                  <SelectItem value="365">Último ano</SelectItem>
-                  <SelectItem value="all">Todos os períodos</SelectItem>
+                  <SelectItem value="7">7 dias</SelectItem>
+                  <SelectItem value="30">30 dias</SelectItem>
+                  <SelectItem value="90">3 meses</SelectItem>
+                  <SelectItem value="365">1 ano</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             {/* Sync button and count */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
               <Button 
                 onClick={() => syncMutation.mutate()}
                 disabled={syncMutation.isPending}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 whitespace-nowrap"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 whitespace-nowrap h-9 text-sm px-3"
                 data-testid="button-sync-shopify-carrier"
               >
                 {syncMutation.isPending ? (
@@ -230,8 +230,8 @@ export default function Orders() {
                   {syncMutation.isPending ? "Sincronizando..." : "Sync"}
                 </span>
               </Button>
-              <div className="text-sm text-gray-300 text-center sm:text-left">
-                {totalOrders} pedidos encontrados
+              <div className="text-xs text-gray-300 text-center sm:text-left whitespace-nowrap">
+                {totalOrders} pedidos
               </div>
             </div>
           </div>
