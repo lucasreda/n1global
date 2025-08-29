@@ -14,6 +14,7 @@ import {
   Plus,
   Wrench
 } from "lucide-react";
+import logoImage from "@assets/Dashboard_1756440445659.png";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -86,7 +87,7 @@ export function Sidebar() {
     <nav className="h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm p-4 sm:p-6 animate-slide-up flex flex-col">
       <div className="flex justify-start sm:justify-center mb-8">
         <img 
-          src="/logo.png" 
+          src={logoImage} 
           alt="COD Dashboard Logo" 
           className="w-[105px] h-auto object-contain"
           onError={(e) => {
