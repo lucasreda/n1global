@@ -333,9 +333,6 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               <div className="flex-shrink-0">
                 <NetworkIcon network={getNetworkForIcon()} size={20} />
               </div>
-              <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
-                {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
-              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -468,9 +465,6 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex items-center justify-between mb-4">
               <div className="flex-shrink-0">
                 <NetworkIcon network={getNetworkForIcon()} size={20} />
-              </div>
-              <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
-                {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
               </div>
             </div>
             <div className="flex justify-between items-start">
