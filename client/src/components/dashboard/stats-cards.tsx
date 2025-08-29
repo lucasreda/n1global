@@ -1,15 +1,66 @@
 import React, { useState } from "react";
-import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock, Eye, EyeOff } from "lucide-react";
+import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock, Eye, EyeOff, Globe } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
+import facebookIcon from "@assets/meta-icon_1756415603759.png";
+import facebookIconMini from "@assets/metamini_1756416312919.png";
+import googleAdsIcon from "@assets/gadsicon_1756416065444.png";
+import googleAdsIconMini from "@assets/gadsmini_1756416199452.png";
 
 interface StatsCardsProps {
   metrics: any;
   isLoading: boolean;
   period?: string;
+}
+
+// Componentes customizados para os ícones de anúncios
+const FacebookIcon = ({ size }: { size?: number }) => {
+  const iconSrc = (size || 40) <= 24 ? facebookIconMini : facebookIcon;
+  return (
+    <img 
+      src={iconSrc} 
+      alt="Meta" 
+      className="object-contain"
+      style={{ width: size || 40, height: size || 40 }}
+    />
+  );
+};
+
+const GoogleAdsIcon = ({ size }: { size?: number }) => {
+  const iconSrc = (size || 40) <= 24 ? googleAdsIconMini : googleAdsIcon;
+  return (
+    <img 
+      src={iconSrc} 
+      alt="Google Ads" 
+      className="object-contain"
+      style={{ width: size || 40, height: size || 40 }}
+    />
+  );
+};
+
+// Network Icon Component para determinar qual ícone mostrar
+const NetworkIcon = ({ network, size = 20 }: { network: 'facebook' | 'google' | 'mixed'; size?: number }) => {
+  switch (network) {
+    case 'facebook':
+      return <FacebookIcon size={size} />;
+    case 'google':
+      return <GoogleAdsIcon size={size} />;
+    case 'mixed':
+      return <Target className={`w-${Math.floor(size/4)} h-${Math.floor(size/4)} text-orange-500`} />;
+    default:
+      return <Target className={`w-${Math.floor(size/4)} h-${Math.floor(size/4)} text-orange-500`} />;
+  }
+};
+
+interface AdAccount {
+  id: string;
+  network: 'facebook' | 'google';
+  accountId: string;
+  name: string;
+  isActive: boolean;
 }
 
 export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProps) {
@@ -34,6 +85,29 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
     },
     enabled: !!operationId
   });
+
+  // Buscar contas de anúncios ativas da operação para determinar o ícone
+  const { data: adAccounts } = useQuery({
+    queryKey: ["/api/ad-accounts", operationId],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest("GET", `/api/ad-accounts?operationId=${operationId}`);
+      return response.json();
+    },
+    enabled: !!operationId
+  });
+
+  // Determinar qual ícone de rede usar baseado nas contas ativas
+  const getNetworkForIcon = (): 'facebook' | 'google' | 'mixed' => {
+    if (!adAccounts || adAccounts.length === 0) return 'mixed';
+    
+    const activeAccounts = (adAccounts as AdAccount[]).filter(acc => acc.isActive);
+    const networks = [...new Set(activeAccounts.map(acc => acc.network))];
+    
+    if (networks.length > 1) return 'mixed';
+    if (networks.includes('facebook')) return 'facebook';
+    if (networks.includes('google')) return 'google';
+    return 'mixed';
+  };
   if (isLoading) {
     return (
       <div className="space-y-4 lg:space-y-6">
@@ -257,7 +331,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex-shrink-0">
-                <Target className="w-5 h-5 text-orange-500" />
+                <NetworkIcon network={getNetworkForIcon()} size={20} />
               </div>
               <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
                 {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
@@ -393,7 +467,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex-shrink-0">
-                <Target className="w-5 h-5 text-orange-500" />
+                <NetworkIcon network={getNetworkForIcon()} size={20} />
               </div>
               <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
                 {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
