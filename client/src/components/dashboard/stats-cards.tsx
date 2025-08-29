@@ -74,25 +74,26 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   // Métricas principais
   const primaryMetrics = [
     {
-      title: "Receita Paga",
-      value: formatCurrencyBRL(totalRevenueBRL),
-      subtitle: `${formatCurrencyEUR(totalRevenueEUR)} • ${deliveredOrders} entregas`,
-      icon: DollarSign,
-      color: "blue",
-      growth: calculateGrowth(totalRevenueBRL),
-      testId: "card-paid-revenue",
-      isProfit: false
+      title: "Pedidos Shopify",
+      value: shopifyOrders.toLocaleString(),
+      subtitle: "Importados da plataforma",
+      icon: () => <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />,
+      color: "green",
+      growth: calculateGrowth(shopifyOrders),
+      testId: "card-shopify-orders",
+      isProfit: false,
+      isNegative: false
     },
     {
-      title: "Lucro Total",
-      value: formatCurrencyBRL(totalProfitBRL),
-      subtitle: `${profitMargin.toFixed(1)}% margem • ${roi.toFixed(1)}% ROI`,
-      icon: TrendingUp,
-      color: totalProfitBRL < 0 ? "red" : "green",
-      growth: calculateGrowth(totalProfitBRL),
-      testId: "card-total-profit",
-      isProfit: true,
-      isNegative: totalProfitBRL < 0
+      title: "CPA Anúncios",
+      value: formatCurrencyBRL(avgCPA),
+      subtitle: "Custo por aquisição",
+      icon: Target,
+      color: "orange",
+      growth: calculateGrowth(avgCPA, avgCPA * 1.1),
+      testId: "card-avg-cpa",
+      isProfit: false,
+      isNegative: false
     }
   ];
 
@@ -157,7 +158,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       cyan: "text-cyan-500",
       amber: "text-amber-500",
       purple: "text-purple-500",
-      red: "text-red-500"
+      red: "text-red-500",
+      orange: "text-orange-500"
     };
     return colors[color as keyof typeof colors] || "text-gray-500";
   };
@@ -251,45 +253,49 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
         })}
       </div>
 
-      {/* Card de Shopify e CPA */}
+      {/* Cards de Receita e Lucro */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
         <div 
           className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
-          data-testid="card-shopify-orders"
+          data-testid="card-paid-revenue"
           style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
           onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
           onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
         >
           <div className="flex items-center justify-between mb-3">
-            <img src={shopifyIcon} alt="Shopify" className="w-5 h-5 object-contain" />
-            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(shopifyOrders))}`}>
-              {parseFloat(calculateGrowth(shopifyOrders)) > 0 ? '+' : ''}{calculateGrowth(shopifyOrders)}%
+            <DollarSign className="w-4 h-4 text-blue-500" />
+            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(totalRevenueBRL))}`}>
+              {parseFloat(calculateGrowth(totalRevenueBRL)) > 0 ? '+' : ''}{calculateGrowth(totalRevenueBRL)}%
             </div>
           </div>
           <div>
-            <h4 className="text-lg font-semibold text-white mb-1">{shopifyOrders.toLocaleString()}</h4>
-            <p className="text-xs font-medium text-gray-400">Pedidos Shopify</p>
-            <p className="text-xs text-gray-500 mt-1">Importados</p>
+            <h4 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h4>
+            <p className="text-xs font-medium text-gray-400">Receita Paga</p>
+            <p className="text-xs text-gray-500 mt-1">{formatCurrencyEUR(totalRevenueEUR)} • {deliveredOrders} entregas</p>
           </div>
         </div>
 
         <div 
-          className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
-          data-testid="card-avg-cpa"
+          className={`backdrop-blur-sm rounded-lg p-4 transition-all duration-300 ${
+            totalProfitBRL < 0 
+              ? 'bg-red-900/20 border border-red-400/50 hover:bg-red-900/30' 
+              : 'bg-black/20 border border-white/10 hover:bg-black/30'
+          }`}
+          data-testid="card-total-profit"
           style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
           onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
           onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
         >
           <div className="flex items-center justify-between mb-3">
-            <Target className="w-4 h-4 text-orange-500" />
-            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(avgCPA, avgCPA * 1.1))}`}>
-              {parseFloat(calculateGrowth(avgCPA, avgCPA * 1.1)) > 0 ? '+' : ''}{calculateGrowth(avgCPA, avgCPA * 1.1)}%
+            <TrendingUp className={`w-4 h-4 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-[#4ade80]'}`} />
+            <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(calculateGrowth(totalProfitBRL))}`}>
+              {parseFloat(calculateGrowth(totalProfitBRL)) > 0 ? '+' : ''}{calculateGrowth(totalProfitBRL)}%
             </div>
           </div>
           <div>
-            <h4 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(avgCPA)}</h4>
-            <p className="text-xs font-medium text-gray-400">CPA Anúncios</p>
-            <p className="text-xs text-gray-500 mt-1">Custo por aquisição</p>
+            <h4 className={`text-lg font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h4>
+            <p className={`text-xs font-medium ${totalProfitBRL < 0 ? 'text-red-300' : 'text-gray-400'}`}>Lucro Total</p>
+            <p className={`text-xs mt-1 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-gray-500'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
           </div>
         </div>
       </div>
