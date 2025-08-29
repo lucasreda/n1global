@@ -80,16 +80,19 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       icon: DollarSign,
       color: "blue",
       growth: calculateGrowth(totalRevenueBRL),
-      testId: "card-paid-revenue"
+      testId: "card-paid-revenue",
+      isProfit: false
     },
     {
       title: "Lucro Total",
       value: formatCurrencyBRL(totalProfitBRL),
       subtitle: `${profitMargin.toFixed(1)}% margem • ${roi.toFixed(1)}% ROI`,
       icon: TrendingUp,
-      color: "green",
+      color: totalProfitBRL < 0 ? "red" : "green",
       growth: calculateGrowth(totalProfitBRL),
-      testId: "card-total-profit"
+      testId: "card-total-profit",
+      isProfit: true,
+      isNegative: totalProfitBRL < 0
     }
   ];
 
@@ -172,10 +175,16 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {primaryMetrics.map((metric, index) => {
           const IconComponent = metric.icon;
+          const isNegativeProfit = metric.isProfit && metric.isNegative;
+          
           return (
             <div 
               key={index}
-              className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:bg-black/30 transition-all duration-300"
+              className={`group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 ${
+                isNegativeProfit 
+                  ? 'bg-red-900/20 border border-red-400/50 hover:bg-red-900/30' 
+                  : 'bg-black/20 border border-white/10 hover:bg-black/30'
+              }`}
               style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
@@ -184,18 +193,18 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0">
-                    <IconComponent className={`w-5 h-5 ${getIconColors(metric.color)}`} />
+                    <IconComponent className={`w-5 h-5 ${isNegativeProfit ? 'text-red-400' : getIconColors(metric.color)}`} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-400">{metric.title}</p>
-                    <h3 className="text-2xl font-bold text-white mt-1">{metric.value}</h3>
+                    <p className={`text-sm font-medium ${isNegativeProfit ? 'text-red-300' : 'text-gray-400'}`}>{metric.title}</p>
+                    <h3 className={`text-2xl font-bold mt-1 ${isNegativeProfit ? 'text-red-200' : 'text-white'}`}>{metric.value}</h3>
                   </div>
                 </div>
                 <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
                   {parseFloat(metric.growth) > 0 ? '+' : ''}{metric.growth}%
                 </div>
               </div>
-              <p className="text-sm text-gray-500">{metric.subtitle}</p>
+              <p className={`text-sm ${isNegativeProfit ? 'text-red-400' : 'text-gray-500'}`}>{metric.subtitle}</p>
             </div>
           );
         })}
@@ -279,7 +288,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
             <p className="text-sm text-gray-400">Receita Total</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-[#4ade80]">{formatCurrencyBRL(totalProfitBRL)}</p>
+            <p className={`text-2xl font-bold ${totalProfitBRL < 0 ? 'text-red-400' : 'text-[#4ade80]'}`}>{formatCurrencyBRL(totalProfitBRL)}</p>
             <p className="text-sm text-gray-400">Lucro Líquido</p>
           </div>
           <div className="text-center">
