@@ -111,6 +111,7 @@ export class InvestmentService {
           monthlyReturn: 0,
           yearlyReturn: 0,
           riskLevel: 'medium',
+          slug: 'cod-operations-fund-i',
         },
         recentTransactions: [],
       };
@@ -184,6 +185,7 @@ export class InvestmentService {
         monthlyReturn: parseFloat(primaryPool.pool?.monthlyReturn || '0'),
         yearlyReturn: parseFloat(primaryPool.pool?.yearlyReturn || '0'),
         riskLevel: primaryPool.pool?.riskLevel || 'medium',
+        slug: primaryPool.pool?.slug || 'cod-operations-fund-i',
       },
       recentTransactions: recentTransactions.map(tx => ({
         id: tx.id,

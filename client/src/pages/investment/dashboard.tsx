@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 interface InvestorDashboardData {
   totalInvested: number;
@@ -30,6 +31,7 @@ interface InvestorDashboardData {
     monthlyReturn: number;
     yearlyReturn: number;
     riskLevel: string;
+    slug: string;
   };
   recentTransactions: Array<{
     id: string;
@@ -42,6 +44,7 @@ interface InvestorDashboardData {
 }
 
 export default function InvestmentDashboard() {
+  const [, navigate] = useLocation();
   const { data: dashboardData, isLoading } = useQuery<InvestorDashboardData>({
     queryKey: ["/api/investment/dashboard"],
   });
@@ -327,7 +330,11 @@ export default function InvestmentDashboard() {
 
                   {/* Action */}
                   <div className="pt-2">
-                    <button className="text-xs text-gray-400 hover:text-white transition-colors">
+                    <button 
+                      onClick={() => navigate(`/investment/pools/${dashboardData.poolPerformance.slug}`)}
+                      className="text-xs text-gray-400 hover:text-white transition-colors"
+                      data-testid="button-pool-details"
+                    >
                       Ver Detalhes →
                     </button>
                   </div>
