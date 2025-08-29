@@ -37,22 +37,31 @@ export function useCurrentOperation() {
 
 
 
-  // Force Dss operation on load (only once)
+  // Set default operation on load (only once, when no operation is selected)
   useEffect(() => {
     if (finalOperations.length > 0 && !selectedOperation) {
       console.log("🎯 Available operations:", finalOperations.map(op => `${op.name} (${op.id})`));
       
-      // Always force Dss operation (has the Shopify orders)
-      const dssOperation = finalOperations.find((op: any) => op.name === "Dss");
+      // Check localStorage first for user's last choice
+      const savedOperationId = localStorage.getItem("current_operation_id");
+      const savedOperation = finalOperations.find((op: any) => op.id === savedOperationId);
       
-      if (dssOperation) {
-        console.log("✅ Forcing Dss operation:", dssOperation.id);
-        setSelectedOperation(dssOperation.id);
-        localStorage.setItem("current_operation_id", dssOperation.id);
+      if (savedOperation) {
+        console.log("🔄 Restoring saved operation:", savedOperation.name, savedOperation.id);
+        setSelectedOperation(savedOperation.id);
       } else {
-        console.warn("⚠️ Dss operation not found, using fallback");
-        setSelectedOperation(finalOperations[0].id);
-        localStorage.setItem("current_operation_id", finalOperations[0].id);
+        // Default to Dss operation (has the Shopify orders) only if no saved choice
+        const dssOperation = finalOperations.find((op: any) => op.name === "Dss");
+        
+        if (dssOperation) {
+          console.log("✅ Setting default Dss operation:", dssOperation.id);
+          setSelectedOperation(dssOperation.id);
+          localStorage.setItem("current_operation_id", dssOperation.id);
+        } else {
+          console.warn("⚠️ Dss operation not found, using fallback");
+          setSelectedOperation(finalOperations[0].id);
+          localStorage.setItem("current_operation_id", finalOperations[0].id);
+        }
       }
     }
   }, [finalOperations, selectedOperation]);
