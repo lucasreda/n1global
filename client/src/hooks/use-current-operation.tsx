@@ -10,9 +10,11 @@ export function useCurrentOperation() {
   // Fetch user operations with fallback for production auth issues
   const { data: operations = [], isLoading, error } = useQuery<{id: string, name: string, description?: string}[]>({
     queryKey: ['/api/operations'],
+    staleTime: 5 * 60 * 1000, // 5 minutes to avoid refetching too often
+    gcTime: 10 * 60 * 1000, // 10 minutes in cache
     retry: (failureCount, error: any) => {
       // If authentication fails, don't retry
-      if (error?.status === 401 || error?.status === 403) {
+      if ((error as any)?.status === 401 || (error as any)?.status === 403) {
         console.log("🔄 Auth failed, using hardcoded operations for fresh@teste.com");
         return false;
       }
@@ -28,7 +30,7 @@ export function useCurrentOperation() {
   ];
 
   // Use fallback if auth fails and no operations loaded
-  const finalOperations = (operations.length === 0 && (error?.status === 401 || error?.status === 403)) 
+  const finalOperations = (operations.length === 0 && ((error as any)?.status === 401 || (error as any)?.status === 403)) 
     ? fallbackOperations 
     : operations;
 
