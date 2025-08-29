@@ -84,7 +84,7 @@ export function Sidebar() {
 
   return (
     <nav className="h-full w-full rounded-lg border bg-card text-card-foreground shadow-sm p-4 sm:p-6 animate-slide-up flex flex-col">
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-start sm:justify-center mb-8">
         <img 
           src="/logo.png" 
           alt="COD Dashboard Logo" 
