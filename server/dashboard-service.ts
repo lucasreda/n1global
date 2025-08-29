@@ -209,18 +209,19 @@ export class DashboardService {
       .where(whereClause)
       .groupBy(orders.status);
     
-    // 2. Get revenue and financial data also filtered by period (same as order counts)
+    // 2. Get total Shopify revenue (all orders × value, not just delivered)
     const revenueQuery = await db
       .select({
         totalRevenue: sum(orders.total),
-        deliveredCount: count()
+        deliveredRevenue: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`,
+        deliveredCount: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)`
       })
       .from(orders)
       .where(and(
         eq(orders.operationId, currentOperation.id),
         gte(orders.orderDate, dateRange.from), // SAME date filter as order counts
         lte(orders.orderDate, dateRange.to),   // SAME date filter as order counts
-        eq(orders.status, 'delivered'), // Only delivered/paid orders count for revenue
+        ne(orders.status, 'cancelled'), // All orders except cancelled (total Shopify revenue)
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
@@ -285,11 +286,12 @@ export class DashboardService {
       }
     });
     
-    // Get revenue from period-filtered delivered orders
-    const totalRevenue = Number(revenueQuery[0]?.totalRevenue || 0);
+    // Get revenue data: total Shopify revenue vs delivered revenue
+    const totalShopifyRevenue = Number(revenueQuery[0]?.totalRevenue || 0); // For faturamento card
+    const deliveredRevenue = Number(revenueQuery[0]?.deliveredRevenue || 0); // For profit calculation
     const totalDeliveredForRevenue = Number(revenueQuery[0]?.deliveredCount || 0);
     
-    const averageOrderValue = totalDeliveredForRevenue > 0 ? totalRevenue / totalDeliveredForRevenue : 0;
+    const averageOrderValue = totalDeliveredForRevenue > 0 ? deliveredRevenue / totalDeliveredForRevenue : 0;
     
     // Calculate product costs and shipping costs based on order quantities
     const productCosts = await this.calculateProductCosts(period, provider, operationId, req);
@@ -341,21 +343,22 @@ export class DashboardService {
     // Get current exchange rates
     const exchangeRates = await currencyService.getExchangeRates();
     
-    // Convert revenue to BRL for consistent calculations
-    const totalRevenueBRL = await currencyService.convertToBRL(totalRevenue, 'EUR');
+    // Convert revenues to BRL for consistent calculations
+    const totalShopifyRevenueBRL = await currencyService.convertToBRL(totalShopifyRevenue, 'EUR'); // For faturamento display
+    const deliveredRevenueBRL = await currencyService.convertToBRL(deliveredRevenue, 'EUR'); // For profit calculation
     
-    // Calculate profit using BRL values (revenue BRL - combined costs BRL - marketing costs BRL)
+    // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
     const marketingCostsBRL = marketingCosts.totalBRL;
-    const totalProfitBRL = totalRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL;
-    const profitMargin = totalRevenueBRL > 0 ? (totalProfitBRL / totalRevenueBRL) * 100 : 0;
+    const totalProfitBRL = deliveredRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL;
+    const profitMargin = deliveredRevenueBRL > 0 ? (totalProfitBRL / deliveredRevenueBRL) * 100 : 0;
     
-    // Calculate ROI (return on investment) in BRL
+    // Calculate ROI (return on investment) using delivered revenue
     const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL;
-    const roi = totalCostsBRL > 0 ? ((totalRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
+    const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
     console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
     console.log(`🔍 Debug Transportadora: Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}`);
-    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
+    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}`);
     
     // Calculate previous period orders for growth comparison
     const previousPeriodRange = this.getPreviousPeriodDateRange(period);
@@ -384,8 +387,10 @@ export class DashboardService {
       confirmedOrders,
       shippedOrders,
       pendingOrders,
-      totalRevenue,
-      totalRevenueBRL, // Added BRL value for display
+      totalRevenue: totalShopifyRevenue, // Total Shopify revenue (all orders)
+      totalRevenueBRL: totalShopifyRevenueBRL, // Total Shopify revenue in BRL for display
+      deliveredRevenue, // Only delivered/paid revenue for calculations
+      deliveredRevenueBRL, // Delivered revenue in BRL for profit calculations
       totalProductCosts, // EUR value for reference (product only)
       totalProductCostsBRL, // BRL value for display (product only)
       totalShippingCosts, // EUR value for reference (shipping only)
