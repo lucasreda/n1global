@@ -30,8 +30,9 @@ export default function Integrations() {
   // Usar a operação atual do hook
   const operationId = selectedOperation;
 
-  // State for shopify integration data
+  // State for integration data
   const [shopifyData, setShopifyData] = useState(null);
+  const [europeanFulfillmentData, setEuropeanFulfillmentData] = useState(null);
 
   // Fetch shopify integration when operation changes
   useEffect(() => {
@@ -61,12 +62,47 @@ export default function Integrations() {
     fetchShopifyIntegration();
   }, [selectedOperation]);
 
+  // Fetch European Fulfillment integration when operation changes
+  useEffect(() => {
+    const fetchEuropeanFulfillmentIntegration = async () => {
+      if (!selectedOperation) {
+        setEuropeanFulfillmentData(null);
+        return;
+      }
+      
+      console.log("🔄 Fetching European Fulfillment integration for operation:", selectedOperation);
+      try {
+        const response = await authenticatedApiRequest("GET", `/api/integrations/european-fulfillment/test?operationId=${selectedOperation}`);
+        if (response.status === 404 || !response.ok) {
+          console.log("📋 No European Fulfillment integration found for", selectedOperation);
+          setEuropeanFulfillmentData(null);
+          return;
+        }
+        const data = await response.json();
+        console.log("📋 European Fulfillment integration found for", selectedOperation, ":", data?.connected);
+        setEuropeanFulfillmentData(data?.connected ? { status: 'active' } : null);
+      } catch (error) {
+        console.error("❌ Error fetching European Fulfillment integration:", error);
+        setEuropeanFulfillmentData(null);
+      }
+    };
+
+    fetchEuropeanFulfillmentIntegration();
+  }, [selectedOperation]);
+
   const shopifyIntegration = shopifyData;
+  const europeanFulfillmentIntegration = europeanFulfillmentData;
 
   // Determinar status real da integração Shopify
   const getShopifyStatus = () => {
     if (!shopifyIntegration) return "pending";
     return shopifyIntegration.status || "pending";
+  };
+
+  // Determinar status real da integração European Fulfillment
+  const getEuropeanFulfillmentStatus = () => {
+    if (!europeanFulfillmentIntegration) return "pending";
+    return europeanFulfillmentIntegration.status || "pending";
   };
 
   // Integrações de E-commerce
@@ -87,7 +123,7 @@ export default function Integrations() {
     {
       id: "european-fulfillment",
       name: "European Fulfillment Center",
-      status: "active",
+      status: getEuropeanFulfillmentStatus(),
       description: "Centro de fulfillment para Europa com API completa",
       icon: Package,
       color: "blue",
