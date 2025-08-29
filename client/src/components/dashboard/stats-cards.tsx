@@ -157,12 +157,12 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       testId: "card-shipping-costs"
     },
     {
-      title: "Cancelados",
-      value: cancelledOrders.toLocaleString(),
-      subtitle: "Perdidos",
-      icon: XCircle,
+      title: "Custos Produtos",
+      value: formatCurrencyBRL(productCostsBRL),
+      subtitle: productCosts > 0 ? formatCurrencyEUR(productCosts) : "Sem custos",
+      icon: DollarSign,
       color: "red",
-      testId: "card-cancelled-orders"
+      testId: "card-product-costs"
     }
   ];
 
