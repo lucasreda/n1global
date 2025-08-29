@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import facebookIcon from "@assets/meta-icon_1756415603759.png";
 import facebookIconMini from "@assets/metamini_1756416312919.png";
@@ -748,18 +749,27 @@ export default function Ads() {
               Selecione campanhas para incluir no dashboard
             </CardDescription>
             <div className="mb-4">
-              <select
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-2 w-full"
-              >
-                <option value="all">Todas as contas</option>
-                {adAccounts?.map((account) => (
-                  <option key={account.id} value={account.accountId}>
-                    {account.network === 'facebook' ? '📘' : '🔍'} {account.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                  <SelectValue placeholder="Selecionar conta" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="all" className="text-white">
+                    <div className="flex items-center gap-2">
+                      <Globe size={16} className="text-gray-400" />
+                      <span>Todas as contas</span>
+                    </div>
+                  </SelectItem>
+                  {adAccounts?.map((account) => (
+                    <SelectItem key={account.id} value={account.accountId} className="text-white">
+                      <div className="flex items-center gap-2">
+                        <NetworkIcon network={account.network as 'facebook' | 'google'} size={16} />
+                        <span>{account.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent>
