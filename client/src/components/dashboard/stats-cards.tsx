@@ -191,7 +191,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Métricas Principais */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 lg:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 lg:gap-6">
         {primaryMetrics.map((metric, index) => {
           const IconComponent = metric.icon;
           const isNegativeProfit = metric.isProfit && metric.isNegative;
