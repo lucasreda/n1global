@@ -226,7 +226,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
                       {profitMargin.toFixed(1)}%
                     </div>
                   </div>
-                ) : (
+                ) : index === 0 ? null : (
                   <div className={`px-2 py-1 rounded-md text-xs font-medium ${getGrowthStyle(metric.growth)}`}>
                     {parseFloat(metric.growth) > 0 ? '+' : ''}{metric.growth}%
                   </div>
