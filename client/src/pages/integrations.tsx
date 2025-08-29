@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { EuropeanFulfillmentPanel } from "@/components/integration/european-fulfillment-panel";
@@ -24,6 +24,9 @@ export default function Integrations() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const { selectedOperation } = useCurrentOperation();
 
+  // Debug logs
+  console.log("🔍 Component render - selectedOperation:", selectedOperation);
+
   // Usar a operação atual do hook
   const operationId = selectedOperation;
 
@@ -44,6 +47,15 @@ export default function Integrations() {
     enabled: !!operationId,
     staleTime: 0, // Always refetch when operation changes
   });
+
+  // Force refetch when operation changes
+  useEffect(() => {
+    if (operationId) {
+      console.log("🔄 Operation changed in useEffect, forcing refetch for:", operationId);
+      console.log("🔄 Current selectedOperation in useEffect:", selectedOperation);
+      refetchShopify();
+    }
+  }, [operationId]);
 
   // Determinar status real da integração Shopify
   const getShopifyStatus = () => {
