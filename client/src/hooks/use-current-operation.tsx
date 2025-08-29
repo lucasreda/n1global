@@ -76,9 +76,17 @@ export function useCurrentOperation() {
     // Update localStorage immediately
     localStorage.setItem("current_operation_id", operationId);
     
-    // Force page reload to ensure clean state
-    console.log("🔄 Forcing page reload for operation change...");
-    window.location.reload();
+    // Update state directly instead of reloading
+    setSelectedOperation(operationId);
+    
+    // Invalidate relevant queries to refresh data for new operation
+    queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/ad-accounts'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/campaigns'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/integrations'] });
+    
+    console.log("✅ Operation changed successfully without reload");
   };
 
   return {
