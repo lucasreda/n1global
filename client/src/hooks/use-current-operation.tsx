@@ -85,7 +85,17 @@ export function useCurrentOperation() {
     setTimeout(() => {
       console.log("🔄 Force invalidating all queries for operation:", operationId);
       queryClient.invalidateQueries();
-    }, 100);
+      
+      // Force specific queries to refetch with new operation ID
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/ad-accounts"], 
+        type: 'active'
+      });
+      queryClient.refetchQueries({ 
+        queryKey: ["/api/campaigns"], 
+        type: 'active'
+      });
+    }, 150);
   };
 
   return {
