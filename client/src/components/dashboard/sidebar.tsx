@@ -122,11 +122,11 @@ export function Sidebar() {
             </SelectTrigger>
             <SelectContent>
               {operations.map((operation: any) => (
-                <SelectItem key={operation.id} value={operation.id} data-testid={`operation-${operation.id}`}>
+                <SelectItem key={operation.id} value={operation.id} data-testid={`operation-${operation.id}`} className="py-3 text-[14px]">
                   {operation.name}
                 </SelectItem>
               ))}
-              <SelectItem value="add-new">
+              <SelectItem value="add-new" className="py-3 text-[14px]">
                 <div className="flex items-center gap-2">
                   <Plus className="w-4 h-4" />
                   <span>Adicionar Nova</span>
