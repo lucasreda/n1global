@@ -355,10 +355,27 @@ export class DashboardService {
     console.log(`🔍 Debug Transportadora: Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}`);
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Revenue: €${totalRevenue}`);
     
+    // Calculate previous period orders for growth comparison
+    const previousPeriodRange = this.getPreviousPeriodDateRange(period);
+    const previousPeriodQuery = await db
+      .select({
+        count: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        gte(orders.orderDate, previousPeriodRange.from),
+        lte(orders.orderDate, previousPeriodRange.to),
+        provider ? eq(orders.provider, provider) : sql`TRUE`
+      ));
+    
+    const previousPeriodOrders = Number(previousPeriodQuery[0]?.count || 0);
+    
     return {
       exchangeRates, // Include current exchange rates
       totalOrders: totalTransportadoraOrders, // Transportadora orders filtered by period
       shopifyOrders: totalOrders, // Shopify orders filtered by period
+      previousPeriodOrders, // Previous period orders for growth comparison
       deliveredOrders, // Shopify delivered orders filtered by period  
       cancelledOrders: cancelledTransportadoraOrders, // Transportadora cancelled orders filtered by period
       returnedOrders,
@@ -655,6 +672,16 @@ export class DashboardService {
         // Default: todos os dados (últimos 365 dias para performance)
         from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
     }
+    
+    return { from, to };
+  }
+
+  private getPreviousPeriodDateRange(period: string) {
+    const currentRange = this.getDateRange(period);
+    const periodDuration = currentRange.to.getTime() - currentRange.from.getTime();
+    
+    const to = new Date(currentRange.from.getTime() - 1); // End of previous period (1ms before current period starts)
+    const from = new Date(to.getTime() - periodDuration);
     
     return { from, to };
   }
