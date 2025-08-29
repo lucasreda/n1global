@@ -683,6 +683,7 @@ export const supplierPaymentItems = pgTable("supplier_payment_items", {
 export const investmentPools = pgTable("investment_pools", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // e.g., "COD Operations Fund I"
+  slug: text("slug").notNull().unique(), // URL-friendly identifier, e.g., "cod-operations-fund-i"
   description: text("description"),
   totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull().default("0"), // Total pool value in BRL
   totalInvested: decimal("total_invested", { precision: 15, scale: 2 }).notNull().default("0"), // Total invested by all investors

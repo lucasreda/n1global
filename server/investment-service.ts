@@ -736,6 +736,107 @@ export class InvestmentService {
       minInvestment: parseFloat(pool.minInvestment),
     };
   }
+
+  /**
+   * Get pool details by slug with investor information
+   */
+  async getPoolBySlug(slug: string, investorId: string) {
+    // Get pool details
+    const [pool] = await db
+      .select()
+      .from(investmentPools)
+      .where(eq(investmentPools.slug, slug));
+
+    if (!pool) {
+      throw new Error('Pool not found');
+    }
+
+    // Get investor's investment in this pool
+    const [investment] = await db
+      .select()
+      .from(investments)
+      .where(and(
+        eq(investments.poolId, pool.id),
+        eq(investments.investorId, investorId)
+      ));
+
+    // Get recent transactions for this pool
+    const transactions = await db
+      .select({
+        id: investmentTransactions.id,
+        type: investmentTransactions.type,
+        amount: investmentTransactions.amount,
+        status: investmentTransactions.status,
+        description: investmentTransactions.description,
+        createdAt: investmentTransactions.createdAt,
+        paymentMethod: investmentTransactions.paymentMethod,
+        transactionDate: investmentTransactions.transactionDate,
+      })
+      .from(investmentTransactions)
+      .where(and(
+        eq(investmentTransactions.poolId, pool.id),
+        eq(investmentTransactions.investorId, investorId)
+      ))
+      .orderBy(desc(investmentTransactions.createdAt))
+      .limit(10);
+
+    // Get pool performance history
+    const performanceHistory = await db
+      .select()
+      .from(poolPerformanceHistory)
+      .where(eq(poolPerformanceHistory.poolId, pool.id))
+      .orderBy(desc(poolPerformanceHistory.date))
+      .limit(12); // Last 12 months
+
+    // Get pool statistics
+    const poolStats = await db
+      .select({
+        totalInvestors: count(),
+        totalInvested: sum(investments.totalInvested),
+        avgInvestment: avg(investments.totalInvested),
+        totalReturns: sum(investments.totalReturns),
+      })
+      .from(investments)
+      .where(eq(investments.poolId, pool.id));
+
+    return {
+      pool: {
+        ...pool,
+        totalValue: parseFloat(pool.totalValue),
+        totalInvested: parseFloat(pool.totalInvested),
+        monthlyReturn: parseFloat(pool.monthlyReturn || '0'),
+        yearlyReturn: parseFloat(pool.yearlyReturn || '0'),
+        minInvestment: parseFloat(pool.minInvestment),
+      },
+      investment: investment ? {
+        ...investment,
+        totalInvested: parseFloat(investment.totalInvested),
+        currentValue: parseFloat(investment.currentValue),
+        totalReturns: parseFloat(investment.totalReturns),
+        totalPaidOut: parseFloat(investment.totalPaidOut),
+        returnRate: parseFloat(investment.returnRate || '0'),
+        monthlyReturn: parseFloat(investment.monthlyReturn || '0'),
+      } : null,
+      transactions: transactions.map(tx => ({
+        ...tx,
+        amount: parseFloat(tx.amount),
+        createdAt: tx.createdAt?.toISOString() || '',
+        transactionDate: tx.transactionDate?.toISOString() || '',
+      })),
+      performanceHistory: performanceHistory.map(perf => ({
+        ...perf,
+        totalValue: parseFloat(perf.totalValue),
+        monthlyReturn: parseFloat(perf.monthlyReturn || '0'),
+        date: perf.date.toISOString(),
+      })),
+      statistics: {
+        totalInvestors: Number(poolStats[0]?.totalInvestors || 0),
+        totalInvested: parseFloat(poolStats[0]?.totalInvested || '0'),
+        avgInvestment: parseFloat(poolStats[0]?.avgInvestment || '0'),
+        totalReturns: parseFloat(poolStats[0]?.totalReturns || '0'),
+      }
+    };
+  }
 }
 
 export const investmentService = new InvestmentService();

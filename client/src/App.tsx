@@ -40,6 +40,7 @@ import ProductSuccess from "@/pages/product-success";
 import InvestorSupplierLanding from "@/pages/investor-supplier";
 import InvestmentDashboard from "@/pages/investment/dashboard";
 import InvestmentsPage from "@/pages/investment/investments";
+import { PoolDetailsPage } from "@/pages/investment/pool-details";
 import AdminInvestmentDashboard from "@/pages/admin-investment/dashboard";
 import AdminInvestmentPools from "@/pages/admin-investment/pools";
 import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
@@ -219,6 +220,7 @@ function Router() {
         <Route path="/supplier" component={isSupplier ? SupplierDashboard : () => <NotFound />} />
         
         {/* Investment Routes */}
+        <Route path="/investment/pools/:slug" component={isInvestor ? PoolDetailsPage : () => <NotFound />} />
         <Route path="/investment/investments" component={isInvestor ? InvestmentsPage : () => <NotFound />} />
         <Route path="/investment" component={isInvestor ? InvestmentDashboard : () => <NotFound />} />
         

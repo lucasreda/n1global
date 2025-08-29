@@ -3911,6 +3911,23 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Get investment pool details by slug
+  app.get("/api/investment/pools/:slug", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { slug } = req.params;
+      const { investmentService } = await import("./investment-service");
+      const poolDetails = await investmentService.getPoolBySlug(slug, req.user.id);
+      res.json(poolDetails);
+    } catch (error) {
+      console.error("Error fetching pool details:", error);
+      if (error.message.includes('not found')) {
+        res.status(404).json({ message: "Pool não encontrada" });
+      } else {
+        res.status(500).json({ message: "Erro ao buscar detalhes da pool" });
+      }
+    }
+  });
+
   // Admin Investment middleware
   const requireAdminInvestimento = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.user?.role !== 'admin_investimento') {
