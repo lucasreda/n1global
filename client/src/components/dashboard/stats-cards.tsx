@@ -243,8 +243,8 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
       </div>
 
       {/* Métricas Secundárias com Card Combinado */}
-      <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: '50% 16% 16% 16%'}}>
-        {/* Card Combinado de Pedidos e Entregues - Ocupa 50% */}
+      <div className="grid gap-2 sm:gap-4" style={{gridTemplateColumns: '40% 20% 20% 20%'}}>
+        {/* Card Combinado de Pedidos e Entregues - Ocupa 40% */}
         <div 
           className="group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
           data-testid="card-orders-delivered"
@@ -285,7 +285,7 @@ export function StatsCards({ metrics, isLoading }: StatsCardsProps) {
           </div>
         </div>
 
-        {/* Cards Secundários - Cada um ocupa 16% */}
+        {/* Cards Secundários - Cada um ocupa 20% */}
         {secondaryMetrics.map((metric, index) => {
           const IconComponent = metric.icon;
           return (
