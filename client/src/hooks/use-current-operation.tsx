@@ -59,11 +59,16 @@ export function useCurrentOperation() {
 
   const changeOperation = (operationId: string) => {
     console.log("🔄 Manual operation change:", operationId);
+    console.log("🗄️ Previous operation:", selectedOperation);
+    console.log("🆕 New operation:", operationId);
+    
     setSelectedOperation(operationId);
     localStorage.setItem("current_operation_id", operationId);
     
-    // Invalidate all queries to force fresh data for new operation
+    // Clear all queries to force fresh data for new operation
+    console.log("🧹 Clearing query cache...");
     queryClient.clear();
+    console.log("✅ Cache cleared!");
   };
 
   return {
