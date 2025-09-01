@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { InvestmentLayout } from "@/components/investment/investment-layout";
 
 interface PoolDetails {
   pool: {
@@ -130,52 +131,48 @@ export function PoolDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-700 rounded w-1/4"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="h-96 bg-gray-700 rounded-lg"></div>
-              </div>
-              <div className="space-y-6">
-                <div className="h-48 bg-gray-700 rounded-lg"></div>
-                <div className="h-48 bg-gray-700 rounded-lg"></div>
-              </div>
+      <InvestmentLayout>
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-700 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="h-96 bg-gray-700 rounded-lg"></div>
+            </div>
+            <div className="space-y-6">
+              <div className="h-48 bg-gray-700 rounded-lg"></div>
+              <div className="h-48 bg-gray-700 rounded-lg"></div>
             </div>
           </div>
         </div>
-      </div>
+      </InvestmentLayout>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">Pool não encontrada</h2>
-              <p className="text-gray-400 mb-4">
-                {error?.message || 'A pool de investimento que você está procurando não foi encontrada.'}
-              </p>
-              <Link href="/investment">
-                <Button variant="outline">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Voltar ao Dashboard
-                </Button>
-              </Link>
-            </div>
+      <InvestmentLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Pool não encontrada</h2>
+            <p className="text-gray-400 mb-4">
+              {error?.message || 'A pool de investimento que você está procurando não foi encontrada.'}
+            </p>
+            <Link href="/investment">
+              <Button variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar ao Dashboard
+              </Button>
+            </Link>
           </div>
         </div>
-      </div>
+      </InvestmentLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <InvestmentLayout>
+      <div className="space-y-6">
         {/* Back Button */}
         <div className="flex items-center">
           <Link href="/investment">
@@ -434,6 +431,6 @@ export function PoolDetailsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </InvestmentLayout>
   );
 }
