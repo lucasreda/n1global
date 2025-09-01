@@ -359,6 +359,39 @@ export async function seedDatabase() {
       console.log("ℹ️  Investment pool already exists");
     }
 
+    // Create second investment pool
+    const [existingPool2] = await db
+      .select()
+      .from(investmentPools)
+      .where(eq(investmentPools.name, "Fundo Digital Elite"))
+      .limit(1);
+
+    let pool2Id;
+    if (!existingPool2) {
+      // Create second investment pool
+      const [pool2] = await db
+        .insert(investmentPools)
+        .values({
+          name: "Fundo Digital Elite",
+          slug: "fundo-digital-elite",
+          description: "Fundo de investimento premium focado em operações digitais de alta performance, com retorno mensal de 7% e gestão exclusiva.",
+          totalValue: "1000000.00", // R$1,000,000
+          totalInvested: "0.00", // Available for investment
+          monthlyReturn: "0.07", // 7% monthly
+          yearlyReturn: "1.25", // 125% yearly (compound calculation)
+          minInvestment: "50000.00", // R$50,000 minimum
+          riskLevel: "high",
+          investmentStrategy: "Fundo exclusivo para investidores qualificados, focado em operações digitais de alto retorno e inovação tecnológica."
+        })
+        .returning();
+      
+      pool2Id = pool2.id;
+      console.log("✅ Second investment pool created:", pool2.name);
+    } else {
+      pool2Id = existingPool2.id;
+      console.log("ℹ️  Second investment pool already exists");
+    }
+
     // Get investor if exists (to fix reference issue)
     const [investor] = await db
       .select()
