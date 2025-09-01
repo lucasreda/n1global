@@ -176,19 +176,21 @@ export function PoolDetailsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Back Button */}
+        <div className="flex items-center">
+          <Link href="/investment">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link href="/investment">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-white">{data.pool.name}</h1>
-              <p className="text-gray-400 mt-1">{data.pool.description}</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white">{data.pool.name}</h1>
+            <p className="text-gray-400 mt-1">{data.pool.description}</p>
           </div>
           <Badge variant={getRiskBadgeVariant(data.pool.riskLevel)}>
             {getRiskLabel(data.pool.riskLevel)}
