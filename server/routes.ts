@@ -3678,6 +3678,18 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Get payments data with transactions, tax calculations and schedules
+  app.get("/api/investment/payments", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
+    try {
+      const { investmentService } = await import("./investment-service");
+      const paymentsData = await investmentService.getPaymentsData(req.user.id);
+      res.json(paymentsData);
+    } catch (error) {
+      console.error("Error fetching payments data:", error);
+      res.status(500).json({ message: "Erro ao buscar dados de pagamentos" });
+    }
+  });
+
   // Reinitialize investor data (for production deployment)
   app.post("/api/investment/reinitialize", authenticateToken, requireInvestor, async (req: AuthRequest, res: Response) => {
     try {

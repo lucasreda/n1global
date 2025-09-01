@@ -839,6 +839,104 @@ export const poolPerformanceHistory = pgTable("pool_performance_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ==========================================
+// INVESTMENT PAYMENT & TAX TABLES
+// ==========================================
+
+// Tax calculations for investment returns
+export const investmentTaxCalculations = pgTable("investment_tax_calculations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  
+  // Tax period
+  taxYear: integer("tax_year").notNull(),
+  referenceMonth: integer("reference_month"), // For monthly calculations
+  
+  // Calculation details
+  totalGains: decimal("total_gains", { precision: 12, scale: 2 }).notNull().default("0"),
+  taxableAmount: decimal("taxable_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).notNull(), // E.g., 0.15 for 15%
+  taxDue: decimal("tax_due", { precision: 12, scale: 2 }).notNull().default("0"),
+  taxPaid: decimal("tax_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+  
+  // Status and dates
+  status: text("status").notNull().default("pending"), // 'pending', 'filed', 'paid', 'overdue'
+  dueDate: timestamp("due_date"),
+  paidDate: timestamp("paid_date"),
+  
+  // Supporting data
+  calculationDetails: jsonb("calculation_details"), // Detailed breakdown
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payment receipts and documentation
+export const paymentReceipts = pgTable("payment_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  transactionId: varchar("transaction_id").notNull().references(() => investmentTransactions.id),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  
+  // Receipt details
+  receiptNumber: text("receipt_number"),
+  receiptType: text("receipt_type").notNull(), // 'bank_transfer', 'pix_receipt', 'ted_receipt', 'wire_transfer'
+  
+  // File storage
+  fileUrl: text("file_url"), // URL to stored receipt file
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  fileMimeType: text("file_mime_type"),
+  
+  // Bank/Payment details
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  routingNumber: text("routing_number"),
+  authenticationCode: text("authentication_code"), // Bank confirmation code
+  
+  // Fund source declaration
+  fundSource: text("fund_source").notNull(), // 'salary', 'savings', 'business_income', 'investment_returns', 'inheritance', 'loan', 'gift', 'other'
+  fundSourceDescription: text("fund_source_description"), // Additional details
+  fundSourceDocuments: jsonb("fund_source_documents"), // Array of supporting documents
+  
+  // Verification
+  isVerified: boolean("is_verified").default(false),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  verificationNotes: text("verification_notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tax payment schedule/calendar
+export const taxPaymentSchedule = pgTable("tax_payment_schedule", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  calculationId: varchar("calculation_id").references(() => investmentTaxCalculations.id),
+  
+  // Schedule details
+  taxType: text("tax_type").notNull(), // 'income_tax', 'capital_gains', 'come_cotas'
+  paymentType: text("payment_type").notNull(), // 'monthly', 'quarterly', 'annual', 'on_demand'
+  
+  // Amount and dates
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  reminderDate: timestamp("reminder_date"),
+  
+  // Status
+  status: text("status").notNull().default("scheduled"), // 'scheduled', 'reminder_sent', 'paid', 'overdue', 'cancelled'
+  paidDate: timestamp("paid_date"),
+  paymentReference: text("payment_reference"),
+  
+  // Notifications
+  reminderSent: boolean("reminder_sent").default(false),
+  reminderSentAt: timestamp("reminder_sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Ad Accounts - Unified table for Facebook and Google Ads
 export const adAccounts = pgTable("ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -994,6 +1092,26 @@ export const insertPoolPerformanceHistorySchema = createInsertSchema(poolPerform
   createdAt: true,
 });
 
+export const insertInvestmentTaxCalculationSchema = createInsertSchema(investmentTaxCalculations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentReceiptSchema = createInsertSchema(paymentReceipts).omit({
+  id: true,
+  verifiedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaxPaymentScheduleSchema = createInsertSchema(taxPaymentSchedule).omit({
+  id: true,
+  reminderSentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type FacebookBusinessManager = typeof facebookBusinessManagers.$inferSelect;
 export type InsertFacebookBusinessManager = z.infer<typeof insertFacebookBusinessManagerSchema>;
@@ -1025,3 +1143,12 @@ export type InsertInvestmentTransaction = z.infer<typeof insertInvestmentTransac
 
 export type PoolPerformanceHistory = typeof poolPerformanceHistory.$inferSelect;
 export type InsertPoolPerformanceHistory = z.infer<typeof insertPoolPerformanceHistorySchema>;
+
+export type InvestmentTaxCalculation = typeof investmentTaxCalculations.$inferSelect;
+export type InsertInvestmentTaxCalculation = z.infer<typeof insertInvestmentTaxCalculationSchema>;
+
+export type PaymentReceipt = typeof paymentReceipts.$inferSelect;
+export type InsertPaymentReceipt = z.infer<typeof insertPaymentReceiptSchema>;
+
+export type TaxPaymentSchedule = typeof taxPaymentSchedule.$inferSelect;
+export type InsertTaxPaymentSchedule = z.infer<typeof insertTaxPaymentScheduleSchema>;

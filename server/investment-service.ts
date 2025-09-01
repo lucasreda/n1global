@@ -77,6 +77,133 @@ export interface PerformanceMetrics {
 }
 
 export class InvestmentService {
+
+  async getPaymentsData(investorId: string) {
+    // Get all transactions for this investor
+    const transactions = await db.select({
+      id: investmentTransactions.id,
+      type: investmentTransactions.type,
+      amount: investmentTransactions.amount,
+      currency: investmentTransactions.currency,
+      status: investmentTransactions.paymentStatus,
+      paymentMethod: investmentTransactions.paymentMethod,
+      paymentReference: investmentTransactions.paymentReference,
+      description: investmentTransactions.description,
+      createdAt: investmentTransactions.createdAt,
+      processedAt: investmentTransactions.processedAt,
+      metadata: investmentTransactions.metadata,
+    })
+    .from(investmentTransactions)
+    .where(eq(investmentTransactions.investorId, investorId))
+    .orderBy(desc(investmentTransactions.createdAt));
+
+    // Calculate summary data
+    const summary = transactions.reduce((acc, transaction) => {
+      const amount = parseInt(transaction.amount);
+      
+      if (transaction.type === 'deposit') {
+        acc.totalDeposits += amount;
+      } else if (transaction.type === 'withdrawal') {
+        acc.totalWithdrawals += amount;
+      }
+      
+      return acc;
+    }, {
+      totalDeposits: 0,
+      totalWithdrawals: 0,
+      totalTaxesDue: 146730, // Sample data
+      totalTaxesPaid: 23470, // Sample data
+      pendingVerifications: 2, // Sample data
+    });
+
+    // Mock tax calculations for demonstration
+    const taxCalculations = [
+      {
+        id: 'tax-calc-1',
+        taxYear: 2024,
+        referenceMonth: 12,
+        totalGains: 117374,
+        taxableAmount: 117374,
+        taxRate: 0.15,
+        taxDue: 17606,
+        taxPaid: 2934,
+        status: 'pending',
+        dueDate: '2025-01-31',
+        calculationDetails: {},
+      },
+      {
+        id: 'tax-calc-2',
+        taxYear: 2024,
+        referenceMonth: 11,
+        totalGains: 98420,
+        taxableAmount: 98420,
+        taxRate: 0.15,
+        taxDue: 14763,
+        taxPaid: 14763,
+        status: 'paid',
+        dueDate: '2024-12-31',
+        calculationDetails: {},
+      }
+    ];
+
+    // Mock tax schedule
+    const taxSchedule = [
+      {
+        id: 'schedule-1',
+        taxType: 'income_tax',
+        paymentType: 'monthly',
+        amount: 17606,
+        dueDate: '2025-01-31',
+        status: 'scheduled',
+        paymentReference: '',
+      },
+      {
+        id: 'schedule-2',
+        taxType: 'capital_gains',
+        paymentType: 'quarterly',
+        amount: 8803,
+        dueDate: '2025-03-31',
+        status: 'scheduled',
+        paymentReference: '',
+      },
+      {
+        id: 'schedule-3',
+        taxType: 'come_cotas',
+        paymentType: 'quarterly',
+        amount: 5862,
+        dueDate: '2025-06-30',
+        status: 'scheduled',
+        paymentReference: '',
+      }
+    ];
+
+    // Enhance transactions with mock additional data for demonstration
+    const enhancedTransactions = transactions.map(transaction => {
+      const metadata = transaction.metadata as any || {};
+      
+      return {
+        ...transaction,
+        fundSource: metadata.fundSource || 'salary',
+        fundSourceDescription: metadata.fundSourceDescription || 'Salário mensal',
+        bankName: metadata.bankName || 'Banco do Brasil',
+        authenticationCode: metadata.authenticationCode || Math.random().toString(36).substring(2, 15).toUpperCase(),
+        isVerified: metadata.isVerified || Math.random() > 0.3,
+        receipt: Math.random() > 0.5 ? {
+          id: `receipt-${transaction.id}`,
+          fileName: `comprovante-${transaction.id}.pdf`,
+          fileUrl: `/receipts/comprovante-${transaction.id}.pdf`,
+          receiptType: 'pix_receipt'
+        } : undefined
+      };
+    });
+
+    return {
+      transactions: enhancedTransactions,
+      taxCalculations,
+      taxSchedule,
+      summary
+    };
+  }
   
   /**
    * Get comprehensive dashboard data for an investor
