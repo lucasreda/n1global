@@ -697,6 +697,26 @@ export const investmentPools = pgTable("investment_pools", {
   riskLevel: text("risk_level").notNull().default("medium"), // 'low', 'medium', 'high'
   investmentStrategy: text("investment_strategy"), // Description of investment strategy
   
+  // Legal Documentation
+  cnpj: text("cnpj"), // CNPJ do fundo/pool
+  cvmRegistration: text("cvm_registration"), // Registro CVM se aplicável
+  auditReport: text("audit_report"), // URL do relatório de auditoria independente
+  
+  // Portfolio Composition
+  portfolioComposition: jsonb("portfolio_composition"), // Composição detalhada da carteira
+  
+  // Fiscal Performance
+  managementFeeRate: decimal("management_fee_rate", { precision: 5, scale: 4 }).default("0"), // Taxa de administração
+  administrativeExpenses: decimal("administrative_expenses", { precision: 10, scale: 2 }).default("0"), // Despesas administrativas
+  irRetentionHistory: jsonb("ir_retention_history"), // Histórico de retenção de IR
+  benchmarkIndex: text("benchmark_index").default("CDI"), // Índice de referência (CDI, IPCA, etc)
+  comeCotasRate: decimal("come_cotas_rate", { precision: 5, scale: 4 }).default("0"), // Taxa come-cotas
+  
+  // Operational Transparency
+  custodyProvider: text("custody_provider"), // Provedor de custódia dos ativos
+  liquidationProcess: text("liquidation_process"), // Descrição do processo de liquidação
+  monthlyReports: jsonb("monthly_reports"), // Relatórios mensais da pool
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -815,6 +815,26 @@ export class InvestmentService {
         monthlyReturn: parseFloat(pool.monthlyReturn || '0'),
         yearlyReturn: parseFloat(pool.yearlyReturn || '0'),
         minInvestment: parseFloat(pool.minInvestment),
+        
+        // Legal Documentation
+        cnpj: pool.cnpj,
+        cvmRegistration: pool.cvmRegistration,
+        auditReport: pool.auditReport,
+        
+        // Portfolio Composition
+        portfolioComposition: pool.portfolioComposition || [],
+        
+        // Fiscal Performance
+        managementFeeRate: parseFloat(pool.managementFeeRate || '0'),
+        administrativeExpenses: parseFloat(pool.administrativeExpenses || '0'),
+        irRetentionHistory: pool.irRetentionHistory || [],
+        benchmarkIndex: pool.benchmarkIndex || 'CDI',
+        comeCotasRate: parseFloat(pool.comeCotasRate || '0'),
+        
+        // Operational Transparency
+        custodyProvider: pool.custodyProvider,
+        liquidationProcess: pool.liquidationProcess,
+        monthlyReports: pool.monthlyReports || [],
       },
       investment: investment ? {
         ...investment,

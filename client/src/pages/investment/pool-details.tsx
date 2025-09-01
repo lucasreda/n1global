@@ -1,6 +1,6 @@
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Calendar, Users, Target, Activity, AlertCircle } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Calendar, Users, Target, Activity, AlertCircle, FileText, PieChart, Calculator, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,38 @@ interface PoolDetails {
     riskLevel: string;
     investmentStrategy: string;
     createdAt: string;
+    
+    // Legal Documentation
+    cnpj?: string;
+    cvmRegistration?: string;
+    auditReport?: string;
+    
+    // Portfolio Composition
+    portfolioComposition?: Array<{
+      asset: string;
+      percentage: number;
+      amount: number;
+    }>;
+    
+    // Fiscal Performance
+    managementFeeRate?: number;
+    administrativeExpenses?: number;
+    irRetentionHistory?: Array<{
+      period: string;
+      amount: number;
+      rate: number;
+    }>;
+    benchmarkIndex?: string;
+    comeCotasRate?: number;
+    
+    // Operational Transparency
+    custodyProvider?: string;
+    liquidationProcess?: string;
+    monthlyReports?: Array<{
+      month: string;
+      url: string;
+      performance: number;
+    }>;
   };
   investment?: {
     id: string;
@@ -422,9 +454,174 @@ export function PoolDetailsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Status</span>
-                  <Badge variant={data.pool.status === 'active' ? 'default' : 'secondary'}>
+                  <Badge variant={data.pool.status === 'active' ? 'default' : 'secondary'} className="text-white">
                     {data.pool.status === 'active' ? 'Ativa' : data.pool.status}
                   </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legal Documentation Section */}
+            <Card className="bg-black/20 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <FileText className="w-5 h-5" />
+                  <span>Documentação Legal</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {data.pool.cnpj && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">CNPJ</span>
+                    <span className="text-white font-mono">{data.pool.cnpj}</span>
+                  </div>
+                )}
+                {data.pool.cvmRegistration && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Registro CVM</span>
+                    <span className="text-white">{data.pool.cvmRegistration}</span>
+                  </div>
+                )}
+                {data.pool.auditReport && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Auditoria</span>
+                    <a 
+                      href={data.pool.auditReport} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      Relatório 2024
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Portfolio Composition Section */}
+            <Card className="bg-black/20 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <PieChart className="w-5 h-5" />
+                  <span>Composição da Carteira</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {data.pool.portfolioComposition && data.pool.portfolioComposition.length > 0 ? (
+                  data.pool.portfolioComposition.map((item, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">{item.asset}</span>
+                        <span className="text-white font-semibold">{item.percentage}%</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${item.percentage}%` }}
+                        />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-gray-400 text-sm">
+                          {formatCurrency(item.amount, data.pool.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400">Informações da carteira não disponíveis</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Fiscal Performance Section */}
+            <Card className="bg-black/20 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <Calculator className="w-5 h-5" />
+                  <span>Performance Fiscal</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Taxa de Administração</span>
+                  <span className="text-white font-semibold">
+                    {((data.pool.managementFeeRate || 0) * 100).toFixed(2)}% a.a.
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Despesas Administrativas</span>
+                  <span className="text-white font-semibold">
+                    {formatCurrency(data.pool.administrativeExpenses || 0, data.pool.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Benchmark</span>
+                  <span className="text-white">{data.pool.benchmarkIndex || 'CDI'}</span>
+                </div>
+                <Separator className="bg-white/10" />
+                <div className="space-y-2">
+                  <span className="text-gray-400 text-sm">Últimas Retenções de IR</span>
+                  {data.pool.irRetentionHistory && data.pool.irRetentionHistory.length > 0 ? (
+                    data.pool.irRetentionHistory.slice(0, 3).map((item, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span className="text-gray-400">{item.period}</span>
+                        <span className="text-white">
+                          {formatCurrency(item.amount, data.pool.currency)} ({(item.rate * 100)}%)
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-sm">Sem retenções registradas</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Operational Transparency Section */}
+            <Card className="bg-black/20 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <Shield className="w-5 h-5" />
+                  <span>Transparência Operacional</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {data.pool.custodyProvider && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Custodiante</span>
+                    <span className="text-white">{data.pool.custodyProvider}</span>
+                  </div>
+                )}
+                {data.pool.liquidationProcess && (
+                  <div className="space-y-2">
+                    <span className="text-gray-400">Processo de Liquidação</span>
+                    <p className="text-white text-sm bg-gray-800/50 p-3 rounded">
+                      {data.pool.liquidationProcess}
+                    </p>
+                  </div>
+                )}
+                <Separator className="bg-white/10" />
+                <div className="space-y-2">
+                  <span className="text-gray-400 text-sm">Relatórios Mensais</span>
+                  {data.pool.monthlyReports && data.pool.monthlyReports.length > 0 ? (
+                    data.pool.monthlyReports.slice(0, 3).map((report, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm">
+                        <a 
+                          href={report.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          {report.month}
+                        </a>
+                        <span className={`font-semibold ${report.performance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {report.performance >= 0 ? '+' : ''}{report.performance.toFixed(1)}%
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-sm">Relatórios em breve</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
