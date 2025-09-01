@@ -53,7 +53,6 @@ export default function InvestmentsPage() {
   const [selectedPool, setSelectedPool] = useState<InvestmentOpportunity | null>(null);
   const [simulatorParams, setSimulatorParams] = useState({
     initialAmount: 27500,
-    monthlyContribution: 2750,
     months: 12
   });
 
@@ -104,14 +103,19 @@ export default function InvestmentsPage() {
 
   // Simulador de rentabilidade
   const calculateSimulation = () => {
-    const monthlyReturn = 2.5; // 2.5% ao mês
-    let currentValue = simulatorParams.initialAmount;
-    let totalInvested = simulatorParams.initialAmount;
+    // Calcular média dos retornos mensais das oportunidades disponíveis
+    let averageMonthlyReturn = 2.5; // valor padrão
+    if (opportunities && opportunities.length > 0) {
+      const totalReturn = opportunities.reduce((sum, opp) => sum + opp.monthlyReturn, 0);
+      averageMonthlyReturn = totalReturn / opportunities.length;
+    }
 
+    let currentValue = simulatorParams.initialAmount;
+    const totalInvested = simulatorParams.initialAmount;
+
+    // Aplicar juros compostos mensais
     for (let i = 1; i <= simulatorParams.months; i++) {
-      currentValue *= (1 + monthlyReturn / 100);
-      totalInvested += simulatorParams.monthlyContribution;
-      currentValue += simulatorParams.monthlyContribution;
+      currentValue *= (1 + averageMonthlyReturn / 100);
     }
 
     const totalReturns = currentValue - totalInvested;
@@ -121,7 +125,8 @@ export default function InvestmentsPage() {
       finalValue: currentValue,
       totalInvested,
       totalReturns,
-      returnRate
+      returnRate,
+      monthlyReturnUsed: averageMonthlyReturn
     };
   };
 
@@ -174,20 +179,6 @@ export default function InvestmentsPage() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="monthly" className="text-gray-300 text-sm">Aporte Mensal</Label>
-                    <Input
-                      id="monthly"
-                      type="number"
-                      value={simulatorParams.monthlyContribution}
-                      onChange={(e) => setSimulatorParams(prev => ({
-                        ...prev,
-                        monthlyContribution: Number(e.target.value)
-                      }))}
-                      className="bg-[#252525] border-[#404040] text-white mt-1"
-                    />
-                  </div>
-                  
-                  <div>
                     <Label htmlFor="months" className="text-gray-300 text-sm">Período (meses)</Label>
                     <Input
                       id="months"
@@ -200,12 +191,17 @@ export default function InvestmentsPage() {
                       className="bg-[#252525] border-[#404040] text-white mt-1"
                     />
                   </div>
+
+                  <div className="p-3 bg-[#1a1a1a] rounded-lg">
+                    <p className="text-gray-400 text-xs mb-1">Rentabilidade Média das Pools</p>
+                    <p className="text-blue-400 font-medium text-sm">{simulation.monthlyReturnUsed.toFixed(2)}% ao mês</p>
+                  </div>
                   
                   <div className="border-t border-[#252525] pt-4">
-                    <h4 className="font-medium text-white mb-3 text-sm">Projeção</h4>
+                    <h4 className="font-medium text-white mb-3 text-sm">Projeção de Retorno</h4>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="bg-[#1a1a1a] p-3 rounded">
-                        <p className="text-gray-400 mb-1">Total Investido</p>
+                        <p className="text-gray-400 mb-1">Valor Investido</p>
                         <p className="text-blue-400 font-medium">{formatCurrency(simulation.totalInvested)}</p>
                       </div>
                       <div className="bg-[#1a1a1a] p-3 rounded">
@@ -213,11 +209,11 @@ export default function InvestmentsPage() {
                         <p className="text-green-400 font-medium">{formatCurrency(simulation.finalValue)}</p>
                       </div>
                       <div className="bg-[#1a1a1a] p-3 rounded">
-                        <p className="text-gray-400 mb-1">Rendimento</p>
+                        <p className="text-gray-400 mb-1">Lucro Total</p>
                         <p className="text-purple-400 font-medium">{formatCurrency(simulation.totalReturns)}</p>
                       </div>
                       <div className="bg-[#1a1a1a] p-3 rounded">
-                        <p className="text-gray-400 mb-1">Rentabilidade</p>
+                        <p className="text-gray-400 mb-1">% de Retorno</p>
                         <p className="text-yellow-400 font-medium">{formatPercentage(simulation.returnRate)}</p>
                       </div>
                     </div>
