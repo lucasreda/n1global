@@ -189,7 +189,7 @@ export function PoolDetailsPage() {
             <h1 className="text-3xl font-bold text-white">{data.pool.name}</h1>
             <p className="text-gray-400 mt-1">{data.pool.description}</p>
           </div>
-          <Badge variant={getRiskBadgeVariant(data.pool.riskLevel)} className="flex items-center justify-center text-center">
+          <Badge variant={getRiskBadgeVariant(data.pool.riskLevel)} className="flex items-center justify-center text-center text-white">
             {getRiskLabel(data.pool.riskLevel)}
           </Badge>
         </div>
