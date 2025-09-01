@@ -787,6 +787,38 @@ export class InvestmentService {
   }
 
   /**
+   * Generate a unique slug for investment pool
+   */
+  private async generateUniqueSlug(name: string): Promise<string> {
+    let baseSlug = name.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]/g, '')
+      .replace(/--+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    let slug = baseSlug;
+    let counter = 1;
+    
+    // Check if slug exists and make it unique
+    while (true) {
+      const [existingPool] = await db
+        .select()
+        .from(investmentPools)
+        .where(eq(investmentPools.slug, slug))
+        .limit(1);
+        
+      if (!existingPool) {
+        break;
+      }
+      
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    return slug;
+  }
+
+  /**
    * Create new investment pool (admin only)
    */
   async createPool(poolData: {
@@ -798,12 +830,28 @@ export class InvestmentService {
     minInvestment?: number;
     status?: string;
   }) {
+    // Validate required fields
+    if (!poolData.name || poolData.name.trim().length === 0) {
+      throw new Error('Pool name is required');
+    }
+    
+    if (poolData.totalValue <= 0) {
+      throw new Error('Total value must be greater than 0');
+    }
+    
+    if (!['low', 'medium', 'high'].includes(poolData.riskLevel)) {
+      throw new Error('Risk level must be one of: low, medium, high');
+    }
+
+    // Generate unique slug
+    const slug = await this.generateUniqueSlug(poolData.name);
+    
     const [pool] = await db
       .insert(investmentPools)
       .values({
-        name: poolData.name,
-        slug: poolData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, ''),
-        description: poolData.description,
+        name: poolData.name.trim(),
+        slug,
+        description: poolData.description?.trim(),
         totalValue: poolData.totalValue.toString(),
         totalInvested: '0',
         monthlyReturn: poolData.monthlyReturnRate.toString(),
