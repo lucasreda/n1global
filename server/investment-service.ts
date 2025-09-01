@@ -33,6 +33,7 @@ export interface InvestorDashboardData {
     monthlyReturn: number;
     yearlyReturn: number;
     riskLevel: string;
+    slug: string;
   };
   
   // Recent transactions
@@ -598,7 +599,7 @@ export class InvestmentService {
         ORDER BY u.created_at DESC
       `);
 
-      return investorData.map((row: any) => ({
+      return investorData.rows.map((row: any) => ({
         id: row.id,
         name: row.name,
         email: row.email,
@@ -674,6 +675,7 @@ export class InvestmentService {
       .insert(investmentPools)
       .values({
         name: poolData.name,
+        slug: poolData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, ''),
         description: poolData.description,
         totalValue: poolData.totalValue.toString(),
         totalInvested: '0',
@@ -768,11 +770,10 @@ export class InvestmentService {
         id: investmentTransactions.id,
         type: investmentTransactions.type,
         amount: investmentTransactions.amount,
-        status: investmentTransactions.status,
+        paymentStatus: investmentTransactions.paymentStatus,
         description: investmentTransactions.description,
         createdAt: investmentTransactions.createdAt,
         paymentMethod: investmentTransactions.paymentMethod,
-        transactionDate: investmentTransactions.transactionDate,
       })
       .from(investmentTransactions)
       .where(and(
@@ -787,25 +788,23 @@ export class InvestmentService {
       .select()
       .from(poolPerformanceHistory)
       .where(eq(poolPerformanceHistory.poolId, pool.id))
-      .orderBy(desc(poolPerformanceHistory.date))
+      .orderBy(desc(poolPerformanceHistory.periodDate))
       .limit(12); // Last 12 months
 
-    // Get pool statistics
-    const poolStatsResult = await db
+    // Get pool statistics - simpler approach
+    const poolInvestments = await db
       .select({
-        totalInvestors: count(),
-        totalInvested: sum(investments.totalInvested),
-        avgInvestment: avg(investments.totalInvested),
-        totalReturns: sum(investments.totalReturns),
+        totalInvested: investments.totalInvested,
+        totalReturns: investments.totalReturns,
       })
       .from(investments)
       .where(eq(investments.poolId, pool.id));
     
-    const poolStats = poolStatsResult[0] || {
-      totalInvestors: 0,
-      totalInvested: null,
-      avgInvestment: null,
-      totalReturns: null,
+    const poolStats = {
+      totalInvestors: poolInvestments.length,
+      totalInvested: poolInvestments.reduce((sum, inv) => sum + parseFloat(inv.totalInvested || '0'), 0),
+      avgInvestment: poolInvestments.length > 0 ? poolInvestments.reduce((sum, inv) => sum + parseFloat(inv.totalInvested || '0'), 0) / poolInvestments.length : 0,
+      totalReturns: poolInvestments.reduce((sum, inv) => sum + parseFloat(inv.totalReturns || '0'), 0),
     };
 
     return {
@@ -829,20 +828,20 @@ export class InvestmentService {
       transactions: transactions.map(tx => ({
         ...tx,
         amount: parseFloat(tx.amount),
-        createdAt: tx.createdAt?.toISOString() || '',
-        transactionDate: tx.transactionDate?.toISOString() || '',
+        status: tx.paymentStatus || 'pending',
+        date: tx.createdAt?.toISOString() || '',
       })),
       performanceHistory: performanceHistory.map(perf => ({
         ...perf,
         totalValue: parseFloat(perf.totalValue),
-        monthlyReturn: parseFloat(perf.monthlyReturn || '0'),
-        date: perf.date.toISOString(),
+        monthlyReturn: parseFloat(perf.returnRate || '0'),
+        date: perf.periodDate.toISOString(),
       })),
       statistics: {
-        totalInvestors: Number(poolStats.totalInvestors || 0),
-        totalInvested: parseFloat(poolStats.totalInvested || '0'),
-        avgInvestment: parseFloat(poolStats.avgInvestment || '0'),
-        totalReturns: parseFloat(poolStats.totalReturns || '0'),
+        totalInvestors: poolStats.totalInvestors,
+        totalInvested: poolStats.totalInvested,
+        avgInvestment: poolStats.avgInvestment,
+        totalReturns: poolStats.totalReturns,
       }
     };
   }
