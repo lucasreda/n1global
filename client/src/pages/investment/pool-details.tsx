@@ -1,6 +1,6 @@
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Calendar, Users, Target, Activity, AlertCircle, FileText, PieChart, Calculator, Shield } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Calendar, Users, Target, Activity, AlertCircle, FileText, PieChart, Calculator, Shield, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -120,26 +120,6 @@ const getRiskLabel = (riskLevel: string) => {
   }
 };
 
-const getTransactionTypeLabel = (type: string) => {
-  switch (type.toLowerCase()) {
-    case 'investment': return 'Investimento';
-    case 'return': return 'Retorno';
-    case 'withdrawal': return 'Saque';
-    case 'fee': return 'Taxa';
-    default: return type;
-  }
-};
-
-const getTransactionIcon = (type: string) => {
-  switch (type.toLowerCase()) {
-    case 'investment': return <TrendingUp className="w-4 h-4 text-green-500" />;
-    case 'return': return <DollarSign className="w-4 h-4 text-blue-500" />;
-    case 'withdrawal': return <TrendingDown className="w-4 h-4 text-red-500" />;
-    case 'fee': return <AlertCircle className="w-4 h-4 text-orange-500" />;
-    default: return <Activity className="w-4 h-4 text-gray-500" />;
-  }
-};
-
 export function PoolDetailsPage() {
   const { slug } = useParams();
 
@@ -166,15 +146,12 @@ export function PoolDetailsPage() {
       <InvestmentLayout>
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-700 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="h-96 bg-gray-700 rounded-lg"></div>
-            </div>
-            <div className="space-y-6">
-              <div className="h-48 bg-gray-700 rounded-lg"></div>
-              <div className="h-48 bg-gray-700 rounded-lg"></div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-700 rounded-lg"></div>
+            ))}
           </div>
+          <div className="h-96 bg-gray-700 rounded-lg"></div>
         </div>
       </InvestmentLayout>
     );
@@ -226,150 +203,179 @@ export function PoolDetailsPage() {
           </Badge>
         </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Charts and Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Performance Chart */}
-            <Card className="bg-black/20 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white">Performance da Pool</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.performanceHistory}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="#9CA3AF"
-                        tickFormatter={(date) => formatDate(date)}
-                      />
-                      <YAxis stroke="#9CA3AF" tickFormatter={(value) => `${value}%`} />
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: '#1F2937',
-                          border: '1px solid #374151',
-                          borderRadius: '8px',
-                          color: '#fff'
-                        }}
-                        formatter={(value: number) => [`${value.toFixed(2)}%`, 'Retorno Mensal']}
-                        labelFormatter={(label) => formatDate(label)}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="monthlyReturn" 
-                        stroke="#10B981" 
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+        {/* Main Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Pool Value */}
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-blue-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Valor da Pool</span>
+                <div className="p-1.5 rounded-full bg-blue-500/10">
+                  <Target className="h-3 w-3 text-blue-400" />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-2xl font-semibold text-white mb-1">
+                {formatCurrency(data.pool.totalValue, data.pool.currency)}
+              </div>
+              <p className="text-xs text-gray-500">
+                Valor total da pool
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Pool Strategy */}
-            {data.pool.investmentStrategy && (
-              <Card className="bg-black/20 border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-white">Estratégia de Investimento</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300">{data.pool.investmentStrategy}</p>
-                </CardContent>
-              </Card>
-            )}
+          {/* Monthly Return */}
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-green-500/50 to-green-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Retorno Mensal</span>
+                <div className="p-1.5 rounded-full bg-green-500/10">
+                  <TrendingUp className="h-3 w-3 text-green-400" />
+                </div>
+              </div>
+              <div className={`text-2xl font-semibold mb-1 ${data.pool.monthlyReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {data.pool.monthlyReturn >= 0 ? '+' : ''}{data.pool.monthlyReturn.toFixed(2)}%
+              </div>
+              <p className="text-xs text-gray-500">
+                Performance mensal
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Transactions History */}
-            <Card className="bg-black/20 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white">Histórico de Transações</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {data.transactions.length > 0 ? (
-                  <div className="space-y-4">
-                    {data.transactions.map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          {getTransactionIcon(transaction.type)}
-                          <div>
-                            <p className="text-white font-medium">{getTransactionTypeLabel(transaction.type)}</p>
-                            <p className="text-gray-400 text-sm">{formatDate(transaction.createdAt)}</p>
-                            {transaction.description && (
-                              <p className="text-gray-500 text-xs">{transaction.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={`font-semibold ${transaction.type === 'withdrawal' || transaction.type === 'fee' 
-                            ? 'text-red-400' : 'text-green-400'}`}>
-                            {transaction.type === 'withdrawal' || transaction.type === 'fee' ? '-' : '+'}
-                            {formatCurrency(transaction.amount, data.pool.currency)}
-                          </p>
-                          <p className="text-gray-400 text-sm capitalize">{transaction.status}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Activity className="w-12 h-12 text-gray-500 mx-auto mb-2" />
-                    <p className="text-gray-400">Nenhuma transação encontrada</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          {/* Yearly Return */}
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-blue-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Retorno Anual</span>
+                <div className="p-1.5 rounded-full bg-blue-500/10">
+                  <BarChart3 className="h-3 w-3 text-blue-400" />
+                </div>
+              </div>
+              <div className={`text-2xl font-semibold mb-1 ${data.pool.yearlyReturn >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                {data.pool.yearlyReturn >= 0 ? '+' : ''}{data.pool.yearlyReturn.toFixed(2)}%
+              </div>
+              <p className="text-xs text-gray-500">
+                Performance anual
+              </p>
+            </CardContent>
+          </Card>
 
-          {/* Right Column - Summary Cards */}
+          {/* Total Investors */}
+          <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-500/50 to-purple-500/20"></div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Investidores</span>
+                <div className="p-1.5 rounded-full bg-purple-500/10">
+                  <Users className="h-3 w-3 text-purple-400" />
+                </div>
+              </div>
+              <div className="text-2xl font-semibold text-white mb-1">
+                {data.statistics.totalInvestors}
+              </div>
+              <p className="text-xs text-gray-500">
+                Total de investidores
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Performance Chart - Full Width */}
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+          <CardHeader>
+            <CardTitle className="text-white" style={{ fontSize: '20px' }}>
+              Performance Histórica
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="h-64 md:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.performanceHistory}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#666"
+                    tickFormatter={(date) => formatDate(date)}
+                  />
+                  <YAxis stroke="#666" tickFormatter={(value) => `${value}%`} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1F2937', 
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                    }}
+                    formatter={(value: number) => [`${value.toFixed(2)}%`, 'Retorno Mensal']}
+                    labelFormatter={(label) => formatDate(label)}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="monthlyReturn" 
+                    stroke="#10B981" 
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 3, stroke: '#10B981', strokeWidth: 1, fill: '#10B981' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Two Column Layout for Detailed Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column */}
           <div className="space-y-6">
-            {/* Your Investment */}
+            {/* Investment Summary or Call to Action */}
             {data.investment ? (
-              <Card className="bg-black/20 border-white/10">
+              <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
                 <CardHeader>
-                  <CardTitle className="text-white">Seu Investimento</CardTitle>
+                  <CardTitle className="text-white" style={{ fontSize: '20px' }}>
+                    Meu Investimento
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Valor Investido</span>
-                    <span className="text-white font-semibold">
-                      {formatCurrency(data.investment.totalInvested, data.pool.currency)}
-                    </span>
+                <CardContent className="p-6 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Investido</p>
+                      <p className="text-lg font-semibold text-white">
+                        {formatCurrency(data.investment.totalInvested, data.pool.currency)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Valor Atual</p>
+                      <p className="text-lg font-semibold text-white">
+                        {formatCurrency(data.investment.currentValue, data.pool.currency)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Valor Atual</span>
-                    <span className="text-white font-semibold">
-                      {formatCurrency(data.investment.currentValue, data.pool.currency)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Retorno Total</span>
-                    <span className={`font-semibold ${data.investment.totalReturns >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {data.investment.totalReturns >= 0 ? '+' : ''}{formatCurrency(data.investment.totalReturns, data.pool.currency)}
-                    </span>
-                  </div>
-                  <Separator className="bg-white/10" />
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Taxa de Retorno</span>
-                    <span className={`font-semibold ${data.investment.returnRate >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {data.investment.returnRate >= 0 ? '+' : ''}{data.investment.returnRate.toFixed(2)}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Primeiro Investimento</span>
-                    <span className="text-white text-sm">
-                      {formatDate(data.investment.firstInvestmentDate)}
-                    </span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Retorno</p>
+                      <p className={`text-lg font-semibold ${data.investment.totalReturns >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {data.investment.totalReturns >= 0 ? '+' : ''}{formatCurrency(data.investment.totalReturns, data.pool.currency)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Taxa</p>
+                      <p className={`text-lg font-semibold ${data.investment.returnRate >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {data.investment.returnRate >= 0 ? '+' : ''}{data.investment.returnRate.toFixed(2)}%
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="bg-black/20 border-white/10">
+              <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
                 <CardHeader>
-                  <CardTitle className="text-white">Investir nesta Pool</CardTitle>
+                  <CardTitle className="text-white" style={{ fontSize: '20px' }}>
+                    Investir nesta Pool
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-6 space-y-4">
                   <p className="text-gray-400">Você ainda não investiu nesta pool.</p>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Investimento Mínimo</span>
@@ -384,92 +390,15 @@ export function PoolDetailsPage() {
               </Card>
             )}
 
-            {/* Pool Statistics */}
-            <Card className="bg-black/20 border-white/10">
+            {/* Legal Documentation */}
+            <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
               <CardHeader>
-                <CardTitle className="text-white">Estatísticas da Pool</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400">Total de Investidores</span>
-                  </div>
-                  <span className="text-white font-semibold">{data.statistics.totalInvestors}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <Target className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400">Total Investido</span>
-                  </div>
-                  <span className="text-white font-semibold">
-                    {formatCurrency(data.statistics.totalInvested, data.pool.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400">Investimento Médio</span>
-                  </div>
-                  <span className="text-white font-semibold">
-                    {formatCurrency(data.statistics.avgInvestment, data.pool.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400">Retorno Total Gerado</span>
-                  </div>
-                  <span className="text-green-400 font-semibold">
-                    {formatCurrency(data.statistics.totalReturns, data.pool.currency)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pool Performance */}
-            <Card className="bg-black/20 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white">Performance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Retorno Mensal</span>
-                  <span className={`font-semibold ${data.pool.monthlyReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {data.pool.monthlyReturn >= 0 ? '+' : ''}{data.pool.monthlyReturn.toFixed(2)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Retorno Anual</span>
-                  <span className={`font-semibold ${data.pool.yearlyReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {data.pool.yearlyReturn >= 0 ? '+' : ''}{data.pool.yearlyReturn.toFixed(2)}%
-                  </span>
-                </div>
-                <Separator className="bg-white/10" />
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Valor Total da Pool</span>
-                  <span className="text-white font-semibold">
-                    {formatCurrency(data.pool.totalValue, data.pool.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Status</span>
-                  <Badge variant={data.pool.status === 'active' ? 'default' : 'secondary'} className="text-white">
-                    {data.pool.status === 'active' ? 'Ativa' : data.pool.status}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Legal Documentation Section */}
-            <Card className="bg-black/20 border-white/10">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
+                <CardTitle className="text-white flex items-center space-x-2" style={{ fontSize: '20px' }}>
                   <FileText className="w-5 h-5" />
                   <span>Documentação Legal</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-6 space-y-4">
                 {data.pool.cnpj && (
                   <div className="flex justify-between">
                     <span className="text-gray-400">CNPJ</span>
@@ -498,15 +427,15 @@ export function PoolDetailsPage() {
               </CardContent>
             </Card>
 
-            {/* Portfolio Composition Section */}
-            <Card className="bg-black/20 border-white/10">
+            {/* Portfolio Composition */}
+            <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
               <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
+                <CardTitle className="text-white flex items-center space-x-2" style={{ fontSize: '20px' }}>
                   <PieChart className="w-5 h-5" />
                   <span>Composição da Carteira</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-6 space-y-4">
                 {data.pool.portfolioComposition && data.pool.portfolioComposition.length > 0 ? (
                   data.pool.portfolioComposition.map((item, index) => (
                     <div key={index} className="space-y-2">
@@ -532,31 +461,73 @@ export function PoolDetailsPage() {
                 )}
               </CardContent>
             </Card>
+          </div>
 
-            {/* Fiscal Performance Section */}
-            <Card className="bg-black/20 border-white/10">
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Pool Statistics */}
+            <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
               <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
+                <CardTitle className="text-white" style={{ fontSize: '20px' }}>
+                  Estatísticas da Pool
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">Total Investido</p>
+                    <p className="text-lg font-semibold text-white">
+                      {formatCurrency(data.statistics.totalInvested, data.pool.currency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">Inv. Médio</p>
+                    <p className="text-lg font-semibold text-white">
+                      {formatCurrency(data.statistics.avgInvestment, data.pool.currency)}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Retorno Total Gerado</p>
+                  <p className="text-lg font-semibold text-green-400">
+                    {formatCurrency(data.statistics.totalReturns, data.pool.currency)}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-gray-400">Status</span>
+                  <Badge variant={data.pool.status === 'active' ? 'default' : 'secondary'} className="text-white">
+                    {data.pool.status === 'active' ? 'Ativa' : data.pool.status}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Fiscal Performance */}
+            <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2" style={{ fontSize: '20px' }}>
                   <Calculator className="w-5 h-5" />
                   <span>Performance Fiscal</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Taxa de Administração</span>
-                  <span className="text-white font-semibold">
-                    {((data.pool.managementFeeRate || 0) * 100).toFixed(2)}% a.a.
-                  </span>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">Taxa Admin.</p>
+                    <p className="text-lg font-semibold text-white">
+                      {((data.pool.managementFeeRate || 0) * 100).toFixed(2)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wider">Benchmark</p>
+                    <p className="text-lg font-semibold text-white">{data.pool.benchmarkIndex || 'CDI'}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Despesas Administrativas</span>
-                  <span className="text-white font-semibold">
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Despesas Admin.</p>
+                  <p className="text-lg font-semibold text-white">
                     {formatCurrency(data.pool.administrativeExpenses || 0, data.pool.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Benchmark</span>
-                  <span className="text-white">{data.pool.benchmarkIndex || 'CDI'}</span>
+                  </p>
                 </div>
                 <Separator className="bg-white/10" />
                 <div className="space-y-2">
@@ -566,7 +537,7 @@ export function PoolDetailsPage() {
                       <div key={index} className="flex justify-between text-sm">
                         <span className="text-gray-400">{item.period}</span>
                         <span className="text-white">
-                          {formatCurrency(item.amount, data.pool.currency)} ({(item.rate * 100)}%)
+                          {formatCurrency(item.amount, data.pool.currency)}
                         </span>
                       </div>
                     ))
@@ -577,15 +548,15 @@ export function PoolDetailsPage() {
               </CardContent>
             </Card>
 
-            {/* Operational Transparency Section */}
-            <Card className="bg-black/20 border-white/10">
+            {/* Operational Transparency */}
+            <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
               <CardHeader>
-                <CardTitle className="text-white flex items-center space-x-2">
+                <CardTitle className="text-white flex items-center space-x-2" style={{ fontSize: '20px' }}>
                   <Shield className="w-5 h-5" />
                   <span>Transparência Operacional</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-6 space-y-4">
                 {data.pool.custodyProvider && (
                   <div className="flex justify-between">
                     <span className="text-gray-400">Custodiante</span>
