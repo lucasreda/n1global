@@ -372,6 +372,8 @@ class GoogleAdsService {
             // Converter para BRL baseado na moeda base da conta
             let costInBRL = costInOriginalCurrency;
             
+            // OTIMIZAÇÃO: Usar conversões síncronas se taxas pré-carregadas disponíveis
+            // Nota: Este método precisa ser atualizado para aceitar preloadedRates
             if (accountData.baseCurrency === 'USD') {
               costInBRL = await currencyService.convertToBRL(costInOriginalCurrency, 'USD');
             } else if (accountData.baseCurrency === 'EUR') {
@@ -385,7 +387,8 @@ class GoogleAdsService {
         }
       }
 
-      // Converter total para EUR
+      // OTIMIZAÇÃO: Converter total para EUR usando taxas já obtidas ou buscar nova
+      // Nota: Este método precisa ser atualizado para aceitar preloadedRates  
       const rates = await currencyService.getExchangeRates();
       const totalEUR = totalBRL / rates['EUR'];
       

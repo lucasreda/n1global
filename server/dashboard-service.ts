@@ -58,13 +58,13 @@ export class DashboardService {
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
-      // Only get current exchange rates and convert to BRL - costs are cached
-      const [exchangeRates, totalRevenueBRL, deliveredRevenueBRL, totalProfitBRL] = await Promise.all([
-        currencyService.getExchangeRates(),
-        currencyService.convertToBRL(Number(cached.totalRevenue || 0), 'EUR'),
-        currencyService.convertToBRL(Number(cached.deliveredRevenue || 0), 'EUR'),
-        currencyService.convertToBRL(Number(cached.totalProfit || 0), 'EUR')
-      ]);
+      // OTIMIZAÇÃO: Uma única chamada para taxas + conversões síncronas
+      const exchangeRates = await currencyService.getExchangeRates();
+      console.log('🚀 Cache hit - reutilizando taxas para conversões de cache');
+      
+      const totalRevenueBRL = currencyService.convertToBRLSync(Number(cached.totalRevenue || 0), 'EUR', exchangeRates);
+      const deliveredRevenueBRL = currencyService.convertToBRLSync(Number(cached.deliveredRevenue || 0), 'EUR', exchangeRates);
+      const totalProfitBRL = currencyService.convertToBRLSync(Number(cached.totalProfit || 0), 'EUR', exchangeRates);
       
       console.log(`🚀 Using fully cached metrics for ${period} - no cost recalculation needed`);
       
@@ -289,13 +289,16 @@ export class DashboardService {
     
     const averageOrderValue = totalDeliveredForRevenue > 0 ? deliveredRevenue / totalDeliveredForRevenue : 0;
     
-    // Parallelize independent cost calculations and external API calls
+    // OTIMIZAÇÃO: Fazer uma única chamada para taxas de câmbio primeiro
+    const exchangeRates = await currencyService.getExchangeRates();
+    console.log('🚀 Uma única chamada da API de moeda realizada - reutilizando taxas para todas conversões');
+    
+    // Parallelize independent cost calculations using pre-loaded exchange rates
     const storeId = await this.getStoreId(req, operationId);
     
-    const [productCosts, marketingCosts, exchangeRates] = await Promise.all([
-      this.calculateProductCosts(period, provider, operationId, req),
-      this.getMarketingCosts(period, storeId, operationId),
-      currencyService.getExchangeRates()
+    const [productCosts, marketingCosts] = await Promise.all([
+      this.calculateProductCosts(period, provider, operationId, req, exchangeRates),
+      this.getMarketingCosts(period, storeId, operationId, exchangeRates)
     ]);
     
     const totalProductCosts = productCosts.totalProductCosts; // EUR value (product only)
@@ -339,11 +342,11 @@ export class DashboardService {
     // Calculate delivery percentage based on transportadora data
     const deliveryRate = totalTransportadoraOrders > 0 ? (deliveredTransportadoraOrders / totalTransportadoraOrders) * 100 : 0;
     
-    // Parallelize currency conversions
-    const [totalShopifyRevenueBRL, deliveredRevenueBRL] = await Promise.all([
-      currencyService.convertToBRL(totalShopifyRevenue, 'EUR'), // For faturamento display
-      currencyService.convertToBRL(deliveredRevenue, 'EUR') // For profit calculation
-    ]);
+    // OTIMIZAÇÃO: Use taxas já obtidas para conversões síncronas
+    const totalShopifyRevenueBRL = currencyService.convertToBRLSync(totalShopifyRevenue, 'EUR', exchangeRates);
+    const deliveredRevenueBRL = currencyService.convertToBRLSync(deliveredRevenue, 'EUR', exchangeRates);
+    
+    console.log(`💰 Conversões otimizadas - Receita Shopify: €${totalShopifyRevenue} = R$${totalShopifyRevenueBRL.toFixed(2)}`);
     
     // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
     const marketingCostsBRL = marketingCosts.totalBRL;
@@ -486,7 +489,7 @@ export class DashboardService {
     }
   }
   
-  private async calculateProductCosts(period: string, provider?: string, operationId?: string, req?: any) {
+  private async calculateProductCosts(period: string, provider?: string, operationId?: string, req?: any, preloadedRates?: any) {
     const dateRange = this.getDateRange(period);
     
     // CRITICAL: Get operation for data isolation
@@ -600,9 +603,17 @@ export class DashboardService {
     
     console.log(`💰 Costs calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${processedOrders}`);
     
-    // Convert both product and shipping costs from EUR to BRL using the currency API
-    const totalProductCostsBRL = await currencyService.convertToBRL(totalProductCosts, 'EUR');
-    const totalShippingCostsBRL = await currencyService.convertToBRL(totalShippingCosts, 'EUR');
+    // OTIMIZAÇÃO: Use taxas pré-carregadas para conversões rápidas
+    const totalProductCostsBRL = preloadedRates 
+      ? currencyService.convertToBRLSync(totalProductCosts, 'EUR', preloadedRates)
+      : await currencyService.convertToBRL(totalProductCosts, 'EUR');
+    const totalShippingCostsBRL = preloadedRates 
+      ? currencyService.convertToBRLSync(totalShippingCosts, 'EUR', preloadedRates) 
+      : await currencyService.convertToBRL(totalShippingCosts, 'EUR');
+    
+    if (preloadedRates) {
+      console.log(`💰 Conversões otimizadas - Produtos: €${totalProductCosts} = R$${totalProductCostsBRL.toFixed(2)}`);
+    }
     
     // Calculate total costs (product + shipping)
     const totalCombinedCosts = totalProductCosts + totalShippingCosts;
@@ -619,11 +630,11 @@ export class DashboardService {
     };
   }
 
-  private async getMarketingCosts(period: string = '30d', storeId?: string | null, operationId?: string | null): Promise<{ totalBRL: number; totalEUR: number; fallbackValue: number }> {
+  private async getMarketingCosts(period: string = '30d', storeId?: string | null, operationId?: string | null, preloadedRates?: any): Promise<{ totalBRL: number; totalEUR: number; fallbackValue: number }> {
     try {
       // Convert dashboard period to Facebook period format
       const fbPeriod = this.convertPeriodToFacebookFormat(period);
-      const marketingData = await this.facebookAdsService.getMarketingCostsByPeriod(fbPeriod, storeId, operationId);
+      const marketingData = await this.facebookAdsService.getMarketingCostsByPeriod(fbPeriod, storeId, operationId, preloadedRates);
       
       return {
         totalBRL: marketingData.totalBRL,

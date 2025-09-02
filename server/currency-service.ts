@@ -85,12 +85,12 @@ export class CurrencyService {
     return this.cachedRates;
   }
 
-  async convertToBRL(amount: number, fromCurrency: string): Promise<number> {
+  async convertToBRL(amount: number, fromCurrency: string, preloadedRates?: ExchangeRates): Promise<number> {
     if (fromCurrency === 'BRL') {
       return amount;
     }
 
-    const rates = await this.getExchangeRates();
+    const rates = preloadedRates || await this.getExchangeRates();
     const rate = rates[fromCurrency.toUpperCase()];
     
     if (!rate) {
@@ -99,20 +99,63 @@ export class CurrencyService {
     }
     
     const convertedAmount = amount * rate;
-    console.log(`💱 Convertendo ${amount} ${fromCurrency} para ${convertedAmount.toFixed(2)} BRL (taxa: ${rate})`);
+    if (!preloadedRates) {
+      console.log(`💱 Convertendo ${amount} ${fromCurrency} para ${convertedAmount.toFixed(2)} BRL (taxa: ${rate})`);
+    }
     
     return convertedAmount;
   }
 
-  async convertMultipleToBRL(amounts: Array<{ amount: number; currency: string }>): Promise<number> {
+  async convertMultipleToBRL(amounts: Array<{ amount: number; currency: string }>, preloadedRates?: ExchangeRates): Promise<number> {
+    const rates = preloadedRates || await this.getExchangeRates();
     let total = 0;
     
     for (const item of amounts) {
-      const converted = await this.convertToBRL(item.amount, item.currency);
+      const converted = await this.convertToBRL(item.amount, item.currency, rates);
       total += converted;
     }
     
     return total;
+  }
+
+  // Novos métodos otimizados para conversões em lote
+  convertToBRLSync(amount: number, fromCurrency: string, rates: ExchangeRates): number {
+    if (fromCurrency === 'BRL') {
+      return amount;
+    }
+
+    const rate = rates[fromCurrency.toUpperCase()];
+    if (!rate) {
+      console.warn(`Taxa de câmbio não encontrada para ${fromCurrency}, usando valor original`);
+      return amount;
+    }
+    
+    return amount * rate;
+  }
+
+  convertFromBRLSync(amountInBRL: number, toCurrency: string, rates: ExchangeRates): number {
+    if (toCurrency === 'BRL') {
+      return amountInBRL;
+    }
+
+    const rate = rates[toCurrency.toUpperCase()];
+    if (!rate) {
+      console.warn(`Taxa de câmbio não encontrada para ${toCurrency}, usando valor original`);
+      return amountInBRL;
+    }
+    
+    return amountInBRL / rate;
+  }
+
+  convertMultipleSync(conversions: Array<{ amount: number; fromCurrency: string; toCurrency: string }>, rates: ExchangeRates): Array<{ original: number; converted: number; fromCurrency: string; toCurrency: string }> {
+    return conversions.map(conv => ({
+      original: conv.amount,
+      converted: conv.toCurrency === 'BRL' 
+        ? this.convertToBRLSync(conv.amount, conv.fromCurrency, rates)
+        : this.convertFromBRLSync(this.convertToBRLSync(conv.amount, conv.fromCurrency, rates), conv.toCurrency, rates),
+      fromCurrency: conv.fromCurrency,
+      toCurrency: conv.toCurrency
+    }));
   }
 
   // Detectar moeda baseada no símbolo ou código
@@ -126,12 +169,12 @@ export class CurrencyService {
     return 'USD';
   }
 
-  async convertFromBRL(amountInBRL: number, toCurrency: string): Promise<number> {
+  async convertFromBRL(amountInBRL: number, toCurrency: string, preloadedRates?: ExchangeRates): Promise<number> {
     if (toCurrency === 'BRL') {
       return amountInBRL;
     }
 
-    const rates = await this.getExchangeRates();
+    const rates = preloadedRates || await this.getExchangeRates();
     const rate = rates[toCurrency.toUpperCase()];
     
     if (!rate) {
@@ -140,7 +183,9 @@ export class CurrencyService {
     }
     
     const convertedAmount = amountInBRL / rate;
-    console.log(`💱 Convertendo ${amountInBRL} BRL para ${convertedAmount.toFixed(2)} ${toCurrency} (taxa: ${rate})`);
+    if (!preloadedRates) {
+      console.log(`💱 Convertendo ${amountInBRL} BRL para ${convertedAmount.toFixed(2)} ${toCurrency} (taxa: ${rate})`);
+    }
     
     return convertedAmount;
   }

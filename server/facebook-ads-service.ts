@@ -164,9 +164,13 @@ export class FacebookAdsService {
             // Não fazer conversão - os valores já são considerados em BRL
             convertedAmount = originalAmount;
           } else {
-            // Para outras moedas base (USD, EUR), converter de EUR para a moeda desejada
-            const brlValue = await currencyService.convertToBRL(originalAmount, originalCurrency);
-            convertedAmount = await currencyService.convertFromBRL(brlValue, baseCurrency);
+            // OTIMIZAÇÃO: Para outras moedas base (USD, EUR), usar taxas pré-carregadas
+            const brlValue = preloadedRates 
+              ? currencyService.convertToBRLSync(originalAmount, originalCurrency, preloadedRates)
+              : await currencyService.convertToBRL(originalAmount, originalCurrency);
+            convertedAmount = preloadedRates 
+              ? currencyService.convertFromBRLSync(brlValue, baseCurrency, preloadedRates)
+              : await currencyService.convertFromBRL(brlValue, baseCurrency);
           }
 
           // Calcular valor em BRL para o total consolidado
@@ -176,8 +180,10 @@ export class FacebookAdsService {
           if (baseCurrency === 'BRL') {
             amountSpentBRL = originalAmount;
           } else if (originalCurrency !== 'BRL') {
-            // Para outras contas, converter da moeda da API para BRL
-            amountSpentBRL = await currencyService.convertToBRL(originalAmount, originalCurrency);
+            // OTIMIZAÇÃO: Para outras contas, usar taxas pré-carregadas
+            amountSpentBRL = preloadedRates 
+              ? currencyService.convertToBRLSync(originalAmount, originalCurrency, preloadedRates)
+              : await currencyService.convertToBRL(originalAmount, originalCurrency);
           }
 
           // Usar dados ao vivo da API mas manter configurações locais (isSelected)
@@ -417,7 +423,7 @@ export class FacebookAdsService {
     }, 0);
   }
 
-  async getMarketingCostsByPeriod(period: string = "last_30d", storeId?: string | null, operationId?: string | null): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
+  async getMarketingCostsByPeriod(period: string = "last_30d", storeId?: string | null, operationId?: string | null, preloadedRates?: any): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
     // Buscar campanhas selecionadas e seus dados ao vivo para o período específico, filtradas por operação ou store
     const { campaigns, adAccounts } = await import("@shared/schema");
     const { and, eq, inArray, isNull } = await import("drizzle-orm");
@@ -529,8 +535,10 @@ export class FacebookAdsService {
             if (baseCurrency === "BRL") {
               liveAmount = originalAmount;
             } else {
-              // Converter de EUR (moeda da API) para BRL
-              liveAmount = await currencyService.convertToBRL(originalAmount, "EUR");
+              // OTIMIZAÇÃO: Converter de EUR usando taxas pré-carregadas
+              liveAmount = preloadedRates 
+                ? currencyService.convertToBRLSync(originalAmount, "EUR", preloadedRates)
+                : await currencyService.convertToBRL(originalAmount, "EUR");
             }
             
             console.log(`💰 Campanha: ${campaign.name}, Valor: ${liveAmount} BRL (período: ${period}), Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
@@ -544,8 +552,10 @@ export class FacebookAdsService {
         
         totalBRL += liveAmount;
         
-        // Para EUR, converter de BRL para EUR
-        const eurValue = await currencyService.convertFromBRL(liveAmount, 'EUR');
+        // OTIMIZAÇÃO: Para EUR, usar taxas pré-carregadas
+        const eurValue = preloadedRates 
+          ? currencyService.convertFromBRLSync(liveAmount, 'EUR', preloadedRates)
+          : await currencyService.convertFromBRL(liveAmount, 'EUR');
         totalEUR += eurValue;
       } catch (error) {
         console.error(`💰 Erro ao processar campanha ${campaign.name}:`, error);
