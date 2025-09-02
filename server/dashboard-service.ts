@@ -405,7 +405,11 @@ export class DashboardService {
         uniqueCustomers: sql<number>`COUNT(DISTINCT customer_email)`,
         avgDeliveryTime: sql<string>`ROUND(AVG(
           CASE 
-            WHEN status = 'delivered' AND order_date IS NOT NULL 
+            WHEN status = 'delivered' 
+              AND order_date IS NOT NULL 
+              AND last_status_update IS NOT NULL
+              AND EXTRACT(days FROM (last_status_update - order_date)) >= 0
+              AND EXTRACT(days FROM (last_status_update - order_date)) < 100
             THEN EXTRACT(days FROM (last_status_update - order_date))
             ELSE NULL 
           END
