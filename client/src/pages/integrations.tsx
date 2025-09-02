@@ -193,9 +193,7 @@ export default function Integrations() {
               <div key={integration.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`integration-${integration.id}`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-20 h-12 rounded-lg bg-${integration.color}-500/20 flex items-center justify-center`}>
-                      <IconComponent className={`text-${integration.color}-400`} size={integration.id === 'shopify' ? 40 : 20} />
-                    </div>
+                    <IconComponent className={`text-${integration.color}-400`} size={integration.id === 'shopify' ? 40 : 20} />
                     <div>
                       <h4 className="text-white font-medium">{integration.name}</h4>
                       <p className="text-gray-400 text-sm">{integration.description}</p>
