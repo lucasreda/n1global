@@ -377,11 +377,13 @@ export class DashboardService {
     
     // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
     const marketingCostsBRL = marketingCosts.totalBRL;
-    const totalProfitBRL = deliveredRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL;
+    // Custos retornados: 2 euros por pedido retornado
+    const returnCostsBRL = currencyService.convertToBRLSync(returnedOrders * 2, 'EUR', exchangeRates);
+    const totalProfitBRL = deliveredRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL - returnCostsBRL;
     const profitMargin = deliveredRevenueBRL > 0 ? (totalProfitBRL / deliveredRevenueBRL) * 100 : 0;
     
     // Calculate ROI (return on investment) using delivered revenue
-    const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL;
+    const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL + returnCostsBRL;
     const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
     console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
