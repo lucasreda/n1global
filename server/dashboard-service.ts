@@ -64,6 +64,7 @@ export class DashboardService {
       
       const totalRevenueBRL = currencyService.convertToBRLSync(Number(cached.totalRevenue || 0), 'EUR', exchangeRates);
       const deliveredRevenueBRL = currencyService.convertToBRLSync(Number(cached.deliveredRevenue || 0), 'EUR', exchangeRates);
+      const paidRevenueBRL = currencyService.convertToBRLSync(Number(cached.paidRevenue || 0), 'EUR', exchangeRates);
       const totalProfitBRL = currencyService.convertToBRLSync(Number(cached.totalProfit || 0), 'EUR', exchangeRates);
       
       console.log(`🚀 Using fully cached metrics for ${period} - no cost recalculation needed`);
@@ -73,6 +74,7 @@ export class DashboardService {
         exchangeRates, // Only update exchange rates
         totalRevenueBRL,
         deliveredRevenueBRL,
+        paidRevenueBRL,
         totalProfitBRL,
         // Use cached costs directly
         totalProductCosts: Number(cached.totalProductCosts || 0),
@@ -219,12 +221,14 @@ export class DashboardService {
       .where(whereClause)
       .groupBy(orders.status);
     
-    // 2. Get total Shopify revenue (all orders × value, not just delivered)
+    // 2. Get revenue data: total, delivered, and PAID revenue
     const revenueQuery = await db
       .select({
         totalRevenue: sum(orders.total),
         deliveredRevenue: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`,
-        deliveredCount: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)`
+        deliveredCount: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)`,
+        paidRevenue: sql<string>`SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END)`,
+        paidCount: sql<number>`SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END)`
       })
       .from(orders)
       .where(and(
@@ -296,10 +300,12 @@ export class DashboardService {
       }
     });
     
-    // Get revenue data: total Shopify revenue vs delivered revenue
-    const totalShopifyRevenue = Number(revenueQuery[0]?.totalRevenue || 0); // For faturamento card
-    const deliveredRevenue = Number(revenueQuery[0]?.deliveredRevenue || 0); // For profit calculation
+    // Get revenue data: total Shopify revenue vs delivered revenue vs PAID revenue
+    const totalShopifyRevenue = Number(revenueQuery[0]?.totalRevenue || 0); // Total Shopify revenue (all non-cancelled)
+    const deliveredRevenue = Number(revenueQuery[0]?.deliveredRevenue || 0); // Only delivered orders
+    const paidRevenue = Number(revenueQuery[0]?.paidRevenue || 0); // Only PAID orders
     const totalDeliveredForRevenue = Number(revenueQuery[0]?.deliveredCount || 0);
+    const totalPaidOrders = Number(revenueQuery[0]?.paidCount || 0);
     
     const averageOrderValue = totalDeliveredForRevenue > 0 ? deliveredRevenue / totalDeliveredForRevenue : 0;
     
@@ -359,8 +365,10 @@ export class DashboardService {
     // OTIMIZAÇÃO: Use taxas já obtidas para conversões síncronas
     const totalShopifyRevenueBRL = currencyService.convertToBRLSync(totalShopifyRevenue, 'EUR', exchangeRates);
     const deliveredRevenueBRL = currencyService.convertToBRLSync(deliveredRevenue, 'EUR', exchangeRates);
+    const paidRevenueBRL = currencyService.convertToBRLSync(paidRevenue, 'EUR', exchangeRates);
     
     console.log(`💰 Conversões otimizadas - Receita Shopify: €${totalShopifyRevenue} = R$${totalShopifyRevenueBRL.toFixed(2)}`);
+    console.log(`💰 Receita PAGA corrigida: €${paidRevenue} = R$${paidRevenueBRL.toFixed(2)} (${totalPaidOrders} pedidos pagos)`);
     
     // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
     const marketingCostsBRL = marketingCosts.totalBRL;
@@ -373,7 +381,7 @@ export class DashboardService {
     
     console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
     console.log(`🔍 Debug Transportadora: Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}`);
-    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}`);
+    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}, Paid Revenue: €${paidRevenue}`);
     
     // Calculate previous period orders for growth comparison
     const previousPeriodRange = this.getPreviousPeriodDateRange(period);
@@ -404,8 +412,11 @@ export class DashboardService {
       pendingOrders,
       totalRevenue: totalShopifyRevenue, // Total Shopify revenue (all orders)
       totalRevenueBRL: totalShopifyRevenueBRL, // Total Shopify revenue in BRL for display
-      deliveredRevenue, // Only delivered/paid revenue for calculations
+      deliveredRevenue, // Only delivered orders revenue for calculations
       deliveredRevenueBRL, // Delivered revenue in BRL for profit calculations
+      paidRevenue, // Only PAID orders revenue (correct for "Receita Paga" card)
+      paidRevenueBRL, // Paid revenue in BRL for display
+      totalPaidOrders, // Count of paid orders
       totalProductCosts, // EUR value for reference (product only)
       totalProductCostsBRL, // BRL value for display (product only)
       totalShippingCosts, // EUR value for reference (shipping only)
@@ -461,6 +472,7 @@ export class DashboardService {
       confirmedOrders: metrics.confirmedOrders,
       totalRevenue: metrics.totalRevenue.toString(),
       deliveredRevenue: metrics.deliveredRevenue.toString(),
+      paidRevenue: metrics.paidRevenue.toString(),
       averageOrderValue: metrics.averageOrderValue.toString(),
       // Cache calculated costs to avoid expensive recalculations
       totalProductCosts: metrics.totalProductCosts.toString(),

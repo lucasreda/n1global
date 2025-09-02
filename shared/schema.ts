@@ -154,6 +154,7 @@ export const dashboardMetrics = pgTable("dashboard_metrics", {
   
   totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0"),
   deliveredRevenue: decimal("delivered_revenue", { precision: 12, scale: 2 }).default("0"),
+  paidRevenue: decimal("paid_revenue", { precision: 12, scale: 2 }).default("0"),
   averageOrderValue: decimal("average_order_value", { precision: 8, scale: 2 }).default("0"),
   
   // Cached costs to avoid recalculation

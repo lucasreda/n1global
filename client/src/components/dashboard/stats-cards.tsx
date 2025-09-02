@@ -195,6 +195,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   const totalProfitBRL = metrics?.totalProfitBRL || 0;
   const totalRevenueEUR = revenue;
   const totalRevenueBRL = metrics?.totalRevenueBRL || 0;
+  const paidRevenueBRL = metrics?.paidRevenueBRL || 0;
+  const paidRevenueEUR = metrics?.paidRevenue || 0;
+  const totalPaidOrders = metrics?.totalPaidOrders || 0;
 
   const calculateGrowth = (current: number, previous: number = current * 0.9): string => {
     if (previous === 0) return "0";
@@ -639,9 +642,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <DollarSign className="w-4 h-4 text-blue-500" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(totalRevenueBRL)}</h3>
+            <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(paidRevenueBRL)}</h3>
             <p className="text-sm font-medium text-gray-400">Receita Paga</p>
-            <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(totalRevenueEUR)} • {deliveredOrders} entregas</p>
+            <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(paidRevenueEUR)} • {totalPaidOrders} pagos</p>
           </div>
         </div>
 
