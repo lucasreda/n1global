@@ -302,7 +302,7 @@ function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNo
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  const exchangeRate = metrics?.exchangeRates?.EUR || 5.8;
+  const exchangeRate = metrics?.exchangeRates?.EUR || 6.37;
 
   return (
     <DashboardLayout exchangeRate={exchangeRate}>

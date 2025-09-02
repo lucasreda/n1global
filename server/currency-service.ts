@@ -7,13 +7,54 @@ export interface ExchangeRates {
 export class CurrencyService {
   private static instance: CurrencyService;
   private cachedRates: ExchangeRates = {};
+  private lastValidRates: ExchangeRates = {}; // Backup das últimas taxas válidas
   private lastUpdate: Date | null = null;
+  private lastValidUpdate: Date | null = null;
   private readonly CACHE_DURATION = 15 * 60 * 1000; // 15 minutos
+  private readonly BACKUP_FILE = './currency-backup.json';
   
   // Método para limpar cache e forçar atualização
   public clearCache(): void {
     this.cachedRates = {};
     this.lastUpdate = null;
+  }
+
+  // Carregar backup das taxas do arquivo
+  private async loadBackupRates(): Promise<void> {
+    try {
+      const fs = await import('fs/promises');
+      const data = await fs.readFile(this.BACKUP_FILE, 'utf-8');
+      const backup = JSON.parse(data);
+      this.lastValidRates = backup.rates || {};
+      this.lastValidUpdate = backup.timestamp ? new Date(backup.timestamp) : null;
+      console.log('📋 Backup de taxas carregado:', this.lastValidRates);
+    } catch (error) {
+      // Arquivo não existe ou erro - usar taxas padrão
+      this.lastValidRates = {
+        'BRL': 1,
+        'USD': 5.2,
+        'EUR': 5.8,
+        'GBP': 6.5,
+      };
+      console.log('📋 Usando taxas padrão como backup');
+    }
+  }
+
+  // Salvar backup das taxas em arquivo
+  private async saveBackupRates(rates: ExchangeRates): Promise<void> {
+    try {
+      const fs = await import('fs/promises');
+      const backup = {
+        rates,
+        timestamp: new Date().toISOString()
+      };
+      await fs.writeFile(this.BACKUP_FILE, JSON.stringify(backup, null, 2));
+      this.lastValidRates = rates;
+      this.lastValidUpdate = new Date();
+      console.log('💾 Backup de taxas salvo');
+    } catch (error) {
+      console.warn('⚠️ Erro ao salvar backup de taxas:', error);
+    }
   }
 
   static getInstance(): CurrencyService {
@@ -24,23 +65,33 @@ export class CurrencyService {
   }
 
   private async fetchExchangeRates(): Promise<ExchangeRates> {
+    // Carregar backup se ainda não foi carregado
+    if (!this.lastValidUpdate) {
+      await this.loadBackupRates();
+    }
+
     try {
       const apiKey = process.env.CURRENCY_API_KEY;
       if (!apiKey) {
-        throw new Error('CURRENCY_API_KEY not found');
+        console.warn('⚠️ CURRENCY_API_KEY não encontrada - usando backup');
+        return this.lastValidRates;
       }
 
+      console.log('📡 Fazendo chamada única para Currency API...');
+      
       // Usando CurrencyAPI com USD como base (padrão) e incluindo BRL
       const response = await fetch(`https://api.currencyapi.com/v3/latest?apikey=${apiKey}&currencies=USD,EUR,GBP,BRL`);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.warn(`⚠️ Currency API retornou status ${response.status} - usando backup`);
+        return this.lastValidRates;
       }
       
       const data = await response.json() as any;
       
       if (!data.data) {
-        throw new Error('Invalid response format from CurrencyAPI');
+        console.warn('⚠️ Resposta inválida da Currency API - usando backup');
+        return this.lastValidRates;
       }
 
       // Converter resposta da CurrencyAPI para nosso formato (com BRL como base)
@@ -57,17 +108,30 @@ export class CurrencyService {
         rates[currency] = usdToBrl / currencyRate; // BRL para a moeda
       }
       
+      // Salvar backup das taxas válidas
+      await this.saveBackupRates(rates);
+      console.log('✅ Taxas obtidas da Currency API e backup salvo');
+      
       return rates;
     } catch (error) {
-      console.error('Erro ao buscar taxas de câmbio da CurrencyAPI:', error);
+      console.error('❌ Erro ao buscar taxas da Currency API - usando backup:', error);
       
-      // Fallback com taxas aproximadas (atualizadas manualmente)
-      return {
+      // Se temos backup válido, usar ele
+      if (this.lastValidRates && Object.keys(this.lastValidRates).length > 0) {
+        console.log('🔄 Usando últimas taxas válidas do backup');
+        return this.lastValidRates;
+      }
+      
+      // Fallback final com taxas padrão
+      const fallbackRates = {
         'BRL': 1,
         'USD': 5.2, // 1 USD = 5.2 BRL
-        'EUR': 5.8, // 1 EUR = 5.8 BRL
+        'EUR': 6.37, // 1 EUR = 6.37 BRL (atualizada dos logs)
         'GBP': 6.5, // 1 GBP = 6.5 BRL
       };
+      
+      console.log('🚨 Usando taxas padrão de emergência');
+      return fallbackRates;
     }
   }
 

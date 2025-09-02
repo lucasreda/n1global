@@ -215,7 +215,7 @@ export default function Dashboard() {
         {/* Euro Exchange Rate - Hidden on mobile */}
         <div className="hidden lg:flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-2 sm:px-3 py-2 w-fit max-w-full">
           <span className="text-green-400 font-medium text-sm">
-            € {metrics?.exchangeRates?.EUR ? (metrics.exchangeRates.EUR).toFixed(2).replace('.', ',') : '6,40'}
+            € {metrics?.exchangeRates?.EUR ? (metrics.exchangeRates.EUR).toFixed(2).replace('.', ',') : '6,37'}
           </span>
           <span className="text-gray-400 text-xs">BRL</span>
         </div>
