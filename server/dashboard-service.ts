@@ -562,100 +562,48 @@ export class DashboardService {
       };
     }
     
-    // 🚀 OTIMIZAÇÃO: Buscar todos os produtos vinculados de uma vez
-    const { userProducts: userProductsTable, products: productsTable } = await import("@shared/schema");
-    const { eq, and } = await import("drizzle-orm");
-    
-    const linkedProductsMap = new Map();
-    
-    try {
-      const operationLinkedProducts = await db
-        .select({
-          sku: userProductsTable.sku,
-          productCost: productsTable.costPrice,
-          shippingCost: userProductsTable.customShippingCost,
-          defaultShippingCost: productsTable.shippingCost
-        })
-        .from(userProductsTable)
-        .innerJoin(productsTable, eq(userProductsTable.productId, productsTable.id))
-        .where(and(
-          eq(userProductsTable.storeId, storeId!),
-          eq(productsTable.operationId, currentOperation.id)
-        ));
-    
-      // Criar mapa de SKU -> custos para acesso O(1)
-      for (const product of operationLinkedProducts) {
-        linkedProductsMap.set(product.sku, {
-          productCost: parseFloat(product.productCost || "0"),
-          shippingCost: parseFloat(product.shippingCost || product.defaultShippingCost || "0")
-        });
-      }
+    // 🚀 OTIMIZAÇÃO: Processar pedidos usando método original (mais estável)
+    // Process each delivered order to calculate costs based on linked products
+    for (const order of deliveredOrders) {
+      if (!order.products) continue;
       
-      console.log(`🚀 Produtos vinculados carregados: ${linkedProductsMap.size} SKUs em cache`);
+      // Extract SKUs from products array (jsonb)
+      const productsArray = order.products as any[];
+      if (!Array.isArray(productsArray)) continue;
       
-      // 🚀 OTIMIZAÇÃO: Processar pedidos em lote usando o mapa
-      let matchedProducts = 0;
-      let unmatchedProducts = 0;
-      
-      for (const order of deliveredOrders) {
-        if (!order.products) continue;
+      // Process each product in the order
+      for (const productInfo of productsArray) {
+        const sku = productInfo?.sku || productInfo?.product_sku;
+        if (!sku) continue;
         
-        const productsArray = order.products as any[];
-        if (!Array.isArray(productsArray)) continue;
+        // Find linked product by SKU for this store AND operation
+        const linkedProduct = await storage.getUserProductBySku(sku, storeId);
         
-        for (const productInfo of productsArray) {
-          const sku = productInfo?.sku || productInfo?.product_sku;
-          if (!sku) continue;
+        // IMPORTANT: Only apply costs if product is linked to THIS specific operation
+        const isLinkedToOperation = linkedProduct && linkedProduct.operationId === currentOperation.id;
+        
+        if (linkedProduct && isLinkedToOperation) {
+          // Para dashboard: usar CUSTO REAL do fornecedor, não o preço B2B
+          // customCostPrice = Preço B2B (€12.50), product.costPrice = Custo real fornecedor (€10.00)
+          const productCost = parseFloat(linkedProduct.product.costPrice || "0"); // Sempre usar custo real
+          const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
           
-          const linkedProduct = linkedProductsMap.get(sku);
+          totalProductCosts += productCost;
+          totalShippingCosts += shippingCost;
           
-          if (linkedProduct) {
-            totalProductCosts += linkedProduct.productCost;
-            totalShippingCosts += linkedProduct.shippingCost;
-            matchedProducts++;
-          } else {
-            unmatchedProducts++;
-          }
+          console.log(`💰 Order ${order.id}: SKU ${sku} - Product: €${productCost}, Shipping: €${shippingCost}`);
+        } else {
+          // Sem produto vinculado à esta operação - não adicionar custos (valor = 0)
+          const reason = !linkedProduct ? "Produto não encontrado" : "Produto não vinculado à esta operação";
+          console.log(`💰 Order ${order.id}: SKU ${sku} - ${reason}, custos = €0`);
         }
-        
-        processedOrders++;
       }
       
-      console.log(`🚀 Processamento otimizado - Produtos: ${matchedProducts} vinculados, ${unmatchedProducts} não vinculados, ${processedOrders} pedidos`);
-      
-    } catch (error) {
-      console.error('❌ Erro na otimização, usando método fallback:', error);
-      
-      // FALLBACK: Usar método original se a otimização falhar
-      for (const order of deliveredOrders) {
-        if (!order.products) continue;
-        
-        const productsArray = order.products as any[];
-        if (!Array.isArray(productsArray)) continue;
-        
-        for (const productInfo of productsArray) {
-          const sku = productInfo?.sku || productInfo?.product_sku;
-          if (!sku) continue;
-          
-          const linkedProduct = await storage.getUserProductBySku(sku, storeId);
-          const isLinkedToOperation = linkedProduct && linkedProduct.operationId === currentOperation.id;
-          
-          if (linkedProduct && isLinkedToOperation) {
-            const productCost = parseFloat(linkedProduct.product.costPrice || "0");
-            const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
-            
-            totalProductCosts += productCost;
-            totalShippingCosts += shippingCost;
-          }
-        }
-        
-        processedOrders++;
-      }
-      
-      console.log(`💰 Fallback - Calculado: Produtos €${totalProductCosts}, Envio €${totalShippingCosts}, Pedidos: ${processedOrders}`);
+      processedOrders++;
     }
     
-    console.log(`💰 Cálculo otimizado - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos: ${processedOrders}`);
+    
+    console.log(`💰 Costs calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${processedOrders}`);
     
     // OTIMIZAÇÃO: Use taxas pré-carregadas para conversões rápidas
     const totalProductCostsBRL = preloadedRates 
