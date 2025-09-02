@@ -693,8 +693,8 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(metrics?.cacBRL || 0)}</h3>
-              <p className="text-sm font-medium text-gray-400">CAC</p>
-              <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(metrics?.cacEUR || 0)} • {metrics?.uniqueCustomers || 0} clientes</p>
+              <p className="text-sm font-medium text-gray-400">CPA Real</p>
+              <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(metrics?.cacEUR || 0)} • {metrics?.deliveredOrders || 0} entregues</p>
             </div>
           </div>
 

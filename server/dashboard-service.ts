@@ -421,9 +421,12 @@ export class DashboardService {
     const uniqueCustomers = Number(customerAnalysisQuery[0]?.uniqueCustomers || 0);
     const avgDeliveryTimeDays = Number(customerAnalysisQuery[0]?.avgDeliveryTime || 0);
     
-    // Calculate CAC (Customer Acquisition Cost)
-    const cacBRL = uniqueCustomers > 0 ? marketingCostsBRL / uniqueCustomers : 0;
-    const cacEUR = uniqueCustomers > 0 ? marketingCosts.totalEUR / uniqueCustomers : 0;
+    // Calculate CPA Real (Marketing Total / Delivered Orders)
+    const cpaBRL = deliveredOrders > 0 ? marketingCostsBRL / deliveredOrders : 0;
+    const cpaEUR = deliveredOrders > 0 ? marketingCosts.totalEUR / deliveredOrders : 0;
+    
+    console.log(`🔍 Customer Analysis Debug - Unique: ${uniqueCustomers}, Avg Delivery: ${avgDeliveryTimeDays} days`);
+    console.log(`🔍 CPA Debug - Marketing BRL: ${marketingCostsBRL}, Delivered: ${deliveredOrders}, CPA: ${cpaBRL}`);
     
     return {
       exchangeRates, // Include current exchange rates
@@ -460,8 +463,8 @@ export class DashboardService {
       averageOrderValue,
       uniqueCustomers,
       avgDeliveryTimeDays,
-      cacBRL,
-      cacEUR,
+      cpaBRL,
+      cpaEUR,
       period,
       provider: provider || null,
       calculatedAt: new Date(),
@@ -515,9 +518,9 @@ export class DashboardService {
       // Customer analytics
       uniqueCustomers: metrics.uniqueCustomers,
       avgDeliveryTimeDays: metrics.avgDeliveryTimeDays.toString(),
-      // CAC (Customer Acquisition Cost)
-      cacBRL: metrics.cacBRL.toString(),
-      cacEUR: metrics.cacEUR.toString(),
+      // CPA Real (Marketing Total / Delivered Orders)
+      cacBRL: metrics.cpaBRL.toString(),
+      cacEUR: metrics.cpaEUR.toString(),
       calculatedAt: metrics.calculatedAt,
       validUntil: metrics.validUntil
     };
