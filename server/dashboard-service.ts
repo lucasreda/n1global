@@ -399,6 +399,28 @@ export class DashboardService {
     
     const previousPeriodOrders = Number(previousPeriodQuery[0]?.count || 0);
     
+    // Calculate CAC and Delivery Time
+    const customerAnalysisQuery = await db
+      .select({
+        uniqueCustomers: sql<number>`COUNT(DISTINCT customer_email)`,
+        avgDeliveryTime: sql<string>`ROUND(AVG(
+          CASE 
+            WHEN status = 'delivered' AND order_date IS NOT NULL 
+            THEN EXTRACT(days FROM (last_status_update - order_date))
+            ELSE NULL 
+          END
+        ), 1)`
+      })
+      .from(orders)
+      .where(whereClause);
+    
+    const uniqueCustomers = Number(customerAnalysisQuery[0]?.uniqueCustomers || 0);
+    const avgDeliveryTimeDays = Number(customerAnalysisQuery[0]?.avgDeliveryTime || 0);
+    
+    // Calculate CAC (Customer Acquisition Cost)
+    const cacBRL = uniqueCustomers > 0 ? marketingCostsBRL / uniqueCustomers : 0;
+    const cacEUR = uniqueCustomers > 0 ? marketingCosts.totalEUR / uniqueCustomers : 0;
+    
     return {
       exchangeRates, // Include current exchange rates
       totalOrders: totalTransportadoraOrders, // Transportadora orders filtered by period
@@ -432,6 +454,10 @@ export class DashboardService {
       profitMargin,
       roi,
       averageOrderValue,
+      uniqueCustomers,
+      avgDeliveryTimeDays,
+      cacBRL,
+      cacEUR,
       period,
       provider: provider || null,
       calculatedAt: new Date(),

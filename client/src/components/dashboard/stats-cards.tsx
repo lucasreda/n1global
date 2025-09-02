@@ -102,7 +102,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
     if (!adAccounts || adAccounts.length === 0) return 'mixed';
     
     const activeAccounts = (adAccounts as AdAccount[]).filter(acc => acc.isActive);
-    const networks = [...new Set(activeAccounts.map(acc => acc.network))];
+    const networks = Array.from(new Set(activeAccounts.map(acc => acc.network)));
     
     if (networks.length > 1) return 'mixed';
     if (networks.includes('facebook')) return 'facebook';
@@ -680,38 +680,39 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         
         {/* Grid seguindo mesmo padrão dos outros cards */}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2 sm:gap-4">
-          {/* Performance Marketing - ROI */}
+          {/* CAC - Customer Acquisition Cost */}
           <div 
             className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-            data-testid="card-roi"
+            data-testid="card-cac"
           >
             <div className="flex items-center justify-between mb-3">
-              <TrendingUp className="w-4 h-4 text-slate-400" />
+              <Target className="w-4 h-4 text-orange-500" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white mb-1">{roi.toFixed(1)}%</h3>
-              <p className="text-sm font-medium text-gray-400">Performance Marketing (ROI)</p>
+              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(metrics?.cacBRL || 0)}</h3>
+              <p className="text-sm font-medium text-gray-400">CAC</p>
+              <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(metrics?.cacEUR || 0)} • {metrics?.uniqueCustomers || 0} clientes</p>
             </div>
           </div>
 
-          {/* Ticket Médio */}
+          {/* Tempo Médio de Entrega */}
           <div 
             className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-            data-testid="card-ticket-medio"
+            data-testid="card-tempo-entrega"
           >
             <div className="flex items-center justify-between mb-3">
-              <Calculator className="w-4 h-4 text-slate-400" />
+              <Truck className="w-4 h-4 text-blue-500" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyEUR(averageOrderValue)}</h3>
-              <p className="text-sm font-medium text-gray-400">Ticket Médio</p>
-              <p className="text-sm text-gray-500 mt-1">{formatCurrencyBRL(averageOrderValue * 5.8)}</p>
+              <h3 className="text-xl font-semibold text-white mb-1">{(metrics?.avgDeliveryTimeDays || 0).toFixed(1)} dias</h3>
+              <p className="text-sm font-medium text-gray-400">Tempo Médio de Entrega</p>
+              <p className="text-sm text-gray-500 mt-1">Da criação até entrega</p>
             </div>
           </div>
 
