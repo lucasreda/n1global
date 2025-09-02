@@ -84,6 +84,11 @@ export class DashboardService {
         totalProfit: Number(cached.totalProfit || 0),
         profitMargin: Number(cached.profitMargin || 0),
         roi: Number(cached.roi || 0),
+        // Include new cached fields
+        uniqueCustomers: Number(cached.uniqueCustomers || 0),
+        avgDeliveryTimeDays: Number(cached.avgDeliveryTimeDays || 0),
+        cpaBRL: Number(cached.cacBRL || 0),
+        cpaEUR: Number(cached.cacEUR || 0),
       };
     }
     
