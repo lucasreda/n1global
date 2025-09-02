@@ -542,52 +542,64 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           </div>
         </div>
         
-        {/* Mobile - Card Custos Retornados */}
+        {/* Mobile - Card Custos Produtos em destaque (linha inteira) */}
         <div className="sm:hidden">
           <div 
             className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
-            data-testid="card-custos-retornados-mobile"
+            data-testid="card-product-costs-featured"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <RotateCcw className="w-4 h-4 text-red-400" />
-                <p className="text-sm font-medium text-gray-400">Custos Retornados</p>
+                <DollarSign className="w-4 h-4 text-red-500" />
+                <p className="text-sm font-medium text-gray-400">Custos Produtos</p>
               </div>
             </div>
             
             <div className="text-center">
-              <h4 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(returnCostBRL)}</h4>
-              <p className="text-xs text-gray-500">{formatCurrencyEUR(returnCostEUR)} • {returnedOrders} retornos</p>
+              <h4 className="text-xl font-bold text-white mb-1">{formatCurrencyBRL(productCostsBRL)}</h4>
+              <p className="text-xs text-gray-500">{productCosts > 0 ? formatCurrencyEUR(productCosts) : "Sem custos"}</p>
             </div>
           </div>
         </div>
         
-        {/* Mobile - Cards secundários na linha seguinte */}
+        {/* Mobile - Custos Envio e Custos Retornados na mesma linha */}
         <div className="grid grid-cols-2 gap-2 sm:hidden">
-          {secondaryMetrics.map((metric, index) => {
-            const IconComponent = metric.icon;
-            return (
-              <div 
-                key={index}
-                className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
-                style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-                onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-                onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-                data-testid={metric.testId}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <IconComponent className={`w-4 h-4 ${getIconColors(metric.color)}`} />
-                </div>
-                <div>
-                  <h4 className="text-base font-semibold text-white mb-1">{metric.value}</h4>
-                  <p className="text-xs font-medium text-gray-400">{metric.title}</p>
-                </div>
-              </div>
-            );
-          })}
+          {/* Custos Envio */}
+          <div 
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-shipping-costs-mobile"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <Truck className="w-4 h-4 text-amber-500" />
+            </div>
+            <div>
+              <h4 className="text-base font-semibold text-white mb-1">{formatCurrencyBRL(shippingCostsBRL)}</h4>
+              <p className="text-xs font-medium text-gray-400">Custos Envio</p>
+            </div>
+          </div>
+          
+          {/* Custos Retornados */}
+          <div 
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-custos-retornados-mobile"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <RotateCcw className="w-4 h-4 text-red-400" />
+            </div>
+            <div>
+              <h4 className="text-base font-semibold text-white mb-1">{formatCurrencyBRL(returnCostBRL)}</h4>
+              <p className="text-xs font-medium text-gray-400">Custos Retornados</p>
+            </div>
+          </div>
         </div>
         
         {/* Desktop layout - todos na mesma linha */}
