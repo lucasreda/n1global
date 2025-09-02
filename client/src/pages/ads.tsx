@@ -699,7 +699,7 @@ export default function Ads() {
                           <div key={account.id} className="flex items-center space-x-2 text-xs py-1">
                             <NetworkIcon network={account.network as 'facebook' | 'google'} size={12} />
                             <span className="text-gray-300 truncate flex-1">{account.name}</span>
-                            <span className="text-green-400 text-[10px]">●</span>
+                            <span className={`text-[10px] ${account.isActive ? 'text-green-400' : 'text-red-400'}`}>●</span>
                           </div>
                         ))}
                         {adAccounts.length > 2 && (
