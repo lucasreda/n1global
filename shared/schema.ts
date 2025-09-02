@@ -168,6 +168,14 @@ export const dashboardMetrics = pgTable("dashboard_metrics", {
   profitMargin: decimal("profit_margin", { precision: 8, scale: 2 }).default("0"),
   roi: decimal("roi", { precision: 8, scale: 2 }).default("0"),
   
+  // Customer analytics
+  uniqueCustomers: integer("unique_customers").default(0),
+  avgDeliveryTimeDays: decimal("avg_delivery_time_days", { precision: 8, scale: 2 }).default("0"),
+  
+  // CAC (Customer Acquisition Cost)
+  cacBRL: decimal("cac_brl", { precision: 12, scale: 2 }).default("0"),
+  cacEUR: decimal("cac_eur", { precision: 12, scale: 2 }).default("0"),
+  
   calculatedAt: timestamp("calculated_at").notNull(),
   validUntil: timestamp("valid_until").notNull(),
   
