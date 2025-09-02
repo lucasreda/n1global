@@ -567,59 +567,93 @@ export class DashboardService {
     const { eq, and } = await import("drizzle-orm");
     
     const linkedProductsMap = new Map();
-    const operationLinkedProducts = await db
-      .select({
-        sku: userProductsTable.sku,
-        productCost: productsTable.costPrice,
-        shippingCost: userProductsTable.customShippingCost,
-        defaultShippingCost: productsTable.shippingCost
-      })
-      .from(userProductsTable)
-      .innerJoin(productsTable, eq(userProductsTable.productId, productsTable.id))
-      .where(and(
-        eq(userProductsTable.storeId, storeId!),
-        eq(productsTable.operationId, currentOperation.id)
-      ));
     
-    // Criar mapa de SKU -> custos para acesso O(1)
-    for (const product of operationLinkedProducts) {
-      linkedProductsMap.set(product.sku, {
-        productCost: parseFloat(product.productCost || "0"),
-        shippingCost: parseFloat(product.shippingCost || product.defaultShippingCost || "0")
-      });
-    }
+    try {
+      const operationLinkedProducts = await db
+        .select({
+          sku: userProductsTable.sku,
+          productCost: productsTable.costPrice,
+          shippingCost: userProductsTable.customShippingCost,
+          defaultShippingCost: productsTable.shippingCost
+        })
+        .from(userProductsTable)
+        .innerJoin(productsTable, eq(userProductsTable.productId, productsTable.id))
+        .where(and(
+          eq(userProductsTable.storeId, storeId!),
+          eq(productsTable.operationId, currentOperation.id)
+        ));
     
-    console.log(`🚀 Produtos vinculados carregados: ${linkedProductsMap.size} SKUs em cache`);
-    
-    // 🚀 OTIMIZAÇÃO: Processar pedidos em lote usando o mapa
-    let matchedProducts = 0;
-    let unmatchedProducts = 0;
-    
-    for (const order of deliveredOrders) {
-      if (!order.products) continue;
-      
-      const productsArray = order.products as any[];
-      if (!Array.isArray(productsArray)) continue;
-      
-      for (const productInfo of productsArray) {
-        const sku = productInfo?.sku || productInfo?.product_sku;
-        if (!sku) continue;
-        
-        const linkedProduct = linkedProductsMap.get(sku);
-        
-        if (linkedProduct) {
-          totalProductCosts += linkedProduct.productCost;
-          totalShippingCosts += linkedProduct.shippingCost;
-          matchedProducts++;
-        } else {
-          unmatchedProducts++;
-        }
+      // Criar mapa de SKU -> custos para acesso O(1)
+      for (const product of operationLinkedProducts) {
+        linkedProductsMap.set(product.sku, {
+          productCost: parseFloat(product.productCost || "0"),
+          shippingCost: parseFloat(product.shippingCost || product.defaultShippingCost || "0")
+        });
       }
       
-      processedOrders++;
+      console.log(`🚀 Produtos vinculados carregados: ${linkedProductsMap.size} SKUs em cache`);
+      
+      // 🚀 OTIMIZAÇÃO: Processar pedidos em lote usando o mapa
+      let matchedProducts = 0;
+      let unmatchedProducts = 0;
+      
+      for (const order of deliveredOrders) {
+        if (!order.products) continue;
+        
+        const productsArray = order.products as any[];
+        if (!Array.isArray(productsArray)) continue;
+        
+        for (const productInfo of productsArray) {
+          const sku = productInfo?.sku || productInfo?.product_sku;
+          if (!sku) continue;
+          
+          const linkedProduct = linkedProductsMap.get(sku);
+          
+          if (linkedProduct) {
+            totalProductCosts += linkedProduct.productCost;
+            totalShippingCosts += linkedProduct.shippingCost;
+            matchedProducts++;
+          } else {
+            unmatchedProducts++;
+          }
+        }
+        
+        processedOrders++;
+      }
+      
+      console.log(`🚀 Processamento otimizado - Produtos: ${matchedProducts} vinculados, ${unmatchedProducts} não vinculados, ${processedOrders} pedidos`);
+      
+    } catch (error) {
+      console.error('❌ Erro na otimização, usando método fallback:', error);
+      
+      // FALLBACK: Usar método original se a otimização falhar
+      for (const order of deliveredOrders) {
+        if (!order.products) continue;
+        
+        const productsArray = order.products as any[];
+        if (!Array.isArray(productsArray)) continue;
+        
+        for (const productInfo of productsArray) {
+          const sku = productInfo?.sku || productInfo?.product_sku;
+          if (!sku) continue;
+          
+          const linkedProduct = await storage.getUserProductBySku(sku, storeId);
+          const isLinkedToOperation = linkedProduct && linkedProduct.operationId === currentOperation.id;
+          
+          if (linkedProduct && isLinkedToOperation) {
+            const productCost = parseFloat(linkedProduct.product.costPrice || "0");
+            const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
+            
+            totalProductCosts += productCost;
+            totalShippingCosts += shippingCost;
+          }
+        }
+        
+        processedOrders++;
+      }
+      
+      console.log(`💰 Fallback - Calculado: Produtos €${totalProductCosts}, Envio €${totalShippingCosts}, Pedidos: ${processedOrders}`);
     }
-    
-    console.log(`🚀 Processamento otimizado - Produtos: ${matchedProducts} vinculados, ${unmatchedProducts} não vinculados, ${processedOrders} pedidos`);
     
     console.log(`💰 Cálculo otimizado - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos: ${processedOrders}`);
     
