@@ -525,13 +525,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <h4 className="text-lg font-bold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Pedidos N1</p>
-              </div>
-              <div className="text-center">
-                <h4 className="text-lg font-bold text-white mb-1">{confirmedOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Confirmados</p>
               </div>
               <div className="text-center">
@@ -590,13 +586,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               </div>
             </div>
             
-            <div className="grid grid-cols-3 gap-4" style={{marginTop: '-6px'}}>
+            <div className="grid grid-cols-2 gap-6" style={{marginTop: '-6px'}}>
               <div className="text-center">
                 <h4 className="text-lg font-semibold text-white mb-1">{totalOrders.toLocaleString()}</h4>
-                <p className="text-xs text-gray-500">Pedidos N1</p>
-              </div>
-              <div className="text-center">
-                <h4 className="text-lg font-semibold text-white mb-1">{confirmedOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Confirmados</p>
               </div>
               <div className="text-center">
