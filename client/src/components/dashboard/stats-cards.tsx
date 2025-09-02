@@ -515,7 +515,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <ShoppingCart className="w-4 h-4 text-slate-400" />
-                <p className="text-sm font-medium text-gray-400">Pedidos Transportadora</p>
+                <p className="text-sm font-medium text-gray-400">Pedidos N1</p>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-[#4ade80]" />
@@ -576,7 +576,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex items-center justify-between mb-3" style={{marginTop: '-3px'}}>
               <div className="flex items-center space-x-2">
                 <ShoppingCart className="w-4 h-4 text-slate-400" />
-                <p className="text-sm font-medium text-gray-400">Pedidos Transportadora</p>
+                <p className="text-sm font-medium text-gray-400">Pedidos N1</p>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-[#4ade80]" />
