@@ -191,6 +191,10 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   const shopifyOrders = metrics?.shopifyOrders || 0;
   const avgCPA = metrics?.cpaBRL || 0; // Use valor calculado do backend
   
+  // Custos de retorno: 2 euros por pedido retornado
+  const returnCostEUR = returnedOrders * 2;
+  const returnCostBRL = returnCostEUR * (metrics?.exchangeRates?.EUR || 6.37);
+  
   
 
   // Calcular valores em BRL
@@ -538,6 +542,29 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           </div>
         </div>
         
+        {/* Mobile - Card Custos Retornados */}
+        <div className="sm:hidden">
+          <div 
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
+            data-testid="card-custos-retornados-mobile"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <RotateCcw className="w-4 h-4 text-red-400" />
+                <p className="text-sm font-medium text-gray-400">Custos Retornados</p>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <h4 className="text-lg font-bold text-white mb-1">{formatCurrencyBRL(returnCostBRL)}</h4>
+              <p className="text-xs text-gray-500">{formatCurrencyEUR(returnCostEUR)} • {returnedOrders} retornos</p>
+            </div>
+          </div>
+        </div>
+        
         {/* Mobile - Cards secundários na linha seguinte */}
         <div className="grid grid-cols-2 gap-2 sm:hidden">
           {secondaryMetrics.map((metric, index) => {
@@ -564,7 +591,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
         </div>
         
         {/* Desktop layout - todos na mesma linha */}
-        <div className="hidden sm:grid gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
+        <div className="hidden sm:grid gap-4" style={{gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)'}}>
           {/* Card Combinado de Pedidos e Entregues - Desktop: 40% */}
           <div 
             className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
@@ -595,6 +622,24 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
                 <h4 className="text-lg font-semibold text-[#4ade80] mb-1">{deliveredOrders.toLocaleString()}</h4>
                 <p className="text-xs text-gray-500">Entregues</p>
               </div>
+            </div>
+          </div>
+          
+          {/* Card Custos Retornados */}
+          <div 
+            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
+            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            data-testid="card-custos-retornados"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <RotateCcw className="w-4 h-4 text-red-400" />
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(returnCostBRL)}</h4>
+              <p className="text-xs font-medium text-gray-400">Custos Retornados</p>
+              <p className="text-xs text-gray-500 mt-1">{formatCurrencyEUR(returnCostEUR)} • {returnedOrders} retornos</p>
             </div>
           </div>
           
