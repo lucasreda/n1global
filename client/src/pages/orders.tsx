@@ -362,7 +362,6 @@ export default function Orders() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-600/30">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Market</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">REF.S / REF</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Tracking Number</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Name</th>
@@ -379,7 +378,7 @@ export default function Orders() {
                 <tbody className="divide-y divide-gray-600/30">
                   {orders.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="py-8 text-center">
+                      <td colSpan={11} className="py-8 text-center">
                         <div className="space-y-4">
                           <p className="text-gray-400">Nenhum pedido encontrado nesta operação</p>
                           <div className="glassmorphism-light rounded-xl p-4 max-w-lg mx-auto">
@@ -396,14 +395,6 @@ export default function Orders() {
                         key={order.id} 
                         className="hover:bg-white/5 transition-colors"
                       >
-                        <td className="py-4 px-4 text-sm text-white">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
-                              <span className="text-xs font-bold text-blue-400">📦</span>
-                            </div>
-                            <span className="text-gray-300">{order.market || 'E-commerce'}</span>
-                          </div>
-                        </td>
                         <td className="py-4 px-4 text-sm text-white font-mono">
                           <div className="space-y-1">
                             <div className="text-blue-400">
