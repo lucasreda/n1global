@@ -495,62 +495,126 @@ export default function Orders() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-600/30">
-                <p className="text-sm text-gray-300">
-                  Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalOrders)} de {totalOrders} pedidos
-                </p>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="glassmorphism-light text-gray-300 hover:bg-white/20"
-                  >
-                    <ChevronLeft size={16} />
-                  </Button>
-                  
-                  <div className="flex items-center space-x-1">
-                    {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={cn(
-                            "w-8 h-8 p-0 text-sm",
-                            currentPage === pageNum
-                              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                              : "glassmorphism-light text-gray-300 hover:bg-white/20"
-                          )}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
+              <div className="mt-6 pt-4 border-t border-gray-600/30">
+                {/* Desktop Layout */}
+                <div className="hidden md:flex items-center justify-between">
+                  <p className="text-sm text-gray-300">
+                    Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalOrders)} de {totalOrders} pedidos
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="glassmorphism-light text-gray-300 hover:bg-white/20"
+                    >
+                      <ChevronLeft size={16} />
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={cn(
+                              "w-8 h-8 p-0 text-sm",
+                              currentPage === pageNum
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : "glassmorphism-light text-gray-300 hover:bg-white/20"
+                            )}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="glassmorphism-light text-gray-300 hover:bg-white/20"
+                    >
+                      <ChevronRight size={16} />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Mobile Layout */}
+                <div className="md:hidden space-y-3">
+                  <div className="flex items-center justify-between w-full">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="glassmorphism-light text-gray-300 hover:bg-white/20"
+                    >
+                      <ChevronLeft size={16} />
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1 flex-1 justify-center">
+                      {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={cn(
+                              "w-8 h-8 p-0 text-sm",
+                              currentPage === pageNum
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : "glassmorphism-light text-gray-300 hover:bg-white/20"
+                            )}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="glassmorphism-light text-gray-300 hover:bg-white/20"
+                    >
+                      <ChevronRight size={16} />
+                    </Button>
                   </div>
                   
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className="glassmorphism-light text-gray-300 hover:bg-white/20"
-                  >
-                    <ChevronRight size={16} />
-                  </Button>
+                  <p className="text-sm text-gray-300 text-center">
+                    Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalOrders)} de {totalOrders} pedidos
+                  </p>
                 </div>
               </div>
             )}
