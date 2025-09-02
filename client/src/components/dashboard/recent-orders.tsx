@@ -13,7 +13,6 @@ interface Order {
   status: string;
   paymentStatus: string;
   deliveryStatus: string;
-  market: string;
   refS: string;
   refNumber: string;
   trackingNumber: string;
@@ -96,7 +95,6 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
         <table className="w-full" data-testid="table-orders">
           <thead>
             <tr className="border-b border-gray-600/30">
-              <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Market</th>
               <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">REF.S / REF</th>
               <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Tracking Number</th>
               <th className="text-left py-3 px-4 text-sm font-medium text-gray-300">Name</th>
@@ -111,7 +109,7 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
           <tbody className="divide-y divide-gray-600/30">
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-8 text-center text-gray-400">
+                <td colSpan={9} className="py-8 text-center text-gray-400">
                   Nenhum pedido encontrado
                 </td>
               </tr>
@@ -122,14 +120,6 @@ export function RecentOrders({ orders, onViewOrder, onEditOrder }: RecentOrdersP
                   className="hover:bg-white/5 transition-colors"
                   data-testid={`row-order-${order.id}`}
                 >
-                  <td className="py-4 px-4 text-sm text-white" data-testid={`market-${order.id}`}>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center">
-                        <span className="text-xs font-bold text-blue-400">📦</span>
-                      </div>
-                      <span className="text-gray-300">{order.market || '-'}</span>
-                    </div>
-                  </td>
                   <td className="py-4 px-4 text-sm text-white font-mono" data-testid={`ref-${order.id}`}>
                     <div className="space-y-1">
                       <div className="text-blue-400">{order.refS || order.id}</div>
