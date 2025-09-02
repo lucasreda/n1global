@@ -41,27 +41,24 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
               <AreaChart data={revenueData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.2}/>
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis 
                   dataKey="date" 
-                  stroke="#9CA3AF" 
-                  fontSize={12}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{fontSize: 11, fill: '#6B7280'}}
                 />
-                <YAxis 
-                  stroke="#9CA3AF" 
-                  fontSize={12}
-                  tickFormatter={(value) => formatCurrencyBRL(value)}
-                />
+                <YAxis hide />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'rgba(30, 41, 59, 0.9)', 
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: '#fff'
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                    border: '1px solid rgba(59, 130, 246, 0.5)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '12px'
                   }}
                   formatter={(value: any) => [formatCurrencyBRL(value), 'Receita']}
                 />
@@ -69,7 +66,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                   type="monotone" 
                   dataKey="revenue" 
                   stroke="#3B82F6" 
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   fillOpacity={1} 
                   fill="url(#colorRevenue)" 
                 />
