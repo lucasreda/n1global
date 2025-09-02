@@ -41,8 +41,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
               <AreaChart data={revenueData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#4ade80" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#4ade80" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
                 <XAxis 
@@ -55,7 +55,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                    border: '1px solid rgba(59, 130, 246, 0.5)',
+                    border: '1px solid rgba(74, 222, 128, 0.5)',
                     borderRadius: '6px',
                     color: '#fff',
                     fontSize: '12px'
@@ -65,7 +65,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                 <Area 
                   type="monotone" 
                   dataKey="revenue" 
-                  stroke="#3B82F6" 
+                  stroke="#4ade80" 
                   strokeWidth={1.5}
                   fillOpacity={1} 
                   fill="url(#colorRevenue)" 
