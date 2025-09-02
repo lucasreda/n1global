@@ -727,8 +727,8 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           Resumo da Operação
         </h3>
         
-        {/* Grid seguindo mesmo padrão dos outros cards */}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-2 sm:gap-4">
+        {/* Grid com 2 cards por linha */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-4">
           {/* CAC - Customer Acquisition Cost */}
           <div 
             className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
