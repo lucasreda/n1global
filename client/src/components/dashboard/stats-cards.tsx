@@ -542,28 +542,6 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           </div>
         </div>
         
-        {/* Mobile - Card Custos Produtos em destaque (linha inteira) */}
-        <div className="sm:hidden">
-          <div 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
-            data-testid="card-product-costs-featured"
-            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="w-4 h-4 text-red-500" />
-                <p className="text-sm font-medium text-gray-400">Custos Produtos</p>
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <h4 className="text-xl font-bold text-white mb-1">{formatCurrencyBRL(productCostsBRL)}</h4>
-              <p className="text-xs text-gray-500">{productCosts > 0 ? formatCurrencyEUR(productCosts) : "Sem custos"}</p>
-            </div>
-          </div>
-        </div>
         
         {/* Mobile - Custos Envio e Custos Retornados na mesma linha */}
         <div className="grid grid-cols-2 gap-2 sm:hidden">
@@ -677,6 +655,29 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Mobile - Card Custos Produtos em destaque (linha inteira) - ANTES da Receita Paga */}
+      <div className="sm:hidden">
+        <div 
+          className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
+          data-testid="card-product-costs-featured"
+          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="w-4 h-4 text-red-500" />
+              <p className="text-sm font-medium text-gray-400">Custos Produtos</p>
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <h4 className="text-xl font-bold text-white mb-1">{formatCurrencyBRL(productCostsBRL)}</h4>
+            <p className="text-xs text-gray-500">{productCosts > 0 ? formatCurrencyEUR(productCosts) : "Sem custos"}</p>
+          </div>
         </div>
       </div>
 
