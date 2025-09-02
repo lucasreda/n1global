@@ -562,46 +562,66 @@ export class DashboardService {
       };
     }
     
-    // Process each delivered order to calculate costs based on linked products
+    // 🚀 OTIMIZAÇÃO: Buscar todos os produtos vinculados de uma vez
+    const { userProducts: userProductsTable, products: productsTable } = await import("@shared/schema");
+    const { eq, and } = await import("drizzle-orm");
+    
+    const linkedProductsMap = new Map();
+    const operationLinkedProducts = await db
+      .select({
+        sku: userProductsTable.sku,
+        productCost: productsTable.costPrice,
+        shippingCost: userProductsTable.customShippingCost,
+        defaultShippingCost: productsTable.shippingCost
+      })
+      .from(userProductsTable)
+      .innerJoin(productsTable, eq(userProductsTable.productId, productsTable.id))
+      .where(and(
+        eq(userProductsTable.storeId, storeId!),
+        eq(productsTable.operationId, currentOperation.id)
+      ));
+    
+    // Criar mapa de SKU -> custos para acesso O(1)
+    for (const product of operationLinkedProducts) {
+      linkedProductsMap.set(product.sku, {
+        productCost: parseFloat(product.productCost || "0"),
+        shippingCost: parseFloat(product.shippingCost || product.defaultShippingCost || "0")
+      });
+    }
+    
+    console.log(`🚀 Produtos vinculados carregados: ${linkedProductsMap.size} SKUs em cache`);
+    
+    // 🚀 OTIMIZAÇÃO: Processar pedidos em lote usando o mapa
+    let matchedProducts = 0;
+    let unmatchedProducts = 0;
+    
     for (const order of deliveredOrders) {
       if (!order.products) continue;
       
-      // Extract SKUs from products array (jsonb)
       const productsArray = order.products as any[];
       if (!Array.isArray(productsArray)) continue;
       
-      // Process each product in the order
       for (const productInfo of productsArray) {
         const sku = productInfo?.sku || productInfo?.product_sku;
         if (!sku) continue;
         
-        // Find linked product by SKU for this store AND operation
-        const linkedProduct = await storage.getUserProductBySku(sku, storeId);
+        const linkedProduct = linkedProductsMap.get(sku);
         
-        // IMPORTANT: Only apply costs if product is linked to THIS specific operation
-        const isLinkedToOperation = linkedProduct && linkedProduct.operationId === currentOperation.id;
-        
-        if (linkedProduct && isLinkedToOperation) {
-          // Para dashboard: usar CUSTO REAL do fornecedor, não o preço B2B
-          // customCostPrice = Preço B2B (€12.50), product.costPrice = Custo real fornecedor (€10.00)
-          const productCost = parseFloat(linkedProduct.product.costPrice || "0"); // Sempre usar custo real
-          const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
-          
-          totalProductCosts += productCost;
-          totalShippingCosts += shippingCost;
-          
-          console.log(`💰 Order ${order.id}: SKU ${sku} - Product: €${productCost}, Shipping: €${shippingCost}`);
+        if (linkedProduct) {
+          totalProductCosts += linkedProduct.productCost;
+          totalShippingCosts += linkedProduct.shippingCost;
+          matchedProducts++;
         } else {
-          // Sem produto vinculado à esta operação - não adicionar custos (valor = 0)
-          const reason = !linkedProduct ? "Produto não encontrado" : "Produto não vinculado à esta operação";
-          console.log(`💰 Order ${order.id}: SKU ${sku} - ${reason}, custos = €0`);
+          unmatchedProducts++;
         }
       }
       
       processedOrders++;
     }
     
-    console.log(`💰 Costs calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${processedOrders}`);
+    console.log(`🚀 Processamento otimizado - Produtos: ${matchedProducts} vinculados, ${unmatchedProducts} não vinculados, ${processedOrders} pedidos`);
+    
+    console.log(`💰 Cálculo otimizado - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos: ${processedOrders}`);
     
     // OTIMIZAÇÃO: Use taxas pré-carregadas para conversões rápidas
     const totalProductCostsBRL = preloadedRates 
@@ -612,7 +632,7 @@ export class DashboardService {
       : await currencyService.convertToBRL(totalShippingCosts, 'EUR');
     
     if (preloadedRates) {
-      console.log(`💰 Conversões otimizadas - Produtos: €${totalProductCosts} = R$${totalProductCostsBRL.toFixed(2)}`);
+      console.log(`💰 Conversões otimizadas - Produtos: €${totalProductCosts} = R$${totalProductCostsBRL.toFixed(2)}, Envio: €${totalShippingCosts} = R$${totalShippingCostsBRL.toFixed(2)}`);
     }
     
     // Calculate total costs (product + shipping)
