@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock, Eye, EyeOff, Globe } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
@@ -190,6 +190,17 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   // Novos cálculos para os cards especiais
   const shopifyOrders = metrics?.shopifyOrders || 0;
   const avgCPA = metrics?.cpaBRL || 0; // Use valor calculado do backend
+  
+  // Force refresh se CPA for 0 mas deveria ter valor
+  const queryClient = useQueryClient();
+  React.useEffect(() => {
+    if (metrics && avgCPA === 0 && metrics.deliveredOrders > 0) {
+      console.log('🔄 Invalidating cache - CPA shows 0 but should have value');
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+      }, 100);
+    }
+  }, [metrics, avgCPA, queryClient]);
   
 
   // Calcular valores em BRL
