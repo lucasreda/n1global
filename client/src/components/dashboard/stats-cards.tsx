@@ -194,9 +194,10 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   // DEBUG TEMPORÁRIO
   console.log('🔍 Frontend Debug:', {
     cpaBRL: metrics?.cpaBRL,
+    avgCPA: avgCPA,
+    formatted: formatCurrencyBRL(avgCPA),
     avgDeliveryTimeDays: metrics?.avgDeliveryTimeDays,
-    uniqueCustomers: metrics?.uniqueCustomers,
-    allFields: Object.keys(metrics || {})
+    uniqueCustomers: metrics?.uniqueCustomers
   });
 
   // Calcular valores em BRL
