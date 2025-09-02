@@ -149,9 +149,23 @@ export const dashboardMetrics = pgTable("dashboard_metrics", {
   cancelledOrders: integer("cancelled_orders").default(0),
   shippedOrders: integer("shipped_orders").default(0),
   pendingOrders: integer("pending_orders").default(0),
+  returnedOrders: integer("returned_orders").default(0),
+  confirmedOrders: integer("confirmed_orders").default(0),
   
   totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0"),
+  deliveredRevenue: decimal("delivered_revenue", { precision: 12, scale: 2 }).default("0"),
   averageOrderValue: decimal("average_order_value", { precision: 8, scale: 2 }).default("0"),
+  
+  // Cached costs to avoid recalculation
+  totalProductCosts: decimal("total_product_costs", { precision: 12, scale: 2 }).default("0"),
+  totalShippingCosts: decimal("total_shipping_costs", { precision: 12, scale: 2 }).default("0"),
+  totalCombinedCosts: decimal("total_combined_costs", { precision: 12, scale: 2 }).default("0"),
+  marketingCosts: decimal("marketing_costs", { precision: 12, scale: 2 }).default("0"),
+  
+  // Profit calculations
+  totalProfit: decimal("total_profit", { precision: 12, scale: 2 }).default("0"),
+  profitMargin: decimal("profit_margin", { precision: 8, scale: 2 }).default("0"),
+  roi: decimal("roi", { precision: 8, scale: 2 }).default("0"),
   
   calculatedAt: timestamp("calculated_at").notNull(),
   validUntil: timestamp("valid_until").notNull(),

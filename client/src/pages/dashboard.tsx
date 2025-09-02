@@ -42,7 +42,7 @@ export default function Dashboard() {
     }
   });
 
-  // Auto-sync on page load (similar to Facebook Ads)
+  // Auto-sync on page load (optimized - no page reload)
   useEffect(() => {
     const performAutoSync = async () => {
       try {
@@ -52,8 +52,13 @@ export default function Dashboard() {
         
         if (result.executed) {
           console.log('✅ Auto-sync da transportadora executado:', result.reason);
-          // Refresh data after auto-sync
-          window.location.reload();
+          // Refresh data without page reload
+          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
+          toast({
+            title: "Dados Atualizados",
+            description: "Sincronização automática concluída",
+          });
         } else {
           console.log('ℹ️ Auto-sync não necessário:', result.reason);
         }
@@ -77,9 +82,10 @@ export default function Dashboard() {
       const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in memory for 10 minutes
+    refetchOnMount: false, // Don't refetch on every mount
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Fetch revenue chart data
@@ -96,9 +102,10 @@ export default function Dashboard() {
       console.log(`📈 Revenue chart data received:`, data);
       return data;
     },
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in memory for 10 minutes
+    refetchOnMount: false, // Don't refetch on every mount
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Calculate distribution data with 3 meaningful categories
@@ -181,7 +188,10 @@ export default function Dashboard() {
 
 
 
-  if (metricsLoading) {
+  // Progressive loading - show available data immediately
+  const isInitialLoading = metricsLoading && !metrics;
+  
+  if (isInitialLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

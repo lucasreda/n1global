@@ -58,34 +58,30 @@ export class DashboardService {
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
-      // Get current exchange rates
-      const exchangeRates = await currencyService.getExchangeRates();
+      // Only get current exchange rates and convert to BRL - costs are cached
+      const [exchangeRates, totalRevenueBRL, deliveredRevenueBRL, totalProfitBRL] = await Promise.all([
+        currencyService.getExchangeRates(),
+        currencyService.convertToBRL(Number(cached.totalRevenue || 0), 'EUR'),
+        currencyService.convertToBRL(Number(cached.deliveredRevenue || 0), 'EUR'),
+        currencyService.convertToBRL(Number(cached.totalProfit || 0), 'EUR')
+      ]);
       
-      // Recalculate dynamic values (costs and BRL conversions)
-      const totalRevenueBRL = await currencyService.convertToBRL(Number(cached.totalRevenue || 0), 'EUR');
-      
-      // Calculate costs dynamically
-      const storeId = await this.getStoreId(req, operationId);
-      const productCosts = await this.calculateProductCosts(period, provider);
-      const marketingCosts = await this.getMarketingCosts(period, storeId, operationId);
-      
-      const totalProfit = Number(cached.totalRevenue || 0) - productCosts.totalProductCosts - marketingCosts.fallbackValue;
-      const totalProfitBRL = await currencyService.convertToBRL(totalProfit, 'EUR');
+      console.log(`🚀 Using fully cached metrics for ${period} - no cost recalculation needed`);
       
       return {
         ...cached,
-        exchangeRates, // Include current exchange rates
+        exchangeRates, // Only update exchange rates
         totalRevenueBRL,
+        deliveredRevenueBRL,
         totalProfitBRL,
-        totalProfit,
-        totalProductCosts: productCosts.totalProductCosts,
-        totalProductCostsBRL: productCosts.totalProductCostsBRL, // Add BRL product costs
-        marketingCosts: marketingCosts.fallbackValue,
-        marketingCostsBRL: marketingCosts.totalBRL,
-        marketingCostsEUR: marketingCosts.totalEUR,
-        profitMargin: Number(cached.totalRevenue || 0) > 0 ? (totalProfit / Number(cached.totalRevenue || 0)) * 100 : 0,
-        roi: (productCosts.totalProductCosts + marketingCosts.fallbackValue) > 0 ? 
-          ((Number(cached.totalRevenue || 0) - productCosts.totalProductCosts - marketingCosts.fallbackValue) / (productCosts.totalProductCosts + marketingCosts.fallbackValue)) * 100 : 0
+        // Use cached costs directly
+        totalProductCosts: Number(cached.totalProductCosts || 0),
+        totalShippingCosts: Number(cached.totalShippingCosts || 0),
+        totalCombinedCosts: Number(cached.totalCombinedCosts || 0),
+        marketingCosts: Number(cached.marketingCosts || 0),
+        totalProfit: Number(cached.totalProfit || 0),
+        profitMargin: Number(cached.profitMargin || 0),
+        roi: Number(cached.roi || 0),
       };
     }
     
@@ -293,18 +289,21 @@ export class DashboardService {
     
     const averageOrderValue = totalDeliveredForRevenue > 0 ? deliveredRevenue / totalDeliveredForRevenue : 0;
     
-    // Calculate product costs and shipping costs based on order quantities
-    const productCosts = await this.calculateProductCosts(period, provider, operationId, req);
+    // Parallelize independent cost calculations and external API calls
+    const storeId = await this.getStoreId(req, operationId);
+    
+    const [productCosts, marketingCosts, exchangeRates] = await Promise.all([
+      this.calculateProductCosts(period, provider, operationId, req),
+      this.getMarketingCosts(period, storeId, operationId),
+      currencyService.getExchangeRates()
+    ]);
+    
     const totalProductCosts = productCosts.totalProductCosts; // EUR value (product only)
     const totalProductCostsBRL = productCosts.totalProductCostsBRL; // BRL value (product only)
     const totalShippingCosts = productCosts.totalShippingCosts; // EUR value (shipping only)
     const totalShippingCostsBRL = productCosts.totalShippingCostsBRL; // BRL value (shipping only)
     const totalCombinedCosts = productCosts.totalCombinedCosts; // EUR value (product + shipping)
     const totalCombinedCostsBRL = productCosts.totalCombinedCostsBRL; // BRL value (product + shipping)
-    
-    // Calculate marketing costs from selected Facebook campaigns based on period
-    const storeId = await this.getStoreId(req, operationId);
-    const marketingCosts = await this.getMarketingCosts(period, storeId, operationId);
     
     // Calculate confirmed orders (total - unpacked)
     const unpackedOrders = statusCounts
@@ -340,12 +339,11 @@ export class DashboardService {
     // Calculate delivery percentage based on transportadora data
     const deliveryRate = totalTransportadoraOrders > 0 ? (deliveredTransportadoraOrders / totalTransportadoraOrders) * 100 : 0;
     
-    // Get current exchange rates
-    const exchangeRates = await currencyService.getExchangeRates();
-    
-    // Convert revenues to BRL for consistent calculations
-    const totalShopifyRevenueBRL = await currencyService.convertToBRL(totalShopifyRevenue, 'EUR'); // For faturamento display
-    const deliveredRevenueBRL = await currencyService.convertToBRL(deliveredRevenue, 'EUR'); // For profit calculation
+    // Parallelize currency conversions
+    const [totalShopifyRevenueBRL, deliveredRevenueBRL] = await Promise.all([
+      currencyService.convertToBRL(totalShopifyRevenue, 'EUR'), // For faturamento display
+      currencyService.convertToBRL(deliveredRevenue, 'EUR') // For profit calculation
+    ]);
     
     // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
     const marketingCostsBRL = marketingCosts.totalBRL;
@@ -442,8 +440,19 @@ export class DashboardService {
       cancelledOrders: metrics.cancelledOrders,
       shippedOrders: metrics.shippedOrders,
       pendingOrders: metrics.pendingOrders,
+      returnedOrders: metrics.returnedOrders,
+      confirmedOrders: metrics.confirmedOrders,
       totalRevenue: metrics.totalRevenue.toString(),
+      deliveredRevenue: metrics.deliveredRevenue.toString(),
       averageOrderValue: metrics.averageOrderValue.toString(),
+      // Cache calculated costs to avoid expensive recalculations
+      totalProductCosts: metrics.totalProductCosts.toString(),
+      totalShippingCosts: metrics.totalShippingCosts.toString(),
+      totalCombinedCosts: metrics.totalCombinedCosts.toString(),
+      marketingCosts: metrics.marketingCosts.toString(),
+      totalProfit: metrics.totalProfit.toString(),
+      profitMargin: metrics.profitMargin.toString(),
+      roi: metrics.roi.toString(),
       calculatedAt: metrics.calculatedAt,
       validUntil: metrics.validUntil
     };
