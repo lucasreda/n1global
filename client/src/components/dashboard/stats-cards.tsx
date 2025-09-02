@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Target, DollarSign, BarChart3, RotateCcw, CheckSquare, Truck, Lock, Eye, EyeOff, Globe } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
@@ -191,16 +191,6 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   const shopifyOrders = metrics?.shopifyOrders || 0;
   const avgCPA = metrics?.cpaBRL || 0; // Use valor calculado do backend
   
-  // Force refresh se CPA for 0 mas deveria ter valor
-  const queryClient = useQueryClient();
-  React.useEffect(() => {
-    if (metrics && avgCPA === 0 && metrics.deliveredOrders > 0) {
-      console.log('🔄 Invalidating cache - CPA shows 0 but should have value');
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-      }, 100);
-    }
-  }, [metrics, avgCPA, queryClient]);
   
 
   // Calcular valores em BRL
@@ -704,7 +694,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               <Target className="w-4 h-4 text-orange-500" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(metrics?.cacBRL || 0)}</h3>
+              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(avgCPA)}</h3>
               <p className="text-sm font-medium text-gray-400">CPA Real</p>
               <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(metrics?.cacEUR || 0)} • {metrics?.deliveredOrders || 0} entregues</p>
             </div>
@@ -763,43 +753,6 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             </div>
           </div>
 
-          {/* CPA Médio */}
-          <div 
-            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
-            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-            data-testid="card-cpa-medio"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <DollarSign className="w-4 h-4 text-slate-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(avgCPA)}</h3>
-              <p className="text-sm font-medium text-gray-400">CPA Médio</p>
-              <p className="text-sm text-gray-500 mt-1">Custo por aquisição</p>
-            </div>
-          </div>
-
-          {/* Taxa de Cancelamento */}
-          <div 
-            className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300"
-            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-            data-testid="card-taxa-cancelamento"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <XCircle className="w-4 h-4 text-slate-400" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-1">
-                {totalOrders > 0 ? `${(cancelledOrders / totalOrders * 100).toFixed(1)}%` : '0.0%'}
-              </h3>
-              <p className="text-sm font-medium text-gray-400">Taxa Cancelamento</p>
-              <p className="text-sm text-gray-500 mt-1">{cancelledOrders} cancelados</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
