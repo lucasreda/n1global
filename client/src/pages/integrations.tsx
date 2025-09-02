@@ -193,7 +193,7 @@ export default function Integrations() {
               <div key={integration.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`integration-${integration.id}`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <IconComponent className={`text-${integration.color}-400`} size={integration.id === 'shopify' ? 40 : 20} />
+                    <IconComponent className={`text-${integration.color}-400`} size={30} />
                     <div>
                       <h4 className="text-white font-medium">{integration.name}</h4>
                       <p className="text-gray-400 text-sm">{integration.description}</p>
@@ -223,7 +223,7 @@ export default function Integrations() {
                     <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle className="text-white flex items-center space-x-2">
-                          <IconComponent className={`text-${integration.color}-400`} size={20} />
+                          <IconComponent className={`text-${integration.color}-400`} size={30} />
                           <span>{integration.name}</span>
                         </DialogTitle>
                       </DialogHeader>
@@ -255,7 +255,7 @@ export default function Integrations() {
               <div key={integration.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`integration-${integration.id}`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <IconComponent className={`text-${integration.color}-400`} size={20} />
+                    <IconComponent className={`text-${integration.color}-400`} size={30} />
                     <div>
                       <h4 className="text-white font-medium">{integration.name}</h4>
                       <p className="text-gray-400 text-sm">{integration.description}</p>
@@ -286,7 +286,7 @@ export default function Integrations() {
                       <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle className="text-white flex items-center space-x-2">
-                            <IconComponent className={`text-${integration.color}-400`} size={20} />
+                            <IconComponent className={`text-${integration.color}-400`} size={30} />
                             <span>{integration.name}</span>
                           </DialogTitle>
                         </DialogHeader>
