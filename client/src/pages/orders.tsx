@@ -164,10 +164,10 @@ export default function Orders() {
 
   return (
     <div className="space-y-6">
-      <DashboardHeader 
-        title="Pedidos" 
-        subtitle="Visualize e gerencie todos os pedidos" 
-      />
+      <div>
+        <h1 className="font-bold text-white" style={{ fontSize: '22px' }}>Pedidos</h1>
+        <p className="text-gray-400">Visualize e gerencie todos os pedidos</p>
+      </div>
 
       {/* Filters */}
       <div className="glassmorphism rounded-xl p-3 sm:p-4">
