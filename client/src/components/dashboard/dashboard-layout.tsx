@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Sidebar } from './sidebar';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import logoImage from '@assets/n1-lblue_1756418570079.png';
@@ -27,11 +27,13 @@ export function DashboardLayout({ children, exchangeRate }: DashboardLayoutProps
       <div className="lg:hidden h-14 flex items-center justify-between px-3">
         {/* Logo - Left */}
         <div className="flex-shrink-0">
-          <img 
-            src={logoImage} 
-            alt="Logo" 
-            className="h-7 w-auto object-contain"
-          />
+          <Link href="/" className="cursor-pointer">
+            <img 
+              src={logoImage} 
+              alt="Logo" 
+              className="h-7 w-auto object-contain hover:opacity-80 transition-opacity"
+            />
+          </Link>
         </div>
 
         {/* Currency Badge + Menu Button - Right */}
