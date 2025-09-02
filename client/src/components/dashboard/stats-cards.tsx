@@ -190,6 +190,14 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   // Novos cálculos para os cards especiais
   const shopifyOrders = metrics?.shopifyOrders || 0;
   const avgCPA = metrics?.cpaBRL || 0; // Use valor calculado do backend
+  
+  // DEBUG TEMPORÁRIO
+  console.log('🔍 Frontend Debug:', {
+    cpaBRL: metrics?.cpaBRL,
+    avgDeliveryTimeDays: metrics?.avgDeliveryTimeDays,
+    uniqueCustomers: metrics?.uniqueCustomers,
+    allFields: Object.keys(metrics || {})
+  });
 
   // Calcular valores em BRL
   const totalProfitBRL = metrics?.totalProfitBRL || 0;
