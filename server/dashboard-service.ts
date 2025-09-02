@@ -227,8 +227,8 @@ export class DashboardService {
         totalRevenue: sum(orders.total),
         deliveredRevenue: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`,
         deliveredCount: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)`,
-        paidRevenue: sql<string>`SUM(CASE WHEN payment_status = 'paid' THEN total ELSE 0 END)`,
-        paidCount: sql<number>`SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END)`
+        paidRevenue: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`, // COD: Entregue = Pago
+        paidCount: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)` // COD: Entregue = Pago
       })
       .from(orders)
       .where(and(

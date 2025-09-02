@@ -644,7 +644,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           <div>
             <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(paidRevenueBRL)}</h3>
             <p className="text-sm font-medium text-gray-400">Receita Paga</p>
-            <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(paidRevenueEUR)} • {totalPaidOrders} pagos</p>
+            <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(paidRevenueEUR)} • {totalPaidOrders} entregas</p>
           </div>
         </div>
 
