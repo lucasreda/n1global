@@ -301,11 +301,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 🚀 CACHE: Cache para sync stats com TTL de 1 minuto
+  const syncStatsCache = new Map<string, { data: any; expiry: number }>();
+  
   app.get("/api/sync/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.query.operationId as string;
+      const cacheKey = `sync-stats-${operationId}`;
+      const now = Date.now();
+      
+      // 🚀 Verificar cache primeiro (TTL de 1 minuto = 60000ms)
+      const cached = syncStatsCache.get(cacheKey);
+      if (cached && cached.expiry > now) {
+        // console.log(`💾 Cache hit para sync stats: ${operationId}`);
+        return res.json(cached.data);
+      }
+      
+      // Cache miss - buscar dados
       const { smartSyncService } = await import("./smart-sync-service");
       const stats = await smartSyncService.getSyncStats(operationId);
+      
+      // 🚀 Armazenar em cache por 1 minuto
+      syncStatsCache.set(cacheKey, {
+        data: stats,
+        expiry: now + 60000 // 1 minuto
+      });
       
       res.json(stats);
     } catch (error) {

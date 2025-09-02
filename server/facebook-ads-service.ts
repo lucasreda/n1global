@@ -11,7 +11,7 @@ import {
   type InsertFacebookAdAccount,
   type InsertFacebookBusinessManager
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { currencyService } from './currency-service';
 
 interface FacebookApiCampaign {
@@ -504,62 +504,110 @@ export class FacebookAdsService {
     let totalBRL = 0;
     let totalEUR = 0;
     
+    // 🚀 OTIMIZAÇÃO CRÍTICA: Agrupar campanhas por conta e fazer chamadas paralelas
+    const campaignsByAccount = new Map<string, typeof selectedCampaigns>();
     for (const campaign of selectedCampaigns) {
-      try {
-        // Buscar informações da conta na tabela unificada
-        const { adAccounts } = await import("@shared/schema");
-        const [account] = await db
-          .select()
-          .from(adAccounts)
-          .where(and(
-            eq(adAccounts.accountId, campaign.accountId || ""),
-            eq(adAccounts.network, 'facebook')
-          ));
-        
-        if (!account?.accessToken) {
-          console.warn(`Account ${campaign.accountId} has no access token, skipping campaign ${campaign.name}`);
-          continue;
-        }
-        
-        // Buscar dados ao vivo da campanha para o período específico
-        let liveAmount = 0;
-        try {
-          const liveCampaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken, period);
-          const liveCampaign = liveCampaigns.find(c => c.campaignId === campaign.campaignId);
-          
-          if (liveCampaign) {
-            const originalAmount = parseFloat(liveCampaign.amountSpent || "0");
-            const baseCurrency = account.baseCurrency || "BRL";
-            
-            // Para contas BRL, valor já está em BRL. Para USD, converter para BRL
-            if (baseCurrency === "BRL") {
-              liveAmount = originalAmount;
-            } else {
-              // OTIMIZAÇÃO: Converter de EUR usando taxas pré-carregadas
-              liveAmount = preloadedRates 
-                ? currencyService.convertToBRLSync(originalAmount, "EUR", preloadedRates)
-                : await currencyService.convertToBRL(originalAmount, "EUR");
-            }
-            
-            console.log(`💰 Campanha: ${campaign.name}, Valor: ${liveAmount} BRL (período: ${period}), Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch live data for campaign ${campaign.name}, using stored data:`, error);
-          // Fallback para dados armazenados
-          liveAmount = parseFloat(campaign.amountSpent || "0");
-          console.log(`💰 Campanha: ${campaign.name}, Valor: ${liveAmount} BRL (dados armazenados), Account ID: ${campaign.accountId}`);
-        }
-        
-        totalBRL += liveAmount;
-        
-        // OTIMIZAÇÃO: Para EUR, usar taxas pré-carregadas
-        const eurValue = preloadedRates 
-          ? currencyService.convertFromBRLSync(liveAmount, 'EUR', preloadedRates)
-          : await currencyService.convertFromBRL(liveAmount, 'EUR');
-        totalEUR += eurValue;
-      } catch (error) {
-        console.error(`💰 Erro ao processar campanha ${campaign.name}:`, error);
+      const accountId = campaign.accountId || "";
+      if (!campaignsByAccount.has(accountId)) {
+        campaignsByAccount.set(accountId, []);
       }
+      campaignsByAccount.get(accountId)!.push(campaign);
+    }
+    
+    console.log(`🚀 Processando ${campaignsByAccount.size} contas em paralelo...`);
+    
+    // Buscar informações de todas as contas necessárias de uma vez
+    const { adAccounts: adAccountsSchema } = await import("@shared/schema");
+    const accountIds = Array.from(campaignsByAccount.keys());
+    const accounts = await db
+      .select()
+      .from(adAccountsSchema)
+      .where(and(
+        inArray(adAccountsSchema.accountId, accountIds),
+        eq(adAccountsSchema.network, 'facebook')
+      ));
+    
+    // Criar mapa de contas para acesso rápido
+    const accountMap = new Map(accounts.map(acc => [acc.accountId, acc]));
+    
+    // 🚀 PARALELIZAÇÃO: Processar todas as contas simultaneamente
+    const accountPromises = Array.from(campaignsByAccount.entries()).map(async ([accountId, accountCampaigns]) => {
+      const account = accountMap.get(accountId);
+      
+      if (!account?.accessToken) {
+        console.warn(`Account ${accountId} has no access token, skipping ${accountCampaigns.length} campaigns`);
+        return { totalBRL: 0, totalEUR: 0 };
+      }
+      
+      let accountTotalBRL = 0;
+      let accountTotalEUR = 0;
+      
+      try {
+        // Uma única chamada à API para todas as campanhas desta conta
+        const liveCampaigns = await this.fetchCampaignsFromAPI(account.accountId, account.accessToken, period);
+        
+        for (const campaign of accountCampaigns) {
+          let liveAmount = 0;
+          
+          try {
+            const liveCampaign = liveCampaigns.find(c => c.campaignId === campaign.campaignId);
+            
+            if (liveCampaign) {
+              const originalAmount = parseFloat(liveCampaign.amountSpent || "0");
+              const baseCurrency = account.baseCurrency || "BRL";
+              
+              // Para contas BRL, valor já está em BRL. Para USD, converter para BRL
+              if (baseCurrency === "BRL") {
+                liveAmount = originalAmount;
+              } else {
+                // OTIMIZAÇÃO: Converter de EUR usando taxas pré-carregadas
+                liveAmount = preloadedRates 
+                  ? currencyService.convertToBRLSync(originalAmount, "EUR", preloadedRates)
+                  : await currencyService.convertToBRL(originalAmount, "EUR");
+              }
+              
+              console.log(`💰 Campanha: ${campaign.name}, Valor: ${liveAmount} BRL (período: ${period}), Conta Base: ${baseCurrency}, Account ID: ${campaign.accountId}`);
+            } else {
+              // Fallback para dados armazenados
+              liveAmount = parseFloat(campaign.amountSpent || "0");
+              console.log(`💰 Campanha: ${campaign.name}, Valor: ${liveAmount} BRL (dados armazenados), Account ID: ${campaign.accountId}`);
+            }
+          } catch (error) {
+            console.warn(`Failed to process campaign ${campaign.name}, using stored data:`, error);
+            liveAmount = parseFloat(campaign.amountSpent || "0");
+          }
+          
+          accountTotalBRL += liveAmount;
+          
+          // OTIMIZAÇÃO: Para EUR, usar taxas pré-carregadas
+          const eurValue = preloadedRates 
+            ? currencyService.convertFromBRLSync(liveAmount, 'EUR', preloadedRates)
+            : await currencyService.convertFromBRL(liveAmount, 'EUR');
+          accountTotalEUR += eurValue;
+        }
+      } catch (error) {
+        console.error(`💰 Erro ao processar conta ${accountId}:`, error);
+        // Fallback para dados armazenados de todas as campanhas da conta
+        for (const campaign of accountCampaigns) {
+          const liveAmount = parseFloat(campaign.amountSpent || "0");
+          accountTotalBRL += liveAmount;
+          const eurValue = preloadedRates 
+            ? currencyService.convertFromBRLSync(liveAmount, 'EUR', preloadedRates)
+            : await currencyService.convertFromBRL(liveAmount, 'EUR');
+          accountTotalEUR += eurValue;
+        }
+      }
+      
+      return { totalBRL: accountTotalBRL, totalEUR: accountTotalEUR };
+    });
+    
+    // 🚀 Aguardar todas as contas em paralelo
+    const accountResults = await Promise.all(accountPromises);
+    
+    // Somar todos os resultados
+    for (const result of accountResults) {
+      totalBRL += result.totalBRL;
+      totalEUR += result.totalEUR;
     }
     
     console.log(`💰 Total calculado: BRL ${totalBRL.toFixed(2)}, EUR ${totalEUR.toFixed(2)}`);
