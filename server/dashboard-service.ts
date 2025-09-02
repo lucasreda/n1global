@@ -512,6 +512,12 @@ export class DashboardService {
       totalProfit: metrics.totalProfit.toString(),
       profitMargin: metrics.profitMargin.toString(),
       roi: metrics.roi.toString(),
+      // Customer analytics
+      uniqueCustomers: metrics.uniqueCustomers,
+      avgDeliveryTimeDays: metrics.avgDeliveryTimeDays.toString(),
+      // CAC (Customer Acquisition Cost)
+      cacBRL: metrics.cacBRL.toString(),
+      cacEUR: metrics.cacEUR.toString(),
       calculatedAt: metrics.calculatedAt,
       validUntil: metrics.validUntil
     };
