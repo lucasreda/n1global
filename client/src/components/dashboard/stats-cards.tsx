@@ -189,7 +189,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   
   // Novos cálculos para os cards especiais
   const shopifyOrders = metrics?.shopifyOrders || 0;
-  const avgCPA = shopifyOrders > 0 ? (marketingCostsBRL / shopifyOrders) : 0;
+  const avgCPA = metrics?.cpaBRL || 0; // Use valor calculado do backend
 
   // Calcular valores em BRL
   const totalProfitBRL = metrics?.totalProfitBRL || 0;
