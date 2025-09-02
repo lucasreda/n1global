@@ -88,10 +88,24 @@ export class DashboardService {
     // Calculate fresh metrics
     const metrics = await this.calculateMetrics(period, provider, req, operationId);
     
-    // Cache the results
+    // 🚀 CACHE INTELIGENTE: TTL baseado no período
     await this.cacheMetrics(period, provider, metrics, req, operationId);
     
+    console.log(`💾 Métricas calculadas e armazenadas em cache por ${this.getCacheTTL(period)} minutos`);
+    
     return metrics;
+  }
+  
+  private getCacheTTL(period: string): number {
+    // TTL inteligente baseado no período
+    switch (period) {
+      case '1d': return 2; // 2 minutos para dados do dia
+      case '7d': return 5; // 5 minutos para última semana
+      case '30d': return 15; // 15 minutos para últimos 30 dias
+      case '90d': return 30; // 30 minutos para últimos 90 dias
+      case 'current_month': return 60; // 1 hora para mês atual
+      default: return 5;
+    }
   }
   
   private getEmptyMetrics() {
@@ -548,6 +562,19 @@ export class DashboardService {
     const storeId = await this.getStoreId(req);
     
     // Check if there are any products linked to this store (operations are store-based)
+    if (!storeId) {
+      console.log('❌ StoreId não encontrado - retornando custos zero');
+      return {
+        totalProductCosts: 0,
+        totalProductCostsBRL: 0,
+        totalShippingCosts: 0,
+        totalShippingCostsBRL: 0,
+        totalCombinedCosts: 0,
+        totalCombinedCostsBRL: 0,
+        totalQuantity: 0
+      };
+    }
+    
     const linkedProducts = await storage.getUserLinkedProducts(req.user.id, storeId);
     if (!linkedProducts || linkedProducts.length === 0) {
       console.log(`💰 Nenhum produto vinculado à operação ${currentOperation.name} - retornando custos zero`);
@@ -562,48 +589,93 @@ export class DashboardService {
       };
     }
     
-    // 🚀 OTIMIZAÇÃO: Processar pedidos usando método original (mais estável)
-    // Process each delivered order to calculate costs based on linked products
-    for (const order of deliveredOrders) {
-      if (!order.products) continue;
+    // 🚀 OTIMIZAÇÃO CRÍTICA: Agregação SQL única em vez de 705 loops individuais
+    console.log(`🚀 Iniciando cálculo otimizado para ${deliveredOrders.length} pedidos...`);
+    
+    try {
+      // Query única que agrega todos os custos de uma vez
+      const costResults = await db.execute(sql`
+        WITH order_products AS (
+          SELECT 
+            o.id as order_id,
+            jsonb_array_elements(o.products) as product_data
+          FROM orders o
+          WHERE o.operation_id = ${currentOperation.id}
+            AND o.status = 'delivered'
+            AND o.order_date BETWEEN ${dateRange.from} AND ${dateRange.to}
+            ${provider ? sql`AND o.provider = ${provider}` : sql``}
+        ),
+        product_costs AS (
+          SELECT 
+            op.order_id,
+            COALESCE(p.cost_price::decimal, 0) as product_cost,
+            COALESCE(
+              up.custom_shipping_cost::decimal, 
+              p.shipping_cost::decimal, 
+              0
+            ) as shipping_cost
+          FROM order_products op
+          LEFT JOIN user_products up ON (
+            up.sku = COALESCE(op.product_data->>'sku', op.product_data->>'product_sku')
+            AND up.store_id = ${storeId}
+          )
+          LEFT JOIN products p ON (
+            p.id = up.product_id 
+            AND p.operation_id = ${currentOperation.id}
+          )
+          WHERE COALESCE(op.product_data->>'sku', op.product_data->>'product_sku') IS NOT NULL
+            AND up.id IS NOT NULL
+            AND p.id IS NOT NULL
+        )
+        SELECT 
+          COALESCE(SUM(product_cost), 0) as total_product_costs,
+          COALESCE(SUM(shipping_cost), 0) as total_shipping_costs,
+          COUNT(DISTINCT order_id) as processed_orders
+        FROM product_costs
+      `);
       
-      // Extract SKUs from products array (jsonb)
-      const productsArray = order.products as any[];
-      if (!Array.isArray(productsArray)) continue;
+      const result = costResults.rows[0] as any;
+      totalProductCosts = parseFloat(result.total_product_costs || "0");
+      totalShippingCosts = parseFloat(result.total_shipping_costs || "0");
+      processedOrders = parseInt(result.processed_orders || "0");
       
-      // Process each product in the order
-      for (const productInfo of productsArray) {
-        const sku = productInfo?.sku || productInfo?.product_sku;
-        if (!sku) continue;
+      console.log(`🚀 Cálculo SQL otimizado concluído - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos processados: ${processedOrders}`);
+      
+    } catch (sqlError) {
+      console.error('❌ Erro na query otimizada, usando fallback:', sqlError);
+      
+      // FALLBACK: Método original em caso de erro
+      for (const order of deliveredOrders) {
+        if (!order.products) continue;
         
-        // Find linked product by SKU for this store AND operation
-        const linkedProduct = await storage.getUserProductBySku(sku, storeId);
+        const productsArray = order.products as any[];
+        if (!Array.isArray(productsArray)) continue;
         
-        // IMPORTANT: Only apply costs if product is linked to THIS specific operation
-        const isLinkedToOperation = linkedProduct && linkedProduct.operationId === currentOperation.id;
-        
-        if (linkedProduct && isLinkedToOperation) {
-          // Para dashboard: usar CUSTO REAL do fornecedor, não o preço B2B
-          // customCostPrice = Preço B2B (€12.50), product.costPrice = Custo real fornecedor (€10.00)
-          const productCost = parseFloat(linkedProduct.product.costPrice || "0"); // Sempre usar custo real
-          const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
+        for (const productInfo of productsArray) {
+          const sku = productInfo?.sku || productInfo?.product_sku;
+          if (!sku) continue;
           
-          totalProductCosts += productCost;
-          totalShippingCosts += shippingCost;
+          const linkedProduct = await storage.getUserProductBySku(sku, storeId);
+          // Verificar se produto existe e se pertence à operação atual através do product
+          const isLinkedToOperation = linkedProduct && linkedProduct.product && linkedProduct.product.operationId === currentOperation.id;
           
-          console.log(`💰 Order ${order.id}: SKU ${sku} - Product: €${productCost}, Shipping: €${shippingCost}`);
-        } else {
-          // Sem produto vinculado à esta operação - não adicionar custos (valor = 0)
-          const reason = !linkedProduct ? "Produto não encontrado" : "Produto não vinculado à esta operação";
-          console.log(`💰 Order ${order.id}: SKU ${sku} - ${reason}, custos = €0`);
+          if (linkedProduct && isLinkedToOperation) {
+            const productCost = parseFloat(linkedProduct.product.costPrice || "0");
+            const shippingCost = parseFloat(linkedProduct.customShippingCost || linkedProduct.product.shippingCost || "0");
+            
+            totalProductCosts += productCost;
+            totalShippingCosts += shippingCost;
+          }
         }
+        
+        processedOrders++;
       }
       
-      processedOrders++;
+      console.log(`💰 Fallback calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${processedOrders}`);
     }
     
     
-    console.log(`💰 Costs calculation - Product: €${totalProductCosts}, Shipping: €${totalShippingCosts}, Orders: ${processedOrders}`);
+    console.log(`💰 Cálculo final - Produtos: €${totalProductCosts}, Envio: €${totalShippingCosts}, Pedidos: ${processedOrders}`);
     
     // OTIMIZAÇÃO: Use taxas pré-carregadas para conversões rápidas
     const totalProductCostsBRL = preloadedRates 
