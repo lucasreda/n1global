@@ -250,7 +250,7 @@ export default function AdminSettings() {
                   Histórico de Conversão de Moedas
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  Configure quais moedas importar e gerencie dados históricos desde 2021
+                  Configure quais moedas importar e gerencie dados históricos desde 2024
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -344,7 +344,7 @@ export default function AdminSettings() {
 
                     {currencyStatus?.isUpToDate && currencyStatus?.enabledCurrencies?.length > 0 && (
                       <p className="text-green-400 text-sm">
-                        ✅ Histórico completo desde 2021 para {currencyStatus.enabledCurrencies.join(', ')}
+                        ✅ Histórico completo desde 2024 para {currencyStatus.enabledCurrencies.join(', ')}
                       </p>
                     )}
 

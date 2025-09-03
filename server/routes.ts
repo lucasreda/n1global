@@ -629,7 +629,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if we have data up to today for enabled currencies
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-      const startDate = '2021-01-01';
+      const startDate = '2024-01-01';
       
       // Get enabled currencies
       const enabledCurrencies = await db
@@ -708,7 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(currencyHistory.date))
         .limit(1);
       
-      let startDate = '2021-01-01';
+      let startDate = '2024-01-01';
       if (latestRecord.length > 0) {
         // Start from day after last record
         const lastDate = new Date(latestRecord[0].date);
