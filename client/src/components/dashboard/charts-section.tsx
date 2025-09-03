@@ -88,7 +88,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           <h3 className="text-base font-semibold text-white">Distribuição de Status</h3>
         </div>
         
-        <div className="flex gap-4 items-start">
+        <div className="flex gap-4 items-center min-h-[200px]">
           {/* Chart Section */}
           <div className="flex-shrink-0">
             <div className="w-32 h-32 sm:w-36 sm:h-36 relative">
