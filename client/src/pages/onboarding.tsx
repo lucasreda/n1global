@@ -452,12 +452,13 @@ export default function OnboardingPage() {
                 return (
                   <Card 
                     key={step.id}
+                    style={{backgroundColor: '#0f0f0f'}}
                     className={`relative ${
                       isActive 
-                        ? 'bg-blue-600/20 border-blue-400 shadow-lg shadow-blue-500/25' 
+                        ? 'border-blue-400 shadow-lg shadow-blue-500/25' 
                         : isCompleted 
-                        ? 'bg-green-600/20 border-green-400'
-                        : 'bg-white/5 border-white/10'
+                        ? 'border-green-400'
+                        : 'border-gray-600'
                     }`}
                     data-testid={`step-card-${index + 1}`}
                   >
@@ -773,7 +774,8 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
             value={shopUrl}
             onChange={(e) => setShopUrl(e.target.value)}
             placeholder="exemplo: minha-loja"
-            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
+            style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}
             data-testid="input-shop-url"
           />
           <p className="text-white/40 text-xs mt-1">
@@ -790,7 +792,8 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
             value={accessToken}
             onChange={(e) => setAccessToken(e.target.value)}
             placeholder="shpat_xxxxxxxxxxxxxxxxxxxxx"
-            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
+            className="w-full px-3 py-2 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
+            style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}
             data-testid="input-access-token"
           />
           <p className="text-white/40 text-xs mt-1">
@@ -1078,12 +1081,13 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
               return (
                 <Card 
                   key={provider.id} 
+                  style={{backgroundColor: '#0f0f0f'}}
                   className={`${
                     isActive 
-                      ? 'bg-green-600/20 border-green-400' 
+                      ? 'border-green-400' 
                       : isConfigured 
-                      ? 'bg-yellow-600/20 border-yellow-400'
-                      : 'bg-gray-600/20 border-gray-400'
+                      ? 'border-yellow-400'
+                      : 'border-gray-400'
                   }`}
                 >
                   <CardContent className="p-4">
@@ -1180,7 +1184,8 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
                 id="provider-type"
                 value="N1 Warehouse 1"
                 disabled
-                className="bg-white/5 border-white/10 text-white/60 mt-2"
+                className="text-white/60 mt-2"
+                style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}
                 data-testid="input-provider-type"
               />
             </div>
