@@ -9,6 +9,8 @@ import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
+import { ElogyService } from "./fulfillment-providers/elogy-service";
+import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-factory";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
 import { adminService } from "./admin-service";
@@ -2157,6 +2159,410 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(status || { status: lead.status });
     } catch (error) {
       res.status(500).json({ message: "Erro ao buscar status do lead" });
+    }
+  });
+
+  // eLogy Logistics Integration Routes
+  
+  // Test connection
+  app.get("/api/integrations/elogy/test", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      // Verificar credenciais armazenadas no banco para esta operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId as string),
+          eq(fulfillmentIntegrations.provider, "elogy")
+        ))
+        .limit(1);
+      
+      if (integration && integration.credentials) {
+        // Testar conexão com as credenciais salvas
+        const credentials = integration.credentials as any;
+        const service = new ElogyService(credentials);
+        const testResult = await service.testConnection();
+        
+        res.json({
+          connected: testResult.connected,
+          message: testResult.message,
+          provider: "elogy"
+        });
+      } else {
+        res.json({
+          connected: false,
+          message: "Credenciais eLogy não configuradas para esta operação",
+          provider: "elogy"
+        });
+      }
+    } catch (error) {
+      console.error("Error testing eLogy connection:", error);
+      res.status(500).json({ 
+        connected: false, 
+        message: "Erro ao testar conexão eLogy",
+        provider: "elogy"
+      });
+    }
+  });
+
+  // Update credentials
+  app.post("/api/integrations/elogy/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { email, password, authHeader, warehouseId, apiUrl, operationId } = req.body;
+      console.log("🔧 eLogy: Iniciando salvamento de credenciais...", { email, operationId, warehouseId });
+      
+      if (!email || !password || !authHeader || !warehouseId || !operationId) {
+        console.log("❌ eLogy: Dados faltando:", { 
+          email: !!email, 
+          password: !!password, 
+          authHeader: !!authHeader,
+          warehouseId: !!warehouseId,
+          operationId: !!operationId 
+        });
+        return res.status(400).json({ 
+          message: "Email, senha, authHeader, warehouseId e operationId são obrigatórios" 
+        });
+      }
+      
+      console.log("🧪 eLogy: Testando credenciais...");
+      // Test the new credentials first
+      const credentials = { 
+        email, 
+        password, 
+        authHeader,
+        warehouseId,
+        apiUrl: apiUrl || "https://api.elogy.io" 
+      };
+      const service = new ElogyService(credentials);
+      const testResult = await service.testConnection();
+      console.log("📊 eLogy: Resultado do teste:", testResult);
+      
+      if (testResult.connected) {
+        console.log("🔄 eLogy: Salvando credenciais no banco...", { operationId, email });
+        
+        // Save credentials to database
+        await db
+          .insert(fulfillmentIntegrations)
+          .values({
+            operationId: operationId,
+            provider: "elogy",
+            isActive: true,
+            credentials: credentials
+          })
+          .onConflictDoUpdate({
+            target: [fulfillmentIntegrations.operationId, fulfillmentIntegrations.provider],
+            set: {
+              isActive: true,
+              credentials: credentials,
+              updatedAt: new Date()
+            }
+          });
+        
+        console.log("✅ eLogy: Credenciais salvas com sucesso!");
+        
+        res.json({
+          message: "Credenciais eLogy salvas e testadas com sucesso",
+          connected: true,
+          provider: "elogy"
+        });
+      } else {
+        console.log("❌ eLogy: Teste de conexão falhou:", testResult.message);
+        res.status(400).json({
+          message: `Falha na conexão eLogy: ${testResult.message}`,
+          connected: false,
+          provider: "elogy"
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar credenciais eLogy:", error);
+      res.status(500).json({ message: "Erro interno ao salvar credenciais eLogy" });
+    }
+  });
+
+  // Get orders to print
+  app.get("/api/integrations/elogy/orders-to-print", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      // Buscar credenciais da operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId as string),
+          eq(fulfillmentIntegrations.provider, "elogy")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(400).json({ message: "Credenciais eLogy não encontradas para esta operação" });
+      }
+      
+      const service = new ElogyService(integration.credentials as any);
+      const orders = await service.getOrdersToPrint();
+      
+      res.json(orders);
+    } catch (error) {
+      console.error("Error getting eLogy orders to print:", error);
+      res.status(500).json({ message: "Erro ao buscar orders para impressão eLogy" });
+    }
+  });
+
+  // Print sticker
+  app.post("/api/integrations/elogy/print-sticker", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { orderId, operationId } = req.body;
+      
+      if (!orderId || !operationId) {
+        return res.status(400).json({ message: "orderId e operationId são obrigatórios" });
+      }
+      
+      // Buscar credenciais da operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "elogy")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(400).json({ message: "Credenciais eLogy não encontradas para esta operação" });
+      }
+      
+      const service = new ElogyService(integration.credentials as any);
+      const result = await service.printSticker(orderId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error printing eLogy sticker:", error);
+      res.status(500).json({ message: "Erro ao imprimir etiqueta eLogy" });
+    }
+  });
+
+  // Get orders to confirm
+  app.get("/api/integrations/elogy/orders-to-confirm", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      // Buscar credenciais da operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId as string),
+          eq(fulfillmentIntegrations.provider, "elogy")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(400).json({ message: "Credenciais eLogy não encontradas para esta operação" });
+      }
+      
+      const service = new ElogyService(integration.credentials as any);
+      const orders = await service.getOrdersToConfirm();
+      
+      res.json(orders);
+    } catch (error) {
+      console.error("Error getting eLogy orders to confirm:", error);
+      res.status(500).json({ message: "Erro ao buscar orders para confirmação eLogy" });
+    }
+  });
+
+  // Get daily waiting for carrier
+  app.get("/api/integrations/elogy/daily-waiting", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      // Buscar credenciais da operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId as string),
+          eq(fulfillmentIntegrations.provider, "elogy")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(400).json({ message: "Credenciais eLogy não encontradas para esta operação" });
+      }
+      
+      const service = new ElogyService(integration.credentials as any);
+      const dailyData = await service.getDailyWaitingForCarrier();
+      
+      res.json(dailyData);
+    } catch (error) {
+      console.error("Error getting eLogy daily waiting:", error);
+      res.status(500).json({ message: "Erro ao buscar dados diários eLogy" });
+    }
+  });
+
+  // Sync eLogy orders
+  app.post("/api/integrations/elogy/sync", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.body;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      // Buscar credenciais da operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "elogy")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(400).json({ 
+          message: "Credenciais eLogy não encontradas para esta operação",
+          success: false 
+        });
+      }
+      
+      const service = new ElogyService(integration.credentials as any);
+      const syncResult = await service.syncOrders(operationId);
+      
+      res.json(syncResult);
+    } catch (error) {
+      console.error("Error syncing eLogy orders:", error);
+      res.status(500).json({ 
+        message: "Erro ao sincronizar orders eLogy",
+        success: false,
+        ordersProcessed: 0,
+        ordersCreated: 0,
+        ordersUpdated: 0,
+        errors: [error instanceof Error ? error.message : "Unknown error"]
+      });
+    }
+  });
+
+  // Unified Multi-Provider Routes
+  
+  // List all available providers
+  app.get("/api/integrations/providers", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const providers = FulfillmentProviderFactory.getAvailableProviders();
+      
+      // Verificar quais providers estão configurados para a operação
+      const { operationId } = req.query;
+      if (operationId) {
+        const integrations = await db
+          .select()
+          .from(fulfillmentIntegrations)
+          .where(eq(fulfillmentIntegrations.operationId, operationId as string));
+        
+        // Marcar providers configurados
+        const providersWithStatus = providers.map(provider => ({
+          ...provider,
+          configured: integrations.some(i => i.provider === provider.type && i.status === 'active')
+        }));
+        
+        res.json(providersWithStatus);
+      } else {
+        res.json(providers);
+      }
+    } catch (error) {
+      console.error("Error listing providers:", error);
+      res.status(500).json({ message: "Erro ao listar providers" });
+    }
+  });
+
+  // Sync all active providers for an operation
+  app.post("/api/integrations/sync-all", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.body;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      // Buscar todas as integrações ativas para a operação
+      const integrations = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.status, "active")
+        ));
+      
+      console.log(`🔄 Iniciando sync unificado para operação ${operationId} com ${integrations.length} providers`);
+      
+      const syncResults = [];
+      let totalOrdersProcessed = 0;
+      let totalOrdersCreated = 0;
+      let totalOrdersUpdated = 0;
+      let allErrors: string[] = [];
+      
+      // Sync cada provider configurado
+      for (const integration of integrations) {
+        try {
+          console.log(`🚚 Sync ${integration.provider} iniciado...`);
+          
+          const provider = FulfillmentProviderFactory.createProvider(
+            integration.provider as any, 
+            integration.credentials as any
+          );
+          
+          const result = await provider.syncOrders(operationId);
+          
+          syncResults.push({
+            provider: integration.provider,
+            ...result
+          });
+          
+          totalOrdersProcessed += result.ordersProcessed;
+          totalOrdersCreated += result.ordersCreated;
+          totalOrdersUpdated += result.ordersUpdated;
+          allErrors.push(...result.errors);
+          
+          console.log(`✅ Sync ${integration.provider} concluído:`, result);
+          
+        } catch (providerError) {
+          const errorMsg = providerError instanceof Error ? providerError.message : "Unknown error";
+          console.error(`❌ Erro no sync ${integration.provider}:`, providerError);
+          
+          syncResults.push({
+            provider: integration.provider,
+            success: false,
+            ordersProcessed: 0,
+            ordersCreated: 0,
+            ordersUpdated: 0,
+            errors: [errorMsg]
+          });
+          
+          allErrors.push(`${integration.provider}: ${errorMsg}`);
+        }
+      }
+      
+      const overallSuccess = syncResults.some(r => r.success);
+      
+      console.log(`🎯 Sync unificado concluído: ${totalOrdersProcessed} processed, ${totalOrdersCreated} created, ${totalOrdersUpdated} updated`);
+      
+      res.json({
+        success: overallSuccess,
+        totalOrdersProcessed,
+        totalOrdersCreated,
+        totalOrdersUpdated,
+        providersResults: syncResults,
+        errors: allErrors,
+        message: `Sync unificado: ${syncResults.length} providers processados`
+      });
+      
+    } catch (error) {
+      console.error("Error in unified sync:", error);
+      res.status(500).json({ 
+        message: "Erro no sync unificado",
+        success: false,
+        errors: [error instanceof Error ? error.message : "Unknown error"]
+      });
     }
   });
 

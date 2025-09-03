@@ -98,7 +98,7 @@ export const orders = pgTable("orders", {
   products: jsonb("products"), // Array of products with quantities and prices
   
   // Shipping provider info  
-  provider: text("provider").notNull().default("european_fulfillment"), // 'european_fulfillment', 'correios', 'jadlog'
+  provider: text("provider").notNull().default("european_fulfillment"), // 'european_fulfillment', 'elogy', 'correios', 'jadlog'
   providerOrderId: text("provider_order_id"), // Original ID from provider (legacy, use carrierOrderId)
   trackingNumber: text("tracking_number"),
   
@@ -265,7 +265,7 @@ export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   operationId: varchar("operation_id").notNull().references(() => operations.id),
   
-  provider: text("provider").notNull(), // 'european_fulfillment', 'correios', 'jadlog'
+  provider: text("provider").notNull(), // 'european_fulfillment', 'elogy', 'correios', 'jadlog'
   credentials: jsonb("credentials").notNull(), // Encrypted credentials
   
   status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
