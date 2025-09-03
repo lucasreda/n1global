@@ -199,10 +199,6 @@ export function EuropeanFulfillmentPanel() {
     <div className="space-y-6">
       <Card className="glassmorphism border-0">
         <CardHeader>
-          <CardTitle className="text-white flex items-center space-x-2">
-            <Package className="text-blue-400" />
-            <span>N1 Warehouse 1</span>
-          </CardTitle>
           <CardDescription className="text-gray-300">
             Integração completa com centro de fulfillment europeu para gerenciamento de pedidos COD
           </CardDescription>
