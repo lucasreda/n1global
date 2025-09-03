@@ -29,7 +29,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       {/* Revenue Chart */}
       <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-revenue">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
-          <h3 className="text-base sm:text-lg font-semibold text-white">Receita por Período</h3>
+          <h3 className="text-lg font-semibold text-white">Receita por Período</h3>
           <div className="text-xs sm:text-sm text-gray-400">
             Dados sincronizados com período selecionado
           </div>
@@ -85,7 +85,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       {/* Distribution Chart */}
       <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden flex flex-col" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-distribution">
         <div className="mb-4">
-          <h3 className="text-base font-semibold text-white">Distribuição de Status</h3>
+          <h3 className="text-lg font-semibold text-white">Distribuição de Status</h3>
         </div>
         
         <div className="flex gap-4 items-center justify-center flex-1">
