@@ -107,6 +107,11 @@ export class ElogyService extends BaseFulfillmentProvider {
       const responseBody: any = await response.json();
       console.log("📋 eLogy login response body:", responseBody);
       
+      // Verificar se login falhou
+      if (responseBody.success === false || responseBody.code === 'USER_NOT_FOUND') {
+        throw new Error(`eLogy login failed: ${responseBody.code || 'Credenciais inválidas'}`);
+      }
+      
       // Se retornou token no body, usar ele; senão usar o authHeader
       const authToken = responseBody.token || responseBody.access_token || this.elogyCredentials.authHeader || DEFAULT_ELOGY_AUTH_HEADER;
       
