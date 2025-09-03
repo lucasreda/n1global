@@ -152,7 +152,7 @@ export default function AdminSettings() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="bg-black/40 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-white text-xl flex items-center gap-2">
                   <Globe className="h-5 w-5" />
                   Configurações Globais
                 </CardTitle>
@@ -200,7 +200,7 @@ export default function AdminSettings() {
 
             <Card className="bg-black/40 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-white text-xl flex items-center gap-2">
                   <Bell className="h-5 w-5" />
                   Notificações
                 </CardTitle>
@@ -245,7 +245,7 @@ export default function AdminSettings() {
           <div className="grid grid-cols-1 gap-6">
             <Card className="bg-black/40 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+                <CardTitle className="text-white text-xl flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
                   Histórico de Conversão de Moedas
                 </CardTitle>
@@ -363,7 +363,7 @@ export default function AdminSettings() {
         <TabsContent value="users" className="space-y-6">
           <Card className="bg-black/40 border-gray-700">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-white text-xl flex items-center gap-2">
                 <Users className="h-5 w-5" />
                 Configurações de Usuários
               </CardTitle>
@@ -403,7 +403,7 @@ export default function AdminSettings() {
         <TabsContent value="system" className="space-y-6">
           <Card className="bg-black/40 border-gray-700">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-white text-xl flex items-center gap-2">
                 <Database className="h-5 w-5" />
                 Configurações do Sistema
               </CardTitle>
@@ -456,7 +456,7 @@ export default function AdminSettings() {
         <TabsContent value="security" className="space-y-6">
           <Card className="bg-black/40 border-gray-700">
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="text-white text-xl flex items-center gap-2">
                 <Shield className="h-5 w-5" />
                 Configurações de Segurança
               </CardTitle>
