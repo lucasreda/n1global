@@ -122,9 +122,9 @@ export const orders = pgTable("orders", {
 export const currencyHistory = pgTable("currency_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   date: text("date").notNull(), // Format: YYYY-MM-DD
-  baseCurrency: text("base_currency").notNull(), // e.g., "BRL"
-  targetCurrency: text("target_currency").notNull(), // e.g., "EUR", "USD", "GBP"
-  rate: decimal("rate", { precision: 12, scale: 6 }).notNull(), // Exchange rate
+  eurToBrl: decimal("eur_to_brl", { precision: 10, scale: 6 }).notNull(), // EUR to BRL rate
+  baseCurrency: text("base_currency").notNull().default("EUR"),
+  targetCurrency: text("target_currency").notNull().default("BRL"),
   source: text("source").notNull().default("currencyapi"), // API source
   createdAt: timestamp("created_at").defaultNow(),
 });
