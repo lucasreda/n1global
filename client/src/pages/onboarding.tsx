@@ -697,7 +697,7 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
     setErrorMessage('');
 
     try {
-      const response = await apiRequest('POST', '/api/integrations/shopify/test', {
+      const response = await apiRequest('/api/integrations/shopify/test', 'POST', {
         shopName: shopUrl.replace('.myshopify.com', ''),
         accessToken
       });
@@ -733,7 +733,7 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
     // Save integration data
     try {
       console.log('Saving Shopify integration with operationId:', operationId);
-      const response = await apiRequest('POST', '/api/integrations/shopify', {
+      const response = await apiRequest('/api/integrations/shopify', 'POST', {
         operationId: operationId,
         shopName: shopUrl.replace('.myshopify.com', ''),
         accessToken
