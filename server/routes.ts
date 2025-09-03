@@ -1665,7 +1665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.json({
           connected: false,
-          message: "European Fulfillment não configurado para esta operação",
+          message: "N1 Warehouse não configurado para esta operação",
           details: "Configure as credenciais específicas desta operação"
         });
       }
