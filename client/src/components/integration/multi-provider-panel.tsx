@@ -146,7 +146,7 @@ export function MultiProviderPanel() {
       case "european_fulfillment":
         return ["email", "password"];
       case "elogy":
-        return ["email", "password", "warehouseId"];
+        return ["email", "password"];
       default:
         return ["email", "password"];
     }
@@ -248,7 +248,7 @@ export function MultiProviderPanel() {
             <DialogTitle className="text-white flex items-center space-x-2">
               <Package className="text-blue-400" size={20} />
               <span>
-                Configurar {providers?.find(p => p.type === selectedProvider)?.name}
+                Configurar {providers?.find((p: any) => p.type === selectedProvider)?.name}
               </span>
             </DialogTitle>
           </DialogHeader>
