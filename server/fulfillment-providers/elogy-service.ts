@@ -103,12 +103,17 @@ export class ElogyService extends BaseFulfillmentProvider {
         throw new Error(`eLogy authentication failed: ${response.status} ${response.statusText}`);
       }
 
-      // eLogy não retorna token no corpo - o Authorization header é o token
-      // Definir expiração padrão de 4 horas
+      // Verificar se o login retornou um novo token no body
+      const responseBody: any = await response.json();
+      console.log("📋 eLogy login response body:", responseBody);
+      
+      // Se retornou token no body, usar ele; senão usar o authHeader
+      const authToken = responseBody.token || responseBody.access_token || this.elogyCredentials.authHeader || DEFAULT_ELOGY_AUTH_HEADER;
+      
       const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
       
       this.token = {
-        token: this.elogyCredentials.authHeader || DEFAULT_ELOGY_AUTH_HEADER,
+        token: authToken,
         expiresAt,
       };
 
@@ -464,7 +469,15 @@ export class ElogyService extends BaseFulfillmentProvider {
       await this.authenticate();
       
       // Tentar buscar orders para confirmar conexão
-      await this.getOrdersToPrint();
+      const orders = await this.getOrdersToPrint();
+      
+      // Verificar se retornou erro 401
+      if (orders && typeof orders === 'object' && 'statusCode' in orders && orders.statusCode === 401) {
+        return {
+          connected: false,
+          message: "Credenciais eLogy inválidas - login negado"
+        };
+      }
       
       return {
         connected: true,
