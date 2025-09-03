@@ -388,7 +388,7 @@ export default function OnboardingPage() {
                   <CardContent className="p-8 text-center">
                     {/* Ícone principal - Mais sutil */}
                     <div className="mb-6">
-                      <div className="w-12 h-12 bg-blue-600/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                      <div className="w-12 h-12 flex items-center justify-center mx-auto mb-4">
                         <Brain className="w-8 h-8 text-blue-400" />
                       </div>
                     </div>
