@@ -95,7 +95,7 @@ export async function seedDatabase() {
       console.log("ℹ️  Default operation already exists");
     }
 
-    // Check if European Fulfillment provider exists for this operation
+    // Check if N1 Warehouse 1 provider exists for this operation
     const [existingProvider] = await db
       .select()
       .from(shippingProviders)
@@ -108,16 +108,16 @@ export async function seedDatabase() {
         .values({
           storeId: defaultStore.id,
           operationId: defaultOperation.id,
-          name: "European Fulfillment Center",
+          name: "N1 Warehouse 1",
           type: "european_fulfillment",
           apiUrl: "https://api-test.ecomfulfilment.eu/",
           isActive: true,
         })
         .returning();
       
-      console.log("✅ European Fulfillment provider created:", provider.name);
+      console.log("✅ N1 Warehouse 1 provider created:", provider.name);
     } else {
-      console.log("ℹ️  European Fulfillment provider already exists");
+      console.log("ℹ️  N1 Warehouse 1 provider already exists");
     }
 
     // Sample products removed - no longer creating automatic demo products

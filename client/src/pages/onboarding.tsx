@@ -1150,7 +1150,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
               </Label>
               <Input
                 id="provider-type"
-                value="European Fulfillment"
+                value="N1 Warehouse 1"
                 disabled
                 className="bg-white/5 border-white/10 text-white/60 mt-2"
                 data-testid="input-provider-type"

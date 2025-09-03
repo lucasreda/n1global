@@ -122,7 +122,7 @@ export default function Integrations() {
   const fulfillmentIntegrations = [
     {
       id: "european-fulfillment",
-      name: "European Fulfillment Center",
+      name: "N1 Warehouse 1",
       status: getEuropeanFulfillmentStatus(),
       description: "Centro de fulfillment para Europa com API completa",
       icon: Package,
