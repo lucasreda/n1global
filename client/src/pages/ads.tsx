@@ -1358,7 +1358,7 @@ export default function Ads() {
       {manualSpends && manualSpends.length > 0 && (
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-white flex items-center space-x-2">
+            <CardTitle className="text-lg text-white flex items-center space-x-2">
               <Calculator className="w-4 h-4 text-green-400" />
               <span>Detalhes dos Gastos Manuais</span>
             </CardTitle>
