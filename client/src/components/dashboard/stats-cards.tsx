@@ -189,7 +189,8 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   
   // Novos cálculos para os cards especiais
   const shopifyOrders = metrics?.shopifyOrders || 0;
-  const avgCPA = metrics?.cpaBRL || 0; // Use valor calculado do backend
+  const avgCPA = metrics?.cpaBRL || 0; // CPA Real (Marketing / Entregues)
+  const cpaAds = metrics?.cpaAdsBRL || 0; // CPA Anúncios (Marketing / Total Shopify)
   
   // Custos de retorno: 2 euros por pedido retornado
   const returnCostEUR = returnedOrders * 2;
@@ -353,7 +354,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(avgCPA)}</h3>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(cpaAds)}</h3>
                 <p className="text-sm text-gray-500">Custo por aquisição</p>
               </div>
               <div>
@@ -492,7 +493,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(avgCPA)}</h3>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(cpaAds)}</h3>
                 <p className="text-sm text-gray-500">Custo por aquisição</p>
               </div>
               <div>

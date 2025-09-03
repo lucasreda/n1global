@@ -176,6 +176,10 @@ export const dashboardMetrics = pgTable("dashboard_metrics", {
   cacBRL: decimal("cac_brl", { precision: 12, scale: 2 }).default("0"),
   cacEUR: decimal("cac_eur", { precision: 12, scale: 2 }).default("0"),
   
+  // CPA Anúncios (Customer Per Acquisition - Ads)
+  cpaAdsBRL: decimal("cpa_ads_brl", { precision: 12, scale: 2 }).default("0"),
+  cpaAdsEUR: decimal("cpa_ads_eur", { precision: 12, scale: 2 }).default("0"),
+  
   calculatedAt: timestamp("calculated_at").notNull(),
   validUntil: timestamp("valid_until").notNull(),
   

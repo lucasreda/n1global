@@ -89,6 +89,8 @@ export class DashboardService {
         avgDeliveryTimeDays: Number(cached.avgDeliveryTimeDays || 0),
         cpaBRL: Number(cached.cacBRL || 0),
         cpaEUR: Number(cached.cacEUR || 0),
+        cpaAdsBRL: Number(cached.cpaAdsBRL || 0),
+        cpaAdsEUR: Number(cached.cpaAdsEUR || 0),
       };
     }
     
@@ -432,6 +434,10 @@ export class DashboardService {
     const cpaBRL = deliveredOrders > 0 ? marketingCostsBRL / deliveredOrders : 0;
     const cpaEUR = deliveredOrders > 0 ? marketingCosts.totalEUR / deliveredOrders : 0;
     
+    // Calculate CPA Anúncios (Marketing Total / Total Shopify Orders)
+    const cpaAdsBRL = totalOrders > 0 ? marketingCostsBRL / totalOrders : 0;
+    const cpaAdsEUR = totalOrders > 0 ? marketingCosts.totalEUR / totalOrders : 0;
+    
     console.log(`🔍 Customer Analysis Debug - Unique: ${uniqueCustomers}, Avg Delivery: ${avgDeliveryTimeDays} days`);
     console.log(`🔍 CPA Debug - Marketing BRL: ${marketingCostsBRL}, Delivered: ${deliveredOrders}, CPA: ${cpaBRL}`);
     
@@ -472,6 +478,8 @@ export class DashboardService {
       avgDeliveryTimeDays,
       cpaBRL,
       cpaEUR,
+      cpaAdsBRL,
+      cpaAdsEUR,
       period,
       provider: provider || null,
       calculatedAt: new Date(),
@@ -528,6 +536,9 @@ export class DashboardService {
       // CPA Real (Marketing Total / Delivered Orders)
       cacBRL: metrics.cpaBRL.toString(),
       cacEUR: metrics.cpaEUR.toString(),
+      // CPA Anúncios (Marketing Total / Total Shopify Orders)
+      cpaAdsBRL: metrics.cpaAdsBRL.toString(),
+      cpaAdsEUR: metrics.cpaAdsEUR.toString(),
       calculatedAt: metrics.calculatedAt,
       validUntil: metrics.validUntil
     };
