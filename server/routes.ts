@@ -1692,6 +1692,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const testResult = await service.testConnection();
       
       if (testResult.connected) {
+        console.log("🔄 Salvando credenciais no banco...", { operationId, email });
+        
         // Save credentials to database
         const credentials = { email, password, apiUrl: apiUrl || "https://api.ecomfulfilment.eu/" };
         
@@ -1705,8 +1707,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ))
           .limit(1);
         
+        console.log("🔍 Integração existente encontrada:", !!existingIntegration);
+        
         if (existingIntegration) {
           // Update existing integration
+          console.log("🔄 Atualizando integração existente...");
           await db
             .update(fulfillmentIntegrations)
             .set({
@@ -1715,8 +1720,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               updatedAt: new Date()
             })
             .where(eq(fulfillmentIntegrations.id, existingIntegration.id));
+          console.log("✅ Integração atualizada com sucesso!");
         } else {
           // Create new integration
+          console.log("🆕 Criando nova integração...");
           await db
             .insert(fulfillmentIntegrations)
             .values({
@@ -1725,7 +1732,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               credentials: credentials,
               status: "active"
             });
+          console.log("✅ Nova integração criada com sucesso!");
         }
+      } else {
+        console.log("❌ Teste de conexão falhou, não salvando credenciais");
       }
       
       res.json({
