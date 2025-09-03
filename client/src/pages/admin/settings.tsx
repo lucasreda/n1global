@@ -240,7 +240,7 @@ export default function AdminSettings() {
                     <Button 
                       onClick={() => populateHistoryMutation.mutate()}
                       disabled={currencyStatus?.isUpToDate || populateHistoryMutation.isPending}
-                      className="w-full bg-white hover:bg-gray-100 text-black disabled:bg-gray-600 disabled:cursor-not-allowed disabled:text-white"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                       {populateHistoryMutation.isPending ? (
                         <>
