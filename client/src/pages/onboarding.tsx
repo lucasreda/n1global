@@ -523,15 +523,21 @@ function OperationStep({ onComplete }: { onComplete: (operationId: string) => vo
 
   const createOperationMutation = useMutation({
     mutationFn: async (operationData: any) => {
+      console.log('🔄 OperationStep: Creating operation', operationData);
       const response = await apiRequest('POST', '/api/operations', operationData);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
       return response.json();
     },
     onSuccess: (data) => {
+      console.log('✅ OperationStep: Operation created successfully', data);
       toast({ title: 'Operação criada com sucesso!' });
       queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
       onComplete(data.id);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('❌ OperationStep: Create operation error:', error);
       toast({ title: 'Erro ao criar operação', variant: 'destructive' });
     }
   });
@@ -542,6 +548,7 @@ function OperationStep({ onComplete }: { onComplete: (operationId: string) => vo
       return;
     }
 
+    console.log('🚀 OperationStep: Submitting operation', { operationName, selectedCountry, selectedCurrency });
     createOperationMutation.mutate({
       name: operationName,
       country: selectedCountry,
