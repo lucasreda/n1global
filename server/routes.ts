@@ -215,6 +215,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logout endpoint
+  app.post("/api/auth/logout", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log(`🔐 User ${req.user.email} logging out...`);
+      // In a JWT system, logout is handled client-side by removing the token
+      // But we can log the action and return success
+      res.json({ 
+        success: true, 
+        message: "Logout realizado com sucesso",
+        action: "clear_token" 
+      });
+    } catch (error) {
+      console.error("❌ Logout error:", error);
+      res.status(500).json({ message: "Erro no logout" });
+    }
+  });
+
   app.get("/api/auth/me", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const user = await storage.getUser(req.user.id);
