@@ -833,6 +833,17 @@ export class DashboardService {
             ? currencyService.convertToBRLSync(amount, 'EUR', preloadedRates)
             : await currencyService.convertToBRL(amount, 'EUR');
           totalBRL += brlAmount;
+        } else {
+          // Handle other currencies (convert to EUR first, then to BRL)
+          const eurAmount = preloadedRates 
+            ? currencyService.convertToBRLSync(amount, spend.currency, preloadedRates) / preloadedRates.BRL * preloadedRates.EUR
+            : await currencyService.convertToBRL(amount, spend.currency) / preloadedRates.BRL * preloadedRates.EUR;
+          totalEUR += eurAmount;
+          
+          const brlAmount = preloadedRates 
+            ? currencyService.convertToBRLSync(amount, spend.currency, preloadedRates)
+            : await currencyService.convertToBRL(amount, spend.currency);
+          totalBRL += brlAmount;
         }
       }
 

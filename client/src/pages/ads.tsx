@@ -225,6 +225,17 @@ export default function Ads() {
     enabled: !!selectedOperation,
   });
 
+  // Fetch operation details to get currency
+  const { data: operationDetails } = useQuery({
+    queryKey: ["/api/operation-details", selectedOperation],
+    queryFn: async () => {
+      const currentOperationId = localStorage.getItem("current_operation_id") || selectedOperation;
+      const response = await authenticatedApiRequest("GET", `/api/operations/${currentOperationId}`);
+      return response.json() as Promise<{id: string, name: string, currency: string, country: string}>;
+    },
+    enabled: !!selectedOperation,
+  });
+
   // Add new ad account
   const addAccountMutation = useMutation({
     mutationFn: async (accountData: any) => {
@@ -316,7 +327,7 @@ export default function Ads() {
       const response = await authenticatedApiRequest("POST", "/api/manual-ad-spend", {
         ...spendData,
         operationId: selectedOperation,
-        currency: "BRL"
+        currency: operationDetails?.currency || "EUR"
       });
       return response.json();
     },
@@ -696,7 +707,9 @@ export default function Ads() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-1">
-                  <Label htmlFor="amount" className="text-sm text-gray-300">Valor (BRL)</Label>
+                  <Label htmlFor="amount" className="text-sm text-gray-300">
+                    Valor ({operationDetails?.currency || 'EUR'})
+                  </Label>
                   <Input
                     id="amount"
                     type="number"
@@ -1307,7 +1320,7 @@ export default function Ads() {
                         <div className="grid grid-cols-3 gap-3 text-xs">
                           <div>
                             <span className="text-gray-400">Valor: </span>
-                            <span className="text-white font-medium">{formatCurrency(spend.amount, 'BRL')}</span>
+                            <span className="text-white font-medium">{formatCurrency(spend.amount, spend.currency || 'EUR')}</span>
                           </div>
                           <div>
                             <span className="text-gray-400">Data: </span>
