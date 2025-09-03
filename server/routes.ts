@@ -2286,10 +2286,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { manualAdSpend, insertManualAdSpendSchema } = await import("@shared/schema");
       const { db } = await import("./db");
       
-      const spendData = insertManualAdSpendSchema.parse({
+      // Convert spendDate string to Date object before validation
+      const requestData = {
         ...req.body,
+        spendDate: new Date(req.body.spendDate),
         createdBy: req.user.id
-      });
+      };
+      
+      const spendData = insertManualAdSpendSchema.parse(requestData);
       
       const [newSpend] = await db
         .insert(manualAdSpend)
@@ -2319,6 +2323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updateData = {
         ...req.body,
+        spendDate: req.body.spendDate ? new Date(req.body.spendDate) : undefined,
         updatedAt: new Date()
       };
       delete updateData.id;
