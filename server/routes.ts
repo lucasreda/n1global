@@ -1659,7 +1659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.json({
           connected: testResult.connected,
-          message: testResult.connected ? "European Fulfillment configurado e conectado" : "Credenciais configuradas mas conexão falhou",
+          message: testResult.connected ? "N1 Warehouse configurado e conectado" : "Credenciais configuradas mas conexão falhou",
           details: testResult.message || testResult.details
         });
       } else {
