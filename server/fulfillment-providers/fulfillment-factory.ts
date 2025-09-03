@@ -4,7 +4,7 @@
 import { BaseFulfillmentProvider, FulfillmentCredentials } from './base-fulfillment-provider';
 import { ElogyService } from './elogy-service';
 
-export type ProviderType = 'european_fulfillment' | 'elogy' | 'correios' | 'jadlog';
+export type ProviderType = 'european_fulfillment' | 'elogy';
 
 export class FulfillmentProviderFactory {
   
@@ -25,12 +25,6 @@ export class FulfillmentProviderFactory {
           throw new Error("eLogy requer authHeader e warehouseId nas credenciais");
         }
         return new ElogyService(credentials as any);
-        
-      case 'correios':
-        throw new Error("Correios provider ainda não implementado");
-        
-      case 'jadlog':
-        throw new Error("Jadlog provider ainda não implementado");
         
       default:
         throw new Error(`Provider type '${providerType}' não suportado`);
@@ -67,13 +61,6 @@ export class FulfillmentProviderFactory {
         if (!credentials.warehouseId) missing.push('warehouseId');
         break;
         
-      case 'correios':
-        // TODO: Implementar validações específicas
-        break;
-        
-      case 'jadlog':
-        // TODO: Implementar validações específicas
-        break;
     }
     
     return {
@@ -88,9 +75,7 @@ export class FulfillmentProviderFactory {
   static getAvailableProviders(): Array<{ type: ProviderType; name: string; status: string }> {
     return [
       { type: 'european_fulfillment', name: 'European Fulfillment Center', status: 'active' },
-      { type: 'elogy', name: 'eLogy Logistics', status: 'active' },
-      { type: 'correios', name: 'Correios Brasil', status: 'planned' },
-      { type: 'jadlog', name: 'Jadlog', status: 'planned' }
+      { type: 'elogy', name: 'eLogy Logistics', status: 'active' }
     ];
   }
 

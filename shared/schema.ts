@@ -98,7 +98,7 @@ export const orders = pgTable("orders", {
   products: jsonb("products"), // Array of products with quantities and prices
   
   // Shipping provider info  
-  provider: text("provider").notNull().default("european_fulfillment"), // 'european_fulfillment', 'elogy', 'correios', 'jadlog'
+  provider: text("provider").notNull().default("european_fulfillment"), // 'european_fulfillment', 'elogy'
   providerOrderId: text("provider_order_id"), // Original ID from provider (legacy, use carrierOrderId)
   trackingNumber: text("tracking_number"),
   
@@ -265,7 +265,7 @@ export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   operationId: varchar("operation_id").notNull().references(() => operations.id),
   
-  provider: text("provider").notNull(), // 'european_fulfillment', 'elogy', 'correios', 'jadlog'
+  provider: text("provider").notNull(), // 'european_fulfillment', 'elogy'
   credentials: jsonb("credentials").notNull(), // Encrypted credentials
   
   status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
@@ -406,7 +406,7 @@ export const shippingProviders = pgTable("shipping_providers", {
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links provider to store
   operationId: varchar("operation_id").notNull().references(() => operations.id), // Links provider to specific operation
   name: text("name").notNull(),
-  type: text("type").notNull().default("custom"), // 'correios', 'jadlog', 'european_fulfillment', 'custom'
+  type: text("type").notNull().default("custom"), // 'european_fulfillment', 'custom'
   login: text("login"), // Login/Email for the provider
   password: text("password"), // Password for the provider  
   apiKey: text("api_key"),

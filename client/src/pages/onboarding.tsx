@@ -1166,7 +1166,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
               </Label>
               <Input
                 id="provider-name"
-                placeholder="Ex: Correios SP"
+                placeholder="Ex: Transportadora Local"
                 value={providerData.name}
                 onChange={(e) => setProviderData(prev => ({ ...prev, name: e.target.value }))}
                 className="bg-white/10 border-white/20 text-white mt-2"

@@ -3,7 +3,15 @@
 ## Overview
 The COD Dashboard is a modern full-stack web application designed for managing Cash on Delivery (COD) orders and providing business metric analysis. It features a comprehensive dashboard for order tracking, customer management, and performance monitoring with real-time data visualization, authentication, and integrations with shipping providers. The project aims to provide a robust solution for businesses to efficiently manage their COD operations and gain actionable insights.
 
-## Recent Changes (August 28, 2025)
+## Recent Changes (September 3, 2025)
+✓ **eLogy Authentication Fix**: Corrected login failure detection to properly identify "USER_NOT_FOUND" errors from eLogy API
+✓ **Token Handling Enhancement**: Enhanced eLogy service to dynamically use tokens returned from login response or fallback to configured auth header
+✓ **Provider Cleanup**: Removed Correios Brasil and Jadlog references from system - no longer appear as planned providers
+✓ **Type Safety Improvement**: Updated ProviderType to only include 'european_fulfillment' and 'elogy'
+✓ **Schema Cleanup**: Removed Correios/Jadlog references from database schema comments and validation logic
+✓ **UI Text Updates**: Changed onboarding placeholder from "Ex: Correios SP" to "Ex: Transportadora Local"
+
+## Previous Changes (August 28, 2025)
 ✓ **Investment Management System**: Implemented comprehensive investor dashboard with portfolio tracking, analytics, and payment management
 ✓ **New Investor Role**: Added 'investor' role to user system with dedicated authentication and route protection
 ✓ **Investment Database Schema**: Created complete database structure with investment pools, investor profiles, investments, transactions, and performance history tables
