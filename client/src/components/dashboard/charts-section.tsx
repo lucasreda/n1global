@@ -83,12 +83,12 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       </div>
 
       {/* Distribution Chart */}
-      <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-distribution">
+      <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden flex flex-col" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-distribution">
         <div className="mb-4">
           <h3 className="text-base font-semibold text-white">Distribuição de Status</h3>
         </div>
         
-        <div className="flex gap-4 items-center min-h-[200px]">
+        <div className="flex gap-4 items-center justify-center flex-1">
           {/* Chart Section */}
           <div className="flex-shrink-0">
             <div className="w-32 h-32 sm:w-36 sm:h-36 relative">
