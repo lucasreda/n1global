@@ -320,12 +320,21 @@ export default function OnboardingPage() {
   // Complete step mutation
   const completeStepMutation = useMutation({
     mutationFn: async (stepId: string) => {
-      const response = await apiRequest('POST', '/api/onboarding/complete-step', { stepId });
-      if (!response.ok) throw new Error('Erro ao completar etapa');
+      console.log('🔄 Completing onboarding step:', stepId);
+      const response = await apiRequest('/api/onboarding/complete-step', 'POST', { stepId });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Complete step error:', response.status, errorText);
+        throw new Error(`Erro ao completar etapa: ${response.status} ${errorText}`);
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('✅ Step completed successfully:', data);
       queryClient.invalidateQueries({ queryKey: ['/api/user/onboarding-status'] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Complete step mutation error:', error);
     }
   });
 
@@ -346,7 +355,13 @@ export default function OnboardingPage() {
   };
 
   const handleStepComplete = (stepId: string, nextStep: number) => {
-    completeStepMutation.mutate(stepId);
+    console.log('🎯 handleStepComplete called with:', { stepId, nextStep });
+    try {
+      completeStepMutation.mutate(stepId);
+      console.log('✅ completeStepMutation.mutate called successfully');
+    } catch (error) {
+      console.error('❌ Error in handleStepComplete:', error);
+    }
     // Don't manually set currentStep - it will be updated automatically when data refetches
   };
 
@@ -534,7 +549,13 @@ function OperationStep({ onComplete }: { onComplete: (operationId: string) => vo
       console.log('✅ OperationStep: Operation created successfully', data);
       toast({ title: 'Operação criada com sucesso!' });
       queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
-      onComplete(data.id);
+      try {
+        console.log('🎯 OperationStep: Calling onComplete with ID:', data.id);
+        onComplete(data.id);
+        console.log('✅ OperationStep: onComplete called successfully');
+      } catch (error) {
+        console.error('❌ OperationStep: Error in onComplete:', error);
+      }
     },
     onError: (error: any) => {
       console.error('❌ OperationStep: Create operation error:', error);
