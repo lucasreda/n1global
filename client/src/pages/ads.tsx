@@ -1121,9 +1121,8 @@ export default function Ads() {
       {filteredCampaigns?.length ? (
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-white flex items-center space-x-2">
-              <Facebook className="w-4 h-4 text-blue-500" />
-              <span>Campanhas {selectedAccountId !== "all" && `- ${adAccounts?.find(acc => acc.accountId === selectedAccountId)?.name}`}</span>
+            <CardTitle className="text-lg text-white">
+              Campanhas {selectedAccountId !== "all" && `- ${adAccounts?.find(acc => acc.accountId === selectedAccountId)?.name}`}
             </CardTitle>
             <CardDescription className="text-sm text-gray-400 mb-3">
               Selecione campanhas para incluir no dashboard
