@@ -88,10 +88,10 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           <h3 className="text-base font-semibold text-white">Distribuição de Status</h3>
         </div>
         
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
           {/* Chart Section */}
-          <div className="flex justify-center lg:justify-start flex-shrink-0">
-            <div className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 relative">
+          <div className="flex justify-center">
+            <div className="w-32 h-32 sm:w-36 sm:h-36 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -143,8 +143,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </div>
           
           {/* Legend Section */}
-          <div className="flex-1 min-w-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+          <div className="w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {distributionData.map((item) => (
                 <div key={item.name} className="flex items-center justify-between p-2 rounded-md bg-white/5 hover:bg-white/10 transition-all" data-testid={`distribution-${item.name.toLowerCase()}`}>
                   <div className="flex items-center space-x-2 min-w-0 flex-1">
