@@ -360,7 +360,7 @@ export default function OnboardingPage() {
           <img 
             src={logoImage} 
             alt="COD Dashboard" 
-            className="h-8 w-auto"
+            className="h-6 w-auto"
           />
         </div>
 
