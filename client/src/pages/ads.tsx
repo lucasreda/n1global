@@ -984,7 +984,8 @@ export default function Ads() {
 
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-white flex items-center space-x-2">
+            <CardTitle className="text-sm text-white flex items-center space-x-2">
+              <Target className="w-4 h-4 text-blue-400" />
               <span>Campanhas Selecionadas</span>
             </CardTitle>
           </CardHeader>
