@@ -122,12 +122,15 @@ export const orders = pgTable("orders", {
 export const currencyHistory = pgTable("currency_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   date: text("date").notNull(), // Format: YYYY-MM-DD
-  eurToBrl: decimal("eur_to_brl", { precision: 10, scale: 6 }).notNull(), // EUR to BRL rate
+  eurToBrl: decimal("eur_to_brl", { precision: 10, scale: 6 }).notNull(), // Generic rate field (any currency to BRL)
   baseCurrency: text("base_currency").notNull().default("EUR"),
   targetCurrency: text("target_currency").notNull().default("BRL"),
   source: text("source").notNull().default("currencyapi"), // API source
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Unique constraint allows multiple currencies per date
+  dateBaseCurrencyUnique: unique().on(table.date, table.baseCurrency),
+}));
 
 // Currency Settings table - stores which currencies to import for each user/system
 export const currencySettings = pgTable("currency_settings", {
