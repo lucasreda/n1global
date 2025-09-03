@@ -399,7 +399,7 @@ export default function OnboardingPage() {
             {/* Card - Design minimalista e profissional */}
             {showCard && (
               <div className="animate-fade-in -mt-12">
-                <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="max-w-2xl mx-auto mb-8">
+                <Card className="max-w-2xl mx-auto mb-8 bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
                   <CardContent className="p-8 text-center">
                     {/* Ícone principal - Mais sutil */}
                     <div className="mb-6">
@@ -452,14 +452,14 @@ export default function OnboardingPage() {
                 return (
                   <Card 
                     key={step.id}
-                    style={{backgroundColor: '#0f0f0f'}}
-                    className={`relative ${
+                    className={`relative rounded-xl ${
                       isActive 
-                        ? 'border-blue-400 shadow-lg shadow-blue-500/25' 
+                        ? 'bg-black/20 backdrop-blur-sm border border-blue-400 shadow-lg shadow-blue-500/25' 
                         : isCompleted 
-                        ? 'border-green-400'
-                        : 'border-gray-600'
+                        ? 'bg-gradient-to-br from-emerald-950 to-green-950 border border-emerald-800'
+                        : 'bg-black/20 backdrop-blur-sm border border-white/10'
                     }`}
+                    style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
                     data-testid={`step-card-${index + 1}`}
                   >
                     <CardContent className="p-4 text-center">
@@ -487,7 +487,7 @@ export default function OnboardingPage() {
 
 
             {/* Current Step Content */}
-            <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+            <Card className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
               <CardContent className="p-8">
                 {currentStep === 1 && <OperationStep onComplete={(operationId) => {
                   setCreatedOperationId(operationId);
@@ -774,8 +774,7 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
             value={shopUrl}
             onChange={(e) => setShopUrl(e.target.value)}
             placeholder="exemplo: minha-loja"
-            className="w-full px-3 py-2 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
-            style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}
+            className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none backdrop-blur-sm"
             data-testid="input-shop-url"
           />
           <p className="text-white/40 text-xs mt-1">
@@ -792,8 +791,7 @@ function ShopifyStep({ operationId, onComplete }: { operationId: string, onCompl
             value={accessToken}
             onChange={(e) => setAccessToken(e.target.value)}
             placeholder="shpat_xxxxxxxxxxxxxxxxxxxxx"
-            className="w-full px-3 py-2 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none"
-            style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}
+            className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white placeholder-white/40 focus:border-blue-400 focus:outline-none backdrop-blur-sm"
             data-testid="input-access-token"
           />
           <p className="text-white/40 text-xs mt-1">
@@ -1081,14 +1079,14 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
               return (
                 <Card 
                   key={provider.id} 
-                  style={{backgroundColor: '#0f0f0f'}}
-                  className={`${
+                  className={`bg-black/20 backdrop-blur-sm rounded-lg ${
                     isActive 
-                      ? 'border-green-400' 
+                      ? 'border border-green-400' 
                       : isConfigured 
-                      ? 'border-yellow-400'
-                      : 'border-gray-400'
+                      ? 'border border-yellow-400'
+                      : 'border border-white/10'
                   }`}
+                  style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
                 >
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center">
@@ -1158,7 +1156,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
       {/* Add new provider form */}
       {showForm ? (
-        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+        <Card className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
           <CardContent className="p-6 space-y-4">
             <h4 className="text-white font-medium">Adicionar Nova Transportadora</h4>
             
@@ -1184,8 +1182,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
                 id="provider-type"
                 value="N1 Warehouse 1"
                 disabled
-                className="text-white/60 mt-2"
-                style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}
+                className="bg-black/20 border border-white/10 text-white/60 mt-2 backdrop-blur-sm"
                 data-testid="input-provider-type"
               />
             </div>
