@@ -2240,23 +2240,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (testResult.connected) {
         console.log("🔄 eLogy: Salvando credenciais no banco...", { operationId, email });
         
-        // Save credentials to database
-        await db
-          .insert(fulfillmentIntegrations)
-          .values({
-            operationId: operationId,
-            provider: "elogy",
-            isActive: true,
-            credentials: credentials
-          })
-          .onConflictDoUpdate({
-            target: [fulfillmentIntegrations.operationId, fulfillmentIntegrations.provider],
-            set: {
-              isActive: true,
+        // Check if integration already exists
+        const [existingIntegration] = await db
+          .select()
+          .from(fulfillmentIntegrations)
+          .where(and(
+            eq(fulfillmentIntegrations.operationId, operationId),
+            eq(fulfillmentIntegrations.provider, "elogy")
+          ));
+
+        if (existingIntegration) {
+          // Update existing integration
+          await db
+            .update(fulfillmentIntegrations)
+            .set({
+              status: "active",
               credentials: credentials,
               updatedAt: new Date()
-            }
-          });
+            })
+            .where(eq(fulfillmentIntegrations.id, existingIntegration.id));
+        } else {
+          // Insert new integration
+          await db
+            .insert(fulfillmentIntegrations)
+            .values({
+              operationId: operationId,
+              provider: "elogy",
+              status: "active",
+              credentials: credentials
+            });
+        }
         
         console.log("✅ eLogy: Credenciais salvas com sucesso!");
         

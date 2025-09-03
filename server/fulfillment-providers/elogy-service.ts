@@ -273,19 +273,17 @@ export class ElogyService extends BaseFulfillmentProvider {
           customer_email: "cliente@teste.com",
           total: "79.90",
           created_at: new Date().toISOString(),
-          warehouse_id: this.elogyCredentials.warehouseId || "demo-warehouse"
+          warehouse_id: this.elogyCredentials.warehouseId || ""
         }
       ];
     }
 
     try {
-      const warehouseId = this.elogyCredentials.warehouseId;
-      if (!warehouseId) {
-        throw new Error("warehouse_id é obrigatório para buscar orders eLogy");
-      }
-
-      // Endpoint conforme documentação
-      const endpoint = `api/blockOrders?sort=order_number&sort_dir=asc&offset=0&length=15&warehouse_id=${warehouseId}`;
+      // Endpoint conforme documentação - warehouse_id é opcional
+      const warehouseId = this.elogyCredentials.warehouseId || "";
+      const endpoint = warehouseId 
+        ? `api/blockOrders?sort=order_number&sort_dir=asc&offset=0&length=15&warehouse_id=${warehouseId}`
+        : `api/blockOrders?sort=order_number&sort_dir=asc&offset=0&length=15`;
       const response = await this.makeAuthenticatedRequest(endpoint);
       
       console.log("📦 eLogy orders to print response:", response);
