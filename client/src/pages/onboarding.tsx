@@ -12,7 +12,7 @@ import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { useOperationStore } from '@/store/operations';
-import logoImage from '@assets/COD DASHBOARD_1755806006009.png';
+import logoImage from '@assets/Dashboard_1756877887022.png';
 
 // European countries with flags
 const EUROPEAN_COUNTRIES = [
