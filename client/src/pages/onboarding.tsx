@@ -399,7 +399,7 @@ export default function OnboardingPage() {
             {/* Card - Design minimalista e profissional */}
             {showCard && (
               <div className="animate-fade-in -mt-12">
-                <Card className="glassmorphism max-w-2xl mx-auto mb-8">
+                <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}} className="max-w-2xl mx-auto mb-8">
                   <CardContent className="p-8 text-center">
                     {/* Ícone principal - Mais sutil */}
                     <div className="mb-6">
@@ -486,7 +486,7 @@ export default function OnboardingPage() {
 
 
             {/* Current Step Content */}
-            <Card className="bg-white/10 border-white/20">
+            <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
               <CardContent className="p-8">
                 {currentStep === 1 && <OperationStep onComplete={(operationId) => {
                   setCreatedOperationId(operationId);
@@ -1154,7 +1154,7 @@ function ShippingStep({ onComplete }: { onComplete: () => void }) {
 
       {/* Add new provider form */}
       {showForm ? (
-        <Card className="bg-white/10 border-white/20">
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
           <CardContent className="p-6 space-y-4">
             <h4 className="text-white font-medium">Adicionar Nova Transportadora</h4>
             
