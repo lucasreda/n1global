@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -37,9 +38,42 @@ export default function AdminSettings() {
     recordCount: number;
     startDate: string;
     today: string;
+    enabledCurrencies: string[];
   }>({
     queryKey: ['/api/currency/history/status'],
     refetchInterval: 10000, // Refresh every 10 seconds during population
+  });
+
+  // Query para configurações de moedas
+  const { data: currencySettings, isLoading: settingsLoading } = useQuery<Array<{
+    id: string;
+    currency: string;
+    enabled: boolean;
+    baseCurrency: string;
+  }>>({
+    queryKey: ['/api/currency/settings'],
+  });
+
+  // Mutation para atualizar configurações de moedas
+  const updateCurrencySettingsMutation = useMutation({
+    mutationFn: async (currencyUpdates: Array<{ currency: string; enabled: boolean }>) => {
+      return apiRequest('/api/currency/settings', 'POST', { currencyUpdates });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configurações atualizadas!",
+        description: "As configurações de moedas foram salvas com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/currency/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/currency/history/status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar configurações",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
   });
 
   // Mutation para preencher histórico
@@ -48,7 +82,8 @@ export default function AdminSettings() {
     recordsAdded: number;
     startDate: string;
     endDate: string;
-    records: Array<{ date: string; eurToBrl: number }>;
+    currencies: string[];
+    records: Array<{ date: string; currency: string; rate: number }>;
   }>({
     mutationFn: async () => {
       return apiRequest('/api/currency/history/populate', 'POST', {});
@@ -56,7 +91,7 @@ export default function AdminSettings() {
     onSuccess: (data) => {
       toast({
         title: "Histórico preenchido com sucesso!",
-        description: `${data.recordsAdded} registros adicionados desde ${data.startDate}`,
+        description: `${data.recordsAdded} registros adicionados para ${data.currencies?.join(', ')} desde ${data.startDate}`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/currency/history/status'] });
     },
@@ -68,6 +103,18 @@ export default function AdminSettings() {
       });
     },
   });
+
+  const handleCurrencyToggle = (currency: string, enabled: boolean) => {
+    if (!currencySettings) return;
+    
+    const updatedSettings = currencySettings.map(setting => 
+      setting.currency === currency ? { ...setting, enabled } : setting
+    );
+    
+    // Update local state and trigger mutation
+    const currencyUpdates = [{ currency, enabled }];
+    updateCurrencySettingsMutation.mutate(currencyUpdates);
+  };
 
   return (
     <div className="space-y-6">
@@ -195,7 +242,7 @@ export default function AdminSettings() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <Card className="bg-black/40 border-gray-700">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
@@ -203,10 +250,43 @@ export default function AdminSettings() {
                   Histórico de Conversão de Moedas
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  Dados históricos EUR/BRL desde 2021 para análises financeiras
+                  Configure quais moedas importar e gerencie dados históricos desde 2021
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
+                {/* Currency Selection */}
+                <div>
+                  <Label className="text-white font-medium mb-3 block">Moedas para Importação</Label>
+                  {settingsLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-gray-400">Carregando moedas...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {currencySettings?.map((setting) => (
+                        <div key={setting.currency} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`currency-${setting.currency}`}
+                            checked={setting.enabled}
+                            onCheckedChange={(checked) => 
+                              handleCurrencyToggle(setting.currency, checked as boolean)
+                            }
+                            disabled={updateCurrencySettingsMutation.isPending}
+                          />
+                          <Label
+                            htmlFor={`currency-${setting.currency}`}
+                            className="text-sm text-gray-300 cursor-pointer"
+                          >
+                            {setting.currency}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Status Information */}
                 {statusLoading ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -214,7 +294,7 @@ export default function AdminSettings() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <Label className="text-gray-400">Status</Label>
                         <p className={`font-medium ${currencyStatus?.isUpToDate ? 'text-green-400' : 'text-yellow-400'}`}>
@@ -232,14 +312,20 @@ export default function AdminSettings() {
                         </p>
                       </div>
                       <div>
-                        <Label className="text-gray-400">Período</Label>
-                        <p className="text-white font-medium">2021 - Hoje</p>
+                        <Label className="text-gray-400">Moedas Ativas</Label>
+                        <p className="text-white font-medium">
+                          {currencyStatus?.enabledCurrencies?.join(', ') || 'Nenhuma'}
+                        </p>
                       </div>
                     </div>
                     
                     <Button 
                       onClick={() => populateHistoryMutation.mutate()}
-                      disabled={currencyStatus?.isUpToDate || populateHistoryMutation.isPending}
+                      disabled={
+                        currencyStatus?.isUpToDate || 
+                        populateHistoryMutation.isPending ||
+                        !currencyStatus?.enabledCurrencies?.length
+                      }
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                       {populateHistoryMutation.isPending ? (
@@ -249,14 +335,22 @@ export default function AdminSettings() {
                         </>
                       ) : currencyStatus?.isUpToDate ? (
                         "Histórico Atualizado"
+                      ) : !currencyStatus?.enabledCurrencies?.length ? (
+                        "Selecione moedas para importar"
                       ) : (
-                        "Preencher Histórico de Moedas"
+                        `Preencher Histórico (${currencyStatus?.enabledCurrencies?.length} moedas)`
                       )}
                     </Button>
 
-                    {currencyStatus?.isUpToDate && (
+                    {currencyStatus?.isUpToDate && currencyStatus?.enabledCurrencies?.length > 0 && (
                       <p className="text-green-400 text-sm">
-                        ✅ Histórico completo desde 2021 até hoje
+                        ✅ Histórico completo desde 2021 para {currencyStatus.enabledCurrencies.join(', ')}
+                      </p>
+                    )}
+
+                    {!currencyStatus?.enabledCurrencies?.length && (
+                      <p className="text-yellow-400 text-sm">
+                        ⚠️ Selecione pelo menos uma moeda para importar dados históricos
                       </p>
                     )}
                   </>

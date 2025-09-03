@@ -4,10 +4,10 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
@@ -583,16 +583,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Currency Settings endpoints
+  app.get("/api/currency/settings", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Get global currency settings (userId = null)
+      const settings = await db
+        .select()
+        .from(currencySettings)
+        .where(eq(currencySettings.userId, null))
+        .orderBy(currencySettings.currency);
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Currency settings error:", error);
+      res.status(500).json({ message: "Erro ao buscar configurações de moedas" });
+    }
+  });
+
+  app.post("/api/currency/settings", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Check if user is admin
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Acesso negado - apenas administradores" });
+      }
+
+      const { currencyUpdates } = req.body; // Array of { currency, enabled }
+      
+      for (const update of currencyUpdates) {
+        await db
+          .update(currencySettings)
+          .set({ enabled: update.enabled })
+          .where(and(
+            eq(currencySettings.userId, null),
+            eq(currencySettings.currency, update.currency)
+          ));
+      }
+      
+      res.json({ message: "Configurações atualizadas com sucesso" });
+    } catch (error) {
+      console.error("Currency settings update error:", error);
+      res.status(500).json({ message: "Erro ao atualizar configurações de moedas" });
+    }
+  });
+
   // Currency History endpoints
   app.get("/api/currency/history/status", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { desc, gte } = await import("drizzle-orm");
+      const { desc, gte, isNull } = await import("drizzle-orm");
       
-      // Check if we have data up to today
+      // Check if we have data up to today for enabled currencies
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
       const startDate = '2021-01-01';
       
-      // Get latest record
+      // Get enabled currencies
+      const enabledCurrencies = await db
+        .select({ currency: currencySettings.currency })
+        .from(currencySettings)
+        .where(and(
+          isNull(currencySettings.userId),
+          eq(currencySettings.enabled, true)
+        ));
+      
+      if (enabledCurrencies.length === 0) {
+        return res.json({
+          isUpToDate: true,
+          lastUpdate: null,
+          recordCount: 0,
+          enabledCurrencies: [],
+          startDate,
+          today
+        });
+      }
+
+      // For backward compatibility, check old eur_to_brl column
       const latestRecord = await db
         .select()
         .from(currencyHistory)
@@ -613,6 +676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isUpToDate,
         lastUpdate,
         recordCount,
+        enabledCurrencies: enabledCurrencies.map(c => c.currency),
         startDate,
         today
       });
@@ -624,11 +688,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/currency/history/populate", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { desc, gte, sql: sqlFn } = await import("drizzle-orm");
+      const { desc, gte } = await import("drizzle-orm");
       
       // Check if user is admin
       if (req.user.role !== 'super_admin') {
         return res.status(403).json({ message: "Acesso negado - apenas administradores" });
+      }
+
+      // Get enabled currencies
+      const enabledCurrencies = await db
+        .select({ currency: currencySettings.currency })
+        .from(currencySettings)
+        .where(and(
+          isNull(currencySettings.userId),
+          eq(currencySettings.enabled, true)
+        ));
+
+      if (enabledCurrencies.length === 0) {
+        return res.json({ 
+          message: "Nenhuma moeda habilitada para importação",
+          recordsAdded: 0
+        });
       }
       
       // Get latest record to determine start date
@@ -666,14 +746,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recordsAdded = [];
       const currentDate = new Date(startDate);
       const finalDate = new Date(endDate);
+      const currenciesString = enabledCurrencies.map(c => c.currency).join(',');
       
       while (currentDate <= finalDate) {
         const dateStr = currentDate.toISOString().split('T')[0];
         
         try {
-          // Fetch historical rate for this date
+          // Fetch historical rates for all enabled currencies (BRL as base)
           const response = await fetch(
-            `https://api.currencyapi.com/v3/historical?date=${dateStr}&base_currency=EUR&currencies=BRL&apikey=${apiKey}`
+            `https://api.currencyapi.com/v3/historical?date=${dateStr}&base_currency=BRL&currencies=${currenciesString}&apikey=${apiKey}`
           );
           
           if (!response.ok) {
@@ -684,24 +765,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const data = await response.json();
           
-          if (data.data && data.data.BRL && data.data.BRL.value) {
-            const eurToBrl = data.data.BRL.value;
-            
-            // Insert record
-            await db.insert(currencyHistory).values({
-              date: dateStr,
-              eurToBrl: eurToBrl.toString(),
-              baseCurrency: 'EUR',
-              targetCurrency: 'BRL',
-              source: 'currencyapi'
-            });
-            
-            recordsAdded.push({ date: dateStr, eurToBrl });
-            console.log(`✅ Adicionado: ${dateStr} - EUR/BRL: ${eurToBrl}`);
+          if (data.data) {
+            for (const [currency, info] of Object.entries(data.data as Record<string, any>)) {
+              if (info && info.value) {
+                const rate = info.value;
+                
+                // For backward compatibility with existing EUR data, use old column
+                if (currency === 'EUR') {
+                  // Insert in old format for EUR
+                  await db.insert(currencyHistory).values({
+                    date: dateStr,
+                    eurToBrl: rate.toString(), // Use camelCase column name from schema
+                    baseCurrency: 'EUR',
+                    targetCurrency: 'BRL',
+                    source: 'currencyapi'
+                  });
+                }
+                
+                recordsAdded.push({ date: dateStr, currency, rate });
+                console.log(`✅ Adicionado: ${dateStr} - ${currency}/BRL: ${rate}`);
+              }
+            }
           }
           
           // Small delay to respect API limits
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200));
           
         } catch (error) {
           console.error(`❌ Erro ao processar ${dateStr}:`, error);
@@ -713,6 +801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         message: `Histórico preenchido com sucesso`,
         recordsAdded: recordsAdded.length,
+        currencies: enabledCurrencies.map(c => c.currency),
         startDate,
         endDate,
         records: recordsAdded.slice(0, 10) // Return first 10 for verification

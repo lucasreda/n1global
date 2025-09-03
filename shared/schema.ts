@@ -118,14 +118,24 @@ export const orders = pgTable("orders", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Currency Exchange History table - stores daily EUR to BRL rates
+// Currency Exchange History table - stores daily rates between currencies
 export const currencyHistory = pgTable("currency_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  date: text("date").notNull().unique(), // Format: YYYY-MM-DD
-  eurToBrl: decimal("eur_to_brl", { precision: 10, scale: 6 }).notNull(), // EUR to BRL rate
-  baseCurrency: text("base_currency").notNull().default("EUR"),
-  targetCurrency: text("target_currency").notNull().default("BRL"),
+  date: text("date").notNull(), // Format: YYYY-MM-DD
+  baseCurrency: text("base_currency").notNull(), // e.g., "BRL"
+  targetCurrency: text("target_currency").notNull(), // e.g., "EUR", "USD", "GBP"
+  rate: decimal("rate", { precision: 12, scale: 6 }).notNull(), // Exchange rate
   source: text("source").notNull().default("currencyapi"), // API source
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Currency Settings table - stores which currencies to import for each user/system
+export const currencySettings = pgTable("currency_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // null = global setting for all users
+  currency: text("currency").notNull(), // Currency code (EUR, USD, GBP, etc.)
+  enabled: boolean("enabled").notNull().default(true),
+  baseCurrency: text("base_currency").notNull().default("BRL"), // Always convert to BRL
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1231,5 +1241,13 @@ export const insertCurrencyHistorySchema = createInsertSchema(currencyHistory).o
   createdAt: true,
 });
 
+export const insertCurrencySettingsSchema = createInsertSchema(currencySettings).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type CurrencyHistory = typeof currencyHistory.$inferSelect;
 export type InsertCurrencyHistory = z.infer<typeof insertCurrencyHistorySchema>;
+
+export type CurrencySettings = typeof currencySettings.$inferSelect;
+export type InsertCurrencySettings = z.infer<typeof insertCurrencySettingsSchema>;
