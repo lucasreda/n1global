@@ -904,81 +904,94 @@ export default function Ads() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString(), 'BRL')}</div>
-            <p className="text-gray-400 text-sm">
-              {allSelectedCampaigns.length} campanhas {manualSpends && manualSpends.length > 0 ? `+ ${manualSpends.length} manual` : ""}
-            </p>
+            <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
             
-            {/* Breakdown por fonte */}
-            <div className="mt-3 space-y-2">
-              {/* Campanhas */}
-              {campaignsSpent > 0 && (
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2">
-                    <Target className="w-3 h-3 text-blue-400" />
-                    <span className="text-gray-300">Campanhas</span>
-                  </div>
-                  <span className="text-blue-400 font-medium">{formatCurrency(campaignsSpent.toString(), 'BRL')}</span>
-                </div>
-              )}
-              
-              {/* Gastos Manuais */}
-              {manualSpentBRL > 0 && (
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2">
-                    <Calculator className="w-3 h-3 text-green-400" />
-                    <span className="text-gray-300">Gastos Manuais</span>
-                  </div>
-                  <span className="text-green-400 font-medium">{formatCurrency(manualSpentBRL.toString(), 'BRL')}</span>
-                </div>
-              )}
-              
-              {/* Breakdown por rede das campanhas (se houver) */}
-              {filteredCampaigns && filteredCampaigns.length > 0 && campaignsSpent > 0 && (
-                <div className="mt-1 pt-2 border-t border-gray-600/50">
-                  {(() => {
-                    // Usar campanhas selecionadas se houver, senão usar todas as filtradas
-                    const campaignsToAnalyze = allSelectedCampaigns.length > 0 ? allSelectedCampaigns : filteredCampaigns;
-                    
-                    // Identificar Meta Ads e Google Ads por rede
-                    const metaCampaigns = campaignsToAnalyze.filter(c => {
-                      // Se tem network específico, usar isso
-                      if (c.network === 'facebook') return true;
-                      if (c.network === 'google') return false;
-                      // Se não tem network definido, assumir que é Meta (padrão atual)
-                      return !c.network;
-                    });
-                    
-                    const googleCampaigns = campaignsToAnalyze.filter(c => c.network === 'google');
-                    
-                    const metaSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
-                    const googleSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
-                    
-                    return (
-                      <>
-                        {metaCampaigns.length > 0 && metaSpent > 0 && (
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center space-x-2 ml-4">
-                              <FacebookIcon size={10} />
-                              <span className="text-gray-400">Meta Ads</span>
+            {/* Breakdown por plataforma */}
+            {filteredCampaigns && filteredCampaigns.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {(() => {
+                  // Usar campanhas selecionadas se houver, senão usar todas as filtradas
+                  const campaignsToAnalyze = allSelectedCampaigns.length > 0 ? allSelectedCampaigns : filteredCampaigns;
+                  
+                  // Identificar Meta Ads e Google Ads por rede
+                  const metaCampaigns = campaignsToAnalyze.filter(c => {
+                    // Se tem network específico, usar isso
+                    if (c.network === 'facebook') return true;
+                    if (c.network === 'google') return false;
+                    // Se não tem network definido, assumir que é Meta (padrão atual)
+                    return !c.network;
+                  });
+                  
+                  const googleCampaigns = campaignsToAnalyze.filter(c => c.network === 'google');
+                  
+                  // Calcular gastos das campanhas
+                  const metaCampaignsSpent = metaCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
+                  const googleCampaignsSpent = googleCampaigns.reduce((sum, c) => sum + parseFloat(c.amountSpent || "0"), 0);
+                  
+                  // Calcular gastos manuais por plataforma
+                  const metaManualSpent = (manualSpends || []).reduce((sum, spend) => {
+                    if (spend.platform === 'facebook') {
+                      const amount = parseFloat(spend.amount || "0");
+                      if (spend.currency === 'BRL') {
+                        return sum + amount;
+                      } else if (spend.currency === 'EUR') {
+                        return sum + (amount * 6.37);
+                      } else {
+                        return sum + amount;
+                      }
+                    }
+                    return sum;
+                  }, 0);
+                  
+                  const googleManualSpent = (manualSpends || []).reduce((sum, spend) => {
+                    if (spend.platform === 'google') {
+                      const amount = parseFloat(spend.amount || "0");
+                      if (spend.currency === 'BRL') {
+                        return sum + amount;
+                      } else if (spend.currency === 'EUR') {
+                        return sum + (amount * 6.37);
+                      } else {
+                        return sum + amount;
+                      }
+                    }
+                    return sum;
+                  }, 0);
+                  
+                  // Totais consolidados por plataforma
+                  const metaTotalSpent = metaCampaignsSpent + metaManualSpent;
+                  const googleTotalSpent = googleCampaignsSpent + googleManualSpent;
+                  
+                  const hasAnySpending = metaTotalSpent > 0 || googleTotalSpent > 0;
+                  
+                  return (
+                    <>
+                      {hasAnySpending && (
+                        <>
+                          {metaTotalSpent > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center space-x-2">
+                                <FacebookIcon size={12} />
+                                <span className="text-gray-300">Meta Ads</span>
+                              </div>
+                              <span className="text-blue-400 font-medium">{formatCurrency(metaTotalSpent.toString(), 'BRL')}</span>
                             </div>
-                            <span className="text-blue-300 font-medium text-xs">{formatCurrency(metaSpent.toString(), 'BRL')}</span>
-                          </div>
-                        )}
-                        {googleCampaigns.length > 0 && googleSpent > 0 && (
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center space-x-2 ml-4">
-                              <GoogleAdsIcon size={10} />
-                              <span className="text-gray-400">Google Ads</span>
+                          )}
+                          {googleTotalSpent > 0 && (
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center space-x-2">
+                                <GoogleAdsIcon size={12} />
+                                <span className="text-gray-300">Google Ads</span>
+                              </div>
+                              <span className="text-red-400 font-medium">{formatCurrency(googleTotalSpent.toString(), 'BRL')}</span>
                             </div>
-                            <span className="text-red-300 font-medium text-xs">{formatCurrency(googleSpent.toString(), 'BRL')}</span>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </CardContent>
         </Card>
 
