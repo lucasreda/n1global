@@ -6,11 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { Mail, Lock, User, Eye, EyeOff, Check, X, Shield } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Check, X } from "lucide-react";
 import logoPath from "@assets/logo_1756142152045.png";
 
 const loginSchema = z.object({
@@ -32,9 +31,6 @@ const registerSchema = z.object({
     .max(128, "Senha deve ter no máximo 128 caracteres")
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Senha deve conter ao menos: 1 letra minúscula, 1 maiúscula e 1 número"),
   confirmPassword: z.string(),
-  role: z.enum(["user", "supplier", "super_admin"], {
-    required_error: "Selecione um tipo de conta",
-  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "As senhas não coincidem",
   path: ["confirmPassword"],
@@ -110,7 +106,6 @@ export function AuthModal({ isOpen }: AuthModalProps) {
       email: "",
       password: "",
       confirmPassword: "",
-      role: "user",
     },
   });
 
@@ -146,17 +141,11 @@ export function AuthModal({ isOpen }: AuthModalProps) {
 
   const handleRegister = async (data: RegisterForm) => {
     try {
-      await register(data.name, data.email, data.password, data.role);
+      // Always create user accounts as "user" role
+      await register(data.name, data.email, data.password, "user");
       
-      // Redirect based on user role after successful registration
-      const userRole = data.role;
-      if (userRole === 'super_admin') {
-        setLocation('/inside');
-      } else if (userRole === 'supplier') {
-        setLocation('/supplier');
-      } else {
-        setLocation('/');
-      }
+      // Always redirect to main dashboard for user accounts
+      setLocation('/');
       
       toast({
         title: "Conta criada com sucesso!",
@@ -434,31 +423,6 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                         )}
                       />
 
-                      <FormField
-                        control={registerForm.control}
-                        name="role"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium text-foreground">Tipo de Conta</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger className="bg-white/5 border border-white/10 rounded-xl h-12 text-foreground focus:border-primary/50 focus:bg-white/10 transition-all duration-200 backdrop-blur-sm focus:ring-2 focus:ring-primary/20 focus:ring-offset-0" data-testid="select-role">
-                                  <div className="flex items-center">
-                                    <Shield className="h-4 w-4 text-muted-foreground mr-3" />
-                                    <SelectValue placeholder="Selecione o tipo de conta" />
-                                  </div>
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="user">👤 Usuário Normal</SelectItem>
-                                <SelectItem value="supplier">🏪 Fornecedor</SelectItem>
-                                <SelectItem value="super_admin">⚡ Super Administrador</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       
                       <Button
                         type="submit"
