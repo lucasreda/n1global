@@ -496,6 +496,10 @@ export const insertManualAdSpendSchema = createInsertSchema(manualAdSpend).omit(
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  spendDate: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
 });
 
 // User Products schemas
