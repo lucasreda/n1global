@@ -881,7 +881,7 @@ export default function Ads() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
@@ -979,6 +979,23 @@ export default function Ads() {
                 })()}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="glassmorphism border-gray-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-white flex items-center space-x-2">
+              <Calculator className="w-4 h-4 text-green-400" />
+              <span>Gastos Manuais</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-400">{manualSpends?.length || 0}</div>
+            <p className="text-gray-400 text-sm">
+              {manualSpends && manualSpends.length > 0 
+                ? `${manualSpends.reduce((sum, s) => sum + parseFloat(s.amount || "0"), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'EUR' })} total`
+                : "Nenhum gasto manual"}
+            </p>
           </CardContent>
         </Card>
 
@@ -1336,13 +1353,13 @@ export default function Ads() {
         </DialogContent>
       </Dialog>
 
-      {/* Manual Ad Spends List */}
+      {/* Manual Ad Spends Details */}
       {manualSpends && manualSpends.length > 0 && (
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
               <Calculator className="w-4 h-4 text-green-400" />
-              <span>Gastos Manuais</span>
+              <span>Detalhes dos Gastos Manuais</span>
             </CardTitle>
             <CardDescription className="text-sm text-gray-400">
               Gastos adicionados manualmente para complementar os dados das campanhas
