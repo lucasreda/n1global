@@ -784,6 +784,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Moeda da operação é obrigatória" });
       }
 
+      console.log("🔧 Creating operation with data:", { name: name.trim(), country: country.trim(), currency: currency.trim() });
+
       // Create operation
       const operation = await storage.createOperation({
         name: name.trim(),
@@ -792,13 +794,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency: currency.trim()
       }, req.user.id);
 
+      console.log("✅ Operation created:", operation);
+
       // Update user onboarding step
       await storage.updateOnboardingStep(req.user.id, 'step1_operation', true);
 
+      console.log("✅ Onboarding step updated");
+
       res.json({ operation });
     } catch (error) {
-      console.error("Create operation error:", error);
-      res.status(500).json({ message: "Erro ao criar operação" });
+      console.error("❌ ONBOARDING Create operation error:", error);
+      console.error("❌ Error details:", error instanceof Error ? error.message : error);
+      console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack');
+      res.status(500).json({ message: "Erro ao criar operação", details: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 

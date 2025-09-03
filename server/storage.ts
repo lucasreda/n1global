@@ -284,52 +284,78 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOperation(operationData: { name: string; description: string; country: string; currency: string }, userId: string): Promise<Operation> {
+    console.log("🏭 Creating operation - Start", { operationData, userId });
+    
     const user = await this.getUser(userId);
-    if (!user) throw new Error('Usuário não encontrado');
+    if (!user) {
+      console.error("❌ User not found:", userId);
+      throw new Error('Usuário não encontrado');
+    }
+    console.log("✅ User found:", user.email);
 
     // Get or create store for user
     let storeId = user.storeId;
+    console.log("🏪 Current user storeId:", storeId);
+    
     if (!storeId) {
-      const [store] = await db
-        .insert(stores)
-        .values({
-          name: `${user.name}'s Store`,
-          description: 'Store criada automaticamente durante onboarding',
-          ownerId: userId
-        })
-        .returning();
-      
-      storeId = store.id;
-      
-      // Update user with storeId
-      await db
-        .update(users)
-        .set({ storeId })
-        .where(eq(users.id, userId));
+      console.log("🏪 Creating new store for user");
+      try {
+        const [store] = await db
+          .insert(stores)
+          .values({
+            name: `${user.name}'s Store`,
+            description: 'Store criada automaticamente durante onboarding',
+            ownerId: userId
+          })
+          .returning();
+        
+        storeId = store.id;
+        console.log("✅ Store created:", store.id);
+        
+        // Update user with storeId
+        await db
+          .update(users)
+          .set({ storeId })
+          .where(eq(users.id, userId));
+        console.log("✅ User updated with storeId");
+      } catch (error) {
+        console.error("❌ Error creating store:", error);
+        throw error;
+      }
     }
 
     // Create operation
-    const [operation] = await db
-      .insert(operations)
-      .values({
-        name: operationData.name,
-        description: operationData.description,
-        country: operationData.country,
-        currency: operationData.currency,
-        storeId
-      })
-      .returning();
+    console.log("🏭 Creating operation with storeId:", storeId);
+    try {
+      const [operation] = await db
+        .insert(operations)
+        .values({
+          name: operationData.name,
+          description: operationData.description,
+          country: operationData.country,
+          currency: operationData.currency,
+          storeId
+        })
+        .returning();
+      console.log("✅ Operation created:", operation.id);
 
-    // Grant user access to operation
-    await db
-      .insert(userOperationAccess)
-      .values({
-        userId,
-        operationId: operation.id,
-        role: 'owner'
-      });
+      // Grant user access to operation
+      console.log("🔐 Granting user access to operation");
+      await db
+        .insert(userOperationAccess)
+        .values({
+          userId,
+          operationId: operation.id,
+          role: 'owner'
+        });
+      console.log("✅ User access granted");
 
-    return operation;
+      console.log("🏭 Creating operation - Complete", operation);
+      return operation;
+    } catch (error) {
+      console.error("❌ Error creating operation or granting access:", error);
+      throw error;
+    }
   }
 
   async createShippingProvider(data: InsertShippingProvider, storeId: string, operationId: string): Promise<ShippingProvider> {
