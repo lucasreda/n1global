@@ -742,7 +742,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dateStr = currentDate.toISOString().split('T')[0];
         
         try {
-          // Process each enabled currency for this date
+          // Collect rates for all enabled currencies for this date
+          const dailyRates: Record<string, number> = {};
+          
           for (const currencyObj of enabledCurrencies) {
             const currency = currencyObj.currency;
             
@@ -760,19 +762,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const data = await response.json();
               
               if (data.data && data.data.BRL && data.data.BRL.value) {
-                const rate = data.data.BRL.value; // Agora rate = quantos BRL vale 1 EUR/USD/etc
-                
-                // Store for all enabled currencies using eurToBrl column as generic rate field
-                await db.insert(currencyHistory).values({
-                  date: dateStr,
-                  eurToBrl: rate.toString(), // Using this column as generic rate field
-                  baseCurrency: currency, // EUR, USD, GBP, etc.
-                  targetCurrency: 'BRL',
-                  source: 'currencyapi'
-                });
-                
-                recordsAdded.push({ date: dateStr, currency, rate });
-                console.log(`✅ Adicionado: ${dateStr} - ${currency}/BRL: ${rate}`);
+                dailyRates[currency] = data.data.BRL.value;
+                console.log(`✅ Obtido: ${dateStr} - ${currency}/BRL: ${data.data.BRL.value}`);
               }
               
               // Small delay between currency requests
@@ -781,6 +772,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } catch (currencyError) {
               console.error(`❌ Erro ao processar ${currency} em ${dateStr}:`, currencyError);
             }
+          }
+          
+          // Insert single row with all currencies for this date (if we have any data)
+          if (Object.keys(dailyRates).length > 0) {
+            const insertData: any = {
+              date: dateStr,
+              source: 'currencyapi'
+            };
+            
+            // Map currencies to their respective columns
+            if (dailyRates.EUR) insertData.eurToBrl = dailyRates.EUR.toString();
+            if (dailyRates.USD) insertData.usdToBrl = dailyRates.USD.toString();
+            if (dailyRates.GBP) insertData.gbpToBrl = dailyRates.GBP.toString();
+            if (dailyRates.ARS) insertData.arsToBrl = dailyRates.ARS.toString();
+            if (dailyRates.CLP) insertData.clpToBrl = dailyRates.CLP.toString();
+            if (dailyRates.CAD) insertData.cadToBrl = dailyRates.CAD.toString();
+            if (dailyRates.AUD) insertData.audToBrl = dailyRates.AUD.toString();
+            if (dailyRates.JPY) insertData.jpyToBrl = dailyRates.JPY.toString();
+            
+            await db.insert(currencyHistory).values(insertData);
+            
+            const currenciesAdded = Object.keys(dailyRates).join(', ');
+            console.log(`📊 Salvo: ${dateStr} - ${currenciesAdded} (${Object.keys(dailyRates).length} moedas)`);
+            recordsAdded.push({ date: dateStr, currencies: currenciesAdded, count: Object.keys(dailyRates).length });
           }
           
         } catch (error) {
