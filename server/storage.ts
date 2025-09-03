@@ -36,7 +36,7 @@ export interface IStorage {
   updateOnboardingStep(userId: string, stepId: string, completed: boolean): Promise<void>;
   completeOnboarding(userId: string): Promise<void>;
   resetUserOnboarding(userId: string): Promise<void>;
-  createOperation(operationData: { name: string; description: string }, userId: string): Promise<Operation>;
+  createOperation(operationData: { name: string; description: string; country: string; currency: string }, userId: string): Promise<Operation>;
   
   // Shipping providers creation
   createShippingProvider(data: InsertShippingProvider, storeId: string, operationId: string): Promise<ShippingProvider>;
