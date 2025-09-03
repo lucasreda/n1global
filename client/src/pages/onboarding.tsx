@@ -303,7 +303,7 @@ export default function OnboardingPage() {
   // Create operation mutation
   const createOperationMutation = useMutation({
     mutationFn: async (data: { name: string; country: string; currency: string }) => {
-      const response = await apiRequest('POST', '/api/onboarding/create-operation', data);
+      const response = await apiRequest('/api/onboarding/create-operation', 'POST', data);
       return response.json();
     },
     onSuccess: () => {
@@ -524,7 +524,7 @@ function OperationStep({ onComplete }: { onComplete: (operationId: string) => vo
   const createOperationMutation = useMutation({
     mutationFn: async (operationData: any) => {
       console.log('🔄 OperationStep: Creating operation', operationData);
-      const response = await apiRequest('POST', '/api/operations', operationData);
+      const response = await apiRequest('/api/operations', 'POST', operationData);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
