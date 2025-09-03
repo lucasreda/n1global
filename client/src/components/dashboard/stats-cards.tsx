@@ -738,7 +738,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             data-testid="card-cac"
           >
             <div className="flex items-center justify-between mb-3">
-              <Target className="w-4 h-4 text-orange-500" />
+              <Target className="w-4 h-4 text-slate-400" />
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(avgCPA)}</h3>
@@ -756,7 +756,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             data-testid="card-tempo-entrega"
           >
             <div className="flex items-center justify-between mb-3">
-              <Truck className="w-4 h-4 text-blue-500" />
+              <Truck className="w-4 h-4 text-slate-400" />
             </div>
             <div>
               <h3 className="text-xl font-semibold text-white mb-1">{(metrics?.avgDeliveryTimeDays || 0).toFixed(1)} dias</h3>
