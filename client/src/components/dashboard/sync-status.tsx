@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { RefreshCw, Play, Database, Activity, CheckCircle2 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -77,119 +74,142 @@ export function SyncStatus() {
 
   if (isLoading) {
     return (
-      <Card className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <RefreshCw className="h-5 w-5 animate-spin text-blue-400" />
-            <CardTitle className="text-white">Carregando status...</CardTitle>
+      <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <Database className="w-4 h-4 text-slate-400" />
+            <h3 className="text-lg font-semibold text-white">Sincronização Inteligente</h3>
           </div>
-        </CardHeader>
-      </Card>
+          <RefreshCw className="h-4 w-4 animate-spin text-blue-400" />
+        </div>
+        <div className="animate-pulse">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center space-y-2">
+              <div className="h-6 bg-gray-600/50 rounded"></div>
+              <div className="h-3 bg-gray-600/50 rounded"></div>
+            </div>
+            <div className="text-center space-y-2">
+              <div className="h-6 bg-gray-600/50 rounded"></div>
+              <div className="h-3 bg-gray-600/50 rounded"></div>
+            </div>
+            <div className="text-center space-y-2">
+              <div className="h-6 bg-gray-600/50 rounded"></div>
+              <div className="h-3 bg-gray-600/50 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="sync-status-card">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Database className="h-5 w-5 text-blue-400" />
-            <CardTitle className="text-white">Sincronização Inteligente</CardTitle>
+    <div 
+      className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300" 
+      style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} 
+      data-testid="sync-status-card"
+      onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+      onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+    >
+      {/* Header - seguindo padrão dos outros cards */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <Database className="w-4 h-4 text-slate-400" />
+          <h3 className="text-lg font-semibold text-white">Sincronização Inteligente</h3>
+        </div>
+        <div className="flex items-center space-x-2">
+          {syncStats?.isRunning && (
+            <div className="px-2 py-1 rounded-md text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex items-center">
+              <Activity className="h-3 w-3 mr-1 animate-pulse" />
+              Executando
+            </div>
+          )}
+          <div className="px-2 py-1 rounded-md text-xs font-medium bg-green-500/20 text-green-400 border border-green-400/30 flex items-center">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Automática
           </div>
-          <div className="flex items-center space-x-2">
-            {syncStats?.isRunning && (
-              <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                <Activity className="h-3 w-3 mr-1 animate-pulse" />
-                Executando
-              </Badge>
+        </div>
+      </div>
+
+      {/* Description */}
+      <p className="text-sm text-gray-400 mb-4">
+        Monitora apenas pedidos ativos, ignorando pedidos finalizados para otimizar performance
+      </p>
+
+      {/* Sync Statistics */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
+        <div className="text-center">
+          <h4 className="text-lg sm:text-xl font-semibold text-white" data-testid="total-leads">
+            {syncStats?.totalLeads || 0}
+          </h4>
+          <p className="text-xs font-medium text-gray-400">Total de Pedidos</p>
+        </div>
+        <div className="text-center">
+          <h4 className="text-lg sm:text-xl font-semibold text-blue-400" data-testid="active-leads">
+            {syncStats?.activeLeads || 0}
+          </h4>
+          <p className="text-xs font-medium text-gray-400">Pedidos Ativos</p>
+        </div>
+        <div className="text-center">
+          <h4 className="text-lg sm:text-xl font-semibold text-green-400" data-testid="finalized-leads">
+            {syncStats?.finalizedLeads || 0}
+          </h4>
+          <p className="text-xs font-medium text-gray-400">Finalizados</p>
+        </div>
+      </div>
+
+      {/* Separator */}
+      <div className="h-px bg-gray-600 mb-4"></div>
+
+      {/* Last Sync Info */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-gray-400">Última sincronização:</span>
+        </div>
+        <span className="text-sm text-white font-medium" data-testid="last-sync-time">
+          {formatLastSync(syncStats?.lastSync)}
+        </span>
+      </div>
+
+      {/* Manual Sync Controls */}
+      <div className="space-y-3">
+        <p className="text-sm text-gray-400">
+          Sincronização inteligente automática a cada 5 minutos - adapta baseado no volume de atividade
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleManualSync("intelligent")}
+            disabled={isManualSyncing || syncStats?.isRunning}
+            className="glassmorphism-light text-gray-200 border-blue-600 hover:bg-blue-500/10 flex-1"
+            data-testid="button-intelligent-sync"
+          >
+            {isManualSyncing ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Activity className="h-4 w-4 mr-2" />
             )}
-            <Badge variant="outline" className="text-green-400 border-green-400/30">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Automática
-            </Badge>
-          </div>
+            Sync Inteligente
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleManualSync("incremental", 2)}
+            disabled={isManualSyncing || syncStats?.isRunning}
+            className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
+            data-testid="button-quick-sync"
+          >
+            {isManualSyncing ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 mr-2" />
+            )}
+            Sync Rápido
+          </Button>
         </div>
-        <CardDescription className="text-gray-300">
-          Monitora apenas pedidos ativos, ignorando pedidos finalizados para otimizar performance
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Sync Statistics */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-white" data-testid="total-leads">
-              {syncStats?.totalLeads || 0}
-            </div>
-            <div className="text-sm text-gray-400">Total de Pedidos</div>
-          </div>
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-blue-400" data-testid="active-leads">
-              {syncStats?.activeLeads || 0}
-            </div>
-            <div className="text-sm text-gray-400">Pedidos Ativos</div>
-          </div>
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-green-400" data-testid="finalized-leads">
-              {syncStats?.finalizedLeads || 0}
-            </div>
-            <div className="text-sm text-gray-400">Finalizados</div>
-          </div>
-        </div>
-
-        <Separator className="bg-gray-600" />
-
-        {/* Last Sync Info */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <RefreshCw className="h-4 w-4 text-gray-400" />
-            <span className="text-sm text-gray-300">Última sincronização:</span>
-          </div>
-          <span className="text-sm text-white font-medium" data-testid="last-sync-time">
-            {formatLastSync(syncStats?.lastSync)}
-          </span>
-        </div>
-
-        {/* Manual Sync Controls */}
-        <div className="space-y-3 pt-2">
-          <div className="text-sm text-gray-400">
-            Sincronização inteligente automática a cada 5 minutos - adapta baseado no volume de atividade
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleManualSync("intelligent")}
-              disabled={isManualSyncing || syncStats?.isRunning}
-              className="glassmorphism-light text-gray-200 border-blue-600 hover:bg-blue-500/10 flex-1"
-              data-testid="button-intelligent-sync"
-            >
-              {isManualSyncing ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Activity className="h-4 w-4 mr-2" />
-              )}
-              Sync Inteligente
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleManualSync("incremental", 2)}
-              disabled={isManualSyncing || syncStats?.isRunning}
-              className="glassmorphism-light text-gray-200 border-gray-600 hover:bg-white/10 flex-1"
-              data-testid="button-quick-sync"
-            >
-              {isManualSyncing ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4 mr-2" />
-              )}
-              Sync Rápido
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
