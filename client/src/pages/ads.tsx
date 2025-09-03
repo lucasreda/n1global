@@ -520,11 +520,13 @@ export default function Ads() {
               </span>
             )}
             <Button
+              variant="outline"
+              size="sm"
               onClick={() => setManualSpendDialogOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1.5 h-8"
+              className="border-gray-600 text-white hover:bg-gray-700"
               data-testid="button-add-manual-spend"
             >
-              <Calculator className="w-3 h-3 mr-2" />
+              <Calculator className="w-4 h-4 mr-2" />
               Gasto Manual
             </Button>
             <Button
