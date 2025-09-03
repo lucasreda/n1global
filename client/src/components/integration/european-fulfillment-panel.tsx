@@ -126,7 +126,6 @@ export function EuropeanFulfillmentPanel() {
   const credentialsSchema = z.object({
     email: z.string().email("Email inválido"),
     password: z.string().min(1, "Senha é obrigatória"),
-    apiUrl: z.string().url("URL inválida").optional(),
   });
 
   const form = useForm<CreateLeadForm>({
@@ -151,7 +150,6 @@ export function EuropeanFulfillmentPanel() {
     defaultValues: {
       email: "tester@exemple.com",
       password: "password",
-      apiUrl: "https://api-test.ecomfulfilment.eu/",
     },
   });
 
@@ -310,22 +308,6 @@ export function EuropeanFulfillmentPanel() {
                             </FormItem>
                           )}
                         />
-                        <FormField
-                          control={credentialsForm.control}
-                          name="apiUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-gray-200">API URL (Opcional)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  className="glassmorphism border-gray-600/30 text-white"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
                         <div className="flex space-x-2">
                           <Button
                             type="submit"
@@ -356,10 +338,6 @@ export function EuropeanFulfillmentPanel() {
                 )}
 
                 <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div className="glassmorphism rounded-lg p-3">
-                    <h4 className="text-white text-sm font-medium">API URL</h4>
-                    <p className="text-gray-300 text-xs">api.ecomfulfilment.eu</p>
-                  </div>
                   <div className="glassmorphism rounded-lg p-3">
                     <h4 className="text-white text-sm font-medium">Foco Regional</h4>
                     <p className="text-gray-300 text-xs">Itália (ITALY)</p>
