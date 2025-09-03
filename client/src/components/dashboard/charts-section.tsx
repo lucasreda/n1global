@@ -83,15 +83,15 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
       </div>
 
       {/* Distribution Chart */}
-      <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 min-h-[320px] sm:min-h-[350px] lg:min-h-[400px] overflow-hidden" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-distribution">
-        <div className="mb-4 sm:mb-6">
-          <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-white">Distribuição de Status</h3>
+      <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-distribution">
+        <div className="mb-4">
+          <h3 className="text-base font-semibold text-white">Distribuição de Status</h3>
         </div>
         
-        <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
           {/* Chart Section */}
-          <div className="flex justify-center w-full">
-            <div className="w-40 h-40 sm:w-48 sm:h-48 lg:w-56 lg:h-56 relative flex-shrink-0">
+          <div className="flex justify-center lg:justify-start flex-shrink-0">
+            <div className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -99,9 +99,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={renderCustomizedLabel}
-                    outerRadius={65}
-                    innerRadius={30}
+                    outerRadius={50}
+                    innerRadius={25}
                     fill="#8884d8"
                     dataKey="value"
                     stroke="none"
@@ -111,17 +110,17 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                         key={`cell-${index}`} 
                         fill={entry.color}
                         stroke={entry.color}
-                        strokeWidth={2}
+                        strokeWidth={1}
                       />
                     ))}
                   </Pie>
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '6px',
                       color: '#fff',
-                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                      fontSize: '12px'
                     }}
                     formatter={(value, name) => [
                       `${value} pedidos`,
@@ -134,7 +133,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
               {/* Center total */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">
+                  <div className="text-sm font-bold text-white">
                     {distributionData.reduce((sum, item) => sum + item.value, 0)}
                   </div>
                   <div className="text-xs text-gray-400">Total</div>
@@ -144,38 +143,21 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
           </div>
           
           {/* Legend Section */}
-          <div className="w-full">
-            <div className="space-y-3 sm:space-y-4">
+          <div className="flex-1 min-w-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
               {distributionData.map((item) => (
-                <div key={item.name} className="glassmorphism-light rounded-lg p-3 sm:p-4 transition-all hover:bg-white/10" data-testid={`distribution-${item.name.toLowerCase()}`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                    <div className="flex items-center space-x-3 sm:space-x-4">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shadow-lg flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                      <div className="min-w-0 flex-1">
-                        <span className="text-white font-medium text-sm sm:text-base block">{item.name}</span>
-                        <div className="text-xs sm:text-sm text-gray-400 mt-1">{item.description}</div>
-                      </div>
-                    </div>
-                    <div className="text-left sm:text-right flex-shrink-0">
-                      <div className="text-white font-bold text-lg sm:text-xl" data-testid={`percentage-${item.name.toLowerCase()}`}>
-                        {item.percentage}%
-                      </div>
-                      <div className="text-xs sm:text-sm text-gray-400">
-                        {item.value} pedidos
-                      </div>
-                    </div>
+                <div key={item.name} className="flex items-center justify-between p-2 rounded-md bg-white/5 hover:bg-white/10 transition-all" data-testid={`distribution-${item.name.toLowerCase()}`}>
+                  <div className="flex items-center space-x-2 min-w-0 flex-1">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                    <span className="text-white text-sm font-medium truncate">{item.name}</span>
                   </div>
-                  
-                  {/* Progress bar */}
-                  <div className="w-full bg-gray-700/30 rounded-full h-3">
-                    <div 
-                      className="h-3 rounded-full transition-all duration-500" 
-                      style={{ 
-                        backgroundColor: item.color, 
-                        width: `${item.percentage}%`,
-                        boxShadow: `0 0 12px ${item.color}50`
-                      }}
-                    ></div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <div className="text-white font-semibold text-sm" data-testid={`percentage-${item.name.toLowerCase()}`}>
+                      {item.percentage}%
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {item.value}
+                    </div>
                   </div>
                 </div>
               ))}
