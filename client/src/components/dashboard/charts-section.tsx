@@ -28,11 +28,8 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 animate-fade-in">
       {/* Revenue Chart */}
       <div className="w-full bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-4 hover:bg-black/30 transition-all duration-300 overflow-hidden" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="chart-revenue">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-6">
           <h3 className="text-lg font-semibold text-white">Receita por Período</h3>
-          <div className="text-xs sm:text-sm text-gray-400">
-            Dados sincronizados com período selecionado
-          </div>
         </div>
         
         <div className="w-full h-40 sm:h-48 lg:h-64 overflow-hidden">
