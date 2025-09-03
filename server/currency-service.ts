@@ -1,7 +1,14 @@
 import fetch from 'node-fetch';
+import { db } from './db';
+import { currencyHistory } from '@shared/schema';
+import { eq, and, gte, lte, or } from 'drizzle-orm';
 
 export interface ExchangeRates {
   [currency: string]: number;
+}
+
+export interface HistoricalRates {
+  [date: string]: ExchangeRates;
 }
 
 export class CurrencyService {
@@ -222,6 +229,71 @@ export class CurrencyService {
     }));
   }
 
+  // Buscar taxas históricas para múltiplas datas de uma vez (OTIMIZADO)
+  async getHistoricalRates(dates: string[]): Promise<HistoricalRates> {
+    console.log(`📊 Buscando taxas históricas para ${dates.length} datas...`);
+    
+    try {
+      // Buscar todas as taxas em uma query
+      const historicalData = await db
+        .select()
+        .from(currencyHistory)
+        .where(or(...dates.map(date => eq(currencyHistory.date, date))));
+      
+      const historicalRates: HistoricalRates = {};
+      
+      historicalData.forEach(row => {
+        historicalRates[row.date] = {
+          'BRL': 1,
+          'EUR': parseFloat(row.eurToBrl || '0') || 0,
+          'USD': parseFloat(row.usdToBrl || '0') || 0,
+          'GBP': parseFloat(row.gbpToBrl || '0') || 0,
+          'ARS': parseFloat(row.arsToBrl || '0') || 0,
+          'CLP': parseFloat(row.clpToBrl || '0') || 0,
+          'CAD': parseFloat(row.cadToBrl || '0') || 0,
+          'AUD': parseFloat(row.audToBrl || '0') || 0,
+          'JPY': parseFloat(row.jpyToBrl || '0') || 0
+        };
+      });
+      
+      console.log(`✅ Carregadas taxas históricas para ${Object.keys(historicalRates).length}/${dates.length} datas`);
+      return historicalRates;
+      
+    } catch (error) {
+      console.error('❌ Erro ao buscar taxas históricas:', error);
+      return {};
+    }
+  }
+  
+  // Converter valor com taxa específica de uma data (HÍBRIDO)
+  async convertToBRLWithDate(amount: number, fromCurrency: string, orderDate: Date): Promise<number> {
+    if (fromCurrency === 'BRL') {
+      return amount;
+    }
+    
+    const today = new Date();
+    const dateStr = orderDate.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Se é hoje, usar taxa em tempo real
+    if (dateStr === todayStr) {
+      const currentRates = await this.getExchangeRates();
+      return this.convertToBRLSync(amount, fromCurrency, currentRates);
+    }
+    
+    // Se é data histórica, buscar na tabela
+    const historicalRates = await this.getHistoricalRates([dateStr]);
+    const dayRates = historicalRates[dateStr];
+    
+    if (!dayRates || !dayRates[fromCurrency.toUpperCase()]) {
+      console.warn(`⚠️ Taxa histórica não encontrada para ${fromCurrency} em ${dateStr}, usando taxa atual`);
+      const currentRates = await this.getExchangeRates();
+      return this.convertToBRLSync(amount, fromCurrency, currentRates);
+    }
+    
+    return this.convertToBRLSync(amount, fromCurrency, dayRates);
+  }
+  
   // Detectar moeda baseada no símbolo ou código
   detectCurrency(text: string): string {
     if (text.includes('$') || text.includes('USD')) return 'USD';

@@ -140,6 +140,100 @@ export class DashboardService {
     };
   }
   
+  // 🎯 MÉTODO PRINCIPAL: Conversões históricas otimizadas por agregação de data
+  private async calculateHistoricalRevenue(operationId: string, dateRange: any, provider?: string) {
+    console.log(`📊 Iniciando cálculo de receita histórica para operação ${operationId}`);
+    
+    // 1. Agregar pedidos POR DATA (otimizado com GROUP BY)
+    let whereConditions = [
+      eq(orders.operationId, operationId),
+      gte(orders.orderDate, dateRange.from),
+      lte(orders.orderDate, dateRange.to)
+    ];
+    
+    if (provider) {
+      whereConditions.push(eq(orders.provider, provider));
+    }
+    
+    const dailyAggregation = await db
+      .select({
+        day: sql<string>`DATE(order_date)`,
+        totalRevenueEUR: sql<string>`SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END)`,
+        deliveredRevenueEUR: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`,
+        paidRevenueEUR: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`, // COD: delivered = paid
+        orderCount: sql<number>`COUNT(*)`,
+        deliveredCount: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)`
+      })
+      .from(orders)
+      .where(and(...whereConditions))
+      .groupBy(sql`DATE(order_date)`)
+      .orderBy(sql`DATE(order_date)`);
+    
+    console.log(`📈 Agregação por data concluída: ${dailyAggregation.length} dias com dados`);
+    
+    if (dailyAggregation.length === 0) {
+      return {
+        totalShopifyRevenueBRL: 0,
+        deliveredRevenueBRL: 0,
+        paidRevenueBRL: 0
+      };
+    }
+    
+    // 2. Buscar taxas históricas para TODAS as datas de uma vez (BATCH)
+    const uniqueDates = dailyAggregation.map(row => row.day).filter(Boolean);
+    const historicalRates = await currencyService.getHistoricalRates(uniqueDates);
+    const currentRates = await currencyService.getExchangeRates(); // Para hoje
+    const today = new Date().toISOString().split('T')[0];
+    
+    console.log(`💱 Taxas carregadas: ${Object.keys(historicalRates).length} históricas + taxa atual`);
+    
+    // 3. Converter TOTAIS DIÁRIOS com suas taxas específicas
+    let totalShopifyRevenueBRL = 0;
+    let deliveredRevenueBRL = 0;
+    let paidRevenueBRL = 0;
+    
+    for (const dayData of dailyAggregation) {
+      if (!dayData.day) continue;
+      
+      const dayTotalEUR = parseFloat(dayData.totalRevenueEUR || '0');
+      const dayDeliveredEUR = parseFloat(dayData.deliveredRevenueEUR || '0');
+      const dayPaidEUR = parseFloat(dayData.paidRevenueEUR || '0');
+      
+      // Escolher taxa histórica OU atual
+      let dayRates;
+      if (dayData.day === today) {
+        dayRates = currentRates;
+        console.log(`📅 ${dayData.day} (HOJE): Usando taxa atual EUR=${currentRates.EUR}`);
+      } else if (historicalRates[dayData.day]) {
+        dayRates = historicalRates[dayData.day];
+        console.log(`📅 ${dayData.day}: Usando taxa histórica EUR=${dayRates.EUR}`);
+      } else {
+        dayRates = currentRates; // Fallback
+        console.warn(`⚠️ ${dayData.day}: Taxa histórica não encontrada, usando atual`);
+      }
+      
+      // Converter totais do dia
+      const dayTotalBRL = currencyService.convertToBRLSync(dayTotalEUR, 'EUR', dayRates);
+      const dayDeliveredBRL = currencyService.convertToBRLSync(dayDeliveredEUR, 'EUR', dayRates);
+      const dayPaidBRL = currencyService.convertToBRLSync(dayPaidEUR, 'EUR', dayRates);
+      
+      // Somar aos totais
+      totalShopifyRevenueBRL += dayTotalBRL;
+      deliveredRevenueBRL += dayDeliveredBRL;
+      paidRevenueBRL += dayPaidBRL;
+      
+      console.log(`💰 ${dayData.day}: €${dayTotalEUR} → R$${dayTotalBRL.toFixed(2)} (taxa: ${dayRates.EUR})`);
+    }
+    
+    console.log(`🎯 RESULTADO FINAL - Total: R$${totalShopifyRevenueBRL.toFixed(2)}, Entregue: R$${deliveredRevenueBRL.toFixed(2)}, Pago: R$${paidRevenueBRL.toFixed(2)}`);
+    
+    return {
+      totalShopifyRevenueBRL,
+      deliveredRevenueBRL,
+      paidRevenueBRL
+    };
+  }
+  
   private async getCachedMetrics(period: string, provider?: string, req?: any, operationId?: string) {
     try {
       // CRITICAL: Cache by operation, not by store
@@ -369,13 +463,15 @@ export class DashboardService {
     // Calculate delivery percentage based on transportadora data
     const deliveryRate = totalTransportadoraOrders > 0 ? (deliveredTransportadoraOrders / totalTransportadoraOrders) * 100 : 0;
     
-    // OTIMIZAÇÃO: Use taxas já obtidas para conversões síncronas
-    const totalShopifyRevenueBRL = currencyService.convertToBRLSync(totalShopifyRevenue, 'EUR', exchangeRates);
-    const deliveredRevenueBRL = currencyService.convertToBRLSync(deliveredRevenue, 'EUR', exchangeRates);
-    const paidRevenueBRL = currencyService.convertToBRLSync(paidRevenue, 'EUR', exchangeRates);
+    // 🎯 NOVA LÓGICA: Agregação por data com conversões históricas precisas
+    const dailyRevenueData = await this.calculateHistoricalRevenue(currentOperation.id, dateRange, provider);
     
-    console.log(`💰 Conversões otimizadas - Receita Shopify: €${totalShopifyRevenue} = R$${totalShopifyRevenueBRL.toFixed(2)}`);
-    console.log(`💰 Receita PAGA corrigida: €${paidRevenue} = R$${paidRevenueBRL.toFixed(2)} (${totalPaidOrders} pedidos pagos)`);
+    const totalShopifyRevenueBRL = dailyRevenueData.totalShopifyRevenueBRL;
+    const deliveredRevenueBRL = dailyRevenueData.deliveredRevenueBRL;
+    const paidRevenueBRL = dailyRevenueData.paidRevenueBRL;
+    
+    console.log(`💰 Conversões HISTÓRICAS otimizadas - Receita Shopify: €${totalShopifyRevenue} = R$${totalShopifyRevenueBRL.toFixed(2)}`);
+    console.log(`💰 Receita PAGA histórica: €${paidRevenue} = R$${paidRevenueBRL.toFixed(2)} (${totalPaidOrders} pedidos pagos)`);
     
     // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
     const marketingCostsBRL = marketingCosts.totalBRL;
@@ -979,11 +1075,43 @@ export class DashboardService {
     
     console.log(`📊 Found ${revenueData.length} days with data for period ${period}`);
     
-    return revenueData.map(row => ({
-      date: row.date,
-      revenue: Number(row.revenue || 0),
-      orders: Number(row.orderCount)
-    }));
+    if (revenueData.length === 0) {
+      return [];
+    }
+    
+    // 🎯 APLICAR CONVERSÕES HISTÓRICAS PRECISAS ao revenue chart
+    const uniqueDates = revenueData.map(row => row.date).filter(Boolean);
+    const historicalRates = await currencyService.getHistoricalRates(uniqueDates);
+    const currentRates = await currencyService.getExchangeRates();
+    const today = new Date().toISOString().split('T')[0];
+    
+    console.log(`📈 Revenue Chart - Aplicando conversões históricas para ${uniqueDates.length} dias`);
+    
+    return revenueData.map(row => {
+      const revenueEUR = Number(row.revenue || 0);
+      
+      // Escolher taxa do dia específico
+      let dayRates;
+      if (row.date === today) {
+        dayRates = currentRates;
+      } else if (historicalRates[row.date]) {
+        dayRates = historicalRates[row.date];
+      } else {
+        dayRates = currentRates; // Fallback
+        console.warn(`⚠️ Revenue Chart - Taxa não encontrada para ${row.date}, usando atual`);
+      }
+      
+      // Converter com taxa específica do dia
+      const revenueBRL = currencyService.convertToBRLSync(revenueEUR, 'EUR', dayRates);
+      
+      console.log(`📊 Chart ${row.date}: €${revenueEUR} → R$${revenueBRL.toFixed(2)} (taxa: ${dayRates.EUR})`);
+      
+      return {
+        date: row.date,
+        revenue: revenueBRL, // 🎯 Agora usando conversão histórica!
+        orders: Number(row.orderCount)
+      };
+    });
   }
   
   async getOrdersByStatus(period: string = '30d', provider?: string, req?: any) {
