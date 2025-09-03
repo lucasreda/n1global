@@ -384,6 +384,27 @@ export const shippingProviders = pgTable("shipping_providers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Manual Ad Spend - for tracking manual advertising costs
+export const manualAdSpend = pgTable("manual_ad_spend", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id), // Links to operation
+  
+  // Spend details
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(), // Amount spent in BRL
+  currency: text("currency").notNull().default("BRL"), // Currency of the spend
+  platform: text("platform").notNull(), // 'facebook', 'google', 'taboola', 'tiktok', 'influencer', 'outro'
+  
+  // Date and description
+  spendDate: timestamp("spend_date").notNull(), // Date of the spend
+  description: text("description"), // Optional description
+  notes: text("notes"), // Additional notes
+  
+  // Metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id), // Who added this spend
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Auth schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -471,6 +492,12 @@ export const insertShippingProviderSchema = createInsertSchema(shippingProviders
   createdAt: true,
 });
 
+export const insertManualAdSpendSchema = createInsertSchema(manualAdSpend).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // User Products schemas
 export const insertUserProductSchema = createInsertSchema(userProducts).omit({
   id: true,
@@ -535,6 +562,9 @@ export type InsertProduct = z.infer<typeof insertProductSchema>;
 
 export type ShippingProvider = typeof shippingProviders.$inferSelect;
 export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema>;
+
+export type ManualAdSpend = typeof manualAdSpend.$inferSelect;
+export type InsertManualAdSpend = z.infer<typeof insertManualAdSpendSchema>;
 
 export type ProductContract = typeof productContracts.$inferSelect;
 export type InsertProductContract = z.infer<typeof insertProductContractSchema>;

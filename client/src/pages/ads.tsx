@@ -21,12 +21,17 @@ import {
   CheckCircle2,
   Plus,
   Target,
-  Globe
+  Globe,
+  Calculator,
+  Trash2,
+  Edit,
+  Calendar
 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import facebookIcon from "@assets/meta-icon_1756415603759.png";
 import facebookIconMini from "@assets/metamini_1756416312919.png";
 import googleAdsIcon from "@assets/gadsicon_1756416065444.png";
@@ -119,6 +124,20 @@ const NetworkIcon = ({ network, size = 16 }: { network: 'facebook' | 'google'; s
   }
 };
 
+interface ManualAdSpend {
+  id: string;
+  operationId: string;
+  amount: string;
+  currency: string;
+  platform: string;
+  spendDate: string;
+  description?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function Ads() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [networkSelectOpen, setNetworkSelectOpen] = useState(false);
@@ -127,6 +146,8 @@ export default function Ads() {
   const [accountsModalOpen, setAccountsModalOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
   const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
+  const [manualSpendDialogOpen, setManualSpendDialogOpen] = useState(false);
+  const [editingSpend, setEditingSpend] = useState<ManualAdSpend | null>(null);
   const [newAccount, setNewAccount] = useState({
     accountId: "",
     name: "",
@@ -140,6 +161,13 @@ export default function Ads() {
     businessId: "",
     name: "",
     accessToken: ""
+  });
+  const [newManualSpend, setNewManualSpend] = useState({
+    amount: "",
+    platform: "facebook",
+    spendDate: new Date().toISOString().split('T')[0],
+    description: "",
+    notes: ""
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -184,6 +212,17 @@ export default function Ads() {
       return data;
     },
     enabled: !!selectedOperation && (adAccounts?.length || 0) >= 0,
+  });
+
+  // Fetch Manual Ad Spends
+  const { data: manualSpends, isLoading: manualSpendsLoading, refetch: refetchManualSpends } = useQuery({
+    queryKey: ["/api/manual-ad-spend", selectedOperation, selectedPeriod],
+    queryFn: async () => {
+      const currentOperationId = localStorage.getItem("current_operation_id") || selectedOperation;
+      const response = await authenticatedApiRequest("GET", `/api/manual-ad-spend?operationId=${currentOperationId}`);
+      return response.json() as Promise<ManualAdSpend[]>;
+    },
+    enabled: !!selectedOperation,
   });
 
   // Add new ad account
@@ -266,6 +305,92 @@ export default function Ads() {
       toast({
         title: "Erro",
         description: "Falha ao atualizar campanha",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create manual ad spend
+  const createManualSpendMutation = useMutation({
+    mutationFn: async (spendData: any) => {
+      const response = await authenticatedApiRequest("POST", "/api/manual-ad-spend", {
+        ...spendData,
+        operationId: selectedOperation,
+        currency: "BRL"
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Gasto adicionado",
+        description: "Gasto manual de anúncios criado com sucesso",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/manual-ad-spend", selectedOperation] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
+      setManualSpendDialogOpen(false);
+      setNewManualSpend({
+        amount: "",
+        platform: "facebook",
+        spendDate: new Date().toISOString().split('T')[0],
+        description: "",
+        notes: ""
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao criar gasto manual",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update manual ad spend
+  const updateManualSpendMutation = useMutation({
+    mutationFn: async ({ id, ...spendData }: any) => {
+      const response = await authenticatedApiRequest("PATCH", `/api/manual-ad-spend/${id}`, {
+        ...spendData,
+        operationId: selectedOperation
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Gasto atualizado",
+        description: "Gasto manual de anúncios atualizado com sucesso",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/manual-ad-spend", selectedOperation] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
+      setManualSpendDialogOpen(false);
+      setEditingSpend(null);
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar gasto manual",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete manual ad spend
+  const deleteManualSpendMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await authenticatedApiRequest("DELETE", `/api/manual-ad-spend/${id}?operationId=${selectedOperation}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Gasto removido",
+        description: "Gasto manual de anúncios removido com sucesso",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/manual-ad-spend", selectedOperation] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics", selectedOperation] });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao remover gasto manual",
         variant: "destructive",
       });
     },
@@ -361,6 +486,14 @@ export default function Ads() {
                 Último sync: {new Date(syncInfo.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
+            <Button
+              onClick={() => setManualSpendDialogOpen(true)}
+              className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1.5 h-8"
+              data-testid="button-add-manual-spend"
+            >
+              <Calculator className="w-3 h-3 mr-2" />
+              Gasto Manual
+            </Button>
             <Button
               onClick={() => syncCampaignsMutation.mutate()}
               disabled={syncCampaignsMutation.isPending || !adAccounts?.length}
@@ -544,6 +677,167 @@ export default function Ads() {
                 >
                   {addAccountMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
                   Conectar Conta
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Manual Ad Spend Dialog */}
+          <Dialog open={manualSpendDialogOpen} onOpenChange={setManualSpendDialogOpen}>
+            <DialogContent className="glassmorphism border-gray-700 max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-white flex items-center">
+                  <Calculator className="w-5 h-5 mr-2 text-green-400" />
+                  {editingSpend ? "Editar Gasto Manual" : "Adicionar Gasto Manual"}
+                </DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  {editingSpend ? "Atualize o gasto com anúncios" : "Registre um gasto manual com anúncios para incluir no dashboard"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-1">
+                  <Label htmlFor="amount" className="text-sm text-gray-300">Valor (BRL)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    value={editingSpend ? editingSpend.amount : newManualSpend.amount}
+                    onChange={(e) => {
+                      if (editingSpend) {
+                        setEditingSpend({ ...editingSpend, amount: e.target.value });
+                      } else {
+                        setNewManualSpend(prev => ({ ...prev, amount: e.target.value }));
+                      }
+                    }}
+                    className="bg-gray-800 border-gray-600 text-white h-9"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="platform" className="text-sm text-gray-300">Plataforma</Label>
+                  <Select 
+                    value={editingSpend ? editingSpend.platform : newManualSpend.platform}
+                    onValueChange={(value) => {
+                      if (editingSpend) {
+                        setEditingSpend({ ...editingSpend, platform: value });
+                      } else {
+                        setNewManualSpend(prev => ({ ...prev, platform: value }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      <SelectItem value="facebook" className="text-white">
+                        <div className="flex items-center gap-2">
+                          <FacebookIcon size={16} />
+                          <span>Meta Ads</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="google" className="text-white">
+                        <div className="flex items-center gap-2">
+                          <GoogleAdsIcon size={16} />
+                          <span>Google Ads</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="taboola" className="text-white">Taboola</SelectItem>
+                      <SelectItem value="tiktok" className="text-white">TikTok Ads</SelectItem>
+                      <SelectItem value="influencer" className="text-white">Influencer</SelectItem>
+                      <SelectItem value="outro" className="text-white">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="spendDate" className="text-sm text-gray-300">Data do Gasto</Label>
+                  <Input
+                    id="spendDate"
+                    type="date"
+                    value={editingSpend ? editingSpend.spendDate.split('T')[0] : newManualSpend.spendDate}
+                    onChange={(e) => {
+                      if (editingSpend) {
+                        setEditingSpend({ ...editingSpend, spendDate: e.target.value });
+                      } else {
+                        setNewManualSpend(prev => ({ ...prev, spendDate: e.target.value }));
+                      }
+                    }}
+                    className="bg-gray-800 border-gray-600 text-white h-9"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="description" className="text-sm text-gray-300">Descrição (opcional)</Label>
+                  <Input
+                    id="description"
+                    value={editingSpend ? editingSpend.description || "" : newManualSpend.description}
+                    onChange={(e) => {
+                      if (editingSpend) {
+                        setEditingSpend({ ...editingSpend, description: e.target.value });
+                      } else {
+                        setNewManualSpend(prev => ({ ...prev, description: e.target.value }));
+                      }
+                    }}
+                    className="bg-gray-800 border-gray-600 text-white h-9"
+                    placeholder="Ex: Campanha de Black Friday"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="notes" className="text-sm text-gray-300">Observações (opcional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={editingSpend ? editingSpend.notes || "" : newManualSpend.notes}
+                    onChange={(e) => {
+                      if (editingSpend) {
+                        setEditingSpend({ ...editingSpend, notes: e.target.value });
+                      } else {
+                        setNewManualSpend(prev => ({ ...prev, notes: e.target.value }));
+                      }
+                    }}
+                    className="bg-gray-800 border-gray-600 text-white"
+                    placeholder="Observações adicionais..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                {editingSpend && (
+                  <Button 
+                    onClick={() => deleteManualSpendMutation.mutate(editingSpend.id)}
+                    disabled={deleteManualSpendMutation.isPending}
+                    variant="destructive"
+                    className="mr-auto"
+                  >
+                    {deleteManualSpendMutation.isPending && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
+                  </Button>
+                )}
+                <Button 
+                  onClick={() => {
+                    if (editingSpend) {
+                      updateManualSpendMutation.mutate({
+                        id: editingSpend.id,
+                        amount: editingSpend.amount,
+                        platform: editingSpend.platform,
+                        spendDate: editingSpend.spendDate,
+                        description: editingSpend.description,
+                        notes: editingSpend.notes
+                      });
+                    } else {
+                      createManualSpendMutation.mutate(newManualSpend);
+                    }
+                  }}
+                  disabled={createManualSpendMutation.isPending || updateManualSpendMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {(createManualSpendMutation.isPending || updateManualSpendMutation.isPending) && 
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingSpend ? "Atualizar" : "Adicionar"} Gasto
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -974,6 +1268,89 @@ export default function Ads() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manual Ad Spends List */}
+      {manualSpends && manualSpends.length > 0 && (
+        <Card className="glassmorphism border-gray-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-white flex items-center space-x-2">
+              <Calculator className="w-4 h-4 text-green-400" />
+              <span>Gastos Manuais</span>
+            </CardTitle>
+            <CardDescription className="text-sm text-gray-400">
+              Gastos adicionados manualmente para complementar os dados das campanhas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {manualSpends.map((spend) => (
+                <div
+                  key={spend.id}
+                  className="glassmorphism-light rounded-lg p-3 border border-gray-600 hover:border-gray-500 transition-all duration-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 flex-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          {spend.platform === 'facebook' && <FacebookIcon size={16} />}
+                          {spend.platform === 'google' && <GoogleAdsIcon size={16} />}
+                          {!['facebook', 'google'].includes(spend.platform) && <Globe className="w-4 h-4 text-gray-400" />}
+                          <h4 className="text-sm font-medium text-white">
+                            {spend.description || `Gasto ${spend.platform === 'facebook' ? 'Meta Ads' : 
+                              spend.platform === 'google' ? 'Google Ads' : 
+                              spend.platform.charAt(0).toUpperCase() + spend.platform.slice(1)}`}
+                          </h4>
+                          <Badge variant="outline" className="text-green-400 border-green-400">
+                            Manual
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <span className="text-gray-400">Valor: </span>
+                            <span className="text-white font-medium">{formatCurrency(spend.amount, 'BRL')}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Data: </span>
+                            <span className="text-white font-medium">
+                              {new Date(spend.spendDate).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Plataforma: </span>
+                            <span className="text-white font-medium">
+                              {spend.platform === 'facebook' ? 'Meta Ads' : 
+                               spend.platform === 'google' ? 'Google Ads' : 
+                               spend.platform.charAt(0).toUpperCase() + spend.platform.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                        {spend.notes && (
+                          <div className="mt-2 text-xs text-gray-400">
+                            {spend.notes}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        onClick={() => {
+                          setEditingSpend(spend);
+                          setManualSpendDialogOpen(true);
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

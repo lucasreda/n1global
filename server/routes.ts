@@ -2238,6 +2238,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual Ad Spend Routes
+  
+  // Get manual ad spends for operation
+  app.get("/api/manual-ad-spend", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { manualAdSpend } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and, desc, gte, lte } = await import("drizzle-orm");
+      
+      const operationId = req.query.operationId as string;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      // Optional date filtering
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      
+      let whereConditions = [eq(manualAdSpend.operationId, operationId)];
+      
+      if (startDate) {
+        whereConditions.push(gte(manualAdSpend.spendDate, new Date(startDate)));
+      }
+      
+      if (endDate) {
+        whereConditions.push(lte(manualAdSpend.spendDate, new Date(endDate)));
+      }
+      
+      const spends = await db
+        .select()
+        .from(manualAdSpend)
+        .where(and(...whereConditions))
+        .orderBy(desc(manualAdSpend.spendDate));
+      
+      res.json(spends);
+    } catch (error) {
+      console.error("Error fetching manual ad spends:", error);
+      res.status(500).json({ message: "Erro ao buscar gastos manuais" });
+    }
+  });
+  
+  // Create manual ad spend
+  app.post("/api/manual-ad-spend", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { manualAdSpend, insertManualAdSpendSchema } = await import("@shared/schema");
+      const { db } = await import("./db");
+      
+      const spendData = insertManualAdSpendSchema.parse({
+        ...req.body,
+        createdBy: req.user.id
+      });
+      
+      const [newSpend] = await db
+        .insert(manualAdSpend)
+        .values(spendData)
+        .returning();
+      
+      res.status(201).json(newSpend);
+    } catch (error) {
+      console.error("Error creating manual ad spend:", error);
+      res.status(500).json({ message: "Erro ao criar gasto manual" });
+    }
+  });
+  
+  // Update manual ad spend
+  app.patch("/api/manual-ad-spend/:id", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { manualAdSpend } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+      
+      const { id } = req.params;
+      const operationId = req.body.operationId as string;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      const updateData = {
+        ...req.body,
+        updatedAt: new Date()
+      };
+      delete updateData.id;
+      delete updateData.createdBy;
+      delete updateData.createdAt;
+      
+      const [updatedSpend] = await db
+        .update(manualAdSpend)
+        .set(updateData)
+        .where(and(
+          eq(manualAdSpend.id, id),
+          eq(manualAdSpend.operationId, operationId)
+        ))
+        .returning();
+      
+      if (!updatedSpend) {
+        return res.status(404).json({ message: "Gasto não encontrado" });
+      }
+      
+      res.json(updatedSpend);
+    } catch (error) {
+      console.error("Error updating manual ad spend:", error);
+      res.status(500).json({ message: "Erro ao atualizar gasto manual" });
+    }
+  });
+  
+  // Delete manual ad spend
+  app.delete("/api/manual-ad-spend/:id", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { manualAdSpend } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+      
+      const { id } = req.params;
+      const operationId = req.query.operationId as string;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      const [deletedSpend] = await db
+        .delete(manualAdSpend)
+        .where(and(
+          eq(manualAdSpend.id, id),
+          eq(manualAdSpend.operationId, operationId)
+        ))
+        .returning();
+      
+      if (!deletedSpend) {
+        return res.status(404).json({ message: "Gasto não encontrado" });
+      }
+      
+      res.json({ message: "Gasto removido com sucesso" });
+    } catch (error) {
+      console.error("Error deleting manual ad spend:", error);
+      res.status(500).json({ message: "Erro ao remover gasto manual" });
+    }
+  });
+
   // Shopify Integration Routes
   
   // Get Shopify integration for operation

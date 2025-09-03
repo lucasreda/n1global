@@ -764,22 +764,87 @@ export class DashboardService {
 
   private async getMarketingCosts(period: string = '30d', storeId?: string | null, operationId?: string | null, preloadedRates?: any): Promise<{ totalBRL: number; totalEUR: number; fallbackValue: number }> {
     try {
-      // Convert dashboard period to Facebook period format
+      // Get Facebook Ads costs
       const fbPeriod = this.convertPeriodToFacebookFormat(period);
       const marketingData = await this.facebookAdsService.getMarketingCostsByPeriod(fbPeriod, storeId, operationId, preloadedRates);
       
+      // Get manual ad spend costs for the same period
+      const manualCosts = await this.getManualAdSpendCosts(period, operationId, preloadedRates);
+      
+      const totalBRL = marketingData.totalBRL + manualCosts.totalBRL;
+      const totalEUR = marketingData.totalEUR + manualCosts.totalEUR;
+      
+      console.log(`💰 Marketing costs breakdown - Facebook: R$${marketingData.totalBRL.toFixed(2)}, Manual: R$${manualCosts.totalBRL.toFixed(2)}, Total: R$${totalBRL.toFixed(2)}`);
+      
       return {
-        totalBRL: marketingData.totalBRL,
-        totalEUR: marketingData.totalEUR,
-        fallbackValue: marketingData.totalBRL // Use BRL as main value for calculations
+        totalBRL,
+        totalEUR,
+        fallbackValue: totalBRL // Use BRL as main value for calculations
       };
     } catch (error) {
-      console.warn("Failed to fetch Facebook Ads costs, using fallback:", error);
+      console.warn("Failed to fetch marketing costs, using fallback:", error);
       return {
         totalBRL: 0,
         totalEUR: 0,
         fallbackValue: 0
       };
+    }
+  }
+
+  private async getManualAdSpendCosts(period: string = '30d', operationId?: string | null, preloadedRates?: any): Promise<{ totalBRL: number; totalEUR: number }> {
+    try {
+      if (!operationId) {
+        return { totalBRL: 0, totalEUR: 0 };
+      }
+
+      const { manualAdSpend } = await import("@shared/schema");
+      const { and, eq, gte, lte } = await import("drizzle-orm");
+
+      // Get date range for the period
+      const dateRange = this.getDateRange(period);
+
+      // Fetch manual ad spend entries for the operation and period
+      const manualSpends = await db
+        .select()
+        .from(manualAdSpend)
+        .where(and(
+          eq(manualAdSpend.operationId, operationId),
+          gte(manualAdSpend.spendDate, dateRange.from),
+          lte(manualAdSpend.spendDate, dateRange.to)
+        ));
+
+      let totalBRL = 0;
+      let totalEUR = 0;
+
+      for (const spend of manualSpends) {
+        const amount = Number(spend.amount);
+        
+        if (spend.currency === 'BRL') {
+          totalBRL += amount;
+          // Convert BRL to EUR
+          const eurAmount = preloadedRates 
+            ? currencyService.convertFromBRLSync(amount, 'EUR', preloadedRates)
+            : await currencyService.convertFromBRL(amount, 'EUR');
+          totalEUR += eurAmount;
+        } else if (spend.currency === 'EUR') {
+          totalEUR += amount;
+          // Convert EUR to BRL
+          const brlAmount = preloadedRates 
+            ? currencyService.convertToBRLSync(amount, 'EUR', preloadedRates)
+            : await currencyService.convertToBRL(amount, 'EUR');
+          totalBRL += brlAmount;
+        }
+      }
+
+      console.log(`💰 Manual ad spend costs - Period: ${period}, Operation: ${operationId}, Entries: ${manualSpends.length}, Total BRL: R$${totalBRL.toFixed(2)}, Total EUR: €${totalEUR.toFixed(2)}`);
+
+      return {
+        totalBRL: Number(totalBRL.toFixed(2)),
+        totalEUR: Number(totalEUR.toFixed(2))
+      };
+    } catch (error) {
+      console.error("Failed to fetch manual ad spend costs:", error);
+      return { totalBRL: 0, totalEUR: 0 };
     }
   }
 
