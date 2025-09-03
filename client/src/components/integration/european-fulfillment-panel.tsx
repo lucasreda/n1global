@@ -161,11 +161,14 @@ export function EuropeanFulfillmentPanel() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Credenciais atualizadas!",
-        description: data.testResult.connected ? "Conexão estabelecida com sucesso" : "Conexão falhou, mas credenciais salvas",
+        title: data.success ? "Credenciais salvas!" : "Erro ao salvar",
+        description: data.message || (data.connected ? "Conexão estabelecida com sucesso" : "Falha na conexão"),
+        variant: data.success ? "default" : "destructive"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/european-fulfillment/test"] });
-      setShowCredentialsForm(false);
+      if (data.success) {
+        setShowCredentialsForm(false);
+      }
     },
     onError: () => {
       toast({

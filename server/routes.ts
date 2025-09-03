@@ -1739,8 +1739,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({
+        success: testResult.connected,
         message: testResult.connected ? "Credenciais salvas com sucesso" : "Erro ao testar credenciais",
-        ...testResult
+        connected: testResult.connected,
+        details: testResult.details || testResult.message
       });
     } catch (error) {
       console.error("Error updating credentials:", error);
