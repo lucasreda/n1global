@@ -61,7 +61,7 @@ export function EuropeanFulfillmentPanel() {
     onSuccess: (data) => {
       toast({
         title: data.success ? "Credenciais salvas!" : "Erro ao salvar",
-        description: data.message || (data.connected ? "Conexão estabelecida com sucesso" : "Falha na conexão"),
+        description: data.message || (data.connected ? "🟢 Conexão estabelecida com sucesso" : "Falha na conexão"),
         variant: data.success ? "default" : "destructive"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/european-fulfillment/test"] });
@@ -113,10 +113,7 @@ export function EuropeanFulfillmentPanel() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   {connectionTest.connected ? (
-                    <>
-                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                      <CheckCircle className="text-green-400" size={18} />
-                    </>
+                    <CheckCircle className="text-green-400" size={18} />
                   ) : (
                     <XCircle className="text-red-400" size={18} />
                   )}
