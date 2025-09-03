@@ -113,7 +113,10 @@ export function EuropeanFulfillmentPanel() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   {connectionTest.connected ? (
-                    <CheckCircle className="text-green-400" size={18} />
+                    <>
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <CheckCircle className="text-green-400" size={18} />
+                    </>
                   ) : (
                     <XCircle className="text-red-400" size={18} />
                   )}
