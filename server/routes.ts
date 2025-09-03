@@ -4,10 +4,10 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
@@ -1641,15 +1641,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { operationId } = req.query;
       
-      // Simular status baseado na operação para demonstrar isolamento
-      // Em produção, isso verificaria credenciais armazenadas no banco por operação
-      const isConfiguredForOperation = operationId === 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4'; // Operação "Dss"
+      // Verificar credenciais armazenadas no banco para esta operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId as string),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment")
+        ))
+        .limit(1);
       
-      if (isConfiguredForOperation) {
+      if (integration && integration.credentials) {
+        // Testar conexão com as credenciais salvas
+        const credentials = integration.credentials as any;
+        const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
+        const testResult = await service.testConnection();
+        
         res.json({
-          connected: true,
-          message: "European Fulfillment configurado para esta operação",
-          details: "Credenciais válidas encontradas"
+          connected: testResult.connected,
+          message: testResult.connected ? "European Fulfillment configurado e conectado" : "Credenciais configuradas mas conexão falhou",
+          details: testResult.message || testResult.details
         });
       } else {
         res.json({
@@ -1670,22 +1681,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update credentials
   app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { email, password, apiUrl } = req.body;
+      const { email, password, apiUrl, operationId } = req.body;
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email e senha são obrigatórios" });
+      if (!email || !password || !operationId) {
+        return res.status(400).json({ message: "Email, senha e operationId são obrigatórios" });
       }
       
+      // Test the new credentials first
       const service = new EuropeanFulfillmentService(email, password, apiUrl);
-      
-      // Test the new credentials
       const testResult = await service.testConnection();
       
+      if (testResult.connected) {
+        // Save credentials to database
+        const credentials = { email, password, apiUrl: apiUrl || "https://api.ecomfulfilment.eu/" };
+        
+        // Check if integration already exists for this operation
+        const [existingIntegration] = await db
+          .select()
+          .from(fulfillmentIntegrations)
+          .where(and(
+            eq(fulfillmentIntegrations.operationId, operationId),
+            eq(fulfillmentIntegrations.provider, "european_fulfillment")
+          ))
+          .limit(1);
+        
+        if (existingIntegration) {
+          // Update existing integration
+          await db
+            .update(fulfillmentIntegrations)
+            .set({
+              credentials: credentials,
+              status: "active",
+              updatedAt: new Date()
+            })
+            .where(eq(fulfillmentIntegrations.id, existingIntegration.id));
+        } else {
+          // Create new integration
+          await db
+            .insert(fulfillmentIntegrations)
+            .values({
+              operationId,
+              provider: "european_fulfillment",
+              credentials: credentials,
+              status: "active"
+            });
+        }
+      }
+      
       res.json({
-        message: "Credenciais atualizadas",
-        testResult
+        message: testResult.connected ? "Credenciais salvas com sucesso" : "Erro ao testar credenciais",
+        ...testResult
       });
     } catch (error) {
+      console.error("Error updating credentials:", error);
       res.status(500).json({ message: "Erro ao atualizar credenciais" });
     }
   });

@@ -43,7 +43,7 @@ export function EuropeanFulfillmentPanel() {
   const { data: connectionTest, isLoading: testLoading } = useQuery({
     queryKey: ["/api/integrations/european-fulfillment/test", operationId],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/test");
+      const response = await authenticatedApiRequest("GET", `/api/integrations/european-fulfillment/test?operationId=${operationId}`);
       return response.json();
     },
     enabled: !!operationId,
@@ -270,7 +270,7 @@ export function EuropeanFulfillmentPanel() {
                   <div className="mt-4 glassmorphism rounded-lg p-4">
                     <h4 className="text-white font-medium mb-3">Configurar Credenciais da API</h4>
                     <Form {...credentialsForm}>
-                      <form onSubmit={credentialsForm.handleSubmit((data) => updateCredentialsMutation.mutate(data))} className="space-y-3">
+                      <form onSubmit={credentialsForm.handleSubmit((data) => updateCredentialsMutation.mutate({ ...data, operationId }))} className="space-y-3">
                         <FormField
                           control={credentialsForm.control}
                           name="email"
