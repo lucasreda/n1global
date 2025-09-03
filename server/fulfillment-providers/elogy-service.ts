@@ -6,8 +6,8 @@ import fetch from 'node-fetch';
 import https from 'https';
 
 interface ElogyCredentials extends FulfillmentCredentials {
-  authHeader: string; // JWT fixo requerido pela API
-  warehouseId: string; // ID do warehouse para consultas
+  authHeader?: string; // JWT fixo requerido pela API (opcional, tem padrão)
+  warehouseId?: string; // ID do warehouse para consultas
   refreshToken?: string; // Token para renovação
   userId?: string; // ID do usuário para refresh
 }
@@ -25,18 +25,23 @@ interface ElogyOrder {
   items?: any[];
 }
 
+// Token padrão da eLogy para desenvolvimento/teste
+const DEFAULT_ELOGY_AUTH_HEADER = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSUdTb2x1dGlvbnMiLCJzdXJuYW1lIjoiR2F0ZURldiIsImlkIjotMjIxNTczOTQ5M30.9uI2zwCLqP4TrTaf6q9_jKinQOnU8NYjr0CiE3N8h0U";
+
 export class ElogyService extends BaseFulfillmentProvider {
   private elogyCredentials: ElogyCredentials;
   
   constructor(credentials: ElogyCredentials) {
     super(credentials);
-    this.elogyCredentials = credentials;
+    // Usar token padrão se não fornecido
+    this.elogyCredentials = {
+      ...credentials,
+      authHeader: credentials.authHeader || DEFAULT_ELOGY_AUTH_HEADER
+    };
     
-    if (credentials.email && credentials.password && credentials.authHeader) {
-      console.log("eLogy Service initialized with credentials:", this.elogyCredentials.email);
-    } else {
-      console.log("eLogy Service initialized without complete credentials - must be configured");
-    }
+    console.log("eLogy Service initialized with token:", this.elogyCredentials.authHeader ? "✅" : "❌");
+    console.log("eLogy Service email:", this.elogyCredentials.email || "Não configurado");
+    console.log("eLogy Service warehouse:", this.elogyCredentials.warehouseId || "Não configurado");
   }
 
   async authenticate(): Promise<FulfillmentToken> {
@@ -54,8 +59,14 @@ export class ElogyService extends BaseFulfillmentProvider {
       }
     }
 
-    if (!this.elogyCredentials.email || !this.elogyCredentials.password || !this.elogyCredentials.authHeader) {
-      throw new Error("❌ Credenciais eLogy incompletas. É necessário: email, password, authHeader");
+    if (!this.elogyCredentials.email || !this.elogyCredentials.password) {
+      throw new Error("❌ Credenciais eLogy incompletas. É necessário: email, password");
+    }
+
+    // Garantir que sempre temos o authorization header
+    if (!this.elogyCredentials.authHeader) {
+      this.elogyCredentials.authHeader = DEFAULT_ELOGY_AUTH_HEADER;
+      console.log("🔑 Usando token eLogy padrão para autenticação");
     }
 
     const loginUrl = `${this.elogyCredentials.apiUrl || 'https://api.elogy.io'}/public-api/login`;
@@ -70,7 +81,7 @@ export class ElogyService extends BaseFulfillmentProvider {
       const response = await fetch(loginUrl, {
         method: "POST",
         headers: {
-          "Authorization": this.elogyCredentials.authHeader,
+          "Authorization": this.elogyCredentials.authHeader!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -97,7 +108,7 @@ export class ElogyService extends BaseFulfillmentProvider {
       const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
       
       this.token = {
-        token: this.elogyCredentials.authHeader,
+        token: this.elogyCredentials.authHeader || DEFAULT_ELOGY_AUTH_HEADER,
         expiresAt,
       };
 
@@ -123,7 +134,7 @@ export class ElogyService extends BaseFulfillmentProvider {
       const response = await fetch(refreshUrl, {
         method: "POST",
         headers: {
-          "Authorization": this.elogyCredentials.authHeader,
+          "Authorization": this.elogyCredentials.authHeader!,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -143,7 +154,7 @@ export class ElogyService extends BaseFulfillmentProvider {
       const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000);
       
       this.token = {
-        token: this.elogyCredentials.authHeader,
+        token: this.elogyCredentials.authHeader!,
         expiresAt,
       };
 

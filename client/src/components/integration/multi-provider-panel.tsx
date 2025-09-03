@@ -146,7 +146,7 @@ export function MultiProviderPanel() {
       case "european_fulfillment":
         return ["email", "password"];
       case "elogy":
-        return ["email", "password", "authHeader", "warehouseId", "apiUrl"];
+        return ["email", "password", "warehouseId"];
       default:
         return ["email", "password"];
     }
