@@ -221,7 +221,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                         {isLoginMode ? "Bem-vindo" : "Criar Conta"}
                       </DialogTitle>
                       <p className="text-muted-foreground">
-                        {isLoginMode ? "Acesse seu dashboard COD" : "Configure seu acesso ao dashboard"}
+                        {isLoginMode ? "Acesse seu Dashboard" : "Configure seu acesso ao dashboard"}
                       </p>
                     </DialogHeader>
 
