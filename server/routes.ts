@@ -586,11 +586,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Currency Settings endpoints
   app.get("/api/currency/settings", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      // Get global currency settings (userId = null)
+      // Get global currency settings
       const settings = await db
         .select()
         .from(currencySettings)
-        .where(eq(currencySettings.userId, null))
         .orderBy(currencySettings.currency);
       
       res.json(settings);
@@ -613,10 +612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db
           .update(currencySettings)
           .set({ enabled: update.enabled })
-          .where(and(
-            eq(currencySettings.userId, null),
-            eq(currencySettings.currency, update.currency)
-          ));
+          .where(eq(currencySettings.currency, update.currency));
       }
       
       res.json({ message: "Configurações atualizadas com sucesso" });
@@ -639,10 +635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enabledCurrencies = await db
         .select({ currency: currencySettings.currency })
         .from(currencySettings)
-        .where(and(
-          isNull(currencySettings.userId),
-          eq(currencySettings.enabled, true)
-        ));
+        .where(eq(currencySettings.enabled, true));
       
       if (enabledCurrencies.length === 0) {
         return res.json({
@@ -655,7 +648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // For backward compatibility, check old eur_to_brl column
+      // For backward compatibility, check existing data
       const latestRecord = await db
         .select()
         .from(currencyHistory)
@@ -699,10 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enabledCurrencies = await db
         .select({ currency: currencySettings.currency })
         .from(currencySettings)
-        .where(and(
-          isNull(currencySettings.userId),
-          eq(currencySettings.enabled, true)
-        ));
+        .where(eq(currencySettings.enabled, true));
 
       if (enabledCurrencies.length === 0) {
         return res.json({ 
