@@ -2211,28 +2211,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/elogy/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, authHeader, warehouseId, apiUrl, operationId } = req.body;
-      console.log("🔧 eLogy: Iniciando salvamento de credenciais...", { email, operationId, warehouseId });
+      console.log("🔧 eLogy: Iniciando salvamento de credenciais...", { email, operationId });
       
-      if (!email || !password || !authHeader || !warehouseId || !operationId) {
+      if (!email || !password || !operationId) {
         console.log("❌ eLogy: Dados faltando:", { 
           email: !!email, 
           password: !!password, 
-          authHeader: !!authHeader,
-          warehouseId: !!warehouseId,
           operationId: !!operationId 
         });
         return res.status(400).json({ 
-          message: "Email, senha, authHeader, warehouseId e operationId são obrigatórios" 
+          message: "Email, senha e operationId são obrigatórios" 
         });
       }
       
       console.log("🧪 eLogy: Testando credenciais...");
-      // Test the new credentials first
+      // Test the new credentials first - use default auth header
+      const DEFAULT_ELOGY_AUTH_HEADER = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSUdTb2x1dGlvbnMiLCJzdXJuYW1lIjoiR2F0ZURldiIsImlkIjotMjIxNTczOTQ5M30.9uI2zwCLqP4TrTaf6q9_jKinQOnU8NYjr0CiE3N8h0U";
       const credentials = { 
         email, 
         password, 
-        authHeader,
-        warehouseId,
+        authHeader: DEFAULT_ELOGY_AUTH_HEADER,
         apiUrl: apiUrl || "https://api.elogy.io" 
       };
       const service = new ElogyService(credentials);
