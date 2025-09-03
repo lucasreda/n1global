@@ -1,4 +1,4 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Download, BarChart3 } from "lucide-react";
@@ -38,18 +38,17 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
         <div className="w-full h-40 sm:h-48 lg:h-64 overflow-hidden">
           {!isLoading && revenueData && revenueData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4ade80" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#4ade80" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
+              <LineChart data={revenueData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                 <XAxis 
                   dataKey="date" 
-                  axisLine={false}
+                  stroke="#6B7280"
+                  fontSize={10}
                   tickLine={false}
-                  tick={{fontSize: 11, fill: '#6B7280'}}
+                  axisLine={false}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getDate()}/${date.getMonth() + 1}`;
+                  }}
                 />
                 <YAxis hide />
                 <Tooltip 
@@ -62,15 +61,15 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                   }}
                   formatter={(value: any) => [formatCurrencyBRL(value), 'Receita']}
                 />
-                <Area 
+                <Line 
                   type="monotone" 
                   dataKey="revenue" 
-                  stroke="#4ade80" 
-                  strokeWidth={1.5}
-                  fillOpacity={1} 
-                  fill="url(#colorRevenue)" 
+                  stroke="#10B981" 
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 3, stroke: '#10B981', strokeWidth: 1, fill: '#10B981' }}
                 />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           ) : (
             <div className="chart-gradient rounded-xl flex items-center justify-center h-full">
