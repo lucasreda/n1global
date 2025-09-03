@@ -1682,14 +1682,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { email, password, apiUrl, operationId } = req.body;
+      console.log("🔧 Iniciando salvamento de credenciais...", { email, operationId });
       
       if (!email || !password || !operationId) {
+        console.log("❌ Dados faltando:", { email: !!email, password: !!password, operationId: !!operationId });
         return res.status(400).json({ message: "Email, senha e operationId são obrigatórios" });
       }
       
+      console.log("🧪 Testando credenciais...");
       // Test the new credentials first
       const service = new EuropeanFulfillmentService(email, password, apiUrl);
       const testResult = await service.testConnection();
+      console.log("📊 Resultado do teste:", testResult);
       
       if (testResult.connected) {
         console.log("🔄 Salvando credenciais no banco...", { operationId, email });
