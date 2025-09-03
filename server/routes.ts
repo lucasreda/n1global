@@ -655,7 +655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .orderBy(desc(currencyHistory.date))
         .limit(1);
       
-      // Count total records since 2021
+      // Count total records since 2024
       const totalRecords = await db
         .select({ count: sql<number>`count(*)` })
         .from(currencyHistory)
@@ -742,47 +742,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dateStr = currentDate.toISOString().split('T')[0];
         
         try {
-          // Fetch historical rates for all enabled currencies (BRL as base)
-          const response = await fetch(
-            `https://api.currencyapi.com/v3/historical?date=${dateStr}&base_currency=BRL&currencies=${currenciesString}&apikey=${apiKey}`
-          );
-          
-          if (!response.ok) {
-            console.warn(`⚠️ Erro na API para ${dateStr}: ${response.status}`);
-            currentDate.setDate(currentDate.getDate() + 1);
-            continue;
-          }
-          
-          const data = await response.json();
-          
-          if (data.data) {
-            for (const [currency, info] of Object.entries(data.data as Record<string, any>)) {
-              if (info && info.value) {
-                const rate = info.value;
+          // Process each enabled currency for this date
+          for (const currencyObj of enabledCurrencies) {
+            const currency = currencyObj.currency;
+            
+            try {
+              // Fetch rate: 1 EUR = X BRL (or 1 USD = Y BRL, etc.)
+              const response = await fetch(
+                `https://api.currencyapi.com/v3/historical?date=${dateStr}&base_currency=${currency}&currencies=BRL&apikey=${apiKey}`
+              );
+              
+              if (!response.ok) {
+                console.warn(`⚠️ Erro na API para ${currency} em ${dateStr}: ${response.status}`);
+                continue;
+              }
+              
+              const data = await response.json();
+              
+              if (data.data && data.data.BRL && data.data.BRL.value) {
+                const rate = data.data.BRL.value; // Agora rate = quantos BRL vale 1 EUR/USD/etc
                 
-                // For backward compatibility with existing EUR data, use old column
+                // Always store as EUR format for compatibility (only EUR for now)
                 if (currency === 'EUR') {
-                  // Insert in old format for EUR
                   await db.insert(currencyHistory).values({
                     date: dateStr,
-                    eurToBrl: rate.toString(), // Use camelCase column name from schema
+                    eurToBrl: rate.toString(),
                     baseCurrency: 'EUR',
                     targetCurrency: 'BRL',
                     source: 'currencyapi'
                   });
+                  
+                  recordsAdded.push({ date: dateStr, currency, rate });
+                  console.log(`✅ Adicionado: ${dateStr} - ${currency}/BRL: ${rate}`);
                 }
-                
-                recordsAdded.push({ date: dateStr, currency, rate });
-                console.log(`✅ Adicionado: ${dateStr} - ${currency}/BRL: ${rate}`);
               }
+              
+              // Small delay between currency requests
+              await new Promise(resolve => setTimeout(resolve, 100));
+              
+            } catch (currencyError) {
+              console.error(`❌ Erro ao processar ${currency} em ${dateStr}:`, currencyError);
             }
           }
           
-          // Small delay to respect API limits
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
         } catch (error) {
-          console.error(`❌ Erro ao processar ${dateStr}:`, error);
+          console.error(`❌ Erro geral ao processar ${dateStr}:`, error);
         }
         
         currentDate.setDate(currentDate.getDate() + 1);
