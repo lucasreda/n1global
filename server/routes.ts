@@ -742,40 +742,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dateStr = currentDate.toISOString().split('T')[0];
         
         try {
-          // Collect rates for all enabled currencies for this date
+          // Collect rates for ALL enabled currencies for this date
           const dailyRates: Record<string, number> = {};
+          const expectedCurrencies = enabledCurrencies.map(c => c.currency);
           
+          console.log(`🔄 Processando ${dateStr} - Moedas esperadas: ${expectedCurrencies.join(', ')}`);
+          
+          // Collect ALL currencies before proceeding to save
           for (const currencyObj of enabledCurrencies) {
             const currency = currencyObj.currency;
+            let retryCount = 0;
+            const maxRetries = 3;
             
-            try {
-              // Fetch rate: 1 EUR = X BRL (or 1 USD = Y BRL, etc.)
-              const response = await fetch(
-                `https://api.currencyapi.com/v3/historical?date=${dateStr}&base_currency=${currency}&currencies=BRL&apikey=${apiKey}`
-              );
-              
-              if (!response.ok) {
-                console.warn(`⚠️ Erro na API para ${currency} em ${dateStr}: ${response.status}`);
-                continue;
+            while (retryCount < maxRetries && !dailyRates[currency]) {
+              try {
+                // Fetch rate: 1 EUR = X BRL (or 1 USD = Y BRL, etc.)
+                const response = await fetch(
+                  `https://api.currencyapi.com/v3/historical?date=${dateStr}&base_currency=${currency}&currencies=BRL&apikey=${apiKey}`
+                );
+                
+                if (!response.ok) {
+                  console.warn(`⚠️ Erro na API para ${currency} em ${dateStr} (tentativa ${retryCount + 1}): ${response.status}`);
+                  retryCount++;
+                  await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+                  continue;
+                }
+                
+                const data = await response.json();
+                
+                if (data.data && data.data.BRL && data.data.BRL.value) {
+                  dailyRates[currency] = data.data.BRL.value;
+                  console.log(`✅ Obtido: ${dateStr} - ${currency}/BRL: ${data.data.BRL.value}`);
+                  break; // Success, exit retry loop
+                } else {
+                  console.warn(`⚠️ Dados inválidos para ${currency} em ${dateStr} (tentativa ${retryCount + 1})`);
+                  retryCount++;
+                }
+                
+              } catch (currencyError) {
+                console.error(`❌ Erro ao processar ${currency} em ${dateStr} (tentativa ${retryCount + 1}):`, currencyError);
+                retryCount++;
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
               }
-              
-              const data = await response.json();
-              
-              if (data.data && data.data.BRL && data.data.BRL.value) {
-                dailyRates[currency] = data.data.BRL.value;
-                console.log(`✅ Obtido: ${dateStr} - ${currency}/BRL: ${data.data.BRL.value}`);
-              }
-              
-              // Small delay between currency requests
-              await new Promise(resolve => setTimeout(resolve, 100));
-              
-            } catch (currencyError) {
-              console.error(`❌ Erro ao processar ${currency} em ${dateStr}:`, currencyError);
             }
+            
+            // Small delay between currency requests
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
           
-          // Insert single row with all currencies for this date (if we have any data)
-          if (Object.keys(dailyRates).length > 0) {
+          // Only save if we have ALL expected currencies
+          const collectedCurrencies = Object.keys(dailyRates);
+          const missingCurrencies = expectedCurrencies.filter(curr => !collectedCurrencies.includes(curr));
+          
+          if (missingCurrencies.length === 0) {
+            // We have all currencies, proceed to save
             const insertData: any = {
               date: dateStr,
               source: 'currencyapi'
@@ -793,9 +813,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             await db.insert(currencyHistory).values(insertData);
             
-            const currenciesAdded = Object.keys(dailyRates).join(', ');
-            console.log(`📊 Salvo: ${dateStr} - ${currenciesAdded} (${Object.keys(dailyRates).length} moedas)`);
-            recordsAdded.push({ date: dateStr, currencies: currenciesAdded, count: Object.keys(dailyRates).length });
+            console.log(`📊 COMPLETO: ${dateStr} - ${collectedCurrencies.join(', ')} (${collectedCurrencies.length}/${expectedCurrencies.length} moedas)`);
+            recordsAdded.push({ date: dateStr, currencies: collectedCurrencies.join(', '), count: collectedCurrencies.length });
+          } else {
+            console.error(`❌ INCOMPLETO: ${dateStr} - Faltaram: ${missingCurrencies.join(', ')} | Obtidas: ${collectedCurrencies.join(', ')}`);
+            // Skip this date if we don't have all currencies
           }
           
         } catch (error) {
