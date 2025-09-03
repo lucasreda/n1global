@@ -885,19 +885,6 @@ export default function Ads() {
         <Card className="glassmorphism border-gray-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
-              <Target className="w-4 h-4 text-blue-400" />
-              <span>Campanhas Selecionadas</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-400">{filteredSelectedCampaigns.length}</div>
-            <p className="text-gray-400 text-sm">de {filteredCampaigns.length} {selectedAccountId === "all" ? "total" : "da conta"}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="glassmorphism border-gray-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-white flex items-center space-x-2">
               <DollarSign className="w-4 h-4 text-green-400" />
               <span>Gasto Total</span>
             </CardTitle>
@@ -992,6 +979,19 @@ export default function Ads() {
                 })()}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="glassmorphism border-gray-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-white flex items-center space-x-2">
+              <Target className="w-4 h-4 text-blue-400" />
+              <span>Campanhas Selecionadas</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-400">{filteredSelectedCampaigns.length}</div>
+            <p className="text-gray-400 text-sm">de {filteredCampaigns.length} {selectedAccountId === "all" ? "total" : "da conta"}</p>
           </CardContent>
         </Card>
 
