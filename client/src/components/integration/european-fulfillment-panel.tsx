@@ -61,7 +61,7 @@ export function EuropeanFulfillmentPanel() {
     onSuccess: (data) => {
       toast({
         title: data.success ? "Credenciais salvas!" : "Erro ao salvar",
-        description: data.message || (data.connected ? "🟢 Conexão estabelecida com sucesso" : "Falha na conexão"),
+        description: data.message || (data.connected ? "🟢 N1 Warehouse 1 - Conexão estabelecida com sucesso" : "Falha na conexão"),
         variant: data.success ? "default" : "destructive"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/european-fulfillment/test"] });
