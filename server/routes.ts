@@ -762,19 +762,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (data.data && data.data.BRL && data.data.BRL.value) {
                 const rate = data.data.BRL.value; // Agora rate = quantos BRL vale 1 EUR/USD/etc
                 
-                // Always store as EUR format for compatibility (only EUR for now)
-                if (currency === 'EUR') {
-                  await db.insert(currencyHistory).values({
-                    date: dateStr,
-                    eurToBrl: rate.toString(),
-                    baseCurrency: 'EUR',
-                    targetCurrency: 'BRL',
-                    source: 'currencyapi'
-                  });
-                  
-                  recordsAdded.push({ date: dateStr, currency, rate });
-                  console.log(`✅ Adicionado: ${dateStr} - ${currency}/BRL: ${rate}`);
-                }
+                // Store for all enabled currencies using eurToBrl column as generic rate field
+                await db.insert(currencyHistory).values({
+                  date: dateStr,
+                  eurToBrl: rate.toString(), // Using this column as generic rate field
+                  baseCurrency: currency, // EUR, USD, GBP, etc.
+                  targetCurrency: 'BRL',
+                  source: 'currencyapi'
+                });
+                
+                recordsAdded.push({ date: dateStr, currency, rate });
+                console.log(`✅ Adicionado: ${dateStr} - ${currency}/BRL: ${rate}`);
               }
               
               // Small delay between currency requests
