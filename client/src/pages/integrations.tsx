@@ -129,15 +129,6 @@ export default function Integrations() {
       color: "blue",
       hasPanel: true,
     },
-    {
-      id: "wapi",
-      name: "WAPI",
-      status: "coming-soon",
-      description: "Em breve - Integração WhatsApp Business",
-      icon: Globe,
-      color: "green",
-      hasPanel: false,
-    },
   ];
 
 
