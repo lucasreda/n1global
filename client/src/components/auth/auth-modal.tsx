@@ -207,7 +207,7 @@ export function AuthModal({ isOpen }: AuthModalProps) {
                     <p className={`text-xl text-muted-foreground leading-relaxed max-w-lg transition-opacity duration-500 ${
                       displayedText === fullText ? 'opacity-100' : 'opacity-0'
                     }`}>
-                      Gerencie seus pedidos COD, analise métricas em tempo real e integre com as principais plataformas de vendas.
+                      Gerencie seus pedidos, analise métricas em tempo real e integre com as principais plataformas de vendas.
                     </p>
                   </div>
                 </div>
