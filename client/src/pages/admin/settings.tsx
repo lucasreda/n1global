@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   User, 
   Bell, 
@@ -15,13 +18,56 @@ import {
   Settings as SettingsIcon,
   Globe,
   Users,
-  Building
+  Building,
+  TrendingUp,
+  Loader2
 } from "lucide-react";
 
 export default function AdminSettings() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [backupEnabled, setBackupEnabled] = useState(true);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Query para verificar status do histórico de moedas
+  const { data: currencyStatus, isLoading: statusLoading } = useQuery<{
+    isUpToDate: boolean;
+    lastUpdate: string | null;
+    recordCount: number;
+    startDate: string;
+    today: string;
+  }>({
+    queryKey: ['/api/currency/history/status'],
+    refetchInterval: 10000, // Refresh every 10 seconds during population
+  });
+
+  // Mutation para preencher histórico
+  const populateHistoryMutation = useMutation<{
+    message: string;
+    recordsAdded: number;
+    startDate: string;
+    endDate: string;
+    records: Array<{ date: string; eurToBrl: number }>;
+  }>({
+    mutationFn: async () => {
+      return apiRequest('/api/currency/history/populate', 'POST', {});
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Histórico preenchido com sucesso!",
+        description: `${data.recordsAdded} registros adicionados desde ${data.startDate}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/currency/history/status'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao preencher histórico",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -145,6 +191,76 @@ export default function AdminSettings() {
                     className="bg-gray-800 border-gray-600 text-white" 
                   />
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="bg-black/40 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Histórico de Conversão de Moedas
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Dados históricos EUR/BRL desde 2021 para análises financeiras
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {statusLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-gray-400">Verificando status...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <Label className="text-gray-400">Status</Label>
+                        <p className={`font-medium ${currencyStatus?.isUpToDate ? 'text-green-400' : 'text-yellow-400'}`}>
+                          {currencyStatus?.isUpToDate ? 'Atualizado' : 'Pendente'}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-gray-400">Registros</Label>
+                        <p className="text-white font-medium">{currencyStatus?.recordCount || 0}</p>
+                      </div>
+                      <div>
+                        <Label className="text-gray-400">Última Atualização</Label>
+                        <p className="text-white font-medium">
+                          {currencyStatus?.lastUpdate || 'Nunca'}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-gray-400">Período</Label>
+                        <p className="text-white font-medium">2021 - Hoje</p>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      onClick={() => populateHistoryMutation.mutate()}
+                      disabled={currencyStatus?.isUpToDate || populateHistoryMutation.isPending}
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    >
+                      {populateHistoryMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Preenchendo Histórico...
+                        </>
+                      ) : currencyStatus?.isUpToDate ? (
+                        "Histórico Atualizado"
+                      ) : (
+                        "Preencher Histórico de Moedas"
+                      )}
+                    </Button>
+
+                    {currencyStatus?.isUpToDate && (
+                      <p className="text-green-400 text-sm">
+                        ✅ Histórico completo desde 2021 até hoje
+                      </p>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

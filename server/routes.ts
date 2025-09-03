@@ -4,10 +4,10 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
@@ -580,6 +580,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Erro ao testar CurrencyAPI:", error);
       res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Currency History endpoints
+  app.get("/api/currency/history/status", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { desc, gte } = await import("drizzle-orm");
+      
+      // Check if we have data up to today
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const startDate = '2021-01-01';
+      
+      // Get latest record
+      const latestRecord = await db
+        .select()
+        .from(currencyHistory)
+        .orderBy(desc(currencyHistory.date))
+        .limit(1);
+      
+      // Count total records since 2021
+      const totalRecords = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(currencyHistory)
+        .where(gte(currencyHistory.date, startDate));
+      
+      const isUpToDate = latestRecord.length > 0 && latestRecord[0].date === today;
+      const lastUpdate = latestRecord.length > 0 ? latestRecord[0].date : null;
+      const recordCount = totalRecords[0]?.count || 0;
+      
+      res.json({
+        isUpToDate,
+        lastUpdate,
+        recordCount,
+        startDate,
+        today
+      });
+    } catch (error) {
+      console.error("Currency history status error:", error);
+      res.status(500).json({ message: "Erro ao verificar status do histórico" });
+    }
+  });
+
+  app.post("/api/currency/history/populate", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { desc, gte, sql: sqlFn } = await import("drizzle-orm");
+      
+      // Check if user is admin
+      if (req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Acesso negado - apenas administradores" });
+      }
+      
+      // Get latest record to determine start date
+      const latestRecord = await db
+        .select()
+        .from(currencyHistory)
+        .orderBy(desc(currencyHistory.date))
+        .limit(1);
+      
+      let startDate = '2021-01-01';
+      if (latestRecord.length > 0) {
+        // Start from day after last record
+        const lastDate = new Date(latestRecord[0].date);
+        lastDate.setDate(lastDate.getDate() + 1);
+        startDate = lastDate.toISOString().split('T')[0];
+      }
+      
+      const endDate = new Date().toISOString().split('T')[0];
+      
+      // If already up to date
+      if (startDate > endDate) {
+        return res.json({ 
+          message: "Histórico já está atualizado",
+          recordsAdded: 0,
+          startDate,
+          endDate
+        });
+      }
+      
+      const apiKey = process.env.CURRENCY_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "API key não configurada" });
+      }
+      
+      const recordsAdded = [];
+      const currentDate = new Date(startDate);
+      const finalDate = new Date(endDate);
+      
+      while (currentDate <= finalDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        
+        try {
+          // Fetch historical rate for this date
+          const response = await fetch(
+            `https://api.currencyapi.com/v3/historical?date=${dateStr}&base_currency=EUR&currencies=BRL&apikey=${apiKey}`
+          );
+          
+          if (!response.ok) {
+            console.warn(`⚠️ Erro na API para ${dateStr}: ${response.status}`);
+            currentDate.setDate(currentDate.getDate() + 1);
+            continue;
+          }
+          
+          const data = await response.json();
+          
+          if (data.data && data.data.BRL && data.data.BRL.value) {
+            const eurToBrl = data.data.BRL.value;
+            
+            // Insert record
+            await db.insert(currencyHistory).values({
+              date: dateStr,
+              eurToBrl: eurToBrl.toString(),
+              baseCurrency: 'EUR',
+              targetCurrency: 'BRL',
+              source: 'currencyapi'
+            });
+            
+            recordsAdded.push({ date: dateStr, eurToBrl });
+            console.log(`✅ Adicionado: ${dateStr} - EUR/BRL: ${eurToBrl}`);
+          }
+          
+          // Small delay to respect API limits
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (error) {
+          console.error(`❌ Erro ao processar ${dateStr}:`, error);
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      res.json({
+        message: `Histórico preenchido com sucesso`,
+        recordsAdded: recordsAdded.length,
+        startDate,
+        endDate,
+        records: recordsAdded.slice(0, 10) // Return first 10 for verification
+      });
+      
+    } catch (error) {
+      console.error("Currency history populate error:", error);
+      res.status(500).json({ message: "Erro ao preencher histórico de moedas" });
     }
   });
 

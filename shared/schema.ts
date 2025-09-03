@@ -118,6 +118,17 @@ export const orders = pgTable("orders", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Currency Exchange History table - stores daily EUR to BRL rates
+export const currencyHistory = pgTable("currency_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: text("date").notNull().unique(), // Format: YYYY-MM-DD
+  eurToBrl: decimal("eur_to_brl", { precision: 10, scale: 6 }).notNull(), // EUR to BRL rate
+  baseCurrency: text("base_currency").notNull().default("EUR"),
+  targetCurrency: text("target_currency").notNull().default("BRL"),
+  source: text("source").notNull().default("currencyapi"), // API source
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Order status history - track all status changes
 export const orderStatusHistory = pgTable("order_status_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1213,3 +1224,12 @@ export type InsertPaymentReceipt = z.infer<typeof insertPaymentReceiptSchema>;
 
 export type TaxPaymentSchedule = typeof taxPaymentSchedule.$inferSelect;
 export type InsertTaxPaymentSchedule = z.infer<typeof insertTaxPaymentScheduleSchema>;
+
+// Currency History schemas and types
+export const insertCurrencyHistorySchema = createInsertSchema(currencyHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CurrencyHistory = typeof currencyHistory.$inferSelect;
+export type InsertCurrencyHistory = z.infer<typeof insertCurrencyHistorySchema>;
