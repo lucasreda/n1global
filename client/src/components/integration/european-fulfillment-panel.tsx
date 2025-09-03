@@ -180,7 +180,7 @@ export function EuropeanFulfillmentPanel() {
                     <div className="flex space-x-2">
                       <Button
                         type="submit"
-                        className="gradient-blue"
+                        className="gradient-blue text-white"
                         disabled={updateCredentialsMutation.isPending}
                       >
                         {updateCredentialsMutation.isPending ? (
@@ -189,7 +189,7 @@ export function EuropeanFulfillmentPanel() {
                             Salvando...
                           </>
                         ) : (
-                          "Salvar e Testar"
+                          "Testar e Salvar"
                         )}
                       </Button>
                       <Button
