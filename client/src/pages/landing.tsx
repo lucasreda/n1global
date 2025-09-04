@@ -230,7 +230,7 @@ export default function Landing() {
         {/* Hero Section */}
         <section className="min-h-screen sm:py-20 lg:py-32 flex items-center">
           <div className="container mx-auto px-4 sm:px-6">
-            <div className="text-center max-w-4xl mx-auto -translate-y-5 sm:translate-y-0">
+            <div className="text-center max-w-4xl mx-auto -translate-y-5 sm:-translate-y-5">
               <h1 className="text-[30px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
                 {displayedText.split('\n').map((line, index) => (
                   <span key={index}>
