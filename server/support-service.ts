@@ -33,7 +33,6 @@ export class SupportService {
     return await db
       .select()
       .from(supportCategories)
-      .where(eq(supportCategories.isActive, true))
       .orderBy(desc(supportCategories.priority));
   }
 

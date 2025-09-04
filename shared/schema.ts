@@ -1107,7 +1107,6 @@ export const supportCategories = pgTable("support_categories", {
   isAutomated: boolean("is_automated").notNull().default(false), // If can be automated or needs manual review
   priority: integer("priority").notNull().default(0), // Higher number = higher priority
   color: text("color").default("#6b7280"), // UI color for category
-  isActive: boolean("is_active").notNull().default(true),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
