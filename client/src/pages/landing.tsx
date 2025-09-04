@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn, MapPin, Clock, Award } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn, MapPin, Clock, Award, ChevronDown, ChevronUp } from "lucide-react";
 import cartLogo from "@assets/cart-logo_1757013744084.png";
 import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
 import openLogo from "@assets/open-logo_1757013744090.png";
@@ -15,6 +15,7 @@ export default function Landing() {
   const [logoVisible, setLogoVisible] = useState(false);
   const [displayedText, setDisplayedText] = useState("");
   const [showCursor, setShowCursor] = useState(true);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   const fullText = "Venda seus produtos físicos na Europa\nsem burocracia";
 
@@ -77,6 +78,10 @@ export default function Landing() {
     if (ctaSection) {
       ctaSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const toggleFaq = (index: number) => {
+    setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
   const solutions = [
@@ -473,12 +478,41 @@ export default function Landing() {
                 Perguntas Frequentes
               </h2>
               
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {faqItems.map((item, index) => (
                   <Card key={index} className="glassmorphism border-border/50">
-                    <CardContent className="p-8">
-                      <h3 className="text-xl font-semibold text-foreground mb-4">{item.question}</h3>
-                      <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
+                    <CardContent className="p-0">
+                      {/* Question Header - Always Visible */}
+                      <div 
+                        className="p-6 sm:p-8 cursor-pointer sm:cursor-default flex items-center justify-between sm:block"
+                        onClick={(e) => {
+                          // Only toggle on mobile
+                          if (window.innerWidth < 640) {
+                            toggleFaq(index);
+                          }
+                        }}
+                      >
+                        <h3 className="text-lg sm:text-xl font-semibold text-foreground pr-4 sm:pr-0 sm:mb-4">{item.question}</h3>
+                        <div className="sm:hidden">
+                          {openFaqIndex === index ? (
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        
+                        {/* Answer for desktop - always visible */}
+                        <div className="hidden sm:block">
+                          <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Answer for mobile - toggle visibility */}
+                      {openFaqIndex === index && (
+                        <div className="px-6 pb-6 border-t border-border/30 sm:hidden">
+                          <p className="text-muted-foreground leading-relaxed pt-4">{item.answer}</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
