@@ -323,17 +323,18 @@ export default function Landing() {
                 ))}
               </div>
               
-              <Card className="glassmorphism border-destructive/30 max-w-3xl mx-auto">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-bold text-destructive mb-4">
-                    O resultado? Meses de planejamento, milhares em consultoria e risco de não conformidade.
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    <strong className="text-foreground">95% das empresas brasileiras</strong> que tentam entrar na Europa por conta própria 
-                    abandonam o projeto ou operam fora da conformidade legal — expondo-se a multas de até €20 milhões.
-                  </p>
-                </CardContent>
-              </Card>
+              <div 
+                className="bg-red-900/20 border border-red-400/50 hover:bg-red-900/30 backdrop-blur-sm rounded-lg p-6 sm:p-8 transition-all duration-300 max-w-3xl mx-auto"
+                style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              >
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">
+                  O resultado? Meses de planejamento, milhares em consultoria e risco de não conformidade.
+                </h3>
+                <p className="text-red-300 leading-relaxed">
+                  <strong className="text-white">95% das empresas brasileiras</strong> que tentam entrar na Europa por conta própria 
+                  abandonam o projeto ou operam fora da conformidade legal — expondo-se a multas de até €20 milhões.
+                </p>
+              </div>
             </div>
           </div>
         </section>
