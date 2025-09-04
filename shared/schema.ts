@@ -1098,6 +1098,166 @@ export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Support system tables
+export const supportCategories = pgTable("support_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // 'duvidas', 'reclamacoes', 'alteracao_endereco', 'cancelamento', 'manual'
+  displayName: text("display_name").notNull(), // 'Dúvidas', 'Reclamações', 'Alteração de Endereço', 'Cancelamento', 'Manual'
+  description: text("description"),
+  isAutomated: boolean("is_automated").notNull().default(false), // If can be automated or needs manual review
+  priority: integer("priority").notNull().default(0), // Higher number = higher priority
+  color: text("color").default("#6b7280"), // UI color for category
+  isActive: boolean("is_active").notNull().default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supportEmails = pgTable("support_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Email details from Resend webhook
+  messageId: text("message_id").notNull().unique(), // Resend message ID
+  from: text("from").notNull(), // Sender email
+  to: text("to").notNull(), // Receiver email (support@n1.com)
+  subject: text("subject").notNull(),
+  textContent: text("text_content"), // Plain text content
+  htmlContent: text("html_content"), // HTML content
+  attachments: jsonb("attachments"), // Array of attachment info
+  
+  // AI Categorization
+  categoryId: varchar("category_id").references(() => supportCategories.id),
+  aiConfidence: decimal("ai_confidence", { precision: 5, scale: 2 }), // 0-100 confidence score
+  aiReasoning: text("ai_reasoning"), // Why AI chose this category
+  
+  // Processing status
+  status: text("status").notNull().default("received"), // 'received', 'categorized', 'responded', 'closed'
+  isUrgent: boolean("is_urgent").notNull().default(false),
+  requiresHuman: boolean("requires_human").notNull().default(false),
+  
+  // Response tracking
+  hasAutoResponse: boolean("has_auto_response").notNull().default(false),
+  autoResponseSentAt: timestamp("auto_response_sent_at"),
+  
+  // Raw data from Resend
+  rawData: jsonb("raw_data"), // Complete webhook payload
+  
+  receivedAt: timestamp("received_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supportTickets = pgTable("support_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketNumber: text("ticket_number").notNull().unique(), // e.g., "SUP-2025-001"
+  
+  // Links
+  emailId: varchar("email_id").notNull().references(() => supportEmails.id),
+  categoryId: varchar("category_id").notNull().references(() => supportCategories.id),
+  assignedToUserId: varchar("assigned_to_user_id").references(() => users.id),
+  
+  // Customer info
+  customerEmail: text("customer_email").notNull(),
+  customerName: text("customer_name"),
+  
+  // Ticket details
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  priority: text("priority").notNull().default("medium"), // 'low', 'medium', 'high', 'urgent'
+  status: text("status").notNull().default("open"), // 'open', 'in_progress', 'waiting_customer', 'resolved', 'closed'
+  
+  // Resolution
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedByUserId: varchar("resolved_by_user_id").references(() => users.id),
+  
+  // Metrics
+  responseTime: integer("response_time"), // Minutes until first response
+  resolutionTime: integer("resolution_time"), // Minutes until resolution
+  
+  // Tags and notes
+  tags: text("tags").array().default([]),
+  internalNotes: text("internal_notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supportResponses = pgTable("support_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").notNull().references(() => supportCategories.id),
+  
+  // Response template
+  name: text("name").notNull(), // Template name for admin reference
+  subject: text("subject").notNull(), // Email subject template
+  textContent: text("text_content").notNull(), // Plain text response
+  htmlContent: text("html_content"), // HTML response (optional)
+  
+  // Template variables
+  variables: jsonb("variables"), // Available variables for personalization
+  
+  // Settings
+  isActive: boolean("is_active").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false), // Default response for category
+  delayMinutes: integer("delay_minutes").default(0), // Delay before sending (0 = immediate)
+  
+  // Usage tracking
+  timesUsed: integer("times_used").default(0),
+  lastUsed: timestamp("last_used"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supportConversations = pgTable("support_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id),
+  
+  // Message details
+  type: text("type").notNull(), // 'email_in', 'email_out', 'note', 'status_change'
+  from: text("from"), // Email address or 'system'
+  to: text("to"), // Email address or null for internal notes
+  
+  // Content
+  subject: text("subject"),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").notNull().default(false), // Internal notes vs customer-facing
+  
+  // Metadata
+  messageId: text("message_id"), // If from email
+  userId: varchar("user_id").references(() => users.id), // If from user action
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const supportMetrics = pgTable("support_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Time period
+  date: text("date").notNull(), // YYYY-MM-DD
+  period: text("period").notNull(), // 'daily', 'weekly', 'monthly'
+  
+  // Volume metrics
+  emailsReceived: integer("emails_received").default(0),
+  ticketsCreated: integer("tickets_created").default(0),
+  ticketsResolved: integer("tickets_resolved").default(0),
+  ticketsClosed: integer("tickets_closed").default(0),
+  
+  // Category breakdown
+  categoryBreakdown: jsonb("category_breakdown"), // Count per category
+  
+  // Response metrics
+  avgResponseTimeMinutes: decimal("avg_response_time_minutes", { precision: 10, scale: 2 }).default("0"),
+  avgResolutionTimeMinutes: decimal("avg_resolution_time_minutes", { precision: 10, scale: 2 }).default("0"),
+  automationRate: decimal("automation_rate", { precision: 5, scale: 2 }).default("0"), // % of automated responses
+  
+  // Satisfaction (future)
+  customerSatisfactionScore: decimal("customer_satisfaction_score", { precision: 3, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Schema validations
 export const insertFacebookBusinessManagerSchema = createInsertSchema(facebookBusinessManagers).omit({
   id: true,
@@ -1259,3 +1419,65 @@ export type InsertCurrencyHistory = z.infer<typeof insertCurrencyHistorySchema>;
 
 export type CurrencySettings = typeof currencySettings.$inferSelect;
 export type InsertCurrencySettings = z.infer<typeof insertCurrencySettingsSchema>;
+
+// Support schemas
+export const insertSupportCategorySchema = createInsertSchema(supportCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportEmailSchema = createInsertSchema(supportEmails).omit({
+  id: true,
+  receivedAt: true,
+  processedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  ticketNumber: true,
+  resolvedAt: true,
+  responseTime: true,
+  resolutionTime: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportResponseSchema = createInsertSchema(supportResponses).omit({
+  id: true,
+  timesUsed: true,
+  lastUsed: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupportMetricsSchema = createInsertSchema(supportMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Support types
+export type SupportCategory = typeof supportCategories.$inferSelect;
+export type InsertSupportCategory = z.infer<typeof insertSupportCategorySchema>;
+
+export type SupportEmail = typeof supportEmails.$inferSelect;
+export type InsertSupportEmail = z.infer<typeof insertSupportEmailSchema>;
+
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+
+export type SupportResponse = typeof supportResponses.$inferSelect;
+export type InsertSupportResponse = z.infer<typeof insertSupportResponseSchema>;
+
+export type SupportConversation = typeof supportConversations.$inferSelect;
+export type InsertSupportConversation = z.infer<typeof insertSupportConversationSchema>;
+
+export type SupportMetrics = typeof supportMetrics.$inferSelect;
+export type InsertSupportMetrics = z.infer<typeof insertSupportMetricsSchema>;

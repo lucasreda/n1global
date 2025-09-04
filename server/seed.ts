@@ -474,6 +474,158 @@ export async function seedDatabase() {
       }
     }
 
+    // =========================================
+    // SUPPORT SYSTEM SEED DATA (TEMPORARILY DISABLED)
+    // =========================================
+    
+    console.log("📧 Support system seeding temporarily disabled...");
+    
+    /* TODO: Re-enable after schema sync
+    // Create support categories
+    const { supportCategories, supportResponses } = await import("@shared/schema");
+    
+    const defaultCategories = [
+      {
+        name: 'duvidas',
+        displayName: 'Dúvidas',
+        description: 'Perguntas sobre rastreamento, produtos e serviços',
+        isAutomated: true,
+        priority: 1,
+        color: '#3b82f6'
+      },
+      {
+        name: 'reclamacoes',
+        displayName: 'Reclamações',
+        description: 'Problemas com produtos ou serviços',
+        isAutomated: false,
+        priority: 5,
+        color: '#ef4444'
+      },
+      {
+        name: 'alteracao_endereco',
+        displayName: 'Alteração de Endereço',
+        description: 'Solicitações de mudança de endereço de entrega',
+        isAutomated: true,
+        priority: 3,
+        color: '#f59e0b'
+      },
+      {
+        name: 'cancelamento',
+        displayName: 'Cancelamento',
+        description: 'Solicitações de cancelamento de pedidos',
+        isAutomated: true,
+        priority: 4,
+        color: '#f97316'
+      },
+      {
+        name: 'manual',
+        displayName: 'Manual',
+        description: 'Emails que requerem análise manual da equipe',
+        isAutomated: false,
+        priority: 10,
+        color: '#6b7280'
+      }
+    ];
+
+    for (const categoryData of defaultCategories) {
+      const existing = await db
+        .select()
+        .from(supportCategories)
+        .where(eq(supportCategories.name, categoryData.name))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(supportCategories).values(categoryData);
+        console.log(`✅ Created support category: ${categoryData.displayName}`);
+      } else {
+        console.log(`ℹ️  Support category ${categoryData.displayName} already exists`);
+      }
+    }
+
+    // Create default response templates
+    const categories = await db.select().from(supportCategories);
+    
+    const defaultResponses = [
+      {
+        categoryName: 'duvidas',
+        name: 'Resposta Automática - Dúvidas',
+        subject: 'Re: {{original_subject}}',
+        textContent: `Olá {{customer_name}},
+
+Recebemos sua mensagem e agradecemos por entrar em contato conosco.
+
+Para dúvidas sobre rastreamento, você pode consultar o status do seu pedido através do nosso sistema.
+
+Se precisar de mais informações, nossa equipe retornará em breve.
+
+Atenciosamente,
+Equipe de Suporte N1`,
+        isDefault: true,
+        isActive: true
+      },
+      {
+        categoryName: 'alteracao_endereco',
+        name: 'Resposta Automática - Alteração de Endereço',
+        subject: 'Re: {{original_subject}} - Alteração de Endereço',
+        textContent: `Olá {{customer_name}},
+
+Recebemos sua solicitação de alteração de endereço.
+
+Nossa equipe está analisando sua solicitação e retornará com as instruções necessárias em até 24 horas.
+
+Atenciosamente,
+Equipe de Suporte N1`,
+        isDefault: true,
+        isActive: true
+      },
+      {
+        categoryName: 'cancelamento',
+        name: 'Resposta Automática - Cancelamento',
+        subject: 'Re: {{original_subject}} - Solicitação de Cancelamento',
+        textContent: `Olá {{customer_name}},
+
+Recebemos sua solicitação de cancelamento.
+
+Nossa equipe está processando sua solicitação e retornará com os detalhes do processo em até 24 horas.
+
+Atenciosamente,
+Equipe de Suporte N1`,
+        isDefault: true,
+        isActive: true
+      }
+    ];
+
+    for (const responseData of defaultResponses) {
+      const category = categories.find(c => c.name === responseData.categoryName);
+      if (!category) continue;
+
+      const existing = await db
+        .select()
+        .from(supportResponses)
+        .where(and(
+          eq(supportResponses.categoryId, category.id),
+          eq(supportResponses.isDefault, true)
+        ))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(supportResponses).values({
+          categoryId: category.id,
+          name: responseData.name,
+          subject: responseData.subject,
+          textContent: responseData.textContent,
+          isDefault: responseData.isDefault,
+          isActive: responseData.isActive
+        });
+        console.log(`✅ Created default response for: ${category.displayName}`);
+      } else {
+        console.log(`ℹ️  Default response for ${category.displayName} already exists`);
+      }
+    }
+
+    console.log("📧 Support system setup completed!");
+    */
+
     console.log("🌱 Database seeding completed!");
   } catch (error) {
     console.error("❌ Database seeding failed:", error);

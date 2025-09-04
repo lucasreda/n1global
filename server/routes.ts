@@ -16,6 +16,7 @@ import { storeContext } from "./middleware/store-context";
 import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
+import { registerSupportRoutes } from "./support-routes";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -4944,6 +4945,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
       res.status(500).json({ message: "Erro ao atualizar pool de investimento" });
     }
   });
+
+  // Register support system routes
+  registerSupportRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
