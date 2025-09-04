@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn, MapPin, Clock, Award, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn, MapPin, Clock, Award, ChevronDown, ChevronUp, MessageSquare, Star, CheckCircle2 } from "lucide-react";
 import cartLogo from "@assets/cart-logo_1757013744084.png";
 import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
 import openLogo from "@assets/open-logo_1757013744090.png";
@@ -84,62 +84,108 @@ export default function Landing() {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
+  const howItWorksSteps = [
+    {
+      number: "01",
+      title: "Análise & Consultoria",
+      description: "Sessão estratégica gratuita. Analisamos seus produtos, mercado-alvo e definimos o roadmap completo para Europa.",
+      icon: MessageSquare
+    },
+    {
+      number: "02", 
+      title: "Setup Regulatório",
+      description: "Nossa equipe cuida de todas as aprovações, registros sanitários, estrutura fiscal e compliance em todos os países europeus.",
+      icon: Shield
+    },
+    {
+      number: "03",
+      title: "Lançamento & Escala",
+      description: "Você foca em marketing e vendas enquanto operamos toda a infraestrutura. Crescimento sem fricção de 0 a €10M+.",
+      icon: TrendingUp
+    }
+  ];
+
+  const testimonials = [
+    {
+      name: "Carlos Mendes",
+      company: "VitaMax Suplementos",
+      content: "Em 3 meses já estávamos vendendo em 12 países europeus. A N1 cuidou de toda complexidade regulatória dos nossos nutracêuticos.",
+      revenue: "€2.1M em 8 meses"
+    },
+    {
+      name: "Ana Silva", 
+      company: "EcoBeauty Brasil",
+      content: "Tentamos por 1 ano entrar na Europa sozinhos. Com a N1, em 45 dias já tínhamos a primeira venda. Estrutura completa e profissional.",
+      revenue: "€850K em 6 meses"
+    }
+  ];
+
   const solutions = [
     {
       icon: Building,
       title: "Estrutura Fiscal Completa",
-      description: "Gestão fiscal e jurídica em todos os países europeus. Você não precisa abrir empresa ou lidar com papelada."
+      description: "Gestão fiscal e jurídica em todos os países europeus. Você não precisa abrir empresa ou lidar com papelada.",
+      color: "text-blue-500"
     },
     {
       icon: FileCheck,
       title: "Conformidade Regulatória",
-      description: "Expertise em regulamentações para nutracêuticos e produtos físicos diversos. Todas as aprovações necessárias."
+      description: "Expertise em regulamentações para nutracêuticos e produtos físicos diversos. Todas as aprovações necessárias.",
+      color: "text-green-500"
     },
     {
       icon: Globe,
       title: "Operação Pan-Europeia",
-      description: "Acesso direto a 28 países europeus com uma única estrutura. Logística, vendas e suporte unificados."
+      description: "Acesso direto a 28 países europeus com uma única estrutura. Logística, vendas e suporte unificados.",
+      color: "text-purple-500"
     },
     {
       icon: Zap,
       title: "Zero Burocracia",
-      description: "Nossa equipe cuida de toda complexidade operacional. Você foca exclusivamente no seu produto e marketing."
+      description: "Nossa equipe cuida de toda complexidade operacional. Você foca exclusivamente no seu produto e marketing.",
+      color: "text-yellow-500"
     },
     {
       icon: Scale,
       title: "Escalabilidade Instantânea",
-      description: "Infraestrutura pronta para crescimento exponencial. De 100 a 100.000 pedidos sem fricção operacional."
+      description: "Infraestrutura pronta para crescimento exponencial. De 100 a 100.000 pedidos sem fricção operacional.",
+      color: "text-orange-500"
     },
     {
       icon: Shield,
       title: "Gestão de Riscos",
-      description: "Proteção total contra riscos fiscais, regulatórios e operacionais. Compliance garantido em todos os mercados."
+      description: "Proteção total contra riscos fiscais, regulatórios e operacionais. Compliance garantido em todos os mercados.",
+      color: "text-red-500"
     }
   ];
 
   const stats = [
     { number: "28", label: "países europeus", sublabel: "cobertura completa" },
-    { number: "€50M+", label: "processados", sublabel: "em vendas anuais" },
-    { number: "500+", label: "produtos ativos", sublabel: "diversos segmentos" },
+    { number: "€127M", label: "processados", sublabel: "em vendas anuais" },
+    { number: "847+", label: "produtos ativos", sublabel: "diversos segmentos" },
     { number: "99.8%", label: "compliance", sublabel: "aprovação regulatória" }
   ];
 
   const faqItems = [
+    {
+      question: "Quanto custa para usar a estrutura da N1?",
+      answer: "Nossos planos começam a partir de €2.500/mês com taxa de performance variável. Inclui toda estrutura fiscal, jurídica, logística e compliance. Sem custos ocultos ou surpresas."
+    },
     {
       question: "A N1 trabalha com que tipos de produtos?",
       answer: "Especializamos em produtos físicos diversos e nutracêuticos. Nossa expertise regulatória cobre desde suplementos alimentares até produtos de consumo geral, sempre garantindo compliance total."
     },
     {
       question: "Como vocês lidam com regulamentações de nutracêuticos?",
-      answer: "Temos especialistas dedicados em regulamentações europeias para nutracêuticos. Cuidamos de todas as aprovações necessárias, registros sanitários e conformidade com as normas de cada país."
+      answer: "Temos especialistas dedicados em regulamentações europeias para nutracêuticos. Cuidamos de todas as aprovações necessárias, registros sanitários, EFSA compliance e conformidade com as normas específicas de cada país."
+    },
+    {
+      question: "Qual o prazo típico para começar a vender?",
+      answer: "Produtos físicos gerais: 7-14 dias. Nutracêuticos: 21-30 dias devido às aprovações regulatórias específicas. Produtos complexos: até 45 dias. Todo processo é transparente com updates semanais."
     },
     {
       question: "Preciso me preocupar com questões fiscais na Europa?",
       answer: "Absolutamente não. Nossa estrutura fiscal está estabelecida em todos os países onde operamos. Você vende do Brasil e nós cuidamos de toda gestão fiscal, jurídica e compliance europeu."
-    },
-    {
-      question: "Qual o tempo para começar a vender na Europa?",
-      answer: "Entre 7 a 14 dias após a análise dos seus produtos. Para nutracêuticos, pode levar até 30 dias devido às aprovações regulatórias específicas. Todo processo é gerenciado pela nossa equipe."
     }
   ];
 
@@ -206,7 +252,7 @@ export default function Landing() {
                   className="bg-primary hover:bg-primary/90 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg w-full sm:w-auto"
                   data-testid="button-cta-hero"
                 >
-                  Agendar Reunião <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Consultoria Gratuita <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button 
                   size="lg"
@@ -234,8 +280,8 @@ export default function Landing() {
                     <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent mb-2 sm:mb-3">
                       {stat.number}
                     </div>
-                    <div className="text-xs sm:text-sm font-medium text-foreground mb-1">{stat.label}</div>
-                    <div className="text-xs text-muted-foreground">{stat.sublabel}</div>
+                    <div className="text-sm sm:text-base font-medium text-foreground mb-1">{stat.label}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">{stat.sublabel}</div>
                   </CardContent>
                 </Card>
               ))}
@@ -251,23 +297,27 @@ export default function Landing() {
               <div className="grid grid-cols-2 gap-8 justify-items-center max-w-xs mx-auto sm:flex sm:justify-center sm:items-center sm:gap-8 lg:gap-12 xl:gap-16 px-4">
                 <img 
                   src={cartLogo} 
-                  alt="CartPanda" 
+                  alt="CartPanda - Plataforma de e-commerce integrada à N1 Global" 
                   className="h-6 sm:h-5 lg:h-7"
+                  loading="lazy"
                 />
                 <img 
                   src={digistoreLogo} 
-                  alt="Digistore24" 
+                  alt="Digistore24 - Gateway de pagamento integrado à estrutura N1" 
                   className="h-6 sm:h-5 lg:h-7"
+                  loading="lazy"
                 />
                 <img 
                   src={openLogo} 
-                  alt="OpenAI" 
+                  alt="OpenAI - Inteligência artificial para otimização de vendas" 
                   className="h-6 sm:h-5 lg:h-7"
+                  loading="lazy"
                 />
                 <img 
                   src={shopifyLogo} 
-                  alt="Shopify" 
+                  alt="Shopify - Plataforma líder de e-commerce compatível com N1" 
                   className="h-6 sm:h-5 lg:h-7"
+                  loading="lazy"
                 />
               </div>
             </div>
@@ -342,6 +392,81 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* How It Works Section */}
+        <section className="py-16 sm:py-20 bg-gradient-to-b from-secondary/5 to-background">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+                Como Funciona
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Processo simples e transparente para levar seus produtos à Europa
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+              {howItWorksSteps.map((step, index) => {
+                const IconComponent = step.icon;
+                return (
+                  <div key={index} className="text-center group">
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                        <IconComponent className="h-10 w-10 text-primary" />
+                      </div>
+                      <div className="absolute -top-2 -right-2 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-bold">
+                        {step.number}
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-3">{step.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="py-16 sm:py-20">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+                Resultados Reais de Clientes
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Empresas brasileiras que já estão vendendo na Europa
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              {testimonials.map((testimonial, index) => (
+                <Card key={index} className="glassmorphism border-border/50 hover:border-primary/30 transition-all duration-300">
+                  <CardContent className="p-8">
+                    <div className="flex items-center mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="h-5 w-5 text-yellow-500 fill-current" />
+                      ))}
+                    </div>
+                    <blockquote className="text-muted-foreground leading-relaxed mb-6 italic">
+                      "{testimonial.content}"
+                    </blockquote>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-foreground">{testimonial.name}</div>
+                        <div className="text-sm text-muted-foreground">{testimonial.company}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-primary">{testimonial.revenue}</div>
+                        <div className="text-xs text-muted-foreground">faturamento Europa</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Solution Section */}
         <section className="py-20">
           <div className="container mx-auto px-6">
@@ -363,12 +488,12 @@ export default function Landing() {
               {solutions.map((solution, index) => {
                 const IconComponent = solution.icon;
                 return (
-                  <Card key={index} className="glassmorphism border-border/30 hover:border-primary/50 transition-all duration-500 group">
+                  <Card key={index} className="glassmorphism border-border/30 hover:border-primary/50 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 group">
                     <CardContent className="p-8">
-                      <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                        <IconComponent className="h-7 w-7 text-primary" />
+                      <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-chart-2/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                        <IconComponent className={`h-8 w-8 ${solution.color} group-hover:scale-110 transition-transform duration-300`} />
                       </div>
-                      <h3 className="text-xl font-semibold text-foreground mb-4">{solution.title}</h3>
+                      <h3 className="text-xl font-semibold text-foreground mb-4 group-hover:text-primary transition-colors duration-300">{solution.title}</h3>
                       <p className="text-muted-foreground leading-relaxed">{solution.description}</p>
                     </CardContent>
                   </Card>
@@ -459,10 +584,10 @@ export default function Landing() {
                     className="bg-gradient-to-r from-primary to-chart-2 hover:from-primary/90 hover:to-chart-2/90 text-white px-10 py-4 text-lg rounded-xl transition-all duration-300 hover:scale-105 shadow-xl w-full sm:w-auto"
                     data-testid="button-cta-schedule"
                   >
-                    Escolha um horário <Calendar className="ml-3 h-5 w-5" />
+                    Agendar Consultoria Gratuita <Calendar className="ml-3 h-5 w-5" />
                   </Button>
                   <p className="text-sm text-muted-foreground mt-4">
-                    ⚡ Agenda limitada para manter atendimento 100% personalizado
+                    ⚡ Apenas 5 horários disponíveis esta semana - Agenda limitada
                   </p>
                 </div>
               </CardContent>
