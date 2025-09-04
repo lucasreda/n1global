@@ -171,45 +171,29 @@ export default function Landing() {
                 Estrutura Completa de Vendas na Europa
               </Badge>
               <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8 min-h-[200px] xl:min-h-[240px]">
-                {(() => {
-                  const chars = displayedText.split('');
-                  const result = [];
-                  let i = 0;
-                  
-                  while (i < chars.length) {
-                    const char = chars[i];
-                    
-                    if (char === '\n') {
-                      result.push(<br key={i} />);
-                      i++;
-                      continue;
-                    }
-                    
-                    const word = getWordAtPosition(fullText, i);
-                    
-                    if (word === "Venda" || word === "sem" || word === "burocracia") {
-                      // Collect all characters of this word
-                      const wordChars = [];
-                      const wordStart = i;
+                {displayedText.split('\n').map((line, lineIndex) => (
+                  <div key={lineIndex}>
+                    {line.split(' ').map((word, wordIndex) => {
+                      if (word === '') return null;
                       
-                      while (i < chars.length && chars[i] !== ' ' && chars[i] !== '\n') {
-                        wordChars.push(chars[i]);
-                        i++;
-                      }
+                      const isHighlighted = word === "Venda" || word === "sem" || word === "burocracia";
                       
-                      result.push(
-                        <span key={wordStart} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                          {wordChars.join('')}
+                      return (
+                        <span key={`${lineIndex}-${wordIndex}`}>
+                          {isHighlighted ? (
+                            <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                              {word}
+                            </span>
+                          ) : (
+                            word
+                          )}
+                          {wordIndex < line.split(' ').length - 1 && " "}
                         </span>
                       );
-                    } else {
-                      result.push(<span key={i}>{char}</span>);
-                      i++;
-                    }
-                  }
-                  
-                  return result;
-                })()}
+                    })}
+                    {lineIndex < displayedText.split('\n').length - 1 && <br />}
+                  </div>
+                ))}
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-12 max-w-4xl mx-auto">
