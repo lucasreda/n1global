@@ -171,40 +171,13 @@ export default function Landing() {
                 Estrutura Completa de Vendas na Europa
               </Badge>
               <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8 min-h-[200px] xl:min-h-[240px]">
-                {displayedText.split(' ').map((word, index) => {
-                  if (word === '\n' || word.includes('\n')) {
-                    const parts = word.split('\n');
-                    return parts.map((part, partIndex) => (
-                      <span key={`${index}-${partIndex}`}>
-                        {part && (
-                          <span>
-                            {part === "Venda" || part === "sem" || part === "burocracia" ? (
-                              <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                                {part}
-                              </span>
-                            ) : (
-                              part
-                            )}
-                          </span>
-                        )}
-                        {partIndex < parts.length - 1 && <br />}
-                      </span>
-                    ));
-                  }
-                  
-                  return (
-                    <span key={index}>
-                      {word === "Venda" || word === "sem" || word === "burocracia" ? (
-                        <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                          {word}
-                        </span>
-                      ) : (
-                        word
-                      )}
-                      {index < displayedText.split(' ').length - 1 && " "}
-                    </span>
-                  );
-                })}
+                <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                  Venda
+                </span>
+                {" "}seus produtos físicos na Europa<br />
+                <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                  sem burocracia
+                </span>
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-12 max-w-4xl mx-auto">
