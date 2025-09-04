@@ -527,7 +527,7 @@ export default function Landing() {
                 const IconComponent = solution.icon;
                 return (
                   <Card key={index} className="glassmorphism border-border/30 hover:border-primary/50 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 group">
-                    <CardContent className="p-8">
+                    <CardContent className="p-4 sm:p-8">
                       <div className="w-16 h-16 bg-gradient-to-br from-primary/10 to-chart-2/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                         <IconComponent className={`h-8 w-8 ${solution.color} group-hover:scale-110 transition-transform duration-300`} />
                       </div>
