@@ -615,33 +615,23 @@ export default function Landing() {
                     <CardContent className="p-0">
                       {/* Question Header - Always Visible */}
                       <div 
-                        className="p-4 sm:p-6 cursor-pointer sm:cursor-default flex items-center justify-between sm:block"
-                        onClick={(e) => {
-                          // Only toggle on mobile
-                          if (window.innerWidth < 640) {
-                            toggleFaq(index);
-                          }
-                        }}
+                        className="p-4 sm:p-6 cursor-pointer flex items-center justify-between"
+                        onClick={() => toggleFaq(index)}
                       >
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground pr-4 sm:pr-0 sm:mb-3">{item.question}</h3>
-                        <div className="sm:hidden">
+                        <h3 className="text-base sm:text-lg font-semibold text-foreground pr-4">{item.question}</h3>
+                        <div>
                           {openFaqIndex === index ? (
                             <ChevronUp className="h-5 w-5 text-muted-foreground" />
                           ) : (
                             <ChevronDown className="h-5 w-5 text-muted-foreground" />
                           )}
                         </div>
-                        
-                        {/* Answer for desktop - always visible */}
-                        <div className="hidden sm:block">
-                          <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
-                        </div>
                       </div>
                       
-                      {/* Answer for mobile - toggle visibility */}
+                      {/* Answer - toggle visibility for all screen sizes */}
                       {openFaqIndex === index && (
-                        <div className="px-4 pb-4 border-t border-border/30 sm:hidden">
-                          <p className="text-sm text-muted-foreground leading-relaxed pt-3">{item.answer}</p>
+                        <div className="px-4 pb-4 border-t border-border/30">
+                          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed pt-3">{item.answer}</p>
                         </div>
                       )}
                     </CardContent>
