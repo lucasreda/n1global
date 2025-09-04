@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,16 @@ import logoPath from "@assets/logo_1756142152045.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  const [logoVisible, setLogoVisible] = useState(false);
+
+  useEffect(() => {
+    // Start logo animation after component mounts
+    const timer = setTimeout(() => {
+      setLogoVisible(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLoginClick = () => {
     setLocation('/login');
@@ -85,7 +96,15 @@ export default function Landing() {
       <header className="relative z-10 border-b border-border/50 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <img src={logoPath} alt="N1 Global" className="h-8 w-auto" />
+            <img 
+              src={logoPath} 
+              alt="N1 Global" 
+              className={`h-8 w-auto transition-all duration-700 ease-out ${
+                logoVisible 
+                  ? 'translate-y-0 opacity-100' 
+                  : '-translate-y-12 opacity-0'
+              }`} 
+            />
             <Button 
               onClick={handleLoginClick}
               className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-xl transition-all duration-200 hover:scale-105"
