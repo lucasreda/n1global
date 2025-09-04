@@ -232,13 +232,19 @@ export default function Landing() {
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center max-w-4xl mx-auto -translate-y-5 sm:translate-y-0">
               <h1 className="text-[30px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
-                <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                  Venda
-                </span>
-                {" "}seus produtos físicos na Europa<br className="hidden sm:block" />
-                <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                  {" "}sem burocracia
-                </span>
+                {displayedText.split('\n').map((line, index) => (
+                  <span key={index}>
+                    {line.split(' ').map((word, wordIndex) => {
+                      const isHighlightWord = word === 'Venda' || word === 'sem' || word === 'burocracia';
+                      return (
+                        <span key={wordIndex} className={isHighlightWord ? "bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent" : ""}>
+                          {word}{wordIndex < line.split(' ').length - 1 ? ' ' : ''}
+                        </span>
+                      );
+                    })}
+                    {index < displayedText.split('\n').length - 1 && <br className="hidden sm:block" />}
+                  </span>
+                ))}
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
               <p className="text-base sm:text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-8 sm:mb-12 max-w-4xl mx-auto px-4">
