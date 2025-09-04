@@ -217,7 +217,6 @@ export default function Landing() {
         <section className="py-20">
           <div className="container mx-auto px-6">
             <div className="mb-16 text-center">
-              <h2 className="text-2xl font-semibold text-foreground mb-4">Números que comprovam nossa excelência</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">Infraestrutura consolidada e resultados comprovados no mercado europeu</p>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
