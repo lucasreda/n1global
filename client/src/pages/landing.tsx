@@ -242,7 +242,13 @@ export default function Landing() {
                       while (i < words.length) {
                         const word = words[i];
                         
-                        if (word === 'sem' && i + 1 < words.length && words[i + 1] === 'burocracia') {
+                        if (word === 'Venda') {
+                          result.push(
+                            <span key={`${index}-${i}`} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                              {word}
+                            </span>
+                          );
+                        } else if (word === 'sem' && i + 1 < words.length && words[i + 1] === 'burocracia') {
                           // Apply gradient to "sem burocracia" as a single unit
                           result.push(
                             <span key={`${index}-${i}`} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
