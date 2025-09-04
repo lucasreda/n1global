@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X } from "lucide-react";
 import cartLogo from "@assets/cart-logo_1757013744084.png";
 import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
 import openLogo from "@assets/open-logo_1757013744090.png";
@@ -324,10 +324,11 @@ export default function Landing() {
               </div>
               
               <div 
-                className="bg-red-900/20 border border-red-400/50 hover:bg-red-900/30 backdrop-blur-sm rounded-lg p-6 sm:p-8 transition-all duration-300 max-w-3xl mx-auto"
+                className="bg-red-900/20 border border-red-400/50 hover:bg-red-900/30 backdrop-blur-sm rounded-lg p-6 sm:p-8 transition-all duration-300 max-w-3xl mx-auto relative"
                 style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
               >
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">
+                <X className="absolute top-4 right-4 w-5 h-5 text-red-400" />
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 pr-8">
                   O resultado? Meses de planejamento, milhares em consultoria e risco de não conformidade.
                 </h3>
                 <p className="text-red-300 leading-relaxed">
