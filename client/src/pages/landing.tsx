@@ -574,7 +574,7 @@ export default function Landing() {
               <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/10 to-chart-2/10 rounded-full blur-3xl"></div>
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-chart-1/10 to-primary/10 rounded-full blur-3xl"></div>
               
-              <CardContent className="p-12 relative z-10">
+              <CardContent className="p-6 sm:p-12 relative z-10">
                 <div className="text-center mb-12">
                   <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-6">
                     Comece a vender na Europa
