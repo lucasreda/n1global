@@ -235,8 +235,39 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Integrations Section */}
+        <section className="py-16 bg-gradient-to-b from-background to-primary/5">
+          <div className="container mx-auto px-6">
+            <div className="text-center">
+              <p className="text-muted-foreground mb-12">Integrações com as principais plataformas</p>
+              <div className="flex justify-center items-center gap-12 lg:gap-16 flex-wrap">
+                <img 
+                  src="/attached_assets/cart-logo_1757013744084.png" 
+                  alt="CartPanda" 
+                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                />
+                <img 
+                  src="/attached_assets/digistore-logo_1757013744090.png" 
+                  alt="Digistore24" 
+                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                />
+                <img 
+                  src="/attached_assets/open-logo_1757013744090.png" 
+                  alt="OpenAI" 
+                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                />
+                <img 
+                  src="/attached_assets/shopify-logo_1757013744091.png" 
+                  alt="Shopify" 
+                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Problem Section */}
-        <section className="py-20 bg-gradient-to-b from-background to-secondary/5">
+        <section className="py-20 bg-gradient-to-b from-primary/5 to-secondary/5">
           <div className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto text-center">
               <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-8">
