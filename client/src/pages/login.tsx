@@ -185,6 +185,17 @@ export default function Login() {
         </button>
       </div>
 
+      {/* Close Button - Top Right */}
+      <div className="absolute top-6 right-6 z-10">
+        <button 
+          onClick={handleBackToHome}
+          className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-white/10 rounded-full"
+          data-testid="button-close-auth"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
       {/* Main Content - Desktop Split Layout */}
       <div className="relative z-10 min-h-screen flex items-center justify-center">
         <div className="w-full max-w-7xl mx-auto">
@@ -230,16 +241,7 @@ export default function Login() {
               </div>
 
               {/* Auth Card */}
-              <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl relative">
-                {/* Close Button */}
-                <button 
-                  onClick={handleBackToHome}
-                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-white/10 rounded-full"
-                  data-testid="button-close-auth"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-
+              <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl">
                 <div className="text-center mb-4 mt-4">
                   <h2 className="text-3xl font-bold text-foreground mb-2">
                     {isLoginMode ? "Bem-vindo" : "Criar Conta"}
