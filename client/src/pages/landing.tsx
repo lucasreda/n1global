@@ -531,7 +531,7 @@ export default function Landing() {
                 {/* Company Info */}
                 <div className="lg:col-span-1">
                   <div className="flex justify-center mb-6">
-                    <img src={logoPath} alt="N1 Global" className="h-8 w-auto" />
+                    <img src={logoPath} alt="N1 Global" className="h-6 w-auto" />
                   </div>
                   <p className="text-muted-foreground leading-relaxed mb-6">
                     Especialistas em estrutura completa para vendas de produtos físicos e nutracêuticos na Europa. 
