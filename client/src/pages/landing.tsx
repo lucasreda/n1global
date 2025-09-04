@@ -45,6 +45,21 @@ export default function Landing() {
     return () => clearInterval(typewriterInterval);
   }, [fullText]);
 
+  // Helper function to get the word at a specific position
+  const getWordAtPosition = (text: string, position: number) => {
+    const textUpToPosition = text.slice(0, position + 1);
+    const words = text.split(/(\s|\n)/);
+    let currentPos = 0;
+    
+    for (const word of words) {
+      if (currentPos + word.length >= position) {
+        return word.trim();
+      }
+      currentPos += word.length;
+    }
+    return "";
+  };
+
   const handleLoginClick = () => {
     setLocation('/login');
   };
@@ -152,27 +167,30 @@ export default function Landing() {
                 Estrutura Completa de Vendas na Europa
               </Badge>
               <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8 min-h-[200px] xl:min-h-[240px]">
-                {displayedText.split('\n').map((line, lineIndex) => (
-                  <div key={lineIndex}>
-                    {line.split(' ').map((word, wordIndex) => (
-                      <span key={`${lineIndex}-${wordIndex}`}>
-                        {word === "Venda" ? (
-                          <span className="bg-gradient-to-r from-blue-600 to-blue-300 bg-clip-text text-transparent">
-                            {word}
-                          </span>
-                        ) : word === "sem" || word === "burocracia" ? (
-                          <span className="bg-gradient-to-r from-blue-400 to-blue-200 bg-clip-text text-transparent">
-                            {word}
-                          </span>
-                        ) : (
-                          word
-                        )}
-                        {wordIndex < line.split(' ').length - 1 && " "}
-                      </span>
-                    ))}
-                    {lineIndex < displayedText.split('\n').length - 1 && <br />}
-                  </div>
-                ))}
+                {displayedText.split('').map((char, index) => {
+                  const textUpToIndex = displayedText.slice(0, index + 1);
+                  const word = getWordAtPosition(fullText, index);
+                  
+                  if (char === '\n') {
+                    return <br key={index} />;
+                  }
+                  
+                  return (
+                    <span key={index}>
+                      {word === "Venda" ? (
+                        <span className="bg-gradient-to-r from-blue-600 to-blue-300 bg-clip-text text-transparent">
+                          {char}
+                        </span>
+                      ) : word === "sem" || word === "burocracia" ? (
+                        <span className="bg-gradient-to-r from-blue-400 to-blue-200 bg-clip-text text-transparent">
+                          {char}
+                        </span>
+                      ) : (
+                        char
+                      )}
+                    </span>
+                  );
+                })}
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-12 max-w-4xl mx-auto">
