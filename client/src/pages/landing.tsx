@@ -185,7 +185,7 @@ export default function Landing() {
         <section className="min-h-screen sm:py-20 lg:py-32 flex items-center">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center max-w-4xl mx-auto -translate-y-5 sm:translate-y-0">
-              <h1 className="text-[28px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
+              <h1 className="text-[30px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                   Venda
                 </span>
@@ -484,7 +484,7 @@ export default function Landing() {
                     <CardContent className="p-0">
                       {/* Question Header - Always Visible */}
                       <div 
-                        className="p-6 sm:p-8 cursor-pointer sm:cursor-default flex items-center justify-between sm:block"
+                        className="p-4 sm:p-6 cursor-pointer sm:cursor-default flex items-center justify-between sm:block"
                         onClick={(e) => {
                           // Only toggle on mobile
                           if (window.innerWidth < 640) {
@@ -492,7 +492,7 @@ export default function Landing() {
                           }
                         }}
                       >
-                        <h3 className="text-lg sm:text-xl font-semibold text-foreground pr-4 sm:pr-0 sm:mb-4">{item.question}</h3>
+                        <h3 className="text-base sm:text-lg font-semibold text-foreground pr-4 sm:pr-0 sm:mb-3">{item.question}</h3>
                         <div className="sm:hidden">
                           {openFaqIndex === index ? (
                             <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -509,8 +509,8 @@ export default function Landing() {
                       
                       {/* Answer for mobile - toggle visibility */}
                       {openFaqIndex === index && (
-                        <div className="px-6 pb-6 border-t border-border/30 sm:hidden">
-                          <p className="text-muted-foreground leading-relaxed pt-4">{item.answer}</p>
+                        <div className="px-4 pb-4 border-t border-border/30 sm:hidden">
+                          <p className="text-sm text-muted-foreground leading-relaxed pt-3">{item.answer}</p>
                         </div>
                       )}
                     </CardContent>
