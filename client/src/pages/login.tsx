@@ -174,8 +174,8 @@ export default function Login() {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-chart-2/20 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Logo - Top Left */}
-      <div className="absolute top-6 left-6 z-10">
+      {/* Logo - Top Left on Desktop, Hidden on Mobile */}
+      <div className="absolute top-6 left-6 z-10 hidden lg:block">
         <button 
           onClick={handleBackToHome}
           className="hover:opacity-80 transition-opacity"
@@ -218,6 +218,17 @@ export default function Login() {
 
             {/* Right Side - Auth Form */}
             <div className="w-full max-w-md lg:max-w-lg xl:max-w-xl lg:flex-shrink-0 p-4">
+              {/* Mobile Logo - Centered at Top */}
+              <div className="flex justify-center mb-8 lg:hidden">
+                <button 
+                  onClick={handleBackToHome}
+                  className="hover:opacity-80 transition-opacity"
+                  data-testid="button-back-home-mobile"
+                >
+                  <img src={logoPath} alt="Logo" className="h-8 w-auto" />
+                </button>
+              </div>
+
               {/* Auth Card */}
               <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl">
                 <div className="text-center mb-8">
