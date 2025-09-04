@@ -376,7 +376,7 @@ export default function Landing() {
             {/* Key Differentiators */}
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-foreground mb-3">Por que escolher a N1?</h3>
+                <h3 className="text-2xl font-bold text-foreground mb-3 mt-10">Por que escolher a N1?</h3>
                 <p className="text-muted-foreground">Somos os únicos com essa expertise específica no mercado</p>
               </div>
               <div className="grid md:grid-cols-3 gap-6 text-center">
