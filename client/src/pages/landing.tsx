@@ -245,22 +245,22 @@ export default function Landing() {
                 <img 
                   src={cartLogo} 
                   alt="CartPanda" 
-                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300"
+                  className="h-6 sm:h-5 lg:h-7"
                 />
                 <img 
                   src={digistoreLogo} 
                   alt="Digistore24" 
-                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300"
+                  className="h-6 sm:h-5 lg:h-7"
                 />
                 <img 
                   src={openLogo} 
                   alt="OpenAI" 
-                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300"
+                  className="h-6 sm:h-5 lg:h-7"
                 />
                 <img 
                   src={shopifyLogo} 
                   alt="Shopify" 
-                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300"
+                  className="h-6 sm:h-5 lg:h-7"
                 />
               </div>
             </div>
