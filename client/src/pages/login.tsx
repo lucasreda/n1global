@@ -231,7 +231,7 @@ export default function Login() {
 
               {/* Auth Card */}
               <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl">
-                <div className="text-center mb-8">
+                <div className="text-center mb-4">
                   <h2 className="text-3xl font-bold text-foreground mb-2">
                     {isLoginMode ? "Bem-vindo" : "Criar Conta"}
                   </h2>
