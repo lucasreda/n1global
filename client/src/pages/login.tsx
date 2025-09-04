@@ -230,7 +230,16 @@ export default function Login() {
               </div>
 
               {/* Auth Card */}
-              <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl">
+              <div className="glassmorphism rounded-2xl p-8 backdrop-blur-xl relative">
+                {/* Close Button */}
+                <button 
+                  onClick={handleBackToHome}
+                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-white/10 rounded-full"
+                  data-testid="button-close-auth"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+
                 <div className="text-center mb-4 mt-4">
                   <h2 className="text-3xl font-bold text-foreground mb-2">
                     {isLoginMode ? "Bem-vindo" : "Criar Conta"}
