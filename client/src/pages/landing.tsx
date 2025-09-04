@@ -178,7 +178,7 @@ export default function Landing() {
         <section className="py-12 sm:py-20 lg:py-32">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center max-w-4xl mx-auto">
-              <Badge variant="outline" className="mb-6 sm:mb-8 border-yellow-500 text-yellow-500 px-3 sm:px-4 py-2 text-sm">
+              <Badge variant="outline" className="mb-6 sm:mb-8 border-yellow-500 text-yellow-500 px-3 sm:px-4 py-2 text-sm hidden sm:flex">
                 <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Estrutura Completa de Vendas na Europa
               </Badge>
