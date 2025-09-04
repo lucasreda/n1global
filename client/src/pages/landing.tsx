@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn, MapPin, Clock, Award } from "lucide-react";
 import cartLogo from "@assets/cart-logo_1757013744084.png";
 import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
 import openLogo from "@assets/open-logo_1757013744090.png";
@@ -496,22 +496,124 @@ export default function Landing() {
         </section>
 
         {/* Footer */}
-        <footer className="py-12 border-t border-border/50">
+        <footer className="bg-gradient-to-b from-background to-secondary/10 border-t border-border/50">
           <div className="container mx-auto px-6">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="flex items-center space-x-4 mb-6 md:mb-0">
-                <img src={logoPath} alt="N1 Global" className="h-6 w-auto" />
-                <span className="text-muted-foreground">Estrutura completa para produtos físicos na Europa</span>
-              </div>
-              
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span className="text-sm">Suporte 24/7</span>
+            {/* Main Footer Content */}
+            <div className="py-16">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+                
+                {/* Company Info */}
+                <div className="lg:col-span-1">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <img src={logoPath} alt="N1 Global" className="h-8 w-auto" />
+                    <span className="text-xl font-bold text-foreground">N1 Global</span>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed mb-6">
+                    Especialistas em estrutura completa para vendas de produtos físicos e nutracêuticos na Europa. 
+                    Compliance, logística e operação sem burocracia.
+                  </p>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Award className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Certificação GDPR • ISO 27001</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Globe className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">28 países europeus cobertos</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <Mail className="h-4 w-4" />
-                  <span className="text-sm">contato@n1-global.com</span>
+
+                {/* Services */}
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-6">Serviços</h3>
+                  <ul className="space-y-3">
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Estrutura Fiscal</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Conformidade Regulatória</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Logística Europeia</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Nutracêuticos</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Produtos Físicos</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Gestão de Riscos</a></li>
+                  </ul>
+                </div>
+
+                {/* Company */}
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-6">Empresa</h3>
+                  <ul className="space-y-3">
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Sobre Nós</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Nossa Equipe</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Casos de Sucesso</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Parceiros</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Carreira</a></li>
+                    <li><a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Imprensa</a></li>
+                  </ul>
+                </div>
+
+                {/* Contact & Support */}
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-6">Contato</h3>
+                  
+                  {/* Europe Office */}
+                  <div className="mb-6">
+                    <h4 className="font-medium text-foreground mb-3">Escritório Europa</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">Amsterdã, Países Baixos<br />Zurich, Suíça</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="h-4 w-4 text-primary" />
+                        <span className="text-sm text-muted-foreground">+31 20 345 6789</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Brazil Office */}
+                  <div className="mb-6">
+                    <h4 className="font-medium text-foreground mb-3">Escritório Brasil</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">São Paulo, SP</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="h-4 w-4 text-primary" />
+                        <span className="text-sm text-muted-foreground">+55 11 3456-7890</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Support */}
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Mail className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">contato@n1-global.com</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="text-sm text-muted-foreground">Suporte 24/7 • 365 dias</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Footer */}
+            <div className="border-t border-border/30 py-8">
+              <div className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0">
+                
+                {/* Legal Links */}
+                <div className="flex flex-wrap justify-center lg:justify-start items-center space-x-6 text-sm text-muted-foreground">
+                  <a href="#" className="hover:text-foreground transition-colors">Política de Privacidade</a>
+                  <a href="#" className="hover:text-foreground transition-colors">Termos de Uso</a>
+                  <a href="#" className="hover:text-foreground transition-colors">Política de Cookies</a>
+                  <a href="#" className="hover:text-foreground transition-colors">LGPD</a>
+                  <a href="#" className="hover:text-foreground transition-colors">Compliance</a>
+                </div>
+
+                {/* Copyright */}
+                <div className="text-sm text-muted-foreground text-center lg:text-right">
+                  <p>© 2025 N1 Global Solutions. Todos os direitos reservados.</p>
+                  <p className="mt-1">CNPJ: 00.000.000/0001-00 • Registro CE: NL123456789B01</p>
                 </div>
               </div>
             </div>
