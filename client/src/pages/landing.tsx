@@ -274,7 +274,7 @@ export default function Landing() {
                       
                       return result;
                     })()}
-                    {index < displayedText.split('\n').length - 1 && <br className="sm:hidden" />}
+                    {index < displayedText.split('\n').length - 1 && <br />}
                   </span>
                 ))}
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
