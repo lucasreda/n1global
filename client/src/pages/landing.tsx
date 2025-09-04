@@ -469,7 +469,7 @@ export default function Landing() {
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-                Resultados Reais de Clientes
+                Resultados Reais<br className="sm:hidden" /> de Clientes
               </h2>
               <p className="text-lg text-muted-foreground">
                 Empresas brasileiras que já estão vendendo na Europa
