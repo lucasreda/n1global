@@ -609,7 +609,7 @@ export default function Landing() {
                 {/* Copyright */}
                 <div className="text-sm text-muted-foreground text-center lg:text-right">
                   <p>© 2025 N1 Global Solutions. Todos os direitos reservados.</p>
-                  <p className="mt-1">CNPJ: 00.000.000/0001-00 • Registro CE: NL123456789B01</p>
+                  <p className="mt-1">CNPJ: 00.000.000/0001-00</p>
                 </div>
               </div>
             </div>
