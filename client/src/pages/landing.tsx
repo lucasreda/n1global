@@ -163,8 +163,8 @@ export default function Landing() {
             />
             <Button 
               onClick={handleLoginClick}
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200"
+              variant="outline"
+              className="border-border/50 text-foreground hover:bg-background/80 px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200"
               data-testid="button-login-header"
             >
               <LogIn className="h-4 w-4 mr-2" />
