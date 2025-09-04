@@ -341,10 +341,6 @@ export default function Landing() {
         <section className="py-20">
           <div className="container mx-auto px-6">
             <div className="text-center mb-20">
-              <Badge className="mb-6 bg-gradient-to-r from-primary/20 to-chart-2/20 text-primary border-primary/30">
-                <Zap className="w-4 h-4 mr-2" />
-                Solução Definitiva
-              </Badge>
               <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-6">
                 A{" "}
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
