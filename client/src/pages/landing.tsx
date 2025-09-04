@@ -171,29 +171,45 @@ export default function Landing() {
                 Estrutura Completa de Vendas na Europa
               </Badge>
               <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8 min-h-[200px] xl:min-h-[240px]">
-                {displayedText.split('').map((char, index) => {
-                  const word = getWordAtPosition(fullText, index);
+                {(() => {
+                  const chars = displayedText.split('');
+                  const result = [];
+                  let i = 0;
                   
-                  if (char === '\n') {
-                    return <br key={index} />;
+                  while (i < chars.length) {
+                    const char = chars[i];
+                    
+                    if (char === '\n') {
+                      result.push(<br key={i} />);
+                      i++;
+                      continue;
+                    }
+                    
+                    const word = getWordAtPosition(fullText, i);
+                    
+                    if (word === "Venda" || word === "sem" || word === "burocracia") {
+                      // Collect all characters of this word
+                      const wordChars = [];
+                      const wordStart = i;
+                      
+                      while (i < chars.length && chars[i] !== ' ' && chars[i] !== '\n') {
+                        wordChars.push(chars[i]);
+                        i++;
+                      }
+                      
+                      result.push(
+                        <span key={wordStart} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                          {wordChars.join('')}
+                        </span>
+                      );
+                    } else {
+                      result.push(<span key={i}>{char}</span>);
+                      i++;
+                    }
                   }
                   
-                  return (
-                    <span key={index}>
-                      {word === "Venda" ? (
-                        <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                          {char}
-                        </span>
-                      ) : word === "sem" || word === "burocracia" ? (
-                        <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                          {char}
-                        </span>
-                      ) : (
-                        char
-                      )}
-                    </span>
-                  );
-                })}
+                  return result;
+                })()}
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-12 max-w-4xl mx-auto">
