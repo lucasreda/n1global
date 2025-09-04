@@ -241,7 +241,7 @@ export default function Landing() {
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center">
               <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12 px-4">Integrações com as principais plataformas</p>
-              <div className="grid grid-cols-2 gap-8 justify-items-center max-w-xs mx-auto sm:flex sm:justify-center sm:items-center sm:gap-8 lg:gap-12 xl:gap-16 sm:flex-wrap px-4">
+              <div className="grid grid-cols-2 gap-8 justify-items-center max-w-xs mx-auto sm:flex sm:justify-center sm:items-center sm:gap-8 lg:gap-12 xl:gap-16 px-4">
                 <img 
                   src={cartLogo} 
                   alt="CartPanda" 
