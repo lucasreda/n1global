@@ -111,7 +111,7 @@ export default function Landing() {
                   Venda
                 </span>
                 {" "}seus produtos físicos na Europa<br />
-                <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-400 to-blue-200 bg-clip-text text-transparent">
                   sem burocracia
                 </span>
               </h1>
