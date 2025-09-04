@@ -149,7 +149,7 @@ export default function Landing() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 border-b border-border/50 backdrop-blur-sm">
+      <header className="relative z-10">
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <img 
