@@ -244,26 +244,26 @@ export default function Landing() {
           <div className="container mx-auto px-6">
             <div className="text-center">
               <p className="text-muted-foreground mb-12">Integrações com as principais plataformas</p>
-              <div className="flex justify-center items-center gap-12 lg:gap-16 flex-wrap">
+              <div className="flex justify-center items-center gap-8 lg:gap-12 flex-wrap">
                 <img 
                   src={cartLogo} 
                   alt="CartPanda" 
-                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 lg:h-8 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={digistoreLogo} 
                   alt="Digistore24" 
-                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 lg:h-8 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={openLogo} 
                   alt="OpenAI" 
-                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 lg:h-8 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={shopifyLogo} 
                   alt="Shopify" 
-                  className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 lg:h-8 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
               </div>
             </div>
