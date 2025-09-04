@@ -6,12 +6,13 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthModal } from "@/components/auth/auth-modal";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import Dashboard from "@/pages/dashboard";
+import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import SellerDashboard from "@/pages/seller-dashboard";
 import Orders from "@/pages/orders";
 import Analytics from "@/pages/analytics";
@@ -200,6 +201,7 @@ function Router() {
   return (
     <OnboardingGuard>
       <Switch>
+        <Route path="/login" component={Login} />
         <Route path="/onboarding" component={Onboarding} />
         
         {/* Admin Routes with Layout */}
@@ -336,51 +338,56 @@ function AppContent() {
     );
   }
 
-  // Public route for landing page
+  // Public routes
   if (location === '/investor-supplier') {
     return <InvestorSupplierLanding />;
   }
+  
+  if (location === '/login') {
+    return <Login />;
+  }
+  
+  // Show landing page if not authenticated
+  if (!isAuthenticated) {
+    return <Landing />;
+  }
 
+  // Authenticated routes
   return (
     <>
-      <AuthModal isOpen={!isAuthenticated} />
-      {isAuthenticated && (
-        <>
-          {/* Fullscreen layout for onboarding and inside pages */}
-          {(location === '/onboarding' || location.startsWith('/inside')) ? (
-            <div className="min-h-screen">
-              <Router />
-            </div>
-          ) : isSupplier ? (
-            /* Supplier layout with header only */
-            <div className="min-h-screen !bg-gray-900" style={{ backgroundColor: '#111827' }}>
-              <SupplierHeader />
-              <main className="p-6">
-                <Router />
-              </main>
-            </div>
-          ) : isAdminFinanceiro ? (
-            /* Finance layout - fullscreen with own layout */
-            <div className="min-h-screen">
-              <Router />
-            </div>
-          ) : isInvestor ? (
-            /* Investment layout - fullscreen with own layout */
-            <div className="min-h-screen">
-              <Router />
-            </div>
-          ) : isAdminInvestimento ? (
-            /* Admin Investment layout - fullscreen with own layout */
-            <div className="min-h-screen">
-              <Router />
-            </div>
-          ) : (
-            /* Regular dashboard layout with sidebar */
-            <DashboardLayoutWithExchangeRate>
-              <Router />
-            </DashboardLayoutWithExchangeRate>
-          )}
-        </>
+      {/* Fullscreen layout for onboarding and inside pages */}
+      {(location === '/onboarding' || location.startsWith('/inside')) ? (
+        <div className="min-h-screen">
+          <Router />
+        </div>
+      ) : isSupplier ? (
+        /* Supplier layout with header only */
+        <div className="min-h-screen !bg-gray-900" style={{ backgroundColor: '#111827' }}>
+          <SupplierHeader />
+          <main className="p-6">
+            <Router />
+          </main>
+        </div>
+      ) : isAdminFinanceiro ? (
+        /* Finance layout - fullscreen with own layout */
+        <div className="min-h-screen">
+          <Router />
+        </div>
+      ) : isInvestor ? (
+        /* Investment layout - fullscreen with own layout */
+        <div className="min-h-screen">
+          <Router />
+        </div>
+      ) : isAdminInvestimento ? (
+        /* Admin Investment layout - fullscreen with own layout */
+        <div className="min-h-screen">
+          <Router />
+        </div>
+      ) : (
+        /* Regular dashboard layout with sidebar */
+        <DashboardLayoutWithExchangeRate>
+          <Router />
+        </DashboardLayoutWithExchangeRate>
       )}
     </>
   );
