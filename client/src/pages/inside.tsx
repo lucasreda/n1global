@@ -143,6 +143,9 @@ export default function InsidePage() {
   const [selectedOperation, setSelectedOperation] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("all");
   const [selectedTab, setSelectedTab] = useState("overview");
+  
+  // Debug log
+  console.log("Inside page rendering, selectedTab:", selectedTab);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -503,7 +506,8 @@ export default function InsidePage() {
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-white/10 border border-white/20 backdrop-blur-md">
+          {/* Navigation tabs with support tab included */}
+          <TabsList className="flex w-full flex-wrap gap-2 bg-white/10 border border-white/20 backdrop-blur-md p-2">
             <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">
               Visão Geral
             </TabsTrigger>
