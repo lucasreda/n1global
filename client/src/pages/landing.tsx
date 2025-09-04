@@ -275,7 +275,7 @@ export default function Landing() {
         <section className="py-12 sm:py-20 bg-gradient-to-b from-primary/5 to-secondary/5">
           <div className="container mx-auto px-4 sm:px-6">
             <div className="max-w-5xl mx-auto text-center">
-              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-foreground mb-6 sm:mb-8 px-2">
+              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-foreground mb-6 sm:mb-8 mt-5 px-2">
                 Vender na Europa deveria ser simples...
               </h2>
               <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-12 sm:mb-16 px-4">
