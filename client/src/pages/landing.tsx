@@ -178,11 +178,11 @@ export default function Landing() {
                   return (
                     <span key={index}>
                       {word === "Venda" ? (
-                        <span className="bg-gradient-to-r from-blue-600 to-blue-300 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                           {char}
                         </span>
                       ) : word === "sem" || word === "burocracia" ? (
-                        <span className="bg-gradient-to-r from-blue-400 to-blue-200 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                           {char}
                         </span>
                       ) : (
