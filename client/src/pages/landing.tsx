@@ -234,14 +234,46 @@ export default function Landing() {
               <h1 className="text-[30px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
                 {displayedText.split('\n').map((line, index) => (
                   <span key={index}>
-                    {line.split(' ').map((word, wordIndex) => {
-                      const isHighlightWord = word === 'Venda' || word === 'sem' || word === 'burocracia';
-                      return (
-                        <span key={wordIndex} className={isHighlightWord ? "bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent" : ""}>
-                          {word}{wordIndex < line.split(' ').length - 1 ? ' ' : ''}
-                        </span>
-                      );
-                    })}
+                    {(() => {
+                      const words = line.split(' ');
+                      const result = [];
+                      let i = 0;
+                      
+                      while (i < words.length) {
+                        const word = words[i];
+                        
+                        if (word === 'Venda') {
+                          result.push(
+                            <span key={`${index}-${i}`} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                              {word}
+                            </span>
+                          );
+                        } else if (word === 'sem' && i + 1 < words.length && words[i + 1] === 'burocracia') {
+                          // Apply gradient to "sem burocracia" as a single unit
+                          result.push(
+                            <span key={`${index}-${i}`} className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                              {word} {words[i + 1]}
+                            </span>
+                          );
+                          i++; // Skip next word since we've processed both
+                        } else {
+                          result.push(
+                            <span key={`${index}-${i}`}>
+                              {word}
+                            </span>
+                          );
+                        }
+                        
+                        // Add space if not the last word
+                        if (i < words.length - 1) {
+                          result.push(' ');
+                        }
+                        
+                        i++;
+                      }
+                      
+                      return result;
+                    })()}
                     {index < displayedText.split('\n').length - 1 && <br className="hidden sm:block" />}
                   </span>
                 ))}
