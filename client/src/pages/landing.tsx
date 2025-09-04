@@ -374,31 +374,29 @@ export default function Landing() {
             </div>
 
             {/* Key Differentiators */}
-            <Card className="glassmorphism border-primary/30 max-w-4xl mx-auto">
-              <CardContent className="p-8">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-foreground mb-3">Por que escolher a N1?</h3>
-                  <p className="text-muted-foreground">Somos os únicos com essa expertise específica no mercado</p>
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-foreground mb-3">Por que escolher a N1?</h3>
+                <p className="text-muted-foreground">Somos os únicos com essa expertise específica no mercado</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-6 text-center">
+                <div>
+                  <Pill className="w-8 h-8 text-primary mx-auto mb-3" />
+                  <h4 className="font-semibold text-foreground mb-2">Expertise em Nutracêuticos</h4>
+                  <p className="text-sm text-muted-foreground">Únicos com aprovação regulatória para 500+ produtos</p>
                 </div>
-                <div className="grid md:grid-cols-3 gap-6 text-center">
-                  <div>
-                    <Pill className="w-8 h-8 text-primary mx-auto mb-3" />
-                    <h4 className="font-semibold text-foreground mb-2">Expertise em Nutracêuticos</h4>
-                    <p className="text-sm text-muted-foreground">Únicos com aprovação regulatória para 500+ produtos</p>
-                  </div>
-                  <div>
-                    <TrendingUp className="w-8 h-8 text-primary mx-auto mb-3" />
-                    <h4 className="font-semibold text-foreground mb-2">Crescimento Sem Limite</h4>
-                    <p className="text-sm text-muted-foreground">Infraestrutura para escalar de 0 a €10M+ sem fricção</p>
-                  </div>
-                  <div>
-                    <Users className="w-8 h-8 text-primary mx-auto mb-3" />
-                    <h4 className="font-semibold text-foreground mb-2">Time Especializado</h4>
-                    <p className="text-sm text-muted-foreground">Regulatório, fiscal e jurídico dedicado ao seu sucesso</p>
-                  </div>
+                <div>
+                  <TrendingUp className="w-8 h-8 text-primary mx-auto mb-3" />
+                  <h4 className="font-semibold text-foreground mb-2">Crescimento Sem Limite</h4>
+                  <p className="text-sm text-muted-foreground">Infraestrutura para escalar de 0 a €10M+ sem fricção</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <Users className="w-8 h-8 text-primary mx-auto mb-3" />
+                  <h4 className="font-semibold text-foreground mb-2">Time Especializado</h4>
+                  <p className="text-sm text-muted-foreground">Regulatório, fiscal e jurídico dedicado ao seu sucesso</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
