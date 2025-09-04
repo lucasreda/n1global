@@ -456,7 +456,7 @@ export default function Landing() {
                   <Button 
                     size="lg"
                     onClick={handleLoginClick}
-                    className="bg-gradient-to-r from-primary to-chart-2 hover:from-primary/90 hover:to-chart-2/90 text-white px-10 py-4 text-lg rounded-xl transition-all duration-300 hover:scale-105 shadow-xl"
+                    className="bg-gradient-to-r from-primary to-chart-2 hover:from-primary/90 hover:to-chart-2/90 text-white px-10 py-4 text-lg rounded-xl transition-all duration-300 hover:scale-105 shadow-xl w-full sm:w-auto"
                     data-testid="button-cta-schedule"
                   >
                     Escolha um horário <Calendar className="ml-3 h-5 w-5" />
