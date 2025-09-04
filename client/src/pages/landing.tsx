@@ -47,17 +47,21 @@ export default function Landing() {
 
   // Helper function to get the word at a specific position
   const getWordAtPosition = (text: string, position: number) => {
-    const textUpToPosition = text.slice(0, position + 1);
-    const words = text.split(/(\s|\n)/);
-    let currentPos = 0;
+    // Find word boundaries around the position
+    let start = position;
+    let end = position;
     
-    for (const word of words) {
-      if (currentPos + word.length >= position) {
-        return word.trim();
-      }
-      currentPos += word.length;
+    // Go back to find start of word
+    while (start > 0 && text[start - 1] !== ' ' && text[start - 1] !== '\n') {
+      start--;
     }
-    return "";
+    
+    // Go forward to find end of word
+    while (end < text.length && text[end] !== ' ' && text[end] !== '\n') {
+      end++;
+    }
+    
+    return text.slice(start, end).trim();
   };
 
   const handleLoginClick = () => {
