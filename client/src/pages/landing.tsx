@@ -380,8 +380,8 @@ export default function Landing() {
               
               <CardContent className="p-12 relative z-10">
                 <div className="text-center mb-12">
-                  <Badge className="mb-6 bg-gradient-to-r from-primary/20 to-chart-2/20 text-primary border-primary/30">
-                    <Sparkles className="w-4 h-4 mr-2" />
+                  <Badge variant="outline" className="mb-6 border-yellow-500 text-yellow-500">
+                    <Sparkles className="w-4 h-4 mr-2 text-yellow-500" />
                     Consultoria Especializada Gratuita
                   </Badge>
                   <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-6">
