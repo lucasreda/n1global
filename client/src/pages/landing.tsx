@@ -9,6 +9,10 @@ import logoPath from "@assets/logo_1756142152045.png";
 export default function Landing() {
   const [, setLocation] = useLocation();
   const [logoVisible, setLogoVisible] = useState(false);
+  const [displayedText, setDisplayedText] = useState("");
+  const [showCursor, setShowCursor] = useState(true);
+
+  const fullText = "Venda seus produtos físicos na Europa\nsem burocracia";
 
   useEffect(() => {
     // Start logo animation after component mounts
@@ -18,6 +22,28 @@ export default function Landing() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Typewriting effect
+  useEffect(() => {
+    setDisplayedText("");
+    setShowCursor(true);
+    let currentIndex = 0;
+    
+    const typewriterInterval = setInterval(() => {
+      if (currentIndex < fullText.length) {
+        setDisplayedText(fullText.slice(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        clearInterval(typewriterInterval);
+        // Hide cursor after a small delay
+        setTimeout(() => {
+          setShowCursor(false);
+        }, 500);
+      }
+    }, 80); // Typing speed (80ms per character)
+
+    return () => clearInterval(typewriterInterval);
+  }, [fullText]);
 
   const handleLoginClick = () => {
     setLocation('/login');
@@ -125,14 +151,29 @@ export default function Landing() {
                 <Sparkles className="w-4 h-4 mr-2" />
                 Estrutura Completa de Vendas na Europa
               </Badge>
-              <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8">
-                <span className="bg-gradient-to-r from-blue-600 to-blue-300 bg-clip-text text-transparent">
-                  Venda
-                </span>
-                {" "}seus produtos físicos na Europa<br />
-                <span className="bg-gradient-to-r from-blue-400 to-blue-200 bg-clip-text text-transparent">
-                  sem burocracia
-                </span>
+              <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8 min-h-[200px] xl:min-h-[240px]">
+                {displayedText.split('\n').map((line, lineIndex) => (
+                  <div key={lineIndex}>
+                    {line.split(' ').map((word, wordIndex) => (
+                      <span key={`${lineIndex}-${wordIndex}`}>
+                        {word === "Venda" ? (
+                          <span className="bg-gradient-to-r from-blue-600 to-blue-300 bg-clip-text text-transparent">
+                            {word}
+                          </span>
+                        ) : word === "sem" || word === "burocracia" ? (
+                          <span className="bg-gradient-to-r from-blue-400 to-blue-200 bg-clip-text text-transparent">
+                            {word}
+                          </span>
+                        ) : (
+                          word
+                        )}
+                        {wordIndex < line.split(' ').length - 1 && " "}
+                      </span>
+                    ))}
+                    {lineIndex < displayedText.split('\n').length - 1 && <br />}
+                  </div>
+                ))}
+                {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
               <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-12 max-w-4xl mx-auto">
                 Estrutura completa para <strong className="text-foreground">produtos físicos diversos e nutracêuticos</strong>. 
