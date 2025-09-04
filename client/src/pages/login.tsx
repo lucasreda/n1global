@@ -161,6 +161,7 @@ export default function Login() {
   };
 
   const handleBackToHome = () => {
+    console.log('Redirecionando para home...');
     setLocation('/');
   };
 
