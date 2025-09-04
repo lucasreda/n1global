@@ -245,26 +245,26 @@ export default function Landing() {
           <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center">
               <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12 px-4">Integrações com as principais plataformas</p>
-              <div className="flex justify-center items-center gap-6 sm:gap-8 lg:gap-12 xl:gap-16 flex-wrap px-4">
+              <div className="grid grid-cols-2 gap-8 justify-items-center max-w-xs mx-auto sm:flex sm:justify-center sm:items-center sm:gap-8 lg:gap-12 xl:gap-16 sm:flex-wrap px-4">
                 <img 
                   src={cartLogo} 
                   alt="CartPanda" 
-                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={digistoreLogo} 
                   alt="Digistore24" 
-                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={openLogo} 
                   alt="OpenAI" 
-                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={shopifyLogo} 
                   alt="Shopify" 
-                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-6 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
               </div>
             </div>
