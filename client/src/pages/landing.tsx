@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles, X, LogIn } from "lucide-react";
 import cartLogo from "@assets/cart-logo_1757013744084.png";
 import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
 import openLogo from "@assets/open-logo_1757013744090.png";
@@ -163,11 +163,13 @@ export default function Landing() {
             />
             <Button 
               onClick={handleLoginClick}
-              className="bg-primary hover:bg-primary/90 text-white px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200 hover:scale-105"
+              variant="ghost"
+              className="text-muted-foreground hover:text-foreground px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200"
               data-testid="button-login-header"
             >
-              <span className="hidden sm:inline">Acessar Dashboard</span>
-              <span className="sm:hidden">Login</span>
+              <LogIn className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Entrar</span>
+              <span className="sm:hidden">Entrar</span>
             </Button>
           </div>
         </div>
