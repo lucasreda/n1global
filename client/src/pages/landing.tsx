@@ -386,17 +386,17 @@ export default function Landing() {
                 <div>
                   <Pill className="w-8 h-8 text-primary mx-auto mb-3" />
                   <h4 className="font-semibold text-foreground mb-2 text-lg">Expertise em Nutracêuticos</h4>
-                  <p className="text-sm text-muted-foreground">Únicos com aprovação regulatória para 500+ produtos</p>
+                  <p className="text-base text-muted-foreground">Únicos com aprovação regulatória para 500+ produtos</p>
                 </div>
                 <div>
                   <TrendingUp className="w-8 h-8 text-primary mx-auto mb-3" />
                   <h4 className="font-semibold text-foreground mb-2 text-lg">Crescimento Sem Limite</h4>
-                  <p className="text-sm text-muted-foreground">Infraestrutura para escalar de 0 a €10M+ sem fricção</p>
+                  <p className="text-base text-muted-foreground">Infraestrutura para escalar de 0 a €10M+ sem fricção</p>
                 </div>
                 <div>
                   <Users className="w-8 h-8 text-primary mx-auto mb-3" />
                   <h4 className="font-semibold text-foreground mb-2 text-lg">Time Especializado</h4>
-                  <p className="text-sm text-muted-foreground">Regulatório, fiscal e jurídico dedicado ao seu sucesso</p>
+                  <p className="text-base text-muted-foreground">Regulatório, fiscal e jurídico dedicado ao seu sucesso</p>
                 </div>
               </div>
             </div>
