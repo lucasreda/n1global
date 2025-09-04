@@ -68,6 +68,13 @@ export default function Landing() {
     setLocation('/login');
   };
 
+  const handleScheduleMeeting = () => {
+    const ctaSection = document.getElementById('cta-section');
+    if (ctaSection) {
+      ctaSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const solutions = [
     {
       icon: Building,
@@ -187,11 +194,11 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
                   size="lg"
-                  onClick={handleLoginClick}
+                  onClick={handleScheduleMeeting}
                   className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg"
                   data-testid="button-cta-hero"
                 >
-                  Acessar Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                  Agendar Reunião <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button 
                   size="lg"
@@ -364,7 +371,7 @@ export default function Landing() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-b from-background to-primary/5">
+        <section id="cta-section" className="py-20 bg-gradient-to-b from-background to-primary/5">
           <div className="container mx-auto px-6">
             <Card className="glassmorphism border-primary/40 max-w-5xl mx-auto relative overflow-hidden">
               {/* Background decoration */}
