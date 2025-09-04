@@ -186,7 +186,7 @@ export default function Login() {
       </div>
 
       {/* Close Button - Top Right */}
-      <div className="absolute top-6 right-6 z-10">
+      <div className="absolute top-2 right-2 z-10">
         <button 
           onClick={handleBackToHome}
           className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-white/10 rounded-full"
