@@ -8,7 +8,8 @@ import {
   Package,
   LogOut,
   Globe,
-  Settings
+  Settings,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -54,6 +55,12 @@ const menuItems = [
     label: 'Global', 
     icon: Globe, 
     path: '/inside/global' 
+  },
+  { 
+    id: 'support', 
+    label: 'Suporte', 
+    icon: MessageSquare, 
+    path: '/inside/support' 
   },
   { 
     id: 'settings', 
