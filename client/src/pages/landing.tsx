@@ -324,11 +324,10 @@ export default function Landing() {
               </div>
               
               <div 
-                className="bg-red-900/20 border border-red-400/50 hover:bg-red-900/30 backdrop-blur-sm rounded-lg p-6 sm:p-8 transition-all duration-300 max-w-3xl mx-auto relative"
+                className="bg-red-900/20 border border-red-400/50 hover:bg-red-900/30 backdrop-blur-sm rounded-lg p-6 sm:p-8 transition-all duration-300 max-w-3xl mx-auto"
                 style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
               >
-                <X className="absolute top-4 right-4 w-5 h-5 text-red-400" />
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 pr-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">
                   O resultado? Meses de planejamento, milhares em consultoria e risco de não conformidade.
                 </h3>
                 <p className="text-red-300 leading-relaxed">
