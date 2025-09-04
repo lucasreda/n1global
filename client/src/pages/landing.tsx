@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles } from "lucide-react";
+import cartLogo from "@assets/cart-logo_1757013744084.png";
+import digistoreLogo from "@assets/digistore-logo_1757013744090.png";
+import openLogo from "@assets/open-logo_1757013744090.png";
+import shopifyLogo from "@assets/shopify-logo_1757013744091.png";
 import logoPath from "@assets/logo_1756142152045.png";
 
 export default function Landing() {
@@ -242,22 +246,22 @@ export default function Landing() {
               <p className="text-muted-foreground mb-12">Integrações com as principais plataformas</p>
               <div className="flex justify-center items-center gap-12 lg:gap-16 flex-wrap">
                 <img 
-                  src="/attached_assets/cart-logo_1757013744084.png" 
+                  src={cartLogo} 
                   alt="CartPanda" 
                   className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
-                  src="/attached_assets/digistore-logo_1757013744090.png" 
+                  src={digistoreLogo} 
                   alt="Digistore24" 
                   className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
-                  src="/attached_assets/open-logo_1757013744090.png" 
+                  src={openLogo} 
                   alt="OpenAI" 
                   className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
-                  src="/attached_assets/shopify-logo_1757013744091.png" 
+                  src={shopifyLogo} 
                   alt="Shopify" 
                   className="h-8 lg:h-10 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
