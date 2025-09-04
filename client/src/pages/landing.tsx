@@ -150,7 +150,7 @@ export default function Landing() {
 
       {/* Header */}
       <header className="relative z-10 border-b border-border/50 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <img 
               src={logoPath} 
@@ -163,10 +163,11 @@ export default function Landing() {
             />
             <Button 
               onClick={handleLoginClick}
-              className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-xl transition-all duration-200 hover:scale-105"
+              className="bg-primary hover:bg-primary/90 text-white px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200 hover:scale-105"
               data-testid="button-login-header"
             >
-              Acessar Dashboard
+              <span className="hidden sm:inline">Acessar Dashboard</span>
+              <span className="sm:hidden">Login</span>
             </Button>
           </div>
         </div>
@@ -174,14 +175,14 @@ export default function Landing() {
 
       <div className="relative z-10">
         {/* Hero Section */}
-        <section className="py-20 lg:py-32">
-          <div className="container mx-auto px-6">
+        <section className="py-12 sm:py-20 lg:py-32">
+          <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center max-w-4xl mx-auto">
-              <Badge variant="outline" className="mb-8 border-yellow-500 text-yellow-500 px-4 py-2">
-                <Sparkles className="w-4 h-4 mr-2" />
+              <Badge variant="outline" className="mb-6 sm:mb-8 border-yellow-500 text-yellow-500 px-3 sm:px-4 py-2 text-sm">
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Estrutura Completa de Vendas na Europa
               </Badge>
-              <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8 min-h-[200px] xl:min-h-[240px]">
+              <h1 className="text-2xl sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                   Venda
                 </span>
@@ -191,23 +192,23 @@ export default function Landing() {
                 </span>
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
-              <p className="text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-12 max-w-4xl mx-auto">
+              <p className="text-base sm:text-xl lg:text-2xl text-muted-foreground leading-relaxed mb-8 sm:mb-12 max-w-4xl mx-auto px-4">
                 Estrutura completa para <strong className="text-foreground">produtos físicos diversos e nutracêuticos</strong>. 
                 Fiscal, jurídico, regulatório e logística — tudo resolvido para você focar no que importa: <strong className="text-foreground">suas vendas</strong>.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
                 <Button 
                   size="lg"
                   onClick={handleScheduleMeeting}
-                  className="bg-primary hover:bg-primary/90 text-white px-8 py-4 text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg"
+                  className="bg-primary hover:bg-primary/90 text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 hover:scale-105 shadow-lg w-full sm:w-auto"
                   data-testid="button-cta-hero"
                 >
-                  Agendar Reunião <ArrowRight className="ml-2 h-5 w-5" />
+                  Agendar Reunião <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button 
                   size="lg"
                   variant="outline"
-                  className="border-border/50 text-foreground hover:bg-background/80 px-8 py-4 text-lg rounded-xl transition-all duration-200"
+                  className="border-border/50 text-foreground hover:bg-background/80 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg rounded-xl transition-all duration-200 w-full sm:w-auto"
                   data-testid="button-learn-more"
                 >
                   Saiba Mais
@@ -218,19 +219,19 @@ export default function Landing() {
         </section>
 
         {/* Stats Section */}
-        <section className="py-20">
-          <div className="container mx-auto px-6">
-            <div className="mb-16 text-center">
-              <p className="text-muted-foreground max-w-2xl mx-auto">Infraestrutura consolidada e resultados comprovados no mercado europeu</p>
+        <section className="py-12 sm:py-20">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="mb-10 sm:mb-16 text-center">
+              <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-4">Infraestrutura consolidada e resultados comprovados no mercado europeu</p>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
               {stats.map((stat, index) => (
                 <Card key={index} className="glassmorphism border-border/30 text-center group hover:border-primary/50 transition-all duration-300">
-                  <CardContent className="p-8">
-                    <div className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent mb-3">
+                  <CardContent className="p-4 sm:p-6 lg:p-8">
+                    <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent mb-2 sm:mb-3">
                       {stat.number}
                     </div>
-                    <div className="text-sm font-medium text-foreground mb-1">{stat.label}</div>
+                    <div className="text-xs sm:text-sm font-medium text-foreground mb-1">{stat.label}</div>
                     <div className="text-xs text-muted-foreground">{stat.sublabel}</div>
                   </CardContent>
                 </Card>
@@ -240,30 +241,30 @@ export default function Landing() {
         </section>
 
         {/* Integrations Section */}
-        <section className="py-16 bg-gradient-to-b from-background to-primary/5">
-          <div className="container mx-auto px-6">
+        <section className="py-12 sm:py-16 bg-gradient-to-b from-background to-primary/5">
+          <div className="container mx-auto px-4 sm:px-6">
             <div className="text-center">
-              <p className="text-muted-foreground mb-12">Integrações com as principais plataformas</p>
-              <div className="flex justify-center items-center gap-10 lg:gap-16 flex-wrap">
+              <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12 px-4">Integrações com as principais plataformas</p>
+              <div className="flex justify-center items-center gap-6 sm:gap-8 lg:gap-12 xl:gap-16 flex-wrap px-4">
                 <img 
                   src={cartLogo} 
                   alt="CartPanda" 
-                  className="h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={digistoreLogo} 
                   alt="Digistore24" 
-                  className="h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={openLogo} 
                   alt="OpenAI" 
-                  className="h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
                 <img 
                   src={shopifyLogo} 
                   alt="Shopify" 
-                  className="h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
+                  className="h-4 sm:h-5 lg:h-7 opacity-60 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0"
                 />
               </div>
             </div>
@@ -271,17 +272,17 @@ export default function Landing() {
         </section>
 
         {/* Problem Section */}
-        <section className="py-20 bg-gradient-to-b from-primary/5 to-secondary/5">
-          <div className="container mx-auto px-6">
+        <section className="py-12 sm:py-20 bg-gradient-to-b from-primary/5 to-secondary/5">
+          <div className="container mx-auto px-4 sm:px-6">
             <div className="max-w-5xl mx-auto text-center">
-              <h2 className="text-3xl lg:text-5xl font-bold text-foreground mb-8">
+              <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-foreground mb-6 sm:mb-8 px-2">
                 Vender na Europa deveria ser simples...
               </h2>
-              <p className="text-xl text-muted-foreground mb-16">
+              <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-12 sm:mb-16 px-4">
                 Mas você sabe quantas <strong className="text-foreground">barreiras complexas</strong> existem
               </p>
               
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 text-left mb-12">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 text-left mb-8 sm:mb-12 px-2">
                 {[
                   {
                     title: "Complexidade Regulatória",
@@ -405,8 +406,8 @@ export default function Landing() {
         </section>
 
         {/* CTA Section */}
-        <section id="cta-section" className="py-20 bg-gradient-to-b from-background to-primary/5">
-          <div className="container mx-auto px-6">
+        <section id="cta-section" className="py-12 sm:py-20 bg-gradient-to-b from-background to-primary/5">
+          <div className="container mx-auto px-4 sm:px-6">
             <Card className="glassmorphism border-primary/40 max-w-5xl mx-auto relative overflow-hidden">
               {/* Background decoration */}
               <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/10 to-chart-2/10 rounded-full blur-3xl"></div>
