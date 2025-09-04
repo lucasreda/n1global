@@ -512,10 +512,6 @@ export default function Landing() {
                     Especialistas em estrutura completa para vendas de produtos físicos e nutracêuticos na Europa. 
                     Compliance, logística e operação sem burocracia.
                   </p>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Award className="h-4 w-4 text-primary" />
-                    <span className="text-sm text-muted-foreground">Certificação GDPR • ISO 27001</span>
-                  </div>
                   <div className="flex items-center space-x-2">
                     <Globe className="h-4 w-4 text-primary" />
                     <span className="text-sm text-muted-foreground">28 países europeus cobertos</span>
