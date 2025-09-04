@@ -182,7 +182,7 @@ export default function Landing() {
                 <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Estrutura Completa de Vendas na Europa
               </Badge>
-              <h1 className="text-[26px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
+              <h1 className="text-[28px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                   Venda
                 </span>
