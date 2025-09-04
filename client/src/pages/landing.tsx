@@ -110,7 +110,7 @@ export default function Landing() {
                 <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                   Venda
                 </span>
-                {" "}seus produtos físicos na Europa{" "}
+                {" "}seus produtos físicos na Europa<br />
                 <span className="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
                   sem burocracia
                 </span>
