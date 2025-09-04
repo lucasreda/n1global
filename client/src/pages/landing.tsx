@@ -107,11 +107,11 @@ export default function Landing() {
                 Estrutura Completa de Vendas na Europa
               </Badge>
               <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-8">
-                <span className="bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-600 to-blue-300 bg-clip-text text-transparent">
                   Venda
                 </span>
                 {" "}seus produtos físicos na Europa<br />
-                <span className="bg-gradient-to-r from-primary to-chart-1 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
                   sem burocracia
                 </span>
               </h1>
