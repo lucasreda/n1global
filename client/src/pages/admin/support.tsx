@@ -99,7 +99,6 @@ export default function AdminSupport() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Coluna Esquerda - Cards dos Tipos de Email Empilhados */}
         <div className="lg:col-span-1 space-y-4">
-          <h2 className="text-lg font-semibold text-white mb-4">Tipos de Email</h2>
           {categoriesLoading ? (
             <div className="text-center py-8 text-slate-400">
               Carregando categorias...
