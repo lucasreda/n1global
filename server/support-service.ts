@@ -1,5 +1,6 @@
 import { OpenAI } from 'openai';
-import sgMail from '@sendgrid/mail';
+import formData from 'form-data';
+import Mailgun from 'mailgun.js';
 import { db } from './db';
 import { 
   supportCategories, 
@@ -22,8 +23,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Configure SendGrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
+// Configure Mailgun
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_API_KEY || '',
+});
 
 export class SupportService {
   
@@ -231,8 +236,8 @@ REGRAS:
       .replace('{{ticket_number}}', `AUTO-${Date.now()}`);
 
     try {
-      await sgMail.send({
-        from: 'suporte@n1.com', // You need to verify this domain in SendGrid
+      await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
+        from: `Suporte <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: email.from,
         subject: personalizedSubject,
         text: personalizedContent,

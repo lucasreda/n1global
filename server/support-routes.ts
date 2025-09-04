@@ -15,45 +15,45 @@ export function registerSupportRoutes(app: Express) {
   // ============================================================================
   
   /**
-   * SendGrid Inbound Parse webhook endpoint for incoming emails
+   * Mailgun webhook endpoint for incoming emails
    */
-  app.post("/api/support/webhook/sendgrid", async (req: Request, res: Response) => {
+  app.post("/api/support/webhook/mailgun", async (req: Request, res: Response) => {
     try {
-      console.log("📧 Received SendGrid Inbound webhook:", req.body);
+      console.log("📧 Received Mailgun webhook:", req.body);
       
-      // SendGrid sends form data, not JSON
+      // Mailgun sends form data for incoming emails
       const {
-        from,
-        to,
-        subject,
-        text,
-        html,
-        headers,
-        attachments,
-        charsets,
-        SPF
+        From: from,
+        To: to,
+        Subject: subject,
+        'stripped-text': text,
+        'stripped-html': html,
+        'Message-Id': messageId,
+        sender,
+        recipient,
+        'body-plain': bodyPlain,
+        'body-html': bodyHtml
       } = req.body;
       
-      // Transform SendGrid data to our format
+      // Transform Mailgun data to our format
       const webhookData = {
-        from: from,
-        to: to,
+        from: from || sender,
+        to: to || recipient,
         subject: subject || '',
-        text: text || '',
-        html: html || '',
-        attachments: attachments ? JSON.parse(attachments) : [],
-        message_id: headers ? JSON.parse(headers)['Message-ID'] : `sg_${Date.now()}`,
-        spf: SPF
+        text: text || bodyPlain || '',
+        html: html || bodyHtml || '',
+        attachments: [], // We can process attachments later if needed
+        message_id: messageId || `mg_${Date.now()}`
       };
       
       // Process the email
       const processedEmail = await supportService.processIncomingEmail(webhookData);
       
-      console.log("✅ SendGrid email processed:", processedEmail.id);
+      console.log("✅ Mailgun email processed:", processedEmail.id);
       res.status(200).send("OK");
       
     } catch (error) {
-      console.error("❌ Error processing SendGrid webhook:", error);
+      console.error("❌ Error processing Mailgun webhook:", error);
       res.status(500).send("Error");
     }
   });
