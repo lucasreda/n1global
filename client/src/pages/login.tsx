@@ -187,13 +187,18 @@ export default function Login() {
       </div>
 
       {/* Close Button - Top Right */}
-      <div className="absolute top-2 right-2 z-10">
+      <div className="absolute top-2 right-2 z-50">
         <button 
-          onClick={handleBackToHome}
-          className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-white/10 rounded-full"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('X clicked!');
+            handleBackToHome();
+          }}
+          className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-white/10 rounded-full cursor-pointer"
           data-testid="button-close-auth"
         >
-          <X className="h-5 w-5" />
+          <X className="h-5 w-5 pointer-events-none" />
         </button>
       </div>
 
