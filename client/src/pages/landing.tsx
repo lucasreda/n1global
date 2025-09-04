@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, ArrowRight, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles } from "lucide-react";
+import { CheckCircle, ArrowRight, Calendar, Zap, Shield, Globe, Pill, Package2, Users, TrendingUp, Building, Scale, FileCheck, Phone, Mail, Sparkles } from "lucide-react";
 import logoPath from "@assets/logo_1756142152045.png";
 
 export default function Landing() {
@@ -430,7 +430,7 @@ export default function Landing() {
                     className="bg-gradient-to-r from-primary to-chart-2 hover:from-primary/90 hover:to-chart-2/90 text-white px-10 py-4 text-lg rounded-xl transition-all duration-300 hover:scale-105 shadow-xl"
                     data-testid="button-cta-schedule"
                   >
-                    Acessar Dashboard Agora <ArrowRight className="ml-3 h-5 w-5" />
+                    Escolha um horário <Calendar className="ml-3 h-5 w-5" />
                   </Button>
                   <p className="text-sm text-muted-foreground mt-4">
                     ⚡ Agenda limitada para manter atendimento 100% personalizado
