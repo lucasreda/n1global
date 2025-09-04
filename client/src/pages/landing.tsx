@@ -186,9 +186,9 @@ export default function Landing() {
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                   Venda
                 </span>
-                {" "}seus produtos físicos na Europa<br />
+                {" "}seus produtos físicos na Europa<br className="hidden sm:block" />
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                  sem burocracia
+                  {" "}sem burocracia
                 </span>
                 {showCursor && <span className="animate-pulse text-blue-500">|</span>}
               </h1>
