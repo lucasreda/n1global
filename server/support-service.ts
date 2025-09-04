@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import { Resend } from 'resend';
+import sgMail from '@sendgrid/mail';
 import { db } from './db';
 import { 
   supportCategories, 
@@ -22,7 +22,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Configure SendGrid
+sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
 
 export class SupportService {
   
@@ -230,8 +231,8 @@ REGRAS:
       .replace('{{ticket_number}}', `AUTO-${Date.now()}`);
 
     try {
-      await resend.emails.send({
-        from: 'suporte@n1.com',
+      await sgMail.send({
+        from: 'suporte@n1.com', // You need to verify this domain in SendGrid
         to: email.from,
         subject: personalizedSubject,
         text: personalizedContent,

@@ -15,7 +15,51 @@ export function registerSupportRoutes(app: Express) {
   // ============================================================================
   
   /**
-   * Resend webhook endpoint for incoming emails
+   * SendGrid Inbound Parse webhook endpoint for incoming emails
+   */
+  app.post("/api/support/webhook/sendgrid", async (req: Request, res: Response) => {
+    try {
+      console.log("📧 Received SendGrid Inbound webhook:", req.body);
+      
+      // SendGrid sends form data, not JSON
+      const {
+        from,
+        to,
+        subject,
+        text,
+        html,
+        headers,
+        attachments,
+        charsets,
+        SPF
+      } = req.body;
+      
+      // Transform SendGrid data to our format
+      const webhookData = {
+        from: from,
+        to: to,
+        subject: subject || '',
+        text: text || '',
+        html: html || '',
+        attachments: attachments ? JSON.parse(attachments) : [],
+        message_id: headers ? JSON.parse(headers)['Message-ID'] : `sg_${Date.now()}`,
+        spf: SPF
+      };
+      
+      // Process the email
+      const processedEmail = await supportService.processIncomingEmail(webhookData);
+      
+      console.log("✅ SendGrid email processed:", processedEmail.id);
+      res.status(200).send("OK");
+      
+    } catch (error) {
+      console.error("❌ Error processing SendGrid webhook:", error);
+      res.status(500).send("Error");
+    }
+  });
+
+  /**
+   * Resend webhook endpoint for incoming emails (deprecated)
    */
   app.post("/api/support/webhook/resend", async (req: Request, res: Response) => {
     try {
