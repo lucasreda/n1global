@@ -401,7 +401,7 @@ export default function Landing() {
                   }
                 ].map((problem, index) => (
                   <Card key={index} className="glassmorphism border-destructive/20 hover:border-destructive/40 transition-all duration-300">
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start space-x-3">
                         <div className="w-2 h-2 bg-destructive rounded-full mt-2 flex-shrink-0"></div>
                         <div>
