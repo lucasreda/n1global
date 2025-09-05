@@ -356,8 +356,13 @@ export default function CustomerSupportPage() {
   const shouldLoadTickets = true; // Simplificando: sempre carregar tickets
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: [`/api/customer-support/${currentOperationId}/tickets`],
+    queryKey: [`tickets-${currentOperationId}`],
     enabled: !!supportConfig && !!currentOperationId,
+    queryFn: async () => {
+      const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets?limit=50`, 'GET');
+      console.log('🎫 Tickets response:', response);
+      return response;
+    }
   });
 
   if (!currentOperationId) {
