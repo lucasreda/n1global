@@ -271,7 +271,12 @@ export default function AdminSupport() {
               ) : (
                 <div className="space-y-4">
                   {supportTicketsResponse.tickets.map((ticketResponse: any) => (
-                    <div key={ticketResponse.ticket.id} className="border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors" data-testid={`ticket-${ticketResponse.ticket.ticketNumber}`}>
+                    <div 
+                      key={ticketResponse.ticket.id} 
+                      className="border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors cursor-pointer" 
+                      onClick={() => handleViewTicket(ticketResponse)}
+                      data-testid={`ticket-${ticketResponse.ticket.ticketNumber}`}
+                    >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-4">
                           <div 
@@ -316,15 +321,9 @@ export default function AdminSupport() {
                             {ticketResponse.ticket.priority === 'high' ? 'Alta' :
                              ticketResponse.ticket.priority === 'medium' ? 'Média' : 'Baixa'}
                           </Badge>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400"
-                            onClick={() => handleViewTicket(ticketResponse)}
-                            data-testid={`button-view-ticket-${ticketResponse.ticket.id}`}
-                          >
+                          <div className="flex items-center text-slate-400">
                             <Eye className="h-4 w-4" />
-                          </Button>
+                          </div>
                         </div>
                       </div>
                       
