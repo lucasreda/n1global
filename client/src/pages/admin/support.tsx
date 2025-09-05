@@ -98,36 +98,6 @@ export default function AdminSupport() {
     setReplyMessage(""); // Reset reply message
   };
 
-  // Function to test AI responses
-  const testAIResponse = async () => {
-    try {
-      console.log('🤖 Testing AI responses...');
-      
-      // Use no-auth endpoint for testing
-      const response = await fetch('/api/support/test-ai-response-no-auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({})
-      });
-
-      console.log('🤖 Response status:', response.status);
-      console.log('🤖 Response headers:', response.headers.get('content-type'));
-
-      const result = await response.json();
-      console.log('🤖 AI test result:', result);
-      
-      if (response.ok) {
-        alert(`✅ Teste IA concluído!\n\nEmail: ${result.simulatedEmail.id}\nStatus: ${result.simulatedEmail.status}\nCategoria: ${result.simulatedEmail.category}\n\nVerifique os logs do servidor para ver a resposta automática sendo gerada!`);
-      } else {
-        alert(`❌ Teste falhou: ${result.message}\n${result.error || ''}`);
-      }
-    } catch (error) {
-      console.error('🤖 AI test error:', error);
-      alert(`❌ Erro no teste: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
 
   // Function to send reply
   const handleSendReply = async () => {
@@ -355,15 +325,10 @@ export default function AdminSupport() {
                   Gerenciamento centralizado de atendimento ao cliente
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="border-slate-600 text-slate-300" onClick={testAIResponse} data-testid="button-test-ai">
-                  🤖 Teste IA
-                </Button>
-                <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
+              <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
             </CardHeader>
             <CardContent>
               {!shouldLoadTickets ? (

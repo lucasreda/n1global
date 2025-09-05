@@ -4,12 +4,17 @@
 The COD Dashboard is a modern full-stack web application designed for managing Cash on Delivery (COD) orders and providing business metric analysis. It features a comprehensive dashboard for order tracking, customer management, and performance monitoring with real-time data visualization, authentication, and integrations with shipping providers. The project aims to provide a robust solution for businesses to efficiently manage their COD operations and gain actionable insights.
 
 ## Recent Changes (September 5, 2025)
-✓ **Email Threading System**: Implementado sistema completo de threading de emails que identifica respostas de clientes baseado em prefixos "Re:", "RE:", "Resposta:" no subject
-✓ **Conversation Continuity**: Emails de resposta agora são anexados ao ticket existente em vez de criar novos tickets, mantendo contexto da conversa
+✓ **AI-Powered Automatic Responses**: Sistema completo de respostas automáticas inteligentes usando OpenAI GPT-4 para categorias específicas (Dúvidas, Alteração de Endereço, Cancelamento)
+✓ **Sofia - Virtual Agent**: Agente de IA empática que responde de forma natural e humana, adaptando-se ao idioma do cliente automaticamente
+✓ **Business Context Integration**: IA treinada com informações específicas da empresa (prazos de entrega 2-7 dias, pagamento na entrega, políticas de embalagem)
+✓ **Selective AI Response**: Sistema inteligente que aplica IA apenas às categorias elegíveis, mantendo atendimento humano para reclamações e casos manuais
+✓ **Professional Email Template**: Template HTML profissional com logo da empresa, design responsivo e identidade visual corporativa
+✓ **Multilingual Support**: Sistema detecta e responde automaticamente no idioma do cliente (português, inglês, espanhol, etc.)
+✓ **Email Threading System**: Sistema completo de threading que identifica respostas de clientes baseado em prefixos "Re:", "RE:", "Resposta:" no subject
+✓ **Conversation Continuity**: Emails de resposta anexados ao ticket existente mantendo contexto completo da conversa
 ✓ **Smart Ticket Matching**: Lógica inteligente para encontrar tickets existentes baseada no email do cliente e similaridade do assunto
-✓ **Status Auto-Update**: Status do ticket é automaticamente atualizado quando cliente responde (de "waiting_customer" para "open")
+✓ **Status Auto-Update**: Status do ticket atualizado automaticamente quando cliente responde (de "waiting_customer" para "open")
 ✓ **Conversation History Display**: Modal de tickets mostra histórico completo de conversação com diferentes tipos (email_in, email_out, status_change)
-✓ **Email Logo Integration**: Emails enviados pelo sistema incluem logo SVG da empresa para identidade visual profissional
 ✓ **Reply Auto-Reload**: Interface recarrega automaticamente após envio de resposta para mostrar nova entrada na conversa
 
 ## Previous Changes (September 3, 2025)
