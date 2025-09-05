@@ -5,7 +5,8 @@ import { db } from "./db";
 import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+// Use the SAME JWT_SECRET as the main routes
+const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
 interface AuthRequest extends Request {
   user?: any;
@@ -16,11 +17,12 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
-  console.log("🔐 Auth Debug:", {
+  console.log("🔐 Support Auth Debug:", {
     hasAuthHeader: !!authHeader,
     hasToken: !!token,
     url: req.url,
-    method: req.method
+    method: req.method,
+    secret: JWT_SECRET.substring(0, 20) + '...'
   });
 
   if (!token) {
@@ -30,10 +32,10 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) {
-      console.log("❌ JWT verification failed:", err.message);
+      console.log("❌ Support JWT verification failed:", err.message);
       return res.status(403).json({ message: "Token inválido" });
     }
-    console.log("✅ JWT verified for user:", user.email);
+    console.log("✅ Support JWT verified for user:", user.email);
     req.user = user;
     next();
   });
