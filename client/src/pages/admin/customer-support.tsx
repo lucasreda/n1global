@@ -79,18 +79,16 @@ export default function CustomerSupportPage() {
   // Initialize support for current operation
   const initializeSupportMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/customer-support/init', {
+      return apiRequest('/api/customer-support/init', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           operationId: currentOperationId,
           operationName: currentOperationName
         })
       });
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/customer-support/config`, currentOperationId] });
@@ -122,13 +120,9 @@ export default function CustomerSupportPage() {
   // Create test data mutation
   const createTestDataMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/customer-support/${currentOperationId}/test-data`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      return apiRequest(`/api/customer-support/${currentOperationId}/test-data`, {
+        method: 'POST'
       });
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });

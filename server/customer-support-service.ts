@@ -158,7 +158,19 @@ export class CustomerSupportService {
    * Get operation support configuration
    */
   async getOperationSupport(operationId: string): Promise<CustomerSupportOperation | null> {
-    const [operation] = await db.select()
+    const [operation] = await db.select({
+      id: customerSupportOperations.id,
+      operationId: customerSupportOperations.operationId,
+      operationName: customerSupportOperations.operationName,
+      emailDomain: customerSupportOperations.emailDomain,
+      isCustomDomain: customerSupportOperations.isCustomDomain,
+      aiEnabled: customerSupportOperations.aiEnabled,
+      aiCategories: customerSupportOperations.aiCategories,
+      brandingConfig: customerSupportOperations.brandingConfig,
+      businessHours: customerSupportOperations.businessHours,
+      createdAt: customerSupportOperations.createdAt,
+      updatedAt: customerSupportOperations.updatedAt
+    })
       .from(customerSupportOperations)
       .where(eq(customerSupportOperations.operationId, operationId))
       .limit(1);
