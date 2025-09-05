@@ -18,7 +18,7 @@ import {
   type InsertSupportTicket,
   type InsertSupportConversation
 } from '@shared/schema';
-import { eq, and, or, in, ilike, desc, sql, count } from 'drizzle-orm';
+import { eq, and, or, inArray, ilike, desc, sql, count } from 'drizzle-orm';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -32,6 +32,39 @@ const mg = mailgun.client({
 });
 
 export class SupportService {
+  
+  /**
+   * Test email threading functionality (for debugging)
+   */
+  async testEmailThreading() {
+    console.log('🧪 Testing email threading functionality...');
+    
+    // Test reply detection
+    const testSubjects = [
+      'Re: Cancelamento por engano',
+      'RE: Problema com entrega', 
+      'Resposta: Dúvida sobre produto',
+      'Novo problema com pedido'
+    ];
+
+    for (const subject of testSubjects) {
+      const isReply = this.isEmailReply(subject);
+      const cleanSubject = this.extractOriginalSubject(subject);
+      console.log(`🧪 Subject: "${subject}" -> isReply: ${isReply}, cleaned: "${cleanSubject}"`);
+    }
+
+    // Test finding existing tickets
+    const testTickets = await db
+      .select()
+      .from(supportTickets)
+      .where(inArray(supportTickets.status, ['open', 'in_progress', 'waiting_customer']))
+      .limit(3);
+
+    console.log(`🧪 Found ${testTickets.length} active tickets for testing`);
+    testTickets.forEach(ticket => {
+      console.log(`🧪 Ticket: ${ticket.ticketNumber} - ${ticket.customerEmail} - "${ticket.subject}"`);
+    });
+  }
   
   /**
    * Get all support categories
@@ -176,7 +209,7 @@ REGRAS:
             eq(supportTickets.subject, subject),
             ilike(supportTickets.subject, `%${originalSubject}%`)
           ),
-          in(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
+          inArray(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
         )
       )
       .orderBy(desc(supportTickets.createdAt))
@@ -194,7 +227,7 @@ REGRAS:
       .where(
         and(
           eq(supportTickets.customerEmail, from),
-          in(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
+          inArray(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
         )
       )
       .orderBy(desc(supportTickets.createdAt))
