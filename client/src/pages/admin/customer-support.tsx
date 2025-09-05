@@ -447,114 +447,128 @@ export default function CustomerSupportPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-start">
+    <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
+      {/* Header with Controls */}
+      <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-100">
             Sistema de Suporte - {currentOperationName}
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-gray-400 mt-1 text-sm sm:text-base">
             Gerenciamento de atendimento ao cliente com IA para esta operação
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button 
             variant="outline" 
-            className="border-slate-600 text-slate-300 hover:bg-white/10" 
+            size="sm"
+            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors text-xs sm:text-sm" 
             onClick={handleCreateTestData}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Dados de Teste
+            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Dados de Teste</span>
           </Button>
           <Button 
             variant="outline" 
-            className="border-slate-600 text-slate-300 hover:bg-white/10" 
+            size="sm"
+            className="bg-green-900/30 border-green-500/50 text-green-300 hover:bg-green-800/50 hover:text-green-200 transition-colors text-xs sm:text-sm" 
             onClick={() => setIsNewMessageModalOpen(true)}
             data-testid="button-send-message"
           >
-            <Send className="h-4 w-4 mr-2" />
-            Enviar Mensagem
+            <Send className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Enviar Mensagem</span>
           </Button>
         </div>
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3 lg:gap-6">
         {overviewLoading ? (
           Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index} className="bg-white/10 border-white/20 backdrop-blur-md">
-              <CardContent className="p-4">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-slate-600 rounded mb-2"></div>
-                  <div className="h-8 bg-slate-600 rounded"></div>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={index} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gray-600/50 rounded-lg"></div>
+                <div className="w-16 h-4 bg-gray-600/50 rounded"></div>
+              </div>
+              <div className="w-32 h-8 bg-gray-600/50 rounded mb-2"></div>
+              <div className="w-20 h-4 bg-gray-600/50 rounded"></div>
+            </div>
           ))
         ) : (
           <>
-            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-tickets-abertos">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-400 text-sm font-medium">Tickets Abertos</p>
-                    <p className="text-2xl font-bold text-white">{overviewMetrics?.openTickets || 0}</p>
-                  </div>
-                  <div className="h-12 w-12 bg-green-500/20 rounded-full flex items-center justify-center">
-                    <MessageSquare className="h-6 w-6 text-green-400" />
-                  </div>
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-abertos">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-green-500/20 rounded-lg">
+                  <MessageSquare className="w-6 h-6 text-green-400" />
                 </div>
-              </CardContent>
-            </Card>
+                <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
+                  +{overviewMetrics?.openTicketsGrowth || 0}%
+                </span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {overviewMetrics?.openTickets || 0}
+              </h3>
+              <p className="text-gray-400 text-sm font-medium">
+                Tickets Abertos
+              </p>
+            </div>
 
-            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-respondido-ia">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-400 text-sm font-medium">Respondido por IA</p>
-                    <p className="text-2xl font-bold text-white">{overviewMetrics?.aiResponded || 0}</p>
-                  </div>
-                  <div className="h-12 w-12 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-6 w-6 text-blue-400" />
-                  </div>
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-respondido-ia">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-blue-400" />
                 </div>
-              </CardContent>
-            </Card>
+                <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">
+                  IA
+                </span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {overviewMetrics?.aiResponded || 0}
+              </h3>
+              <p className="text-gray-400 text-sm font-medium">
+                Respondido por IA
+              </p>
+            </div>
 
-            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-tickets-mes">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-400 text-sm font-medium">Tickets no Mês</p>
-                    <p className="text-2xl font-bold text-white">{overviewMetrics?.monthlyTickets || 0}</p>
-                  </div>
-                  <div className="h-12 w-12 bg-purple-500/20 rounded-full flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-purple-400" />
-                  </div>
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-mes">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <Clock className="w-6 h-6 text-purple-400" />
                 </div>
-              </CardContent>
-            </Card>
+                <span className="text-xs font-medium text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20">
+                  MÊS
+                </span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {overviewMetrics?.monthlyTickets || 0}
+              </h3>
+              <p className="text-gray-400 text-sm font-medium">
+                Tickets no Mês
+              </p>
+            </div>
 
-            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-nao-lidos">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-400 text-sm font-medium">Não Lidos</p>
-                    <p className="text-2xl font-bold text-white">{overviewMetrics?.unreadTickets || 0}</p>
-                  </div>
-                  <div className="h-12 w-12 bg-red-500/20 rounded-full flex items-center justify-center">
-                    <Mail className="h-6 w-6 text-red-400" />
-                  </div>
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-nao-lidos">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-red-500/20 rounded-lg">
+                  <Mail className="w-6 h-6 text-red-400" />
                 </div>
-              </CardContent>
-            </Card>
+                <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/20">
+                  NOVO
+                </span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {overviewMetrics?.unreadTickets || 0}
+              </h3>
+              <p className="text-gray-400 text-sm font-medium">
+                Não Lidos
+              </p>
+            </div>
           </>
         )}
       </div>
 
       {/* Layout com Cards de Tipos na Esquerda e Filtros/Tickets na Direita */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 lg:gap-6">
         {/* Coluna Esquerda - Cards dos Tipos de Email Empilhados */}
         <div className="xl:col-span-2 space-y-4">
           {categoriesLoading ? (
@@ -563,10 +577,10 @@ export default function CustomerSupportPage() {
             </div>
           ) : supportCategories && supportCategories.length > 0 ? (
             supportCategories.map((category) => (
-              <Card key={category.id} className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors cursor-pointer"
+              <div key={category.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20 cursor-pointer" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} 
                     onClick={() => setSelectedCategory(category.id)}
                     data-testid={`card-category-${category.name}`}>
-                <CardContent className="p-4">
+                <div className="p-4">
                   <div className="flex items-center space-x-3 mb-3">
                     <div 
                       className="w-4 h-4 rounded-full flex-shrink-0" 
@@ -595,8 +609,8 @@ export default function CustomerSupportPage() {
                       P{category.priority}
                     </Badge>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))
           ) : (
             <Card className="bg-white/10 border-white/20 backdrop-blur-md">
