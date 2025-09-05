@@ -64,8 +64,8 @@ export class SupportService {
     // Handle lists (- item or * item)
     formatted = formatted.replace(/<p[^>]*>([^<]*[-*]\s[^<]*(?:<br>[^<]*[-*]\s[^<]*)*)<\/p>/g, (match, listContent) => {
       const items = listContent.split('<br>')
-        .filter(item => item.trim().match(/^[-*]\s/))
-        .map(item => `<li style="margin-bottom: 8px;">${item.replace(/^[-*]\s/, '').trim()}</li>`)
+        .filter((item: string) => item.trim().match(/^[-*]\s/))
+        .map((item: string) => `<li style="margin-bottom: 8px;">${item.replace(/^[-*]\s/, '').trim()}</li>`)
         .join('');
       return `<ul style="margin-bottom: 15px; padding-left: 20px;">${items}</ul>`;
     });
@@ -567,9 +567,13 @@ IMPORTANTE:
       let content = response.choices[0].message.content || '{}';
       
       // Extract JSON from markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*(\{.*?\})\s*```/s);
-      if (jsonMatch) {
-        content = jsonMatch[1];
+      const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/g);
+      if (jsonMatch && jsonMatch[0]) {
+        const fullMatch = jsonMatch[0];
+        const innerMatch = fullMatch.match(/\{[\s\S]*?\}/);
+        if (innerMatch) {
+          content = innerMatch[0];
+        }
       }
       
       // Clean up potential control characters but preserve newlines in content
@@ -1172,7 +1176,7 @@ IMPORTANTE:
         from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: recipient,
         subject: subject,
-        content: message,
+        textContent: message,
         messageId: mailgunResponse.id || ticketNumber,
         status: 'sent'
       }).returning();
@@ -1184,10 +1188,10 @@ IMPORTANTE:
         ticketNumber: ticketNumber,
         customerEmail: recipient,
         subject: subject,
+        description: message, // Use description field instead of content
         status: 'open',
         priority: 'medium',
-        categoryId: 'manual', // Default to manual category
-        source: 'outbound'
+        categoryId: 'manual' // Default to manual category
       }).returning();
 
       // Add conversation record
