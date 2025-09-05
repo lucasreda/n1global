@@ -1511,7 +1511,6 @@ export const customerSupportOperations = pgTable("customer_support_operations", 
   // Business settings
   businessHours: jsonb("business_hours"),
   timezone: varchar("timezone").default("America/Sao_Paulo"),
-  autoResponseDelay: integer("auto_response_delay").default(0), // Minutes
   
   // Status
   isActive: boolean("is_active").default(true),
