@@ -560,7 +560,7 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="text-align: center; margin-bottom: 20px;">
-              <div style="background-color: #2563eb; color: white; width: 80px; height: 40px; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; font-size: 18px; margin-bottom: 10px;">N1</div>
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALMAAACWCAYAAACVdbl2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAKLklEQVR4nO2dMYgkWRnHf7UsQh2LHoggHJiIl9xMYCInl5htIJiY3CRGe1CBzoKIyWBgsAYiwhbCFdxgsAgzgUZioBiYiBOZzMChoIGBIHIgsljZlEG/t/O6t3q6qvtVve979f1gmNnunuqe3l9//X/fe/W66LqOQyia9hHw7KCD7M9FV5VXie7bcBRN+y5wMvPdnnVV+TK84GGkA59GOs5YLhLdr7HOEfM7cAGsFbIHkQ5cRzrOWI4S3a+xznHqBwARZN4s9caycBFDBLEqs7FcTkgXM9eIJfN1pOOMRcTb21KRVJUhg8rsuilGGlIM/LaiXWYxT+TScFVZ1DtjLJlvIh3H0EPKrFzT41wOMlt7bmaKpn2S+jH0ddG0xwwwmWcliBcpI15vwyGmzKkmToyZC" alt="Logo" style="height: 40px; width: auto; margin-bottom: 10px;">
             </div>
             <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; border-radius: 8px;">
               ${aiResponse.content.replace(/\n/g, '<br>')}
@@ -957,7 +957,7 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="text-align: center; margin-bottom: 20px;">
-              <div style="background-color: #2563eb; color: white; width: 80px; height: 40px; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: bold; font-size: 18px; margin-bottom: 10px;">N1</div>
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALMAAACWCAYAAACVdbl2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAKLklEQVR4nO2dMYgkWRnHf7UsQh2LHoggHJiIl9xMYCInl5htIJiY3CRGe1CBzoKIyWBgsAYiwhbCFdxgsAgzgUZioBiYiBOZzMChoIGBIHIgsljZlEG/t/O6t3q6qvtVve979f1gmNnunuqe3l9//X/fe/W66LqOQyia9hHw7KCD7M9FV5VXie7bcBRN+y5wMvPdnnVV+TK84GGkA59GOs5YLhLdr7HOEfM7cAGsFbIHkQ5cRzrOWI4S3a+xznHqBwARZN4s9caycBFDBLEqs7FcTkgXM9eIJfN1pOOMRcTb21KRVJUhg8rsuilGGlIM/LaiXWYxT+TScFVZ1DtjLJlvIh3H0EPKrFzT41wOMlt7bmaKpn2S+jH0ddG0xwwwmWcliBcpI15vwyGmzKkmToyZC" alt="Logo" style="height: 40px; width: auto; margin-bottom: 10px;">
             </div>
             <h2 style="color: #2563eb;">Resposta do Suporte</h2>
             <p>Olá,</p>
