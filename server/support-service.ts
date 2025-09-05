@@ -271,7 +271,7 @@ REGRAS:
             eq(supportTickets.subject, subject),
             ilike(supportTickets.subject, `%${originalSubject}%`)
           ),
-          inArray(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
+          inArray(supportTickets.status, ['open', 'in_progress'])
         )
       )
       .orderBy(desc(supportTickets.createdAt))
@@ -289,7 +289,7 @@ REGRAS:
       .where(
         and(
           eq(supportTickets.customerEmail, from),
-          inArray(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
+          inArray(supportTickets.status, ['open', 'in_progress'])
         )
       )
       .orderBy(desc(supportTickets.createdAt))
@@ -358,25 +358,14 @@ REGRAS:
       });
 
       // Update ticket status to show new activity and mark as unread
-      if (existingTicket.status === 'waiting_customer') {
-        await db
-          .update(supportTickets)
-          .set({
-            status: 'open',
-            isRead: false,
-            updatedAt: new Date()
-          })
-          .where(eq(supportTickets.id, existingTicket.id));
-      } else {
-        // Just update the timestamp and mark as unread
-        await db
-          .update(supportTickets)
-          .set({ 
-            isRead: false,
-            updatedAt: new Date() 
-          })
-          .where(eq(supportTickets.id, existingTicket.id));
-      }
+      await db
+        .update(supportTickets)
+        .set({
+          status: 'open', // Set to open when customer replies
+          isRead: false,
+          updatedAt: new Date()
+        })
+        .where(eq(supportTickets.id, existingTicket.id));
 
       console.log(`✅ Reply attached to ticket: ${existingTicket.ticketNumber}`);
       return savedEmail;
@@ -507,15 +496,16 @@ REGRAS:
 Você é Sofia, uma agente de atendimento ao cliente experiente e empática de uma empresa de e-commerce. Você deve responder ao email de suporte de forma natural, humana e profissional, sem revelar que você é uma IA.
 
 INFORMAÇÕES DA EMPRESA:
-- Tempo de entrega: 2 a 7 dias úteis (maioria chega em até 3 dias)
+- Tempo de entrega: **2 a 7 dias úteis** (a maioria dos pedidos chega em **até 3 dias úteis**)
 - Pagamento: Na entrega (COD - Cash on Delivery)
 - Política: Embalagens não podem ser violadas antes da entrega (gera prejuízos ao entregador)
+- Horário de funcionamento: Segunda a sexta, 9h às 18h
 
 CARACTERÍSTICAS DA SUA RESPOSTA:
 - Seja empática e compreensiva com frustrações
 - Use linguagem natural e calorosa
 - Responda na MESMA LÍNGUA do cliente
-- Seja específica e útil
+- Seja específica e útil sobre prazos e processos
 - Mantenha tom profissional mas amigável
 - NÃO mencione que você é IA ou bot
 - Use o nome do cliente quando possível
@@ -531,11 +521,27 @@ Assunto: ${email.subject}
 Categoria: ${category.displayName}
 Conteúdo: ${email.textContent || email.htmlContent}
 
-INSTRUÇÕES ESPECÍFICAS:
-- Se for sobre ENTREGA: Explique os prazos e tranquilize sobre acompanhamento
-- Se for sobre CANCELAMENTO: Seja compreensiva e ofereça soluções
-- Se for sobre ALTERAÇÃO DE ENDEREÇO: Explique o processo e prazos para mudança
-- Se for DÚVIDAS GERAIS: Responda diretamente e ofereça ajuda adicional
+INSTRUÇÕES ESPECÍFICAS POR CATEGORIA:
+
+**Se for sobre ENTREGA/TEMPO DE CHEGADA:**
+- Sempre informe os prazos específicos: "2 a 7 dias úteis, sendo que a maioria dos pedidos chega em até 3 dias úteis"
+- Explique que o prazo conta a partir da confirmação do pedido
+- Tranquilize sobre a confiabilidade do serviço
+- Ofereça acompanhamento se necessário
+
+**Se for sobre CANCELAMENTO:**
+- Seja compreensiva e ofereça soluções
+- Explique o processo de cancelamento
+- Informe sobre reembolso se aplicável
+
+**Se for sobre ALTERAÇÃO DE ENDEREÇO:**
+- Explique o processo e prazos para mudança
+- Informe limitações se o pedido já saiu para entrega
+
+**Se for DÚVIDAS GERAIS:**
+- Responda diretamente à pergunta específica
+- Ofereça informações detalhadas relevantes
+- Seja proativa em antecipar outras dúvidas relacionadas
 
 Responda em JSON com:
 {
@@ -543,7 +549,11 @@ Responda em JSON com:
   "content": "Conteúdo da resposta em texto limpo e empático"
 }
 
-IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever em português, responda em português. Se escrever em inglês, responda em inglês, etc.
+IMPORTANTE: 
+1. Responda na mesma língua do email original
+2. Seja ESPECÍFICA - evite respostas genéricas como "analisaremos sua solicitação"
+3. Responda diretamente à pergunta feita pelo cliente
+4. Use as informações da empresa fornecidas acima
 `;
 
     try {
@@ -652,11 +662,11 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
           messageId: null
         });
 
-        // Update ticket status to show it was responded
+        // Update ticket status to show it was responded by AI but keep it active
         await db
           .update(supportTickets)
           .set({
-            status: 'waiting_customer',
+            status: 'in_progress',
             updatedAt: new Date()
           })
           .where(eq(supportTickets.id, ticket[0].id));
