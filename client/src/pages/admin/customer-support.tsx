@@ -100,9 +100,10 @@ export default function CustomerSupportPage() {
   });
 
   // Get support configuration
-  const { data: supportConfig, isLoading: isLoadingConfig } = useQuery({
+  const { data: supportConfig, isLoading: isLoadingConfig, error: configError } = useQuery({
     queryKey: [`/api/customer-support/config/${currentOperationId}`],
     enabled: !!currentOperationId,
+    retry: false, // Don't retry on 404
   });
 
   // Get support metrics
@@ -172,8 +173,10 @@ export default function CustomerSupportPage() {
     );
   }
 
-  // Show initialization screen if not configured
-  if (!isLoadingConfig && !supportConfig) {
+  // Show initialization screen if not configured (404 error means not configured yet)
+  const isNotConfigured = !isLoadingConfig && (!supportConfig || (configError as any)?.response?.status === 404);
+  
+  if (isNotConfigured) {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
