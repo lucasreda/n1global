@@ -521,7 +521,7 @@ export default function AdminSupport() {
                     <Button 
                       variant="destructive" 
                       size="sm" 
-                      className="ml-4"
+                      className="mr-8"
                       data-testid="button-close-ticket"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
