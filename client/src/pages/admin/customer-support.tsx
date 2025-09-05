@@ -447,8 +447,8 @@ export default function CustomerSupportPage() {
       {/* Header with Controls */}
       <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-100">
-            Sistema de Suporte - {currentOperationName}
+          <h1 className="font-bold tracking-tight text-gray-100" style={{ fontSize: '20px' }}>
+            Suporte de Clientes
           </h1>
           <p className="text-gray-400 mt-1 text-sm sm:text-base">
             Gerenciamento de atendimento ao cliente com IA para esta operação
