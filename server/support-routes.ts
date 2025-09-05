@@ -405,6 +405,19 @@ export function registerSupportRoutes(app: Express) {
   /**
    * Get support dashboard metrics
    */
+  /**
+   * Get overview metrics for cards
+   */
+  app.get("/api/support/overview", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const metrics = await supportService.getOverviewMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching overview metrics:", error);
+      res.status(500).json({ message: "Failed to fetch overview metrics" });
+    }
+  });
+
   app.get("/api/support/dashboard", async (req: AuthRequest, res: Response) => {
     try {
       const { period = "7d" } = req.query;

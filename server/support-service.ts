@@ -868,6 +868,45 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
   }
 
   /**
+   * Get support overview cards metrics
+   */
+  async getOverviewMetrics() {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Tickets Abertos
+    const openTickets = await db
+      .select({ count: count() })
+      .from(supportTickets)
+      .where(eq(supportTickets.status, 'open'));
+
+    // Respondido por IA
+    const aiResponded = await db
+      .select({ count: count() })
+      .from(supportEmails)
+      .where(eq(supportEmails.hasAutoResponse, true));
+
+    // Tickets no Mês  
+    const monthlyTickets = await db
+      .select({ count: count() })
+      .from(supportTickets)
+      .where(sql`${supportTickets.createdAt} >= ${monthStart}`);
+
+    // Não Lidos
+    const unreadTickets = await db
+      .select({ count: count() })
+      .from(supportTickets)
+      .where(eq(supportTickets.isRead, false));
+
+    return {
+      openTickets: openTickets[0].count,
+      aiResponded: aiResponded[0].count,
+      monthlyTickets: monthlyTickets[0].count,
+      unreadTickets: unreadTickets[0].count
+    };
+  }
+
+  /**
    * Get support dashboard metrics
    */
   async getDashboardMetrics(period: string = '7d') {

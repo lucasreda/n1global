@@ -257,6 +257,18 @@ export default function AdminSupport() {
     enabled: true
   });
 
+  // Overview metrics for cards
+  const { data: overviewMetrics, isLoading: overviewLoading } = useQuery<{
+    openTickets: number;
+    aiResponded: number;
+    monthlyTickets: number;
+    unreadTickets: number;
+  }>({
+    queryKey: ['/api/support/overview'],
+    enabled: true,
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
   const hasSupportFilters = supportSearchTerm.trim().length > 0 || 
                            selectedCategory !== "all" || 
                            selectedTicketStatus !== "all";
@@ -296,6 +308,80 @@ export default function AdminSupport() {
       <div>
         <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte</h1>
         <p className="text-slate-300">Gerenciamento centralizado de atendimento ao cliente com IA</p>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {overviewLoading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index} className="bg-white/10 border-white/20 backdrop-blur-md">
+              <CardContent className="p-4">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-slate-600 rounded mb-2"></div>
+                  <div className="h-8 bg-slate-600 rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-tickets-abertos">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Tickets Abertos</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.openTickets || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <MessageSquare className="h-6 w-6 text-green-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-respondido-ia">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Respondido por IA</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.aiResponded || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-blue-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-tickets-mes">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Tickets no Mês</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.monthlyTickets || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-purple-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-nao-lidos">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Não Lidos</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.unreadTickets || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <Mail className="h-6 w-6 text-red-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Layout com Cards de Tipos na Esquerda e Filtros/Tickets na Direita */}
