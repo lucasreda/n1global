@@ -317,20 +317,24 @@ REGRAS:
         messageId: message_id
       });
 
-      // Update ticket status to show new activity
+      // Update ticket status to show new activity and mark as unread
       if (existingTicket.status === 'waiting_customer') {
         await db
           .update(supportTickets)
           .set({
             status: 'open',
+            isRead: false,
             updatedAt: new Date()
           })
           .where(eq(supportTickets.id, existingTicket.id));
       } else {
-        // Just update the timestamp
+        // Just update the timestamp and mark as unread
         await db
           .update(supportTickets)
-          .set({ updatedAt: new Date() })
+          .set({ 
+            isRead: false,
+            updatedAt: new Date() 
+          })
           .where(eq(supportTickets.id, existingTicket.id));
       }
 
@@ -432,6 +436,7 @@ REGRAS:
       description: email.textContent || email.htmlContent || '',
       priority: email.isUrgent ? 'high' : 'medium',
       status: 'open',
+      isRead: false,
     };
 
     const [ticket] = await db
@@ -804,6 +809,17 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
     return await db
       .update(supportTickets)
       .set(updateData)
+      .where(eq(supportTickets.id, ticketId))
+      .returning();
+  }
+
+  /**
+   * Mark ticket as read
+   */
+  async markTicketAsRead(ticketId: string) {
+    return await db
+      .update(supportTickets)
+      .set({ isRead: true, updatedAt: new Date() })
       .where(eq(supportTickets.id, ticketId))
       .returning();
   }

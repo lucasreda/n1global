@@ -270,6 +270,26 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
+   * Mark ticket as read
+   */
+  app.patch("/api/support/tickets/:id/mark-read", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const [updatedTicket] = await supportService.markTicketAsRead(id);
+      
+      if (!updatedTicket) {
+        return res.status(404).json({ message: "Ticket not found" });
+      }
+
+      res.json({ success: true, ticket: updatedTicket });
+    } catch (error) {
+      console.error("Error marking ticket as read:", error);
+      res.status(500).json({ message: "Failed to mark ticket as read" });
+    }
+  });
+
+  /**
    * Add conversation/reply to ticket
    */
   app.post("/api/support/tickets/:id/conversations", authenticateToken, async (req: AuthRequest, res: Response) => {

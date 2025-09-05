@@ -1179,6 +1179,9 @@ export const supportTickets = pgTable("support_tickets", {
   tags: text("tags").array().default([]),
   internalNotes: text("internal_notes"),
   
+  // Read status
+  isRead: boolean("is_read").notNull().default(false),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

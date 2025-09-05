@@ -88,6 +88,11 @@ export default function AdminSupport() {
           ...fullTicketData,
           conversations: fullTicketData.conversations || []
         });
+        
+        // Mark ticket as read if it wasn't read
+        if (!ticketResponse.ticket.isRead) {
+          await markTicketAsRead(ticketResponse.ticket.id);
+        }
       } else {
         console.error('❌ Failed to load full ticket data');
         // Fallback to original data
@@ -101,6 +106,38 @@ export default function AdminSupport() {
     
     setIsTicketModalOpen(true);
     setReplyMessage(""); // Reset reply message
+    
+    // Scroll to last message after modal opens
+    setTimeout(() => {
+      scrollToLastMessage();
+    }, 500);
+  };
+
+  // Function to mark ticket as read
+  const markTicketAsRead = async (ticketId: string) => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      await fetch(`/api/support/tickets/${ticketId}/mark-read`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+      });
+      
+      // Refresh tickets list to update UI
+      queryClient.invalidateQueries({ queryKey: ['/api/support/tickets'] });
+    } catch (error) {
+      console.error('❌ Error marking ticket as read:', error);
+    }
+  };
+
+  // Function to scroll to last message in conversation
+  const scrollToLastMessage = () => {
+    const conversationContainer = document.getElementById('conversation-history');
+    if (conversationContainer) {
+      conversationContainer.scrollTop = conversationContainer.scrollHeight;
+    }
   };
 
   // Function to close ticket
@@ -413,10 +450,14 @@ export default function AdminSupport() {
                   {supportTicketsResponse.tickets.map((ticketResponse: any) => (
                     <div 
                       key={ticketResponse.ticket.id} 
-                      className="border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors cursor-pointer" 
+                      className="relative border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors cursor-pointer" 
                       onClick={() => handleViewTicket(ticketResponse)}
                       data-testid={`ticket-${ticketResponse.ticket.ticketNumber}`}
                     >
+                      {/* Círculo azul para tickets não lidos */}
+                      {!ticketResponse.ticket.isRead && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border border-slate-900 z-10" />
+                      )}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-4">
                           <div 
@@ -673,7 +714,7 @@ export default function AdminSupport() {
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Histórico de Conversação ({selectedTicket.conversations.length})
                   </h3>
-                  <div className="space-y-4 max-h-60 overflow-y-auto">
+                  <div id="conversation-history" className="space-y-4 max-h-60 overflow-y-auto">
                     {selectedTicket.conversations.map((conversation: any, index: number) => (
                       <div 
                         key={conversation.id || index} 
