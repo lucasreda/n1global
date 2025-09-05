@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +19,8 @@ import {
   User,
   Mail,
   FileText,
-  X
+  X,
+  Send
 } from "lucide-react";
 
 interface SupportCategory {
@@ -54,11 +56,49 @@ export default function AdminSupport() {
   const [selectedTicketStatus, setSelectedTicketStatus] = useState<string>("all");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
   // Function to open ticket modal
   const handleViewTicket = (ticketResponse: any) => {
     setSelectedTicket(ticketResponse);
     setIsTicketModalOpen(true);
+    setReplyMessage(""); // Reset reply message
+  };
+
+  // Function to send reply
+  const handleSendReply = async () => {
+    if (!selectedTicket || !replyMessage.trim()) return;
+
+    setIsSendingReply(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/support/tickets/${selectedTicket.ticket.id}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          message: replyMessage.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao enviar resposta');
+      }
+
+      setReplyMessage("");
+      setIsTicketModalOpen(false);
+      setSelectedTicket(null);
+      // TODO: Add success toast/notification
+      alert('Resposta enviada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar resposta:', error);
+      alert('Erro ao enviar resposta. Tente novamente.');
+    } finally {
+      setIsSendingReply(false);
+    }
   };
 
   // Support system queries
@@ -475,6 +515,50 @@ export default function AdminSupport() {
                   </p>
                 </div>
               )}
+
+              {/* Reply Section */}
+              <div className="bg-slate-800/50 rounded-lg p-4 border-t-2 border-blue-500/50">
+                <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
+                  <Send className="h-4 w-4 mr-2" />
+                  Responder Ticket
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm text-slate-400 mb-2 block">
+                      Resposta para {selectedTicket.ticket.customerEmail}
+                    </label>
+                    <Textarea
+                      placeholder="Digite sua resposta aqui..."
+                      value={replyMessage}
+                      onChange={(e) => setReplyMessage(e.target.value)}
+                      className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[120px] resize-none"
+                      disabled={isSendingReply}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-400">
+                      Esta resposta será enviada por email para o cliente
+                    </p>
+                    <Button
+                      onClick={handleSendReply}
+                      disabled={!replyMessage.trim() || isSendingReply}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isSendingReply ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Enviar Resposta
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>

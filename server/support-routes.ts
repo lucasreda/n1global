@@ -1,12 +1,43 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 import { supportService } from "./support-service";
 import { db } from "./db";
 import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
 interface AuthRequest extends Request {
   user?: any;
 }
+
+// Middleware to verify JWT token
+const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  console.log("🔐 Auth Debug:", {
+    hasAuthHeader: !!authHeader,
+    hasToken: !!token,
+    url: req.url,
+    method: req.method
+  });
+
+  if (!token) {
+    console.log("❌ No token provided");
+    return res.status(401).json({ message: "Token de acesso requerido" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) {
+      console.log("❌ JWT verification failed:", err.message);
+      return res.status(403).json({ message: "Token inválido" });
+    }
+    console.log("✅ JWT verified for user:", user.email);
+    req.user = user;
+    next();
+  });
+};
 
 export function registerSupportRoutes(app: Express) {
   
@@ -379,6 +410,45 @@ export function registerSupportRoutes(app: Express) {
     } catch (error) {
       console.error("Error categorizing email:", error);
       res.status(500).json({ message: "Failed to categorize email" });
+    }
+  });
+
+  /**
+   * Reply to a support ticket
+   */
+  app.post('/api/support/tickets/:id/reply', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id: ticketId } = req.params;
+      const { message } = req.body;
+
+      if (!ticketId) {
+        return res.status(400).json({ message: 'ID do ticket é obrigatório' });
+      }
+
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({ message: 'Mensagem é obrigatória' });
+      }
+
+      if (message.length > 5000) {
+        return res.status(400).json({ message: 'Mensagem muito longa (máximo 5000 caracteres)' });
+      }
+
+      // Get agent name from user session if available
+      const agentName = (req as any).user?.name || (req as any).user?.email || 'Equipe de Suporte';
+
+      await supportService.replyToTicket(ticketId, message.trim(), agentName);
+
+      res.json({ 
+        message: 'Resposta enviada com sucesso',
+        success: true 
+      });
+
+    } catch (error) {
+      console.error('Error replying to ticket:', error);
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor',
+        success: false
+      });
     }
   });
 }

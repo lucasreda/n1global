@@ -461,6 +461,92 @@ REGRAS:
       period
     };
   }
+
+  /**
+   * Send a reply to a support ticket via email
+   */
+  async replyToTicket(ticketId: string, message: string, agentName?: string): Promise<void> {
+    try {
+      // Get ticket details
+      const ticketResult = await db
+        .select({
+          ticket: supportTickets,
+          email: supportEmails
+        })
+        .from(supportTickets)
+        .leftJoin(supportEmails, eq(supportTickets.emailId, supportEmails.id))
+        .where(eq(supportTickets.id, ticketId))
+        .limit(1);
+
+      if (ticketResult.length === 0) {
+        throw new Error('Ticket não encontrado');
+      }
+
+      const { ticket, email } = ticketResult[0];
+      if (!email) {
+        throw new Error('Email original não encontrado');
+      }
+
+      // Send reply via Mailgun
+      const replySubject = `Re: ${email.subject}`;
+      const senderName = agentName || 'Equipe de Suporte';
+      
+      await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
+        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: ticket.customerEmail,
+        subject: replySubject,
+        text: message,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2563eb;">Resposta do Suporte</h2>
+            <p>Olá,</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
+              ${message.replace(/\n/g, '<br>')}
+            </div>
+            <p style="color: #64748b; font-size: 14px;">
+              Esta é uma resposta ao seu ticket ${ticket.ticketNumber}.
+              <br>Se você tiver outras dúvidas, pode responder diretamente a este email.
+            </p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+            <p style="color: #94a3b8; font-size: 12px;">
+              ${senderName}<br>
+              Atendimento ao Cliente
+            </p>
+          </div>
+        `
+      });
+
+      // Update ticket status to 'responded' and add conversation record
+      await db.transaction(async (tx) => {
+        // Update ticket
+        await tx
+          .update(supportTickets)
+          .set({
+            status: 'in_progress', // Set to in_progress after agent response
+            updatedAt: new Date()
+          })
+          .where(eq(supportTickets.id, ticketId));
+
+        // Add conversation record
+        await tx.insert(supportConversations).values({
+          ticketId: ticketId,
+          type: 'email_out',
+          from: `suporte@${process.env.MAILGUN_DOMAIN}`,
+          to: ticket.customerEmail,
+          subject: replySubject,
+          content: message,
+          isInternal: false,
+          userId: null // TODO: Get user ID from auth
+        });
+      });
+
+      console.log(`✅ Reply sent for ticket ${ticket.ticketNumber} to ${ticket.customerEmail}`);
+      
+    } catch (error) {
+      console.error('Error sending ticket reply:', error);
+      throw new Error('Falha ao enviar resposta do ticket');
+    }
+  }
 }
 
 export const supportService = new SupportService();
