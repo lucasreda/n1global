@@ -361,26 +361,35 @@ export default function CustomerSupportPage() {
     staleTime: 0,
     queryFn: async () => {
       try {
-        console.log('🎫 Fetching real tickets from API...');
-        const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets?limit=50`, 'GET');
-        console.log('🎫 Real API response:', response);
+        console.log('🎫 Fetching tickets with direct fetch...');
         
-        // If response is empty or invalid, provide fallback
-        if (!response || !response.tickets) {
-          console.log('🎫 API response invalid, using fallback data');
-          return {
-            tickets: [],
-            total: 0
-          };
+        // Get fresh token from auth context
+        const token = localStorage.getItem('token');
+        const url = `/api/customer-support/${currentOperationId}/tickets?limit=50&fresh=${Date.now()}`;
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
+        const data = await response.json();
+        console.log('🎫 Fresh API response:', data);
+        
         return {
-          tickets: response.tickets || [],
-          total: response.total || 0
+          tickets: data.tickets || [],
+          total: data.total || 0
         };
       } catch (error) {
-        console.error('🎫 API error, using fallback:', error);
-        // Return empty instead of failing
+        console.error('🎫 Fetch error:', error);
         return {
           tickets: [],
           total: 0
