@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,20 @@ export default function AdminSupport() {
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isClosingTicket, setIsClosingTicket] = useState(false);
 
+  // Effect to scroll to last message when modal opens with conversations
+  useEffect(() => {
+    if (isTicketModalOpen && selectedTicket?.conversations && selectedTicket.conversations.length > 0) {
+      console.log('📜 Modal opened with conversations, attempting scroll...');
+      // Multiple attempts to ensure scroll happens after DOM updates
+      const scrollAttempts = [100, 300, 600, 1000];
+      scrollAttempts.forEach(delay => {
+        setTimeout(() => {
+          scrollToLastMessage();
+        }, delay);
+      });
+    }
+  }, [isTicketModalOpen, selectedTicket?.conversations?.length]);
+
   // Function to open ticket modal with full conversation history
   const handleViewTicket = async (ticketResponse: any) => {
     try {
@@ -106,11 +120,6 @@ export default function AdminSupport() {
     
     setIsTicketModalOpen(true);
     setReplyMessage(""); // Reset reply message
-    
-    // Scroll to last message after modal opens
-    setTimeout(() => {
-      scrollToLastMessage();
-    }, 500);
   };
 
   // Function to mark ticket as read
@@ -135,7 +144,9 @@ export default function AdminSupport() {
   // Function to scroll to last message in conversation
   const scrollToLastMessage = () => {
     const conversationContainer = document.getElementById('conversation-history');
+    console.log('🔍 Scroll attempt - Container found:', !!conversationContainer);
     if (conversationContainer) {
+      console.log('📜 Scrolling to bottom - scrollHeight:', conversationContainer.scrollHeight);
       conversationContainer.scrollTop = conversationContainer.scrollHeight;
     }
   };
