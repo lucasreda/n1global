@@ -447,7 +447,7 @@ export default function CustomerSupportPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-none">
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte - {currentOperationName}</h1>
@@ -549,9 +549,9 @@ export default function CustomerSupportPage() {
       </div>
 
       {/* Layout com Cards de Tipos na Esquerda e Filtros/Tickets na Direita */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
         {/* Coluna Esquerda - Cards dos Tipos de Email Empilhados */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="xl:col-span-1 space-y-4">
           {categoriesLoading ? (
             <div className="text-center py-8 text-slate-400">
               Carregando categorias...
@@ -607,7 +607,7 @@ export default function CustomerSupportPage() {
         </div>
 
         {/* Coluna Direita - Filtros e Lista de Tickets */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="xl:col-span-4 space-y-6">
           {/* Filtros */}
           <Card className="bg-white/10 border-white/20 backdrop-blur-md">
             <CardHeader className="pb-3">
