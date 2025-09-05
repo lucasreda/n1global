@@ -1,6 +1,7 @@
 import { OpenAI } from 'openai';
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
+import crypto from 'crypto';
 import { db } from './db';
 import { 
   supportCategories, 
