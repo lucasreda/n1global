@@ -356,71 +356,36 @@ export default function CustomerSupportPage() {
   const shouldLoadTickets = true; // Simplificando: sempre carregar tickets
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: [`tickets-hardcoded-${currentOperationId}`],
+    queryKey: [`tickets-real-${currentOperationId}`],
     enabled: !!supportConfig && !!currentOperationId,
     staleTime: 0,
     queryFn: async () => {
-      // Temporary hardcoded data to test the interface
-      console.log('🎫 Using hardcoded test data');
-      return {
-        tickets: [
-          {
-            id: '1',
-            ticketNumber: 'SUP-202509-0001',
-            subject: 'Dúvida sobre meu pedido',
-            customerName: 'João Silva',
-            customerEmail: 'joao@teste.com',
-            status: 'open',
-            priority: 'medium',
-            categoryId: '1',
-            categoryName: 'duvidas',
-            category: { displayName: 'Dúvidas' },
-            isRead: false,
-            isAutomated: false,
-            conversationCount: 0,
-            createdAt: new Date().toISOString(),
-            lastActivity: new Date().toISOString(),
-            operationId: currentOperationId
-          },
-          {
-            id: '2',
-            ticketNumber: 'SUP-202509-0002',
-            subject: 'Preciso alterar o endereço de entrega',
-            customerName: 'Maria Santos',
-            customerEmail: 'maria@teste.com',
-            status: 'pending',
-            priority: 'high',
-            categoryId: '2',
-            categoryName: 'alteracao_endereco',
-            category: { displayName: 'Alteração de Endereço' },
-            isRead: true,
-            isAutomated: true,
-            conversationCount: 2,
-            createdAt: new Date().toISOString(),
-            lastActivity: new Date().toISOString(),
-            operationId: currentOperationId
-          },
-          {
-            id: '3',
-            ticketNumber: 'SUP-202509-0003',
-            subject: 'Quero cancelar meu pedido',
-            customerName: 'Pedro Costa',
-            customerEmail: 'pedro@teste.com',
-            status: 'resolved',
-            priority: 'low',
-            categoryId: '3',
-            categoryName: 'cancelamento',
-            category: { displayName: 'Cancelamento' },
-            isRead: true,
-            isAutomated: false,
-            conversationCount: 1,
-            createdAt: new Date().toISOString(),
-            lastActivity: new Date().toISOString(),
-            operationId: currentOperationId
-          }
-        ],
-        total: 3
-      };
+      try {
+        console.log('🎫 Fetching real tickets from API...');
+        const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets?limit=50`, 'GET');
+        console.log('🎫 Real API response:', response);
+        
+        // If response is empty or invalid, provide fallback
+        if (!response || !response.tickets) {
+          console.log('🎫 API response invalid, using fallback data');
+          return {
+            tickets: [],
+            total: 0
+          };
+        }
+        
+        return {
+          tickets: response.tickets || [],
+          total: response.total || 0
+        };
+      } catch (error) {
+        console.error('🎫 API error, using fallback:', error);
+        // Return empty instead of failing
+        return {
+          tickets: [],
+          total: 0
+        };
+      }
     }
   });
 
