@@ -624,7 +624,7 @@ export default function CustomerSupportPage() {
         </div>
 
         {/* Coluna Direita - Filtros e Lista de Tickets */}
-        <div className="xl:col-span-10 space-y-3 lg:space-y-6">
+        <div className="xl:col-span-10 space-y-4">
           {/* Filtros */}
           <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
             <div className="mb-4">
