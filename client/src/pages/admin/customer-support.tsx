@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Settings, Mail, MessageSquare, BarChart3, Plus, Search, Filter, ExternalLink, Bot, User, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -71,15 +70,11 @@ export default function CustomerSupportPage() {
   const currentOperationName = currentOperation?.name;
   const queryClient = useQueryClient();
   
-  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: 'all',
     category: 'all',
     search: ''
   });
-  
-  const [showConfigDialog, setShowConfigDialog] = useState(false);
-  const [replyDialog, setReplyDialog] = useState<{ ticketId: string; subject: string; customerEmail: string } | null>(null);
 
   // Initialize support for current operation
   const initializeSupportMutation = useMutation({
@@ -103,7 +98,7 @@ export default function CustomerSupportPage() {
 
   // Get support configuration
   const { data: supportConfig, isLoading: isLoadingConfig } = useQuery({
-    queryKey: [`/api/customer-support/config`, currentOperationId],
+    queryKey: [`/api/customer-support/config/${currentOperationId}`],
     enabled: !!currentOperationId,
   });
 
@@ -132,29 +127,6 @@ export default function CustomerSupportPage() {
       toast({
         title: "Dados de Teste Criados",
         description: "Tickets de exemplo foram criados com sucesso",
-      });
-    },
-  });
-
-  // Send reply mutation
-  const sendReplyMutation = useMutation({
-    mutationFn: async (data: { ticketId: string; subject: string; content: string }) => {
-      return apiRequest(`/api/customer-support/${currentOperationId}/tickets/${data.ticketId}/reply`, {
-        method: "POST",
-        body: {
-          subject: `Re: ${data.subject}`,
-          content: data.content,
-          senderName: 'Suporte',
-          senderEmail: supportConfig?.emailDomain || 'suporte@exemplo.com'
-        }
-      });
-    },
-    onSuccess: () => {
-      setReplyDialog(null);
-      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
-      toast({
-        title: "Resposta Enviada",
-        description: "Sua resposta foi enviada com sucesso",
       });
     },
   });
@@ -249,10 +221,7 @@ export default function CustomerSupportPage() {
             <Plus className="w-4 h-4 mr-2" />
             Dados de Teste
           </Button>
-          <Button 
-            onClick={() => setShowConfigDialog(true)}
-            data-testid="button-settings"
-          >
+          <Button data-testid="button-settings">
             <Settings className="w-4 h-4 mr-2" />
             Configurações
           </Button>
@@ -401,7 +370,6 @@ export default function CustomerSupportPage() {
                     <div
                       key={ticket.id}
                       className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => setSelectedTicket(ticket.id)}
                       data-testid={`ticket-item-${ticket.ticketNumber}`}
                     >
                       <div className="flex items-center justify-between">
@@ -432,14 +400,6 @@ export default function CustomerSupportPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setReplyDialog({
-                                ticketId: ticket.id,
-                                subject: ticket.subject,
-                                customerEmail: ticket.customerEmail
-                              });
-                            }}
                             data-testid={`button-reply-${ticket.ticketNumber}`}
                           >
                             <Mail className="w-4 h-4 mr-2" />
@@ -512,63 +472,6 @@ export default function CustomerSupportPage() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Reply Dialog */}
-      <Dialog open={!!replyDialog} onOpenChange={() => setReplyDialog(null)}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-reply">
-          <DialogHeader>
-            <DialogTitle>Responder Ticket</DialogTitle>
-            <DialogDescription>
-              Enviando resposta para {replyDialog?.customerEmail}
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              const content = formData.get("content") as string;
-              
-              if (replyDialog && content.trim()) {
-                sendReplyMutation.mutate({
-                  ticketId: replyDialog.ticketId,
-                  subject: replyDialog.subject,
-                  content
-                });
-              }
-            }}
-            className="space-y-4"
-          >
-            <div>
-              <Label htmlFor="reply-content">Mensagem</Label>
-              <Textarea
-                id="reply-content"
-                name="content"
-                placeholder="Digite sua resposta..."
-                rows={8}
-                required
-                data-testid="textarea-reply-content"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setReplyDialog(null)}
-                data-testid="button-cancel-reply"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={sendReplyMutation.isPending}
-                data-testid="button-send-reply"
-              >
-                {sendReplyMutation.isPending ? "Enviando..." : "Enviar Resposta"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
