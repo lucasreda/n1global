@@ -98,30 +98,6 @@ export default function AdminSupport() {
     setReplyMessage(""); // Reset reply message
   };
 
-  // Function to test authentication
-  const testAuth = async () => {
-    try {
-      const token = localStorage.getItem("auth_token");
-      console.log('🧪 Token exists:', !!token);
-      console.log('🧪 Token preview:', token ? token.substring(0, 50) + '...' : 'NO TOKEN');
-      
-      const response = await fetch('/api/support/test-auth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { "Authorization": `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ test: true })
-      });
-
-      const result = await response.json();
-      console.log('🧪 Test auth result:', result);
-      alert(`Auth test: ${response.status} - ${JSON.stringify(result)}`);
-    } catch (error) {
-      console.error('🧪 Auth test error:', error);
-      alert(`Auth test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
 
   // Function to send reply
   const handleSendReply = async () => {
@@ -349,15 +325,10 @@ export default function AdminSupport() {
                   Gerenciamento centralizado de atendimento ao cliente
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="border-slate-600 text-slate-300" onClick={testAuth} data-testid="button-test-auth">
-                  🧪 Teste Auth
-                </Button>
-                <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
+              <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
             </CardHeader>
             <CardContent>
               {!shouldLoadTickets ? (
