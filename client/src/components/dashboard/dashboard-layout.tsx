@@ -78,7 +78,7 @@ export function DashboardLayout({ children, exchangeRate }: DashboardLayoutProps
         </div>
 
         {/* Main Content */}
-        <main className="w-full min-w-0 flex-1 lg:ml-64 p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6 overflow-x-hidden">
+        <main className="w-full min-w-0 flex-1 lg:ml-[260px] p-3 sm:p-4 lg:p-4 pb-20 lg:pb-6 overflow-x-hidden">
           <div className="w-full max-w-full overflow-x-hidden">
             {children}
           </div>
