@@ -1,13 +1,13 @@
-import { OpenAI } from 'openai';
-import formData from 'form-data';
-import Mailgun from 'mailgun.js';
-import crypto from 'crypto';
-import { db } from './db';
-import { 
-  supportCategories, 
-  supportEmails, 
-  supportTickets, 
-  supportResponses, 
+import { OpenAI } from "openai";
+import formData from "form-data";
+import Mailgun from "mailgun.js";
+import crypto from "crypto";
+import { db } from "./db";
+import {
+  supportCategories,
+  supportEmails,
+  supportTickets,
+  supportResponses,
   supportConversations,
   supportMetrics,
   type SupportCategory,
@@ -16,9 +16,9 @@ import {
   type SupportResponse,
   type InsertSupportEmail,
   type InsertSupportTicket,
-  type InsertSupportConversation
-} from '@shared/schema';
-import { eq, and, or, inArray, ilike, desc, sql, count } from 'drizzle-orm';
+  type InsertSupportConversation,
+} from "@shared/schema";
+import { eq, and, or, inArray, ilike, desc, sql, count } from "drizzle-orm";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -27,12 +27,11 @@ const openai = new OpenAI({
 // Configure Mailgun
 const mailgun = new Mailgun(formData);
 const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY || '',
+  username: "api",
+  key: process.env.MAILGUN_API_KEY || "",
 });
 
 export class SupportService {
-  
   /**
    * Format AI response content for HTML email
    */
@@ -40,39 +39,46 @@ export class SupportService {
     // Split content into paragraphs
     let formatted = content
       // Replace double line breaks with paragraph separators
-      .split('\n\n')
-      .map(paragraph => {
+      .split("\n\n")
+      .map((paragraph) => {
         // Trim whitespace
         paragraph = paragraph.trim();
-        if (!paragraph) return '';
-        
+        if (!paragraph) return "";
+
         // Convert **bold** to <strong>bold</strong>
-        paragraph = paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        
+        paragraph = paragraph.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
         // Convert *italic* to <em>italic</em>
-        paragraph = paragraph.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        
+        paragraph = paragraph.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
         // Convert single line breaks to <br>
-        paragraph = paragraph.replace(/\n/g, '<br>');
-        
+        paragraph = paragraph.replace(/\n/g, "<br>");
+
         // Wrap in paragraph tags
         return `<p style="margin-bottom: 15px; line-height: 1.6;">${paragraph}</p>`;
       })
-      .filter(p => p.length > 0)
-      .join('');
-    
+      .filter((p) => p.length > 0)
+      .join("");
+
     // Handle lists (- item or * item)
-    formatted = formatted.replace(/<p[^>]*>([^<]*[-*]\s[^<]*(?:<br>[^<]*[-*]\s[^<]*)*)<\/p>/g, (match, listContent) => {
-      const items = listContent.split('<br>')
-        .filter((item: string) => item.trim().match(/^[-*]\s/))
-        .map((item: string) => `<li style="margin-bottom: 8px;">${item.replace(/^[-*]\s/, '').trim()}</li>`)
-        .join('');
-      return `<ul style="margin-bottom: 15px; padding-left: 20px;">${items}</ul>`;
-    });
-    
+    formatted = formatted.replace(
+      /<p[^>]*>([^<]*[-*]\s[^<]*(?:<br>[^<]*[-*]\s[^<]*)*)<\/p>/g,
+      (match, listContent) => {
+        const items = listContent
+          .split("<br>")
+          .filter((item: string) => item.trim().match(/^[-*]\s/))
+          .map(
+            (item: string) =>
+              `<li style="margin-bottom: 8px;">${item.replace(/^[-*]\s/, "").trim()}</li>`,
+          )
+          .join("");
+        return `<ul style="margin-bottom: 15px; padding-left: 20px;">${items}</ul>`;
+      },
+    );
+
     return formatted;
   }
-  
+
   /**
    * Get all support categories
    */
@@ -86,16 +92,22 @@ export class SupportService {
   /**
    * Categorize email using OpenAI
    */
-  async categorizeEmail(subject: string, content: string): Promise<{
+  async categorizeEmail(
+    subject: string,
+    content: string,
+  ): Promise<{
     categoryName: string;
     confidence: number;
     reasoning: string;
     requiresHuman: boolean;
   }> {
     const categories = await this.getCategories();
-    const categoryDescriptions = categories.map(cat => 
-      `${cat.name}: ${cat.description} (automação: ${cat.isAutomated ? 'sim' : 'não'})`
-    ).join('\n');
+    const categoryDescriptions = categories
+      .map(
+        (cat) =>
+          `${cat.name}: ${cat.description} (automação: ${cat.isAutomated ? "sim" : "não"})`,
+      )
+      .join("\n");
 
     const prompt = `
 Analise o seguinte email de suporte e categorize-o em uma das categorias disponíveis.
@@ -148,62 +160,87 @@ REGRAS:
         max_tokens: 300,
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      
-      const categoryName = result.categoryName || 'manual';
-      let requiresHuman = result.requiresHuman !== undefined ? result.requiresHuman : true;
-      
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+
+      const categoryName = result.categoryName || "manual";
+      let requiresHuman =
+        result.requiresHuman !== undefined ? result.requiresHuman : true;
+
       // Override AI decision for simple cases - force AI response for basic inquiries
-      if (categoryName === 'duvidas') {
-        const contentLower = (subject + ' ' + content).toLowerCase();
+      if (categoryName === "duvidas") {
+        const contentLower = (subject + " " + content).toLowerCase();
         const simpleInquiryKeywords = [
-          'quando', 'chegar', 'chegou', 'entrega', 'prazo', 'demora', 
-          'rastreamento', 'rastrear', 'acompanhar', 'status', 'pedido',
-          'produto', 'comprei', 'onde está', 'chegada'
+          "quando",
+          "chegar",
+          "chegou",
+          "entrega",
+          "prazo",
+          "demora",
+          "rastreamento",
+          "rastrear",
+          "acompanhar",
+          "status",
+          "pedido",
+          "produto",
+          "comprei",
+          "onde está",
+          "chegada",
         ];
-        
-        const hasSimpleKeywords = simpleInquiryKeywords.some(keyword => 
-          contentLower.includes(keyword)
+
+        const hasSimpleKeywords = simpleInquiryKeywords.some((keyword) =>
+          contentLower.includes(keyword),
         );
-        
+
         const hasComplexKeywords = [
-          'defeito', 'quebrado', 'problema', 'reclamação', 'advogado',
-          'processo', 'judicial', 'indenização', 'dano'
-        ].some(keyword => contentLower.includes(keyword));
-        
+          "defeito",
+          "quebrado",
+          "problema",
+          "reclamação",
+          "advogado",
+          "processo",
+          "judicial",
+          "indenização",
+          "dano",
+        ].some((keyword) => contentLower.includes(keyword));
+
         // If it's a simple delivery question without complex issues, AI can handle it
         if (hasSimpleKeywords && !hasComplexKeywords) {
           requiresHuman = false;
           console.log(`🤖 Forçando IA para dúvida simples: ${subject}`);
         }
       }
-      
+
       // Always allow AI for cancellations and address changes (unless explicitly complex)
-      if (['cancelamento', 'alteracao_endereco'].includes(categoryName)) {
-        const contentLower = (subject + ' ' + content).toLowerCase();
+      if (["cancelamento", "alteracao_endereco"].includes(categoryName)) {
+        const contentLower = (subject + " " + content).toLowerCase();
         const hasComplexKeywords = [
-          'advogado', 'processo', 'judicial', 'indenização', 'dano', 'ameaça'
-        ].some(keyword => contentLower.includes(keyword));
-        
+          "advogado",
+          "processo",
+          "judicial",
+          "indenização",
+          "dano",
+          "ameaça",
+        ].some((keyword) => contentLower.includes(keyword));
+
         if (!hasComplexKeywords) {
           requiresHuman = false;
           console.log(`🤖 Forçando IA para ${categoryName}: ${subject}`);
         }
       }
-      
+
       return {
         categoryName,
         confidence: Math.min(100, Math.max(0, result.confidence || 0)),
-        reasoning: result.reasoning || 'Categorização automática falhou',
-        requiresHuman
+        reasoning: result.reasoning || "Categorização automática falhou",
+        requiresHuman,
       };
     } catch (error) {
-      console.error('Erro na categorização por IA:', error);
+      console.error("Erro na categorização por IA:", error);
       return {
-        categoryName: 'manual',
+        categoryName: "manual",
         confidence: 0,
-        reasoning: 'Erro na análise de IA - necessita revisão manual',
-        requiresHuman: true
+        reasoning: "Erro na análise de IA - necessita revisão manual",
+        requiresHuman: true,
       };
     }
   }
@@ -215,7 +252,7 @@ REGRAS:
     // Check for common reply indicators in subject
     const replyPrefixes = [
       /^re:\s*/i,
-      /^re\[\d+\]:\s*/i, 
+      /^re\[\d+\]:\s*/i,
       /^aw:\s*/i,
       /^re\(\d+\):\s*/i,
       /^antw:\s*/i,
@@ -225,7 +262,7 @@ REGRAS:
       /^\[resposta\]:\s*/i,
     ];
 
-    return replyPrefixes.some(pattern => pattern.test(subject));
+    return replyPrefixes.some((pattern) => pattern.test(subject));
   }
 
   /**
@@ -247,18 +284,21 @@ REGRAS:
 
     let cleanSubject = subject.trim();
     for (const pattern of replyPrefixes) {
-      cleanSubject = cleanSubject.replace(pattern, '');
+      cleanSubject = cleanSubject.replace(pattern, "");
     }
-    
+
     return cleanSubject.trim();
   }
 
   /**
    * Find existing ticket for email reply
    */
-  private async findExistingTicketForReply(from: string, subject: string): Promise<SupportTicket | null> {
+  private async findExistingTicketForReply(
+    from: string,
+    subject: string,
+  ): Promise<SupportTicket | null> {
     const originalSubject = this.extractOriginalSubject(subject);
-    
+
     // Strategy 1: Find by customer email and similar subject
     const ticketsBySubject = await db
       .select()
@@ -269,16 +309,18 @@ REGRAS:
           or(
             eq(supportTickets.subject, originalSubject),
             eq(supportTickets.subject, subject),
-            ilike(supportTickets.subject, `%${originalSubject}%`)
+            ilike(supportTickets.subject, `%${originalSubject}%`),
           ),
-          inArray(supportTickets.status, ['open', 'in_progress'])
-        )
+          inArray(supportTickets.status, ["open", "in_progress"]),
+        ),
       )
       .orderBy(desc(supportTickets.createdAt))
       .limit(1);
 
     if (ticketsBySubject.length > 0) {
-      console.log(`📬 Found existing ticket by subject match: ${ticketsBySubject[0].ticketNumber}`);
+      console.log(
+        `📬 Found existing ticket by subject match: ${ticketsBySubject[0].ticketNumber}`,
+      );
       return ticketsBySubject[0];
     }
 
@@ -289,14 +331,16 @@ REGRAS:
       .where(
         and(
           eq(supportTickets.customerEmail, from),
-          inArray(supportTickets.status, ['open', 'in_progress'])
-        )
+          inArray(supportTickets.status, ["open", "in_progress"]),
+        ),
       )
       .orderBy(desc(supportTickets.createdAt))
       .limit(1);
 
     if (recentTickets.length > 0) {
-      console.log(`📬 Found existing ticket by recent activity: ${recentTickets[0].ticketNumber}`);
+      console.log(
+        `📬 Found existing ticket by recent activity: ${recentTickets[0].ticketNumber}`,
+      );
       return recentTickets[0];
     }
 
@@ -308,7 +352,15 @@ REGRAS:
    * Process incoming email from webhook
    */
   async processIncomingEmail(webhookData: any): Promise<SupportEmail> {
-    const { from, to, subject, text, html, attachments = [], message_id } = webhookData;
+    const {
+      from,
+      to,
+      subject,
+      text,
+      html,
+      attachments = [],
+      message_id,
+    } = webhookData;
 
     console.log(`📧 Processing email - From: ${from}, Subject: ${subject}`);
 
@@ -323,8 +375,10 @@ REGRAS:
 
     // If this is a reply to existing ticket, add to conversation instead of creating new ticket
     if (existingTicket) {
-      console.log(`📧 Adding reply to existing ticket: ${existingTicket.ticketNumber}`);
-      
+      console.log(
+        `📧 Adding reply to existing ticket: ${existingTicket.ticketNumber}`,
+      );
+
       // Save email
       const emailData: InsertSupportEmail = {
         messageId: message_id,
@@ -336,10 +390,10 @@ REGRAS:
         attachments: attachments.length > 0 ? attachments : null,
         categoryId: existingTicket.categoryId,
         aiConfidence: 100,
-        aiReasoning: 'Reply to existing ticket - no AI categorization needed',
-        status: 'attached_to_ticket',
+        aiReasoning: "Reply to existing ticket - no AI categorization needed",
+        status: "attached_to_ticket",
         requiresHuman: true,
-        rawData: webhookData
+        rawData: webhookData,
       };
 
       const [savedEmail] = await db
@@ -349,25 +403,27 @@ REGRAS:
 
       // Add conversation entry
       await this.addConversation(existingTicket.id, {
-        type: 'email_in',
+        type: "email_in",
         from: from,
         to: to,
         subject: subject,
-        content: text || html || '',
-        messageId: message_id
+        content: text || html || "",
+        messageId: message_id,
       });
 
       // Update ticket status to show new activity and mark as unread
       await db
         .update(supportTickets)
         .set({
-          status: 'open', // Set to open when customer replies
+          status: "open", // Set to open when customer replies
           isRead: false,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(supportTickets.id, existingTicket.id));
 
-      console.log(`✅ Reply attached to ticket: ${existingTicket.ticketNumber}`);
+      console.log(
+        `✅ Reply attached to ticket: ${existingTicket.ticketNumber}`,
+      );
       return savedEmail;
     }
 
@@ -375,8 +431,11 @@ REGRAS:
     console.log(`📧 Processing as new email`);
 
     // Categorize with AI
-    const categorization = await this.categorizeEmail(subject, text || html || '');
-    
+    const categorization = await this.categorizeEmail(
+      subject,
+      text || html || "",
+    );
+
     // Find category by name
     const category = await db
       .select()
@@ -398,9 +457,9 @@ REGRAS:
       categoryId,
       aiConfidence: categorization.confidence,
       aiReasoning: categorization.reasoning,
-      status: 'categorized',
+      status: "categorized",
       requiresHuman: categorization.requiresHuman,
-      rawData: webhookData
+      rawData: webhookData,
     };
 
     const [savedEmail] = await db
@@ -412,32 +471,50 @@ REGRAS:
     // Tickets should exist regardless of whether they get automatic responses
     if (categoryId) {
       const ticket = await this.createTicketFromEmail(savedEmail);
-      console.log(`📋 Ticket criado: ${ticket.ticketNumber} para ${savedEmail.from}`);
-      
+      console.log(
+        `📋 Ticket criado: ${ticket.ticketNumber} para ${savedEmail.from}`,
+      );
+
       // If automatic response was sent, mark ticket as initially responded
       if (category[0]?.isAutomated && !categorization.requiresHuman) {
         const categoryName = category[0].name.toLowerCase();
-        if (['duvidas', 'alteracao_endereco', 'cancelamento'].includes(categoryName)) {
+        if (
+          ["duvidas", "alteracao_endereco", "cancelamento"].includes(
+            categoryName,
+          )
+        ) {
           // The AI will respond, so we'll update ticket status after response is sent
-          console.log(`📋 Ticket ${ticket.ticketNumber} will receive automatic response`);
+          console.log(
+            `📋 Ticket ${ticket.ticketNumber} will receive automatic response`,
+          );
         }
       }
     }
 
     // Send AI auto-response if category supports it and is eligible
-    if (categoryId && category[0]?.isAutomated && !categorization.requiresHuman) {
+    if (
+      categoryId &&
+      category[0]?.isAutomated &&
+      !categorization.requiresHuman
+    ) {
       const categoryName = category[0].name.toLowerCase();
-      
+
       // Use AI responses for specific categories only
-      if (['duvidas', 'alteracao_endereco', 'cancelamento'].includes(categoryName)) {
+      if (
+        ["duvidas", "alteracao_endereco", "cancelamento"].includes(categoryName)
+      ) {
         console.log(`🤖 Enviando resposta IA para categoria: ${categoryName}`);
         await this.sendAIAutoResponse(savedEmail, category[0]);
-      } else if (categoryName !== 'reclamacoes' && categoryName !== 'manual') {
+      } else if (categoryName !== "reclamacoes" && categoryName !== "manual") {
         // Fallback to template system for other automated categories
-        console.log(`📄 Enviando resposta template para categoria: ${categoryName}`);
+        console.log(
+          `📄 Enviando resposta template para categoria: ${categoryName}`,
+        );
         await this.sendAutoResponse(savedEmail, category[0]);
       } else {
-        console.log(`⏸️ Categoria não elegível para resposta automática: ${categoryName}`);
+        console.log(
+          `⏸️ Categoria não elegível para resposta automática: ${categoryName}`,
+        );
       }
     }
 
@@ -454,17 +531,17 @@ REGRAS:
       .select({ count: sql<number>`count(*)::int` })
       .from(supportTickets)
       .where(sql`EXTRACT(YEAR FROM created_at) = ${year}`);
-    
-    const ticketNumber = `SUP-${year}-${String((count[0]?.count || 0) + 1).padStart(3, '0')}`;
+
+    const ticketNumber = `SUP-${year}-${String((count[0]?.count || 0) + 1).padStart(3, "0")}`;
 
     const ticketData: InsertSupportTicket = {
       emailId: email.id,
       categoryId: email.categoryId!,
       customerEmail: email.from,
       subject: email.subject,
-      description: email.textContent || email.htmlContent || '',
-      priority: email.isUrgent ? 'high' : 'medium',
-      status: 'open',
+      description: email.textContent || email.htmlContent || "",
+      priority: email.isUrgent ? "high" : "medium",
+      status: "open",
       isRead: false,
     };
 
@@ -475,12 +552,12 @@ REGRAS:
 
     // Add initial conversation entry
     await this.addConversation(ticket.id, {
-      type: 'email_in',
+      type: "email_in",
       from: email.from,
       to: email.to,
       subject: email.subject,
-      content: email.textContent || email.htmlContent || '',
-      messageId: email.messageId
+      content: email.textContent || email.htmlContent || "",
+      messageId: email.messageId,
     });
 
     return ticket;
@@ -489,71 +566,339 @@ REGRAS:
   /**
    * Generate AI-powered automatic response
    */
-  async generateAIAutoResponse(email: SupportEmail, category: SupportCategory): Promise<{subject: string, content: string}> {
-    const customerName = email.from.split('@')[0];
-    
+  async generateAIAutoResponse(
+    email: SupportEmail,
+    category: SupportCategory,
+  ): Promise<{ subject: string; content: string }> {
+    const customerName = email.from.split("@")[0];
+
     const prompt = `
-Você é Sofia, uma agente de atendimento ao cliente experiente e empática de uma empresa de e-commerce. Você deve responder ao email de suporte de forma natural, humana e profissional, sem revelar que você é uma IA.
+Você é Sofia, Analista Sênior de Customer Success da [NOME DA EMPRESA], com 8+ anos de experiência em e-commerce. Você resolve problemas com eficiência, antecipa necessidades e transforma frustrações em experiências positivas.
 
-INFORMAÇÕES DA EMPRESA:
-- Tempo de entrega: **2 a 7 dias úteis** (a maioria dos pedidos chega em **até 3 dias úteis**)
-- Pagamento: Na entrega (COD - Cash on Delivery)
-- Política: Embalagens não podem ser violadas antes da entrega (gera prejuízos ao entregador)
-- Horário de funcionamento: Segunda a sexta, 9h às 18h
+INFORMAÇÕES OPERACIONAIS:
 
-CARACTERÍSTICAS DA SUA RESPOSTA:
-- Seja empática e compreensiva com frustrações
-- Use linguagem natural e calorosa
-- Responda na MESMA LÍNGUA do cliente
-- Seja específica e útil sobre prazos e processos
-- Mantenha tom profissional mas amigável
-- NÃO mencione que você é IA ou bot
-- Use o nome do cliente quando possível
-- **FORMATAÇÃO**: Use formatação markdown no conteúdo:
-  * Use **texto** para palavras importantes ou destaque
-  * Use quebras de linha duplas (\n\n) para separar parágrafos
-  * Use listas com - quando apropriado
-  * Estruture a resposta em parágrafos claros e organizados
+ENTREGAS:
+- Prazo padrão: 2-7 dias úteis (70% chegam em até 3 dias)
+- Prazo conta após confirmação do pagamento
+- Entrega: Segunda a sexta, 8h às 18h / Sábado: 8h às 12h
+- Área de cobertura: [especificar cidades/regiões]
+- Transportadoras: [listar principais]
 
-EMAIL ORIGINAL:
-Remetente: ${email.from}
-Assunto: ${email.subject}
-Categoria: ${category.displayName}
-Conteúdo: ${email.textContent || email.htmlContent}
+PAGAMENTO:
+- Modalidade: Pagamento na Entrega
+- Aceito: Dinheiro, cartão (débito/crédito), PIX
+- Taxa de entrega: Grátis
+- Política: Embalagem violada = prejuízo ao entregador
 
-INSTRUÇÕES ESPECÍFICAS POR CATEGORIA:
+POLÍTICAS:
+- Troca/Devolução: 7 dias após recebimento
+- Garantia: [especificar por tipo de produto]
+- Cancelamento: Até [X] horas após pedido
+- Reembolso: 5-10 dias úteis (varia por banco)
 
-**Se for sobre ENTREGA/TEMPO DE CHEGADA:**
-- Sempre informe os prazos específicos: "2 a 7 dias úteis, sendo que a maioria dos pedidos chega em até 3 dias úteis"
-- Explique que o prazo conta a partir da confirmação do pedido
-- Tranquilize sobre a confiabilidade do serviço
-- Ofereça acompanhamento se necessário
+METODOLOGIA DE ATENDIMENTO:
 
-**Se for sobre CANCELAMENTO:**
-- Seja compreensiva e ofereça soluções
-- Explique o processo de cancelamento
-- Informe sobre reembolso se aplicável
+1. ANÁLISE INICIAL:
+- Identifique o problema principal E problemas secundários
+- Classifique urgência: CRÍTICO / MODERADO / BAIXO
+- Detecte emoção: Frustrado / Ansioso / Neutro / Satisfeito
 
-**Se for sobre ALTERAÇÃO DE ENDEREÇO:**
-- Explique o processo e prazos para mudança
-- Informe limitações se o pedido já saiu para entrega
+2. ESTRUTURA DA RESPOSTA:
+[SAUDAÇÃO PERSONALIZADA]
+[RECONHECIMENTO/EMPATIA]
+[AÇÃO ESPECÍFICA TOMADA]
+[INFORMAÇÕES DETALHADAS]
+[PRÓXIMOS PASSOS]
+[PREVENÇÃO/VALOR AGREGADO]
+[FECHAMENTO PROFISSIONAL]
 
-**Se for DÚVIDAS GERAIS:**
-- Responda diretamente à pergunta específica
-- Ofereça informações detalhadas relevantes
-- Seja proativa em antecipar outras dúvidas relacionadas
+3. PADRÕES DE QUALIDADE:
+✅ ESPECIFICIDADE: Números, datas, horários exatos
+✅ PROATIVIDADE: Antecipe dúvidas relacionadas
+✅ PERSONALIZAÇÃO: Use nome, histórico, contexto específico
+✅ SOLUCIONISMO: Ofereça alternativas quando não puder atender
+✅ FOLLOW-UP: Indique quando e como acompanhar
 
-Responda em JSON com:
+❌ NUNCA:
+- Frases genéricas ou templates óbvios
+- Promessas vagas ("em breve", "logo")
+- Transferir responsabilidade ("sistema", "política")
+- Ignorar tom emocional do cliente
+
+ANÁLISE DO CASO:
+Dados do Cliente:
+- Email: ${email.from}
+- Assunto: ${email.subject}
+- Categoria: ${category.displayName}
+- Conteúdo: ${email.textContent || email.htmlContent}
+- Histórico: [Se disponível: pedidos anteriores, interações]
+
+PROTOCOLOS POR CATEGORIA:
+
+ENTREGA/RASTREAMENTO:
+INVESTIGAR:
+- Status atual do pedido (#número)
+- Última atualização de rastreamento
+- Tentativas de entrega anteriores
+- Endereço de entrega confirmado
+
+RESPONDER COM:
+- Status específico: "Seu pedido saiu do centro de distribuição às [hora] e chegará hoje entre [horário]"
+- Código de rastreamento: "[CÓDIGO] - acompanhe em [link]"
+- Se atraso: Motivo específico + nova previsão + compensação
+- Contato da transportadora se necessário
+
+AÇÕES PROATIVAS:
+- Alertar sobre necessidade de estar presente
+- Confirmar telefone de contato
+- Sugerir endereço alternativo se histórico de problemas
+
+CANCELAMENTO/ALTERAÇÃO:
+VERIFICAR IMEDIATAMENTE:
+- Status: Em separação / Enviado / Em trânsito
+- Janela para alteração (até [X] horas)
+- Tipo de alteração solicitada
+
+SE POSSÍVEL:
+- "Cancelei/alterei seu pedido agora mesmo"
+- Confirmação por email em até [X] minutos
+- Prazo de estorno: [específico por forma de pagamento]
+
+SE IMPOSSÍVEL:
+- Explicar motivo específico + quando passou do prazo
+- Alternativas: Recusar na entrega / Troca posterior / Cupom desconto
+- Processo detalhado para cada alternativa
+
+PROBLEMA COM PRODUTO:
+CATEGORIZAR:
+- Defeito de fábrica
+- Produto diferente do anunciado
+- Embalagem danificada
+- Produto não funcionando
+
+SOLUÇÃO IMEDIATA:
+- Troca expressa (envio antes da devolução para clientes fidelizados)
+- Reembolso total + frete de devolução grátis
+- Desconto para manter produto (se defeito menor)
+- Upgrade gratuito se disponível
+
+SEGUIR:
+- Email com etiqueta de devolução
+- Agendamento de coleta
+- Prazo específico para resolução
+
+PAGAMENTO/FINANCEIRO:
+ESCLARECER:
+- Valor exato cobrado vs. esperado
+- Forma de pagamento utilizada
+- Data/hora da transação
+
+RESOLVER:
+- Ajuste de valor na próxima entrega
+- Estorno parcial: [prazo específico]
+- Crédito na conta para próxima compra
+- Parcelamento alternativo se disponível
+
+DÚVIDAS TÉCNICAS/PRODUTO:
+RESPONDER:
+- Especificações técnicas completas
+- Compatibilidade com outros produtos
+- Instruções de uso/instalação
+- Cuidados e manutenção
+
+AGREGAR VALOR:
+- Acessórios recomendados
+- Produtos complementares
+- Dicas de uso otimizado
+- Garantia estendida se disponível
+
+CONTATO/INFORMAÇÕES:
+FORNECER:
+- Telefone direto da empresa
+- WhatsApp para suporte
+- Horários de funcionamento
+- Endereço físico se necessário
+
+ORIENTAR:
+- Melhor horário para contato
+- Documentos necessários
+- Informações que deve ter em mãos
+
+PRIMEIRA COMPRA/NOVOS CLIENTES:
+ACOLHER:
+- Agradecer pela confiança
+- Explicar processo completo
+- Tranquilizar sobre segurança
+
+EDUCAR:
+- Como acompanhar pedido
+- O que esperar da entrega
+- Políticas importantes
+- Benefícios de cliente fidelizado
+
+BANCO DE RESPOSTAS EMPÁTICAS:
+
+Cliente Frustrado:
+- "Entendo perfeitamente sua frustração, [Nome]. Ninguém gosta de [situação]. Vou resolver isso agora mesmo."
+- "Você tem toda razão em estar chateado(a). Isso realmente não deveria ter acontecido."
+- "Sei como é importante [contexto da necessidade]. Deixe-me cuidar disso pessoalmente."
+
+Cliente Ansioso:
+- "Fico feliz em esclarecer isso para você, [Nome]. É natural ter essa preocupação."
+- "Entendo sua ansiedade. Vou te dar todas as informações em detalhes."
+- "Compreendo que você precisa dessa certeza. Vou acompanhar pessoalmente seu caso."
+
+Cliente Neutro/Informativo:
+- "Perfeito, [Nome]! Vou te ajudar com todas as informações que precisa."
+- "Claro! Fico feliz em esclarecer essas dúvidas para você."
+- "Sem problemas! Vou te orientar sobre todo o processo."
+
+Cliente Satisfeito:
+- "Que bom saber que está tudo perfeito! Fico muito feliz em ajudar."
+- "Obrigada pelo feedback positivo, [Nome]. Significa muito para nossa equipe."
+- "É um prazer atender clientes como você! Conte sempre conosco."
+
+Cliente Recorrente:
+- "Sempre um prazer falar com você, [Nome]! Como posso ajudar dessa vez?"
+- "Oi, [Nome]! Vi que você já é nosso cliente fiel. O que posso resolver para você hoje?"
+
+DIRETRIZES DE FORMATAÇÃO:
+
+ESTRUTURA VISUAL:
+- Use **negrito** para informações importantes (prazos, valores, status)
+- Use quebras de linha duplas (\n\n) entre parágrafos
+- Use listas com - ou • para múltiplas informações
+- Use emojis sutilmente (📦 para entrega, ✅ para confirmações)
+
+HIERARQUIA DE INFORMAÇÃO:
+1. **Ação imediata tomada** (primeiro parágrafo)
+2. **Detalhes específicos** (segundo parágrafo)
+3. **Próximos passos** (terceiro parágrafo)
+4. **Informações complementares** (se necessário)
+5. **Fechamento empático** (último parágrafo)
+
+TOM DE VOZ:
+- Profissional mas caloroso
+- Direto mas não seco
+- Empático mas não excessivo
+- Confiante mas não arrogante
+
+CENÁRIOS ESPECIAIS:
+
+CLIENTE VIP/RECORRENTE:
+- Priorizar atendimento diferenciado
+- Oferecer benefícios exclusivos
+- Mencionar histórico positivo
+- Acesso direto a você para futuras questões
+
+PEDIDO DE ALTO VALOR:
+- Tratamento premium automático
+- Rastreamento detalhado
+- Seguro opcional
+- Entrega expressa se disponível
+
+PROBLEMA COMPLEXO/ESCALADO:
+- Assumir ownership total do caso
+- Cronograma de resolução claro
+- Updates proativos regulares
+- Envolvimento de gestão se necessário
+
+RECLAMAÇÃO PÚBLICA (redes sociais mencionadas):
+- Prioridade máxima
+- Resolução imediata quando possível
+- Convite para continuar conversa privada
+- Follow-up para garantir satisfação
+
+CLIENTE INDECISO/PRIMEIRA COMPRA:
+- Mais detalhes sobre segurança
+- Depoimentos de outros clientes
+- Garantias e políticas claras
+- Suporte mais próximo
+
+INDICADORES DE QUALIDADE:
+
+RESPOSTA EXCELENTE DEVE TER:
+✅ Nome do cliente usado pelo menos 1 vez
+✅ Ação específica mencionada no primeiro parágrafo
+✅ Prazo ou data específica (não "em breve")
+✅ Próximo passo claro para o cliente
+✅ Tom empático apropriado à situação
+✅ Informação além do que foi perguntado (valor agregado)
+✅ Fechamento que convida continuidade
+
+SINAIS DE ALERTA (REVISAR):
+❌ Resposta muito curta (menos de 3 parágrafos para problemas)
+❌ Linguagem muito formal ou robótica
+❌ Não menciona nome do cliente
+❌ Usa "nossa equipe" em vez de "eu"
+❌ Promete sem dar prazo específico
+❌ Não oferece alternativa quando não pode resolver
+❌ Ignora completamente a emoção do cliente
+
+FORMATO DE RESPOSTA:
+
 {
-  "subject": "Assunto da resposta (em resposta ao email original)",
-  "content": "Conteúdo da resposta em texto limpo e empático"
+  "urgency": "critico|moderado|baixo",
+  "emotion_detected": "frustrado|ansioso|neutro|satisfeito",
+  "customer_type": "novo|recorrente|vip|problematico",
+  "main_issue": "Problema principal identificado",
+  "secondary_issues": ["Problema secundário 1", "Problema secundário 2"],
+  "action_taken": "Ação específica realizada ou sendo realizada",
+  "subject": "Re: [assunto] - [Ação tomada/Status atualizado]",
+  "content": "Resposta estruturada seguindo metodologia acima com formatação markdown",
+  "follow_up": "Próximo contato em [prazo] ou [condição]",
+  "compensation_offered": "Benefício oferecido (se aplicável)",
+  "internal_notes": "Observações para próximas interações"
 }
 
-IMPORTANTE: 
-1. Responda na mesma língua do email original
-2. Seja ESPECÍFICA - evite respostas genéricas como "analisaremos sua solicitação"
-3. Responda diretamente à pergunta feita pelo cliente
-4. Use as informações da empresa fornecidas acima
+EXEMPLOS DE EXCELÊNCIA:
+
+❌ RESPOSTA GENÉRICA:
+"Olá! Recebemos sua solicitação e nossa equipe irá analisar. Retornaremos em breve."
+
+✅ RESPOSTA PROFISSIONAL:
+"Olá, João! 👋
+
+Acabei de verificar seu pedido #1547 e identifiquei o problema: houve um atraso na transportadora devido ao feriado de ontem.
+
+**Status atual:** Seu pedido está no centro de distribuição de São Paulo e sairá para entrega ainda hoje às 14h.
+
+**Nova previsão:** Chegará amanhã (quarta-feira) entre 9h e 17h.
+
+**Compensação:** Como o atraso foi nosso, incluí frete grátis no seu próximo pedido (cupom **FG2024** - válido por 30 dias).
+
+Vou acompanhar pessoalmente a entrega e te atualizo por WhatsApp assim que sair para entrega. Qualquer coisa, é só responder este email!
+
+Abraços,  
+Sofia"
+
+✅ EXEMPLO - CANCELAMENTO:
+"Oi, Maria!
+
+**Cancelei seu pedido agora mesmo!** ✅
+
+Sua solicitação chegou a tempo - o pedido #2341 ainda estava em separação no nosso estoque.
+
+**Estorno:** O valor de R$ 89,90 será estornado em até **5 dias úteis** no cartão final 1234 (mesmo cartão da compra).
+
+**Para sua próxima compra:** Separei um cupom de **10% OFF** (VOLTA10) válido por 30 dias, caso mude de ideia sobre o produto.
+
+Espero te ver em breve por aqui! Qualquer dúvida, estarei sempre disponível.
+
+Beijos,  
+Sofia"
+
+EXECUTE AGORA:
+
+Analise o email recebido seguindo esta metodologia:
+1. Identifique a emoção e urgência
+2. Classifique o tipo de cliente
+3. Aplique o protocolo específico da categoria
+4. Estruture a resposta seguindo os padrões de qualidade
+5. Revise usando os indicadores de excelência
+6. Gere uma resposta que transforme este contato em uma experiência memorável positiva
+
+LEMBRE-SE: Você não é apenas uma atendente, você é a voz humana da empresa que pode transformar um problema em oportunidade de fidelização.
 `;
 
     try {
@@ -564,8 +909,8 @@ IMPORTANTE:
         max_tokens: 600,
       });
 
-      let content = response.choices[0].message.content || '{}';
-      
+      let content = response.choices[0].message.content || "{}";
+
       // Extract JSON from markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/g);
       if (jsonMatch && jsonMatch[0]) {
@@ -575,22 +920,27 @@ IMPORTANTE:
           content = innerMatch[0];
         }
       }
-      
+
       // Clean up potential control characters but preserve newlines in content
-      content = content.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
-      
+      content = content.replace(
+        /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g,
+        "",
+      );
+
       const result = JSON.parse(content);
-      
+
       return {
         subject: result.subject || `Re: ${email.subject}`,
-        content: result.content || 'Obrigada pelo seu contato. Nossa equipe analisará sua solicitação e retornaremos em breve.'
+        content:
+          result.content ||
+          "Obrigada pelo seu contato. Nossa equipe analisará sua solicitação e retornaremos em breve.",
       };
     } catch (error) {
-      console.error('Erro na geração de resposta IA:', error);
+      console.error("Erro na geração de resposta IA:", error);
       // Fallback para resposta padrão
       return {
         subject: `Re: ${email.subject}`,
-        content: `Olá ${customerName},\n\nObrigada pelo seu contato. Recebemos sua mensagem sobre "${email.subject}" e nossa equipe está analisando sua solicitação.\n\nRetornaremos com uma resposta personalizada em breve.\n\nAtenciosamente,\nEquipe de Atendimento`
+        content: `Olá ${customerName},\n\nObrigada pelo seu contato. Recebemos sua mensagem sobre "${email.subject}" e nossa equipe está analisando sua solicitação.\n\nRetornaremos com uma resposta personalizada em breve.\n\nAtenciosamente,\nEquipe de Atendimento`,
       };
     }
   }
@@ -598,23 +948,30 @@ IMPORTANTE:
   /**
    * Send AI-powered automatic response
    */
-  async sendAIAutoResponse(email: SupportEmail, category: SupportCategory): Promise<void> {
-    console.log(`🤖 Gerando resposta automática IA para categoria: ${category.name}`);
-    
+  async sendAIAutoResponse(
+    email: SupportEmail,
+    category: SupportCategory,
+  ): Promise<void> {
+    console.log(
+      `🤖 Gerando resposta automática IA para categoria: ${category.name}`,
+    );
+
     try {
       // Gerar resposta com IA
       const aiResponse = await this.generateAIAutoResponse(email, category);
-      
+
       console.log(`🤖 Resposta IA gerada - Assunto: "${aiResponse.subject}"`);
-      
+
       // Enviar email com resposta da IA
-      const mailgunResponse = await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
-        from: `Sofia - Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
-        to: email.from,
-        'h:Reply-To': `suporte@${process.env.MAILGUN_DOMAIN}`,
-        subject: aiResponse.subject,
-        text: aiResponse.content,
-        html: `
+      const mailgunResponse = await mg.messages.create(
+        process.env.MAILGUN_DOMAIN || "",
+        {
+          from: `Sofia - Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
+          to: email.from,
+          "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
+          subject: aiResponse.subject,
+          text: aiResponse.content,
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALMAAACWCAYAAACVdbl2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAKLklEQVR4nO2dMYgkWRnHf7UsQh2LHoggHJiIl9xMYCInl5htIJiY3CRGe1CBzoKIyWBgsAYiwhbCFdxgsAgzgUZioBiYiBOZzMChoIGBIHIgsljZlEG/t/O6t3q6qvtVve979f1gmNnunuqe3l9//X/fe/W66LqOQyia9hHw7KCD7M9FV5VXie7bcBRN+y5wMvPdnnVV+TK84GGkA59GOs5YLhLdr7HOEfM7cAGsFbIHkQ5cRzrOWI4S3a+xznHqBwARZN4s9caycBFDBLEqs7FcTkgXM9eIJfN1pOOMRcTb21KRVJUhg8rsuilGGlIM/LaiXWYxT+TScFVZ1DtjLJlvIh3H0EPKrFzT41wOMlt7bmaKpn2S+jH0ddG0xwwwmWcliBcpI15vwyGmzKkmToyZC" alt="Logo" style="height: 40px; width: auto; margin-bottom: 10px;">
@@ -632,10 +989,11 @@ IMPORTANTE:
               Atendimento ao Cliente
             </p>
           </div>
-        `
-      });
+        `,
+        },
+      );
 
-      console.log('🤖 Email IA enviado via Mailgun:', mailgunResponse.status);
+      console.log("🤖 Email IA enviado via Mailgun:", mailgunResponse.status);
 
       // Update email as responded
       await db
@@ -643,12 +1001,12 @@ IMPORTANTE:
         .set({
           hasAutoResponse: true,
           autoResponseSentAt: new Date(),
-          status: 'responded'
+          status: "responded",
         })
         .where(eq(supportEmails.id, email.id));
 
       console.log(`✅ Resposta automática IA enviada para: ${email.from}`);
-      
+
       // Add conversation entry for AI response
       const ticket = await db
         .select()
@@ -658,27 +1016,29 @@ IMPORTANTE:
 
       if (ticket[0]) {
         await this.addConversation(ticket[0].id, {
-          type: 'email_out',
+          type: "email_out",
           from: `Sofia - Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
           to: email.from,
           subject: aiResponse.subject,
           content: aiResponse.content,
-          messageId: null
+          messageId: null,
         });
 
         // Update ticket status to show it was responded by AI but keep it active
         await db
           .update(supportTickets)
           .set({
-            status: 'in_progress',
-            updatedAt: new Date()
+            status: "in_progress",
+            updatedAt: new Date(),
           })
           .where(eq(supportTickets.id, ticket[0].id));
 
-        console.log(`📋 Ticket ${ticket[0].ticketNumber} atualizado após resposta IA`);
+        console.log(
+          `📋 Ticket ${ticket[0].ticketNumber} atualizado após resposta IA`,
+        );
       }
     } catch (error) {
-      console.error('❌ Erro ao enviar resposta automática IA:', error);
+      console.error("❌ Erro ao enviar resposta automática IA:", error);
       throw error;
     }
   }
@@ -686,39 +1046,53 @@ IMPORTANTE:
   /**
    * Send automatic response (legacy template system - fallback)
    */
-  async sendAutoResponse(email: SupportEmail, category: SupportCategory): Promise<void> {
+  async sendAutoResponse(
+    email: SupportEmail,
+    category: SupportCategory,
+  ): Promise<void> {
     // Get default response for category
     const response = await db
       .select()
       .from(supportResponses)
-      .where(and(
-        eq(supportResponses.categoryId, category.id),
-        eq(supportResponses.isActive, true),
-        eq(supportResponses.isDefault, true)
-      ))
+      .where(
+        and(
+          eq(supportResponses.categoryId, category.id),
+          eq(supportResponses.isActive, true),
+          eq(supportResponses.isDefault, true),
+        ),
+      )
       .limit(1);
 
     if (!response[0]) {
-      console.log(`Nenhuma resposta automática encontrada para categoria: ${category.name}`);
+      console.log(
+        `Nenhuma resposta automática encontrada para categoria: ${category.name}`,
+      );
       return;
     }
 
     const template = response[0];
 
     // Replace variables in template
-    const personalizedSubject = template.subject.replace('{{customer_name}}', email.from.split('@')[0]);
+    const personalizedSubject = template.subject.replace(
+      "{{customer_name}}",
+      email.from.split("@")[0],
+    );
     const personalizedContent = template.textContent
-      .replace('{{customer_name}}', email.from.split('@')[0])
-      .replace('{{original_subject}}', email.subject)
-      .replace('{{ticket_number}}', `AUTO-${Date.now()}`);
+      .replace("{{customer_name}}", email.from.split("@")[0])
+      .replace("{{original_subject}}", email.subject)
+      .replace("{{ticket_number}}", `AUTO-${Date.now()}`);
 
     try {
-      await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
+      await mg.messages.create(process.env.MAILGUN_DOMAIN || "", {
         from: `Suporte <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: email.from,
         subject: personalizedSubject,
         text: personalizedContent,
-        html: template.htmlContent?.replace('{{customer_name}}', email.from.split('@')[0]) || undefined
+        html:
+          template.htmlContent?.replace(
+            "{{customer_name}}",
+            email.from.split("@")[0],
+          ) || undefined,
       });
 
       // Update email as responded
@@ -727,7 +1101,7 @@ IMPORTANTE:
         .set({
           hasAutoResponse: true,
           autoResponseSentAt: new Date(),
-          status: 'responded'
+          status: "responded",
         })
         .where(eq(supportEmails.id, email.id));
 
@@ -736,13 +1110,13 @@ IMPORTANTE:
         .update(supportResponses)
         .set({
           timesUsed: sql`${supportResponses.timesUsed} + 1`,
-          lastUsed: new Date()
+          lastUsed: new Date(),
         })
         .where(eq(supportResponses.id, template.id));
 
       console.log(`Resposta automática enviada para: ${email.from}`);
     } catch (error) {
-      console.error('Erro ao enviar resposta automática:', error);
+      console.error("Erro ao enviar resposta automática:", error);
       throw error;
     }
   }
@@ -750,17 +1124,20 @@ IMPORTANTE:
   /**
    * Add conversation entry to ticket
    */
-  async addConversation(ticketId: string, data: Partial<InsertSupportConversation>) {
+  async addConversation(
+    ticketId: string,
+    data: Partial<InsertSupportConversation>,
+  ) {
     const conversationData = {
       ticketId,
-      type: data.type || 'note',
-      content: data.content || '',
+      type: data.type || "note",
+      content: data.content || "",
       from: data.from || null,
       to: data.to || null,
       subject: data.subject || null,
       isInternal: data.isInternal || false,
       messageId: data.messageId || null,
-      userId: data.userId || null
+      userId: data.userId || null,
     };
 
     return await db
@@ -772,25 +1149,37 @@ IMPORTANTE:
   /**
    * Get tickets with pagination and filters
    */
-  async getTickets(options: {
-    status?: string;
-    categoryId?: string;
-    priority?: string;
-    assignedToUserId?: string;
-    page?: number;
-    limit?: number;
-  } = {}) {
-    const { status, categoryId, priority, assignedToUserId, page = 1, limit = 20 } = options;
+  async getTickets(
+    options: {
+      status?: string;
+      categoryId?: string;
+      priority?: string;
+      assignedToUserId?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ) {
+    const {
+      status,
+      categoryId,
+      priority,
+      assignedToUserId,
+      page = 1,
+      limit = 20,
+    } = options;
     const offset = (page - 1) * limit;
 
     let query = db
       .select({
         ticket: supportTickets,
         category: supportCategories,
-        email: supportEmails
+        email: supportEmails,
       })
       .from(supportTickets)
-      .leftJoin(supportCategories, eq(supportTickets.categoryId, supportCategories.id))
+      .leftJoin(
+        supportCategories,
+        eq(supportTickets.categoryId, supportCategories.id),
+      )
       .leftJoin(supportEmails, eq(supportTickets.emailId, supportEmails.id))
       .orderBy(desc(supportTickets.createdAt))
       .limit(limit)
@@ -801,7 +1190,8 @@ IMPORTANTE:
     if (status) conditions.push(eq(supportTickets.status, status));
     if (categoryId) conditions.push(eq(supportTickets.categoryId, categoryId));
     if (priority) conditions.push(eq(supportTickets.priority, priority));
-    if (assignedToUserId) conditions.push(eq(supportTickets.assignedToUserId, assignedToUserId));
+    if (assignedToUserId)
+      conditions.push(eq(supportTickets.assignedToUserId, assignedToUserId));
 
     if (conditions.length > 0) {
       query = query.where(and(...conditions)) as any;
@@ -818,7 +1208,7 @@ IMPORTANTE:
       tickets,
       total: totalResult[0].count,
       page,
-      totalPages: Math.ceil(totalResult[0].count / limit)
+      totalPages: Math.ceil(totalResult[0].count / limit),
     };
   }
 
@@ -830,10 +1220,13 @@ IMPORTANTE:
       .select({
         ticket: supportTickets,
         category: supportCategories,
-        email: supportEmails
+        email: supportEmails,
       })
       .from(supportTickets)
-      .leftJoin(supportCategories, eq(supportTickets.categoryId, supportCategories.id))
+      .leftJoin(
+        supportCategories,
+        eq(supportTickets.categoryId, supportCategories.id),
+      )
       .leftJoin(supportEmails, eq(supportTickets.emailId, supportEmails.id))
       .where(eq(supportTickets.id, ticketId));
 
@@ -848,7 +1241,7 @@ IMPORTANTE:
 
     return {
       ...ticket,
-      conversations
+      conversations,
     };
   }
 
@@ -857,8 +1250,8 @@ IMPORTANTE:
    */
   async updateTicketStatus(ticketId: string, status: string, userId?: string) {
     const updateData: any = { status, updatedAt: new Date() };
-    
-    if (status === 'resolved') {
+
+    if (status === "resolved") {
       updateData.resolvedAt = new Date();
       updateData.resolvedByUserId = userId;
     }
@@ -887,12 +1280,12 @@ IMPORTANTE:
   async getOverviewMetrics() {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    
+
     // Tickets Abertos
     const openTickets = await db
       .select({ count: count() })
       .from(supportTickets)
-      .where(eq(supportTickets.status, 'open'));
+      .where(eq(supportTickets.status, "open"));
 
     // Respondido por IA
     const aiResponded = await db
@@ -900,7 +1293,7 @@ IMPORTANTE:
       .from(supportEmails)
       .where(eq(supportEmails.hasAutoResponse, true));
 
-    // Tickets no Mês  
+    // Tickets no Mês
     const monthlyTickets = await db
       .select({ count: count() })
       .from(supportTickets)
@@ -916,25 +1309,25 @@ IMPORTANTE:
       openTickets: openTickets[0].count,
       aiResponded: aiResponded[0].count,
       monthlyTickets: monthlyTickets[0].count,
-      unreadTickets: unreadTickets[0].count
+      unreadTickets: unreadTickets[0].count,
     };
   }
 
   /**
    * Get support dashboard metrics
    */
-  async getDashboardMetrics(period: string = '7d') {
+  async getDashboardMetrics(period: string = "7d") {
     const now = new Date();
     let startDate: Date;
 
     switch (period) {
-      case '1d':
+      case "1d":
         startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         break;
-      case '7d':
+      case "7d":
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
-      case '30d':
+      case "30d":
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         break;
       default:
@@ -951,7 +1344,7 @@ IMPORTANTE:
     const ticketsByStatus = await db
       .select({
         status: supportTickets.status,
-        count: count()
+        count: count(),
       })
       .from(supportTickets)
       .where(sql`${supportTickets.createdAt} >= ${startDate}`)
@@ -961,10 +1354,13 @@ IMPORTANTE:
     const ticketsByCategory = await db
       .select({
         categoryName: supportCategories.displayName,
-        count: count()
+        count: count(),
       })
       .from(supportTickets)
-      .leftJoin(supportCategories, eq(supportTickets.categoryId, supportCategories.id))
+      .leftJoin(
+        supportCategories,
+        eq(supportTickets.categoryId, supportCategories.id),
+      )
       .where(sql`${supportTickets.createdAt} >= ${startDate}`)
       .groupBy(supportCategories.displayName);
 
@@ -973,84 +1369,100 @@ IMPORTANTE:
     const autoResponded = await db
       .select({ count: count() })
       .from(supportEmails)
-      .where(and(
-        sql`${supportEmails.receivedAt} >= ${startDate}`,
-        eq(supportEmails.hasAutoResponse, true)
-      ));
+      .where(
+        and(
+          sql`${supportEmails.receivedAt} >= ${startDate}`,
+          eq(supportEmails.hasAutoResponse, true),
+        ),
+      );
 
-    const automationRate = totalEmails > 0 ? (autoResponded[0].count / totalEmails) * 100 : 0;
+    const automationRate =
+      totalEmails > 0 ? (autoResponded[0].count / totalEmails) * 100 : 0;
 
     return {
       emailsReceived: totalEmails,
-      ticketsByStatus: ticketsByStatus.reduce((acc, item) => ({ ...acc, [item.status]: item.count }), {}),
+      ticketsByStatus: ticketsByStatus.reduce(
+        (acc, item) => ({ ...acc, [item.status]: item.count }),
+        {},
+      ),
       ticketsByCategory,
       automationRate: Number(automationRate.toFixed(2)),
-      period
+      period,
     };
   }
 
   /**
    * Send a reply to a support ticket via email
    */
-  async replyToTicket(ticketId: string, message: string, agentName?: string): Promise<void> {
+  async replyToTicket(
+    ticketId: string,
+    message: string,
+    agentName?: string,
+  ): Promise<void> {
     try {
-      console.log('🎯 SupportService.replyToTicket called with:', { ticketId, messageLength: message.length, agentName });
-      
+      console.log("🎯 SupportService.replyToTicket called with:", {
+        ticketId,
+        messageLength: message.length,
+        agentName,
+      });
+
       // Check environment variables
-      console.log('🌍 Environment check:', {
+      console.log("🌍 Environment check:", {
         hasMailgunDomain: !!process.env.MAILGUN_DOMAIN,
         hasMailgunApiKey: !!process.env.MAILGUN_API_KEY,
-        domain: process.env.MAILGUN_DOMAIN || 'NOT_SET'
+        domain: process.env.MAILGUN_DOMAIN || "NOT_SET",
       });
 
       // Get ticket details
-      console.log('🔍 Fetching ticket details...');
+      console.log("🔍 Fetching ticket details...");
       const ticketResult = await db
         .select({
           ticket: supportTickets,
-          email: supportEmails
+          email: supportEmails,
         })
         .from(supportTickets)
         .leftJoin(supportEmails, eq(supportTickets.emailId, supportEmails.id))
         .where(eq(supportTickets.id, ticketId))
         .limit(1);
 
-      console.log('📋 Ticket query result:', { 
-        found: ticketResult.length, 
+      console.log("📋 Ticket query result:", {
+        found: ticketResult.length,
         ticketId: ticketResult[0]?.ticket?.id,
-        emailId: ticketResult[0]?.email?.id
+        emailId: ticketResult[0]?.email?.id,
       });
 
       if (ticketResult.length === 0) {
-        console.error('❌ Ticket not found in database');
-        throw new Error('Ticket não encontrado');
+        console.error("❌ Ticket not found in database");
+        throw new Error("Ticket não encontrado");
       }
 
       const { ticket, email } = ticketResult[0];
       if (!email) {
-        console.error('❌ Original email not found for ticket');
-        throw new Error('Email original não encontrado');
+        console.error("❌ Original email not found for ticket");
+        throw new Error("Email original não encontrado");
       }
 
       // Send reply via Mailgun
       const replySubject = `Re: ${email.subject}`;
-      const senderName = agentName || 'Equipe de Suporte';
-      
-      console.log('📧 Preparing to send email via Mailgun...');
-      console.log('Email details:', {
+      const senderName = agentName || "Equipe de Suporte";
+
+      console.log("📧 Preparing to send email via Mailgun...");
+      console.log("Email details:", {
         from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: ticket.customerEmail,
         subject: replySubject,
-        ticketNumber: ticket.ticketNumber
+        ticketNumber: ticket.ticketNumber,
       });
 
-      const mailgunResponse = await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
-        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
-        to: ticket.customerEmail,
-        'h:Reply-To': `suporte@${process.env.MAILGUN_DOMAIN}`,
-        subject: replySubject,
-        text: message,
-        html: `
+      const mailgunResponse = await mg.messages.create(
+        process.env.MAILGUN_DOMAIN || "",
+        {
+          from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+          to: ticket.customerEmail,
+          "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
+          subject: replySubject,
+          text: message,
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALMAAACWCAYAAACVdbl2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAKLklEQVR4nO2dMYgkWRnHf7UsQh2LHoggHJiIl9xMYCInl5htIJiY3CRGe1CBzoKIyWBgsAYiwhbCFdxgsAgzgUZioBiYiBOZzMChoIGBIHIgsljZlEG/t/O6t3q6qvtVve979f1gmNnunuqe3l9//X/fe/W66LqOQyia9hHw7KCD7M9FV5VXie7bcBRN+y5wMvPdnnVV+TK84GGkA59GOs5YLhLdr7HOEfM7cAGsFbIHkQ5cRzrOWI4S3a+xznHqBwARZN4s9caycBFDBLEqs7FcTkgXM9eIJfN1pOOMRcTb21KRVJUhg8rsuilGGlIM/LaiXWYxT+TScFVZ1DtjLJlvIh3H0EPKrFzT41wOMlt7bmaKpn2S+jH0ddG0xwwwmWcliBcpI15vwyGmzKkmToyZC" alt="Logo" style="height: 40px; width: auto; margin-bottom: 10px;">
@@ -1058,7 +1470,7 @@ IMPORTANTE:
             <h2 style="color: #2563eb;">Resposta do Suporte</h2>
             <p>Olá,</p>
             <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
-              ${message.replace(/\n/g, '<br>')}
+              ${message.replace(/\n/g, "<br>")}
             </div>
             <p style="color: #64748b; font-size: 14px;">
               Esta é uma resposta ao seu ticket ${ticket.ticketNumber}.
@@ -1070,86 +1482,100 @@ IMPORTANTE:
               Atendimento ao Cliente
             </p>
           </div>
-        `
-      });
+        `,
+        },
+      );
 
-      console.log('📧 Mailgun response:', mailgunResponse);
+      console.log("📧 Mailgun response:", mailgunResponse);
 
       // Update ticket status to 'responded' and add conversation record
-      console.log('💾 Updating database...');
+      console.log("💾 Updating database...");
       await db.transaction(async (tx) => {
         // Update ticket
-        console.log('🔄 Updating ticket status...');
+        console.log("🔄 Updating ticket status...");
         await tx
           .update(supportTickets)
           .set({
-            status: 'in_progress', // Set to in_progress after agent response
-            updatedAt: new Date()
+            status: "in_progress", // Set to in_progress after agent response
+            updatedAt: new Date(),
           })
           .where(eq(supportTickets.id, ticketId));
 
         // Add conversation record
-        console.log('💬 Adding conversation record...');
+        console.log("💬 Adding conversation record...");
         await tx.insert(supportConversations).values({
           ticketId: ticketId,
-          type: 'email_out',
+          type: "email_out",
           from: `suporte@${process.env.MAILGUN_DOMAIN}`,
           to: ticket.customerEmail,
           subject: replySubject,
           content: message,
           isInternal: false,
-          userId: null // TODO: Get user ID from auth
+          userId: null, // TODO: Get user ID from auth
         });
       });
 
-      console.log(`✅ Reply sent successfully for ticket ${ticket.ticketNumber} to ${ticket.customerEmail}`);
-      
+      console.log(
+        `✅ Reply sent successfully for ticket ${ticket.ticketNumber} to ${ticket.customerEmail}`,
+      );
     } catch (error) {
-      console.error('❌ SupportService.replyToTicket error:', error);
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error constructor:', error?.constructor?.name);
+      console.error("❌ SupportService.replyToTicket error:", error);
+      console.error("❌ Error type:", typeof error);
+      console.error("❌ Error constructor:", error?.constructor?.name);
       if (error instanceof Error) {
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error stack:', error.stack);
+        console.error("❌ Error message:", error.message);
+        console.error("❌ Error stack:", error.stack);
       }
-      throw new Error(`Falha ao enviar resposta do ticket: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Falha ao enviar resposta do ticket: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   /**
    * Send new message to recipient and create a new ticket
    */
-  async sendNewMessage(recipient: string, message: string, agentName?: string): Promise<{ ticketId: string }> {
+  async sendNewMessage(
+    recipient: string,
+    message: string,
+    agentName?: string,
+  ): Promise<{ ticketId: string }> {
     try {
-      console.log('🎯 SupportService.sendNewMessage called with:', { recipient, messageLength: message.length, agentName });
-      
+      console.log("🎯 SupportService.sendNewMessage called with:", {
+        recipient,
+        messageLength: message.length,
+        agentName,
+      });
+
       // Check environment variables
-      console.log('🌍 Environment check:', {
+      console.log("🌍 Environment check:", {
         hasMailgunDomain: !!process.env.MAILGUN_DOMAIN,
         hasMailgunApiKey: !!process.env.MAILGUN_API_KEY,
-        domain: process.env.MAILGUN_DOMAIN || 'NOT_SET'
+        domain: process.env.MAILGUN_DOMAIN || "NOT_SET",
       });
 
       const ticketNumber = `TKT-${Date.now().toString().slice(-8)}`;
-      const senderName = agentName || 'Equipe de Suporte';
+      const senderName = agentName || "Equipe de Suporte";
       const subject = `Mensagem da equipe de suporte - ${ticketNumber}`;
-      
-      console.log('📧 Preparing to send email via Mailgun...');
-      console.log('Email details:', {
+
+      console.log("📧 Preparing to send email via Mailgun...");
+      console.log("Email details:", {
         from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: recipient,
         subject: subject,
-        ticketNumber: ticketNumber
+        ticketNumber: ticketNumber,
       });
 
       // Send email via Mailgun
-      const mailgunResponse = await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
-        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
-        to: recipient,
-        'h:Reply-To': `suporte@${process.env.MAILGUN_DOMAIN}`,
-        subject: subject,
-        text: message,
-        html: `
+      const mailgunResponse = await mg.messages.create(
+        process.env.MAILGUN_DOMAIN || "",
+        {
+          from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+          to: recipient,
+          "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
+          subject: subject,
+          text: message,
+          html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="text-align: center; margin-bottom: 20px;">
               <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFvElEQVR4nO2bW2wUVRjHf7OztAul3EpbKBcpCCJYQS5JfTAaE0w0IZo0xgfUF1980BgTE/XBB18MiQ/GF40PJiYmJr6YaKKJJj4Y8AEjmMiFcm/pFaEtlNJLge7uOCez3ZnuzOzMzs7szibZL5lkd2bO+c753//7vnPOLECRIkWKFClSpEiR/wMQO5lhFb4s5bAs5xMsAYvAlqWgJmCRhDEwMcYQgxF+TiQMjCNNIMZ4HWJ8xhgjAcYJxhhjxhijdBFjIzKXGFMfJLwWEuZYU1Q7qL4+FW0/qnz/VbKk+kq5TcP0RVJZlL2omIZl7+8lHW/vIfsqvh7fEhOgC6d4I+n4bwJ9B2O1mUhLo8XfrIEoXwmEsyO02VeP8VtNTGsaBTVBR1dGKz3eEANLON1SBSEMLBJiGIFRShgjmCBEZ4ZggBEKQsKTDFaHK6Cx2EpJtM+4bAhBON4QDxmCEYwgwLlpCMEIQTBCKIHRJoByjj7A7VjVAiw5BwAfqX8Ff5/sKgJcXQFLFi3DJy8+g4cfXI6HVi7DzfOr8a+tB5YNWLJdFUCApMRFqO+KgHMaXWYMnOK5o4+NX6dUglbk0u9H+1EZq8DDK+7Dh0/swOGW0xi83+VUqEy4XAEI5xZBJaU8Cl3ZMOWKACtGlV9/S6w2L1iHJ9c+iG2f7MbBs93oGRh0B9WcLZAygQ7rIlNB5YOWJ7c/jq37j+JPvwc3LV6Hl9c/jO3b9+CgfQm3+v3IBAW/DyCXC+Rrp7kGQMYjN9bg6dWrsOPLf3Cqu0eZVBULafnJ6qQTCBvOp+z3TZJGSaytAY+sWYEdh39Hzc1Vju88YLgGQPrI7QLZzLZWb3q98bKtTH31LFdRPFdw2v7QZQTdAaAZONWvLXBpAWggWjmrPEZ9iYuKb7hkCdW8AIqVnSwHOBs4eDt8vWzrSC5kWL1++wGE8NvwjhzgbGDl+60HEICW7xwAyBVu3vdU5wv7ycAZCqLJh2v9HjwZOEPB9tXlAw/twHrpZoSzCZcfJn0fJsRmkZbAhqb0U5YPu12bHLzHKftRO8Dp3j4dweNK3k/ldbvUz3vHcuZwZf/JhK5wdJJpGICNXTy3fvI8QV7bJwPHs/mFvFdyJQDOqSTy/uaadP4iB67Z3k/BgZs93xd0fZKNAGSJX2j7YYmfO2MHPOe8vY8LGqLk/YAMocG5jA7fqPdNbN/cAY+kqAygMX7t7ztg9wBQ2b8xACb5vrnqXA3c7GnvBFDZvzEA6aq8g7lDhQCMgGhCjJQz2Bq3BeCkFNrIbJRUPgF7M5P2BZD0v9ttP2jbD1oMgbbvlhDaLnSjtKLSKSGZ//WJkLJPe6QJOKffqe2pYr3A/b4uANz+bbc9NbGNthLXpPetbOBlCKJLiOz+qKPfqA8WrG5Bpjzh2n7Qth+07eutEwBdH6DJD7Kt7LZkr12uXIhEe0K3fqPpLh3vG12O2wGgI9H3Q/N+0+XKYP2myx96xHqQ8YOX3wD5E6Da8oPufSvvh35lVrG7fjYu+90AaPfHBWtAYRcHJCmGYKG6fdVK1NPfuLgNNz+FPjEV9Ku1gvdtRl5wPEcMAdWe7Jci8mL7LhejJiZA0lEOtKhNZFf7/QQlIgFg3u0OVtQ0i1LZWcm2+FqXywFqSACo9X6H8wVNOxrCIpgw5Xq/HXBI6PZ+S6J3hOcLVgtNdZJJcIKAINudHBDhbG8CX0o1G7PdhFRG6B4h4fzg3tD3EG1zl8uFnfCl3fVOgJt2d7jBxhLa/K8S3R8bL3d9gTZd9+2iXZdPfD/gZrR8p0dHO8lIB0TnJN2L1IKO8XfP/xaHlWxfUOGkjuF39v8qUqRIkSJFihQpUqTIJP8BFvT4rKXOwDcAAAAASUVORK5CYII=" alt="N1 Support" style="width: 64px; height: 64px;">
@@ -1165,61 +1591,71 @@ IMPORTANTE:
               Para responder, basta responder a este email.
             </p>
           </div>
-        `
-      });
+        `,
+        },
+      );
 
-      console.log('📧 Mailgun response:', mailgunResponse);
+      console.log("📧 Mailgun response:", mailgunResponse);
 
       // Create email record in database
-      console.log('💾 Saving email to database...');
-      const [emailRecord] = await db.insert(supportEmails).values({
-        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
-        to: recipient,
-        subject: subject,
-        textContent: message,
-        messageId: mailgunResponse.id || ticketNumber,
-        status: 'sent'
-      }).returning();
+      console.log("💾 Saving email to database...");
+      const [emailRecord] = await db
+        .insert(supportEmails)
+        .values({
+          from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+          to: recipient,
+          subject: subject,
+          textContent: message,
+          messageId: mailgunResponse.id || ticketNumber,
+          status: "sent",
+        })
+        .returning();
 
       // Create ticket record
-      console.log('💾 Creating new ticket...');
-      const [ticketRecord] = await db.insert(supportTickets).values({
-        emailId: emailRecord.id,
-        ticketNumber: ticketNumber,
-        customerEmail: recipient,
-        subject: subject,
-        description: message, // Use description field instead of content
-        status: 'open',
-        priority: 'medium',
-        categoryId: 'manual' // Default to manual category
-      }).returning();
+      console.log("💾 Creating new ticket...");
+      const [ticketRecord] = await db
+        .insert(supportTickets)
+        .values({
+          emailId: emailRecord.id,
+          ticketNumber: ticketNumber,
+          customerEmail: recipient,
+          subject: subject,
+          description: message, // Use description field instead of content
+          status: "open",
+          priority: "medium",
+          categoryId: "manual", // Default to manual category
+        })
+        .returning();
 
       // Add conversation record
-      console.log('💬 Adding conversation record...');
+      console.log("💬 Adding conversation record...");
       await db.insert(supportConversations).values({
         ticketId: ticketRecord.id,
-        type: 'email_out',
+        type: "email_out",
         from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: recipient,
         subject: subject,
         content: message,
         isInternal: false,
-        userId: null
+        userId: null,
       });
 
-      console.log(`✅ New message sent successfully. Ticket ${ticketNumber} created for ${recipient}`);
-      
+      console.log(
+        `✅ New message sent successfully. Ticket ${ticketNumber} created for ${recipient}`,
+      );
+
       return { ticketId: ticketRecord.id };
-      
     } catch (error) {
-      console.error('❌ SupportService.sendNewMessage error:', error);
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error constructor:', error?.constructor?.name);
+      console.error("❌ SupportService.sendNewMessage error:", error);
+      console.error("❌ Error type:", typeof error);
+      console.error("❌ Error constructor:", error?.constructor?.name);
       if (error instanceof Error) {
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error stack:', error.stack);
+        console.error("❌ Error message:", error.message);
+        console.error("❌ Error stack:", error.stack);
       }
-      throw new Error(`Falha ao enviar nova mensagem: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Falha ao enviar nova mensagem: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }
