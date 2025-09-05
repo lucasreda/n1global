@@ -260,57 +260,57 @@ export default function AdminSupport() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {supportTicketsResponse.tickets.map((ticket: SupportTicket) => (
-                    <div key={ticket.id} className="border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors" data-testid={`ticket-${ticket.ticketNumber}`}>
+                  {supportTicketsResponse.tickets.map((ticketResponse: any) => (
+                    <div key={ticketResponse.ticket.id} className="border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors" data-testid={`ticket-${ticketResponse.ticket.ticketNumber}`}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-4">
                           <div 
                             className="w-3 h-3 rounded-full flex-shrink-0 mt-1" 
-                            style={{ backgroundColor: ticket.category.color }}
+                            style={{ backgroundColor: ticketResponse.category.color }}
                           />
                           <div>
                             <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-medium text-white">{ticket.ticketNumber}</h3>
+                              <h3 className="font-medium text-white">{ticketResponse.ticket.ticketNumber}</h3>
                               <Badge className="bg-slate-700 text-slate-300 text-xs">
-                                {ticket.category.displayName}
+                                {ticketResponse.category.displayName}
                               </Badge>
                             </div>
-                            <p className="text-sm text-slate-300 font-medium">{ticket.subject}</p>
+                            <p className="text-sm text-slate-300 font-medium">{ticketResponse.ticket.subject}</p>
                             <p className="text-xs text-slate-400 mt-1">
-                              De: {ticket.customerEmail}
-                              {ticket.customerName && ` (${ticket.customerName})`}
+                              De: {ticketResponse.ticket.customerEmail}
+                              {ticketResponse.ticket.customerName && ` (${ticketResponse.ticket.customerName})`}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           <Badge 
                             className={`text-xs ${
-                              ticket.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
-                              ticket.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
-                              ticket.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
+                              ticketResponse.ticket.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
+                              ticketResponse.ticket.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
+                              ticketResponse.ticket.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
                               'bg-gray-600/20 text-gray-400 border-gray-600/30'
                             }`}
                           >
-                            {ticket.status === 'open' ? 'Aberto' :
-                             ticket.status === 'in_progress' ? 'Em Andamento' :
-                             ticket.status === 'resolved' ? 'Resolvido' : 'Fechado'}
+                            {ticketResponse.ticket.status === 'open' ? 'Aberto' :
+                             ticketResponse.ticket.status === 'in_progress' ? 'Em Andamento' :
+                             ticketResponse.ticket.status === 'resolved' ? 'Resolvido' : 'Fechado'}
                           </Badge>
                           <Badge 
                             variant="outline" 
                             className={`text-xs ${
-                              ticket.priority === 'high' ? 'border-red-600 text-red-400' :
-                              ticket.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
+                              ticketResponse.ticket.priority === 'high' ? 'border-red-600 text-red-400' :
+                              ticketResponse.ticket.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
                               'border-slate-600 text-slate-400'
                             }`}
                           >
-                            {ticket.priority === 'high' ? 'Alta' :
-                             ticket.priority === 'medium' ? 'Média' : 'Baixa'}
+                            {ticketResponse.ticket.priority === 'high' ? 'Alta' :
+                             ticketResponse.ticket.priority === 'medium' ? 'Média' : 'Baixa'}
                           </Badge>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400"
-                            data-testid={`button-view-ticket-${ticket.id}`}
+                            data-testid={`button-view-ticket-${ticketResponse.ticket.id}`}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -321,20 +321,20 @@ export default function AdminSupport() {
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-1">
                             <Clock className="h-3 w-3" />
-                            <span>Criado: {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</span>
+                            <span>Criado: {new Date(ticketResponse.ticket.createdAt).toLocaleDateString('pt-BR')}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <MessageSquare className="h-3 w-3" />
-                            <span>{ticket.conversationCount} mensagens</span>
+                            <span>0 mensagens</span>
                           </div>
-                          {ticket.assignedUser && (
+                          {ticketResponse.ticket.assignedToUserId && (
                             <div className="flex items-center space-x-1">
                               <User className="h-3 w-3" />
-                              <span>Atribuído: {ticket.assignedUser.name}</span>
+                              <span>Atribuído</span>
                             </div>
                           )}
                         </div>
-                        <span>Última atividade: {new Date(ticket.lastActivity).toLocaleDateString('pt-BR')}</span>
+                        <span>Última atividade: {new Date(ticketResponse.ticket.updatedAt || ticketResponse.ticket.createdAt).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
                   ))}
