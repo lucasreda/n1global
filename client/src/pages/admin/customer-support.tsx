@@ -345,7 +345,13 @@ export default function CustomerSupportPage() {
   }>({
     queryKey: [`/api/customer-support/${currentOperationId}/overview`],
     enabled: !!supportConfig && !!currentOperationId,
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
+    onSuccess: (data) => {
+      console.log('🔍 Overview metrics received:', data);
+    },
+    onError: (error) => {
+      console.error('🔍 Overview metrics error:', error);
+    }
   });
 
   const hasSupportFilters = supportSearchTerm.trim().length > 0 || 
