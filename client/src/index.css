@@ -445,3 +445,10 @@ html, body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Custom margin override for dashboard layout */
+@media (min-width: 1024px) {
+    .lg\:ml-\[288px\] {
+        margin-left: 138px;
+    }
+}
