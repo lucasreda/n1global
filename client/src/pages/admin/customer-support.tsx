@@ -446,13 +446,20 @@ export default function CustomerSupportPage() {
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
       {/* Header with Controls */}
       <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
-        <div>
-          <h1 className="font-bold tracking-tight text-gray-100" style={{ fontSize: '20px' }}>
-            Suporte de Clientes
-          </h1>
-          <p className="text-gray-400 mt-1 text-sm sm:text-base">
-            Gerenciamento de atendimento ao cliente com IA para esta operação
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h1 className="font-bold tracking-tight text-gray-100" style={{ fontSize: '20px' }}>
+              Suporte de Clientes
+            </h1>
+            <p className="text-gray-400 mt-1 text-sm sm:text-base">
+              Gerenciamento de atendimento ao cliente com IA para esta operação
+            </p>
+          </div>
+          {supportConfig?.emailDomain && (
+            <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs px-3 py-1">
+              {supportConfig.emailDomain}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button 
