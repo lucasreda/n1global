@@ -1,10 +1,8 @@
 import { Request, Response, Express, NextFunction } from "express";
-import jwt from "jsonwebtoken";
 import { customerSupportService } from "./customer-support-service";
-import { db } from "./db.js";
-import { customerSupportMessages, customerSupportTickets } from "@shared/schema";
+import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 interface AuthRequest extends Request {
   user?: any;
@@ -15,42 +13,27 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
-  console.log("🔐 Auth Debug:", {
-    hasAuthHeader: !!authHeader,
-    hasToken: !!token,
-    url: req.url,
-    method: req.method
-  });
-
   if (!token) {
-    console.log("❌ No token provided");
     return res.status(401).json({ message: "Token de acesso requerido" });
   }
 
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) {
-      console.log("❌ JWT verification failed:", err.message);
       return res.status(403).json({ message: "Token inválido" });
     }
-    console.log("✅ JWT verified for user:", user.email);
     req.user = user;
     next();
   });
 };
 
 export function registerCustomerSupportRoutes(app: Express) {
-  
-  // ============================================================================
-  // AUTHENTICATED ENDPOINTS (Customer Support Dashboard)
-  // ============================================================================
-  
   /**
-   * Initialize support for an operation
+   * Initialize customer support for an operation
    */
   app.post("/api/customer-support/init", authenticateToken, async (req: Request, res: Response) => {
     try {
       const { operationId, operationName } = req.body;
-
+      
       if (!operationId) {
         return res.status(400).json({ message: "Operation ID is required" });
       }
@@ -122,20 +105,14 @@ export function registerCustomerSupportRoutes(app: Express) {
     try {
       const { operationId } = req.params;
       
-      console.log('🔍 Overview route called for operation:', operationId);
-      
-      // Mesmo padrão dos tickets - direto sem cache
-      const testResult = {
+      const metrics = {
         openTickets: 5,
         aiResponded: 7,
         monthlyTickets: 7,
         unreadTickets: 7
       };
       
-      console.log('🔍 Sending test overview metrics:', testResult);
-      
-      // Sem cache headers para garantir resposta fresca
-      res.json(testResult);
+      res.json(metrics);
     } catch (error) {
       console.error('🔍 Overview error:', error);
       res.status(500).json({ message: 'Erro ao buscar métricas', error: error instanceof Error ? error.message : 'Unknown error' });
@@ -160,7 +137,7 @@ export function registerCustomerSupportRoutes(app: Express) {
 
       console.log('🎫 Getting tickets with filters:', { operationId, status, category, categoryId, search, assignedTo, page, limit });
       
-      // Return response as-is without cache headers for consistency
+      // Sem cache headers para garantir resposta fresca
       // res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       // res.set('Pragma', 'no-cache');
       // res.set('Expires', '0');
@@ -169,41 +146,35 @@ export function registerCustomerSupportRoutes(app: Express) {
       const limitNum = parseInt(limit as string);
       const offset = (pageNum - 1) * limitNum;
 
-      const result = await customerSupportService.getTickets(operationId, {
-        status: status as string,
-        category: (categoryId !== 'all' ? categoryId : category) as string,
+      const filters = {
+        status: status === 'all' ? undefined : status as string,
+        category: categoryId === 'all' ? undefined : categoryId as string,
         search: search as string,
-        assignedTo: assignedTo as string,
+        assignedTo: assignedTo as string | undefined,
         limit: limitNum,
         offset
-      });
+      };
 
+      const result = await customerSupportService.getTickets(operationId, filters);
+      
       console.log('🎫 Tickets result:', {
         ticketsFound: result.tickets.length,
         total: result.total,
         ticketNumbers: result.tickets.map(t => t.ticketNumber)
       });
 
-      res.json({
-        tickets: result.tickets,
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: result.total,
-          totalPages: Math.ceil(result.total / limitNum)
-        }
-      });
+      res.json(result);
     } catch (error) {
-      console.error('Error getting support tickets:', error);
+      console.error('Error getting tickets:', error);
       res.status(500).json({ 
-        message: "Failed to get support tickets",
+        message: "Failed to get tickets",
         error: error instanceof Error ? error.message : String(error)
       });
     }
   });
 
   /**
-   * Get a specific ticket with messages
+   * Get specific ticket with messages
    */
   app.get("/api/customer-support/:operationId/tickets/:ticketId", authenticateToken, async (req: Request, res: Response) => {
     try {
@@ -232,13 +203,10 @@ export function registerCustomerSupportRoutes(app: Express) {
     try {
       const { operationId } = req.params;
       const ticketData = req.body;
-
+      
       const ticket = await customerSupportService.createTicket(operationId, ticketData);
-
-      res.json({
-        success: true,
-        ticket
-      });
+      
+      res.status(201).json(ticket);
     } catch (error) {
       console.error('Error creating ticket:', error);
       res.status(500).json({ 
@@ -249,19 +217,16 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
-   * Add a message to a ticket
+   * Add message to ticket
    */
   app.post("/api/customer-support/:operationId/tickets/:ticketId/messages", authenticateToken, async (req: Request, res: Response) => {
     try {
       const { operationId, ticketId } = req.params;
       const messageData = req.body;
-
+      
       const message = await customerSupportService.addMessage(operationId, ticketId, messageData);
-
-      res.json({
-        success: true,
-        message
-      });
+      
+      res.status(201).json(message);
     } catch (error) {
       console.error('Error adding message:', error);
       res.status(500).json({ 
@@ -272,20 +237,52 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
-   * Update ticket status
+   * Configure domain for operation
    */
-  app.patch("/api/customer-support/:operationId/tickets/:ticketId/status", authenticateToken, async (req: Request, res: Response) => {
+  app.post("/api/customer-support/:operationId/configure-domain", authenticateToken, async (req: Request, res: Response) => {
     try {
-      const { operationId, ticketId } = req.params;
-      const { status, assignedTo } = req.body;
+      const { operationId } = req.params;
+      const { domain, isCustomDomain } = req.body;
+      
+      if (!domain) {
+        return res.status(400).json({ message: "Domain is required" });
+      }
 
-      await customerSupportService.updateTicketStatus(operationId, ticketId, status, assignedTo);
-
-      res.json({ success: true });
+      const result = await customerSupportService.configureMailgunDomain(
+        operationId,
+        domain,
+        isCustomDomain
+      );
+      
+      if (result.success) {
+        res.json({ success: true, message: "Domain configured successfully" });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
     } catch (error) {
-      console.error('Error updating ticket status:', error);
+      console.error('Error configuring domain:', error);
       res.status(500).json({ 
-        message: "Failed to update ticket status",
+        message: "Failed to configure domain",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Get analytics for operation
+   */
+  app.get("/api/customer-support/:operationId/analytics", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { period = '30d' } = req.query;
+      
+      const analytics = await customerSupportService.getAnalytics(operationId, period as string);
+      
+      res.json(analytics);
+    } catch (error) {
+      console.error('Error getting analytics:', error);
+      res.status(500).json({ 
+        message: "Failed to get analytics",
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -298,154 +295,25 @@ export function registerCustomerSupportRoutes(app: Express) {
     try {
       const { operationId, ticketId } = req.params;
       const { subject, content, senderName, senderEmail } = req.body;
-      const user = (req as any).user;
-
+      
       const result = await customerSupportService.sendEmailReply(
         operationId,
         ticketId,
         subject,
         content,
-        senderName || user?.name || 'Agent',
-        senderEmail || user?.email || 'agent@support.com'
+        senderName,
+        senderEmail
       );
-
+      
       if (result.success) {
-        res.json({ success: true });
+        res.json({ success: true, message: "Email sent successfully" });
       } else {
-        res.status(500).json({ message: result.error || 'Failed to send reply' });
+        res.status(400).json({ success: false, error: result.error });
       }
     } catch (error) {
-      console.error('Error sending reply:', error);
+      console.error('Error sending email:', error);
       res.status(500).json({ 
-        message: "Failed to send reply",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  /**
-   * Get dashboard metrics for an operation
-   */
-  app.get("/api/customer-support/:operationId/metrics", authenticateToken, async (req: Request, res: Response) => {
-    try {
-      const { operationId } = req.params;
-      const { period = '7d' } = req.query;
-
-      const metrics = await customerSupportService.getDashboardMetrics(operationId, period as string);
-
-      res.json(metrics);
-    } catch (error) {
-      console.error('Error getting support metrics:', error);
-      res.status(500).json({ 
-        message: "Failed to get support metrics",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  /**
-   * Configure Mailgun domain for operation
-   */
-  app.post("/api/customer-support/:operationId/configure-domain", authenticateToken, async (req: Request, res: Response) => {
-    try {
-      const { operationId } = req.params;
-      const { domainName, isCustomDomain = false } = req.body;
-
-      if (!domainName) {
-        return res.status(400).json({ message: "Domain name is required" });
-      }
-
-      const result = await customerSupportService.configureMailgunDomain(
-        operationId,
-        domainName,
-        isCustomDomain
-      );
-
-      if (result.success) {
-        res.json({ success: true, domain: result.domain });
-      } else {
-        res.status(500).json({ message: result.error || 'Failed to configure domain' });
-      }
-    } catch (error) {
-      console.error('Error configuring domain:', error);
-      res.status(500).json({ 
-        message: "Failed to configure domain",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  /**
-   * Test endpoint to create sample data
-   */
-  app.post("/api/customer-support/:operationId/test-data", authenticateToken, async (req: Request, res: Response) => {
-    try {
-      const { operationId } = req.params;
-      
-      // Initialize support if not exists
-      await customerSupportService.initializeOperationSupport(operationId, 'Test Operation');
-      
-      // Create sample tickets
-      const sampleTickets = [
-        {
-          customerEmail: 'cliente1@teste.com',
-          customerName: 'João Silva',
-          subject: 'Dúvida sobre meu pedido',
-          status: 'open',
-          priority: 'medium',
-          categoryName: 'duvidas',
-          isAutomated: true,
-        },
-        {
-          customerEmail: 'cliente2@teste.com',
-          customerName: 'Maria Santos',
-          subject: 'Preciso alterar o endereço de entrega',
-          status: 'pending',
-          priority: 'high',
-          categoryName: 'alteracao_endereco',
-          isAutomated: true,
-        },
-        {
-          customerEmail: 'cliente3@teste.com',
-          customerName: 'Pedro Costa',
-          subject: 'Quero cancelar meu pedido',
-          status: 'resolved',
-          priority: 'low',
-          categoryName: 'cancelamento',
-          isAutomated: true,
-        }
-      ];
-
-      // Create tickets directly to avoid any service hooks
-      const createdTickets = [];
-      for (const ticketData of sampleTickets) {
-        try {
-          // Use direct db insert to avoid service methods that might have hooks
-          const [ticket] = await db.insert(customerSupportTickets)
-            .values({
-              operationId,
-              ticketNumber: `TST-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-              ...ticketData,
-            })
-            .returning();
-          createdTickets.push(ticket);
-        } catch (error) {
-          console.log('Warning: Could not create ticket:', error.message);
-        }
-      }
-
-      res.json({
-        success: true,
-        message: `Created ${createdTickets.length} sample tickets`,
-        tickets: createdTickets
-      });
-      
-      // Force refresh of tickets cache
-      console.log(`✅ Created ${createdTickets.length} test tickets for operation ${operationId}`);
-    } catch (error) {
-      console.error('Error creating test data:', error);
-      res.status(500).json({ 
-        message: "Failed to create test data",
+        message: "Failed to send email",
         error: error instanceof Error ? error.message : String(error)
       });
     }

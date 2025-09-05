@@ -13,7 +13,8 @@ import {
   ChevronDown,
   Plus,
   Wrench,
-  MessageSquare
+  MessageSquare,
+  ChevronRight
 } from "lucide-react";
 import logoImage from "@assets/Dashboard_1756440445659.png";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,11 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
+import { 
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { NewOperationDialog } from "./new-operation-dialog";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 
@@ -37,7 +43,15 @@ const getNavigationForRole = (userRole: string) => {
     { name: "Dashboard", href: "/", icon: Home },
     { name: "Pedidos", href: "/orders", icon: Package },
     { name: "Produtos", href: "/products", icon: ShoppingCart },
-    { name: "Suporte de Clientes", href: "/customer-support", icon: MessageSquare },
+    { 
+      name: "Suporte de Clientes", 
+      icon: MessageSquare,
+      isDropdown: true,
+      subItems: [
+        { name: "Suporte de Clientes", href: "/customer-support" },
+        { name: "Configurações", href: "/customer-support/settings" }
+      ]
+    },
     { name: "Integrações", href: "/integrations", icon: Plug },
     { name: "Ferramentas", href: "/tools", icon: Wrench },
     { name: "Configurações", href: "/settings", icon: Settings },
@@ -56,6 +70,7 @@ export function Sidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [showNewOperationDialog, setShowNewOperationDialog] = useState(false);
+  const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const { selectedOperation, operations, changeOperation, isDssOperation } = useCurrentOperation();
   
   // Disabled debug logs
@@ -83,6 +98,14 @@ export function Sidebar() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const toggleDropdown = (itemName: string) => {
+    setOpenDropdowns(prev => 
+      prev.includes(itemName) 
+        ? prev.filter(name => name !== itemName)
+        : [...prev, itemName]
+    );
   };
 
   return (
@@ -144,7 +167,62 @@ export function Sidebar() {
       </div>
 
       <ul className="space-y-1 flex-1" data-testid="nav-menu">
-        {navigation.map((item) => {
+        {navigation.map((item: any) => {
+          if (item.isDropdown) {
+            const isDropdownOpen = openDropdowns.includes(item.name);
+            const isAnySubItemActive = item.subItems?.some((subItem: any) => location === subItem.href);
+            
+            return (
+              <li key={item.name}>
+                <Collapsible open={isDropdownOpen} onOpenChange={() => toggleDropdown(item.name)}>
+                  <CollapsibleTrigger asChild>
+                    <div
+                      className={cn(
+                        "flex items-center justify-between space-x-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer w-full",
+                        isAnySubItemActive
+                          ? "text-white bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30"
+                          : "text-gray-300 hover:text-white hover:bg-white/10"
+                      )}
+                      data-testid={`nav-dropdown-${item.name.toLowerCase()}`}
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <item.icon size={15} className={isAnySubItemActive ? "text-blue-400" : "text-gray-400"} />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <ChevronRight 
+                        size={14} 
+                        className={cn(
+                          "transition-transform",
+                          isDropdownOpen ? "rotate-90" : ""
+                        )}
+                      />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1 mt-1">
+                    {item.subItems?.map((subItem: any) => {
+                      const isActive = location === subItem.href;
+                      return (
+                        <Link key={subItem.name} href={subItem.href}>
+                          <div
+                            className={cn(
+                              "flex items-center space-x-2.5 px-3 py-2 ml-6 rounded-xl transition-all cursor-pointer",
+                              isActive
+                                ? "text-white bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30"
+                                : "text-gray-300 hover:text-white hover:bg-white/10"
+                            )}
+                            data-testid={`nav-sublink-${subItem.name.toLowerCase()}`}
+                          >
+                            <span className="font-medium text-sm">{subItem.name}</span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </CollapsibleContent>
+                </Collapsible>
+              </li>
+            );
+          }
+
           const isActive = location === item.href;
           return (
             <li key={item.name}>

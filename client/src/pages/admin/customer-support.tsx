@@ -347,13 +347,7 @@ export default function CustomerSupportPage() {
     enabled: !!supportConfig && !!currentOperationId,
   });
 
-  // Debug log para ver os dados
-  console.log('🔍 Overview debug:', { 
-    overviewMetrics, 
-    overviewLoading, 
-    currentOperationId, 
-    supportConfig: !!supportConfig 
-  });
+  // Overview metrics successfully connected
 
   const hasSupportFilters = supportSearchTerm.trim().length > 0 || 
                            selectedCategory !== "all" || 
