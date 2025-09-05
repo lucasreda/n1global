@@ -447,11 +447,16 @@ export default function CustomerSupportPage() {
   };
 
   return (
-    <div className="w-full min-h-screen p-4 space-y-6">
+    <div className="space-y-6">
+      {/* Page Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte - {currentOperationName}</h1>
-          <p className="text-slate-300">Gerenciamento de atendimento ao cliente com IA para esta operação</p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+            Sistema de Suporte - {currentOperationName}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Gerenciamento de atendimento ao cliente com IA para esta operação
+          </p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -475,7 +480,7 @@ export default function CustomerSupportPage() {
       </div>
 
       {/* Overview Cards */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {overviewLoading ? (
           Array.from({ length: 4 }).map((_, index) => (
             <Card key={index} className="bg-white/10 border-white/20 backdrop-blur-md">
@@ -549,9 +554,9 @@ export default function CustomerSupportPage() {
       </div>
 
       {/* Layout com Cards de Tipos na Esquerda e Filtros/Tickets na Direita */}
-      <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Coluna Esquerda - Cards dos Tipos de Email Empilhados */}
-        <div className="xl:col-span-2 space-y-4 w-full">
+        <div className="xl:col-span-2 space-y-4">
           {categoriesLoading ? (
             <div className="text-center py-8 text-slate-400">
               Carregando categorias...
@@ -607,7 +612,7 @@ export default function CustomerSupportPage() {
         </div>
 
         {/* Coluna Direita - Filtros e Lista de Tickets */}
-        <div className="xl:col-span-10 space-y-6 w-full">
+        <div className="xl:col-span-10 space-y-6">
           {/* Filtros */}
           <Card className="bg-white/10 border-white/20 backdrop-blur-md">
             <CardHeader className="pb-3">
