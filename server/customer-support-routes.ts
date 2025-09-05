@@ -130,6 +130,8 @@ export function registerCustomerSupportRoutes(app: Express) {
         limit = '25'
       } = req.query;
 
+      console.log('🎫 Getting tickets with filters:', { operationId, status, category, search, assignedTo, page, limit });
+
       const pageNum = parseInt(page as string);
       const limitNum = parseInt(limit as string);
       const offset = (pageNum - 1) * limitNum;
@@ -141,6 +143,12 @@ export function registerCustomerSupportRoutes(app: Express) {
         assignedTo: assignedTo as string,
         limit: limitNum,
         offset
+      });
+
+      console.log('🎫 Tickets result:', {
+        ticketsFound: result.tickets.length,
+        total: result.total,
+        ticketNumbers: result.tickets.map(t => t.ticketNumber)
       });
 
       res.json({

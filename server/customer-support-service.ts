@@ -212,6 +212,8 @@ export class CustomerSupportService {
   }> {
     const { status, category, search, assignedTo, limit = 50, offset = 0 } = filters;
 
+    console.log('🔍 Service getTickets called with:', { operationId, filters });
+
     // Build where conditions
     const conditions = [eq(customerSupportTickets.operationId, operationId)];
 
@@ -257,13 +259,21 @@ export class CustomerSupportService {
       .from(customerSupportTickets)
       .where(and(...conditions));
 
-    return {
+    const result = {
       tickets: tickets.map(row => ({
         ...row.ticket,
         category: row.category,
       })),
       total,
     };
+
+    console.log('🔍 Service returning:', {
+      ticketsCount: result.tickets.length,
+      total: result.total,
+      ticketNumbers: result.tickets.map(t => t.ticketNumber)
+    });
+
+    return result;
   }
 
   /**
