@@ -70,10 +70,13 @@ export default function AdminSupport() {
   const hasSupportFilters = supportSearchTerm.trim().length > 0 || 
                            selectedCategory !== "all" || 
                            selectedTicketStatus !== "all";
+                           
+  // Always show tickets when any filter is applied OR when showing all
+  const shouldLoadTickets = hasSupportFilters || (selectedCategory === "all" && selectedTicketStatus === "all" && !supportSearchTerm.trim());
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading } = useQuery<{tickets: SupportTicket[], total: number}>({
     queryKey: ['/api/support/tickets', selectedCategory, selectedTicketStatus, supportSearchTerm],
-    enabled: hasSupportFilters,
+    enabled: shouldLoadTickets,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (supportSearchTerm) params.append('search', supportSearchTerm);
@@ -243,7 +246,7 @@ export default function AdminSupport() {
               </Button>
             </CardHeader>
             <CardContent>
-              {!hasSupportFilters ? (
+              {!shouldLoadTickets ? (
                 <div className="text-center py-12 space-y-4">
                   <Search className="h-12 w-12 text-slate-500 mx-auto" />
                   <div className="space-y-2">
