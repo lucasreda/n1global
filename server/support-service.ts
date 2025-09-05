@@ -75,16 +75,29 @@ Responda em JSON no seguinte formato:
   "requiresHuman": false
 }
 
+IMPORTANTE SOBRE requiresHuman:
+- DEFAULT é false (nossa IA Sofia pode responder a maioria dos casos)
+- Use requiresHuman = true APENAS para casos GRAVES: ameaças, problemas legais, linguagem agressiva, reclamações complexas
+
+EXEMPLOS DE requiresHuman = false:
+- "Quando meu pedido vai chegar?"
+- "Quero cancelar meu pedido" 
+- "Preciso alterar meu endereço"
+- "Meu produto ainda não chegou"
+- "Quanto tempo demora a entrega?"
+
+EXEMPLOS DE requiresHuman = true:
+- Linguagem agressiva ou ofensiva
+- Ameaças ou menções legais
+- Problemas técnicos complexos do site
+- Reclamações sobre produto com defeito
+
 REGRAS:
-1. Use apenas categorias da lista acima
-2. confidence deve ser 0-100
-3. requiresHuman = true APENAS se: tom agressivo, ameaças legais, reclamações complexas, ou problemas técnicos graves
-4. requiresHuman = false para: dúvidas simples sobre entrega, cancelamentos diretos, alterações de endereço básicas
-5. Para dúvidas simples sobre rastreamento/entrega use "duvidas" com requiresHuman = false
-6. Para reclamações sobre produtos use "reclamacoes" com requiresHuman = true (sempre humano)
-7. Para pedidos de mudança de endereço use "alteracao_endereco" com requiresHuman = false
-8. Para cancelamentos use "cancelamento" com requiresHuman = false
-9. Para tudo que precisa análise humana use "manual" com requiresHuman = true
+1. Para "duvidas" simples → requiresHuman = false
+2. Para "cancelamento" direto → requiresHuman = false  
+3. Para "alteracao_endereco" → requiresHuman = false
+4. Para "reclamacoes" → sempre requiresHuman = true
+5. Para "manual" → sempre requiresHuman = true
 `;
 
     try {
@@ -98,18 +111,51 @@ REGRAS:
       const result = JSON.parse(response.choices[0].message.content || '{}');
       
       const categoryName = result.categoryName || 'manual';
+      let requiresHuman = result.requiresHuman !== undefined ? result.requiresHuman : true;
       
-      // Smart default for requiresHuman based on category
-      let defaultRequiresHuman = true;
-      if (['duvidas', 'alteracao_endereco', 'cancelamento'].includes(categoryName)) {
-        defaultRequiresHuman = false; // These categories can be handled by AI by default
+      // Override AI decision for simple cases - force AI response for basic inquiries
+      if (categoryName === 'duvidas') {
+        const contentLower = (subject + ' ' + content).toLowerCase();
+        const simpleInquiryKeywords = [
+          'quando', 'chegar', 'chegou', 'entrega', 'prazo', 'demora', 
+          'rastreamento', 'rastrear', 'acompanhar', 'status', 'pedido',
+          'produto', 'comprei', 'onde está', 'chegada'
+        ];
+        
+        const hasSimpleKeywords = simpleInquiryKeywords.some(keyword => 
+          contentLower.includes(keyword)
+        );
+        
+        const hasComplexKeywords = [
+          'defeito', 'quebrado', 'problema', 'reclamação', 'advogado',
+          'processo', 'judicial', 'indenização', 'dano'
+        ].some(keyword => contentLower.includes(keyword));
+        
+        // If it's a simple delivery question without complex issues, AI can handle it
+        if (hasSimpleKeywords && !hasComplexKeywords) {
+          requiresHuman = false;
+          console.log(`🤖 Forçando IA para dúvida simples: ${subject}`);
+        }
+      }
+      
+      // Always allow AI for cancellations and address changes (unless explicitly complex)
+      if (['cancelamento', 'alteracao_endereco'].includes(categoryName)) {
+        const contentLower = (subject + ' ' + content).toLowerCase();
+        const hasComplexKeywords = [
+          'advogado', 'processo', 'judicial', 'indenização', 'dano', 'ameaça'
+        ].some(keyword => contentLower.includes(keyword));
+        
+        if (!hasComplexKeywords) {
+          requiresHuman = false;
+          console.log(`🤖 Forçando IA para ${categoryName}: ${subject}`);
+        }
       }
       
       return {
         categoryName,
         confidence: Math.min(100, Math.max(0, result.confidence || 0)),
         reasoning: result.reasoning || 'Categorização automática falhou',
-        requiresHuman: result.requiresHuman !== undefined ? result.requiresHuman : defaultRequiresHuman
+        requiresHuman
       };
     } catch (error) {
       console.error('Erro na categorização por IA:', error);
