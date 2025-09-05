@@ -61,11 +61,6 @@ export default function AdminSupport() {
     setIsTicketModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsTicketModalOpen(false);
-    setSelectedTicket(null);
-  };
-
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
     queryKey: ['/api/support/categories'],
@@ -365,25 +360,15 @@ export default function AdminSupport() {
       <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-slate-900 border-slate-700">
           <DialogHeader>
-            <DialogTitle className="text-slate-200 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div 
-                  className="w-4 h-4 rounded-full" 
-                  style={{ backgroundColor: selectedTicket?.category?.color || '#6b7280' }}
-                />
-                <span>{selectedTicket?.ticket?.ticketNumber || 'N/A'}</span>
-                <Badge className="bg-slate-700 text-slate-300 text-xs">
-                  {selectedTicket?.category?.displayName || 'Sem categoria'}
-                </Badge>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCloseModal}
-                className="text-slate-400 hover:text-slate-200"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            <DialogTitle className="text-slate-200 flex items-center space-x-3">
+              <div 
+                className="w-4 h-4 rounded-full" 
+                style={{ backgroundColor: selectedTicket?.category?.color || '#6b7280' }}
+              />
+              <span>{selectedTicket?.ticket?.ticketNumber || 'N/A'}</span>
+              <Badge className="bg-slate-700 text-slate-300 text-xs">
+                {selectedTicket?.category?.displayName || 'Sem categoria'}
+              </Badge>
             </DialogTitle>
           </DialogHeader>
 
