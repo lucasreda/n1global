@@ -115,9 +115,19 @@ Analise o seguinte email de suporte e categorize-o em uma das categorias dispon�
 CATEGORIAS DISPONÍVEIS:
 ${categoryDescriptions}
 
-EMAIL:
-Assunto: ${subject}
-Conteúdo: ${content}
+EMAIL PARA ANÁLISE:
+---
+CONTEÚDO PRINCIPAL (PRIORIDADE MÁXIMA): ${content}
+---
+Assunto (referência secundária): ${subject}
+
+INSTRUÇÃO CRÍTICA: Analise PRINCIPALMENTE o CONTEÚDO do email, não o assunto. 
+O assunto pode ser genérico (como "Bom dia", "Olá", "Contato") mas o que importa é o que o cliente escreve no corpo da mensagem.
+
+EXEMPLOS:
+- Assunto: "Bom dia" + Conteúdo: "Gostaria de saber quando meu pedido vai chegar" → CATEGORIA: duvidas
+- Assunto: "Olá" + Conteúdo: "Preciso cancelar minha compra" → CATEGORIA: cancelamento  
+- Assunto: "Contato" + Conteúdo: "Quero alterar o endereço de entrega" → CATEGORIA: alteracao_endereco
 
 Responda em JSON no seguinte formato:
 {
