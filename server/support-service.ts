@@ -953,6 +953,9 @@ SINAIS DE ALERTA (REVISAR):
     console.log(
       `🤖 Gerando resposta automática IA para categoria: ${category.name}`,
     );
+    console.log("🔥 STEP 1");
+    console.log("🔥 STEP 2");
+    console.log("🔥 ENTRANDO EM sendAIAutoResponse - INICIO DA FUNÇÃO");
 
     try {
       // Gerar resposta com IA
@@ -962,11 +965,21 @@ SINAIS DE ALERTA (REVISAR):
 
       // Carregar template HTML
       const templatePath = path.join(process.cwd(), "email-templates", "ai-response-template.html");
-      let htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+      console.log("🔍 Carregando template de:", templatePath);
+      
+      let htmlTemplate: string;
+      try {
+        htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+        console.log("✅ Template HTML carregado com sucesso - tamanho:", htmlTemplate.length, "caracteres");
+      } catch (templateError) {
+        console.error("❌ ERRO ao carregar template HTML:", templateError);
+        throw new Error(`Falha ao carregar template: ${templateError}`);
+      }
       
       // Substituir placeholder com conteúdo formatado
       const formattedContent = this.formatAIResponseForEmail(aiResponse.content);
       const htmlContent = htmlTemplate.replace("{{AI_RESPONSE_CONTENT}}", formattedContent);
+      console.log("🎨 Template processado - HTML final tem", htmlContent.length, "caracteres");
 
       // Enviar email com resposta da IA
       const mailgunResponse = await mg.messages.create(
@@ -1026,7 +1039,24 @@ SINAIS DE ALERTA (REVISAR):
         );
       }
     } catch (error) {
-      console.error("❌ Erro ao enviar resposta automática IA:", error);
+      console.error("🚨 ERRO CRÍTICO em sendAIAutoResponse:");
+      console.error("Tipo do erro:", error instanceof Error ? error.name : typeof error);
+      console.error("Mensagem:", error instanceof Error ? error.message : error);
+      console.error("Stack trace:", error instanceof Error ? error.stack : error);
+      
+      // Registrar onde exatamente o erro ocorreu
+      if (error instanceof Error) {
+        if (error.message.includes('template')) {
+          console.error("❌ ERRO no carregamento do template HTML");
+        } else if (error.message.includes('Mailgun')) {
+          console.error("❌ ERRO no envio via Mailgun");
+        } else if (error.message.includes('database') || error.message.includes('db')) {
+          console.error("❌ ERRO de banco de dados");
+        } else {
+          console.error("❌ ERRO desconhecido na função sendAIAutoResponse");
+        }
+      }
+      
       throw error;
     }
   }
