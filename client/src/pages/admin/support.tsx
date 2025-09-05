@@ -446,32 +446,32 @@ export default function AdminSupport() {
         <div className="lg:col-span-3 space-y-6">
           {/* Filtros */}
           <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-            <CardHeader>
-              <CardTitle className="text-slate-200 flex items-center gap-2 text-xl">
-                <Search className="h-5 w-5" />
+            <CardHeader className="pb-3">
+              <CardTitle className="text-slate-200 flex items-center gap-2 text-lg">
+                <Search className="h-4 w-4" />
                 Filtros de Tickets
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-slate-400">Buscar</label>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">Buscar</label>
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                     <Input
                       placeholder="Email, assunto, ticket..."
                       value={supportSearchTerm}
                       onChange={(e) => setSupportSearchTerm(e.target.value)}
-                      className="pl-10 bg-slate-700 border-slate-600 text-white"
+                      className="pl-10 bg-slate-700 border-slate-600 text-white h-9"
                       data-testid="input-support-search"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-slate-400">Categoria</label>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">Categoria</label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-category">
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm h-9" data-testid="select-category">
                       <SelectValue placeholder="Todas as categorias" />
                     </SelectTrigger>
                     <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
@@ -485,10 +485,10 @@ export default function AdminSupport() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-slate-400">Status</label>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">Status</label>
                   <Select value={selectedTicketStatus} onValueChange={setSelectedTicketStatus}>
-                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-status">
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm h-9" data-testid="select-status">
                       <SelectValue placeholder="Todos os status" />
                     </SelectTrigger>
                     <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
