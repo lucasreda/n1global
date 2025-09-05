@@ -34,6 +34,46 @@ const mg = mailgun.client({
 export class SupportService {
   
   /**
+   * Format AI response content for HTML email
+   */
+  private formatAIResponseForEmail(content: string): string {
+    // Split content into paragraphs
+    let formatted = content
+      // Replace double line breaks with paragraph separators
+      .split('\n\n')
+      .map(paragraph => {
+        // Trim whitespace
+        paragraph = paragraph.trim();
+        if (!paragraph) return '';
+        
+        // Convert **bold** to <strong>bold</strong>
+        paragraph = paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert *italic* to <em>italic</em>
+        paragraph = paragraph.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Convert single line breaks to <br>
+        paragraph = paragraph.replace(/\n/g, '<br>');
+        
+        // Wrap in paragraph tags
+        return `<p style="margin-bottom: 15px; line-height: 1.6;">${paragraph}</p>`;
+      })
+      .filter(p => p.length > 0)
+      .join('');
+    
+    // Handle lists (- item or * item)
+    formatted = formatted.replace(/<p[^>]*>([^<]*[-*]\s[^<]*(?:<br>[^<]*[-*]\s[^<]*)*)<\/p>/g, (match, listContent) => {
+      const items = listContent.split('<br>')
+        .filter(item => item.trim().match(/^[-*]\s/))
+        .map(item => `<li style="margin-bottom: 8px;">${item.replace(/^[-*]\s/, '').trim()}</li>`)
+        .join('');
+      return `<ul style="margin-bottom: 15px; padding-left: 20px;">${items}</ul>`;
+    });
+    
+    return formatted;
+  }
+  
+  /**
    * Get all support categories
    */
   async getCategories(): Promise<SupportCategory[]> {
@@ -479,6 +519,11 @@ CARACTERÍSTICAS DA SUA RESPOSTA:
 - Mantenha tom profissional mas amigável
 - NÃO mencione que você é IA ou bot
 - Use o nome do cliente quando possível
+- **FORMATAÇÃO**: Use formatação markdown no conteúdo:
+  * Use **texto** para palavras importantes ou destaque
+  * Use quebras de linha duplas (\n\n) para separar parágrafos
+  * Use listas com - quando apropriado
+  * Estruture a resposta em parágrafos claros e organizados
 
 EMAIL ORIGINAL:
 Remetente: ${email.from}
@@ -511,16 +556,14 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
 
       let content = response.choices[0].message.content || '{}';
       
-      // Clean up potential control characters and newlines that break JSON parsing
-      content = content.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
-      content = content.replace(/\n/g, " ");
-      content = content.replace(/\r/g, " ");
-      
       // Extract JSON from markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*(\{.*?\})\s*```/s);
       if (jsonMatch) {
         content = jsonMatch[1];
       }
+      
+      // Clean up potential control characters but preserve newlines in content
+      content = content.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
       
       const result = JSON.parse(content);
       
@@ -563,7 +606,7 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
               <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALMAAACWCAYAAACVdbl2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAKLklEQVR4nO2dMYgkWRnHf7UsQh2LHoggHJiIl9xMYCInl5htIJiY3CRGe1CBzoKIyWBgsAYiwhbCFdxgsAgzgUZioBiYiBOZzMChoIGBIHIgsljZlEG/t/O6t3q6qvtVve979f1gmNnunuqe3l9//X/fe/W66LqOQyia9hHw7KCD7M9FV5VXie7bcBRN+y5wMvPdnnVV+TK84GGkA59GOs5YLhLdr7HOEfM7cAGsFbIHkQ5cRzrOWI4S3a+xznHqBwARZN4s9caycBFDBLEqs7FcTkgXM9eIJfN1pOOMRcTb21KRVJUhg8rsuilGGlIM/LaiXWYxT+TScFVZ1DtjLJlvIh3H0EPKrFzT41wOMlt7bmaKpn2S+jH0ddG0xwwwmWcliBcpI15vwyGmzKkmToyZC" alt="Logo" style="height: 40px; width: auto; margin-bottom: 10px;">
             </div>
             <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; border-radius: 8px;">
-              ${aiResponse.content.replace(/\n/g, '<br>')}
+              ${this.formatAIResponseForEmail(aiResponse.content)}
             </div>
             <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 30px;">
               Se precisar de mais alguma coisa, pode responder diretamente a este email.

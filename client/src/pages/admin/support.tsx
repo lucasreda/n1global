@@ -67,7 +67,6 @@ export default function AdminSupport() {
   // Effect to scroll to last message when modal opens with conversations
   useEffect(() => {
     if (isTicketModalOpen && selectedTicket?.conversations && selectedTicket.conversations.length > 0) {
-      console.log('📜 Modal opened with conversations, attempting scroll...');
       // Multiple attempts to ensure scroll happens after DOM updates
       const scrollAttempts = [100, 300, 600, 1000];
       scrollAttempts.forEach(delay => {
@@ -144,18 +143,14 @@ export default function AdminSupport() {
   // Function to scroll to last message in conversation
   const scrollToLastMessage = () => {
     const conversationContainer = document.getElementById('conversation-history');
-    console.log('🔍 Scroll attempt - Container found:', !!conversationContainer);
     if (conversationContainer) {
       const messages = conversationContainer.children;
-      console.log('📜 Container info - scrollHeight:', conversationContainer.scrollHeight, 'clientHeight:', conversationContainer.clientHeight, 'messages:', messages.length);
       
       if (messages.length > 0) {
         const lastMessage = messages[messages.length - 1] as HTMLElement;
-        console.log('🎯 Scrolling to last message element');
         lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
       } else {
         // Fallback to scrollTop method
-        console.log('📜 Fallback: Scrolling to bottom using scrollTop');
         conversationContainer.scrollTop = conversationContainer.scrollHeight;
       }
     }
