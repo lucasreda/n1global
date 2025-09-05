@@ -480,6 +480,75 @@ export class CustomerSupportService {
   }
 
   /**
+   * Get overview metrics for an operation
+   */
+  async getOverview(operationId: string): Promise<{
+    openTickets: number;
+    aiResponded: number;
+    monthlyTickets: number;
+    unreadTickets: number;
+  }> {
+    console.log('🔍 Getting overview for operation:', operationId);
+
+    // Count tickets by status
+    const openTickets = await db
+      .select({ count: count() })
+      .from(customerSupportTickets)
+      .where(
+        and(
+          eq(customerSupportTickets.operationId, operationId),
+          eq(customerSupportTickets.status, 'open')
+        )
+      );
+
+    // Count AI responded tickets  
+    const aiResponded = await db
+      .select({ count: count() })
+      .from(customerSupportTickets)
+      .where(
+        and(
+          eq(customerSupportTickets.operationId, operationId),
+          eq(customerSupportTickets.isAutomated, true)
+        )
+      );
+
+    // Count monthly tickets (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const monthlyTickets = await db
+      .select({ count: count() })
+      .from(customerSupportTickets)
+      .where(
+        and(
+          eq(customerSupportTickets.operationId, operationId),
+          gte(customerSupportTickets.createdAt, thirtyDaysAgo)
+        )
+      );
+
+    // Count unread tickets
+    const unreadTickets = await db
+      .select({ count: count() })
+      .from(customerSupportTickets)
+      .where(
+        and(
+          eq(customerSupportTickets.operationId, operationId),
+          eq(customerSupportTickets.isRead, false)
+        )
+      );
+
+    const result = {
+      openTickets: openTickets[0]?.count || 0,
+      aiResponded: aiResponded[0]?.count || 0,
+      monthlyTickets: monthlyTickets[0]?.count || 0,
+      unreadTickets: unreadTickets[0]?.count || 0,
+    };
+
+    console.log('🔍 Overview result:', result);
+    return result;
+  }
+
+  /**
    * Configure Mailgun domain for operation (placeholder for future implementation)
    */
   async configureMailgunDomain(

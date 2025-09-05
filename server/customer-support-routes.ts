@@ -116,6 +116,25 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
+   * Get overview metrics for an operation
+   */
+  app.get("/api/customer-support/:operationId/overview", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      
+      console.log('🔍 Getting overview for operation:', operationId);
+      
+      const metrics = await customerSupportService.getOverview(operationId);
+      
+      console.log('🔍 Returning overview metrics:', metrics);
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error getting overview:', error);
+      res.status(500).json({ message: 'Erro ao buscar métricas', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  /**
    * Get tickets for an operation with filters
    */
   app.get("/api/customer-support/:operationId/tickets", authenticateToken, async (req: Request, res: Response) => {
