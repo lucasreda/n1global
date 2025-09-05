@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +53,7 @@ interface SupportTicket {
 }
 
 export default function AdminSupport() {
+  const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [supportSearchTerm, setSupportSearchTerm] = useState("");
   const [selectedTicketStatus, setSelectedTicketStatus] = useState<string>("all");
@@ -134,6 +135,8 @@ export default function AdminSupport() {
         });
         // Close the confirmation dialog
         setIsCloseConfirmOpen(false);
+        // Invalidate queries to refresh the tickets list
+        queryClient.invalidateQueries({ queryKey: ['/api/support/tickets'] });
         // Optionally close the ticket modal
         // setIsTicketModalOpen(false);
       } else {
