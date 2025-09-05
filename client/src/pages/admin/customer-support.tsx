@@ -356,14 +356,32 @@ export default function CustomerSupportPage() {
   const shouldLoadTickets = true; // Simplificando: sempre carregar tickets
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: [`tickets-${currentOperationId}-${Date.now()}`], // Force cache invalidation
+    queryKey: [`tickets-direct-${currentOperationId}`],
     enabled: !!supportConfig && !!currentOperationId,
     staleTime: 0,
     queryFn: async () => {
-      const url = `/api/customer-support/${currentOperationId}/tickets?limit=50&bust=${Date.now()}`;
-      const response = await apiRequest(url, 'GET');
-      console.log('🎫 Tickets response:', response);
-      return response;
+      const url = `/api/customer-support/${currentOperationId}/tickets?limit=50&direct=${Date.now()}`;
+      
+      const token = localStorage.getItem('token');
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('🎫 Direct fetch response:', data);
+      
+      return {
+        tickets: data.tickets || [],
+        total: data.total || 0
+      };
     }
   });
 
