@@ -20,11 +20,10 @@ export default function CustomerSupportPage() {
     try {
       setIsInitializing(true);
       
-      const response = await fetch('/api/customer-support/init', {
+      const data = await apiRequest('/api/customer-support/init', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           operationId: currentOperationId,
@@ -32,28 +31,18 @@ export default function CustomerSupportPage() {
         })
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: "Suporte Inicializado",
-          description: "Sistema de suporte de clientes foi configurado com sucesso",
-        });
-        
-        // Refresh the page after success
-        window.location.reload();
-      } else {
-        const error = await response.json();
-        toast({
-          title: "Erro",
-          description: error.message || "Falha ao configurar suporte",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Suporte Inicializado",
+        description: "Sistema de suporte de clientes foi configurado com sucesso",
+      });
+      
+      // Refresh the page after success
+      window.location.reload();
     } catch (error) {
       console.error('Error initializing support:', error);
       toast({
         title: "Erro",
-        description: "Erro interno ao configurar suporte",
+        description: "Erro ao configurar suporte",
         variant: "destructive"
       });
     } finally {
@@ -64,31 +53,19 @@ export default function CustomerSupportPage() {
   // Create test data
   const handleCreateTestData = async () => {
     try {
-      const response = await fetch(`/api/customer-support/${currentOperationId}/test-data`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        }
+      await apiRequest(`/api/customer-support/${currentOperationId}/test-data`, {
+        method: 'POST'
       });
 
-      if (response.ok) {
-        toast({
-          title: "Dados de Teste Criados",
-          description: "Tickets de exemplo foram criados com sucesso",
-        });
-      } else {
-        const error = await response.json();
-        toast({
-          title: "Erro",
-          description: error.message || "Falha ao criar dados de teste",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Dados de Teste Criados",
+        description: "Tickets de exemplo foram criados com sucesso",
+      });
     } catch (error) {
       console.error('Error creating test data:', error);
       toast({
         title: "Erro", 
-        description: "Erro interno ao criar dados de teste",
+        description: "Erro ao criar dados de teste",
         variant: "destructive"
       });
     }
