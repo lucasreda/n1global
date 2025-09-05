@@ -901,6 +901,8 @@ Analise o email recebido seguindo esta metodologia:
 LEMBRE-SE: Você não é apenas uma atendente, você é a voz humana da empresa que pode transformar um problema em oportunidade de fidelização.
 `;
 
+    let content = "{}"; // Declarar fora do try para acessar no catch
+    
     try {
       console.log("🤖 DEBUG - Iniciando chamada para OpenAI");
       console.log("📊 Tamanho do prompt:", prompt.length, "caracteres");
@@ -921,7 +923,7 @@ LEMBRE-SE: Você não é apenas uma atendente, você é a voz humana da empresa 
       console.log("✅ Resposta recebida da OpenAI");
       console.log("📝 Token usage:", response.usage);
 
-      let content = response.choices[0].message.content || "{}";
+      content = response.choices[0].message.content || "{}";
 
       // Extract JSON from markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/g);
