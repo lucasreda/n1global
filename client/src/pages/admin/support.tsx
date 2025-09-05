@@ -977,6 +977,13 @@ export default function AdminSupport() {
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
+              <label className="text-sm text-slate-400">Remetente</label>
+              <div className="bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-white">
+                suporte@n1global.app
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm text-slate-400">Destinatário</label>
               <Input
                 placeholder="email@exemplo.com"
