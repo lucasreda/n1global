@@ -66,6 +66,31 @@ export default function AdminSupport() {
     setReplyMessage(""); // Reset reply message
   };
 
+  // Function to test authentication
+  const testAuth = async () => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      console.log('🧪 Token exists:', !!token);
+      console.log('🧪 Token preview:', token ? token.substring(0, 50) + '...' : 'NO TOKEN');
+      
+      const response = await fetch('/api/support/test-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ test: true })
+      });
+
+      const result = await response.json();
+      console.log('🧪 Test auth result:', result);
+      alert(`Auth test: ${response.status} - ${JSON.stringify(result)}`);
+    } catch (error) {
+      console.error('🧪 Auth test error:', error);
+      alert(`Auth test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Function to send reply
   const handleSendReply = async () => {
     if (!selectedTicket || !replyMessage.trim()) return;
@@ -73,6 +98,10 @@ export default function AdminSupport() {
     setIsSendingReply(true);
     try {
       const token = localStorage.getItem("auth_token");
+      console.log('📧 Reply - Token exists:', !!token);
+      console.log('📧 Reply - Token preview:', token ? token.substring(0, 50) + '...' : 'NO TOKEN');
+      console.log('📧 Reply - Ticket ID:', selectedTicket.ticket.id);
+      
       const response = await fetch(`/api/support/tickets/${selectedTicket.ticket.id}/reply`, {
         method: 'POST',
         headers: {
@@ -84,18 +113,24 @@ export default function AdminSupport() {
         })
       });
 
+      const responseText = await response.text();
+      console.log('📧 Reply response status:', response.status);
+      console.log('📧 Reply response text:', responseText);
+
       if (!response.ok) {
-        throw new Error('Erro ao enviar resposta');
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
       }
+
+      const result = JSON.parse(responseText);
+      console.log('📧 Reply success:', result);
 
       setReplyMessage("");
       setIsTicketModalOpen(false);
       setSelectedTicket(null);
-      // TODO: Add success toast/notification
       alert('Resposta enviada com sucesso!');
     } catch (error) {
-      console.error('Erro ao enviar resposta:', error);
-      alert('Erro ao enviar resposta. Tente novamente.');
+      console.error('📧 Reply error:', error);
+      alert(`Erro ao enviar resposta: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSendingReply(false);
     }
@@ -280,10 +315,15 @@ export default function AdminSupport() {
                   Gerenciamento centralizado de atendimento ao cliente
                 </CardDescription>
               </div>
-              <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="border-slate-600 text-slate-300" onClick={testAuth} data-testid="button-test-auth">
+                  🧪 Teste Auth
+                </Button>
+                <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {!shouldLoadTickets ? (
