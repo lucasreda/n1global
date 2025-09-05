@@ -171,7 +171,7 @@ export default function AdminSupport() {
           {/* Filtros */}
           <Card className="bg-white/10 border-white/20 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="text-slate-200 flex items-center gap-2">
+              <CardTitle className="text-slate-200 flex items-center gap-2 text-xl">
                 <Search className="h-5 w-5" />
                 Filtros de Tickets
               </CardTitle>
@@ -232,7 +232,7 @@ export default function AdminSupport() {
           <Card className="bg-white/10 border-white/20 backdrop-blur-md">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-slate-200 flex items-center gap-2">
+                <CardTitle className="text-slate-200 flex items-center gap-2 text-xl">
                   <MessageSquare className="h-5 w-5" />
                   Tickets de Suporte
                 </CardTitle>
