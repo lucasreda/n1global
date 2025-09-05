@@ -114,10 +114,177 @@ REGRAS:
   }
 
   /**
-   * Process incoming email from Resend webhook
+   * Check if email is a reply to an existing conversation
+   */
+  private isEmailReply(subject: string): boolean {
+    // Check for common reply indicators in subject
+    const replyPrefixes = [
+      /^re:\s*/i,
+      /^re\[\d+\]:\s*/i, 
+      /^aw:\s*/i,
+      /^re\(\d+\):\s*/i,
+      /^antw:\s*/i,
+      /^resp:\s*/i,
+      /^resposta:\s*/i,
+      /^\[re\]:\s*/i,
+      /^\[resposta\]:\s*/i,
+    ];
+
+    return replyPrefixes.some(pattern => pattern.test(subject));
+  }
+
+  /**
+   * Extract original subject from reply
+   */
+  private extractOriginalSubject(subject: string): string {
+    // Remove reply prefixes to get original subject
+    const replyPrefixes = [
+      /^re:\s*/i,
+      /^re\[\d+\]:\s*/i,
+      /^aw:\s*/i,
+      /^re\(\d+\):\s*/i,
+      /^antw:\s*/i,
+      /^resp:\s*/i,
+      /^resposta:\s*/i,
+      /^\[re\]:\s*/i,
+      /^\[resposta\]:\s*/i,
+    ];
+
+    let cleanSubject = subject.trim();
+    for (const pattern of replyPrefixes) {
+      cleanSubject = cleanSubject.replace(pattern, '');
+    }
+    
+    return cleanSubject.trim();
+  }
+
+  /**
+   * Find existing ticket for email reply
+   */
+  private async findExistingTicketForReply(from: string, subject: string): Promise<SupportTicket | null> {
+    const originalSubject = this.extractOriginalSubject(subject);
+    
+    // Strategy 1: Find by customer email and similar subject
+    const ticketsBySubject = await db
+      .select()
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.customerEmail, from),
+          or(
+            eq(supportTickets.subject, originalSubject),
+            eq(supportTickets.subject, subject),
+            ilike(supportTickets.subject, `%${originalSubject}%`)
+          ),
+          in(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
+        )
+      )
+      .orderBy(desc(supportTickets.createdAt))
+      .limit(1);
+
+    if (ticketsBySubject.length > 0) {
+      console.log(`📬 Found existing ticket by subject match: ${ticketsBySubject[0].ticketNumber}`);
+      return ticketsBySubject[0];
+    }
+
+    // Strategy 2: Find most recent open ticket from same customer
+    const recentTickets = await db
+      .select()
+      .from(supportTickets)
+      .where(
+        and(
+          eq(supportTickets.customerEmail, from),
+          in(supportTickets.status, ['open', 'in_progress', 'waiting_customer'])
+        )
+      )
+      .orderBy(desc(supportTickets.createdAt))
+      .limit(1);
+
+    if (recentTickets.length > 0) {
+      console.log(`📬 Found existing ticket by recent activity: ${recentTickets[0].ticketNumber}`);
+      return recentTickets[0];
+    }
+
+    console.log(`📬 No existing ticket found for reply from ${from}`);
+    return null;
+  }
+
+  /**
+   * Process incoming email from webhook
    */
   async processIncomingEmail(webhookData: any): Promise<SupportEmail> {
     const { from, to, subject, text, html, attachments = [], message_id } = webhookData;
+
+    console.log(`📧 Processing email - From: ${from}, Subject: ${subject}`);
+
+    // Check if this is a reply to existing conversation
+    const isReply = this.isEmailReply(subject);
+    console.log(`📧 Is reply: ${isReply}`);
+
+    let existingTicket = null;
+    if (isReply) {
+      existingTicket = await this.findExistingTicketForReply(from, subject);
+    }
+
+    // If this is a reply to existing ticket, add to conversation instead of creating new ticket
+    if (existingTicket) {
+      console.log(`📧 Adding reply to existing ticket: ${existingTicket.ticketNumber}`);
+      
+      // Save email
+      const emailData: InsertSupportEmail = {
+        messageId: message_id,
+        from,
+        to,
+        subject,
+        textContent: text,
+        htmlContent: html,
+        attachments: attachments.length > 0 ? attachments : null,
+        categoryId: existingTicket.categoryId,
+        aiConfidence: 100,
+        aiReasoning: 'Reply to existing ticket - no AI categorization needed',
+        status: 'attached_to_ticket',
+        requiresHuman: true,
+        rawData: webhookData
+      };
+
+      const [savedEmail] = await db
+        .insert(supportEmails)
+        .values(emailData)
+        .returning();
+
+      // Add conversation entry
+      await this.addConversation(existingTicket.id, {
+        type: 'email_in',
+        from: from,
+        to: to,
+        subject: subject,
+        content: text || html || '',
+        messageId: message_id
+      });
+
+      // Update ticket status to show new activity
+      if (existingTicket.status === 'waiting_customer') {
+        await db
+          .update(supportTickets)
+          .set({
+            status: 'open',
+            updatedAt: new Date()
+          })
+          .where(eq(supportTickets.id, existingTicket.id));
+      } else {
+        // Just update the timestamp
+        await db
+          .update(supportTickets)
+          .set({ updatedAt: new Date() })
+          .where(eq(supportTickets.id, existingTicket.id));
+      }
+
+      console.log(`✅ Reply attached to ticket: ${existingTicket.ticketNumber}`);
+      return savedEmail;
+    }
+
+    // This is a new email, process normally
+    console.log(`📧 Processing as new email`);
 
     // Categorize with AI
     const categorization = await this.categorizeEmail(subject, text || html || '');
