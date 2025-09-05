@@ -502,7 +502,7 @@ export default function CustomerSupportPage() {
                   <MessageSquare className="w-6 h-6 text-green-400" />
                 </div>
                 <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
-                  +{overviewMetrics?.openTicketsGrowth || 0}%
+                  ATIVO
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
@@ -613,29 +613,27 @@ export default function CustomerSupportPage() {
               </div>
             ))
           ) : (
-            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-              <CardContent className="p-6 text-center">
-                <Mail className="h-8 w-8 text-slate-500 mx-auto mb-3" />
-                <h3 className="text-sm font-medium text-white mb-2">Sistema de Suporte</h3>
-                <p className="text-xs text-slate-400">
-                  Sistema com IA configurado para {currentOperationName}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 text-center transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+              <Mail className="h-8 w-8 text-gray-500 mx-auto mb-3" />
+              <h3 className="text-sm font-medium text-white mb-2">Sistema de Suporte</h3>
+              <p className="text-xs text-gray-400">
+                Sistema com IA configurado para {currentOperationName}
+              </p>
+            </div>
           )}
         </div>
 
         {/* Coluna Direita - Filtros e Lista de Tickets */}
-        <div className="xl:col-span-10 space-y-6">
+        <div className="xl:col-span-10 space-y-3 lg:space-y-6">
           {/* Filtros */}
-          <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-slate-200 flex items-center gap-2 text-lg">
+          <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+            <div className="mb-4">
+              <h3 className="text-gray-100 flex items-center gap-2 text-lg font-semibold">
                 <Search className="h-4 w-4" />
                 Filtros de Tickets
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
+              </h3>
+            </div>
+            <div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs text-slate-400">Buscar</label>
@@ -684,25 +682,25 @@ export default function CustomerSupportPage() {
                   </Select>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Lista de Tickets */}
-          <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-slate-200 flex items-center justify-between text-lg">
+          <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+            <div className="mb-4">
+              <h3 className="text-gray-100 flex items-center justify-between text-lg font-semibold">
                 <span className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   Tickets de Suporte
                 </span>
                 {supportTicketsResponse && (
-                  <span className="text-sm text-slate-400">
+                  <span className="text-sm text-gray-400">
                     {supportTicketsResponse.tickets?.length || 0} tickets
                   </span>
                 )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h3>
+            </div>
+            <div>
               {ticketsLoading ? (
                 <div className="text-center py-8 text-slate-400">
                   <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin" />
@@ -719,7 +717,7 @@ export default function CustomerSupportPage() {
                     }
                   </p>
                   {!hasSupportFilters && (
-                    <Button onClick={handleCreateTestData} variant="outline" className="border-slate-600 text-slate-300 hover:bg-white/10">
+                    <Button onClick={handleCreateTestData} variant="outline" className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors">
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Criar Dados de Teste
                     </Button>
@@ -728,9 +726,8 @@ export default function CustomerSupportPage() {
               ) : (
                 <div className="space-y-3">
                   {supportTicketsResponse?.tickets?.map((ticket) => (
-                    <Card key={ticket.id} className="bg-white/5 border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                    <div key={ticket.id} className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20 cursor-pointer" style={{boxShadow: '0 4px 16px rgba(31, 38, 135, 0.2)'}}
                           onClick={() => handleViewTicket(ticket)}>
-                      <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <div className={`w-2 h-2 rounded-full ${!ticket.isRead ? 'bg-blue-400' : 'bg-slate-600'}`} />
@@ -778,13 +775,12 @@ export default function CustomerSupportPage() {
                             </span>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                    </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
 
