@@ -468,4 +468,43 @@ export function registerSupportRoutes(app: Express) {
     }
   });
 
+  /**
+   * Test AI auto-response system
+   */
+  app.post('/api/support/test-ai-response', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log('🤖 Testing AI auto-response...');
+      
+      // Simulate an email for testing
+      const testEmail = {
+        from: 'cliente@teste.com',
+        to: 'support@codashboard.com',
+        subject: 'Quando meu pedido vai chegar?',
+        text: 'Oi, fiz um pedido há 3 dias e ainda não recebi informações sobre a entrega. Podem me ajudar?',
+        html: '<p>Oi, fiz um pedido há 3 dias e ainda não recebi informações sobre a entrega. Podem me ajudar?</p>',
+        attachments: [],
+        message_id: `test_ai_${Date.now()}`
+      };
+      
+      console.log('🤖 Simulating AI response generation...');
+      const result = await supportService.processIncomingEmail(testEmail);
+      
+      res.json({ 
+        message: 'AI response test completed',
+        simulatedEmail: {
+          id: result.id,
+          status: result.status,
+          category: result.categoryId
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('🤖 AI response test error:', error);
+      res.status(500).json({ 
+        message: 'Test failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
 }

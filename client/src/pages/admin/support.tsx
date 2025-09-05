@@ -98,6 +98,33 @@ export default function AdminSupport() {
     setReplyMessage(""); // Reset reply message
   };
 
+  // Function to test AI responses
+  const testAIResponse = async () => {
+    try {
+      console.log('🤖 Testing AI responses...');
+      const token = localStorage.getItem("auth_token");
+      
+      const response = await fetch('/api/support/test-ai-response', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+      });
+
+      const result = await response.json();
+      console.log('🤖 AI test result:', result);
+      
+      if (response.ok) {
+        alert(`✅ Teste IA concluído! Verifique os logs do servidor para ver a resposta automática sendo gerada.`);
+      } else {
+        alert(`❌ Teste falhou: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('🤖 AI test error:', error);
+      alert(`❌ Erro no teste: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
 
   // Function to send reply
   const handleSendReply = async () => {
@@ -325,10 +352,15 @@ export default function AdminSupport() {
                   Gerenciamento centralizado de atendimento ao cliente
                 </CardDescription>
               </div>
-              <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="border-slate-600 text-slate-300" onClick={testAIResponse} data-testid="button-test-ai">
+                  🤖 Teste IA
+                </Button>
+                <Button variant="outline" className="border-slate-600 text-slate-300" data-testid="button-export-tickets">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {!shouldLoadTickets ? (
