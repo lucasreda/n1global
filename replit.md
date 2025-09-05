@@ -3,7 +3,16 @@
 ## Overview
 The COD Dashboard is a modern full-stack web application designed for managing Cash on Delivery (COD) orders and providing business metric analysis. It features a comprehensive dashboard for order tracking, customer management, and performance monitoring with real-time data visualization, authentication, and integrations with shipping providers. The project aims to provide a robust solution for businesses to efficiently manage their COD operations and gain actionable insights.
 
-## Recent Changes (September 3, 2025)
+## Recent Changes (September 5, 2025)
+✓ **Email Threading System**: Implementado sistema completo de threading de emails que identifica respostas de clientes baseado em prefixos "Re:", "RE:", "Resposta:" no subject
+✓ **Conversation Continuity**: Emails de resposta agora são anexados ao ticket existente em vez de criar novos tickets, mantendo contexto da conversa
+✓ **Smart Ticket Matching**: Lógica inteligente para encontrar tickets existentes baseada no email do cliente e similaridade do assunto
+✓ **Status Auto-Update**: Status do ticket é automaticamente atualizado quando cliente responde (de "waiting_customer" para "open")
+✓ **Conversation History Display**: Modal de tickets mostra histórico completo de conversação com diferentes tipos (email_in, email_out, status_change)
+✓ **Email Logo Integration**: Emails enviados pelo sistema incluem logo SVG da empresa para identidade visual profissional
+✓ **Reply Auto-Reload**: Interface recarrega automaticamente após envio de resposta para mostrar nova entrada na conversa
+
+## Previous Changes (September 3, 2025)
 ✓ **eLogy Authentication Fix**: Corrected login failure detection to properly identify "USER_NOT_FOUND" errors from eLogy API
 ✓ **Token Handling Enhancement**: Enhanced eLogy service to dynamically use tokens returned from login response or fallback to configured auth header
 ✓ **Provider Cleanup**: Removed Correios Brasil and Jadlog references from system - no longer appear as planned providers

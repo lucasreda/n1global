@@ -468,43 +468,4 @@ export function registerSupportRoutes(app: Express) {
     }
   });
 
-  /**
-   * Test email threading functionality
-   */
-  app.post('/api/support/test-threading', authenticateToken, async (req: AuthRequest, res: Response) => {
-    try {
-      console.log('🧪 Testing email threading...');
-      await supportService.testEmailThreading();
-      
-      // Simulate a reply email
-      const testReplyEmail = {
-        from: 'sofia@cliente.com',
-        to: 'support@codashboard.com',
-        subject: 'Re: Cancelamento por engano',
-        text: 'Muito obrigada pela resposta rápida! Conseguiram reativar meu pedido?',
-        html: '<p>Muito obrigada pela resposta rápida! Conseguiram reativar meu pedido?</p>',
-        attachments: [],
-        message_id: `test_reply_${Date.now()}`
-      };
-      
-      console.log('🧪 Simulating reply email...');
-      const result = await supportService.processIncomingEmail(testReplyEmail);
-      
-      res.json({ 
-        message: 'Threading test completed',
-        simulatedEmail: {
-          id: result.id,
-          status: result.status,
-          isReply: true
-        },
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('🧪 Threading test error:', error);
-      res.status(500).json({ 
-        message: 'Test failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
 }
