@@ -133,10 +133,10 @@ export function registerCustomerSupportRoutes(app: Express) {
 
       console.log('🎫 Getting tickets with filters:', { operationId, status, category, categoryId, search, assignedTo, page, limit });
       
-      // Disable cache for debugging
-      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
+      // Return response as-is without cache headers for consistency
+      // res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      // res.set('Pragma', 'no-cache');
+      // res.set('Expires', '0');
 
       const pageNum = parseInt(page as string);
       const limitNum = parseInt(limit as string);

@@ -356,46 +356,8 @@ export default function CustomerSupportPage() {
   const shouldLoadTickets = true; // Simplificando: sempre carregar tickets
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: [`tickets-real-${currentOperationId}`],
+    queryKey: [`/api/customer-support/${currentOperationId}/tickets?limit=50`],
     enabled: !!supportConfig && !!currentOperationId,
-    staleTime: 0,
-    queryFn: async () => {
-      try {
-        console.log('🎫 Fetching tickets with direct fetch...');
-        
-        // Get fresh token from auth context
-        const token = localStorage.getItem('token');
-        const url = `/api/customer-support/${currentOperationId}/tickets?limit=50&fresh=${Date.now()}`;
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          },
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('🎫 Fresh API response:', data);
-        
-        return {
-          tickets: data.tickets || [],
-          total: data.total || 0
-        };
-      } catch (error) {
-        console.error('🎫 Fetch error:', error);
-        return {
-          tickets: [],
-          total: 0
-        };
-      }
-    }
   });
 
   if (!currentOperationId) {
