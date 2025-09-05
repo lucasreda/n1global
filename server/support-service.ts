@@ -78,12 +78,13 @@ Responda em JSON no seguinte formato:
 REGRAS:
 1. Use apenas categorias da lista acima
 2. confidence deve ser 0-100
-3. requiresHuman = true se o email for complexo, tiver tom agressivo, ou mencionar problemas legais
-4. Para dúvidas simples sobre rastreamento use "duvidas"
-5. Para reclamações sobre produtos use "reclamacoes"
-6. Para pedidos de mudança de endereço use "alteracao_endereco"
-7. Para cancelamentos use "cancelamento"
-8. Para tudo que precisa análise humana use "manual"
+3. requiresHuman = true APENAS se: tom agressivo, ameaças legais, reclamações complexas, ou problemas técnicos graves
+4. requiresHuman = false para: dúvidas simples sobre entrega, cancelamentos diretos, alterações de endereço básicas
+5. Para dúvidas simples sobre rastreamento/entrega use "duvidas" com requiresHuman = false
+6. Para reclamações sobre produtos use "reclamacoes" com requiresHuman = true (sempre humano)
+7. Para pedidos de mudança de endereço use "alteracao_endereco" com requiresHuman = false
+8. Para cancelamentos use "cancelamento" com requiresHuman = false
+9. Para tudo que precisa análise humana use "manual" com requiresHuman = true
 `;
 
     try {
@@ -96,11 +97,19 @@ REGRAS:
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
       
+      const categoryName = result.categoryName || 'manual';
+      
+      // Smart default for requiresHuman based on category
+      let defaultRequiresHuman = true;
+      if (['duvidas', 'alteracao_endereco', 'cancelamento'].includes(categoryName)) {
+        defaultRequiresHuman = false; // These categories can be handled by AI by default
+      }
+      
       return {
-        categoryName: result.categoryName || 'manual',
+        categoryName,
         confidence: Math.min(100, Math.max(0, result.confidence || 0)),
         reasoning: result.reasoning || 'Categorização automática falhou',
-        requiresHuman: result.requiresHuman || true
+        requiresHuman: result.requiresHuman !== undefined ? result.requiresHuman : defaultRequiresHuman
       };
     } catch (error) {
       console.error('Erro na categorização por IA:', error);
