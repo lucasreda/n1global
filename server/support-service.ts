@@ -1101,6 +1101,113 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
       throw new Error(`Falha ao enviar resposta do ticket: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
+
+  /**
+   * Send new message to recipient and create a new ticket
+   */
+  async sendNewMessage(recipient: string, message: string, agentName?: string): Promise<{ ticketId: string }> {
+    try {
+      console.log('🎯 SupportService.sendNewMessage called with:', { recipient, messageLength: message.length, agentName });
+      
+      // Check environment variables
+      console.log('🌍 Environment check:', {
+        hasMailgunDomain: !!process.env.MAILGUN_DOMAIN,
+        hasMailgunApiKey: !!process.env.MAILGUN_API_KEY,
+        domain: process.env.MAILGUN_DOMAIN || 'NOT_SET'
+      });
+
+      const ticketNumber = `TKT-${Date.now().toString().slice(-8)}`;
+      const senderName = agentName || 'Equipe de Suporte';
+      const subject = `Mensagem da equipe de suporte - ${ticketNumber}`;
+      
+      console.log('📧 Preparing to send email via Mailgun...');
+      console.log('Email details:', {
+        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: recipient,
+        subject: subject,
+        ticketNumber: ticketNumber
+      });
+
+      // Send email via Mailgun
+      const mailgunResponse = await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
+        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: recipient,
+        'h:Reply-To': `suporte@${process.env.MAILGUN_DOMAIN}`,
+        subject: subject,
+        text: message,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFvElEQVR4nO2bW2wUVRjHf7OztAul3EpbKBcpCCJYQS5JfTAaE0w0IZo0xgfUF1980BgTE/XBB18MiQ/GF40PJiYmJr6YaKKJJj4Y8AEjmMiFcm/pFaEtlNJLge7uOCez3ZnuzOzMzs7szibZL5lkd2bO+c753//7vnPOLECRIkWKFClSpEiR/wMQO5lhFb4s5bAs5xMsAYvAlqWgJmCRhDEwMcYQgxF+TiQMjCNNIMZ4HWJ8xhgjAcYJxhhjxhijdBFjIzKXGFMfJLwWEuZYU1Q7qL4+FW0/qnz/VbKk+kq5TcP0RVJZlL2omIZl7+8lHW/vIfsqvh7fEhOgC6d4I+n4bwJ9B2O1mUhLo8XfrIEoXwmEsyO02VeP8VtNTGsaBTVBR1dGKz3eEANLON1SBSEMLBJiGIFRShgjmCBEZ4ZggBEKQsKTDFaHK6Cx2EpJtM+4bAhBON4QDxmCEYwgwLlpCMEIQTBCKIHRJoByjj7A7VjVAiw5BwAfqX8Ff5/sKgJcXQFLFi3DJy8+g4cfXI6HVi7DzfOr8a+tB5YNWLJdFUCApMRFqO+KgHMaXWYMnOK5o4+NX6dUglbk0u9H+1EZq8DDK+7Dh0/swOGW0xi83+VUqEy4XAEI5xZBJaU8Cl3ZMOWKACtGlV9/S6w2L1iHJ9c+iG2f7MbBs93oGRh0B9WcLZAygQ7rIlNB5YOWJ7c/jq37j+JPvwc3LV6Hl9c/jO3b9+CgfQm3+v3IBAW/DyCXC+Rrp7kGQMYjN9bg6dWrsOPLf3Cqu0eZVBULafnJ6qQTCBvOp+z3TZJGSaytAY+sWYEdh39Hzc1Vju88YLgGQPrI7QLZzLZWb3q98bKtTH31LFdRPFdw2v7QZQTdAaAZONWvLXBpAWggWjmrPEZ9iYuKb7hkCdW8AIqVnSwHOBs4eDt8vWzrSC5kWL1++wGE8NvwjhzgbGDl+60HEICW7xwAyBVu3vdU5wv7ycAZCqLJh2v9HjwZOEPB9tXlAw/twHrpZoSzCZcfJn0fJsRmkZbAhqb0U5YPu12bHLzHKftRO8Dp3j4dweNK3k/ldbvUz3vHcuZwZf/JhK5wdJJpGICNXTy3fvI8QV7bJwPHs/mFvFdyJQDOqSTy/uaadP4iB67Z3k/BgZs93xd0fZKNAGSJX2j7YYmfO2MHPOe8vY8LGqLk/YAMocG5jA7fqPdNbN/cAY+kqAygMX7t7ztg9wBQ2b8xACb5vrnqXA3c7GnvBFDZvzEA6aq8g7lDhQCMgGhCjJQz2Bq3BeCkFNrIbJRUPgF7M5P2BZD0v9ttP2jbD1oMgbbvlhDaLnSjtKLSKSGZ//WJkLJPe6QJOKffqe2pYr3A/b4uANz+bbc9NbGNthLXpPetbOBlCKJLiOz+qKPfqA8WrG5Bpjzh2n7Qth+07eutEwBdH6DJD7Kt7LZkr12uXIhEe0K3fqPpLh3vG12O2wGgI9H3Q/N+0+XKYP2myx96xHqQ8YOX3wD5E6Da8oPufSvvh35lVrG7fjYu+90AaPfHBWtAYRcHJCmGYKG6fdVK1NPfuLgNNz+FPjEV9Ku1gvdtRl5wPEcMAdWe7Jci8mL7LhejJiZA0lEOtKhNZFf7/QQlIgFg3u0OVtQ0i1LZWcm2+FqXywFqSACo9X6H8wVNOxrCIpgw5Xq/HXBI6PZ+S6J3hOcLVgtNdZJJcIKAINudHBDhbG8CX0o1G7PdhFRG6B4h4fzg3tD3EG1zl8uFnfCl3fVOgJt2d7jBxhLa/K8S3R8bL3d9gTZd9+2iXZdPfD/gZrR8p0dHO8lIB0TnJN2L1IKO8XfP/xaHlWxfUOGkjuF39v8qUqRIkSJFihQpUqTIJP8BFvT4rKXOwDcAAAAASUVORK5CYII=" alt="N1 Support" style="width: 64px; height: 64px;">
+              <h2 style="color: #333; margin: 20px 0 10px 0;">Mensagem da Equipe de Suporte</h2>
+              <p style="color: #666; margin: 0;">Ticket: ${ticketNumber}</p>
+            </div>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="color: #333; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+            </div>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #666; font-size: 14px; text-align: center;">
+              Esta mensagem foi enviada pela nossa equipe de suporte.<br>
+              Para responder, basta responder a este email.
+            </p>
+          </div>
+        `
+      });
+
+      console.log('📧 Mailgun response:', mailgunResponse);
+
+      // Create email record in database
+      console.log('💾 Saving email to database...');
+      const [emailRecord] = await db.insert(supportEmails).values({
+        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: recipient,
+        subject: subject,
+        content: message,
+        messageId: mailgunResponse.id || ticketNumber,
+        status: 'sent'
+      }).returning();
+
+      // Create ticket record
+      console.log('💾 Creating new ticket...');
+      const [ticketRecord] = await db.insert(supportTickets).values({
+        emailId: emailRecord.id,
+        ticketNumber: ticketNumber,
+        customerEmail: recipient,
+        subject: subject,
+        status: 'open',
+        priority: 'medium',
+        categoryId: 'manual', // Default to manual category
+        source: 'outbound'
+      }).returning();
+
+      // Add conversation record
+      console.log('💬 Adding conversation record...');
+      await db.insert(supportConversations).values({
+        ticketId: ticketRecord.id,
+        type: 'email_out',
+        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: recipient,
+        subject: subject,
+        content: message,
+        isInternal: false,
+        userId: null
+      });
+
+      console.log(`✅ New message sent successfully. Ticket ${ticketNumber} created for ${recipient}`);
+      
+      return { ticketId: ticketRecord.id };
+      
+    } catch (error) {
+      console.error('❌ SupportService.sendNewMessage error:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error constructor:', error?.constructor?.name);
+      if (error instanceof Error) {
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
+      }
+      throw new Error(`Falha ao enviar nova mensagem: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 }
 
 export const supportService = new SupportService();

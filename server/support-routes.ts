@@ -501,5 +501,68 @@ export function registerSupportRoutes(app: Express) {
     }
   });
 
+  /**
+   * Send new message and create ticket
+   */
+  app.post('/api/support/send-message', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log('📧 Starting send new message process...');
+      console.log('Request body:', req.body);
+      console.log('User info:', req.user);
+
+      const { recipient, message } = req.body;
+
+      if (!recipient || typeof recipient !== 'string' || recipient.trim().length === 0) {
+        console.error('❌ Missing or invalid recipient');
+        return res.status(400).json({ message: 'Destinatário é obrigatório' });
+      }
+
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        console.error('❌ Missing or invalid message');
+        return res.status(400).json({ message: 'Mensagem é obrigatória' });
+      }
+
+      if (message.length > 5000) {
+        console.error('❌ Message too long');
+        return res.status(400).json({ message: 'Mensagem muito longa (máximo 5000 caracteres)' });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(recipient.trim())) {
+        console.error('❌ Invalid email format');
+        return res.status(400).json({ message: 'Formato de email inválido' });
+      }
+
+      // Get agent name from user session if available
+      const agentName = (req as any).user?.name || (req as any).user?.email || 'Equipe de Suporte';
+      console.log('👤 Agent name:', agentName);
+
+      console.log('🔄 Calling supportService.sendNewMessage...');
+      const result = await supportService.sendNewMessage(
+        recipient.trim(), 
+        message.trim(), 
+        agentName
+      );
+      console.log('✅ New message sent successfully:', result);
+
+      res.json({ 
+        message: 'Mensagem enviada com sucesso',
+        success: true,
+        ticketId: result.ticketId
+      });
+
+    } catch (error) {
+      console.error('❌ Error sending new message:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor',
+        success: false,
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
+      });
+    }
+  });
+
 
 }

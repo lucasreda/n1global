@@ -63,6 +63,11 @@ export default function AdminSupport() {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isClosingTicket, setIsClosingTicket] = useState(false);
+  const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
+  const [newMessageRecipient, setNewMessageRecipient] = useState("");
+  const [newMessageContent, setNewMessageContent] = useState("");
+  const [isSendingNewMessage, setIsSendingNewMessage] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   // Effect to scroll to last message when modal opens with conversations
   useEffect(() => {
@@ -251,6 +256,50 @@ export default function AdminSupport() {
     }
   };
 
+  const handleSendNewMessage = async () => {
+    if (!newMessageRecipient.trim() || !newMessageContent.trim()) return;
+
+    setIsSendingNewMessage(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      console.log('📧 New Message - Token exists:', !!token);
+      console.log('📧 New Message - Recipient:', newMessageRecipient);
+      
+      const response = await fetch('/api/support/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          recipient: newMessageRecipient.trim(),
+          message: newMessageContent.trim(),
+        }),
+      });
+
+      const responseText = await response.text();
+      console.log('📧 New Message response status:', response.status);
+      console.log('📧 New Message response text:', responseText);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
+      }
+
+      const result = JSON.parse(responseText);
+      console.log('📧 New Message success:', result);
+
+      setShowSuccessPopup(true);
+      refetchTickets();
+      refetchOverview();
+    } catch (error) {
+      console.error('📧 New Message error:', error);
+      alert(`Erro ao enviar mensagem: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSendingNewMessage(false);
+    }
+  };
+
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
     queryKey: ['/api/support/categories'],
@@ -305,9 +354,20 @@ export default function AdminSupport() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte</h1>
-        <p className="text-slate-300">Gerenciamento centralizado de atendimento ao cliente com IA</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte</h1>
+          <p className="text-slate-300">Gerenciamento centralizado de atendimento ao cliente com IA</p>
+        </div>
+        <Button 
+          variant="outline" 
+          className="border-slate-600 text-slate-300 hover:bg-white/10" 
+          onClick={() => setIsNewMessageModalOpen(true)}
+          data-testid="button-send-message"
+        >
+          <Send className="h-4 w-4 mr-2" />
+          Enviar Mensagem
+        </Button>
       </div>
 
       {/* Overview Cards */}
@@ -904,6 +964,100 @@ export default function AdminSupport() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal para Enviar Nova Mensagem */}
+      <Dialog open={isNewMessageModalOpen} onOpenChange={setIsNewMessageModalOpen}>
+        <DialogContent className="bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-slate-200 flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Enviar Nova Mensagem
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm text-slate-400">Destinatário</label>
+              <Input
+                placeholder="email@exemplo.com"
+                value={newMessageRecipient}
+                onChange={(e) => setNewMessageRecipient(e.target.value)}
+                className="bg-slate-700 border-slate-600 text-white"
+                disabled={isSendingNewMessage}
+                data-testid="input-recipient"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm text-slate-400">Mensagem</label>
+              <Textarea
+                placeholder="Digite sua mensagem aqui..."
+                value={newMessageContent}
+                onChange={(e) => setNewMessageContent(e.target.value)}
+                className="bg-slate-700 border-slate-600 text-white min-h-[120px] resize-none"
+                disabled={isSendingNewMessage}
+                data-testid="textarea-message"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsNewMessageModalOpen(false)}
+              disabled={isSendingNewMessage}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendNewMessage}
+              disabled={!newMessageRecipient.trim() || !newMessageContent.trim() || isSendingNewMessage}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="button-send-new-message"
+            >
+              {isSendingNewMessage ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Popup de Sucesso */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-8 max-w-md mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                <Send className="h-8 w-8 text-green-400 animate-bounce" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Email enviado com sucesso!</h3>
+              <p className="text-slate-300 mb-6">Sua mensagem foi enviada e um novo ticket foi criado.</p>
+              <Button
+                onClick={() => {
+                  setShowSuccessPopup(false);
+                  setIsNewMessageModalOpen(false);
+                  setNewMessageRecipient("");
+                  setNewMessageContent("");
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                data-testid="button-close-success"
+              >
+                OK
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
