@@ -458,7 +458,7 @@ export default function CustomerSupportPage() {
             )}
           </div>
           <p className="text-gray-400 mt-1 text-sm sm:text-base">
-            Gerenciamento de atendimento ao cliente com IA para esta operação
+            Gerenciamento de atendimento ao cliente com IA
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
