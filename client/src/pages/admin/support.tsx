@@ -102,23 +102,26 @@ export default function AdminSupport() {
   const testAIResponse = async () => {
     try {
       console.log('🤖 Testing AI responses...');
-      const token = localStorage.getItem("auth_token");
       
-      const response = await fetch('/api/support/test-ai-response', {
+      // Use no-auth endpoint for testing
+      const response = await fetch('/api/support/test-ai-response-no-auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { "Authorization": `Bearer ${token}` }),
         },
+        body: JSON.stringify({})
       });
+
+      console.log('🤖 Response status:', response.status);
+      console.log('🤖 Response headers:', response.headers.get('content-type'));
 
       const result = await response.json();
       console.log('🤖 AI test result:', result);
       
       if (response.ok) {
-        alert(`✅ Teste IA concluído! Verifique os logs do servidor para ver a resposta automática sendo gerada.`);
+        alert(`✅ Teste IA concluído!\n\nEmail: ${result.simulatedEmail.id}\nStatus: ${result.simulatedEmail.status}\nCategoria: ${result.simulatedEmail.category}\n\nVerifique os logs do servidor para ver a resposta automática sendo gerada!`);
       } else {
-        alert(`❌ Teste falhou: ${result.message}`);
+        alert(`❌ Teste falhou: ${result.message}\n${result.error || ''}`);
       }
     } catch (error) {
       console.error('🤖 AI test error:', error);

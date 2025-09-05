@@ -469,11 +469,14 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
-   * Test AI auto-response system
+   * Test AI auto-response system (temporary endpoint without auth for testing)
    */
-  app.post('/api/support/test-ai-response', authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post('/api/support/test-ai-response-no-auth', async (req: Request, res: Response) => {
     try {
-      console.log('🤖 Testing AI auto-response...');
+      console.log('🤖 Testing AI auto-response (no auth)...');
+      
+      // Set response headers explicitly
+      res.setHeader('Content-Type', 'application/json');
       
       // Simulate an email for testing
       const testEmail = {
@@ -489,7 +492,7 @@ export function registerSupportRoutes(app: Express) {
       console.log('🤖 Simulating AI response generation...');
       const result = await supportService.processIncomingEmail(testEmail);
       
-      res.json({ 
+      const response = { 
         message: 'AI response test completed',
         simulatedEmail: {
           id: result.id,
@@ -497,12 +500,71 @@ export function registerSupportRoutes(app: Express) {
           category: result.categoryId
         },
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      console.log('🤖 Sending response:', response);
+      return res.status(200).json(response);
+      
     } catch (error) {
       console.error('🤖 AI response test error:', error);
-      res.status(500).json({ 
+      console.error('🤖 AI response test error stack:', error instanceof Error ? error.stack : 'No stack');
+      
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(500).json({ 
         message: 'Test failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
+      });
+    }
+  });
+
+  /**
+   * Test AI auto-response system
+   */
+  app.post('/api/support/test-ai-response', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log('🤖 Testing AI auto-response...');
+      console.log('🤖 User from auth:', req.user);
+      
+      // Set response headers explicitly
+      res.setHeader('Content-Type', 'application/json');
+      
+      // Simulate an email for testing
+      const testEmail = {
+        from: 'cliente@teste.com',
+        to: 'support@codashboard.com',
+        subject: 'Quando meu pedido vai chegar?',
+        text: 'Oi, fiz um pedido há 3 dias e ainda não recebi informações sobre a entrega. Podem me ajudar?',
+        html: '<p>Oi, fiz um pedido há 3 dias e ainda não recebi informações sobre a entrega. Podem me ajudar?</p>',
+        attachments: [],
+        message_id: `test_ai_${Date.now()}`
+      };
+      
+      console.log('🤖 Simulating AI response generation...');
+      const result = await supportService.processIncomingEmail(testEmail);
+      
+      const response = { 
+        message: 'AI response test completed',
+        simulatedEmail: {
+          id: result.id,
+          status: result.status,
+          category: result.categoryId
+        },
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('🤖 Sending response:', response);
+      return res.status(200).json(response);
+      
+    } catch (error) {
+      console.error('🤖 AI response test error:', error);
+      console.error('🤖 AI response test error stack:', error instanceof Error ? error.stack : 'No stack');
+      
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(500).json({ 
+        message: 'Test failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
       });
     }
   });
