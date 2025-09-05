@@ -902,12 +902,24 @@ LEMBRE-SE: Você não é apenas uma atendente, você é a voz humana da empresa 
 `;
 
     try {
+      console.log("🤖 DEBUG - Iniciando chamada para OpenAI");
+      console.log("📊 Tamanho do prompt:", prompt.length, "caracteres");
+      console.log("📧 Email original:", {
+        from: email.from,
+        subject: email.subject,
+        category: category.name,
+        contentLength: (email.textContent || email.htmlContent || '').length
+      });
+
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7, // Mais criativo para respostas naturais
         max_tokens: 600,
       });
+
+      console.log("✅ Resposta recebida da OpenAI");
+      console.log("📝 Token usage:", response.usage);
 
       let content = response.choices[0].message.content || "{}";
 
@@ -927,6 +939,8 @@ LEMBRE-SE: Você não é apenas uma atendente, você é a voz humana da empresa 
         "",
       );
 
+      console.log("🔍 Conteúdo que será parseado:", content.substring(0, 500) + "...");
+      
       const result = JSON.parse(content);
 
       return {
@@ -936,7 +950,24 @@ LEMBRE-SE: Você não é apenas uma atendente, você é a voz humana da empresa 
           "Obrigada pelo seu contato. Nossa equipe analisará sua solicitação e retornaremos em breve.",
       };
     } catch (error) {
-      console.error("Erro na geração de resposta IA:", error);
+      console.error("🚨 ERRO DETALHADO na geração de resposta IA:");
+      console.error("Tipo do erro:", error instanceof Error ? error.name : typeof error);
+      console.error("Mensagem:", error instanceof Error ? error.message : error);
+      
+      if (error instanceof Error && error.message.includes('JSON')) {
+        console.error("❌ ERRO JSON - Conteúdo recebido da OpenAI:", content);
+      }
+      
+      if (error instanceof Error && error.message.includes('token')) {
+        console.error("❌ ERRO TOKEN - Limite excedido ou quota");
+      }
+      
+      if (error instanceof Error && error.message.includes('API')) {
+        console.error("❌ ERRO API - Problema na chamada OpenAI");
+      }
+      
+      console.error("Stack trace completo:", error);
+      
       // Fallback para resposta padrão
       return {
         subject: `Re: ${email.subject}`,
