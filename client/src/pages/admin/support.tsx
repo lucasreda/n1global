@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Search,
   Download,
@@ -16,7 +17,8 @@ import {
   RefreshCw,
   User,
   Mail,
-  FileText
+  FileText,
+  X
 } from "lucide-react";
 
 interface SupportCategory {
@@ -50,6 +52,19 @@ export default function AdminSupport() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [supportSearchTerm, setSupportSearchTerm] = useState("");
   const [selectedTicketStatus, setSelectedTicketStatus] = useState<string>("all");
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+
+  // Function to open ticket modal
+  const handleViewTicket = (ticketResponse: any) => {
+    setSelectedTicket(ticketResponse);
+    setIsTicketModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsTicketModalOpen(false);
+    setSelectedTicket(null);
+  };
 
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
@@ -310,6 +325,7 @@ export default function AdminSupport() {
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400"
+                            onClick={() => handleViewTicket(ticketResponse)}
                             data-testid={`button-view-ticket-${ticketResponse.ticket.id}`}
                           >
                             <Eye className="h-4 w-4" />
@@ -344,6 +360,138 @@ export default function AdminSupport() {
           </Card>
         </div>
       </div>
+
+      {/* Ticket Details Modal */}
+      <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-slate-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div 
+                  className="w-4 h-4 rounded-full" 
+                  style={{ backgroundColor: selectedTicket?.category?.color || '#6b7280' }}
+                />
+                <span>{selectedTicket?.ticket?.ticketNumber || 'N/A'}</span>
+                <Badge className="bg-slate-700 text-slate-300 text-xs">
+                  {selectedTicket?.category?.displayName || 'Sem categoria'}
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseModal}
+                className="text-slate-400 hover:text-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedTicket && (
+            <div className="space-y-6">
+              {/* Ticket Header */}
+              <div className="bg-slate-800/50 rounded-lg p-4">
+                <h2 className="text-lg font-semibold text-slate-200 mb-2">
+                  {selectedTicket.ticket.subject}
+                </h2>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-slate-400">De: </span>
+                    <span className="text-slate-200">{selectedTicket.ticket.customerEmail}</span>
+                    {selectedTicket.ticket.customerName && (
+                      <span className="text-slate-400"> ({selectedTicket.ticket.customerName})</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Status: </span>
+                    <Badge 
+                      className={`text-xs ${
+                        selectedTicket.ticket.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
+                        selectedTicket.ticket.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
+                        selectedTicket.ticket.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
+                        'bg-gray-600/20 text-gray-400 border-gray-600/30'
+                      }`}
+                    >
+                      {selectedTicket.ticket.status === 'open' ? 'Aberto' :
+                       selectedTicket.ticket.status === 'in_progress' ? 'Em Andamento' :
+                       selectedTicket.ticket.status === 'resolved' ? 'Resolvido' : 'Fechado'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Prioridade: </span>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        selectedTicket.ticket.priority === 'high' ? 'border-red-600 text-red-400' :
+                        selectedTicket.ticket.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
+                        'border-slate-600 text-slate-400'
+                      }`}
+                    >
+                      {selectedTicket.ticket.priority === 'high' ? 'Alta' :
+                       selectedTicket.ticket.priority === 'medium' ? 'Média' : 'Baixa'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Criado: </span>
+                    <span className="text-slate-200">
+                      {new Date(selectedTicket.ticket.createdAt).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email Content */}
+              <div className="bg-slate-800/50 rounded-lg p-4">
+                <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email Original
+                </h3>
+                <div className="space-y-3">
+                  {selectedTicket.email?.textContent && (
+                    <div>
+                      <span className="text-slate-400 text-sm">Conteúdo:</span>
+                      <div className="mt-1 p-3 bg-slate-900/50 rounded border-l-4 border-blue-500">
+                        <p className="text-slate-200 whitespace-pre-wrap">
+                          {selectedTicket.email.textContent}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedTicket.email?.aiReasoning && (
+                    <div>
+                      <span className="text-slate-400 text-sm flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Análise da IA:
+                      </span>
+                      <div className="mt-1 p-3 bg-slate-900/50 rounded border-l-4 border-purple-500">
+                        <p className="text-slate-300 text-sm">
+                          {selectedTicket.email.aiReasoning}
+                        </p>
+                        {selectedTicket.email.aiConfidence && (
+                          <p className="text-slate-400 text-xs mt-2">
+                            Confiança: {selectedTicket.email.aiConfidence}%
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedTicket.ticket.description && (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-slate-200 mb-3">Descrição</h3>
+                  <p className="text-slate-300 whitespace-pre-wrap">
+                    {selectedTicket.ticket.description}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
