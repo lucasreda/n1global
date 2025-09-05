@@ -830,6 +830,7 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
       const mailgunResponse = await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
         from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: ticket.customerEmail,
+        'h:Reply-To': `suporte@${process.env.MAILGUN_DOMAIN}`,
         subject: replySubject,
         text: message,
         html: `
