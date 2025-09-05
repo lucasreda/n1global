@@ -358,18 +358,43 @@ export default function CustomerSupportPage() {
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
     queryKey: [`/api/customer-support/${currentOperationId}/tickets`, selectedCategory, selectedTicketStatus, supportSearchTerm],
     enabled: shouldLoadTickets && !!supportConfig && !!currentOperationId,
+    staleTime: 0, // Força nova requisição
+    cacheTime: 0, // Não usa cache
     queryFn: async () => {
       const params = new URLSearchParams();
       if (supportSearchTerm) params.append('search', supportSearchTerm);
       if (selectedCategory !== 'all') params.append('categoryId', selectedCategory);
       if (selectedTicketStatus !== 'all') params.append('status', selectedTicketStatus);
       params.append('limit', '50');
+      params.append('timestamp', Date.now().toString()); // Cache busting
       
       console.log('🎫 Calling API with params:', params.toString());
-      const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets?${params.toString()}`, 'GET');
-      console.log('🎫 API Response:', response);
+      const url = `/api/customer-support/${currentOperationId}/tickets?${params.toString()}`;
       
-      return { tickets: (response as any).tickets || [], total: (response as any).total || 0 };
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('🎫 Raw API Response:', data);
+        
+        return { 
+          tickets: data.tickets || [], 
+          total: data.total || 0 
+        };
+      } catch (error) {
+        console.error('🎫 API Error:', error);
+        throw error;
+      }
     }
   });
 
