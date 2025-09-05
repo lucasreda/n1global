@@ -493,7 +493,20 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
         max_tokens: 600,
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      let content = response.choices[0].message.content || '{}';
+      
+      // Clean up potential control characters and newlines that break JSON parsing
+      content = content.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+      content = content.replace(/\n/g, " ");
+      content = content.replace(/\r/g, " ");
+      
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = content.match(/```(?:json)?\s*(\{.*?\})\s*```/s);
+      if (jsonMatch) {
+        content = jsonMatch[1];
+      }
+      
+      const result = JSON.parse(content);
       
       return {
         subject: result.subject || `Re: ${email.subject}`,
