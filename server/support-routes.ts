@@ -57,6 +57,77 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
+   * Test endpoint to verify AI is working
+   */
+  app.post("/api/support/test-ai", async (req: Request, res: Response) => {
+    try {
+      console.log("🧪 TESTANDO IA DIRETAMENTE");
+      
+      // Simular um email de teste
+      const mockEmail = {
+        id: `test-${Date.now()}`,
+        from: "lucas.reda@teste.com",
+        to: "suporte@n1global.app", 
+        subject: "Duvidas sobre meu pedido",
+        textContent: "Olá, gostaria de saber quanto tempo demora para chegar meu pedido.",
+        htmlContent: "<p>Olá, gostaria de saber quanto tempo demora para chegar meu pedido.</p>",
+        messageId: `test-${Date.now()}`,
+        rawData: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        status: "unread" as const,
+        attachments: null,
+        categoryId: null,
+        aiConfidence: null,
+        threadId: null,
+        isReply: false,
+        isSpam: false,
+        ticketId: null,
+        processedAt: null,
+        language: null,
+        sentiment: null,
+        aiReasoning: null,
+        isUrgent: false,
+        requiresHuman: false,
+        hasAutoResponse: false,
+        senderInfo: null,
+        extractedData: null
+      };
+
+      // Buscar categoria de dúvidas
+      const category = {
+        id: "test-category",
+        name: "duvidas",
+        displayName: "Dúvidas",
+        isActive: true,
+        aiEnabled: true,
+        defaultResponse: "",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Chamar diretamente a função da IA
+      const aiResponse = await supportService.generateAIAutoResponse(mockEmail, category);
+      
+      console.log("✅ TESTE IA CONCLUÍDO - Resposta:", aiResponse);
+      
+      res.json({ 
+        success: true, 
+        aiResponse,
+        message: "IA funcionando!" 
+      });
+
+    } catch (error) {
+      console.error("❌ ERRO NO TESTE DA IA:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        message: "IA com problemas!" 
+      });
+    }
+  });
+
+  /**
    * Mailgun webhook endpoint for incoming emails
    */
   app.post("/api/support/webhook/mailgun", async (req: Request, res: Response) => {
