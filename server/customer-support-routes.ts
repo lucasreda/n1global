@@ -124,7 +124,7 @@ export function registerCustomerSupportRoutes(app: Express) {
       
       console.log('🔍 Overview route called for operation:', operationId);
       
-      // Manual count for testing
+      // Mesmo padrão dos tickets - direto sem cache
       const testResult = {
         openTickets: 5,
         aiResponded: 7,
@@ -133,9 +133,11 @@ export function registerCustomerSupportRoutes(app: Express) {
       };
       
       console.log('🔍 Sending test overview metrics:', testResult);
+      
+      // Sem cache headers para garantir resposta fresca
       res.json(testResult);
     } catch (error) {
-      console.error('Error getting overview:', error);
+      console.error('🔍 Overview error:', error);
       res.status(500).json({ message: 'Erro ao buscar métricas', error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
