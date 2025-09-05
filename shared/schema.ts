@@ -1115,10 +1115,10 @@ export const supportCategories = pgTable("support_categories", {
 export const supportEmails = pgTable("support_emails", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
-  // Email details from Resend webhook
-  messageId: text("message_id").notNull().unique(), // Resend message ID
-  from: text("from").notNull(), // Sender email
-  to: text("to").notNull(), // Receiver email (support@n1.com)
+  // Email details from webhook
+  messageId: text("message_id").notNull().unique(), // Message ID
+  from: text("from_email").notNull(), // Sender email
+  to: text("to_email").notNull(), // Receiver email (support@n1.com)
   subject: text("subject").notNull(),
   textContent: text("text_content"), // Plain text content
   htmlContent: text("html_content"), // HTML content
@@ -1126,7 +1126,7 @@ export const supportEmails = pgTable("support_emails", {
   
   // AI Categorization
   categoryId: varchar("category_id").references(() => supportCategories.id),
-  aiConfidence: decimal("ai_confidence", { precision: 5, scale: 2 }), // 0-100 confidence score
+  aiConfidence: integer("ai_confidence"), // 0-100 confidence score
   aiReasoning: text("ai_reasoning"), // Why AI chose this category
   
   // Processing status
