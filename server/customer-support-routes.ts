@@ -382,6 +382,7 @@ export function registerCustomerSupportRoutes(app: Express) {
           sender: 'customer',
           senderName: ticketData.customerName,
           senderEmail: ticketData.customerEmail,
+          senderUserId: null,
           content: `Mensagem inicial para: ${ticketData.subject}`,
           messageType: 'email',
         });
