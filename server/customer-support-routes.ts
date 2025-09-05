@@ -378,22 +378,6 @@ export function registerCustomerSupportRoutes(app: Express) {
       const createdTickets = [];
       for (const ticketData of sampleTickets) {
         const ticket = await customerSupportService.createTicket(operationId, ticketData);
-        
-        // Add initial message using direct DB insert to avoid schema issues
-        try {
-          await db.insert(customerSupportMessages).values({
-            operationId,
-            ticketId: ticket.id,
-            sender: 'customer',
-            senderName: ticketData.customerName,
-            senderEmail: ticketData.customerEmail,
-            content: `Mensagem inicial para: ${ticketData.subject}`,
-            messageType: 'email',
-          });
-        } catch (error) {
-          console.log('Warning: Could not create message:', error.message);
-        }
-        
         createdTickets.push(ticket);
       }
 
