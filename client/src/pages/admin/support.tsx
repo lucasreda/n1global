@@ -377,6 +377,11 @@ export default function AdminSupport() {
                               <Badge className="bg-slate-700 text-slate-300 text-xs">
                                 {ticketResponse.category.displayName}
                               </Badge>
+                              {ticketResponse.email?.hasAutoResponse && (
+                                <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs">
+                                  🤖 Sofia IA
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-slate-300 font-medium">{ticketResponse.ticket.subject}</p>
                             <p className="text-xs text-slate-400 mt-1">
