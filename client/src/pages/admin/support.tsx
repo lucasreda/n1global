@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { 
   Search,
   Download,
@@ -20,7 +21,8 @@ import {
   Mail,
   FileText,
   X,
-  Send
+  Send,
+  XCircle
 } from "lucide-react";
 
 interface SupportCategory {
@@ -58,6 +60,8 @@ export default function AdminSupport() {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
   const [isSendingReply, setIsSendingReply] = useState(false);
+  const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
+  const [isClosingTicket, setIsClosingTicket] = useState(false);
 
   // Function to open ticket modal with full conversation history
   const handleViewTicket = async (ticketResponse: any) => {
@@ -98,6 +102,51 @@ export default function AdminSupport() {
     setReplyMessage(""); // Reset reply message
   };
 
+  // Function to close ticket
+  const handleCloseTicket = async () => {
+    if (!selectedTicket) return;
+
+    setIsClosingTicket(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      console.log('🎫 Closing ticket:', selectedTicket.ticket.id);
+      
+      const response = await fetch(`/api/support/tickets/${selectedTicket.ticket.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          status: 'resolved'
+        })
+      });
+
+      if (response.ok) {
+        console.log('✅ Ticket closed successfully');
+        // Update selected ticket status
+        setSelectedTicket({
+          ...selectedTicket,
+          ticket: {
+            ...selectedTicket.ticket,
+            status: 'resolved'
+          }
+        });
+        // Close the confirmation dialog
+        setIsCloseConfirmOpen(false);
+        // Optionally close the ticket modal
+        // setIsTicketModalOpen(false);
+      } else {
+        console.error('❌ Failed to close ticket');
+        alert('Erro ao encerrar o ticket. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('❌ Error closing ticket:', error);
+      alert('Erro ao encerrar o ticket. Tente novamente.');
+    } finally {
+      setIsClosingTicket(false);
+    }
+  };
 
   // Function to send reply
   const handleSendReply = async () => {
@@ -452,15 +501,63 @@ export default function AdminSupport() {
       <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-slate-900 border-slate-700">
           <DialogHeader>
-            <DialogTitle className="text-slate-200 flex items-center space-x-3">
-              <div 
-                className="w-4 h-4 rounded-full" 
-                style={{ backgroundColor: selectedTicket?.category?.color || '#6b7280' }}
-              />
-              <span>{selectedTicket?.ticket?.ticketNumber || 'N/A'}</span>
-              <Badge className="bg-slate-700 text-slate-300 text-xs">
-                {selectedTicket?.category?.displayName || 'Sem categoria'}
-              </Badge>
+            <DialogTitle className="text-slate-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div 
+                  className="w-4 h-4 rounded-full" 
+                  style={{ backgroundColor: selectedTicket?.category?.color || '#6b7280' }}
+                />
+                <span>{selectedTicket?.ticket?.ticketNumber || 'N/A'}</span>
+                <Badge className="bg-slate-700 text-slate-300 text-xs">
+                  {selectedTicket?.category?.displayName || 'Sem categoria'}
+                </Badge>
+              </div>
+              {selectedTicket?.ticket?.status !== 'resolved' && selectedTicket?.ticket?.status !== 'closed' && (
+                <AlertDialog open={isCloseConfirmOpen} onOpenChange={setIsCloseConfirmOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className="ml-4"
+                      data-testid="button-close-ticket"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Encerrar Ticket
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-slate-900 border-slate-700">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-slate-200">
+                        Encerrar Ticket
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-slate-400">
+                        Tem certeza de que deseja encerrar este ticket? Esta ação não pode ser desfeita.
+                        O ticket será marcado como resolvido.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+                        Cancelar
+                      </AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleCloseTicket}
+                        disabled={isClosingTicket}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                        data-testid="button-confirm-close-ticket"
+                      >
+                        {isClosingTicket ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Encerrando...
+                          </>
+                        ) : (
+                          'Sim, Encerrar'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </DialogTitle>
           </DialogHeader>
 
