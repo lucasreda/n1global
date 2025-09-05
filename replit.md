@@ -8,8 +8,9 @@ The COD Dashboard is a modern full-stack web application designed for managing C
 ✓ **Sofia - Virtual Agent**: Agente de IA empática que responde de forma natural e humana, adaptando-se ao idioma do cliente automaticamente
 ✓ **Business Context Integration**: IA treinada com informações específicas da empresa (prazos de entrega 2-7 dias, pagamento na entrega, políticas de embalagem)
 ✓ **Selective AI Response**: Sistema inteligente que aplica IA apenas às categorias elegíveis, mantendo atendimento humano para reclamações e casos manuais
-✓ **Professional Email Template**: Template HTML profissional com logo da empresa, design responsivo e identidade visual corporativa
+✓ **Professional Email Template**: Template HTML profissional com logo azul da empresa (#2563eb), design responsivo e identidade visual corporativa
 ✓ **Multilingual Support**: Sistema detecta e responde automaticamente no idioma do cliente (português, inglês, espanhol, etc.)
+✓ **Reply-To Configuration**: Header Reply-To configurado corretamente para garantir que respostas dos clientes cheguem ao sistema de suporte
 ✓ **Email Threading System**: Sistema completo de threading que identifica respostas de clientes baseado em prefixos "Re:", "RE:", "Resposta:" no subject
 ✓ **Conversation Continuity**: Emails de resposta anexados ao ticket existente mantendo contexto completo da conversa
 ✓ **Smart Ticket Matching**: Lógica inteligente para encontrar tickets existentes baseada no email do cliente e similaridade do assunto
