@@ -2,7 +2,7 @@ import { Request, Response, Express, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { customerSupportService } from "./customer-support-service";
 import { db } from "./db.js";
-import { customerSupportMessages } from "@shared/schema";
+import { customerSupportMessages, customerSupportTickets } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -375,10 +375,22 @@ export function registerCustomerSupportRoutes(app: Express) {
         }
       ];
 
+      // Create tickets directly to avoid any service hooks
       const createdTickets = [];
       for (const ticketData of sampleTickets) {
-        const ticket = await customerSupportService.createTicket(operationId, ticketData);
-        createdTickets.push(ticket);
+        try {
+          // Use direct db insert to avoid service methods that might have hooks
+          const [ticket] = await db.insert(customerSupportTickets)
+            .values({
+              operationId,
+              ticketNumber: `TST-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              ...ticketData,
+            })
+            .returning();
+          createdTickets.push(ticket);
+        } catch (error) {
+          console.log('Warning: Could not create ticket:', error.message);
+        }
       }
 
       res.json({
