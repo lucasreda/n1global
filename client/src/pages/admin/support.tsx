@@ -146,8 +146,18 @@ export default function AdminSupport() {
     const conversationContainer = document.getElementById('conversation-history');
     console.log('🔍 Scroll attempt - Container found:', !!conversationContainer);
     if (conversationContainer) {
-      console.log('📜 Scrolling to bottom - scrollHeight:', conversationContainer.scrollHeight);
-      conversationContainer.scrollTop = conversationContainer.scrollHeight;
+      const messages = conversationContainer.children;
+      console.log('📜 Container info - scrollHeight:', conversationContainer.scrollHeight, 'clientHeight:', conversationContainer.clientHeight, 'messages:', messages.length);
+      
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1] as HTMLElement;
+        console.log('🎯 Scrolling to last message element');
+        lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
+      } else {
+        // Fallback to scrollTop method
+        console.log('📜 Fallback: Scrolling to bottom using scrollTop');
+        conversationContainer.scrollTop = conversationContainer.scrollHeight;
+      }
     }
   };
 
