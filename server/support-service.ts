@@ -468,7 +468,17 @@ REGRAS:
    */
   async replyToTicket(ticketId: string, message: string, agentName?: string): Promise<void> {
     try {
+      console.log('🎯 SupportService.replyToTicket called with:', { ticketId, messageLength: message.length, agentName });
+      
+      // Check environment variables
+      console.log('🌍 Environment check:', {
+        hasMailgunDomain: !!process.env.MAILGUN_DOMAIN,
+        hasMailgunApiKey: !!process.env.MAILGUN_API_KEY,
+        domain: process.env.MAILGUN_DOMAIN || 'NOT_SET'
+      });
+
       // Get ticket details
+      console.log('🔍 Fetching ticket details...');
       const ticketResult = await db
         .select({
           ticket: supportTickets,
@@ -479,12 +489,20 @@ REGRAS:
         .where(eq(supportTickets.id, ticketId))
         .limit(1);
 
+      console.log('📋 Ticket query result:', { 
+        found: ticketResult.length, 
+        ticketId: ticketResult[0]?.ticket?.id,
+        emailId: ticketResult[0]?.email?.id
+      });
+
       if (ticketResult.length === 0) {
+        console.error('❌ Ticket not found in database');
         throw new Error('Ticket não encontrado');
       }
 
       const { ticket, email } = ticketResult[0];
       if (!email) {
+        console.error('❌ Original email not found for ticket');
         throw new Error('Email original não encontrado');
       }
 
@@ -492,7 +510,15 @@ REGRAS:
       const replySubject = `Re: ${email.subject}`;
       const senderName = agentName || 'Equipe de Suporte';
       
-      await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
+      console.log('📧 Preparing to send email via Mailgun...');
+      console.log('Email details:', {
+        from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: ticket.customerEmail,
+        subject: replySubject,
+        ticketNumber: ticket.ticketNumber
+      });
+
+      const mailgunResponse = await mg.messages.create(process.env.MAILGUN_DOMAIN || '', {
         from: `${senderName} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: ticket.customerEmail,
         subject: replySubject,
@@ -517,9 +543,13 @@ REGRAS:
         `
       });
 
+      console.log('📧 Mailgun response:', mailgunResponse);
+
       // Update ticket status to 'responded' and add conversation record
+      console.log('💾 Updating database...');
       await db.transaction(async (tx) => {
         // Update ticket
+        console.log('🔄 Updating ticket status...');
         await tx
           .update(supportTickets)
           .set({
@@ -529,6 +559,7 @@ REGRAS:
           .where(eq(supportTickets.id, ticketId));
 
         // Add conversation record
+        console.log('💬 Adding conversation record...');
         await tx.insert(supportConversations).values({
           ticketId: ticketId,
           type: 'email_out',
@@ -541,11 +572,17 @@ REGRAS:
         });
       });
 
-      console.log(`✅ Reply sent for ticket ${ticket.ticketNumber} to ${ticket.customerEmail}`);
+      console.log(`✅ Reply sent successfully for ticket ${ticket.ticketNumber} to ${ticket.customerEmail}`);
       
     } catch (error) {
-      console.error('Error sending ticket reply:', error);
-      throw new Error('Falha ao enviar resposta do ticket');
+      console.error('❌ SupportService.replyToTicket error:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error constructor:', error?.constructor?.name);
+      if (error instanceof Error) {
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
+      }
+      throw new Error(`Falha ao enviar resposta do ticket: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

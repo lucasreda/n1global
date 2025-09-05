@@ -418,25 +418,36 @@ export function registerSupportRoutes(app: Express) {
    */
   app.post('/api/support/tickets/:id/reply', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      console.log('📧 Starting ticket reply process...');
+      console.log('Request params:', req.params);
+      console.log('Request body:', req.body);
+      console.log('User info:', req.user);
+
       const { id: ticketId } = req.params;
       const { message } = req.body;
 
       if (!ticketId) {
+        console.error('❌ Missing ticket ID');
         return res.status(400).json({ message: 'ID do ticket é obrigatório' });
       }
 
       if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        console.error('❌ Missing or invalid message');
         return res.status(400).json({ message: 'Mensagem é obrigatória' });
       }
 
       if (message.length > 5000) {
+        console.error('❌ Message too long');
         return res.status(400).json({ message: 'Mensagem muito longa (máximo 5000 caracteres)' });
       }
 
       // Get agent name from user session if available
       const agentName = (req as any).user?.name || (req as any).user?.email || 'Equipe de Suporte';
+      console.log('👤 Agent name:', agentName);
 
+      console.log('🔄 Calling supportService.replyToTicket...');
       await supportService.replyToTicket(ticketId, message.trim(), agentName);
+      console.log('✅ Reply sent successfully');
 
       res.json({ 
         message: 'Resposta enviada com sucesso',
@@ -444,10 +455,13 @@ export function registerSupportRoutes(app: Express) {
       });
 
     } catch (error) {
-      console.error('Error replying to ticket:', error);
+      console.error('❌ Error replying to ticket:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      
       return res.status(500).json({ 
         message: error instanceof Error ? error.message : 'Erro interno do servidor',
-        success: false
+        success: false,
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
       });
     }
   });
