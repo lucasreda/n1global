@@ -219,7 +219,7 @@ export function registerSupportRoutes(app: Express) {
   /**
    * Get specific ticket by ID with conversation history
    */
-  app.get("/api/support/tickets/:id", async (req: AuthRequest, res: Response) => {
+  app.get("/api/support/tickets/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const ticket = await supportService.getTicketById(id);
