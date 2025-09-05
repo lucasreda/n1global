@@ -65,9 +65,9 @@ interface SupportMetrics {
 }
 
 export default function CustomerSupportPage() {
-  const { currentOperation } = useCurrentOperation();
-  const currentOperationId = currentOperation?.id;
-  const currentOperationName = currentOperation?.name;
+  const { selectedOperation, operations } = useCurrentOperation();
+  const currentOperationId = selectedOperation;
+  const currentOperationName = operations.find(op => op.id === selectedOperation)?.name;
   const queryClient = useQueryClient();
   
   const [filters, setFilters] = useState({
@@ -79,13 +79,18 @@ export default function CustomerSupportPage() {
   // Initialize support for current operation
   const initializeSupportMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/customer-support/init`, {
-        method: "POST",
-        body: {
+      const response = await fetch('/api/customer-support/init', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
           operationId: currentOperationId,
           operationName: currentOperationName
-        }
+        })
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/customer-support/config`, currentOperationId] });
@@ -117,9 +122,13 @@ export default function CustomerSupportPage() {
   // Create test data mutation
   const createTestDataMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/customer-support/${currentOperationId}/test-data`, {
-        method: "POST",
+      const response = await fetch(`/api/customer-support/${currentOperationId}/test-data`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
@@ -248,12 +257,12 @@ export default function CustomerSupportPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm text-muted-foreground">Domínio de Email</Label>
-                  <p className="font-medium">{supportConfig.emailDomain}</p>
+                  <p className="font-medium">{(supportConfig as any)?.emailDomain}</p>
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">IA Habilitada</Label>
                   <div className="flex items-center gap-2">
-                    {supportConfig.aiEnabled ? (
+                    {(supportConfig as any)?.aiEnabled ? (
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
                         <Bot className="w-3 h-3 mr-1" />
                         Ativa
@@ -364,9 +373,9 @@ export default function CustomerSupportPage() {
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                   <span className="ml-2">Carregando tickets...</span>
                 </div>
-              ) : ticketsData?.tickets?.length > 0 ? (
+              ) : (ticketsData as any)?.tickets?.length > 0 ? (
                 <div className="space-y-2">
-                  {ticketsData.tickets.map((ticket: SupportTicket) => (
+                  {(ticketsData as any).tickets.map((ticket: SupportTicket) => (
                     <div
                       key={ticket.id}
                       className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
