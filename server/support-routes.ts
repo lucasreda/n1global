@@ -270,7 +270,7 @@ export function registerSupportRoutes(app: Express) {
   /**
    * Add conversation/reply to ticket
    */
-  app.post("/api/support/tickets/:id/conversations", async (req: AuthRequest, res: Response) => {
+  app.post("/api/support/tickets/:id/conversations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { content, isInternal = false, type = 'note' } = req.body;
@@ -464,5 +464,20 @@ export function registerSupportRoutes(app: Express) {
         error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
       });
     }
+  });
+
+  /**
+   * Test endpoint to verify authentication is working
+   */
+  app.post('/api/support/test-auth', authenticateToken, async (req: AuthRequest, res: Response) => {
+    console.log('🧪 Test auth endpoint called');
+    console.log('🧪 User info:', req.user);
+    console.log('🧪 Request headers:', req.headers);
+    
+    res.json({ 
+      message: 'Authentication working!',
+      user: req.user,
+      timestamp: new Date().toISOString()
+    });
   });
 }
