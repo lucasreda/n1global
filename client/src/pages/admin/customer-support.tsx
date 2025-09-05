@@ -365,9 +365,11 @@ export default function CustomerSupportPage() {
       if (selectedTicketStatus !== 'all') params.append('status', selectedTicketStatus);
       params.append('limit', '50');
       
+      console.log('🎫 Calling API with params:', params.toString());
       const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets?${params.toString()}`, 'GET');
+      console.log('🎫 API Response:', response);
       
-      return { tickets: response.tickets || [], total: response.total || 0 };
+      return { tickets: (response as any).tickets || [], total: (response as any).total || 0 };
     }
   });
 

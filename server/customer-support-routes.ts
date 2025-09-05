@@ -131,7 +131,7 @@ export function registerCustomerSupportRoutes(app: Express) {
         limit = '25'
       } = req.query;
 
-      console.log('🎫 Getting tickets with filters:', { operationId, status, category, search, assignedTo, page, limit });
+      console.log('🎫 Getting tickets with filters:', { operationId, status, category, categoryId, search, assignedTo, page, limit });
 
       const pageNum = parseInt(page as string);
       const limitNum = parseInt(limit as string);
