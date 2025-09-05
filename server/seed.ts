@@ -478,9 +478,8 @@ export async function seedDatabase() {
     // SUPPORT SYSTEM SEED DATA (TEMPORARILY DISABLED)
     // =========================================
     
-    console.log("📧 Support system seeding temporarily disabled...");
+    console.log("📧 Setting up support system...");
     
-    /* TODO: Re-enable after schema sync
     // Create support categories
     const { supportCategories, supportResponses } = await import("@shared/schema");
     
@@ -624,7 +623,6 @@ Equipe de Suporte N1`,
     }
 
     console.log("📧 Support system setup completed!");
-    */
 
     console.log("🌱 Database seeding completed!");
   } catch (error) {
