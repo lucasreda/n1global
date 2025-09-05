@@ -1,6 +1,8 @@
 import { Request, Response, Express, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { customerSupportService } from "./customer-support-service";
+import { db } from "./db.js";
+import { customerSupportMessages } from "@shared/schema";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -377,15 +379,20 @@ export function registerCustomerSupportRoutes(app: Express) {
       for (const ticketData of sampleTickets) {
         const ticket = await customerSupportService.createTicket(operationId, ticketData);
         
-        // Add initial message
-        await customerSupportService.addMessage(operationId, ticket.id, {
-          sender: 'customer',
-          senderName: ticketData.customerName,
-          senderEmail: ticketData.customerEmail,
-          senderUserId: null,
-          content: `Mensagem inicial para: ${ticketData.subject}`,
-          messageType: 'email',
-        });
+        // Add initial message using direct DB insert to avoid schema issues
+        try {
+          await db.insert(customerSupportMessages).values({
+            operationId,
+            ticketId: ticket.id,
+            sender: 'customer',
+            senderName: ticketData.customerName,
+            senderEmail: ticketData.customerEmail,
+            content: `Mensagem inicial para: ${ticketData.subject}`,
+            messageType: 'email',
+          });
+        } catch (error) {
+          console.log('Warning: Could not create message:', error.message);
+        }
         
         createdTickets.push(ticket);
       }
