@@ -48,11 +48,22 @@ export function registerSupportRoutes(app: Express) {
   // ============================================================================
   
   /**
+   * Test endpoint to verify webhook works
+   */
+  app.post("/api/support/test-webhook", (req: Request, res: Response) => {
+    console.log("🧪 TEST WEBHOOK CALLED - Headers:", req.headers);
+    console.log("🧪 TEST WEBHOOK BODY:", req.body);
+    res.json({ success: true, message: "Webhook funcionando!" });
+  });
+
+  /**
    * Mailgun webhook endpoint for incoming emails
    */
   app.post("/api/support/webhook/mailgun", async (req: Request, res: Response) => {
     try {
-      console.log("📧 Received Mailgun webhook:", req.body);
+      console.log("📧 WEBHOOK MAILGUN CHAMADO!");
+      console.log("📧 Headers recebidos:", req.headers);
+      console.log("📧 Body recebido:", req.body);
       
       // Mailgun sends form data for incoming emails
       const {
