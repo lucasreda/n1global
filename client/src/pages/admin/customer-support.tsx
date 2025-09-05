@@ -1,37 +1,62 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
-import { MessageSquare, Settings, Plus, TicketIcon, Clock, CheckCircle2, AlertCircle, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { 
+  Search,
+  Download,
+  Eye,
+  MessageSquare,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+  User,
+  Mail,
+  FileText,
+  X,
+  Send,
+  XCircle
+} from "lucide-react";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { apiRequest } from "@/lib/queryClient";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
 
-type Ticket = {
+interface SupportCategory {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  isAutomated: boolean;
+  priority: number;
+  color: string;
+  aiEnabled: boolean;
+}
+
+interface SupportTicket {
   id: string;
   ticketNumber: string;
-  subject: string;
-  customerEmail: string;
-  customerName?: string;
+  categoryId: string;
+  category: SupportCategory;
   status: string;
   priority: string;
-  categoryName?: string;
+  customerEmail: string;
+  customerName?: string;
+  subject: string;
   createdAt: string;
-  lastActivity?: string;
+  lastActivity: string;
+  assignedAgentId?: string;
+  assignedAgentName?: string;
+  conversationCount: number;
+  isRead?: boolean;
   isAutomated: boolean;
-};
-
-type SupportMetrics = {
-  totalTickets: number;
-  openTickets: number;
-  resolvedTickets: number;
-  pendingTickets: number;
-  avgResponseTime: string;
-  automatedResponses: number;
-};
+}
 
 export default function CustomerSupportPage() {
   const { selectedOperation, operations } = useCurrentOperation();
@@ -39,8 +64,48 @@ export default function CustomerSupportPage() {
   const currentOperationName = operations.find(op => op.id === selectedOperation)?.name;
   const queryClient = useQueryClient();
   
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [supportSearchTerm, setSupportSearchTerm] = useState("");
+  const [selectedTicketStatus, setSelectedTicketStatus] = useState<string>("all");
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
+  const [isClosingTicket, setIsClosingTicket] = useState(false);
+  const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
+  const [newMessageRecipient, setNewMessageRecipient] = useState("");
+  const [newMessageContent, setNewMessageContent] = useState("");
+  const [isSendingNewMessage, setIsSendingNewMessage] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+
+  // Effect to scroll to last message when modal opens with conversations
+  useEffect(() => {
+    if (isTicketModalOpen && selectedTicket?.conversations && selectedTicket.conversations.length > 0) {
+      const scrollAttempts = [100, 300, 600, 1000];
+      scrollAttempts.forEach(delay => {
+        setTimeout(() => {
+          scrollToLastMessage();
+        }, delay);
+      });
+    }
+  }, [isTicketModalOpen, selectedTicket?.conversations?.length]);
+
+  // Function to scroll to last message in conversation
+  const scrollToLastMessage = () => {
+    const conversationContainer = document.getElementById('conversation-history');
+    if (conversationContainer) {
+      const messages = conversationContainer.children;
+      
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1] as HTMLElement;
+        lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
+      } else {
+        conversationContainer.scrollTop = conversationContainer.scrollHeight;
+      }
+    }
+  };
 
   // Initialize support for current operation
   const handleInitializeSupport = async () => {
@@ -73,6 +138,167 @@ export default function CustomerSupportPage() {
     }
   };
 
+  // Function to open ticket modal with full conversation history
+  const handleViewTicket = async (ticketResponse: any) => {
+    try {
+      console.log('📋 Loading full ticket details...');
+      
+      const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketResponse.id}`, 'GET');
+      
+      console.log('📋 Full ticket data:', response);
+      
+      // Merge the full data with the original ticket response
+      setSelectedTicket({
+        ticket: ticketResponse,
+        conversations: response.conversations || []
+      });
+      
+      // Mark ticket as read if it wasn't read
+      if (!ticketResponse.isRead) {
+        await markTicketAsRead(ticketResponse.id);
+      }
+    } catch (error) {
+      console.error('❌ Error loading ticket details:', error);
+      // Fallback to original data
+      setSelectedTicket({
+        ticket: ticketResponse,
+        conversations: []
+      });
+    }
+    
+    setIsTicketModalOpen(true);
+    setReplyMessage(""); // Reset reply message
+  };
+
+  // Function to mark ticket as read
+  const markTicketAsRead = async (ticketId: string) => {
+    try {
+      await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketId}/mark-read`, 'PATCH');
+      
+      // Refresh tickets list to update UI
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
+    } catch (error) {
+      console.error('❌ Error marking ticket as read:', error);
+    }
+  };
+
+  // Function to close ticket
+  const handleCloseTicket = async () => {
+    if (!selectedTicket) return;
+
+    setIsClosingTicket(true);
+    try {
+      console.log('🎫 Closing ticket:', selectedTicket.ticket.id);
+      
+      await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${selectedTicket.ticket.id}/status`, 'PATCH', {
+        status: 'resolved'
+      });
+
+      console.log('✅ Ticket closed successfully');
+      // Update selected ticket status
+      setSelectedTicket({
+        ...selectedTicket,
+        ticket: {
+          ...selectedTicket.ticket,
+          status: 'resolved'
+        }
+      });
+      // Close the confirmation dialog
+      setIsCloseConfirmOpen(false);
+      // Invalidate queries to refresh the tickets list
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
+      
+      toast({
+        title: "Ticket Fechado",
+        description: "Ticket foi marcado como resolvido com sucesso",
+      });
+    } catch (error) {
+      console.error('❌ Error closing ticket:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao encerrar o ticket. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsClosingTicket(false);
+    }
+  };
+
+  // Function to send reply
+  const handleSendReply = async () => {
+    if (!selectedTicket || !replyMessage.trim()) return;
+
+    setIsSendingReply(true);
+    try {
+      console.log('📧 Reply - Ticket ID:', selectedTicket.ticket.id);
+      
+      await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${selectedTicket.ticket.id}/reply`, 'POST', {
+        message: replyMessage.trim()
+      });
+
+      console.log('📧 Reply success');
+
+      // Reload the ticket to show the new conversation
+      console.log('🔄 Reloading ticket with conversation...');
+      await handleViewTicket(selectedTicket.ticket);
+
+      setReplyMessage("");
+      toast({
+        title: "Resposta Enviada",
+        description: "Resposta enviada com sucesso!",
+      });
+    } catch (error) {
+      console.error('📧 Reply error:', error);
+      toast({
+        title: "Erro",
+        description: `Erro ao enviar resposta: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
+
+  const handleSendNewMessage = async () => {
+    if (!newMessageRecipient.trim() || !newMessageContent.trim()) return;
+
+    setIsSendingNewMessage(true);
+    try {
+      console.log('📧 New Message - Recipient:', newMessageRecipient);
+      
+      await apiRequest(`/api/customer-support/${currentOperationId}/send-message`, 'POST', {
+        recipient: newMessageRecipient.trim(),
+        message: newMessageContent.trim(),
+      });
+
+      console.log('📧 New Message success');
+
+      setShowSuccessPopup(true);
+      // Clear form
+      setNewMessageRecipient("");
+      setNewMessageContent("");
+      setIsNewMessageModalOpen(false);
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/overview`] });
+
+      toast({
+        title: "Mensagem Enviada",
+        description: "Mensagem enviada com sucesso!",
+      });
+    } catch (error) {
+      console.error('📧 New Message error:', error);
+      toast({
+        title: "Erro",
+        description: `Erro ao enviar mensagem: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingNewMessage(false);
+    }
+  };
+
   // Create test data
   const handleCreateTestData = async () => {
     try {
@@ -84,12 +310,8 @@ export default function CustomerSupportPage() {
       });
 
       // Refresh tickets and metrics
-      await queryClient.invalidateQueries({
-        queryKey: [`/api/customer-support/${currentOperationId}/tickets`]
-      });
-      await queryClient.invalidateQueries({
-        queryKey: [`/api/customer-support/${currentOperationId}/metrics`]
-      });
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/overview`] });
     } catch (error) {
       console.error('Error creating test data:', error);
       toast({
@@ -108,18 +330,45 @@ export default function CustomerSupportPage() {
     throwOnError: false,
   });
 
-  // Get support metrics
-  const { data: metrics } = useQuery({
-    queryKey: [`/api/customer-support/${currentOperationId}/metrics`],
-    enabled: !!supportConfig && !!currentOperationId,
-    throwOnError: false,
+  // Support system queries
+  const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
+    queryKey: [`/api/customer-support/${currentOperationId}/categories`],
+    enabled: !!supportConfig && !!currentOperationId
   });
 
-  // Get support tickets
-  const { data: tickets, isLoading: isLoadingTickets } = useQuery({
-    queryKey: [`/api/customer-support/${currentOperationId}/tickets`],
+  // Overview metrics for cards
+  const { data: overviewMetrics, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<{
+    openTickets: number;
+    aiResponded: number;
+    monthlyTickets: number;
+    unreadTickets: number;
+  }>({
+    queryKey: [`/api/customer-support/${currentOperationId}/overview`],
     enabled: !!supportConfig && !!currentOperationId,
-    throwOnError: false,
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
+  const hasSupportFilters = supportSearchTerm.trim().length > 0 || 
+                           selectedCategory !== "all" || 
+                           selectedTicketStatus !== "all";
+                           
+  // Always show tickets when any filter is applied OR when showing all
+  const shouldLoadTickets = hasSupportFilters || (selectedCategory === "all" && selectedTicketStatus === "all" && !supportSearchTerm.trim());
+
+  const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
+    queryKey: [`/api/customer-support/${currentOperationId}/tickets`, selectedCategory, selectedTicketStatus, supportSearchTerm],
+    enabled: shouldLoadTickets && !!supportConfig && !!currentOperationId,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (supportSearchTerm) params.append('search', supportSearchTerm);
+      if (selectedCategory !== 'all') params.append('categoryId', selectedCategory);
+      if (selectedTicketStatus !== 'all') params.append('status', selectedTicketStatus);
+      params.append('limit', '50');
+      
+      const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets?${params.toString()}`, 'GET');
+      
+      return { tickets: response.tickets || [], total: response.total || 0 };
+    }
   });
 
   if (!currentOperationId) {
@@ -167,265 +416,544 @@ export default function CustomerSupportPage() {
     );
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'open': return 'bg-blue-100 text-blue-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'resolved': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'open':
+        return <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30">Aberto</Badge>;
+      case 'in_progress':
+        return <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30">Em Andamento</Badge>;
+      case 'resolved':
+        return <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Resolvido</Badge>;
+      case 'closed':
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">Fechado</Badge>;
+      default:
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">{status}</Badge>;
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityBadge = (priority: string) => {
     switch (priority?.toLowerCase()) {
-      case 'urgent': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'medium': return 'bg-blue-100 text-blue-800';
-      case 'low': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'urgent':
+        return <Badge className="bg-red-600/20 text-red-400 border-red-600/30">Urgente</Badge>;
+      case 'high':
+        return <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30">Alto</Badge>;
+      case 'medium':
+        return <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30">Médio</Badge>;
+      case 'low':
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">Baixo</Badge>;
+      default:
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">{priority}</Badge>;
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const filteredTickets = tickets?.filter((ticket: Ticket) => {
-    if (selectedStatus === 'all') return true;
-    return ticket.status.toLowerCase() === selectedStatus;
-  }) || [];
-
-  // Support is configured - show dashboard
   return (
-    <div className="container mx-auto p-6" data-testid="customer-support-page">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold">Suporte de Clientes</h1>
-          <p className="text-muted-foreground">{currentOperationName}</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte - {currentOperationName}</h1>
+          <p className="text-slate-300">Gerenciamento de atendimento ao cliente com IA para esta operação</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
+          <Button 
+            variant="outline" 
+            className="border-slate-600 text-slate-300 hover:bg-white/10" 
             onClick={handleCreateTestData}
-            data-testid="button-create-test-data"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <RefreshCw className="h-4 w-4 mr-2" />
             Dados de Teste
           </Button>
-          <Button data-testid="button-settings">
-            <Settings className="w-4 h-4 mr-2" />
-            Configurações
+          <Button 
+            variant="outline" 
+            className="border-slate-600 text-slate-300 hover:bg-white/10" 
+            onClick={() => setIsNewMessageModalOpen(true)}
+            data-testid="button-send-message"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Enviar Mensagem
           </Button>
         </div>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <TicketIcon className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-2xl font-bold">{metrics?.totalTickets || 0}</p>
-                <p className="text-xs text-muted-foreground">Total de Tickets</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-2xl font-bold">{metrics?.openTickets || 0}</p>
-                <p className="text-xs text-muted-foreground">Abertos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {overviewLoading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index} className="bg-white/10 border-white/20 backdrop-blur-md">
+              <CardContent className="p-4">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-slate-600 rounded mb-2"></div>
+                  <div className="h-8 bg-slate-600 rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-tickets-abertos">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Tickets Abertos</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.openTickets || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <MessageSquare className="h-6 w-6 text-green-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-yellow-600" />
-              <div>
-                <p className="text-2xl font-bold">{metrics?.pendingTickets || 0}</p>
-                <p className="text-xs text-muted-foreground">Pendentes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-respondido-ia">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Respondido por IA</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.aiResponded || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-blue-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-2xl font-bold">{metrics?.resolvedTickets || 0}</p>
-                <p className="text-xs text-muted-foreground">Resolvidos</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-tickets-mes">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Tickets no Mês</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.monthlyTickets || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-purple-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-2xl font-bold">{metrics?.automatedResponses || 0}</p>
-                <p className="text-xs text-muted-foreground">Automatizados</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid="card-nao-lidos">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">Não Lidos</p>
+                    <p className="text-2xl font-bold text-white">{overviewMetrics?.unreadTickets || 0}</p>
+                  </div>
+                  <div className="h-12 w-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <Mail className="h-6 w-6 text-red-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
-      {/* Support Configuration Status */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            Configuração do Sistema
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="text-sm text-muted-foreground">Domínio de Email</label>
-              <p className="font-medium">{supportConfig?.emailDomain || 'N/A'}</p>
+      {/* Layout com Cards de Tipos na Esquerda e Filtros/Tickets na Direita */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Coluna Esquerda - Cards dos Tipos de Email Empilhados */}
+        <div className="lg:col-span-1 space-y-4">
+          {categoriesLoading ? (
+            <div className="text-center py-8 text-slate-400">
+              Carregando categorias...
             </div>
-            <div>
-              <label className="text-sm text-muted-foreground">IA Habilitada</label>
-              <p className="font-medium">
-                {supportConfig?.aiEnabled ? "Ativa" : "Desativada"}
-              </p>
-            </div>
-          </div>
-          
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <h3 className="text-green-800 font-medium">✅ Sistema Ativo</h3>
-            <p className="text-green-700 text-sm mt-1">
-              O sistema de suporte está funcionando e configurado para esta operação.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          ) : supportCategories && supportCategories.length > 0 ? (
+            supportCategories.map((category) => (
+              <Card key={category.id} className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors cursor-pointer"
+                    onClick={() => setSelectedCategory(category.id)}
+                    data-testid={`card-category-${category.name}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div 
+                      className="w-4 h-4 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: category.color }}
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white text-sm">{category.displayName}</h3>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-400 mb-3">{category.description}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      {category.isAutomated ? (
+                        <Badge className="bg-green-600/20 text-green-400 border-green-600/30 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Auto
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          Manual
+                        </Badge>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs">
+                      P{category.priority}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+              <CardContent className="p-6 text-center">
+                <Mail className="h-8 w-8 text-slate-500 mx-auto mb-3" />
+                <h3 className="text-sm font-medium text-white mb-2">Sistema de Suporte</h3>
+                <p className="text-xs text-slate-400">
+                  Sistema com IA configurado para {currentOperationName}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-      {/* Tickets Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              Tickets de Suporte
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={selectedStatus} onValueChange={setSelectedStatus} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="open">Abertos</TabsTrigger>
-              <TabsTrigger value="pending">Pendentes</TabsTrigger>
-              <TabsTrigger value="resolved">Resolvidos</TabsTrigger>
-              <TabsTrigger value="closed">Fechados</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={selectedStatus} className="mt-4">
-              {isLoadingTickets ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-2 text-sm text-muted-foreground">Carregando tickets...</p>
+        {/* Coluna Direita - Filtros e Lista de Tickets */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Filtros */}
+          <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-slate-200 flex items-center gap-2 text-lg">
+                <Search className="h-4 w-4" />
+                Filtros de Tickets
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">Buscar</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Email, assunto, ticket..."
+                      value={supportSearchTerm}
+                      onChange={(e) => setSupportSearchTerm(e.target.value)}
+                      className="pl-10 bg-slate-700 border-slate-600 text-white h-9"
+                      data-testid="input-support-search"
+                    />
+                  </div>
                 </div>
-              ) : filteredTickets.length === 0 ? (
-                <div className="text-center py-8">
-                  <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-2 text-sm font-medium">Nenhum ticket encontrado</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {selectedStatus === 'all' ? 'Não há tickets para esta operação ainda.' : `Não há tickets com status "${selectedStatus}".`}
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">Categoria</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm h-9" data-testid="select-category">
+                      <SelectValue placeholder="Todas as categorias" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
+                      <SelectItem value="all">Todas as categorias</SelectItem>
+                      {supportCategories?.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400">Status</label>
+                  <Select value={selectedTicketStatus} onValueChange={setSelectedTicketStatus}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm h-9" data-testid="select-status">
+                      <SelectValue placeholder="Todos os status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
+                      <SelectItem value="all">Todos os status</SelectItem>
+                      <SelectItem value="open">Aberto</SelectItem>
+                      <SelectItem value="in_progress">Em Andamento</SelectItem>
+                      <SelectItem value="resolved">Resolvido</SelectItem>
+                      <SelectItem value="closed">Fechado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lista de Tickets */}
+          <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-slate-200 flex items-center justify-between text-lg">
+                <span className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Tickets de Suporte
+                </span>
+                {supportTicketsResponse && (
+                  <span className="text-sm text-slate-400">
+                    {supportTicketsResponse.tickets?.length || 0} tickets
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {ticketsLoading ? (
+                <div className="text-center py-8 text-slate-400">
+                  <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin" />
+                  Carregando tickets...
+                </div>
+              ) : supportTicketsResponse?.tickets?.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageSquare className="h-12 w-12 text-slate-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-white mb-2">Nenhum ticket encontrado</h3>
+                  <p className="text-slate-400 mb-6">
+                    {hasSupportFilters 
+                      ? 'Não há tickets que correspondam aos filtros aplicados.'
+                      : 'Não há tickets de suporte para esta operação ainda.'
+                    }
                   </p>
-                  <Button onClick={handleCreateTestData} className="mt-4" variant="outline">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Criar Dados de Teste
-                  </Button>
+                  {!hasSupportFilters && (
+                    <Button onClick={handleCreateTestData} variant="outline" className="border-slate-600 text-slate-300 hover:bg-white/10">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Criar Dados de Teste
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Ticket</TableHead>
-                        <TableHead>Assunto</TableHead>
-                        <TableHead>Cliente</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Prioridade</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Criado em</TableHead>
-                        <TableHead>IA</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTickets.map((ticket: Ticket) => (
-                        <TableRow key={ticket.id}>
-                          <TableCell className="font-mono text-sm">
-                            {ticket.ticketNumber}
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {ticket.subject}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{ticket.customerName || 'N/A'}</p>
-                              <p className="text-xs text-muted-foreground">{ticket.customerEmail}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(ticket.status)} variant="secondary">
-                              {ticket.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getPriorityColor(ticket.priority)} variant="secondary">
-                              {ticket.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {ticket.categoryName || 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {formatDate(ticket.createdAt)}
-                          </TableCell>
-                          <TableCell>
-                            {ticket.isAutomated ? (
-                              <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                                Auto
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-                                Manual
+                <div className="space-y-3">
+                  {supportTicketsResponse?.tickets?.map((ticket) => (
+                    <Card key={ticket.id} className="bg-white/5 border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                          onClick={() => handleViewTicket(ticket)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${!ticket.isRead ? 'bg-blue-400' : 'bg-slate-600'}`} />
+                            <span className="font-mono text-xs text-slate-300">{ticket.ticketNumber}</span>
+                            {ticket.isAutomated && (
+                              <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 text-xs">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                IA
                               </Badge>
                             )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(ticket.status)}
+                            {getPriorityBadge(ticket.priority)}
+                          </div>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <h4 className="font-medium text-white text-sm mb-1">{ticket.subject}</h4>
+                          <div className="flex items-center gap-4 text-xs text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              {ticket.customerName || 'N/A'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              {ticket.customerEmail}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-slate-400">
+                          <span>
+                            {ticket.category?.displayName || 'Sem categoria'}
+                          </span>
+                          <div className="flex items-center gap-4">
+                            {ticket.conversationCount > 0 && (
+                              <span className="flex items-center gap-1">
+                                <MessageSquare className="w-3 h-3" />
+                                {ticket.conversationCount}
+                              </span>
+                            )}
+                            <span>
+                              {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Modal para Ver Ticket */}
+      <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Ticket #{selectedTicket?.ticket?.ticketNumber}
+              </span>
+              <div className="flex items-center gap-2">
+                {selectedTicket?.ticket && getStatusBadge(selectedTicket.ticket.status)}
+                {selectedTicket?.ticket?.status !== 'resolved' && selectedTicket?.ticket?.status !== 'closed' && (
+                  <AlertDialog open={isCloseConfirmOpen} onOpenChange={setIsCloseConfirmOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Fechar
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Fechar Ticket</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja marcar este ticket como resolvido? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCloseTicket} disabled={isClosingTicket}>
+                          {isClosingTicket ? "Fechando..." : "Fechar Ticket"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedTicket && (
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {/* Detalhes do Ticket */}
+              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div>
+                    <label className="text-xs text-slate-600 font-medium">Cliente</label>
+                    <p className="text-sm">{selectedTicket.ticket.customerName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-600 font-medium">Email</label>
+                    <p className="text-sm">{selectedTicket.ticket.customerEmail}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-600 font-medium">Assunto</label>
+                  <p className="text-sm font-medium">{selectedTicket.ticket.subject}</p>
+                </div>
+              </div>
+
+              {/* Conversas */}
+              <div className="flex-1 overflow-y-auto mb-4" id="conversation-history">
+                {selectedTicket.conversations && selectedTicket.conversations.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedTicket.conversations.map((conv: any, index: number) => (
+                      <div key={index} className={`p-4 rounded-lg ${
+                        conv.sender === 'customer' ? 'bg-blue-50 ml-8' : 
+                        conv.sender === 'ai' ? 'bg-purple-50 mr-8' : 'bg-slate-50 mr-8'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                            conv.sender === 'customer' ? 'bg-blue-500 text-white' : 
+                            conv.sender === 'ai' ? 'bg-purple-500 text-white' : 'bg-slate-500 text-white'
+                          }`}>
+                            {conv.sender === 'customer' ? 'C' : conv.sender === 'ai' ? 'IA' : 'A'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {conv.sender === 'customer' ? 'Cliente' : 
+                               conv.sender === 'ai' ? 'IA (Sofia)' : 'Agente'}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {new Date(conv.createdAt).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-sm" dangerouslySetInnerHTML={{ __html: conv.content.replace(/\n/g, '<br>') }} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-400">
+                    <MessageSquare className="h-8 w-8 mx-auto mb-2" />
+                    <p>Nenhuma conversa ainda</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Campo de Resposta */}
+              {selectedTicket.ticket?.status !== 'resolved' && selectedTicket.ticket?.status !== 'closed' && (
+                <div className="border-t pt-4">
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder="Digite sua resposta..."
+                      value={replyMessage}
+                      onChange={(e) => setReplyMessage(e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                    <div className="flex justify-end">
+                      <Button onClick={handleSendReply} disabled={isSendingReply || !replyMessage.trim()}>
+                        {isSendingReply ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Enviar Resposta
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para Enviar Nova Mensagem */}
+      <Dialog open={isNewMessageModalOpen} onOpenChange={setIsNewMessageModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Enviar Nova Mensagem
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email do Destinatário</label>
+              <Input
+                type="email"
+                placeholder="cliente@exemplo.com"
+                value={newMessageRecipient}
+                onChange={(e) => setNewMessageRecipient(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mensagem</label>
+              <Textarea
+                placeholder="Digite sua mensagem..."
+                value={newMessageContent}
+                onChange={(e) => setNewMessageContent(e.target.value)}
+                className="min-h-[120px]"
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsNewMessageModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSendNewMessage} 
+                disabled={isSendingNewMessage || !newMessageRecipient.trim() || !newMessageContent.trim()}
+              >
+                {isSendingNewMessage ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
