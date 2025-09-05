@@ -347,6 +347,14 @@ export default function CustomerSupportPage() {
     enabled: !!supportConfig && !!currentOperationId,
   });
 
+  // Debug log para ver os dados
+  console.log('🔍 Overview debug:', { 
+    overviewMetrics, 
+    overviewLoading, 
+    currentOperationId, 
+    supportConfig: !!supportConfig 
+  });
+
   const hasSupportFilters = supportSearchTerm.trim().length > 0 || 
                            selectedCategory !== "all" || 
                            selectedTicketStatus !== "all";
@@ -494,7 +502,7 @@ export default function CustomerSupportPage() {
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {overviewMetrics?.openTickets || 0}
+                {overviewMetrics ? overviewMetrics.openTickets : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
                 Tickets Abertos
@@ -511,7 +519,7 @@ export default function CustomerSupportPage() {
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {overviewMetrics?.aiResponded || 0}
+                {overviewMetrics ? overviewMetrics.aiResponded : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
                 Respondido por IA
@@ -528,7 +536,7 @@ export default function CustomerSupportPage() {
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {overviewMetrics?.monthlyTickets || 0}
+                {overviewMetrics ? overviewMetrics.monthlyTickets : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
                 Tickets no Mês
@@ -545,7 +553,7 @@ export default function CustomerSupportPage() {
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {overviewMetrics?.unreadTickets || 0}
+                {overviewMetrics ? overviewMetrics.unreadTickets : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
                 Não Lidos
