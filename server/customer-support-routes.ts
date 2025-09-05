@@ -398,6 +398,9 @@ export function registerCustomerSupportRoutes(app: Express) {
         message: `Created ${createdTickets.length} sample tickets`,
         tickets: createdTickets
       });
+      
+      // Force refresh of tickets cache
+      console.log(`✅ Created ${createdTickets.length} test tickets for operation ${operationId}`);
     } catch (error) {
       console.error('Error creating test data:', error);
       res.status(500).json({ 
