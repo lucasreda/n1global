@@ -353,7 +353,7 @@ export default function CustomerSupportPage() {
                            selectedTicketStatus !== "all";
                            
   // Always show tickets when any filter is applied OR when showing all
-  const shouldLoadTickets = hasSupportFilters || (selectedCategory === "all" && selectedTicketStatus === "all" && !supportSearchTerm.trim());
+  const shouldLoadTickets = true; // Simplificando: sempre carregar tickets
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
     queryKey: [`/api/customer-support/${currentOperationId}/tickets`, selectedCategory, selectedTicketStatus, supportSearchTerm],
@@ -361,7 +361,7 @@ export default function CustomerSupportPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (supportSearchTerm) params.append('search', supportSearchTerm);
-      if (selectedCategory !== 'all') params.append('categoryId', selectedCategory);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (selectedTicketStatus !== 'all') params.append('status', selectedTicketStatus);
       params.append('limit', '50');
       
