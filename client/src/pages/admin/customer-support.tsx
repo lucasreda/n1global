@@ -20,15 +20,9 @@ export default function CustomerSupportPage() {
     try {
       setIsInitializing(true);
       
-      const data = await apiRequest('/api/customer-support/init', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          operationId: currentOperationId,
-          operationName: currentOperationName
-        })
+      const data = await apiRequest('/api/customer-support/init', 'POST', {
+        operationId: currentOperationId,
+        operationName: currentOperationName
       });
 
       toast({
@@ -53,9 +47,7 @@ export default function CustomerSupportPage() {
   // Create test data
   const handleCreateTestData = async () => {
     try {
-      await apiRequest(`/api/customer-support/${currentOperationId}/test-data`, {
-        method: 'POST'
-      });
+      await apiRequest(`/api/customer-support/${currentOperationId}/test-data`, 'POST');
 
       toast({
         title: "Dados de Teste Criados",
