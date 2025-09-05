@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, timestamp, integer, boolean, jsonb, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1483,3 +1483,289 @@ export type InsertSupportConversation = z.infer<typeof insertSupportConversation
 
 export type SupportMetrics = typeof supportMetrics.$inferSelect;
 export type InsertSupportMetrics = z.infer<typeof insertSupportMetricsSchema>;
+
+// ============================================================================
+// CUSTOMER SUPPORT TABLES (Multi-tenant for Operations)
+// ============================================================================
+
+export const customerSupportOperations = pgTable("customer_support_operations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  operationName: varchar("operation_name"),
+  
+  // Email configuration
+  emailDomain: varchar("email_domain"), // suporte@loja.com
+  isCustomDomain: boolean("is_custom_domain").default(false),
+  mailgunDomainName: varchar("mailgun_domain_name"), // Mailgun domain name
+  mailgunApiKey: varchar("mailgun_api_key"), // Operation-specific Mailgun key
+  domainVerified: boolean("domain_verified").default(false),
+  
+  // AI Configuration
+  aiEnabled: boolean("ai_enabled").default(true),
+  aiCategories: jsonb("ai_categories"), // Categories that AI can handle
+  
+  // Branding
+  brandingConfig: jsonb("branding_config"), // Logo, colors, signature
+  emailTemplateId: varchar("email_template_id"),
+  
+  // Business settings
+  businessHours: jsonb("business_hours"),
+  timezone: varchar("timezone").default("America/Sao_Paulo"),
+  autoResponseDelay: integer("auto_response_delay").default(0), // Minutes
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    uniqueOperation: unique().on(table.operationId),
+    emailDomainIdx: index().on(table.emailDomain),
+  };
+});
+
+export const customerSupportCategories = pgTable("customer_support_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  
+  name: text("name").notNull(), // 'duvidas', 'alteracao_endereco', 'cancelamento', etc.
+  displayName: text("display_name").notNull(), // 'Dúvidas', 'Alteração de Endereço', etc.
+  description: text("description"),
+  
+  // AI settings
+  isAutomated: boolean("is_automated").default(false),
+  aiEnabled: boolean("ai_enabled").default(false),
+  defaultResponse: text("default_response"),
+  
+  // UI settings
+  priority: integer("priority").default(0),
+  color: text("color").default("#6b7280"),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationCategoryIdx: index().on(table.operationId, table.name),
+    uniqueOperationCategory: unique().on(table.operationId, table.name),
+  };
+});
+
+export const customerSupportTickets = pgTable("customer_support_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  ticketNumber: text("ticket_number").notNull(),
+  
+  // Customer info
+  customerEmail: varchar("customer_email").notNull(),
+  customerName: varchar("customer_name"),
+  
+  // Ticket details
+  subject: varchar("subject").notNull(),
+  status: varchar("status").notNull().default("open"), // 'open', 'pending', 'resolved', 'closed'
+  priority: varchar("priority").default("medium"), // 'low', 'medium', 'high', 'urgent'
+  
+  // Classification
+  categoryId: varchar("category_id").references(() => customerSupportCategories.id),
+  categoryName: varchar("category_name"), // Cache for quick filtering
+  
+  // Assignment
+  assignedAgentId: varchar("assigned_agent_id").references(() => users.id),
+  assignedAgentName: varchar("assigned_agent_name"), // Cache
+  
+  // AI processing
+  isAutomated: boolean("is_automated").default(false),
+  requiresHuman: boolean("requires_human").default(false),
+  aiConfidence: integer("ai_confidence"), // 0-100
+  aiReasoning: text("ai_reasoning"),
+  
+  // Email tracking
+  originalEmailId: varchar("original_email_id"),
+  threadId: varchar("thread_id"), // For email threading
+  
+  // Resolution
+  resolvedAt: timestamp("resolved_at"),
+  resolutionTime: integer("resolution_time_minutes"),
+  customerSatisfaction: integer("customer_satisfaction"), // 1-5
+  
+  // Tags and metadata
+  tags: jsonb("tags"),
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  lastActivity: timestamp("last_activity").defaultNow(),
+}, (table) => {
+  return {
+    operationIdx: index().on(table.operationId),
+    customerEmailIdx: index().on(table.customerEmail),
+    statusIdx: index().on(table.status),
+    assignedIdx: index().on(table.assignedAgentId),
+    createdAtIdx: index().on(table.createdAt),
+    uniqueTicketNumber: unique().on(table.operationId, table.ticketNumber),
+  };
+});
+
+export const customerSupportMessages = pgTable("customer_support_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  ticketId: varchar("ticket_id").notNull().references(() => customerSupportTickets.id, { onDelete: 'cascade' }),
+  
+  // Sender info
+  sender: varchar("sender").notNull(), // 'customer', 'agent', 'ai', 'system'
+  senderName: varchar("sender_name"),
+  senderEmail: varchar("sender_email"),
+  senderUserId: varchar("sender_user_id").references(() => users.id),
+  
+  // Message content
+  subject: varchar("subject"),
+  content: text("content").notNull(),
+  htmlContent: text("html_content"),
+  
+  // Message type
+  messageType: varchar("message_type").default("email"), // 'email', 'internal_note', 'system'
+  isInternal: boolean("is_internal").default(false),
+  isPublic: boolean("is_public").default(true),
+  
+  // AI info
+  isAiGenerated: boolean("is_ai_generated").default(false),
+  aiModel: varchar("ai_model"), // 'gpt-4', etc.
+  aiPromptUsed: text("ai_prompt_used"),
+  
+  // Email tracking
+  emailMessageId: varchar("email_message_id"),
+  emailInReplyTo: varchar("email_in_reply_to"),
+  emailReferences: text("email_references"),
+  
+  // Attachments
+  attachments: jsonb("attachments"),
+  
+  // Tracking
+  sentViaEmail: boolean("sent_via_email").default(false),
+  emailSentAt: timestamp("email_sent_at"),
+  emailDelivered: boolean("email_delivered").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    ticketIdx: index().on(table.ticketId),
+    operationIdx: index().on(table.operationId),
+    senderIdx: index().on(table.sender),
+    createdAtIdx: index().on(table.createdAt),
+    emailMessageIdIdx: index().on(table.emailMessageId),
+  };
+});
+
+export const customerSupportEmails = pgTable("customer_support_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  
+  // Email identifiers
+  messageId: text("message_id").notNull(),
+  threadId: varchar("thread_id"),
+  
+  // Email details
+  fromEmail: varchar("from_email").notNull(),
+  fromName: varchar("from_name"),
+  toEmail: varchar("to_email").notNull(),
+  ccEmails: jsonb("cc_emails"),
+  bccEmails: jsonb("bcc_emails"),
+  
+  subject: varchar("subject").notNull(),
+  textContent: text("text_content"),
+  htmlContent: text("html_content"),
+  
+  // Processing
+  status: varchar("status").default("received"), // 'received', 'processing', 'processed', 'failed'
+  ticketId: varchar("ticket_id").references(() => customerSupportTickets.id),
+  
+  // Categorization
+  categoryId: varchar("category_id").references(() => customerSupportCategories.id),
+  aiConfidence: integer("ai_confidence"),
+  aiReasoning: text("ai_reasoning"),
+  
+  // Flags
+  isSpam: boolean("is_spam").default(false),
+  isAutoReply: boolean("is_auto_reply").default(false),
+  requiresHuman: boolean("requires_human").default(false),
+  hasAutoResponse: boolean("has_auto_response").default(false),
+  
+  // Metadata
+  attachments: jsonb("attachments"),
+  headers: jsonb("headers"),
+  rawData: jsonb("raw_data"),
+  
+  // Processing timestamps
+  receivedAt: timestamp("received_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdx: index().on(table.operationId),
+    messageIdIdx: index().on(table.messageId),
+    ticketIdx: index().on(table.ticketId),
+    statusIdx: index().on(table.status),
+    receivedAtIdx: index().on(table.receivedAt),
+    uniqueOperationMessage: unique().on(table.operationId, table.messageId),
+  };
+});
+
+// Customer Support Insert Schemas
+export const insertCustomerSupportOperationSchema = createInsertSchema(customerSupportOperations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSupportCategorySchema = createInsertSchema(customerSupportCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSupportTicketSchema = createInsertSchema(customerSupportTickets).omit({
+  id: true,
+  ticketNumber: true,
+  resolvedAt: true,
+  resolutionTime: true,
+  createdAt: true,
+  updatedAt: true,
+  lastActivity: true,
+});
+
+export const insertCustomerSupportMessageSchema = createInsertSchema(customerSupportMessages).omit({
+  id: true,
+  emailSentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSupportEmailSchema = createInsertSchema(customerSupportEmails).omit({
+  id: true,
+  receivedAt: true,
+  processedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Customer Support Types
+export type CustomerSupportOperation = typeof customerSupportOperations.$inferSelect;
+export type InsertCustomerSupportOperation = z.infer<typeof insertCustomerSupportOperationSchema>;
+
+export type CustomerSupportCategory = typeof customerSupportCategories.$inferSelect;
+export type InsertCustomerSupportCategory = z.infer<typeof insertCustomerSupportCategorySchema>;
+
+export type CustomerSupportTicket = typeof customerSupportTickets.$inferSelect;
+export type InsertCustomerSupportTicket = z.infer<typeof insertCustomerSupportTicketSchema>;
+
+export type CustomerSupportMessage = typeof customerSupportMessages.$inferSelect;
+export type InsertCustomerSupportMessage = z.infer<typeof insertCustomerSupportMessageSchema>;
+
+export type CustomerSupportEmail = typeof customerSupportEmails.$inferSelect;
+export type InsertCustomerSupportEmail = z.infer<typeof insertCustomerSupportEmailSchema>;

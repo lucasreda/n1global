@@ -17,6 +17,7 @@ import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
 import { registerSupportRoutes } from "./support-routes";
+import { registerCustomerSupportRoutes } from "./customer-support-routes";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -4948,6 +4949,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register support system routes
   registerSupportRoutes(app);
+
+  // Register customer support system routes
+  registerCustomerSupportRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

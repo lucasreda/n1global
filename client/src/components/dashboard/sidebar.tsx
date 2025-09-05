@@ -12,7 +12,8 @@ import {
   Briefcase,
   ChevronDown,
   Plus,
-  Wrench
+  Wrench,
+  MessageSquare
 } from "lucide-react";
 import logoImage from "@assets/Dashboard_1756440445659.png";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const getNavigationForRole = (userRole: string) => {
     { name: "Dashboard", href: "/", icon: Home },
     { name: "Pedidos", href: "/orders", icon: Package },
     { name: "Produtos", href: "/products", icon: ShoppingCart },
+    { name: "Suporte de Clientes", href: "/customer-support", icon: MessageSquare },
     { name: "Integrações", href: "/integrations", icon: Plug },
     { name: "Ferramentas", href: "/tools", icon: Wrench },
     { name: "Configurações", href: "/settings", icon: Settings },
