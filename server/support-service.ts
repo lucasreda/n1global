@@ -375,9 +375,20 @@ REGRAS:
       .values(emailData)
       .returning();
 
-    // Create ticket if not manual category or if requires human review
-    if (categoryId && (categorization.requiresHuman || category[0]?.name === 'manual')) {
-      await this.createTicketFromEmail(savedEmail);
+    // Always create ticket for proper tracking and history
+    // Tickets should exist regardless of whether they get automatic responses
+    if (categoryId) {
+      const ticket = await this.createTicketFromEmail(savedEmail);
+      console.log(`📋 Ticket criado: ${ticket.ticketNumber} para ${savedEmail.from}`);
+      
+      // If automatic response was sent, mark ticket as initially responded
+      if (category[0]?.isAutomated && !categorization.requiresHuman) {
+        const categoryName = category[0].name.toLowerCase();
+        if (['duvidas', 'alteracao_endereco', 'cancelamento'].includes(categoryName)) {
+          // The AI will respond, so we'll update ticket status after response is sent
+          console.log(`📋 Ticket ${ticket.ticketNumber} will receive automatic response`);
+        }
+      }
     }
 
     // Send AI auto-response if category supports it and is eligible
@@ -578,6 +589,35 @@ IMPORTANTE: Responda na mesma língua do email original. Se o cliente escrever e
         .where(eq(supportEmails.id, email.id));
 
       console.log(`✅ Resposta automática IA enviada para: ${email.from}`);
+      
+      // Add conversation entry for AI response
+      const ticket = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.emailId, email.id))
+        .limit(1);
+
+      if (ticket[0]) {
+        await this.addConversation(ticket[0].id, {
+          type: 'email_out',
+          from: `Sofia - Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
+          to: email.from,
+          subject: aiResponse.subject,
+          content: aiResponse.content,
+          messageId: null
+        });
+
+        // Update ticket status to show it was responded
+        await db
+          .update(supportTickets)
+          .set({
+            status: 'waiting_customer',
+            updatedAt: new Date()
+          })
+          .where(eq(supportTickets.id, ticket[0].id));
+
+        console.log(`📋 Ticket ${ticket[0].ticketNumber} atualizado após resposta IA`);
+      }
     } catch (error) {
       console.error('❌ Erro ao enviar resposta automática IA:', error);
       throw error;
