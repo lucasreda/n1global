@@ -18,7 +18,7 @@ import {
   type InsertSupportTicket,
   type InsertSupportConversation
 } from '@shared/schema';
-import { eq, and, desc, sql, count } from 'drizzle-orm';
+import { eq, and, or, in, ilike, desc, sql, count } from 'drizzle-orm';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
