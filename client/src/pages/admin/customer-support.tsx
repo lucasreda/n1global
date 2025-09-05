@@ -361,7 +361,7 @@ export default function CustomerSupportPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (supportSearchTerm) params.append('search', supportSearchTerm);
-      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (selectedCategory !== 'all') params.append('categoryId', selectedCategory);
       if (selectedTicketStatus !== 'all') params.append('status', selectedTicketStatus);
       params.append('limit', '50');
       

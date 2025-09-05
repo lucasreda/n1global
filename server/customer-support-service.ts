@@ -222,7 +222,7 @@ export class CustomerSupportService {
     }
 
     if (category && category !== 'all') {
-      conditions.push(eq(customerSupportTickets.categoryName, category));
+      conditions.push(eq(customerSupportTickets.categoryId, category));
     }
 
     if (search) {

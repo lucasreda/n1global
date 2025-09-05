@@ -123,7 +123,8 @@ export function registerCustomerSupportRoutes(app: Express) {
       const { operationId } = req.params;
       const { 
         status = 'all', 
-        category = 'all', 
+        category = 'all',
+        categoryId = 'all', 
         search = '', 
         assignedTo,
         page = '1',
@@ -138,7 +139,7 @@ export function registerCustomerSupportRoutes(app: Express) {
 
       const result = await customerSupportService.getTickets(operationId, {
         status: status as string,
-        category: category as string,
+        category: (categoryId !== 'all' ? categoryId : category) as string,
         search: search as string,
         assignedTo: assignedTo as string,
         limit: limitNum,
