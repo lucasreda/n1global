@@ -356,31 +356,70 @@ export default function CustomerSupportPage() {
   const shouldLoadTickets = true; // Simplificando: sempre carregar tickets
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: [`tickets-direct-${currentOperationId}`],
+    queryKey: [`tickets-hardcoded-${currentOperationId}`],
     enabled: !!supportConfig && !!currentOperationId,
     staleTime: 0,
     queryFn: async () => {
-      const url = `/api/customer-support/${currentOperationId}/tickets?limit=50&direct=${Date.now()}`;
-      
-      const token = localStorage.getItem('token');
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('🎫 Direct fetch response:', data);
-      
+      // Temporary hardcoded data to test the interface
+      console.log('🎫 Using hardcoded test data');
       return {
-        tickets: data.tickets || [],
-        total: data.total || 0
+        tickets: [
+          {
+            id: '1',
+            ticketNumber: 'SUP-202509-0001',
+            subject: 'Dúvida sobre meu pedido',
+            customerName: 'João Silva',
+            customerEmail: 'joao@teste.com',
+            status: 'open',
+            priority: 'medium',
+            categoryId: '1',
+            categoryName: 'duvidas',
+            category: { displayName: 'Dúvidas' },
+            isRead: false,
+            isAutomated: false,
+            conversationCount: 0,
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            operationId: currentOperationId
+          },
+          {
+            id: '2',
+            ticketNumber: 'SUP-202509-0002',
+            subject: 'Preciso alterar o endereço de entrega',
+            customerName: 'Maria Santos',
+            customerEmail: 'maria@teste.com',
+            status: 'pending',
+            priority: 'high',
+            categoryId: '2',
+            categoryName: 'alteracao_endereco',
+            category: { displayName: 'Alteração de Endereço' },
+            isRead: true,
+            isAutomated: true,
+            conversationCount: 2,
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            operationId: currentOperationId
+          },
+          {
+            id: '3',
+            ticketNumber: 'SUP-202509-0003',
+            subject: 'Quero cancelar meu pedido',
+            customerName: 'Pedro Costa',
+            customerEmail: 'pedro@teste.com',
+            status: 'resolved',
+            priority: 'low',
+            categoryId: '3',
+            categoryName: 'cancelamento',
+            category: { displayName: 'Cancelamento' },
+            isRead: true,
+            isAutomated: false,
+            conversationCount: 1,
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            operationId: currentOperationId
+          }
+        ],
+        total: 3
       };
     }
   });
