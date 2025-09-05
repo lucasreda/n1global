@@ -59,9 +59,41 @@ export default function AdminSupport() {
   const [replyMessage, setReplyMessage] = useState("");
   const [isSendingReply, setIsSendingReply] = useState(false);
 
-  // Function to open ticket modal
-  const handleViewTicket = (ticketResponse: any) => {
-    setSelectedTicket(ticketResponse);
+  // Function to open ticket modal with full conversation history
+  const handleViewTicket = async (ticketResponse: any) => {
+    try {
+      console.log('📋 Loading full ticket details...');
+      const token = localStorage.getItem("auth_token");
+      
+      const response = await fetch(`/api/support/tickets/${ticketResponse.ticket.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+      });
+
+      if (response.ok) {
+        const fullTicketData = await response.json();
+        console.log('📋 Full ticket data:', fullTicketData);
+        
+        // Merge the full data with the original ticket response
+        setSelectedTicket({
+          ...ticketResponse,
+          ...fullTicketData,
+          conversations: fullTicketData.conversations || []
+        });
+      } else {
+        console.error('❌ Failed to load full ticket data');
+        // Fallback to original data
+        setSelectedTicket(ticketResponse);
+      }
+    } catch (error) {
+      console.error('❌ Error loading ticket details:', error);
+      // Fallback to original data
+      setSelectedTicket(ticketResponse);
+    }
+    
     setIsTicketModalOpen(true);
     setReplyMessage(""); // Reset reply message
   };
@@ -124,9 +156,11 @@ export default function AdminSupport() {
       const result = JSON.parse(responseText);
       console.log('📧 Reply success:', result);
 
+      // Reload the ticket to show the new conversation
+      console.log('🔄 Reloading ticket with conversation...');
+      await handleViewTicket(selectedTicket);
+
       setReplyMessage("");
-      setIsTicketModalOpen(false);
-      setSelectedTicket(null);
       alert('Resposta enviada com sucesso!');
     } catch (error) {
       console.error('📧 Reply error:', error);
@@ -553,6 +587,54 @@ export default function AdminSupport() {
                   <p className="text-slate-300 whitespace-pre-wrap">
                     {selectedTicket.ticket.description}
                   </p>
+                </div>
+              )}
+
+              {/* Conversation History */}
+              {selectedTicket.conversations && selectedTicket.conversations.length > 0 && (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Histórico de Conversação ({selectedTicket.conversations.length})
+                  </h3>
+                  <div className="space-y-4 max-h-60 overflow-y-auto">
+                    {selectedTicket.conversations.map((conversation: any, index: number) => (
+                      <div 
+                        key={conversation.id || index} 
+                        className={`p-3 rounded border-l-4 ${
+                          conversation.type === 'email_in' ? 'border-green-500 bg-green-900/20' :
+                          conversation.type === 'email_out' ? 'border-blue-500 bg-blue-900/20' :
+                          conversation.type === 'note' ? 'border-yellow-500 bg-yellow-900/20' :
+                          'border-gray-500 bg-gray-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                          <span>
+                            {conversation.type === 'email_in' ? 'Cliente' : 
+                             conversation.type === 'email_out' ? 'Agente' : 
+                             conversation.type === 'note' ? 'Nota Interna' : 
+                             'Sistema'}
+                          </span>
+                          <span>
+                            {new Date(conversation.createdAt).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        {conversation.subject && (
+                          <div className="text-sm font-medium text-slate-200 mb-1">
+                            {conversation.subject}
+                          </div>
+                        )}
+                        <div className="text-sm text-slate-300 whitespace-pre-wrap">
+                          {conversation.content}
+                        </div>
+                        {conversation.from && conversation.to && (
+                          <div className="text-xs text-slate-500 mt-2">
+                            De: {conversation.from} → Para: {conversation.to}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
