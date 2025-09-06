@@ -1076,8 +1076,8 @@ export class CustomerSupportService {
       const routeData = new URLSearchParams();
       routeData.append('priority', '1');
       routeData.append('description', `Support ${domainName}`);
-      routeData.append('expression', `match_recipient('*@${domainName}')`);
-      routeData.append('action', `forward('${webhookUrl}')`);
+      routeData.append('expression', `match_recipient("*@${domainName}")`);
+      routeData.append('action', `forward("${webhookUrl}")`);
       routeData.append('action', 'stop()');
 
       console.log(`📧 Creating route with direct API call...`);
