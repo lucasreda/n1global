@@ -18,6 +18,16 @@ interface SupportConfig {
   mailgunDomainName?: string;
 }
 
+interface DnsRecord {
+  record_type: string;
+  name: string;
+  value: string;
+  category: string;
+  valid?: string;
+  dns_type: string;
+  priority?: string;
+}
+
 export default function CustomerSupportSettings() {
   const { toast } = useToast();
   const { selectedOperation, operations } = useCurrentOperation();
@@ -32,6 +42,13 @@ export default function CustomerSupportSettings() {
     enabled: !!currentOperationId,
     retry: 3,
     retryDelay: 1000,
+  });
+
+  // Get DNS records for the domain
+  const { data: dnsRecordsData } = useQuery<{ success: boolean; dnsRecords: DnsRecord[] }>({
+    queryKey: [`/api/customer-support/${currentOperationId}/dns-records/${supportConfig?.emailDomain}`],
+    enabled: !!currentOperationId && !!supportConfig?.emailDomain,
+    retry: 1,
   });
 
   // Configuration loaded successfully
@@ -70,26 +87,31 @@ export default function CustomerSupportSettings() {
   // Verify domain mutation
   const verifyDomainMutation = useMutation({
     mutationFn: async () => {
-      setIsVerifying(true);
-      // Simular verificação
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      return { verified: true };
+      const response = await fetch(`/api/customer-support/${currentOperationId}/verify-domain`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ domain: supportConfig?.emailDomain })
+      });
+      if (!response.ok) throw new Error('Failed to verify domain');
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Domínio verificado",
-        description: "O domínio foi verificado com sucesso!",
+        title: data.verified ? "Domínio verificado" : "Verificação pendente",
+        description: data.message,
+        variant: data.verified ? "default" : "destructive",
       });
       refetch();
-      setIsVerifying(false);
     },
     onError: () => {
       toast({
-        title: "Verificação falhou",
-        description: "Não foi possível verificar o domínio. Verifique as configurações DNS.",
+        title: "Erro na verificação",
+        description: "Falha ao verificar o domínio.",
         variant: "destructive",
       });
-      setIsVerifying(false);
     }
   });
 
@@ -99,7 +121,10 @@ export default function CustomerSupportSettings() {
   };
 
   const handleVerifyDomain = () => {
-    verifyDomainMutation.mutate();
+    setIsVerifying(true);
+    verifyDomainMutation.mutate(undefined, {
+      onSettled: () => setIsVerifying(false)
+    });
   };
 
   // Show loading while waiting for operation ID to load
@@ -302,23 +327,55 @@ export default function CustomerSupportSettings() {
                   <span className="font-semibold">Valor</span>
                 </div>
                 <Separator className="bg-gray-600" />
-                <div className="grid grid-cols-3 gap-4 text-white">
-                  <span>TXT</span>
-                  <span>{supportConfig.emailDomain}</span>
-                  <span>mailgun-verification-abc123</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-white">
-                  <span>MX</span>
-                  <span>{supportConfig.emailDomain}</span>
-                  <span>10 mxa.mailgun.org</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-white">
-                  <span>CNAME</span>
-                  <span>email.{supportConfig.emailDomain}</span>
-                  <span>mailgun.org</span>
-                </div>
+                
+                {dnsRecordsData?.dnsRecords?.length ? (
+                  dnsRecordsData.dnsRecords.map((record, index) => (
+                    <div key={index} className="grid grid-cols-3 gap-4 text-white">
+                      <span className="text-yellow-400">{record.record_type}</span>
+                      <span className="break-all">{record.name}</span>
+                      <span className="break-all text-green-400">
+                        {record.record_type === 'MX' && record.priority ? `${record.priority} ` : ''}
+                        {record.value}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 gap-4 text-white">
+                      <span className="text-yellow-400">TXT</span>
+                      <span>{supportConfig.emailDomain}</span>
+                      <span className="text-green-400">v=spf1 include:mailgun.org ~all</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 text-white">
+                      <span className="text-yellow-400">MX</span>
+                      <span>{supportConfig.emailDomain}</span>
+                      <span className="text-green-400">10 mxa.mailgun.org</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 text-white">
+                      <span className="text-yellow-400">CNAME</span>
+                      <span>email.{supportConfig.emailDomain}</span>
+                      <span className="text-green-400">mailgun.org</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
+            
+            {dnsRecordsData?.dnsRecords?.length && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm text-blue-400">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Registros DNS específicos carregados do Mailgun</span>
+                </div>
+                <div className="text-xs text-gray-400">
+                  <span className="text-yellow-400">●</span> Registros de envio (TXT, CNAME)
+                </div>
+                <div className="text-xs text-gray-400">
+                  <span className="text-green-400">●</span> Registros de recebimento (MX)
+                </div>
+              </div>
+            )}
+            
             <p className="text-xs text-gray-400 mt-3">
               Após adicionar estes registros DNS, clique em "Verificar Domínio" para confirmar a configuração.
             </p>

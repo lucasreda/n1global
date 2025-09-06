@@ -265,7 +265,12 @@ export function registerCustomerSupportRoutes(app: Express) {
       );
       
       if (result.success) {
-        res.json({ success: true, message: "Domain configured successfully" });
+        res.json({ 
+          success: true, 
+          message: "Domain configured successfully",
+          domain: result.domain,
+          dnsRecords: result.dnsRecords
+        });
       } else {
         res.status(400).json({ success: false, error: result.error });
       }
@@ -293,6 +298,57 @@ export function registerCustomerSupportRoutes(app: Express) {
       console.error('Error getting analytics:', error);
       res.status(500).json({ 
         message: "Failed to get analytics",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Verify domain configuration
+   */
+  app.post("/api/customer-support/:operationId/verify-domain", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { domain } = req.body;
+      
+      if (!domain) {
+        return res.status(400).json({ message: "Domain is required" });
+      }
+
+      const result = await customerSupportService.verifyDomain(operationId, domain);
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: result.verified ? "Domain verified successfully" : "Domain not yet verified",
+          verified: result.verified
+        });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      console.error('Error verifying domain:', error);
+      res.status(500).json({ 
+        message: "Failed to verify domain",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Get DNS records for domain
+   */
+  app.get("/api/customer-support/:operationId/dns-records/:domain", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { domain } = req.params;
+      
+      const dnsRecords = await customerSupportService.getDomainDnsRecords(domain);
+      
+      res.json({ success: true, dnsRecords });
+    } catch (error) {
+      console.error('Error getting DNS records:', error);
+      res.status(500).json({ 
+        message: "Failed to get DNS records",
         error: error instanceof Error ? error.message : String(error)
       });
     }
