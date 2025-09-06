@@ -14,7 +14,7 @@ import {
   type InsertCustomerSupportMessage,
   type InsertCustomerSupportEmail,
 } from "@shared/schema";
-import { eq, and, or, desc, count, sql, like, ilike } from "drizzle-orm";
+import { eq, and, or, desc, count, sql, like, ilike, gte } from "drizzle-orm";
 import Mailgun from "mailgun.js";
 import formData from "form-data";
 import fs from "fs";
@@ -567,7 +567,7 @@ export class CustomerSupportService {
       // Create domain in Mailgun
       const domainData = {
         name: domainName,
-        spam_action: 'disabled',
+        spam_action: 'disabled' as const,
         wildcard: false
       };
 
@@ -576,6 +576,9 @@ export class CustomerSupportService {
 
       // Get DNS records for the domain
       const dnsRecords = await this.getDomainDnsRecords(domainName);
+
+      // Configure webhook for the domain
+      await this.configureWebhook(domainName);
 
       // Update database with domain info
       await db.update(customerSupportOperations)
@@ -590,7 +593,7 @@ export class CustomerSupportService {
 
       return { 
         success: true, 
-        domain: createResponse.domain,
+        domain: createResponse,
         dnsRecords 
       };
     } catch (error: any) {
@@ -840,7 +843,7 @@ export class CustomerSupportService {
           await db.update(customerSupportTickets)
             .set({ 
               status: 'customer_reply',
-              lastActivityAt: new Date()
+              lastActivity: new Date()
             })
             .where(eq(customerSupportTickets.id, ticketId));
         }
@@ -851,7 +854,7 @@ export class CustomerSupportService {
           customerEmail: emailData.from,
           customerName: this.extractNameFromEmail(emailData.from),
           subject: emailData.subject,
-          description: emailData.textBody || emailData.htmlBody || '',
+          content: emailData.textBody || emailData.htmlBody || '',
           category: 'Geral',
           priority: 'medium',
           source: 'email'
@@ -867,9 +870,6 @@ export class CustomerSupportService {
         subject: emailData.subject,
         content: emailData.textBody || '',
         htmlContent: emailData.htmlBody || emailData.textBody?.replace(/\n/g, '<br>') || '',
-        messageId: emailData.messageId,
-        inReplyTo: emailData.inReplyTo,
-        references: emailData.references,
       });
 
       console.log('✅ Email processed successfully, ticket:', ticketId);
@@ -894,7 +894,7 @@ export class CustomerSupportService {
       if (inReplyTo) {
         const messageByReplyTo = await db.select()
           .from(customerSupportMessages)
-          .where(eq(customerSupportMessages.messageId, inReplyTo))
+          .where(eq(customerSupportMessages.subject, inReplyTo))
           .limit(1);
 
         if (messageByReplyTo.length) {
@@ -989,20 +989,19 @@ export class CustomerSupportService {
           content,
           htmlContent: content.replace(/\n/g, '<br>'),
           sentViaEmail: true,
-          emailSentAt: new Date(),
         });
 
         return { success: true };
       }
 
       // Prepare email using client's domain
-      const fromAddress = `${senderEmail.split('@')[0]}@${operation.emailDomain}`;
+      const fromAddress = `${senderEmail.split('@')[0]}@${operation.emailDomain || 'localhost'}`;
       const emailData = {
         from: `${senderName} <${fromAddress}>`,
         to: ticket.customerEmail,
         subject: `Re: ${subject} [${ticket.ticketNumber}]`,
         text: content,
-        html: this.createEmailTemplate(content, senderName, operation.operationName),
+        html: this.createEmailTemplate(content, senderName, operation.operationName || 'Support'),
         'o:tag': ['customer-support'],
         'o:tracking': true,
         'h:Reply-To': fromAddress,
@@ -1015,7 +1014,7 @@ export class CustomerSupportService {
       });
 
       // Send via Mailgun
-      const result = await mg.messages.create(operation.emailDomain, emailData);
+      const result = await mg.messages.create(operation.emailDomain || 'localhost', emailData);
       console.log('✅ Email sent successfully:', result.id);
 
       // Save message with actual sent data
@@ -1027,15 +1026,13 @@ export class CustomerSupportService {
         content,
         htmlContent: emailData.html,
         sentViaEmail: true,
-        emailSentAt: new Date(),
-        messageId: result.id,
       });
 
       // Update ticket status
       await db.update(customerSupportTickets)
         .set({ 
           status: 'agent_reply',
-          lastActivityAt: new Date()
+          lastActivity: new Date()
         })
         .where(eq(customerSupportTickets.id, ticketId));
 
@@ -1043,6 +1040,35 @@ export class CustomerSupportService {
     } catch (error: any) {
       console.error('❌ Error sending email reply:', error);
       return { success: false, error: error.message || 'Failed to send email' };
+    }
+  }
+
+  /**
+   * Configure webhook for Mailgun domain
+   */
+  private async configureWebhook(domainName: string): Promise<void> {
+    try {
+      if (!process.env.MAILGUN_API_KEY) {
+        console.log('⚠️ Skipping webhook setup - no API key');
+        return;
+      }
+
+      // Get the current domain's webhook URL 
+      const webhookUrl = process.env.REPL_ID 
+        ? `https://${process.env.REPL_ID}-00-${process.env.REPL_SLUG}.${process.env.REPLIT_CLUSTER}.replit.dev/api/webhooks/mailgun/email`
+        : 'https://localhost:5000/api/webhooks/mailgun/email';
+
+      console.log(`🔗 Configuring webhook for ${domainName}: ${webhookUrl}`);
+
+      // Create or update webhook
+      await mg.webhooks.create(domainName, 'delivered', webhookUrl);
+      await mg.webhooks.create(domainName, 'opened', webhookUrl);
+      await mg.webhooks.create(domainName, 'clicked', webhookUrl);
+      
+      console.log('✅ Webhooks configured successfully');
+    } catch (error) {
+      console.error('❌ Error configuring webhooks:', error);
+      // Don't throw - webhook is nice to have but not critical
     }
   }
 
@@ -1081,6 +1107,59 @@ export class CustomerSupportService {
       </body>
       </html>
     `;
+  }
+
+  /**
+   * Get analytics data for operation
+   */
+  async getAnalytics(operationId: string, period: string = '30d'): Promise<any> {
+    try {
+      const days = parseInt(period.replace('d', ''));
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      // Get ticket counts by status
+      const statusCounts = await db.select({
+        status: customerSupportTickets.status,
+        count: count()
+      })
+      .from(customerSupportTickets)
+      .where(
+        and(
+          eq(customerSupportTickets.operationId, operationId),
+          gte(customerSupportTickets.createdAt, startDate)
+        )
+      )
+      .groupBy(customerSupportTickets.status);
+
+      // Get daily ticket creation
+      const dailyTickets = await db.select({
+        date: sql<string>`DATE(${customerSupportTickets.createdAt})`,
+        count: count()
+      })
+      .from(customerSupportTickets)
+      .where(
+        and(
+          eq(customerSupportTickets.operationId, operationId),
+          gte(customerSupportTickets.createdAt, startDate)
+        )
+      )
+      .groupBy(sql`DATE(${customerSupportTickets.createdAt})`)
+      .orderBy(sql`DATE(${customerSupportTickets.createdAt})`);
+
+      return {
+        statusCounts,
+        dailyTickets,
+        period
+      };
+    } catch (error) {
+      console.error('Error getting analytics:', error);
+      return {
+        statusCounts: [],
+        dailyTickets: [],
+        period
+      };
+    }
   }
 }
 
