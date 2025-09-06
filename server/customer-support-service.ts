@@ -598,10 +598,16 @@ export class CustomerSupportService {
       };
     } catch (error: any) {
       console.error('❌ Error configuring Mailgun domain:', error);
+      console.log('🔍 Error details:', {
+        status: error.status,
+        message: error.message,
+        details: error.details,
+        type: error.type
+      });
       
       // If domain already exists, that's OK - get its DNS records
       if (error.status === 400 && (error.message?.includes('already exists') || error.details?.includes('already exists'))) {
-        console.log('📧 Domain already exists, fetching DNS records and configuring routes...');
+        console.log('✅ Domain already exists condition matched! Proceeding with configuration...');
         
         try {
           const dnsRecords = await this.getDomainDnsRecords(domainName);
