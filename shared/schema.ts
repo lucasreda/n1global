@@ -1495,6 +1495,7 @@ export const customerSupportOperations = pgTable("customer_support_operations", 
   
   // Email configuration
   emailDomain: varchar("email_domain"), // suporte@loja.com
+  emailPrefix: varchar("email_prefix").default("suporte"), // Email prefix (e.g., "suporte", "atendimento")
   isCustomDomain: boolean("is_custom_domain").default(false),
   mailgunDomainName: varchar("mailgun_domain_name"), // Mailgun domain name
   mailgunApiKey: varchar("mailgun_api_key"), // Operation-specific Mailgun key

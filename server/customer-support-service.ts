@@ -585,6 +585,7 @@ export class CustomerSupportService {
       await db.update(customerSupportOperations)
         .set({
           emailDomain: domainName,
+          emailPrefix,
           isCustomDomain,
           mailgunDomainName: domainName,
           domainVerified: false,
@@ -619,6 +620,7 @@ export class CustomerSupportService {
           await db.update(customerSupportOperations)
             .set({
               emailDomain: domainName,
+              emailPrefix,
               isCustomDomain,
               mailgunDomainName: domainName,
               domainVerified: false,
