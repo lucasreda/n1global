@@ -785,7 +785,178 @@ export class CustomerSupportService {
   }
 
   /**
-   * Send email reply to customer (simplified implementation)
+   * Process incoming email from Mailgun webhook
+   */
+  async processIncomingEmail(emailData: {
+    from: string;
+    to: string;
+    subject: string;
+    textBody: string;
+    htmlBody: string;
+    messageId: string;
+    inReplyTo?: string;
+    references?: string;
+    timestamp: Date;
+  }): Promise<{ success: boolean; error?: string; ticketId?: string }> {
+    try {
+      console.log('📧 Processing incoming email:', {
+        from: emailData.from,
+        to: emailData.to,
+        subject: emailData.subject,
+        inReplyTo: emailData.inReplyTo
+      });
+
+      // Extract domain from recipient to find operation
+      const recipientDomain = emailData.to.split('@')[1];
+      const operation = await db.select()
+        .from(customerSupportOperations)
+        .where(eq(customerSupportOperations.emailDomain, recipientDomain))
+        .limit(1);
+
+      if (!operation.length) {
+        console.log('❌ No operation found for domain:', recipientDomain);
+        return { success: false, error: 'Domain not configured' };
+      }
+
+      const operationData = operation[0];
+
+      // Try to find existing ticket by thread (In-Reply-To, References, or subject)
+      let existingTicket = await this.findTicketByThread(
+        operationData.operationId, 
+        emailData.inReplyTo, 
+        emailData.references, 
+        emailData.subject
+      );
+
+      let ticketId: string;
+
+      if (existingTicket) {
+        // Reply to existing ticket
+        console.log('📬 Found existing ticket:', existingTicket.ticketNumber);
+        ticketId = existingTicket.id;
+        
+        // Update ticket status to customer_reply if it was closed
+        if (existingTicket.status === 'closed' || existingTicket.status === 'resolved') {
+          await db.update(customerSupportTickets)
+            .set({ 
+              status: 'customer_reply',
+              lastActivityAt: new Date()
+            })
+            .where(eq(customerSupportTickets.id, ticketId));
+        }
+      } else {
+        // Create new ticket
+        console.log('🎫 Creating new ticket for email');
+        const newTicket = await this.createTicket(operationData.operationId, {
+          customerEmail: emailData.from,
+          customerName: this.extractNameFromEmail(emailData.from),
+          subject: emailData.subject,
+          description: emailData.textBody || emailData.htmlBody || '',
+          category: 'Geral',
+          priority: 'medium',
+          source: 'email'
+        });
+        ticketId = newTicket.id;
+      }
+
+      // Add customer message to ticket
+      await this.addMessage(operationData.operationId, ticketId, {
+        sender: 'customer',
+        senderName: this.extractNameFromEmail(emailData.from),
+        senderEmail: emailData.from,
+        subject: emailData.subject,
+        content: emailData.textBody || '',
+        htmlContent: emailData.htmlBody || emailData.textBody?.replace(/\n/g, '<br>') || '',
+        messageId: emailData.messageId,
+        inReplyTo: emailData.inReplyTo,
+        references: emailData.references,
+      });
+
+      console.log('✅ Email processed successfully, ticket:', ticketId);
+      return { success: true, ticketId };
+    } catch (error) {
+      console.error('❌ Error processing incoming email:', error);
+      return { success: false, error: 'Failed to process email' };
+    }
+  }
+
+  /**
+   * Find existing ticket by email thread headers
+   */
+  private async findTicketByThread(
+    operationId: string, 
+    inReplyTo?: string, 
+    references?: string, 
+    subject?: string
+  ): Promise<any> {
+    try {
+      // First try by message ID in thread
+      if (inReplyTo) {
+        const messageByReplyTo = await db.select()
+          .from(customerSupportMessages)
+          .where(eq(customerSupportMessages.messageId, inReplyTo))
+          .limit(1);
+
+        if (messageByReplyTo.length) {
+          const ticketId = messageByReplyTo[0].ticketId;
+          return await db.select()
+            .from(customerSupportTickets)
+            .where(
+              and(
+                eq(customerSupportTickets.id, ticketId),
+                eq(customerSupportTickets.operationId, operationId)
+              )
+            )
+            .limit(1)
+            .then(results => results[0]);
+        }
+      }
+
+      // Try by subject pattern (Re: TICKET-NUMBER)
+      if (subject) {
+        const ticketNumberMatch = subject.match(/(?:Re:|RE:).*?(SUP-\d{6}-\d{4})/i);
+        if (ticketNumberMatch) {
+          const ticketNumber = ticketNumberMatch[1];
+          return await db.select()
+            .from(customerSupportTickets)
+            .where(
+              and(
+                eq(customerSupportTickets.ticketNumber, ticketNumber),
+                eq(customerSupportTickets.operationId, operationId)
+              )
+            )
+            .limit(1)
+            .then(results => results[0]);
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error finding ticket by thread:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Extract name from email address
+   */
+  private extractNameFromEmail(email: string): string {
+    const match = email.match(/^"?([^"]*)"?\s*<.*>$/);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    
+    // If no name in format, use part before @
+    const atIndex = email.indexOf('@');
+    if (atIndex > 0) {
+      return email.substring(0, atIndex).replace(/[._]/g, ' ').trim();
+    }
+    
+    return email;
+  }
+
+  /**
+   * Send email reply to customer using client's domain
    */
   async sendEmailReply(
     operationId: string,
@@ -807,23 +978,109 @@ export class CustomerSupportService {
         return { success: false, error: 'Operation support not configured' };
       }
 
-      // For now, just save the message - in production this would send via Mailgun
-      await this.addMessage(operationId, ticketId, {
-        sender: 'agent',
-        senderName,
-        senderEmail,
-        subject,
-        content,
-        htmlContent: content.replace(/\n/g, '<br>'),
-        sentViaEmail: true,
-        emailSentAt: new Date(),
+      if (!process.env.MAILGUN_API_KEY) {
+        console.warn('⚠️ MAILGUN_API_KEY not configured, saving message only');
+        
+        await this.addMessage(operationId, ticketId, {
+          sender: 'agent',
+          senderName,
+          senderEmail: `${senderEmail.split('@')[0]}@${operation.emailDomain}`,
+          subject: `Re: ${subject} [${ticket.ticketNumber}]`,
+          content,
+          htmlContent: content.replace(/\n/g, '<br>'),
+          sentViaEmail: true,
+          emailSentAt: new Date(),
+        });
+
+        return { success: true };
+      }
+
+      // Prepare email using client's domain
+      const fromAddress = `${senderEmail.split('@')[0]}@${operation.emailDomain}`;
+      const emailData = {
+        from: `${senderName} <${fromAddress}>`,
+        to: ticket.customerEmail,
+        subject: `Re: ${subject} [${ticket.ticketNumber}]`,
+        text: content,
+        html: this.createEmailTemplate(content, senderName, operation.operationName),
+        'o:tag': ['customer-support'],
+        'o:tracking': true,
+        'h:Reply-To': fromAddress,
+      };
+
+      console.log('📧 Sending email via Mailgun:', {
+        from: emailData.from,
+        to: emailData.to,
+        subject: emailData.subject
       });
 
+      // Send via Mailgun
+      const result = await mg.messages.create(operation.emailDomain, emailData);
+      console.log('✅ Email sent successfully:', result.id);
+
+      // Save message with actual sent data
+      const message = await this.addMessage(operationId, ticketId, {
+        sender: 'agent',
+        senderName,
+        senderEmail: fromAddress,
+        subject: emailData.subject,
+        content,
+        htmlContent: emailData.html,
+        sentViaEmail: true,
+        emailSentAt: new Date(),
+        messageId: result.id,
+      });
+
+      // Update ticket status
+      await db.update(customerSupportTickets)
+        .set({ 
+          status: 'agent_reply',
+          lastActivityAt: new Date()
+        })
+        .where(eq(customerSupportTickets.id, ticketId));
+
       return { success: true };
-    } catch (error) {
-      console.error('Error sending email reply:', error);
-      return { success: false, error: 'Failed to send email' };
+    } catch (error: any) {
+      console.error('❌ Error sending email reply:', error);
+      return { success: false, error: error.message || 'Failed to send email' };
     }
+  }
+
+  /**
+   * Create HTML email template
+   */
+  private createEmailTemplate(content: string, senderName: string, operationName: string): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Resposta do Suporte</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">${operationName}</h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0;">Suporte ao Cliente</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px;">
+          <div style="color: #555; white-space: pre-wrap; font-size: 16px;">${content}</div>
+        </div>
+        
+        <div style="border-top: 2px solid #eee; padding-top: 20px;">
+          <p style="margin: 0; color: #666; font-size: 14px;">
+            <strong>${senderName}</strong><br>
+            Equipe de Suporte - ${operationName}
+          </p>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #999;">
+          <p>Esta é uma mensagem automática do sistema de suporte. Responda a este email para continuar a conversa.</p>
+        </div>
+      </body>
+      </html>
+    `;
   }
 }
 

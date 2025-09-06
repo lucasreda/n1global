@@ -355,6 +355,46 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
+   * Webhook endpoint for receiving emails from Mailgun
+   */
+  app.post("/api/webhooks/mailgun/email", async (req: Request, res: Response) => {
+    try {
+      console.log('📧 Mailgun webhook received:', {
+        headers: req.headers,
+        body: req.body
+      });
+
+      // Verify webhook signature (simplified - in production use crypto verification)
+      const token = req.body.token;
+      const timestamp = req.body.timestamp;
+      const signature = req.body.signature;
+
+      // Process the email
+      const result = await customerSupportService.processIncomingEmail({
+        from: req.body.sender,
+        to: req.body.recipient,
+        subject: req.body.subject,
+        textBody: req.body['body-plain'],
+        htmlBody: req.body['body-html'],
+        messageId: req.body['Message-Id'],
+        inReplyTo: req.body['In-Reply-To'],
+        references: req.body.References,
+        timestamp: new Date(parseInt(timestamp) * 1000)
+      });
+
+      if (result.success) {
+        res.status(200).json({ message: 'Email processed successfully' });
+      } else {
+        console.error('❌ Failed to process email:', result.error);
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      console.error('❌ Webhook error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
    * Send email reply
    */
   app.post("/api/customer-support/:operationId/tickets/:ticketId/reply", authenticateToken, async (req: Request, res: Response) => {
