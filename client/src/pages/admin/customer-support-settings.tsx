@@ -415,13 +415,6 @@ export default function CustomerSupportSettings() {
             
             {/* Status e próximos passos */}
             <div className="mt-4 space-y-3">
-              {dnsRecordsData?.dnsRecords?.length && (
-                <div className="flex items-center gap-2 text-sm text-green-400 bg-green-600/20 p-2 rounded">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>✅ Registros DNS carregados do Mailgun - Dados atualizados</span>
-                </div>
-              )}
-              
               <div className="bg-yellow-600/20 border border-yellow-600/30 rounded p-3">
                 <div className="flex items-start gap-2">
                   <span className="text-yellow-400 text-lg">⚠️</span>
