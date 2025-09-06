@@ -1083,8 +1083,8 @@ export class CustomerSupportService {
       const routeData = {
         priority: 1,
         description: `Support route ${domainName}`,
-        expression: `match_recipient(".*@${domainName}")`,
-        action: [`forward("${webhookUrl}")`, 'stop()']
+        expression: `match_recipient('*@${domainName}')`,
+        action: [`forward('${webhookUrl}')`, 'stop()']
       };
 
       console.log(`📧 Route data:`, routeData);
