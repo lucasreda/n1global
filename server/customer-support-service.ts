@@ -1062,9 +1062,9 @@ export class CustomerSupportService {
         return;
       }
 
-      // Get the current domain's webhook URL 
+      // Get the current domain's webhook URL (simplified)
       const webhookUrl = process.env.REPL_ID 
-        ? `https://${process.env.REPL_ID}-00-${process.env.REPL_SLUG}.${process.env.REPLIT_CLUSTER}.replit.dev/api/webhooks/mailgun/email`
+        ? `https://${process.env.REPL_ID}-00-workspace.${process.env.REPLIT_CLUSTER}.replit.dev/api/webhooks/mailgun/email`
         : 'https://localhost:5000/api/webhooks/mailgun/email';
 
       console.log(`🔗 Configuring webhook for ${domainName}: ${webhookUrl}`);
@@ -1076,13 +1076,33 @@ export class CustomerSupportService {
       
       console.log('✅ Webhooks configured successfully');
 
+      // Check existing routes first
+      console.log('📋 Checking existing routes...');
+      try {
+        const existingRoutes = await mg.routes.list();
+        console.log(`📋 Found ${existingRoutes.items?.length || 0} existing routes`);
+        
+        // Check if route for this domain already exists
+        const domainRoute = existingRoutes.items?.find(route => 
+          route.expression?.includes(domainName) || 
+          route.description?.includes(domainName)
+        );
+        
+        if (domainRoute) {
+          console.log(`✅ Route already exists for ${domainName}:`, domainRoute.id);
+          return; // Skip creation if already exists
+        }
+      } catch (listError) {
+        console.log('⚠️ Could not list existing routes, proceeding with creation');
+      }
+
       // CRITICAL: Create route for incoming emails
       console.log(`📧 Creating route for incoming emails to ${domainName}`);
       console.log(`📧 Route URL: ${webhookUrl}`);
       
       const routeData = {
         priority: 1,
-        description: `Support route ${domainName}`,
+        description: `Support ${domainName}`,
         expression: `match_recipient('*@${domainName}')`,
         action: [`forward('${webhookUrl}')`, 'stop()']
       };
@@ -1091,17 +1111,22 @@ export class CustomerSupportService {
 
       // Try creating route with retry for 503 errors
       let routeSuccess = false;
-      for (let attempt = 1; attempt <= 3; attempt++) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-          await mg.routes.create(routeData);
-          console.log('✅ Mailgun route created for incoming emails');
+          const routeResult = await mg.routes.create(routeData);
+          console.log('✅ Mailgun route created:', routeResult);
           routeSuccess = true;
           break;
         } catch (routeError: any) {
-          console.log(`❌ Route attempt ${attempt} failed:`, routeError);
-          if (routeError.status === 503 && attempt < 3) {
-            console.log(`⏳ Retrying route creation in 2 seconds...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log(`❌ Route attempt ${attempt} failed:`, {
+            status: routeError.status,
+            message: routeError.message,
+            details: routeError.details
+          });
+          
+          if (routeError.status === 503 && attempt < 2) {
+            console.log(`⏳ Retrying route creation in 3 seconds...`);
+            await new Promise(resolve => setTimeout(resolve, 3000));
           } else {
             throw routeError;
           }
@@ -1109,7 +1134,7 @@ export class CustomerSupportService {
       }
 
       if (!routeSuccess) {
-        console.log('❌ All route creation attempts failed');
+        console.log('❌ All route creation attempts failed - may need manual creation');
       }
 
     } catch (error: any) {
