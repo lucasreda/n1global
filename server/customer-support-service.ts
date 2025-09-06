@@ -1069,14 +1069,7 @@ export class CustomerSupportService {
 
       console.log(`🔗 Configuring webhook for ${domainName}: ${webhookUrl}`);
 
-      // Create or update webhooks (for sent email events)
-      await mg.webhooks.create(domainName, 'delivered', webhookUrl, true);
-      await mg.webhooks.create(domainName, 'opened', webhookUrl, true);
-      await mg.webhooks.create(domainName, 'clicked', webhookUrl, true);
-      
-      console.log('✅ Webhooks configured successfully');
-
-      // CRITICAL: Create route for incoming emails using direct API call
+      // CRITICAL: Create route for incoming emails FIRST (using direct API call)
       console.log(`📧 Creating route for incoming emails to ${domainName}`);
       console.log(`📧 Route URL: ${webhookUrl}`);
       
@@ -1136,6 +1129,17 @@ export class CustomerSupportService {
 
       if (!routeSuccess) {
         console.log('❌ All route creation attempts failed - may need manual creation');
+      }
+
+      // Now create webhooks (for sent email events) - these are optional
+      try {
+        console.log('📧 Creating webhooks for email events...');
+        await mg.webhooks.create(domainName, 'delivered', webhookUrl, true);
+        await mg.webhooks.create(domainName, 'opened', webhookUrl, true);
+        await mg.webhooks.create(domainName, 'clicked', webhookUrl, true);
+        console.log('✅ Webhooks configured successfully');
+      } catch (webhookError: any) {
+        console.log('⚠️ Webhook creation failed (not critical):', webhookError.message);
       }
 
     } catch (error: any) {
