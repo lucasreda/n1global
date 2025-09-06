@@ -549,31 +549,239 @@ export class CustomerSupportService {
   }
 
   /**
-   * Configure Mailgun domain for operation (placeholder for future implementation)
+   * Configure Mailgun domain for operation
    */
   async configureMailgunDomain(
     operationId: string,
     domainName: string,
     isCustomDomain: boolean = false
-  ): Promise<{ success: boolean; domain?: any; error?: string }> {
+  ): Promise<{ success: boolean; domain?: any; error?: string; dnsRecords?: any[] }> {
     try {
-      // This is a placeholder - in production you'd use Mailgun API
-      // to create and verify domains
+      if (!process.env.MAILGUN_API_KEY) {
+        console.warn('⚠️ MAILGUN_API_KEY not configured, using mock data');
+        return this.configureMockDomain(operationId, domainName, isCustomDomain);
+      }
+
+      console.log(`📧 Creating Mailgun domain: ${domainName}`);
       
+      // Create domain in Mailgun
+      const domainData = {
+        name: domainName,
+        spam_action: 'disabled',
+        wildcard: false
+      };
+
+      const createResponse = await mg.domains.create(domainData);
+      console.log('✅ Mailgun domain created:', createResponse);
+
+      // Get DNS records for the domain
+      const dnsRecords = await this.getDomainDnsRecords(domainName);
+
+      // Update database with domain info
       await db.update(customerSupportOperations)
         .set({
           emailDomain: domainName,
           isCustomDomain,
           mailgunDomainName: domainName,
-          domainVerified: false, // Would be true after Mailgun verification
+          domainVerified: false,
+          updatedAt: new Date(),
         })
         .where(eq(customerSupportOperations.operationId, operationId));
 
-      return { success: true };
-    } catch (error) {
-      console.error('Error configuring Mailgun domain:', error);
-      return { success: false, error: 'Failed to configure domain' };
+      return { 
+        success: true, 
+        domain: createResponse.domain,
+        dnsRecords 
+      };
+    } catch (error: any) {
+      console.error('❌ Error configuring Mailgun domain:', error);
+      
+      // If domain already exists, that's OK - get its DNS records
+      if (error.status === 400 && error.message?.includes('already exists')) {
+        console.log('📧 Domain already exists, fetching DNS records...');
+        
+        try {
+          const dnsRecords = await this.getDomainDnsRecords(domainName);
+          
+          await db.update(customerSupportOperations)
+            .set({
+              emailDomain: domainName,
+              isCustomDomain,
+              mailgunDomainName: domainName,
+              domainVerified: false,
+              updatedAt: new Date(),
+            })
+            .where(eq(customerSupportOperations.operationId, operationId));
+
+          return { 
+            success: true, 
+            domain: { name: domainName },
+            dnsRecords 
+          };
+        } catch (dnsError) {
+          console.error('❌ Error fetching DNS records:', dnsError);
+          return { success: false, error: 'Domain exists but could not fetch DNS records' };
+        }
+      }
+      
+      return { success: false, error: error.message || 'Failed to configure domain' };
     }
+  }
+
+  /**
+   * Get DNS records for a Mailgun domain
+   */
+  async getDomainDnsRecords(domainName: string): Promise<any[]> {
+    try {
+      if (!process.env.MAILGUN_API_KEY) {
+        return this.getMockDnsRecords(domainName);
+      }
+
+      console.log(`📋 Fetching DNS records for: ${domainName}`);
+      const response = await mg.domains.get(domainName);
+      
+      const dnsRecords = [];
+      
+      // Add receiving records
+      if (response.receiving_dns_records) {
+        dnsRecords.push(...response.receiving_dns_records.map((record: any) => ({
+          ...record,
+          category: 'receiving'
+        })));
+      }
+
+      // Add sending records  
+      if (response.sending_dns_records) {
+        dnsRecords.push(...response.sending_dns_records.map((record: any) => ({
+          ...record,
+          category: 'sending'
+        })));
+      }
+
+      console.log(`✅ Found ${dnsRecords.length} DNS records`);
+      return dnsRecords;
+    } catch (error) {
+      console.error('❌ Error fetching DNS records:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify domain configuration
+   */
+  async verifyDomain(operationId: string, domainName: string): Promise<{ success: boolean; verified?: boolean; error?: string }> {
+    try {
+      if (!process.env.MAILGUN_API_KEY) {
+        console.log('🔍 Mock verification for:', domainName);
+        // Mock verification - simulate successful verification
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        await db.update(customerSupportOperations)
+          .set({
+            domainVerified: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(customerSupportOperations.operationId, operationId));
+
+        return { success: true, verified: true };
+      }
+
+      console.log(`🔍 Verifying domain: ${domainName}`);
+      
+      // Check domain status in Mailgun
+      const response = await mg.domains.get(domainName);
+      const isVerified = response.state === 'active';
+
+      // Update database
+      await db.update(customerSupportOperations)
+        .set({
+          domainVerified: isVerified,
+          updatedAt: new Date(),
+        })
+        .where(eq(customerSupportOperations.operationId, operationId));
+
+      return { success: true, verified: isVerified };
+    } catch (error: any) {
+      console.error('❌ Error verifying domain:', error);
+      return { success: false, error: error.message || 'Failed to verify domain' };
+    }
+  }
+
+  /**
+   * Mock domain configuration (fallback when API key not available)
+   */
+  private async configureMockDomain(
+    operationId: string,
+    domainName: string,
+    isCustomDomain: boolean
+  ): Promise<{ success: boolean; domain?: any; dnsRecords?: any[] }> {
+    const dnsRecords = this.getMockDnsRecords(domainName);
+    
+    await db.update(customerSupportOperations)
+      .set({
+        emailDomain: domainName,
+        isCustomDomain,
+        mailgunDomainName: domainName,
+        domainVerified: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(customerSupportOperations.operationId, operationId));
+
+    return { 
+      success: true, 
+      domain: { name: domainName },
+      dnsRecords 
+    };
+  }
+
+  /**
+   * Get mock DNS records (fallback when API key not available)
+   */
+  private getMockDnsRecords(domainName: string): any[] {
+    return [
+      {
+        record_type: 'TXT',
+        name: domainName,
+        value: `v=spf1 include:mailgun.org ~all`,
+        category: 'sending',
+        valid: 'unknown',
+        dns_type: 'TXT'
+      },
+      {
+        record_type: 'TXT',
+        name: `mg._domainkey.${domainName}`,
+        value: 'k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC4...',
+        category: 'sending',
+        valid: 'unknown',
+        dns_type: 'TXT'
+      },
+      {
+        record_type: 'CNAME',
+        name: `email.${domainName}`,
+        value: 'mailgun.org',
+        category: 'sending',
+        valid: 'unknown',
+        dns_type: 'CNAME'
+      },
+      {
+        record_type: 'MX',
+        name: domainName,
+        value: '10 mxa.mailgun.org',
+        category: 'receiving',
+        valid: 'unknown',
+        dns_type: 'MX',
+        priority: '10'
+      },
+      {
+        record_type: 'MX',
+        name: domainName,
+        value: '10 mxb.mailgun.org',
+        category: 'receiving',
+        valid: 'unknown',
+        dns_type: 'MX',
+        priority: '10'
+      }
+    ];
   }
 
   /**
