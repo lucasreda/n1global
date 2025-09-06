@@ -95,15 +95,17 @@ export async function seedDatabase() {
       console.log("ℹ️  Default operation already exists");
     }
 
-    // Check if N1 Warehouse 1 provider exists for this operation
-    const [existingProvider] = await db
+    // Check and create N1 Warehouse providers
+    const existingProviders = await db
       .select()
       .from(shippingProviders)
-      .where(eq(shippingProviders.operationId, defaultOperation.id))
-      .limit(1);
+      .where(eq(shippingProviders.operationId, defaultOperation.id));
 
-    if (!existingProvider) {
-      const [provider] = await db
+    const providerNames = existingProviders.map(p => p.name);
+
+    // Create N1 Warehouse 1 if it doesn't exist
+    if (!providerNames.includes("N1 Warehouse 1")) {
+      const [provider1] = await db
         .insert(shippingProviders)
         .values({
           storeId: defaultStore.id,
@@ -115,9 +117,28 @@ export async function seedDatabase() {
         })
         .returning();
       
-      console.log("✅ N1 Warehouse 1 provider created:", provider.name);
+      console.log("✅ N1 Warehouse 1 provider created:", provider1.name);
     } else {
       console.log("ℹ️  N1 Warehouse 1 provider already exists");
+    }
+
+    // Create N1 Warehouse 2 if it doesn't exist
+    if (!providerNames.includes("N1 Warehouse 2")) {
+      const [provider2] = await db
+        .insert(shippingProviders)
+        .values({
+          storeId: defaultStore.id,
+          operationId: defaultOperation.id,
+          name: "N1 Warehouse 2",
+          type: "european_fulfillment",
+          apiUrl: "https://api-test.ecomfulfilment.eu/",
+          isActive: true,
+        })
+        .returning();
+      
+      console.log("✅ N1 Warehouse 2 provider created:", provider2.name);
+    } else {
+      console.log("ℹ️  N1 Warehouse 2 provider already exists");
     }
 
     // Sample products removed - no longer creating automatic demo products
