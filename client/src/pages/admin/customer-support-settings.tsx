@@ -8,11 +8,12 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface SupportConfig {
   emailDomain: string;
+  emailPrefix: string;
   isCustomDomain: boolean;
   domainVerified: boolean;
   mailgunDomainName?: string;
@@ -180,6 +181,81 @@ export default function CustomerSupportSettings() {
         </div>
       </div>
 
+      {/* Emails Configurados */}
+      {supportConfig?.emailDomain && (
+        <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-green-400" />
+                <CardTitle className="text-white" style={{ fontSize: '18px' }}>Emails Configurados</CardTitle>
+              </div>
+              <Badge variant="outline" className="bg-green-600/20 text-green-400 border-green-600/30">
+                1 email ativo
+              </Badge>
+            </div>
+            <CardDescription>
+              Emails de suporte configurados para esta operação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-white">
+                        {supportConfig.emailPrefix}@{supportConfig.emailDomain}
+                      </span>
+                      {supportConfig.domainVerified ? (
+                        <Badge className="bg-green-600/20 text-green-400 border-green-600/30 text-xs">
+                          Verificado
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30 text-xs">
+                          Pendente
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {supportConfig.isCustomDomain ? "Domínio personalizado" : "Domínio padrão"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-600/20"
+                    onClick={() => {
+                      setEmailPrefix(supportConfig.emailPrefix || "");
+                      setCustomDomain(supportConfig.emailDomain || "");
+                    }}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
+                    onClick={() => {
+                      // TODO: Implementar remoção
+                      toast({
+                        title: "Em breve",
+                        description: "Funcionalidade de remoção será implementada em breve.",
+                      });
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Current Configuration */}
         <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
@@ -195,10 +271,10 @@ export default function CustomerSupportSettings() {
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Domínio de Email</span>
-                {supportConfig?.emailDomain ? (
+                <span className="text-sm text-gray-300">Email de Suporte</span>
+                {supportConfig?.emailDomain && supportConfig?.emailPrefix ? (
                   <Badge variant="outline" className="bg-blue-600/20 text-blue-400 border-blue-600/30">
-                    {supportConfig.emailDomain}
+                    {supportConfig.emailPrefix}@{supportConfig.emailDomain}
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="bg-gray-600/20 text-gray-400 border-gray-600/30">
