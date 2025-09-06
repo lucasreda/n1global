@@ -600,11 +600,14 @@ export class CustomerSupportService {
       console.error('❌ Error configuring Mailgun domain:', error);
       
       // If domain already exists, that's OK - get its DNS records
-      if (error.status === 400 && error.message?.includes('already exists')) {
-        console.log('📧 Domain already exists, fetching DNS records...');
+      if (error.status === 400 && (error.message?.includes('already exists') || error.details?.includes('already exists'))) {
+        console.log('📧 Domain already exists, fetching DNS records and configuring routes...');
         
         try {
           const dnsRecords = await this.getDomainDnsRecords(domainName);
+          
+          // Configure webhook and routes for existing domain
+          await this.configureWebhook(domainName);
           
           await db.update(customerSupportOperations)
             .set({
