@@ -1078,16 +1078,39 @@ export class CustomerSupportService {
 
       // CRITICAL: Create route for incoming emails
       console.log(`📧 Creating route for incoming emails to ${domainName}`);
+      console.log(`📧 Route URL: ${webhookUrl}`);
       
       const routeData = {
         priority: 1,
-        description: `Route for ${domainName} customer support`,
+        description: `Support route ${domainName}`,
         expression: `match_recipient(".*@${domainName}")`,
         action: [`forward("${webhookUrl}")`, 'stop()']
       };
 
-      await mg.routes.create(routeData);
-      console.log('✅ Mailgun route created for incoming emails');
+      console.log(`📧 Route data:`, routeData);
+
+      // Try creating route with retry for 503 errors
+      let routeSuccess = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await mg.routes.create(routeData);
+          console.log('✅ Mailgun route created for incoming emails');
+          routeSuccess = true;
+          break;
+        } catch (routeError: any) {
+          console.log(`❌ Route attempt ${attempt} failed:`, routeError);
+          if (routeError.status === 503 && attempt < 3) {
+            console.log(`⏳ Retrying route creation in 2 seconds...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else {
+            throw routeError;
+          }
+        }
+      }
+
+      if (!routeSuccess) {
+        console.log('❌ All route creation attempts failed');
+      }
 
     } catch (error: any) {
       console.error('❌ Error configuring webhooks/routes:', error);
