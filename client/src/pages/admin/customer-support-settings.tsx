@@ -33,6 +33,7 @@ export default function CustomerSupportSettings() {
   const { selectedOperation, operations } = useCurrentOperation();
   const currentOperationId = selectedOperation;
   const currentOperationName = operations.find(op => op.id === selectedOperation)?.name;
+  const [emailPrefix, setEmailPrefix] = useState("");
   const [customDomain, setCustomDomain] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -55,24 +56,25 @@ export default function CustomerSupportSettings() {
 
   // Configure domain mutation
   const configureDomainMutation = useMutation({
-    mutationFn: async (domain: string) => {
+    mutationFn: async ({ domain, emailPrefix }: { domain: string; emailPrefix: string }) => {
       const response = await fetch(`/api/customer-support/${currentOperationId}/configure-domain`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify({ domain, isCustomDomain: true })
+        body: JSON.stringify({ domain, emailPrefix, isCustomDomain: true })
       });
       if (!response.ok) throw new Error('Failed to configure domain');
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Domínio configurado",
-        description: "O domínio foi configurado com sucesso. Aguarde a verificação.",
+        title: "Email configurado",
+        description: "O email foi configurado com sucesso. Aguarde a verificação.",
       });
       refetch();
+      setEmailPrefix("");
       setCustomDomain("");
     },
     onError: () => {
@@ -116,8 +118,11 @@ export default function CustomerSupportSettings() {
   });
 
   const handleConfigureDomain = () => {
-    if (!customDomain.trim()) return;
-    configureDomainMutation.mutate(customDomain.trim());
+    if (!emailPrefix.trim() || !customDomain.trim()) return;
+    configureDomainMutation.mutate({ 
+      domain: customDomain.trim(), 
+      emailPrefix: emailPrefix.trim() 
+    });
   };
 
   const handleVerifyDomain = () => {
@@ -272,25 +277,40 @@ export default function CustomerSupportSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="custom-domain" className="text-gray-300">
-                Domínio de Email
+              <Label htmlFor="email-config" className="text-gray-300">
+                Email de Suporte
               </Label>
-              <Input
-                id="custom-domain"
-                type="text"
-                placeholder="support.meudominio.com"
-                value={customDomain}
-                onChange={(e) => setCustomDomain(e.target.value)}
-                className="bg-gray-800/50 border-gray-600/50 text-white"
-              />
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input
+                    id="email-prefix"
+                    type="text"
+                    placeholder="suporte"
+                    value={emailPrefix}
+                    onChange={(e) => setEmailPrefix(e.target.value)}
+                    className="bg-gray-800/50 border-gray-600/50 text-white"
+                  />
+                </div>
+                <span className="text-gray-400 text-lg font-medium px-2">@</span>
+                <div className="flex-1">
+                  <Input
+                    id="custom-domain"
+                    type="text"
+                    placeholder="meudominio.com.br"
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value)}
+                    className="bg-gray-800/50 border-gray-600/50 text-white"
+                  />
+                </div>
+              </div>
               <p className="text-xs text-gray-400">
-                Insira o subdomínio que você quer usar para emails de suporte
+                Escolha o nome do email (ex: suporte, atendimento) e seu domínio personalizado
               </p>
             </div>
 
             <Button 
               onClick={handleConfigureDomain}
-              disabled={!customDomain.trim() || configureDomainMutation.isPending}
+              disabled={!emailPrefix.trim() || !customDomain.trim() || configureDomainMutation.isPending}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white"
             >
               {configureDomainMutation.isPending ? (
@@ -301,7 +321,7 @@ export default function CustomerSupportSettings() {
               ) : (
                 <>
                   <Mail className="w-4 h-4 mr-2" />
-                  Configurar Domínio
+                  Configurar Email
                 </>
               )}
             </Button>
