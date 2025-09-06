@@ -554,7 +554,8 @@ export class CustomerSupportService {
   async configureMailgunDomain(
     operationId: string,
     domainName: string,
-    isCustomDomain: boolean = false
+    isCustomDomain: boolean = false,
+    emailPrefix: string = "suporte"
   ): Promise<{ success: boolean; domain?: any; error?: string; dnsRecords?: any[] }> {
     try {
       if (!process.env.MAILGUN_API_KEY) {
@@ -578,7 +579,7 @@ export class CustomerSupportService {
       const dnsRecords = await this.getDomainDnsRecords(domainName);
 
       // Configure webhook for the domain
-      await this.configureWebhook(domainName);
+      await this.configureWebhook(domainName, emailPrefix);
 
       // Update database with domain info
       await db.update(customerSupportOperations)
@@ -613,7 +614,7 @@ export class CustomerSupportService {
           const dnsRecords = await this.getDomainDnsRecords(domainName);
           
           // Configure webhook and routes for existing domain
-          await this.configureWebhook(domainName);
+          await this.configureWebhook(domainName, emailPrefix);
           
           await db.update(customerSupportOperations)
             .set({
@@ -1055,7 +1056,7 @@ export class CustomerSupportService {
   /**
    * Configure webhook and routes for Mailgun domain
    */
-  private async configureWebhook(domainName: string): Promise<void> {
+  private async configureWebhook(domainName: string, emailPrefix: string = "suporte"): Promise<void> {
     try {
       if (!process.env.MAILGUN_API_KEY) {
         console.log('⚠️ Skipping webhook/route setup - no API key');
@@ -1076,7 +1077,7 @@ export class CustomerSupportService {
       const routeData = new URLSearchParams();
       routeData.append('priority', '1');
       routeData.append('description', `Support ${domainName}`);
-      routeData.append('expression', `match_recipient(".*@${domainName}")`);
+      routeData.append('expression', `match_recipient("${emailPrefix}@${domainName}")`);
       routeData.append('action', `forward("${webhookUrl}")`);
       routeData.append('action', 'stop()');
 

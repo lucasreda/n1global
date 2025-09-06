@@ -252,16 +252,17 @@ export function registerCustomerSupportRoutes(app: Express) {
   app.post("/api/customer-support/:operationId/configure-domain", authenticateToken, async (req: Request, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { domain, isCustomDomain } = req.body;
+      const { domain, emailPrefix, isCustomDomain } = req.body;
       
-      if (!domain) {
-        return res.status(400).json({ message: "Domain is required" });
+      if (!domain || !emailPrefix) {
+        return res.status(400).json({ message: "Domain and email prefix are required" });
       }
 
       const result = await customerSupportService.configureMailgunDomain(
         operationId,
         domain,
-        isCustomDomain
+        isCustomDomain,
+        emailPrefix
       );
       
       if (result.success) {
