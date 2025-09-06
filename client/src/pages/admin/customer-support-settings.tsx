@@ -319,66 +319,124 @@ export default function CustomerSupportSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Instruções para o cliente */}
+            <div className="mb-4 p-3 bg-blue-600/20 border border-blue-600/30 rounded-lg">
+              <p className="text-blue-300 text-sm font-medium mb-1">
+                📋 Instruções para seu provedor DNS
+              </p>
+              <p className="text-blue-200 text-xs">
+                Copie os registros abaixo e adicione-os nas configurações DNS do seu domínio. 
+                <strong> Todos os 5 registros são obrigatórios</strong> para o email funcionar corretamente.
+              </p>
+            </div>
+
             <div className="bg-gray-800/50 rounded-lg p-4 font-mono text-sm">
-              <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-4 text-gray-300">
-                  <span className="font-semibold">Tipo</span>
-                  <span className="font-semibold">Nome</span>
-                  <span className="font-semibold">Valor</span>
+              <div className="space-y-3">
+                {/* Cabeçalho da tabela */}
+                <div className="grid grid-cols-12 gap-2 text-gray-300 pb-2 border-b border-gray-600">
+                  <span className="col-span-2 font-semibold text-xs">TIPO</span>
+                  <span className="col-span-5 font-semibold text-xs">NOME/HOST</span>
+                  <span className="col-span-4 font-semibold text-xs">VALOR</span>
+                  <span className="col-span-1 font-semibold text-xs text-center">PRIO</span>
                 </div>
-                <Separator className="bg-gray-600" />
                 
                 {dnsRecordsData?.dnsRecords?.length ? (
-                  dnsRecordsData.dnsRecords.map((record, index) => (
-                    <div key={index} className="grid grid-cols-3 gap-4 text-white">
-                      <span className="text-yellow-400">{record.record_type}</span>
-                      <span className="break-all">{record.name}</span>
-                      <span className="break-all text-green-400">
-                        {record.record_type === 'MX' && record.priority ? `${record.priority} ` : ''}
-                        {record.value}
-                      </span>
-                    </div>
-                  ))
-                ) : (
                   <>
-                    <div className="grid grid-cols-3 gap-4 text-white">
-                      <span className="text-yellow-400">TXT</span>
-                      <span>{supportConfig.emailDomain}</span>
-                      <span className="text-green-400">v=spf1 include:mailgun.org ~all</span>
+                    {/* Separar por categoria */}
+                    {dnsRecordsData.dnsRecords
+                      .filter(record => record.category === 'receiving')
+                      .map((record, index) => (
+                        <div key={`receiving-${index}`} className="grid grid-cols-12 gap-2 text-white py-1">
+                          <span className="col-span-2 text-green-400 font-bold text-xs">{record.record_type}</span>
+                          <span className="col-span-5 break-all text-xs text-gray-200">{record.name}</span>
+                          <span className="col-span-4 break-all text-green-300 text-xs">{record.value}</span>
+                          <span className="col-span-1 text-center text-yellow-400 text-xs font-bold">
+                            {record.priority || '-'}
+                          </span>
+                        </div>
+                    ))}
+                    
+                    {dnsRecordsData.dnsRecords.filter(record => record.category === 'receiving').length > 0 && (
+                      <div className="text-xs text-gray-400 flex items-center gap-2 py-1">
+                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                        <span>Registros MX - Para receber emails</span>
+                      </div>
+                    )}
+
+                    {dnsRecordsData.dnsRecords
+                      .filter(record => record.category === 'sending')
+                      .map((record, index) => (
+                        <div key={`sending-${index}`} className="grid grid-cols-12 gap-2 text-white py-1">
+                          <span className="col-span-2 text-blue-400 font-bold text-xs">{record.record_type}</span>
+                          <span className="col-span-5 break-all text-xs text-gray-200">{record.name}</span>
+                          <span className="col-span-4 break-all text-blue-300 text-xs">{record.value}</span>
+                          <span className="col-span-1 text-center text-gray-500 text-xs">-</span>
+                        </div>
+                    ))}
+                    
+                    {dnsRecordsData.dnsRecords.filter(record => record.category === 'sending').length > 0 && (
+                      <div className="text-xs text-gray-400 flex items-center gap-2 py-1">
+                        <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                        <span>Registros TXT/CNAME - Para enviar emails e autenticação</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Registros de fallback */
+                  <>
+                    <div className="grid grid-cols-12 gap-2 text-white py-1">
+                      <span className="col-span-2 text-blue-400 font-bold text-xs">TXT</span>
+                      <span className="col-span-5 text-xs text-gray-200">{supportConfig.emailDomain}</span>
+                      <span className="col-span-4 text-blue-300 text-xs">v=spf1 include:mailgun.org ~all</span>
+                      <span className="col-span-1 text-center text-gray-500 text-xs">-</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 text-white">
-                      <span className="text-yellow-400">MX</span>
-                      <span>{supportConfig.emailDomain}</span>
-                      <span className="text-green-400">10 mxa.mailgun.org</span>
+                    <div className="grid grid-cols-12 gap-2 text-white py-1">
+                      <span className="col-span-2 text-green-400 font-bold text-xs">MX</span>
+                      <span className="col-span-5 text-xs text-gray-200">{supportConfig.emailDomain}</span>
+                      <span className="col-span-4 text-green-300 text-xs">mxa.mailgun.org</span>
+                      <span className="col-span-1 text-center text-yellow-400 text-xs font-bold">10</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 text-white">
-                      <span className="text-yellow-400">CNAME</span>
-                      <span>email.{supportConfig.emailDomain}</span>
-                      <span className="text-green-400">mailgun.org</span>
+                    <div className="grid grid-cols-12 gap-2 text-white py-1">
+                      <span className="col-span-2 text-green-400 font-bold text-xs">MX</span>
+                      <span className="col-span-5 text-xs text-gray-200">{supportConfig.emailDomain}</span>
+                      <span className="col-span-4 text-green-300 text-xs">mxb.mailgun.org</span>
+                      <span className="col-span-1 text-center text-yellow-400 text-xs font-bold">10</span>
+                    </div>
+                    <div className="grid grid-cols-12 gap-2 text-white py-1">
+                      <span className="col-span-2 text-blue-400 font-bold text-xs">CNAME</span>
+                      <span className="col-span-5 text-xs text-gray-200">email.{supportConfig.emailDomain}</span>
+                      <span className="col-span-4 text-blue-300 text-xs">mailgun.org</span>
+                      <span className="col-span-1 text-center text-gray-500 text-xs">-</span>
                     </div>
                   </>
                 )}
               </div>
             </div>
             
-            {dnsRecordsData?.dnsRecords?.length && (
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-blue-400">
+            {/* Status e próximos passos */}
+            <div className="mt-4 space-y-3">
+              {dnsRecordsData?.dnsRecords?.length && (
+                <div className="flex items-center gap-2 text-sm text-green-400 bg-green-600/20 p-2 rounded">
                   <CheckCircle className="w-4 h-4" />
-                  <span>Registros DNS específicos carregados do Mailgun</span>
+                  <span>✅ Registros DNS carregados do Mailgun - Dados atualizados</span>
                 </div>
-                <div className="text-xs text-gray-400">
-                  <span className="text-yellow-400">●</span> Registros de envio (TXT, CNAME)
-                </div>
-                <div className="text-xs text-gray-400">
-                  <span className="text-green-400">●</span> Registros de recebimento (MX)
+              )}
+              
+              <div className="bg-yellow-600/20 border border-yellow-600/30 rounded p-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-yellow-400 text-lg">⚠️</span>
+                  <div className="text-xs text-yellow-200">
+                    <p className="font-medium mb-1">Importantes:</p>
+                    <ul className="space-y-1 text-yellow-100">
+                      <li>• Todos os 5 registros são obrigatórios</li>
+                      <li>• Para registros MX, a prioridade deve ser <strong>10</strong></li>
+                      <li>• Aguarde até 24h para propagação DNS</li>
+                      <li>• Use o botão "Verificar Domínio" após configurar</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            )}
-            
-            <p className="text-xs text-gray-400 mt-3">
-              Após adicionar estes registros DNS, clique em "Verificar Domínio" para confirmar a configuração.
-            </p>
+            </div>
           </CardContent>
         </Card>
       )}
