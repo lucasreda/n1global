@@ -1076,55 +1076,56 @@ export class CustomerSupportService {
       
       console.log('✅ Webhooks configured successfully');
 
-      // Check existing routes first
-      console.log('📋 Checking existing routes...');
-      try {
-        const existingRoutes = await mg.routes.list();
-        console.log(`📋 Found ${existingRoutes.items?.length || 0} existing routes`);
-        
-        // Check if route for this domain already exists
-        const domainRoute = existingRoutes.items?.find(route => 
-          route.expression?.includes(domainName) || 
-          route.description?.includes(domainName)
-        );
-        
-        if (domainRoute) {
-          console.log(`✅ Route already exists for ${domainName}:`, domainRoute.id);
-          return; // Skip creation if already exists
-        }
-      } catch (listError) {
-        console.log('⚠️ Could not list existing routes, proceeding with creation');
-      }
-
-      // CRITICAL: Create route for incoming emails
+      // CRITICAL: Create route for incoming emails using direct API call
       console.log(`📧 Creating route for incoming emails to ${domainName}`);
       console.log(`📧 Route URL: ${webhookUrl}`);
       
-      const routeData = {
-        priority: 1,
-        description: `Support ${domainName}`,
-        expression: `match_recipient('*@${domainName}')`,
-        action: [`forward('${webhookUrl}')`, 'stop()']
-      };
+      const routeData = new URLSearchParams();
+      routeData.append('priority', '1');
+      routeData.append('description', `Support ${domainName}`);
+      routeData.append('expression', `match_recipient('*@${domainName}')`);
+      routeData.append('action', `forward('${webhookUrl}')`);
+      routeData.append('action', 'stop()');
 
-      console.log(`📧 Route data:`, routeData);
+      console.log(`📧 Creating route with direct API call...`);
 
-      // Try creating route with retry for 503 errors
+      // Create route using direct API call
       let routeSuccess = false;
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-          const routeResult = await mg.routes.create(routeData);
-          console.log('✅ Mailgun route created:', routeResult);
-          routeSuccess = true;
-          break;
-        } catch (routeError: any) {
-          console.log(`❌ Route attempt ${attempt} failed:`, {
-            status: routeError.status,
-            message: routeError.message,
-            details: routeError.details
+          const response = await fetch('https://api.mailgun.net/v3/routes', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${Buffer.from(`api:${process.env.MAILGUN_API_KEY}`).toString('base64')}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: routeData
           });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Mailgun route created successfully:', result.route?.id);
+            routeSuccess = true;
+            break;
+          } else {
+            const errorText = await response.text();
+            console.log(`❌ Route attempt ${attempt} failed:`, {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText
+            });
+            
+            if (response.status === 503 && attempt < 2) {
+              console.log(`⏳ Retrying route creation in 3 seconds...`);
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            } else {
+              throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+          }
+        } catch (routeError: any) {
+          console.log(`❌ Route attempt ${attempt} failed:`, routeError.message);
           
-          if (routeError.status === 503 && attempt < 2) {
+          if (attempt < 2) {
             console.log(`⏳ Retrying route creation in 3 seconds...`);
             await new Promise(resolve => setTimeout(resolve, 3000));
           } else {
