@@ -34,15 +34,7 @@ export default function CustomerSupportSettings() {
     retryDelay: 1000,
   });
 
-  // Debug logs
-  console.log('🔧 Settings Page Debug:', {
-    currentOperationId,
-    currentOperationName,
-    isLoading,
-    supportConfig,
-    error: error?.message,
-    enabled: !!currentOperationId
-  });
+  // Configuration loaded successfully
 
   // Configure domain mutation
   const configureDomainMutation = useMutation({
@@ -112,7 +104,6 @@ export default function CustomerSupportSettings() {
 
   // Show loading while waiting for operation ID to load
   if (!currentOperationId) {
-    console.log('🔧 No operation ID available - waiting...');
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -124,7 +115,6 @@ export default function CustomerSupportSettings() {
   }
 
   if (isLoading) {
-    console.log('🔧 Loading configuration...');
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -136,7 +126,6 @@ export default function CustomerSupportSettings() {
   }
 
   if (error) {
-    console.log('🔧 Error loading configuration:', error);
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -167,7 +156,7 @@ export default function CustomerSupportSettings() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-blue-400" />
-              <CardTitle className="text-white">Configuração Atual</CardTitle>
+              <CardTitle className="text-white" style={{ fontSize: '18px' }}>Configuração Atual</CardTitle>
             </div>
             <CardDescription>
               Status da configuração do sistema de suporte
@@ -250,7 +239,7 @@ export default function CustomerSupportSettings() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Globe className="w-5 h-5 text-purple-400" />
-              <CardTitle className="text-white">Domínio Personalizado</CardTitle>
+              <CardTitle className="text-white" style={{ fontSize: '18px' }}>Domínio Personalizado</CardTitle>
             </div>
             <CardDescription>
               Configure seu próprio domínio para emails de suporte
@@ -299,7 +288,7 @@ export default function CustomerSupportSettings() {
       {supportConfig?.emailDomain && !supportConfig.domainVerified && (
         <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
           <CardHeader>
-            <CardTitle className="text-white">Instruções de Configuração DNS</CardTitle>
+            <CardTitle className="text-white" style={{ fontSize: '18px' }}>Instruções de Configuração DNS</CardTitle>
             <CardDescription>
               Adicione os seguintes registros DNS ao seu domínio para verificar
             </CardDescription>
