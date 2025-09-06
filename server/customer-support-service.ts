@@ -1044,12 +1044,12 @@ export class CustomerSupportService {
   }
 
   /**
-   * Configure webhook for Mailgun domain
+   * Configure webhook and routes for Mailgun domain
    */
   private async configureWebhook(domainName: string): Promise<void> {
     try {
       if (!process.env.MAILGUN_API_KEY) {
-        console.log('⚠️ Skipping webhook setup - no API key');
+        console.log('⚠️ Skipping webhook/route setup - no API key');
         return;
       }
 
@@ -1060,15 +1060,36 @@ export class CustomerSupportService {
 
       console.log(`🔗 Configuring webhook for ${domainName}: ${webhookUrl}`);
 
-      // Create or update webhook
-      await mg.webhooks.create(domainName, 'delivered', webhookUrl);
-      await mg.webhooks.create(domainName, 'opened', webhookUrl);
-      await mg.webhooks.create(domainName, 'clicked', webhookUrl);
+      // Create or update webhooks (for sent email events)
+      await mg.webhooks.create(domainName, 'delivered', webhookUrl, true);
+      await mg.webhooks.create(domainName, 'opened', webhookUrl, true);
+      await mg.webhooks.create(domainName, 'clicked', webhookUrl, true);
       
       console.log('✅ Webhooks configured successfully');
-    } catch (error) {
-      console.error('❌ Error configuring webhooks:', error);
-      // Don't throw - webhook is nice to have but not critical
+
+      // CRITICAL: Create route for incoming emails
+      console.log(`📧 Creating route for incoming emails to ${domainName}`);
+      
+      const routeData = {
+        priority: 1,
+        description: `Route for ${domainName} customer support`,
+        expression: `match_recipient(".*@${domainName}")`,
+        action: [`forward("${webhookUrl}")`, 'stop()']
+      };
+
+      await mg.routes.create(routeData);
+      console.log('✅ Mailgun route created for incoming emails');
+
+    } catch (error: any) {
+      console.error('❌ Error configuring webhooks/routes:', error);
+      
+      // If route already exists, that's OK
+      if (error.message?.includes('already exists') || error.status === 400) {
+        console.log('📧 Route may already exist, continuing...');
+      } else {
+        // Don't throw - webhook/route is nice to have but not critical for domain creation
+        console.warn('⚠️ Could not configure all webhooks/routes, but domain is still usable');
+      }
     }
   }
 
