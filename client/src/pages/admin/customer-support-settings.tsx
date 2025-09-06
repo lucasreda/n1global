@@ -20,14 +20,28 @@ interface SupportConfig {
 
 export default function CustomerSupportSettings() {
   const { toast } = useToast();
-  const { currentOperationId, currentOperationName } = useCurrentOperation();
+  const { selectedOperation, operations } = useCurrentOperation();
+  const currentOperationId = selectedOperation;
+  const currentOperationName = operations.find(op => op.id === selectedOperation)?.name;
   const [customDomain, setCustomDomain] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
   // Get current support configuration
-  const { data: supportConfig, isLoading, refetch } = useQuery<SupportConfig>({
+  const { data: supportConfig, isLoading, refetch, error } = useQuery<SupportConfig>({
     queryKey: [`/api/customer-support/config/${currentOperationId}`],
     enabled: !!currentOperationId,
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  // Debug logs
+  console.log('🔧 Settings Page Debug:', {
+    currentOperationId,
+    currentOperationName,
+    isLoading,
+    supportConfig,
+    error: error?.message,
+    enabled: !!currentOperationId
   });
 
   // Configure domain mutation
@@ -96,20 +110,38 @@ export default function CustomerSupportSettings() {
     verifyDomainMutation.mutate();
   };
 
+  // Show loading while waiting for operation ID to load
   if (!currentOperationId) {
+    console.log('🔧 No operation ID available - waiting...');
     return (
       <div className="flex items-center justify-center h-96">
-        <p className="text-muted-foreground">Selecione uma operação para configurar o suporte</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Carregando operação...</p>
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
+    console.log('🔧 Loading configuration...');
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-muted-foreground">Carregando configurações...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.log('🔧 Error loading configuration:', error);
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-red-400">Erro ao carregar configurações</p>
+          <p className="text-muted-foreground text-sm mt-2">{error.message}</p>
         </div>
       </div>
     );
