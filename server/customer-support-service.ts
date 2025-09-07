@@ -158,21 +158,7 @@ export class CustomerSupportService {
    * Get operation support configuration
    */
   async getOperationSupport(operationId: string): Promise<CustomerSupportOperation | null> {
-    const [operation] = await db.select({
-      id: customerSupportOperations.id,
-      operationId: customerSupportOperations.operationId,
-      operationName: customerSupportOperations.operationName,
-      emailDomain: customerSupportOperations.emailDomain,
-      emailPrefix: customerSupportOperations.emailPrefix,
-      isCustomDomain: customerSupportOperations.isCustomDomain,
-      domainVerified: customerSupportOperations.domainVerified,
-      aiEnabled: customerSupportOperations.aiEnabled,
-      aiCategories: customerSupportOperations.aiCategories,
-      brandingConfig: customerSupportOperations.brandingConfig,
-      businessHours: customerSupportOperations.businessHours,
-      createdAt: customerSupportOperations.createdAt,
-      updatedAt: customerSupportOperations.updatedAt
-    })
+    const [operation] = await db.select()
       .from(customerSupportOperations)
       .where(eq(customerSupportOperations.operationId, operationId))
       .limit(1);
@@ -228,13 +214,14 @@ export class CustomerSupportService {
     }
 
     if (search) {
-      conditions.push(
-        or(
-          ilike(customerSupportTickets.subject, `%${search}%`),
-          ilike(customerSupportTickets.customerEmail, `%${search}%`),
-          ilike(customerSupportTickets.ticketNumber, `%${search}%`)
-        )
+      const searchCondition = or(
+        ilike(customerSupportTickets.subject, `%${search}%`),
+        ilike(customerSupportTickets.customerEmail, `%${search}%`),
+        ilike(customerSupportTickets.ticketNumber, `%${search}%`)
       );
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
     }
 
     if (assignedTo) {
@@ -488,7 +475,7 @@ export class CustomerSupportService {
     openTickets: number;
     aiResponded: number;
     monthlyTickets: number;
-    unreadTickets: number;
+    pendingTickets: number;
   }> {
     console.log('🔍 Getting overview for operation:', operationId);
 
@@ -528,14 +515,14 @@ export class CustomerSupportService {
         )
       );
 
-    // Count unread tickets
-    const unreadTickets = await db
+    // Count pending tickets (status = 'open')
+    const pendingTickets = await db
       .select({ count: count() })
       .from(customerSupportTickets)
       .where(
         and(
           eq(customerSupportTickets.operationId, operationId),
-          eq(customerSupportTickets.isRead, false)
+          eq(customerSupportTickets.status, 'open')
         )
       );
 
@@ -543,7 +530,7 @@ export class CustomerSupportService {
       openTickets: openTickets[0]?.count || 0,
       aiResponded: aiResponded[0]?.count || 0,
       monthlyTickets: monthlyTickets[0]?.count || 0,
-      unreadTickets: unreadTickets[0]?.count || 0,
+      pendingTickets: pendingTickets[0]?.count || 0,
     };
 
     console.log('🔍 Overview result:', result);
@@ -868,10 +855,8 @@ export class CustomerSupportService {
           customerEmail: emailData.from,
           customerName: this.extractNameFromEmail(emailData.from),
           subject: emailData.subject,
-          content: emailData.textBody || emailData.htmlBody || '',
-          category: 'Geral',
+          categoryId: null,
           priority: 'medium',
-          source: 'email'
         });
         ticketId = newTicket.id;
       }
@@ -885,6 +870,85 @@ export class CustomerSupportService {
         content: emailData.textBody || '',
         htmlContent: emailData.htmlBody || emailData.textBody?.replace(/\n/g, '<br>') || '',
       });
+
+      // AI CATEGORIZATION & AUTO RESPONSE (new ticket only)
+      if (!existingTicket && operationData.aiEnabled) {
+        console.log('🤖 Starting AI processing for new ticket...');
+        
+        try {
+          // Step 1: Categorize email with AI
+          const aiResult = await this.categorizeEmail(
+            emailData.textBody || emailData.htmlBody || '',
+            emailData.subject,
+            emailData.from,
+            operationData.operationId
+          );
+
+          console.log('✅ AI categorization completed:', aiResult);
+
+          // Update ticket with AI categorization
+          const categoryResult = await db.select()
+            .from(customerSupportCategories)
+            .where(
+              and(
+                eq(customerSupportCategories.operationId, operationData.operationId),
+                eq(customerSupportCategories.name, aiResult.category)
+              )
+            )
+            .limit(1);
+
+          if (categoryResult.length > 0) {
+            await db.update(customerSupportTickets)
+              .set({
+                categoryId: categoryResult[0].id,
+                categoryName: categoryResult[0].displayName,
+                aiConfidence: aiResult.confidence,
+                aiReasoning: aiResult.reasoning,
+                requiresHuman: aiResult.requiresHuman,
+                isAutomated: !aiResult.requiresHuman
+              })
+              .where(eq(customerSupportTickets.id, ticketId));
+
+            console.log('✅ Ticket updated with AI categorization');
+
+            // Step 2: Send auto response if category supports it and doesn't require human
+            if (!aiResult.requiresHuman && categoryResult[0].aiEnabled && categoryResult[0].isAutomated) {
+              console.log('🤖 Sending Sofia auto response...');
+              
+              const autoResponseResult = await this.sendAIAutoResponse(
+                operationData.operationId,
+                ticketId,
+                emailData.from,
+                emailData.subject,
+                emailData.textBody || emailData.htmlBody || '',
+                aiResult.category
+              );
+
+              if (autoResponseResult.success) {
+                console.log('✅ Sofia auto response sent successfully');
+                
+                // Update ticket status to show it was auto-responded
+                await db.update(customerSupportTickets)
+                  .set({
+                    status: 'auto_responded',
+                    lastActivity: new Date()
+                  })
+                  .where(eq(customerSupportTickets.id, ticketId));
+              } else {
+                console.warn('⚠️ Sofia auto response failed:', autoResponseResult.error);
+              }
+            } else {
+              console.log('ℹ️ No auto response - requires human attention or category not automated');
+            }
+          } else {
+            console.warn('⚠️ Category not found for AI result:', aiResult.category);
+          }
+
+        } catch (error) {
+          console.error('❌ AI processing failed:', error);
+          // Continue without AI - email still processed successfully
+        }
+      }
 
       console.log('✅ Email processed successfully, ticket:', ticketId);
       return { success: true, ticketId };
@@ -1256,6 +1320,230 @@ export class CustomerSupportService {
         dailyTickets: [],
         period
       };
+    }
+  }
+
+  /**
+   * Categorize email using AI
+   */
+  async categorizeEmail(emailContent: string, subject: string, from: string, operationId: string): Promise<{
+    category: string;
+    confidence: number;
+    reasoning: string;
+    requiresHuman: boolean;
+  }> {
+    try {
+      // Get available categories for this operation
+      const categories = await this.getCategories(operationId);
+      const categoryPrompt = categories.map(cat => 
+        `${cat.name}: ${cat.displayName} - ${cat.description}`
+      ).join('\n');
+
+      const prompt = `
+Você é um sistema de categorização de emails de suporte ao cliente experiente.
+
+CATEGORIAS DISPONÍVEIS:
+${categoryPrompt}
+
+EMAIL PARA ANALISAR:
+De: ${from}
+Assunto: ${subject}
+Conteúdo: ${emailContent}
+
+Analise este email e categorize-o. Retorne APENAS um JSON válido no formato:
+{
+  "category": "nome_da_categoria",
+  "confidence": 85,
+  "reasoning": "Explicação de 1-2 frases do porquê escolheu esta categoria",
+  "requiresHuman": false
+}
+
+INSTRUÇÕES:
+- confidence: 0-100 (confiança na categorização)
+- requiresHuman: true se o email for complexo, emocional, ou precisar atenção manual
+- Use apenas as categorias listadas acima
+- Se não tiver certeza, use 'geral' com baixa confiança`;
+
+      console.log('🤖 Categorizing email with AI...');
+      
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: 'Você é um especialista em categorização de emails de suporte.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 500
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content?.trim();
+      
+      if (!content) {
+        throw new Error('Empty response from OpenAI');
+      }
+
+      console.log('🤖 AI categorization raw response:', content);
+
+      // Parse JSON response
+      const result = JSON.parse(content);
+      
+      // Validate result
+      if (!result.category || typeof result.confidence !== 'number') {
+        throw new Error('Invalid AI response format');
+      }
+
+      console.log('✅ AI categorization result:', result);
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error in AI categorization:', error);
+      // Fallback to manual categorization
+      return {
+        category: 'geral',
+        confidence: 0,
+        reasoning: 'Erro na categorização automática - requer análise manual',
+        requiresHuman: true
+      };
+    }
+  }
+
+  /**
+   * Send AI auto response (Sofia)
+   */
+  async sendAIAutoResponse(
+    operationId: string,
+    ticketId: string,
+    customerEmail: string,
+    subject: string,
+    originalContent: string,
+    category: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!process.env.OPENAI_API_KEY) {
+        console.warn('⚠️ OPENAI_API_KEY not configured, skipping AI response');
+        return { success: false, error: 'OpenAI not configured' };
+      }
+
+      // Get operation details for branding
+      const operation = await this.getOperationSupport(operationId);
+      if (!operation) {
+        return { success: false, error: 'Operation not found' };
+      }
+
+      const customerName = this.extractNameFromEmail(customerEmail);
+
+      // Sofia's response prompt (same as /inside/support)
+      const prompt = `
+Você é Sofia, uma agente de atendimento ao cliente experiente e empática. 
+
+INFORMAÇÕES DA EMPRESA:
+- Tempo de entrega: 2 a 7 dias úteis (maioria chega em até 3 dias úteis)
+- Pagamento: Na entrega (COD - Cash on Delivery)  
+- Horário: Segunda a sexta, 9h às 18h
+
+EMAIL ORIGINAL:
+Remetente: ${customerEmail}
+Assunto: ${subject}
+Categoria: ${category}
+Conteúdo: ${originalContent}
+
+IMPORTANTE: Responda APENAS com JSON válido no formato:
+{
+  "subject": "Re: ${subject}",
+  "content": "Sua resposta empática e personalizada aqui"
+}
+
+DIRETRIZES:
+- Use o nome ${customerName} na resposta
+- Seja empática e profissional
+- Forneça informações específicas baseadas na categoria
+- Mantenha tom caloroso mas conciso
+- Termine oferecendo ajuda adicional`;
+
+      console.log('🤖 Sofia generating auto response...');
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: 'Você é Sofia, uma agente de atendimento empática e eficiente.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 800
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content?.trim();
+      
+      if (!content) {
+        throw new Error('Empty response from OpenAI');
+      }
+
+      console.log('🤖 Sofia response raw:', content);
+
+      // Parse JSON response
+      const aiResponse = JSON.parse(content);
+      
+      if (!aiResponse.subject || !aiResponse.content) {
+        throw new Error('Invalid AI response format');
+      }
+
+      // Send email via customer support service
+      const emailResult = await this.sendEmailReply(
+        operationId,
+        ticketId, 
+        aiResponse.subject,
+        aiResponse.content,
+        'Sofia',
+        'sofia'
+      );
+
+      if (emailResult.success) {
+        console.log('✅ Sofia auto response sent successfully');
+        
+        // Add AI response message to ticket
+        await this.addMessage(operationId, ticketId, {
+          sender: 'ai',
+          senderName: 'Sofia (IA)',
+          senderEmail: `sofia@${operation.emailDomain || 'localhost'}`,
+          subject: aiResponse.subject,
+          content: aiResponse.content,
+          htmlContent: aiResponse.content.replace(/\n/g, '<br>'),
+          sentViaEmail: true,
+        });
+
+        return { success: true };
+      } else {
+        console.error('❌ Failed to send Sofia response email:', emailResult.error);
+        return { success: false, error: emailResult.error };
+      }
+
+    } catch (error) {
+      console.error('❌ Error in Sofia auto response:', error);
+      return { success: false, error: `Sofia response failed: ${error.message}` };
     }
   }
 }
