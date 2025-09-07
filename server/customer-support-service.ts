@@ -1067,10 +1067,19 @@ export class CustomerSupportService {
         return;
       }
 
-      // Get the current domain's webhook URL (simplified)
-      const webhookUrl = process.env.REPL_ID 
-        ? `https://${process.env.REPL_ID}-00-workspace.${process.env.REPLIT_CLUSTER}.replit.dev/api/webhooks/mailgun/email`
-        : 'https://localhost:5000/api/webhooks/mailgun/email';
+      // Get the current domain's webhook URL
+      let webhookUrl;
+      
+      // Check if we're in production (using n1global.app domain)
+      if (process.env.NODE_ENV === 'production') {
+        webhookUrl = 'https://n1global.app/api/webhooks/mailgun/email';
+      } else if (process.env.REPL_ID) {
+        // Development environment with Replit
+        webhookUrl = `https://${process.env.REPL_ID}-00-workspace.${process.env.REPLIT_CLUSTER}.replit.dev/api/webhooks/mailgun/email`;
+      } else {
+        // Local development
+        webhookUrl = 'https://localhost:5000/api/webhooks/mailgun/email';
+      }
 
       console.log(`🔗 Configuring webhook for ${domainName}: ${webhookUrl}`);
 
