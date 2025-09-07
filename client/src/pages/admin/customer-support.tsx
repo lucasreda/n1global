@@ -143,14 +143,14 @@ export default function CustomerSupportPage() {
     try {
       console.log('📋 Loading full ticket details...');
       
-      const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketResponse.id}`, 'GET');
+      const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketResponse.id}`, 'GET') as any;
       
       console.log('📋 Full ticket data:', response);
       
       // Merge the full data with the original ticket response
       setSelectedTicket({
         ticket: ticketResponse,
-        conversations: response.conversations || []
+        conversations: response.messages || []
       });
       
       // Mark ticket as read if it wasn't read
@@ -445,9 +445,9 @@ export default function CustomerSupportPage() {
             <h1 className="font-bold tracking-tight text-gray-100" style={{ fontSize: '20px' }}>
               Suporte de Clientes
             </h1>
-            {supportConfig?.emailDomain && (
+            {(supportConfig as any)?.emailDomain && (
               <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs px-3 py-1">
-                {supportConfig.emailDomain}
+                {(supportConfig as any).emailDomain}
               </Badge>
             )}
           </div>
