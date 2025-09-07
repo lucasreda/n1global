@@ -821,75 +821,174 @@ export default function CustomerSupportPage() {
           </DialogHeader>
           
           {selectedTicket && (
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {/* Detalhes do Ticket */}
-              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 mb-3">
+            <div className="flex-1 overflow-hidden flex flex-col space-y-6">
+              {/* Header - Informações Principais do Ticket */}
+              <div className="bg-slate-800/50 rounded-lg p-4">
+                <h2 className="text-xl font-semibold text-slate-200 mb-3 flex items-center">
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  {selectedTicket.ticket.subject}
+                </h2>
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <label className="text-xs text-slate-600 font-medium">Cliente</label>
-                    <p className="text-sm">{selectedTicket.ticket.customerName || 'N/A'}</p>
+                    <span className="text-slate-400">De: </span>
+                    <span className="text-slate-200">{selectedTicket.ticket.customerEmail}</span>
+                    {selectedTicket.ticket.customerName && (
+                      <span className="text-slate-400"> ({selectedTicket.ticket.customerName})</span>
+                    )}
                   </div>
                   <div>
-                    <label className="text-xs text-slate-600 font-medium">Email</label>
-                    <p className="text-sm">{selectedTicket.ticket.customerEmail}</p>
+                    <span className="text-slate-400">Status: </span>
+                    <Badge 
+                      className={`text-xs ${
+                        selectedTicket.ticket.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
+                        selectedTicket.ticket.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
+                        selectedTicket.ticket.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
+                        selectedTicket.ticket.status === 'auto_responded' ? 'bg-emerald-600/20 text-emerald-400 border-emerald-600/30' :
+                        'bg-gray-600/20 text-gray-400 border-gray-600/30'
+                      }`}
+                    >
+                      {selectedTicket.ticket.status === 'open' ? 'Aberto' :
+                       selectedTicket.ticket.status === 'in_progress' ? 'Em Andamento' :
+                       selectedTicket.ticket.status === 'resolved' ? 'Resolvido' :
+                       selectedTicket.ticket.status === 'auto_responded' ? 'Resposta Automática' :
+                       'Fechado'}
+                    </Badge>
                   </div>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-600 font-medium">Assunto</label>
-                  <p className="text-sm font-medium">{selectedTicket.ticket.subject}</p>
+                  <div>
+                    <span className="text-slate-400">Prioridade: </span>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        selectedTicket.ticket.priority === 'high' ? 'border-red-600 text-red-400' :
+                        selectedTicket.ticket.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
+                        'border-slate-600 text-slate-400'
+                      }`}
+                    >
+                      {selectedTicket.ticket.priority === 'high' ? 'Alta' :
+                       selectedTicket.ticket.priority === 'medium' ? 'Média' : 'Baixa'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Criado: </span>
+                    <span className="text-slate-200">
+                      {new Date(selectedTicket.ticket.createdAt).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                  {selectedTicket.ticket.categoryName && (
+                    <div className="col-span-2">
+                      <span className="text-slate-400">Categoria: </span>
+                      <Badge className="bg-slate-700 text-slate-300 text-xs">
+                        {selectedTicket.ticket.categoryName}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Conversas */}
-              <div className="flex-1 overflow-y-auto mb-4" id="conversation-history">
-                {selectedTicket.conversations && selectedTicket.conversations.length > 0 ? (
-                  <div className="space-y-4">
-                    {selectedTicket.conversations.map((conv: any, index: number) => (
-                      <div key={index} className={`p-4 rounded-lg ${
-                        conv.sender === 'customer' ? 'bg-blue-50 ml-8' : 
-                        conv.sender === 'ai' ? 'bg-purple-50 mr-8' : 'bg-slate-50 mr-8'
-                      }`}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                            conv.sender === 'customer' ? 'bg-blue-500 text-white' : 
-                            conv.sender === 'ai' ? 'bg-purple-500 text-white' : 'bg-slate-500 text-white'
-                          }`}>
-                            {conv.sender === 'customer' ? 'C' : conv.sender === 'ai' ? 'IA' : 'A'}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {conv.sender === 'customer' ? 'Cliente' : 
-                               conv.sender === 'ai' ? 'IA (Sofia)' : 'Agente'}
+              {/* IA Information */}
+              {(selectedTicket.ticket.aiConfidence || selectedTicket.ticket.aiReasoning) && (
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Análise da IA
+                  </h3>
+                  <div className="space-y-3">
+                    {selectedTicket.ticket.aiReasoning && (
+                      <div>
+                        <span className="text-slate-400 text-sm">Categorização:</span>
+                        <div className="mt-1 p-3 bg-slate-900/50 rounded border-l-4 border-purple-500">
+                          <p className="text-slate-300 text-sm">
+                            {selectedTicket.ticket.aiReasoning}
+                          </p>
+                          {selectedTicket.ticket.aiConfidence && (
+                            <p className="text-slate-400 text-xs mt-2">
+                              Confiança: {selectedTicket.ticket.aiConfidence}%
                             </p>
-                            <p className="text-xs text-slate-500">
-                              {new Date(conv.createdAt).toLocaleString('pt-BR')}
-                            </p>
-                          </div>
+                          )}
                         </div>
-                        <div className="text-sm" dangerouslySetInnerHTML={{ __html: conv.content.replace(/\n/g, '<br>') }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Histórico de Conversação */}
+              {selectedTicket.conversations && selectedTicket.conversations.length > 0 && (
+                <div className="bg-slate-800/50 rounded-lg p-4 flex-1 overflow-hidden">
+                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Histórico de Conversação ({selectedTicket.conversations.length})
+                  </h3>
+                  <div id="conversation-history" className="space-y-4 max-h-60 overflow-y-auto">
+                    {selectedTicket.conversations.map((conv: any, index: number) => (
+                      <div 
+                        key={conv.id || index} 
+                        className={`p-3 rounded border-l-4 ${
+                          conv.sender === 'customer' ? 'border-green-500 bg-green-900/20' :
+                          conv.sender === 'agent' ? 'border-blue-500 bg-blue-900/20' :
+                          conv.sender === 'ai' ? 'border-purple-500 bg-purple-900/20' :
+                          'border-gray-500 bg-gray-900/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                          <span>
+                            {conv.sender === 'customer' ? 'Cliente' : 
+                             conv.sender === 'agent' ? 'Agente' : 
+                             conv.sender === 'ai' ? 'IA (Sofia)' : 
+                             'Sistema'}
+                          </span>
+                          <span>
+                            {new Date(conv.createdAt).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        {conv.subject && (
+                          <div className="text-sm font-medium text-slate-200 mb-1">
+                            {conv.subject}
+                          </div>
+                        )}
+                        <div className="text-sm text-slate-300 whitespace-pre-wrap">
+                          {conv.content}
+                        </div>
+                        {conv.senderEmail && (
+                          <div className="text-xs text-slate-500 mt-2">
+                            De: {conv.senderEmail}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-slate-400">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-2" />
-                    <p>Nenhuma conversa ainda</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Campo de Resposta */}
+              {/* Seção de Resposta */}
               {selectedTicket.ticket?.status !== 'resolved' && selectedTicket.ticket?.status !== 'closed' && (
-                <div className="border-t pt-4">
-                  <div className="space-y-3">
-                    <Textarea
-                      placeholder="Digite sua resposta..."
-                      value={replyMessage}
-                      onChange={(e) => setReplyMessage(e.target.value)}
-                      className="min-h-[100px]"
-                    />
-                    <div className="flex justify-end">
-                      <Button onClick={handleSendReply} disabled={isSendingReply || !replyMessage.trim()}>
+                <div className="bg-slate-800/50 rounded-lg p-4 border-t-2 border-blue-500/50">
+                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
+                    <Send className="h-4 w-4 mr-2" />
+                    Responder Ticket
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm text-slate-400 mb-2 block">
+                        Resposta para {selectedTicket.ticket.customerEmail}
+                      </label>
+                      <Textarea
+                        placeholder="Digite sua resposta aqui..."
+                        value={replyMessage}
+                        onChange={(e) => setReplyMessage(e.target.value)}
+                        className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[120px] resize-none"
+                        disabled={isSendingReply}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-slate-400">
+                        Esta resposta será enviada por email para o cliente
+                      </p>
+                      <Button
+                        onClick={handleSendReply}
+                        disabled={!replyMessage.trim() || isSendingReply}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
                         {isSendingReply ? (
                           <>
                             <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
