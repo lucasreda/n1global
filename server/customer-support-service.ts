@@ -1543,7 +1543,7 @@ DIRETRIZES:
 
     } catch (error) {
       console.error('❌ Error in Sofia auto response:', error);
-      return { success: false, error: `Sofia response failed: ${error.message}` };
+      return { success: false, error: `Sofia response failed: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
 }
