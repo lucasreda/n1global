@@ -409,7 +409,7 @@ export function registerCustomerSupportRoutes(app: Express) {
       // Simular um email de teste para o domínio configurado
       const testEmail = {
         from: 'teste.sofia@gmail.com',
-        to: 'suporte@n1global.app', // Domínio configurado no banco
+        to: 'suporte@garriguesmilano.com', // Domínio configurado no banco
         subject: 'Preciso cancelar minha compra urgente',
         textBody: 'Olá, preciso cancelar minha compra de hoje. Por favor me ajudem!',
         htmlBody: '<p>Olá, preciso cancelar minha compra de hoje. Por favor me ajudem!</p>',
