@@ -387,6 +387,15 @@ export default function CustomerSupportPage() {
     enabled: !!supportConfig && !!currentOperationId
   });
 
+  // Debug categories
+  console.log('🔍 Categories Debug:', {
+    supportCategories,
+    categoriesLoading,
+    currentOperationId,
+    supportConfig: !!supportConfig,
+    queryEnabled: !!supportConfig && !!currentOperationId
+  });
+
   // Overview metrics for cards - mesma estratégia dos tickets
   const { data: overviewMetrics, isLoading: overviewLoading, refetch: refetchOverview } = useQuery<{
     openTickets: number;
