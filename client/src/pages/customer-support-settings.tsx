@@ -5,10 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3 } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface SupportConfig {
@@ -180,6 +181,22 @@ export default function CustomerSupportSettings() {
           </p>
         </div>
       </div>
+
+      {/* Tabs Container */}
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-black/20 backdrop-blur-sm border border-white/10">
+          <TabsTrigger value="general" className="flex items-center gap-2 data-[state=active]:bg-white/10">
+            <Cog className="w-4 h-4" />
+            Geral
+          </TabsTrigger>
+          <TabsTrigger value="design" className="flex items-center gap-2 data-[state=active]:bg-white/10">
+            <Palette className="w-4 h-4" />
+            Design
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Aba Geral */}
+        <TabsContent value="general" className="space-y-6 mt-6">
 
       {/* Emails Configurados */}
       {supportConfig?.emailDomain && (
@@ -529,6 +546,41 @@ export default function CustomerSupportSettings() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        {/* Aba Design */}
+        <TabsContent value="design" className="space-y-6 mt-6">
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Palette className="w-5 h-5 text-purple-400" />
+                <CardTitle className="text-white" style={{ fontSize: '18px' }}>Personalização Visual</CardTitle>
+              </div>
+              <CardDescription>
+                Configure a aparência e branding dos emails e interface
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-center p-8 text-center">
+                <div className="space-y-2">
+                  <div className="w-16 h-16 mx-auto bg-purple-600/20 rounded-full flex items-center justify-center">
+                    <Palette className="w-8 h-8 text-purple-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-200">Configurações de Design</h3>
+                  <p className="text-sm text-gray-400 max-w-md">
+                    Personalize cores, logos, templates de email e outros elementos visuais do seu sistema de suporte.
+                  </p>
+                  <div className="pt-4">
+                    <Badge variant="outline" className="bg-purple-600/20 text-purple-400 border-purple-600/30">
+                      Em breve
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
