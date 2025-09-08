@@ -143,7 +143,8 @@ export default function CustomerSupportPage() {
     try {
       console.log('📋 Loading full ticket details...');
       
-      const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketResponse.id}`, 'GET') as any;
+      const apiResponse = await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketResponse.id}`, 'GET');
+      const response = await apiResponse.json();
       
       console.log('📋 Full ticket data:', response);
       console.log('📋 Messages count:', response?.messages?.length || 0);
@@ -407,7 +408,7 @@ export default function CustomerSupportPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status?.toLowerCase()) {
+    switch (status?.toString()?.toLowerCase()) {
       case 'open':
         return <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30">Aberto</Badge>;
       case 'in_progress':
@@ -422,7 +423,7 @@ export default function CustomerSupportPage() {
   };
 
   const getPriorityBadge = (priority: string) => {
-    switch (priority?.toLowerCase()) {
+    switch (priority?.toString()?.toLowerCase()) {
       case 'urgent':
         return <Badge className="bg-red-600/20 text-red-400 border-red-600/30">Urgente</Badge>;
       case 'high':
