@@ -67,7 +67,9 @@ export default function CustomerSupportSettings() {
         ...designConfigData,
         logo: designConfigData.logo?.includes('storage.googleapis.com') 
           ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
-          : designConfigData.logo
+          : designConfigData.logo,
+        // Preserve logoAlignment if not present in server data
+        logoAlignment: designConfigData.logoAlignment || designConfig.logoAlignment || "center"
       };
       console.log('🔧 Processed config:', processedConfig);
       setDesignConfig(processedConfig);
@@ -139,7 +141,8 @@ export default function CustomerSupportSettings() {
 
       return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, 'PUT', {
         ...config,
-        logo: logoUrl
+        logo: logoUrl,
+        logoAlignment: config.logoAlignment || "center"
       });
     },
     onSuccess: () => {
