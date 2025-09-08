@@ -1351,15 +1351,15 @@ export default function CustomerSupportSettings() {
                       
                       {/* Custom Signature ou Sofia Default */}
                       {(designConfig.signature.name || designConfig.signature.position || designConfig.signature.phone || designConfig.signature.email || designConfig.signature.website) ? (
-                        <div className="text-sm space-y-1" style={{ color: designConfig.textColor }}>
+                        <div className="text-sm space-y-1" style={{ color: designConfig.secondaryTextColor }}>
                           <p className="font-semibold">Atenciosamente,</p>
                           {designConfig.signature.name && (
                             <p><strong>{designConfig.signature.name}</strong></p>
                           )}
                           {designConfig.signature.position && (
-                            <p className="text-xs" style={{ color: designConfig.secondaryTextColor }}>{designConfig.signature.position}</p>
+                            <p className="text-xs">{designConfig.signature.position}</p>
                           )}
-                          <div className="space-y-1 text-xs" style={{ color: designConfig.secondaryTextColor }}>
+                          <div className="space-y-1 text-xs">
                             {designConfig.signature.phone && (
                               <p>📞 {designConfig.signature.phone}</p>
                             )}
