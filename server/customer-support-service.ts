@@ -355,11 +355,13 @@ export class CustomerSupportService {
       const [overviewStats] = await this.db
         .select({
           openTickets: count(sql`CASE WHEN status = 'open' THEN 1 END`),
-          aiResponded: count(sql`CASE WHEN status = 'resolved' AND ai_confidence > 0 THEN 1 END`),
+          aiResponded: count(sql`CASE WHEN status = 'in_progress' THEN 1 END`),
           monthlyTickets: count(sql`CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN 1 END`),
           unreadTickets: count(sql`CASE WHEN is_read = false THEN 1 END`)
         })
         .from(this.schema.supportTickets);
+
+      console.log('📊 Overview stats raw:', overviewStats);
 
       return {
         openTickets: overviewStats?.openTickets || 0,
