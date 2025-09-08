@@ -176,8 +176,7 @@ export default function CustomerSupportSettings() {
         }
       }
 
-      console.log('💾 Salvando configuração completa:', config);
-      return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, 'PUT', {
+      const dataToSave = {
         logo: logoUrl,
         primaryColor: config.primaryColor,
         backgroundColor: config.backgroundColor,
@@ -186,7 +185,10 @@ export default function CustomerSupportSettings() {
         secondaryTextColor: config.secondaryTextColor || "#666666",
         signature: config.signature,
         card: config.card
-      });
+      };
+      console.log('💾 Dados que serão enviados para salvar:', dataToSave);
+      console.log('🎨 Card config detalhado:', config.card);
+      return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, 'PUT', dataToSave);
     },
     onSuccess: () => {
       toast({

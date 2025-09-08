@@ -481,13 +481,10 @@ export function registerCustomerSupportRoutes(app: Express) {
   app.put("/api/customer-support/:operationId/design-config", authenticateToken, async (req: Request, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { logo, primaryColor, backgroundColor, textColor } = req.body;
+      console.log('💄 Saving design config for operation', operationId, ':', req.body);
       
       const designConfig = await customerSupportService.saveDesignConfig(operationId, {
-        logo,
-        primaryColor,
-        backgroundColor,
-        textColor,
+        ...req.body,
         updatedAt: new Date().toISOString()
       });
       
