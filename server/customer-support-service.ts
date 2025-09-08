@@ -1542,7 +1542,18 @@ DIRETRIZES:
 - Seja empática e profissional
 - Forneça informações específicas baseadas na categoria
 - Mantenha tom caloroso mas conciso
-- Termine oferecendo ajuda adicional`;
+- Termine oferecendo ajuda adicional
+
+FORMATAÇÃO DO CONTEÚDO:
+- Use quebras de linha duplas (\\n\\n) para separar parágrafos
+- Use **texto** para destacar informações importantes (palavras-chave, prazos, etc.)
+- Organize a resposta em parágrafos claros e bem estruturados
+- Primeiro parágrafo: saudação e reconhecimento do problema
+- Parágrafos do meio: explicações e soluções
+- Último parágrafo: oferecimento de ajuda adicional
+
+EXEMPLO DE FORMATAÇÃO:
+"Olá João,\\n\\nCompreendo sua preocupação com o **cancelamento do pedido**.\\n\\nSe a compra ainda não foi enviada, podemos **cancelar imediatamente**. Caso já tenha sido enviada, o processo pode levar de **2 a 7 dias úteis** para o reembolso completo.\\n\\nEstamos disponíveis para ajudar de **segunda a sexta-feira, das 9h às 18h**.\\n\\nSe precisar de mais alguma coisa, estarei aqui para ajudar! 😊"`;
 
       console.log('🤖 Sofia generating auto response...');
 
@@ -1649,9 +1660,12 @@ DIRETRIZES:
         ? 'https://n1global.app' 
         : `https://${process.env.REPL_ID}-00-workspace.${process.env.REPLIT_CLUSTER}.replit.dev`;
       
+      // Convert markdown-style content to HTML with better formatting
+      const formattedContent = this.formatAIContentToHtml(aiResponse.content);
+      
       const processedHtml = htmlTemplate
         .replace(/\{\{BASE_URL\}\}/g, baseUrl)
-        .replace(/\{\{AI_RESPONSE_CONTENT\}\}/g, aiResponse.content.replace(/\n/g, '<br>'));
+        .replace(/\{\{AI_RESPONSE_CONTENT\}\}/g, formattedContent);
 
       // Prepare email using Sofia's identity
       const fromAddress = `sofia@${operation.emailDomain || 'localhost'}`;
@@ -1704,6 +1718,56 @@ DIRETRIZES:
       console.error('❌ Error in Sofia auto response:', error);
       return { success: false, error: `Sofia response failed: ${error instanceof Error ? error.message : String(error)}` };
     }
+  }
+
+  /**
+   * Convert AI content with markdown-style formatting to HTML
+   */
+  private formatAIContentToHtml(content: string): string {
+    if (!content) return '';
+    
+    // Split into paragraphs based on double line breaks OR multiple spaces (3+ spaces)
+    let paragraphs = content.split(/\n\n+/);
+    
+    // If no double line breaks, try splitting by multiple spaces (AI often uses 3+ spaces for separation)
+    if (paragraphs.length === 1) {
+      paragraphs = content.split(/\s{3,}/);
+    }
+    
+    // If still one paragraph, split by sentences for better readability
+    if (paragraphs.length === 1) {
+      paragraphs = content.split(/\.\s+/).map((p, i, arr) => 
+        i === arr.length - 1 ? p : p + '.'
+      ).filter(p => p.trim().length > 0);
+    }
+    
+    let formattedContent = paragraphs.map(paragraph => {
+      if (paragraph.trim() === '') return '';
+      
+      // Convert **bold** text to <strong>
+      let formatted = paragraph.trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // Auto-bold common keywords for COD business
+      formatted = formatted
+        .replace(/(cancelar|cancelamento)/gi, '<strong>$1</strong>')
+        .replace(/(reembolso|devolu[çc][ãa]o)/gi, '<strong>$1</strong>')
+        .replace(/(\d+\s+a\s+\d+\s+dias\s+[úu]teis)/gi, '<strong>$1</strong>')
+        .replace(/(entrega|envio|enviado)/gi, '<strong>$1</strong>')
+        .replace(/(segunda\s+a\s+sexta[^,]*)/gi, '<strong>$1</strong>');
+      
+      // Convert single line breaks to <br>
+      formatted = formatted.replace(/\n/g, '<br>');
+      
+      // Wrap paragraph in <p> tag with spacing
+      return `<p style="margin: 0 0 15px 0; line-height: 1.5; color: #333;">${formatted}</p>`;
+    }).join('');
+    
+    // Remove the bottom margin from the last paragraph
+    formattedContent = formattedContent.replace(/(<p[^>]*>.*<\/p>)$/, (match) => {
+      return match.replace('margin: 0 0 15px 0;', 'margin: 0;');
+    });
+    
+    return formattedContent;
   }
 }
 
