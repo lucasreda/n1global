@@ -1513,24 +1513,56 @@ DIRETRIZES:
         throw new Error('Invalid AI response format');
       }
 
-      // Send email via customer support service
-      const emailResult = await this.sendEmailReply(
-        operationId,
-        ticketId, 
-        aiResponse.subject,
-        aiResponse.content,
-        'Sofia',
-        'sofia'
+      // Send email and add message to ticket as AI response
+      const ticket = await this.getTicket(operationId, ticketId);
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+
+      // Prepare email using Sofia's identity
+      const fromAddress = `sofia@${operation.emailDomain || 'localhost'}`;
+      const emailData = {
+        from: `Sofia <${fromAddress}>`,
+        to: ticket.customerEmail,
+        subject: aiResponse.subject,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            ${aiResponse.content.replace(/\n/g, '<br>')}
+            <br><br>
+            <div style="border-top: 1px solid #ddd; padding-top: 20px; margin-top: 20px; color: #666; font-size: 12px;">
+              <p>Esta é uma resposta automática de Sofia, nossa assistente de atendimento ao cliente.</p>
+              <p>Responda este email se precisar de mais ajuda.</p>
+            </div>
+          </div>
+        `,
+        text: aiResponse.content,
+        'h:Reply-To': fromAddress,
+        'o:tracking': 'yes'
+      };
+
+      console.log('📧 Sending Sofia auto response email...');
+      
+      // Send via Mailgun
+      const emailResponse = await fetch(
+        `https://api.mailgun.net/v3/${operation.emailDomain || 'localhost'}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`api:${process.env.MAILGUN_API_KEY}`).toString('base64')}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams(emailData).toString()
+        }
       );
 
-      if (emailResult.success) {
-        console.log('✅ Sofia auto response sent successfully');
+      if (emailResponse.ok) {
+        console.log('✅ Sofia auto response email sent successfully');
         
-        // Add AI response message to ticket
+        // Add AI response message to ticket (only once)
         await this.addMessage(operationId, ticketId, {
           sender: 'ai',
           senderName: 'Sofia (IA)',
-          senderEmail: `sofia@${operation.emailDomain || 'localhost'}`,
+          senderEmail: fromAddress,
           subject: aiResponse.subject,
           content: aiResponse.content,
           htmlContent: aiResponse.content.replace(/\n/g, '<br>'),
@@ -1539,8 +1571,8 @@ DIRETRIZES:
 
         return { success: true };
       } else {
-        console.error('❌ Failed to send Sofia response email:', emailResult.error);
-        return { success: false, error: emailResult.error };
+        console.error('❌ Failed to send Sofia response email:', await emailResponse.text());
+        return { success: false, error: 'Failed to send email' };
       }
 
     } catch (error) {
