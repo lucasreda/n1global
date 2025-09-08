@@ -139,7 +139,18 @@ export class CustomerSupportService {
         .from(this.schema.supportCategories)
         .orderBy(this.schema.supportCategories.priority);
 
-      return categories.map(cat => ({
+      // Custom ordering: Manual first, Reclamações second, then by priority
+      const orderedCategories = categories.sort((a, b) => {
+        if (a.name === 'manual') return -1;
+        if (b.name === 'manual') return 1;
+        if (a.name === 'reclamacoes') return -1;
+        if (b.name === 'reclamacoes') return 1;
+        return b.priority - a.priority;
+      });
+
+      console.log('📋 Categories from DB:', categories.map(c => ({id: c.id, name: c.name, displayName: c.displayName})));
+
+      return orderedCategories.map(cat => ({
         id: cat.id,
         name: cat.displayName || cat.name,
         description: cat.description,
