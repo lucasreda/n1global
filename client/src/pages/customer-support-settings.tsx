@@ -76,8 +76,16 @@ export default function CustomerSupportSettings() {
               'Content-Type': 'application/json'
             }
           }).then(async res => {
+            if (res.status === 401 || res.status === 403) {
+              // Token expirado, redirecionar para login
+              localStorage.removeItem('auth_token');
+              localStorage.removeItem('user');
+              window.location.href = '/';
+              throw new Error('Sessão expirada. Redirecionando para login...');
+            }
             if (!res.ok) {
-              throw new Error(`Erro ao obter URL de upload: ${res.status} ${res.statusText}`);
+              const errorText = await res.text();
+              throw new Error(`Erro ao obter URL de upload: ${res.status} ${res.statusText} - ${errorText}`);
             }
             return res.json();
           });
@@ -107,12 +115,9 @@ export default function CustomerSupportSettings() {
         }
       }
 
-      return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...config,
-          logo: logoUrl
-        })
+      return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, 'PUT', {
+        ...config,
+        logo: logoUrl
       });
     },
     onSuccess: () => {
@@ -120,7 +125,7 @@ export default function CustomerSupportSettings() {
         title: "Configurações salvas!",
         description: "As configurações de design foram aplicadas com sucesso.",
       });
-      queryClient.invalidateQueries([`/api/customer-support/${currentOperationId}/design-config`]);
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/design-config`] });
       setLogoFile(null);
     },
     onError: (error: any) => {
@@ -863,7 +868,7 @@ export default function CustomerSupportSettings() {
                         className="h-12 mx-auto mb-2"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling!.style.display = 'block';
+                          (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'block';
                         }}
                       />
                       <div className="hidden text-sm px-3 py-2 rounded" style={{ color: designConfig.textColor, backgroundColor: `${designConfig.primaryColor}10` }}>
