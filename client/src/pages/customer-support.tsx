@@ -1012,7 +1012,9 @@ export default function CustomerSupportPage() {
                             onBlur={(e) => {
                               // Só recolhe se não há texto, não está enviando e clicou fora da área de resposta
                               setTimeout(() => {
-                                if (!replyMessage.trim() && !isSendingReply && !e.currentTarget.contains(document.activeElement)) {
+                                const activeElement = document.activeElement;
+                                const clickedOutside = !activeElement || !e.currentTarget.contains(activeElement);
+                                if (!replyMessage.trim() && !isSendingReply && clickedOutside) {
                                   setIsReplyExpanded(false);
                                 }
                               }, 100);
