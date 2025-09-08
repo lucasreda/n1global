@@ -42,10 +42,11 @@ app.use((req, res, next) => {
   // Seed database with initial data
   await seedDatabase();
   
-  const server = await registerRoutes(app);
+  // Servir imagens antes de tudo (precisa vir antes do Vite)
+  app.use('/images', express.static(path.join(process.cwd(), 'client', 'public', 'images')));
+  app.use('/favicon.ico', express.static(path.join(process.cwd(), 'client', 'public', 'favicon.ico')));
   
-  // Servir arquivos estáticos da pasta client/public (imagens, favicons, etc.)
-  app.use(express.static(path.join(process.cwd(), 'client', 'public')));
+  const server = await registerRoutes(app);
   
   // Sistema de sincronização sob demanda configurado
   console.log('🔄 Sistema de sincronização sob demanda configurado (30min de intervalo)');
