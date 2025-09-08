@@ -46,7 +46,28 @@ export default function CustomerSupportSettings() {
     primaryColor: "#2563eb",
     backgroundColor: "#f8fafc",
     textColor: "#333333",
-    logoAlignment: "center" as "left" | "center" | "right"
+    logoAlignment: "center" as "left" | "center" | "right",
+    // Assinatura personalizada
+    signature: {
+      name: "",
+      position: "",
+      phone: "",
+      email: "",
+      website: ""
+    },
+    // Configurações do card de conteúdo
+    card: {
+      backgroundColor: "#ffffff",
+      backgroundOpacity: 1,
+      borderColor: "#e5e7eb",
+      borderRadius: 8,
+      borderWidth: {
+        top: 1,
+        right: 1,
+        bottom: 1,
+        left: 1
+      }
+    }
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -64,12 +85,25 @@ export default function CustomerSupportSettings() {
       console.log('🔄 Updating design config from server:', designConfigData);
       // Convert Google Storage URLs to local object URLs if needed
       const processedConfig = {
+        ...designConfig, // Start with current state to preserve defaults
         ...designConfigData,
         logo: designConfigData.logo?.includes('storage.googleapis.com') 
           ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
           : designConfigData.logo,
-        // Preserve logoAlignment if not present in server data
-        logoAlignment: designConfigData.logoAlignment || designConfig.logoAlignment || "center"
+        // Preserve all new fields with defaults if not present
+        logoAlignment: designConfigData.logoAlignment || designConfig.logoAlignment || "center",
+        signature: {
+          ...designConfig.signature,
+          ...designConfigData.signature
+        },
+        card: {
+          ...designConfig.card,
+          ...(designConfigData.card || {}),
+          borderWidth: {
+            ...designConfig.card.borderWidth,
+            ...(designConfigData.card?.borderWidth || {})
+          }
+        }
       };
       console.log('🔧 Processed config:', processedConfig);
       setDesignConfig(processedConfig);
@@ -892,6 +926,283 @@ export default function CustomerSupportSettings() {
 
                 <Separator className="bg-white/10" />
 
+                {/* Signature Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <h3 className="text-sm font-semibold text-gray-200">Assinatura Personalizada</h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-300">Nome</Label>
+                        <Input
+                          type="text"
+                          value={designConfig.signature.name}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            signature: { ...prev.signature, name: e.target.value }
+                          }))}
+                          className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="João Silva"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-300">Cargo</Label>
+                        <Input
+                          type="text"
+                          value={designConfig.signature.position}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            signature: { ...prev.signature, position: e.target.value }
+                          }))}
+                          className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="Atendimento ao Cliente"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-300">Telefone</Label>
+                        <Input
+                          type="text"
+                          value={designConfig.signature.phone}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            signature: { ...prev.signature, phone: e.target.value }
+                          }))}
+                          className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="(11) 99999-9999"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-300">Email</Label>
+                        <Input
+                          type="email"
+                          value={designConfig.signature.email}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            signature: { ...prev.signature, email: e.target.value }
+                          }))}
+                          className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="contato@empresa.com"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-300">Website</Label>
+                      <Input
+                        type="url"
+                        value={designConfig.signature.website}
+                        onChange={(e) => setDesignConfig(prev => ({ 
+                          ...prev, 
+                          signature: { ...prev.signature, website: e.target.value }
+                        }))}
+                        className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                        placeholder="https://www.empresa.com"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="bg-white/10" />
+
+                {/* Card Configuration Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <h3 className="text-sm font-semibold text-gray-200">Configurações do Card</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Card Background */}
+                    <div className="space-y-3">
+                      <Label className="text-xs text-gray-300">Fundo do Card</Label>
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
+                          style={{ backgroundColor: designConfig.card.backgroundColor }}
+                          onClick={() => document.getElementById('card-background-picker')?.click()}
+                        ></div>
+                        <input
+                          id="card-background-picker"
+                          type="color"
+                          value={designConfig.card.backgroundColor}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            card: { ...prev.card, backgroundColor: e.target.value }
+                          }))}
+                          className="hidden"
+                        />
+                        <Input
+                          type="text"
+                          value={designConfig.card.backgroundColor}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            card: { ...prev.card, backgroundColor: e.target.value }
+                          }))}
+                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="#ffffff"
+                        />
+                      </div>
+                      
+                      {/* Opacity */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs text-gray-300">Opacidade</Label>
+                          <span className="text-xs text-gray-400">{Math.round(designConfig.card.backgroundOpacity * 100)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={designConfig.card.backgroundOpacity}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            card: { ...prev.card, backgroundOpacity: parseFloat(e.target.value) }
+                          }))}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Border Configuration */}
+                    <div className="space-y-3">
+                      <Label className="text-xs text-gray-300">Configuração de Bordas</Label>
+                      
+                      {/* Border Color */}
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
+                          style={{ backgroundColor: designConfig.card.borderColor }}
+                          onClick={() => document.getElementById('border-color-picker')?.click()}
+                        ></div>
+                        <input
+                          id="border-color-picker"
+                          type="color"
+                          value={designConfig.card.borderColor}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            card: { ...prev.card, borderColor: e.target.value }
+                          }))}
+                          className="hidden"
+                        />
+                        <Input
+                          type="text"
+                          value={designConfig.card.borderColor}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            card: { ...prev.card, borderColor: e.target.value }
+                          }))}
+                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="#e5e7eb"
+                        />
+                      </div>
+
+                      {/* Border Radius */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs text-gray-300">Raio das Bordas</Label>
+                          <span className="text-xs text-gray-400">{designConfig.card.borderRadius}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="20"
+                          step="1"
+                          value={designConfig.card.borderRadius}
+                          onChange={(e) => setDesignConfig(prev => ({ 
+                            ...prev, 
+                            card: { ...prev.card, borderRadius: parseInt(e.target.value) }
+                          }))}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                        />
+                      </div>
+
+                      {/* Border Width */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-gray-300">Espessura das Bordas</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-400">Superior</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={designConfig.card.borderWidth.top}
+                              onChange={(e) => setDesignConfig(prev => ({ 
+                                ...prev, 
+                                card: { 
+                                  ...prev.card, 
+                                  borderWidth: { ...prev.card.borderWidth, top: parseInt(e.target.value) || 0 }
+                                }
+                              }))}
+                              className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-400">Inferior</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={designConfig.card.borderWidth.bottom}
+                              onChange={(e) => setDesignConfig(prev => ({ 
+                                ...prev, 
+                                card: { 
+                                  ...prev.card, 
+                                  borderWidth: { ...prev.card.borderWidth, bottom: parseInt(e.target.value) || 0 }
+                                }
+                              }))}
+                              className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-400">Esquerda</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={designConfig.card.borderWidth.left}
+                              onChange={(e) => setDesignConfig(prev => ({ 
+                                ...prev, 
+                                card: { 
+                                  ...prev.card, 
+                                  borderWidth: { ...prev.card.borderWidth, left: parseInt(e.target.value) || 0 }
+                                }
+                              }))}
+                              className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-400">Direita</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={designConfig.card.borderWidth.right}
+                              onChange={(e) => setDesignConfig(prev => ({ 
+                                ...prev, 
+                                card: { 
+                                  ...prev.card, 
+                                  borderWidth: { ...prev.card.borderWidth, right: parseInt(e.target.value) || 0 }
+                                }
+                              }))}
+                              className="h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="bg-white/10" />
+
                 {/* Save Button */}
                 <div className="space-y-3">
                   <Button 
@@ -962,9 +1273,15 @@ export default function CustomerSupportSettings() {
                     </div>
 
                     {/* Email Content */}
-                    <div className="p-4 border-l-4 rounded-lg" style={{ 
-                      backgroundColor: `${designConfig.primaryColor}10`,
-                      borderLeftColor: designConfig.primaryColor 
+                    <div className="p-4 rounded-lg" style={{ 
+                      backgroundColor: `${designConfig.card.backgroundColor}${Math.round(designConfig.card.backgroundOpacity * 255).toString(16).padStart(2, '0')}`,
+                      borderTopWidth: `${designConfig.card.borderWidth.top}px`,
+                      borderRightWidth: `${designConfig.card.borderWidth.right}px`,
+                      borderBottomWidth: `${designConfig.card.borderWidth.bottom}px`,
+                      borderLeftWidth: `${designConfig.card.borderWidth.left}px`,
+                      borderColor: designConfig.card.borderColor,
+                      borderStyle: 'solid',
+                      borderRadius: `${designConfig.card.borderRadius}px`
                     }}>
                       <p className="mb-3" style={{ color: designConfig.textColor }}>
                         <strong>Olá João,</strong>
@@ -987,6 +1304,32 @@ export default function CustomerSupportSettings() {
                         Se precisar de mais alguma coisa, estarei aqui para ajudar! 😊
                       </p>
                     </div>
+
+                    {/* Signature */}
+                    {(designConfig.signature.name || designConfig.signature.position || designConfig.signature.phone || designConfig.signature.email || designConfig.signature.website) && (
+                      <div className="pt-4 border-t space-y-2" style={{ borderColor: `${designConfig.primaryColor}30` }}>
+                        <div className="text-sm space-y-1" style={{ color: designConfig.textColor }}>
+                          <p className="font-semibold">Atenciosamente,</p>
+                          {designConfig.signature.name && (
+                            <p><strong>{designConfig.signature.name}</strong></p>
+                          )}
+                          {designConfig.signature.position && (
+                            <p className="text-xs" style={{ color: `${designConfig.textColor}CC` }}>{designConfig.signature.position}</p>
+                          )}
+                          <div className="space-y-1 text-xs" style={{ color: `${designConfig.textColor}99` }}>
+                            {designConfig.signature.phone && (
+                              <p>📞 {designConfig.signature.phone}</p>
+                            )}
+                            {designConfig.signature.email && (
+                              <p>✉️ {designConfig.signature.email}</p>
+                            )}
+                            {designConfig.signature.website && (
+                              <p>🌐 {designConfig.signature.website}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Email Footer */}
                     <div className="text-center pt-4 border-t space-y-2" style={{ borderColor: `${designConfig.primaryColor}30` }}>
