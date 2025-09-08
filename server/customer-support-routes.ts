@@ -450,4 +450,57 @@ export function registerCustomerSupportRoutes(app: Express) {
       });
     }
   });
+
+  /**
+   * Get design configuration for an operation
+   */
+  app.get("/api/customer-support/:operationId/design-config", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      
+      const designConfig = await customerSupportService.getDesignConfig(operationId);
+      
+      res.json(designConfig || {
+        logo: "/images/n1-lblue.png",
+        primaryColor: "#2563eb",
+        backgroundColor: "#f8fafc",
+        textColor: "#333333"
+      });
+    } catch (error) {
+      console.error('Error getting design config:', error);
+      res.status(500).json({ 
+        message: "Failed to get design configuration",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Save design configuration for an operation
+   */
+  app.put("/api/customer-support/:operationId/design-config", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { logo, primaryColor, backgroundColor, textColor } = req.body;
+      
+      const designConfig = await customerSupportService.saveDesignConfig(operationId, {
+        logo,
+        primaryColor,
+        backgroundColor,
+        textColor,
+        updatedAt: new Date().toISOString()
+      });
+      
+      res.json({
+        success: true,
+        designConfig
+      });
+    } catch (error) {
+      console.error('Error saving design config:', error);
+      res.status(500).json({ 
+        message: "Failed to save design configuration",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 }

@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
@@ -48,6 +49,69 @@ export default function CustomerSupportSettings() {
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  // Get current design configuration
+  const { data: designConfigData } = useQuery({
+    queryKey: [`/api/customer-support/${currentOperationId}/design-config`],
+    enabled: !!currentOperationId,
+  });
+
+  // Save design configuration mutation
+  const saveMutation = useMutation({
+    mutationFn: async (config: typeof designConfig) => {
+      let logoUrl = config.logo;
+      
+      // Upload logo if a new file was selected
+      if (logoFile) {
+        setIsUploadingLogo(true);
+        try {
+          // Get upload URL
+          const uploadResponse = await apiRequest(`/api/objects/upload`, {
+            method: 'POST'
+          });
+          
+          // Upload file
+          await fetch(uploadResponse.uploadURL, {
+            method: 'PUT',
+            body: logoFile
+          });
+          
+          logoUrl = uploadResponse.uploadURL.split('?')[0]; // Remove query params
+        } catch (error) {
+          throw new Error('Erro no upload do logo');
+        } finally {
+          setIsUploadingLogo(false);
+        }
+      }
+
+      return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...config,
+          logo: logoUrl
+        })
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configurações salvas!",
+        description: "As configurações de design foram aplicadas com sucesso.",
+      });
+      queryClient.invalidateQueries([`/api/customer-support/${currentOperationId}/design-config`]);
+      setLogoFile(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message || "Não foi possível salvar as configurações.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSaveDesignConfig = () => {
+    saveMutation.mutate(designConfig);
+  };
 
   // Get current support configuration
   const { data: supportConfig, isLoading, refetch, error } = useQuery<SupportConfig>({
@@ -694,9 +758,17 @@ export default function CustomerSupportSettings() {
 
                 {/* Save Button */}
                 <div className="space-y-3">
-                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Salvar Configurações
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    onClick={handleSaveDesignConfig}
+                    disabled={saveMutation.isPending}
+                  >
+                    {saveMutation.isPending ? (
+                      <Cog className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Shield className="w-4 h-4 mr-2" />
+                    )}
+                    {saveMutation.isPending ? 'Salvando...' : 'Salvar Configurações'}
                   </Button>
                   
                   <div className="flex items-center gap-2 text-xs text-gray-400">
