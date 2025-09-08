@@ -717,7 +717,7 @@ export default function CustomerSupportSettings() {
                             type="color"
                             value={designConfig.primaryColor}
                             onChange={(e) => setDesignConfig(prev => ({ ...prev, primaryColor: e.target.value }))}
-                            className="absolute -top-10 left-0 w-8 h-8 rounded border border-gray-600/50 cursor-pointer opacity-0 hover:opacity-100 transition-opacity z-10"
+                            className="absolute -top-16 left-0 w-8 h-8 rounded border border-gray-600/50 cursor-pointer opacity-0 hover:opacity-100 transition-opacity z-10"
                           />
                           <div 
                             className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
@@ -745,7 +745,7 @@ export default function CustomerSupportSettings() {
                             type="color"
                             value={designConfig.backgroundColor}
                             onChange={(e) => setDesignConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                            className="absolute -top-10 left-0 w-8 h-8 rounded border border-gray-600/50 cursor-pointer opacity-0 hover:opacity-100 transition-opacity z-10"
+                            className="absolute -top-16 left-0 w-8 h-8 rounded border border-gray-600/50 cursor-pointer opacity-0 hover:opacity-100 transition-opacity z-10"
                           />
                           <div 
                             className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
@@ -773,7 +773,7 @@ export default function CustomerSupportSettings() {
                             type="color"
                             value={designConfig.textColor}
                             onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
-                            className="absolute -top-10 left-0 w-8 h-8 rounded border border-gray-600/50 cursor-pointer opacity-0 hover:opacity-100 transition-opacity z-10"
+                            className="absolute -top-16 left-0 w-8 h-8 rounded border border-gray-600/50 cursor-pointer opacity-0 hover:opacity-100 transition-opacity z-10"
                           />
                           <div 
                             className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
