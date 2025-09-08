@@ -770,7 +770,7 @@ export default function CustomerSupportPage() {
 
       {/* Modal para Ver Ticket */}
       <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
@@ -906,7 +906,7 @@ export default function CustomerSupportPage() {
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Histórico de Conversação ({selectedTicket.conversations.length})
                   </h3>
-                  <div id="conversation-history" className="space-y-4 max-h-[300px] overflow-y-auto pr-2 pb-2">
+                  <div id="conversation-history" className="space-y-4 max-h-[250px] overflow-y-auto pr-2 pb-2">
                     {selectedTicket.conversations.map((conv: any, index: number) => (
                       <div 
                         key={conv.id || index} 
@@ -947,9 +947,9 @@ export default function CustomerSupportPage() {
                 </div>
               )}
 
-              {/* Seção de Resposta */}
+              {/* Seção de Resposta - Sempre visível */}
               {selectedTicket.ticket?.status !== 'resolved' && selectedTicket.ticket?.status !== 'closed' && (
-                <div className="bg-slate-800/50 rounded-lg p-4 border-t-2 border-blue-500/50 mt-4">
+                <div className="bg-slate-800/50 rounded-lg p-4 border-t-2 border-blue-500/50 mt-4 flex-shrink-0">
                   <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
                     <Send className="h-4 w-4 mr-2" />
                     Responder Ticket
