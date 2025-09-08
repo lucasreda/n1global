@@ -716,20 +716,22 @@ export default function CustomerSupportSettings() {
                           style={{ backgroundColor: designConfig.primaryColor }}
                           onClick={() => document.getElementById('primary-color-picker')?.click()}
                         ></div>
-                        <input
-                          id="primary-color-picker"
-                          type="color"
-                          value={designConfig.primaryColor}
-                          onChange={(e) => setDesignConfig(prev => ({ ...prev, primaryColor: e.target.value }))}
-                          className="hidden"
-                        />
-                        <Input
-                          type="text"
-                          value={designConfig.primaryColor}
-                          onChange={(e) => setDesignConfig(prev => ({ ...prev, primaryColor: e.target.value }))}
-                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
-                          placeholder="#2563eb"
-                        />
+                        <div className="flex-1 flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={designConfig.primaryColor}
+                            onChange={(e) => setDesignConfig(prev => ({ ...prev, primaryColor: e.target.value }))}
+                            className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                            placeholder="#2563eb"
+                          />
+                          <input
+                            id="primary-color-picker"
+                            type="color"
+                            value={designConfig.primaryColor}
+                            onChange={(e) => setDesignConfig(prev => ({ ...prev, primaryColor: e.target.value }))}
+                            className="w-8 h-8 rounded border border-gray-600/50 cursor-pointer"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -742,20 +744,22 @@ export default function CustomerSupportSettings() {
                           style={{ backgroundColor: designConfig.backgroundColor }}
                           onClick={() => document.getElementById('background-color-picker')?.click()}
                         ></div>
-                        <input
-                          id="background-color-picker"
-                          type="color"
-                          value={designConfig.backgroundColor}
-                          onChange={(e) => setDesignConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                          className="hidden"
-                        />
-                        <Input
-                          type="text"
-                          value={designConfig.backgroundColor}
-                          onChange={(e) => setDesignConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
-                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
-                          placeholder="#f8fafc"
-                        />
+                        <div className="flex-1 flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={designConfig.backgroundColor}
+                            onChange={(e) => setDesignConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                            className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                            placeholder="#f8fafc"
+                          />
+                          <input
+                            id="background-color-picker"
+                            type="color"
+                            value={designConfig.backgroundColor}
+                            onChange={(e) => setDesignConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                            className="w-8 h-8 rounded border border-gray-600/50 cursor-pointer"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -768,20 +772,22 @@ export default function CustomerSupportSettings() {
                           style={{ backgroundColor: designConfig.textColor }}
                           onClick={() => document.getElementById('text-color-picker')?.click()}
                         ></div>
-                        <input
-                          id="text-color-picker"
-                          type="color"
-                          value={designConfig.textColor}
-                          onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
-                          className="hidden"
-                        />
-                        <Input
-                          type="text"
-                          value={designConfig.textColor}
-                          onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
-                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
-                          placeholder="#333333"
-                        />
+                        <div className="flex-1 flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={designConfig.textColor}
+                            onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
+                            className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                            placeholder="#333333"
+                          />
+                          <input
+                            id="text-color-picker"
+                            type="color"
+                            value={designConfig.textColor}
+                            onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
+                            className="w-8 h-8 rounded border border-gray-600/50 cursor-pointer"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
