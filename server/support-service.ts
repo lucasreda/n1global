@@ -1260,27 +1260,57 @@ SINAIS DE ALERTA (REVISAR):
 
     const template = response[0];
 
+    // Get design configuration for this email
+    const designConfig = await this.getDesignConfigForEmail(email);
+    console.log("🎨 Template automático usando design config:", {
+      logo: designConfig.logo,
+      primaryColor: designConfig.primaryColor,
+      hasSignature: !!(designConfig.signature?.name)
+    });
+
     // Replace variables in template
+    const customerName = email.from.split("@")[0];
     const personalizedSubject = template.subject.replace(
       "{{customer_name}}",
-      email.from.split("@")[0],
+      customerName,
     );
     const personalizedContent = template.textContent
-      .replace("{{customer_name}}", email.from.split("@")[0])
+      .replace("{{customer_name}}", customerName)
       .replace("{{original_subject}}", email.subject)
       .replace("{{ticket_number}}", `AUTO-${Date.now()}`);
 
+    // Load HTML template and apply design
+    const templatePath = path.join(process.cwd(), "email-templates", "ai-response-template.html");
+    let htmlTemplate: string;
+    try {
+      htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+    } catch (templateError) {
+      console.error("❌ Erro ao carregar template HTML:", templateError);
+      throw new Error("Template HTML não encontrado");
+    }
+
+    // Apply design configurations to HTML template
+    const processedHtml = htmlTemplate
+      .replace(/\{\{LOGO_URL\}\}/g, designConfig.logo || '')
+      .replace(/\{\{PRIMARY_COLOR\}\}/g, designConfig.primaryColor || '#0091ff')
+      .replace(/\{\{BACKGROUND_COLOR\}\}/g, designConfig.backgroundColor || '#ffffff')
+      .replace(/\{\{TEXT_COLOR\}\}/g, designConfig.textColor || '#000000')
+      .replace(/\{\{SECONDARY_TEXT_COLOR\}\}/g, designConfig.secondaryTextColor || '#666666')
+      .replace(/\{\{CUSTOMER_NAME\}\}/g, customerName)
+      .replace(/\{\{AI_RESPONSE\}\}/g, personalizedContent.replace(/\n/g, '<br>'))
+      .replace(/\{\{SIGNATURE_NAME\}\}/g, designConfig.signature?.name || 'Equipe de Suporte')
+      .replace(/\{\{SIGNATURE_POSITION\}\}/g, designConfig.signature?.position || 'Atendimento ao Cliente')
+      .replace(/\{\{SIGNATURE_PHONE\}\}/g, designConfig.signature?.phone || '')
+      .replace(/\{\{SIGNATURE_EMAIL\}\}/g, designConfig.signature?.email || '')
+      .replace(/\{\{SIGNATURE_WEBSITE\}\}/g, designConfig.signature?.website || '');
+
     try {
       await mg.messages.create(process.env.MAILGUN_DOMAIN || "", {
-        from: `Suporte <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        from: `${designConfig.signature?.name || 'Suporte'} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: email.from,
         subject: personalizedSubject,
         text: personalizedContent,
-        html:
-          template.htmlContent?.replace(
-            "{{customer_name}}",
-            email.from.split("@")[0],
-          ) || undefined,
+        html: processedHtml,
       });
 
       // Update email as responded
@@ -1302,7 +1332,7 @@ SINAIS DE ALERTA (REVISAR):
         })
         .where(eq(supportResponses.id, template.id));
 
-      console.log(`Resposta automática enviada para: ${email.from}`);
+      console.log(`✅ Resposta automática enviada para: ${email.from} com design personalizado`);
     } catch (error) {
       console.error("Erro ao enviar resposta automática:", error);
       throw error;
@@ -1630,9 +1660,17 @@ SINAIS DE ALERTA (REVISAR):
         throw new Error("Email original não encontrado");
       }
 
+      // Get design configuration for this email
+      const designConfig = await this.getDesignConfigForEmail(email);
+      console.log("🎨 Resposta manual usando design config:", {
+        logo: designConfig.logo,
+        primaryColor: designConfig.primaryColor,
+        hasSignature: !!(designConfig.signature?.name)
+      });
+
       // Send reply via Mailgun
       const replySubject = `Re: ${email.subject}`;
-      const senderName = agentName || "Equipe de Suporte";
+      const senderName = designConfig.signature?.name || agentName || "Equipe de Suporte";
 
       console.log("📧 Preparing to send email via Mailgun...");
       console.log("Email details:", {
@@ -1642,6 +1680,31 @@ SINAIS DE ALERTA (REVISAR):
         ticketNumber: ticket.ticketNumber,
       });
 
+      // Load HTML template and apply design
+      const templatePath = path.join(process.cwd(), "email-templates", "ai-response-template.html");
+      let htmlTemplate: string;
+      try {
+        htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+      } catch (templateError) {
+        console.error("❌ Erro ao carregar template HTML:", templateError);
+        throw new Error("Template HTML não encontrado");
+      }
+
+      // Apply design configurations to HTML template
+      const processedHtml = htmlTemplate
+        .replace(/\{\{LOGO_URL\}\}/g, designConfig.logo || '')
+        .replace(/\{\{PRIMARY_COLOR\}\}/g, designConfig.primaryColor || '#0091ff')
+        .replace(/\{\{BACKGROUND_COLOR\}\}/g, designConfig.backgroundColor || '#ffffff')
+        .replace(/\{\{TEXT_COLOR\}\}/g, designConfig.textColor || '#000000')
+        .replace(/\{\{SECONDARY_TEXT_COLOR\}\}/g, designConfig.secondaryTextColor || '#666666')
+        .replace(/\{\{CUSTOMER_NAME\}\}/g, ticket.customerName || 'Cliente')
+        .replace(/\{\{AI_RESPONSE\}\}/g, message.replace(/\n/g, '<br>'))
+        .replace(/\{\{SIGNATURE_NAME\}\}/g, designConfig.signature?.name || senderName)
+        .replace(/\{\{SIGNATURE_POSITION\}\}/g, designConfig.signature?.position || 'Atendimento ao Cliente')
+        .replace(/\{\{SIGNATURE_PHONE\}\}/g, designConfig.signature?.phone || '')
+        .replace(/\{\{SIGNATURE_EMAIL\}\}/g, designConfig.signature?.email || '')
+        .replace(/\{\{SIGNATURE_WEBSITE\}\}/g, designConfig.signature?.website || '');
+
       const mailgunResponse = await mg.messages.create(
         process.env.MAILGUN_DOMAIN || "",
         {
@@ -1650,27 +1713,7 @@ SINAIS DE ALERTA (REVISAR):
           "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
           subject: replySubject,
           text: message,
-          html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALMAAACWCAYAAACVdbl2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAKLklEQVR4nO2dMYgkWRnHf7UsQh2LHoggHJiIl9xMYCInl5htIJiY3CRGe1CBzoKIyWBgsAYiwhbCFdxgsAgzgUZioBiYiBOZzMChoIGBIHIgsljZlEG/t/O6t3q6qvtVve979f1gmNnunuqe3l9//X/fe/W66LqOQyia9hHw7KCD7M9FV5VXie7bcBRN+y5wMvPdnnVV+TK84GGkA59GOs5YLhLdr7HOEfM7cAGsFbIHkQ5cRzrOWI4S3a+xznHqBwARZN4s9caycBFDBLEqs7FcTkgXM9eIJfN1pOOMRcTb21KRVJUhg8rsuilGGlIM/LaiXWYxT+TScFVZ1DtjLJlvIh3H0EPKrFzT41wOMlt7bmaKpn2S+jH0ddG0xwwwmWcliBcpI15vwyGmzKkmToyZC" alt="Logo" style="height: 40px; width: auto; margin-bottom: 10px;">
-            </div>
-            <h2 style="color: #2563eb;">Resposta do Suporte</h2>
-            <p>Olá,</p>
-            <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0;">
-              ${message.replace(/\n/g, "<br>")}
-            </div>
-            <p style="color: #64748b; font-size: 14px;">
-              Esta é uma resposta ao seu ticket ${ticket.ticketNumber}.
-              <br>Se você tiver outras dúvidas, pode responder diretamente a este email.
-            </p>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-            <p style="color: #94a3b8; font-size: 12px;">
-              ${senderName}<br>
-              Atendimento ao Cliente
-            </p>
-          </div>
-        `,
+          html: processedHtml,
         },
       );
 
