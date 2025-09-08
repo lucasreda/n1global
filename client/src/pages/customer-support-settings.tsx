@@ -427,7 +427,7 @@ export default function CustomerSupportSettings() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-300">Tipo de Domínio</span>
                 <Badge variant="outline" className={supportConfig?.isCustomDomain 
-                  ? "bg-purple-600/20 text-purple-400 border-purple-600/30"
+                  ? "bg-blue-600/20 text-blue-400 border-blue-600/30"
                   : "bg-gray-600/20 text-gray-400 border-gray-600/30"
                 }>
                   {supportConfig?.isCustomDomain ? "Personalizado" : "Padrão"}
@@ -485,7 +485,7 @@ export default function CustomerSupportSettings() {
         <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-purple-400" />
+              <Globe className="w-5 h-5 text-blue-400" />
               <CardTitle className="text-white" style={{ fontSize: '18px' }}>Domínio Personalizado</CardTitle>
             </div>
             <CardDescription>
@@ -528,7 +528,7 @@ export default function CustomerSupportSettings() {
             <Button 
               onClick={handleConfigureDomain}
               disabled={!emailPrefix.trim() || !customDomain.trim() || configureDomainMutation.isPending}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               {configureDomainMutation.isPending ? (
                 <>
@@ -679,7 +679,7 @@ export default function CustomerSupportSettings() {
             <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Palette className="w-5 h-5 text-purple-400" />
+                  <Palette className="w-5 h-5 text-blue-400" />
                   <CardTitle className="text-white" style={{ fontSize: '18px' }}>Personalização do Template</CardTitle>
                 </div>
                 <CardDescription>
@@ -690,7 +690,7 @@ export default function CustomerSupportSettings() {
                 {/* Logo Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                     <h3 className="text-sm font-semibold text-gray-200">Logo da Empresa</h3>
                   </div>
                   
@@ -723,7 +723,7 @@ export default function CustomerSupportSettings() {
                     {/* Logo Alignment */}
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                         <h4 className="text-sm font-semibold text-gray-200">Alinhamento da Logo</h4>
                       </div>
                       
@@ -734,7 +734,7 @@ export default function CustomerSupportSettings() {
                             onClick={() => setDesignConfig(prev => ({ ...prev, logoAlignment: alignment }))}
                             className={`p-3 rounded-lg border text-xs font-medium transition-all ${
                               designConfig.logoAlignment === alignment
-                                ? 'bg-purple-600/30 border-purple-500 text-purple-200'
+                                ? 'bg-blue-600/30 border-blue-500 text-blue-200'
                                 : 'bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600/50'
                             }`}
                           >
@@ -774,7 +774,7 @@ export default function CustomerSupportSettings() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="w-full bg-purple-600/20 border-purple-600/30 text-purple-300 hover:bg-purple-600/30"
+                        className="w-full bg-blue-600/20 border-blue-600/30 text-blue-300 hover:bg-blue-600/30"
                         onClick={() => document.getElementById('logo-upload')?.click()}
                         disabled={isUploadingLogo}
                       >
@@ -892,7 +892,7 @@ export default function CustomerSupportSettings() {
                 {/* Save Button */}
                 <div className="space-y-3">
                   <Button 
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={handleSaveDesignConfig}
                     disabled={saveMutation.isPending}
                   >
