@@ -114,7 +114,11 @@ export default function CustomerSupportSettings() {
             throw new Error(`Erro no upload: ${uploadResult.status} ${uploadResult.statusText}`);
           }
           
-          logoUrl = uploadResponse.uploadURL.split('?')[0]; // Remove query params
+          // Convert the upload URL to our object serving endpoint
+          const urlPath = new URL(uploadResponse.uploadURL).pathname;
+          const bucketName = uploadResponse.uploadURL.split('/')[3];
+          const objectPath = urlPath.replace(`/${bucketName}/`, '');
+          logoUrl = `/objects/${objectPath.replace('.private/', '')}`;
           console.log('✅ Upload concluído:', logoUrl);
         } catch (error) {
           console.error('❌ Erro detalhado no upload:', error);
