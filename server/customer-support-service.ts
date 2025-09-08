@@ -229,7 +229,12 @@ export class CustomerSupportService {
           createdAt: row.support_tickets.createdAt,
           lastActivity: row.support_tickets.updatedAt || row.support_tickets.createdAt,
           conversationCount: 0, // Could count from conversations table if needed
-          category: row.support_categories?.name || 'Sem categoria'
+          category: row.support_categories ? {
+            id: row.support_categories.id,
+            name: row.support_categories.name,
+            displayName: row.support_categories.displayName || row.support_categories.name,
+            color: row.support_categories.color
+          } : null
         })),
         total,
         page: parseInt(page)
