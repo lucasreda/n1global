@@ -1072,6 +1072,70 @@ export class CustomerSupportService {
         return { success: true };
       }
 
+      // Load and process the professional HTML template
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      let htmlTemplate: string;
+      try {
+        const templatePath = path.join(process.cwd(), 'email-templates', 'ai-response-template.html');
+        htmlTemplate = await fs.readFile(templatePath, 'utf-8');
+      } catch (error) {
+        console.warn('⚠️ Template file not found, using fallback template');
+        htmlTemplate = `
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resposta do Suporte</title>
+</head>
+<body>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <!-- Header com Logo -->
+        <div style="text-align: center; margin-bottom: 20px">
+            <img
+                src="{{BASE_URL}}/images/n1-lblue.png"
+                alt="N1 Support Logo"
+                style="height: 50px; width: auto; max-width: 200px; margin-bottom: 10px"
+                width="200" height="50"
+            />
+        </div>
+        
+        <!-- Conteúdo da Mensagem -->
+        <div style="background-color: #f8fafc; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; border-radius: 8px;">
+            {{AI_RESPONSE_CONTENT}}
+        </div>
+        
+        <!-- Call to Action -->
+        <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 30px;">
+            Se precisar de mais alguma coisa, pode responder diretamente a este email.<br />Estamos aqui para ajudar! 😊
+        </p>
+        
+        <!-- Separador -->
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+        
+        <!-- Footer -->
+        <div style="text-align: center; color: #94a3b8; font-size: 12px; margin: 20px 0;">
+            <p style="margin: 0"><strong>${senderName}</strong> - Equipe de Suporte</p>
+            <p style="margin: 5px 0 0 0">${operation.operationName || 'Support'}</p>
+        </div>
+    </div>
+</body>
+</html>`;
+      }
+
+      // Replace template variables
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://n1global.app' 
+        : `https://${process.env.REPL_ID}-00-workspace.${process.env.REPLIT_CLUSTER}.replit.dev`;
+      
+      const processedHtml = htmlTemplate
+        .replace(/\{\{BASE_URL\}\}/g, baseUrl)
+        .replace(/\{\{AI_RESPONSE_CONTENT\}\}/g, content.replace(/\n/g, '<br>'))
+        .replace(/Sofia.*Assistente IA.*N1 Support/g, `${senderName} - Equipe de Suporte`)
+        .replace(/Resposta automática baseada na sua solicitação/g, `${operation.operationName || 'Support'}`);
+
       // Prepare email using client's domain
       const fromAddress = `${senderEmail.split('@')[0]}@${operation.emailDomain || 'localhost'}`;
       const emailData = {
@@ -1079,7 +1143,7 @@ export class CustomerSupportService {
         to: ticket.customerEmail,
         subject: `Re: ${subject} [${ticket.ticketNumber}]`,
         text: content,
-        html: this.createEmailTemplate(content, senderName, operation.operationName || 'Support'),
+        html: processedHtml,
         'o:tag': ['customer-support'],
         'o:tracking': true,
         'h:Reply-To': fromAddress,
