@@ -1342,9 +1342,15 @@ export default function CustomerSupportSettings() {
                       </p>
                     </div>
 
-                    {/* Signature */}
-                    {(designConfig.signature.name || designConfig.signature.position || designConfig.signature.phone || designConfig.signature.email || designConfig.signature.website) && (
-                      <div className="pt-4 border-t space-y-2" style={{ borderColor: `${designConfig.primaryColor}30` }}>
+                    {/* Email Footer */}
+                    <div className="text-center pt-4 border-t space-y-2" style={{ borderColor: `${designConfig.primaryColor}30` }}>
+                      <p className="text-sm" style={{ color: designConfig.secondaryTextColor }}>
+                        Se precisar de mais alguma coisa, pode responder diretamente a este email.
+                        <br />Estamos aqui para ajudar! 😊
+                      </p>
+                      
+                      {/* Custom Signature ou Sofia Default */}
+                      {(designConfig.signature.name || designConfig.signature.position || designConfig.signature.phone || designConfig.signature.email || designConfig.signature.website) ? (
                         <div className="text-sm space-y-1" style={{ color: designConfig.textColor }}>
                           <p className="font-semibold">Atenciosamente,</p>
                           {designConfig.signature.name && (
@@ -1365,20 +1371,12 @@ export default function CustomerSupportSettings() {
                             )}
                           </div>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Email Footer */}
-                    <div className="text-center pt-4 border-t space-y-2" style={{ borderColor: `${designConfig.primaryColor}30` }}>
-                      <p className="text-sm" style={{ color: designConfig.secondaryTextColor }}>
-                        Se precisar de mais alguma coisa, pode responder diretamente a este email.
-                        <br />Estamos aqui para ajudar! 😊
-                      </p>
-                      
-                      <div className="text-xs space-y-1" style={{ color: designConfig.secondaryTextColor }}>
-                        <p><strong>Sofia</strong> - Assistente IA do N1 Support</p>
-                        <p>Resposta automática baseada na sua solicitação</p>
-                      </div>
+                      ) : (
+                        <div className="text-xs space-y-1" style={{ color: designConfig.secondaryTextColor }}>
+                          <p><strong>Sofia</strong> - Assistente IA do N1 Support</p>
+                          <p>Resposta automática baseada na sua solicitação</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
