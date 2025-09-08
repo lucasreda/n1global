@@ -326,10 +326,17 @@ export function registerCustomerSupportRoutes(app: Express) {
    */
   app.post("/api/webhooks/mailgun/email", async (req: Request, res: Response) => {
     try {
-      console.log('📧 Mailgun webhook received:', {
-        headers: req.headers,
-        body: req.body
+      console.log('🚨 ===== WEBHOOK PRODUÇÃO CHAMADO ===== 🚨');
+      console.log('📧 User-Agent:', req.headers['user-agent']);
+      console.log('📧 Content-Type:', req.headers['content-type']);
+      console.log('📧 Body keys:', Object.keys(req.body));
+      console.log('📧 Email details:', {
+        from: req.body.sender,
+        to: req.body.recipient,  
+        subject: req.body.subject,
+        timestamp: req.body.timestamp
       });
+      console.log('🚨 =============================🚨');
 
       // Verify webhook signature (simplified - in production use crypto verification)
       const token = req.body.token;
