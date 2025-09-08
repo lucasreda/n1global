@@ -65,20 +65,34 @@ export default function CustomerSupportSettings() {
       if (logoFile) {
         setIsUploadingLogo(true);
         try {
+          console.log('🔄 Iniciando upload do logo...');
+          
           // Get upload URL
+          console.log('🔗 Solicitando URL de upload...');
           const uploadResponse = await apiRequest(`/api/objects/upload`, {
             method: 'POST'
           });
+          console.log('✅ URL de upload obtida:', uploadResponse.uploadURL);
           
           // Upload file
-          await fetch(uploadResponse.uploadURL, {
+          console.log('📤 Fazendo upload do arquivo...');
+          const uploadResult = await fetch(uploadResponse.uploadURL, {
             method: 'PUT',
-            body: logoFile
+            body: logoFile,
+            headers: {
+              'Content-Type': logoFile.type,
+            }
           });
           
+          if (!uploadResult.ok) {
+            throw new Error(`Erro no upload: ${uploadResult.status} ${uploadResult.statusText}`);
+          }
+          
           logoUrl = uploadResponse.uploadURL.split('?')[0]; // Remove query params
+          console.log('✅ Upload concluído:', logoUrl);
         } catch (error) {
-          throw new Error('Erro no upload do logo');
+          console.error('❌ Erro detalhado no upload:', error);
+          throw new Error(`Erro no upload do logo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         } finally {
           setIsUploadingLogo(false);
         }
