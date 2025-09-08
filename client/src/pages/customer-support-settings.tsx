@@ -69,8 +69,17 @@ export default function CustomerSupportSettings() {
           
           // Get upload URL
           console.log('🔗 Solicitando URL de upload...');
-          const uploadResponse = await apiRequest(`/api/objects/upload`, {
-            method: 'POST'
+          const uploadResponse = await fetch(`/api/objects/upload`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+              'Content-Type': 'application/json'
+            }
+          }).then(async res => {
+            if (!res.ok) {
+              throw new Error(`Erro ao obter URL de upload: ${res.status} ${res.statusText}`);
+            }
+            return res.json();
           });
           console.log('✅ URL de upload obtida:', uploadResponse.uploadURL);
           
