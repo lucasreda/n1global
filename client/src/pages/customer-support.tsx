@@ -126,6 +126,20 @@ export default function CustomerSupportPage() {
     }
   }, [isTicketModalOpen, selectedTicket?.conversations?.length]);
 
+  // Effect to adjust scroll when reply section expands
+  useEffect(() => {
+    if (isReplyExpanded) {
+      setTimeout(() => {
+        const conversationContainer = document.getElementById('conversation-history');
+        if (conversationContainer) {
+          // Scroll to show the last few messages when reply expands
+          const scrollTop = Math.max(0, conversationContainer.scrollHeight - conversationContainer.clientHeight - 100);
+          conversationContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }
+      }, 350); // Wait for expansion animation to complete
+    }
+  }, [isReplyExpanded]);
+
   // Function to scroll to last message in conversation
   const scrollToLastMessage = () => {
     const conversationContainer = document.getElementById('conversation-history');
@@ -842,7 +856,7 @@ export default function CustomerSupportPage() {
           </DialogHeader>
           
           {selectedTicket && (
-            <div className="flex-1 overflow-hidden flex flex-col space-y-2 min-h-0">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 gap-2">
               {/* Header Compacto */}
               <div className="bg-slate-800/50 rounded-lg p-3 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
@@ -889,12 +903,12 @@ export default function CustomerSupportPage() {
 
               {/* Histórico de Conversação - Prioridade */}
               {selectedTicket.conversations && selectedTicket.conversations.length > 0 && (
-                <div className="bg-slate-800/50 rounded-lg p-3 flex-1 min-h-0 flex flex-col">
+                <div className="bg-slate-800/50 rounded-lg p-3 flex-1 min-h-0 flex flex-col overflow-hidden">
                   <h3 className="text-sm font-semibold text-slate-200 mb-2 flex items-center flex-shrink-0">
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Mensagens ({selectedTicket.conversations.length})
                   </h3>
-                  <div id="conversation-history" className="space-y-3 overflow-y-auto pr-2 flex-1" style={{ minHeight: '400px' }}>
+                  <div id="conversation-history" className="space-y-3 overflow-y-auto pr-2 flex-1" style={{ scrollBehavior: 'smooth' }}>
                     {selectedTicket.conversations.map((conv: any, index: number) => (
                       <div 
                         key={conv.id || index} 
@@ -946,12 +960,12 @@ export default function CustomerSupportPage() {
               {/* Seção de Resposta - Dinâmica */}
               {selectedTicket.ticket?.status !== 'resolved' && selectedTicket.ticket?.status !== 'closed' && (
                 <div 
-                  className={`bg-slate-800/50 rounded-lg border-t-2 border-blue-500/50 mt-2 flex-shrink-0 transition-all duration-300 ease-in-out ${
+                  className={`bg-slate-800/50 rounded-lg border-t-2 border-blue-500/50 flex-shrink-0 transition-all duration-300 ease-in-out ${
                     isReplyExpanded ? 'p-3' : 'p-2'
                   }`}
                   style={{ 
-                    height: isReplyExpanded ? 'auto' : '60px',
-                    maxHeight: isReplyExpanded ? '300px' : '60px'
+                    height: isReplyExpanded ? 'auto' : '50px',
+                    maxHeight: isReplyExpanded ? '250px' : '50px'
                   }}
                 >
                   {!isReplyExpanded ? (
@@ -961,7 +975,7 @@ export default function CustomerSupportPage() {
                     >
                       <div className="flex items-center gap-2 text-slate-400">
                         <Send className="h-4 w-4" />
-                        <span className="text-sm">Digite sua resposta aqui...</span>
+                        <span className="text-sm">Clique para responder ao ticket...</span>
                       </div>
                     </div>
                   ) : (
@@ -992,14 +1006,16 @@ export default function CustomerSupportPage() {
                             placeholder="Digite sua resposta aqui..."
                             value={replyMessage}
                             onChange={(e) => setReplyMessage(e.target.value)}
-                            className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[100px] max-h-[150px] resize-none"
+                            className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[80px] max-h-[120px] resize-none"
                             disabled={isSendingReply}
                             autoFocus
                             onBlur={(e) => {
-                              // Só recolhe se não há texto e não está enviando
-                              if (!replyMessage.trim() && !isSendingReply && !e.currentTarget.contains(e.relatedTarget)) {
-                                setIsReplyExpanded(false);
-                              }
+                              // Só recolhe se não há texto, não está enviando e clicou fora da área de resposta
+                              setTimeout(() => {
+                                if (!replyMessage.trim() && !isSendingReply && !e.currentTarget.contains(document.activeElement)) {
+                                  setIsReplyExpanded(false);
+                                }
+                              }, 100);
                             }}
                           />
                         </div>
