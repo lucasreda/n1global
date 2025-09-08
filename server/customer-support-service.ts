@@ -149,16 +149,21 @@ export class CustomerSupportService {
       });
 
       console.log('📋 Categories from DB:', categories.map(c => ({id: c.id, name: c.name, displayName: c.displayName})));
-
-      return orderedCategories.map(cat => ({
+      
+      const result = orderedCategories.map(cat => ({
         id: cat.id,
         name: cat.displayName || cat.name,
+        displayName: cat.displayName || cat.name,
         description: cat.description,
         isAutomated: cat.isAutomated,
         priority: cat.priority,
         color: cat.color,
         active: true
       }));
+      
+      console.log('📋 Returning to frontend:', result);
+
+      return result;
     } catch (error) {
       console.error('Error getting categories:', error);
       throw error;
