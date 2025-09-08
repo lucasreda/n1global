@@ -73,6 +73,7 @@ export default function CustomerSupportPage() {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isClosingTicket, setIsClosingTicket] = useState(false);
+  const [isReplyExpanded, setIsReplyExpanded] = useState(false);
   const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
   const [newMessageRecipient, setNewMessageRecipient] = useState("");
   const [newMessageContent, setNewMessageContent] = useState("");
@@ -947,49 +948,88 @@ export default function CustomerSupportPage() {
                 </div>
               )}
 
-              {/* Seção de Resposta - Sempre visível */}
+              {/* Seção de Resposta - Dinâmica */}
               {selectedTicket.ticket?.status !== 'resolved' && selectedTicket.ticket?.status !== 'closed' && (
-                <div className="bg-slate-800/50 rounded-lg p-4 border-t-2 border-blue-500/50 mt-4 flex-shrink-0">
-                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
-                    <Send className="h-4 w-4 mr-2" />
-                    Responder Ticket
-                  </h3>
-                  <div className="space-y-4">
+                <div 
+                  className={`bg-slate-800/50 rounded-lg border-t-2 border-blue-500/50 mt-4 flex-shrink-0 transition-all duration-300 ease-in-out ${
+                    isReplyExpanded ? 'p-4' : 'p-2'
+                  }`}
+                  style={{ height: isReplyExpanded ? 'auto' : '80px' }}
+                >
+                  {!isReplyExpanded ? (
+                    <div 
+                      className="flex items-center justify-center h-full cursor-text hover:bg-slate-700/30 rounded transition-colors"
+                      onClick={() => setIsReplyExpanded(true)}
+                    >
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <Send className="h-4 w-4" />
+                        <span className="text-sm">Digite sua resposta aqui...</span>
+                      </div>
+                    </div>
+                  ) : (
                     <div>
-                      <label className="text-sm text-slate-400 mb-2 block">
-                        Resposta para {selectedTicket.ticket.customerEmail}
-                      </label>
-                      <Textarea
-                        placeholder="Digite sua resposta aqui..."
-                        value={replyMessage}
-                        onChange={(e) => setReplyMessage(e.target.value)}
-                        className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[120px] resize-none"
-                        disabled={isSendingReply}
-                      />
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-md font-semibold text-slate-200 flex items-center">
+                          <Send className="h-4 w-4 mr-2" />
+                          Responder Ticket
+                        </h3>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setIsReplyExpanded(false);
+                            setReplyMessage("");
+                          }}
+                          className="text-slate-400 hover:text-slate-200"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm text-slate-400 mb-2 block">
+                            Resposta para {selectedTicket.ticket.customerEmail}
+                          </label>
+                          <Textarea
+                            placeholder="Digite sua resposta aqui..."
+                            value={replyMessage}
+                            onChange={(e) => setReplyMessage(e.target.value)}
+                            className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[120px] resize-none"
+                            disabled={isSendingReply}
+                            autoFocus
+                            onBlur={(e) => {
+                              // Só recolhe se não há texto e não está enviando
+                              if (!replyMessage.trim() && !isSendingReply && !e.currentTarget.contains(e.relatedTarget)) {
+                                setIsReplyExpanded(false);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">
+                            Esta resposta será enviada por email para o cliente
+                          </p>
+                          <Button
+                            onClick={handleSendReply}
+                            disabled={!replyMessage.trim() || isSendingReply}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            {isSendingReply ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Enviando...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Enviar Resposta
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-slate-400">
-                        Esta resposta será enviada por email para o cliente
-                      </p>
-                      <Button
-                        onClick={handleSendReply}
-                        disabled={!replyMessage.trim() || isSendingReply}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        {isSendingReply ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Enviando...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4 mr-2" />
-                            Enviar Resposta
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
