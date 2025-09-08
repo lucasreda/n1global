@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface SupportConfig {
@@ -38,6 +38,16 @@ export default function CustomerSupportSettings() {
   const [emailPrefix, setEmailPrefix] = useState("");
   const [customDomain, setCustomDomain] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Design configuration states
+  const [designConfig, setDesignConfig] = useState({
+    logo: "/images/n1-lblue.png",
+    primaryColor: "#2563eb",
+    backgroundColor: "#f8fafc",
+    textColor: "#333333"
+  });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Get current support configuration
   const { data: supportConfig, isLoading, refetch, error } = useQuery<SupportConfig>({
@@ -581,14 +591,42 @@ export default function CustomerSupportSettings() {
                       </div>
                     </div>
                     
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="w-full bg-purple-600/20 border-purple-600/30 text-purple-300 hover:bg-purple-600/30"
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
-                      Fazer Upload do Logo
-                    </Button>
+                    <div className="space-y-2">
+                      <input
+                        type="file"
+                        id="logo-upload"
+                        accept=".png,.jpg,.jpeg"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setLogoFile(file);
+                            // Create preview URL
+                            const previewUrl = URL.createObjectURL(file);
+                            setDesignConfig(prev => ({ ...prev, logo: previewUrl }));
+                          }
+                        }}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full bg-purple-600/20 border-purple-600/30 text-purple-300 hover:bg-purple-600/30"
+                        onClick={() => document.getElementById('logo-upload')?.click()}
+                        disabled={isUploadingLogo}
+                      >
+                        {isUploadingLogo ? (
+                          <Cog className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4 mr-2" />
+                        )}
+                        {isUploadingLogo ? 'Enviando...' : 'Fazer Upload do Logo'}
+                      </Button>
+                      {logoFile && (
+                        <p className="text-xs text-green-400">
+                          ✓ {logoFile.name} selecionado
+                        </p>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-400">
                       Formatos aceitos: PNG, JPG. Tamanho máximo: 2MB
                     </p>
@@ -609,10 +647,11 @@ export default function CustomerSupportSettings() {
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-300">Cor Principal</Label>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-500 rounded border border-white/20"></div>
+                        <div className="w-8 h-8 rounded border border-white/20" style={{ backgroundColor: designConfig.primaryColor }}></div>
                         <Input
                           type="text"
-                          value="#2563eb"
+                          value={designConfig.primaryColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, primaryColor: e.target.value }))}
                           className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
                           placeholder="#2563eb"
                         />
@@ -623,10 +662,11 @@ export default function CustomerSupportSettings() {
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-300">Cor de Fundo</Label>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-50 rounded border border-white/20"></div>
+                        <div className="w-8 h-8 rounded border border-white/20" style={{ backgroundColor: designConfig.backgroundColor }}></div>
                         <Input
                           type="text"
-                          value="#f8fafc"
+                          value={designConfig.backgroundColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
                           className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
                           placeholder="#f8fafc"
                         />
@@ -637,10 +677,11 @@ export default function CustomerSupportSettings() {
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-300">Cor do Texto</Label>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-800 rounded border border-white/20"></div>
+                        <div className="w-8 h-8 rounded border border-white/20" style={{ backgroundColor: designConfig.textColor }}></div>
                         <Input
                           type="text"
-                          value="#333333"
+                          value={designConfig.textColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
                           className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
                           placeholder="#333333"
                         />
@@ -683,13 +724,13 @@ export default function CustomerSupportSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-full">
-                <div className="bg-white rounded-lg p-4 h-[600px] overflow-y-auto border">
+                <div className="rounded-lg p-4 h-[600px] overflow-y-auto border" style={{ backgroundColor: designConfig.backgroundColor }}>
                   {/* Email Preview */}
                   <div className="max-w-lg mx-auto space-y-4">
                     {/* Email Header */}
-                    <div className="text-center pb-4 border-b border-gray-200">
+                    <div className="text-center pb-4 border-b" style={{ borderColor: `${designConfig.primaryColor}30` }}>
                       <img
-                        src="/images/n1-lblue.png"
+                        src={designConfig.logo}
                         alt="Logo"
                         className="h-12 mx-auto mb-2"
                         onError={(e) => {
@@ -697,43 +738,46 @@ export default function CustomerSupportSettings() {
                           e.currentTarget.nextElementSibling!.style.display = 'block';
                         }}
                       />
-                      <div className="hidden text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded">
+                      <div className="hidden text-sm px-3 py-2 rounded" style={{ color: designConfig.textColor, backgroundColor: `${designConfig.primaryColor}10` }}>
                         Logo da Empresa
                       </div>
                     </div>
 
                     {/* Email Content */}
-                    <div className="bg-blue-50 p-4 border-l-4 border-blue-500 rounded-lg">
-                      <p className="text-gray-800 mb-3">
+                    <div className="p-4 border-l-4 rounded-lg" style={{ 
+                      backgroundColor: `${designConfig.primaryColor}10`,
+                      borderLeftColor: designConfig.primaryColor 
+                    }}>
+                      <p className="mb-3" style={{ color: designConfig.textColor }}>
                         <strong>Olá João,</strong>
                       </p>
                       
-                      <p className="text-gray-800 mb-3">
+                      <p className="mb-3" style={{ color: designConfig.textColor }}>
                         Compreendo sua preocupação com o <strong>cancelamento do pedido</strong>.
                       </p>
                       
-                      <p className="text-gray-800 mb-3">
+                      <p className="mb-3" style={{ color: designConfig.textColor }}>
                         Se a compra ainda não foi enviada, podemos <strong>cancelar imediatamente</strong>. 
                         Caso já tenha sido enviada, o processo pode levar de <strong>2 a 7 dias úteis</strong> para o reembolso completo.
                       </p>
                       
-                      <p className="text-gray-800 mb-3">
+                      <p className="mb-3" style={{ color: designConfig.textColor }}>
                         Estamos disponíveis para ajudar de <strong>segunda a sexta-feira, das 9h às 18h</strong>.
                       </p>
                       
-                      <p className="text-gray-800">
+                      <p style={{ color: designConfig.textColor }}>
                         Se precisar de mais alguma coisa, estarei aqui para ajudar! 😊
                       </p>
                     </div>
 
                     {/* Email Footer */}
-                    <div className="text-center pt-4 border-t border-gray-200 space-y-2">
-                      <p className="text-sm text-gray-600">
+                    <div className="text-center pt-4 border-t space-y-2" style={{ borderColor: `${designConfig.primaryColor}30` }}>
+                      <p className="text-sm" style={{ color: `${designConfig.textColor}CC` }}>
                         Se precisar de mais alguma coisa, pode responder diretamente a este email.
                         <br />Estamos aqui para ajudar! 😊
                       </p>
                       
-                      <div className="text-xs text-gray-500 space-y-1">
+                      <div className="text-xs space-y-1" style={{ color: `${designConfig.textColor}99` }}>
                         <p><strong>Sofia</strong> - Assistente IA do N1 Support</p>
                         <p>Resposta automática baseada na sua solicitação</p>
                       </div>
