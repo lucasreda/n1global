@@ -58,6 +58,39 @@ interface SupportTicket {
   isAutomated: boolean;
 }
 
+const getStatusBadge = (status: string) => {
+  const statusConfig = {
+    'open': { bg: 'bg-green-600/20', text: 'text-green-400', border: 'border-green-600/30', label: 'Aberto' },
+    'in_progress': { bg: 'bg-blue-600/20', text: 'text-blue-400', border: 'border-blue-600/30', label: 'Em Andamento' },
+    'resolved': { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/30', label: 'Resolvido' },
+    'auto_responded': { bg: 'bg-emerald-600/20', text: 'text-emerald-400', border: 'border-emerald-600/30', label: 'Auto Resposta' },
+    'closed': { bg: 'bg-gray-600/20', text: 'text-gray-400', border: 'border-gray-600/30', label: 'Fechado' }
+  };
+  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['closed'];
+  
+  return (
+    <Badge className={`text-xs ${config.bg} ${config.text} ${config.border}`}>
+      {config.label}
+    </Badge>
+  );
+};
+
+const getPriorityBadge = (priority: string) => {
+  const priorityConfig = {
+    'urgent': { bg: 'bg-red-600/20', text: 'text-red-400', border: 'border-red-600/30', label: 'Urgente' },
+    'high': { bg: 'bg-orange-600/20', text: 'text-orange-400', border: 'border-orange-600/30', label: 'Alto' },
+    'medium': { bg: 'bg-blue-600/20', text: 'text-blue-400', border: 'border-blue-600/30', label: 'Médio' },
+    'low': { bg: 'bg-gray-600/20', text: 'text-gray-400', border: 'border-gray-600/30', label: 'Baixo' }
+  };
+  const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig['low'];
+  
+  return (
+    <Badge className={`text-xs ${config.bg} ${config.text} ${config.border}`}>
+      {config.label}
+    </Badge>
+  );
+};
+
 export default function CustomerSupportPage() {
   const { selectedOperation, operations } = useCurrentOperation();
   const currentOperationId = selectedOperation;
@@ -809,124 +842,91 @@ export default function CustomerSupportPage() {
           </DialogHeader>
           
           {selectedTicket && (
-            <div className="flex-1 overflow-hidden flex flex-col space-y-4 min-h-0">
-              {/* Header - Informações Principais do Ticket */}
-              <div className="bg-slate-800/50 rounded-lg p-4 flex-shrink-0">
-                <h2 className="text-xl font-semibold text-slate-200 mb-3 flex items-center">
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  {selectedTicket.ticket.subject}
-                </h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-slate-400">De: </span>
-                    <span className="text-slate-200">{selectedTicket.ticket.customerEmail}</span>
+            <div className="flex-1 overflow-hidden flex flex-col space-y-2 min-h-0">
+              {/* Header Compacto */}
+              <div className="bg-slate-800/50 rounded-lg p-3 flex-shrink-0">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-lg font-semibold text-slate-200 flex items-center">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    {selectedTicket.ticket.subject}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(selectedTicket.ticket.status)}
+                    {getPriorityBadge(selectedTicket.ticket.priority)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 text-sm text-slate-400">
+                  <span>
+                    <span className="text-slate-300">{selectedTicket.ticket.customerEmail}</span>
                     {selectedTicket.ticket.customerName && (
-                      <span className="text-slate-400"> ({selectedTicket.ticket.customerName})</span>
+                      <span className="ml-1">({selectedTicket.ticket.customerName})</span>
                     )}
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Status: </span>
-                    <Badge 
-                      className={`text-xs ${
-                        selectedTicket.ticket.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
-                        selectedTicket.ticket.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
-                        selectedTicket.ticket.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
-                        selectedTicket.ticket.status === 'auto_responded' ? 'bg-emerald-600/20 text-emerald-400 border-emerald-600/30' :
-                        'bg-gray-600/20 text-gray-400 border-gray-600/30'
-                      }`}
-                    >
-                      {selectedTicket.ticket.status === 'open' ? 'Aberto' :
-                       selectedTicket.ticket.status === 'in_progress' ? 'Em Andamento' :
-                       selectedTicket.ticket.status === 'resolved' ? 'Resolvido' :
-                       selectedTicket.ticket.status === 'auto_responded' ? 'Resposta Automática' :
-                       'Fechado'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Prioridade: </span>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${
-                        selectedTicket.ticket.priority === 'high' ? 'border-red-600 text-red-400' :
-                        selectedTicket.ticket.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
-                        'border-slate-600 text-slate-400'
-                      }`}
-                    >
-                      {selectedTicket.ticket.priority === 'high' ? 'Alta' :
-                       selectedTicket.ticket.priority === 'medium' ? 'Média' : 'Baixa'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <span className="text-slate-400">Criado: </span>
-                    <span className="text-slate-200">
-                      {new Date(selectedTicket.ticket.createdAt).toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                  {selectedTicket.ticket.categoryName && (
-                    <div className="col-span-2">
-                      <span className="text-slate-400">Categoria: </span>
-                      <Badge className="bg-slate-700 text-slate-300 text-xs">
-                        {selectedTicket.ticket.categoryName}
-                      </Badge>
-                    </div>
-                  )}
+                  </span>
+                  <span>{selectedTicket.ticket.categoryName}</span>
+                  <span>{new Date(selectedTicket.ticket.createdAt).toLocaleDateString('pt-BR')}</span>
                 </div>
               </div>
 
-              {/* IA Information */}
+              {/* IA Information - Compacta */}
               {(selectedTicket.ticket.aiConfidence || selectedTicket.ticket.aiReasoning) && (
-                <div className="bg-slate-800/50 rounded-lg p-4 flex-shrink-0">
-                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    Análise da IA
-                  </h3>
-                  <div className="space-y-3">
-                    {selectedTicket.ticket.aiReasoning && (
-                      <div>
-                        <span className="text-slate-400 text-sm">Categorização:</span>
-                        <div className="mt-1 p-3 bg-slate-900/50 rounded border-l-4 border-purple-500">
-                          <p className="text-slate-300 text-sm">
-                            {selectedTicket.ticket.aiReasoning}
-                          </p>
-                          {selectedTicket.ticket.aiConfidence && (
-                            <p className="text-slate-400 text-xs mt-2">
-                              Confiança: {selectedTicket.ticket.aiConfidence}%
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                <div className="bg-slate-800/50 rounded-lg p-2 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-3 w-3 text-purple-400" />
+                      <span className="text-xs text-slate-400">IA: {selectedTicket.ticket.aiConfidence}% confiança</span>
+                    </div>
+                    <Badge className="bg-purple-900/30 text-purple-300 text-xs">
+                      {selectedTicket.ticket.categoryName}
+                    </Badge>
                   </div>
+                  {selectedTicket.ticket.aiReasoning && (
+                    <p className="text-xs text-slate-400 mt-1 truncate" title={selectedTicket.ticket.aiReasoning}>
+                      {selectedTicket.ticket.aiReasoning}
+                    </p>
+                  )}
                 </div>
               )}
 
-              {/* Histórico de Conversação - Flexível */}
+              {/* Histórico de Conversação - Prioridade */}
               {selectedTicket.conversations && selectedTicket.conversations.length > 0 && (
-                <div className="bg-slate-800/50 rounded-lg p-4 mb-4 flex-1 min-h-0 flex flex-col">
-                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center flex-shrink-0">
+                <div className="bg-slate-800/50 rounded-lg p-3 flex-1 min-h-0 flex flex-col">
+                  <h3 className="text-sm font-semibold text-slate-200 mb-2 flex items-center flex-shrink-0">
                     <MessageSquare className="h-4 w-4 mr-2" />
-                    Histórico de Conversação ({selectedTicket.conversations.length})
+                    Mensagens ({selectedTicket.conversations.length})
                   </h3>
-                  <div id="conversation-history" className="space-y-4 overflow-y-auto pr-2 flex-1">
+                  <div id="conversation-history" className="space-y-3 overflow-y-auto pr-2 flex-1" style={{ minHeight: '400px' }}>
                     {selectedTicket.conversations.map((conv: any, index: number) => (
                       <div 
                         key={conv.id || index} 
-                        className={`p-3 rounded border-l-4 ${
-                          conv.sender === 'customer' ? 'border-green-500 bg-green-900/20' :
-                          conv.sender === 'agent' ? 'border-blue-500 bg-blue-900/20' :
-                          conv.sender === 'ai' ? 'border-purple-500 bg-purple-900/20' :
-                          'border-gray-500 bg-gray-900/20'
+                        className={`p-2 rounded-lg border-l-3 ${
+                          conv.sender === 'customer' ? 'border-green-500 bg-green-900/10' :
+                          conv.sender === 'agent' ? 'border-blue-500 bg-blue-900/10' :
+                          conv.sender === 'ai' ? 'border-purple-500 bg-purple-900/10' :
+                          'border-gray-500 bg-gray-900/10'
                         }`}
                       >
-                        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                        <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                              conv.sender === 'customer' ? 'bg-green-900/30 text-green-300' :
+                              conv.sender === 'agent' ? 'bg-blue-900/30 text-blue-300' :
+                              conv.sender === 'ai' ? 'bg-purple-900/30 text-purple-300' :
+                              'bg-gray-900/30 text-gray-300'
+                            }`}>
+                              {conv.sender === 'customer' ? 'Cliente' : 
+                               conv.sender === 'agent' ? 'Agente' : 
+                               conv.sender === 'ai' ? 'Sofia' : 
+                               'Sistema'}
+                            </span>
+                            <span className="text-slate-500">{conv.senderEmail}</span>
+                          </div>
                           <span>
-                            {conv.sender === 'customer' ? 'Cliente' : 
-                             conv.sender === 'agent' ? 'Agente' : 
-                             conv.sender === 'ai' ? 'IA (Sofia)' : 
-                             'Sistema'}
-                          </span>
-                          <span>
-                            {new Date(conv.createdAt).toLocaleString('pt-BR')}
+                            {new Date(conv.createdAt).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
                           </span>
                         </div>
                         {conv.subject && (
@@ -934,14 +934,9 @@ export default function CustomerSupportPage() {
                             {conv.subject}
                           </div>
                         )}
-                        <div className="text-sm text-slate-300 whitespace-pre-wrap">
+                        <div className="text-sm text-slate-300 leading-relaxed">
                           {conv.content}
                         </div>
-                        {conv.senderEmail && (
-                          <div className="text-xs text-slate-500 mt-2">
-                            De: {conv.senderEmail}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -951,10 +946,13 @@ export default function CustomerSupportPage() {
               {/* Seção de Resposta - Dinâmica */}
               {selectedTicket.ticket?.status !== 'resolved' && selectedTicket.ticket?.status !== 'closed' && (
                 <div 
-                  className={`bg-slate-800/50 rounded-lg border-t-2 border-blue-500/50 mt-4 flex-shrink-0 transition-all duration-300 ease-in-out ${
-                    isReplyExpanded ? 'p-4' : 'p-2'
+                  className={`bg-slate-800/50 rounded-lg border-t-2 border-blue-500/50 mt-2 flex-shrink-0 transition-all duration-300 ease-in-out ${
+                    isReplyExpanded ? 'p-3' : 'p-2'
                   }`}
-                  style={{ height: isReplyExpanded ? 'auto' : '80px' }}
+                  style={{ 
+                    height: isReplyExpanded ? 'auto' : '60px',
+                    maxHeight: isReplyExpanded ? '300px' : '60px'
+                  }}
                 >
                   {!isReplyExpanded ? (
                     <div 
@@ -994,7 +992,7 @@ export default function CustomerSupportPage() {
                             placeholder="Digite sua resposta aqui..."
                             value={replyMessage}
                             onChange={(e) => setReplyMessage(e.target.value)}
-                            className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[120px] resize-none"
+                            className="bg-slate-900/50 border-slate-600 text-slate-200 min-h-[100px] max-h-[150px] resize-none"
                             disabled={isSendingReply}
                             autoFocus
                             onBlur={(e) => {
