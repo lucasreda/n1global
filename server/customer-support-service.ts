@@ -148,8 +148,6 @@ export class CustomerSupportService {
         return b.priority - a.priority;
       });
 
-      console.log('📋 Categories from DB:', categories.map(c => ({id: c.id, name: c.name, displayName: c.displayName})));
-      
       const result = orderedCategories.map(cat => ({
         id: cat.id,
         name: cat.displayName || cat.name,
@@ -160,8 +158,6 @@ export class CustomerSupportService {
         color: cat.color,
         active: true
       }));
-      
-      console.log('📋 Returning to frontend:', result);
 
       return result;
     } catch (error) {
@@ -263,6 +259,15 @@ export class CustomerSupportService {
         throw new Error('Ticket not found');
       }
 
+      // Get conversations for this ticket
+      const conversations = await this.db
+        .select()
+        .from(this.schema.supportConversations)
+        .where(eq(this.schema.supportConversations.ticketId, ticketId))
+        .orderBy(this.schema.supportConversations.createdAt);
+
+      console.log(`🎫 Loading ticket ${ticketId} with ${conversations.length} conversations`);
+
       const row = ticket[0];
       return {
         id: row.support_tickets.id,
@@ -275,7 +280,17 @@ export class CustomerSupportService {
         createdAt: row.support_tickets.createdAt,
         description: row.support_tickets.description,
         resolution: row.support_tickets.resolution,
-        category: row.support_categories?.name || 'Sem categoria'
+        category: row.support_categories?.name || 'Sem categoria',
+        messages: conversations.map(conv => ({
+          id: conv.id,
+          type: conv.type,
+          content: conv.content,
+          fromEmail: conv.fromEmail,
+          toEmail: conv.toEmail,
+          subject: conv.subject,
+          createdAt: conv.createdAt,
+          isInternal: conv.isInternal || false
+        }))
       };
     } catch (error) {
       console.error('Error getting ticket:', error);
