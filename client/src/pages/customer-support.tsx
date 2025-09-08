@@ -435,15 +435,16 @@ export default function CustomerSupportPage() {
   };
 
   return (
-    <div className="w-full" style={{ width: '100%', marginLeft: '0', paddingLeft: '0' }}>
     <div className="space-y-6">
+      <div>
+        <h1 className="font-bold text-white" style={{ fontSize: '22px' }}>Suporte de Clientes</h1>
+        <p className="text-gray-400">Visualize e gerencie todos os tickets de suporte</p>
+      </div>
+      
       {/* Header with Controls */}
       <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-bold tracking-tight text-gray-100" style={{ fontSize: '20px' }}>
-              Suporte de Clientes
-            </h1>
             {(supportConfig as any)?.emailDomain && (
               <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs px-3 py-1">
                 {(supportConfig as any).emailDomain}
@@ -1064,7 +1065,6 @@ export default function CustomerSupportPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
     </div>
   );
 }
