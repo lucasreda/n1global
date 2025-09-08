@@ -711,7 +711,18 @@ export default function CustomerSupportSettings() {
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-300">Cor Principal</Label>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded border border-white/20" style={{ backgroundColor: designConfig.primaryColor }}></div>
+                        <div 
+                          className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
+                          style={{ backgroundColor: designConfig.primaryColor }}
+                          onClick={() => document.getElementById('primary-color-picker')?.click()}
+                        ></div>
+                        <input
+                          id="primary-color-picker"
+                          type="color"
+                          value={designConfig.primaryColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, primaryColor: e.target.value }))}
+                          className="hidden"
+                        />
                         <Input
                           type="text"
                           value={designConfig.primaryColor}
@@ -726,7 +737,18 @@ export default function CustomerSupportSettings() {
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-300">Cor de Fundo</Label>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded border border-white/20" style={{ backgroundColor: designConfig.backgroundColor }}></div>
+                        <div 
+                          className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
+                          style={{ backgroundColor: designConfig.backgroundColor }}
+                          onClick={() => document.getElementById('background-color-picker')?.click()}
+                        ></div>
+                        <input
+                          id="background-color-picker"
+                          type="color"
+                          value={designConfig.backgroundColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
+                          className="hidden"
+                        />
                         <Input
                           type="text"
                           value={designConfig.backgroundColor}
@@ -741,7 +763,18 @@ export default function CustomerSupportSettings() {
                     <div className="space-y-2">
                       <Label className="text-xs text-gray-300">Cor do Texto</Label>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded border border-white/20" style={{ backgroundColor: designConfig.textColor }}></div>
+                        <div 
+                          className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
+                          style={{ backgroundColor: designConfig.textColor }}
+                          onClick={() => document.getElementById('text-color-picker')?.click()}
+                        ></div>
+                        <input
+                          id="text-color-picker"
+                          type="color"
+                          value={designConfig.textColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
+                          className="hidden"
+                        />
                         <Input
                           type="text"
                           value={designConfig.textColor}
