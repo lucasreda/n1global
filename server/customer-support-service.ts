@@ -1,6 +1,6 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq, and, or, ilike, desc, count } from "drizzle-orm";
+import { eq, and, or, ilike, desc, count, sql } from "drizzle-orm";
 
 export class CustomerSupportService {
   private db = db;
@@ -227,8 +227,8 @@ export class CustomerSupportService {
           status: row.support_tickets.status,
           priority: row.support_tickets.priority || 'medium',
           createdAt: row.support_tickets.createdAt,
-          lastActivity: row.support_tickets.lastActivity,
-          conversationCount: row.support_tickets.conversationCount || 0,
+          lastActivity: row.support_tickets.updatedAt || row.support_tickets.createdAt,
+          conversationCount: 0, // Could count from conversations table if needed
           category: row.support_categories?.name || 'Sem categoria'
         })),
         total,
@@ -285,8 +285,8 @@ export class CustomerSupportService {
           id: conv.id,
           type: conv.type,
           content: conv.content,
-          fromEmail: conv.fromEmail,
-          toEmail: conv.toEmail,
+          fromEmail: conv.from,
+          toEmail: conv.to,
           subject: conv.subject,
           createdAt: conv.createdAt,
           isInternal: conv.isInternal || false
@@ -347,14 +347,53 @@ export class CustomerSupportService {
   }
 
   /**
+   * Get support overview metrics
+   */
+  async getOverview(operationId: string) {
+    try {
+      // Get metrics for overview cards
+      const [overviewStats] = await this.db
+        .select({
+          openTickets: count(sql`CASE WHEN status = 'open' THEN 1 END`),
+          aiResponded: count(sql`CASE WHEN status = 'resolved' AND ai_confidence > 0 THEN 1 END`),
+          monthlyTickets: count(sql`CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN 1 END`),
+          unreadTickets: count(sql`CASE WHEN is_read = false THEN 1 END`)
+        })
+        .from(this.schema.supportTickets);
+
+      return {
+        openTickets: overviewStats?.openTickets || 0,
+        aiResponded: overviewStats?.aiResponded || 0,
+        monthlyTickets: overviewStats?.monthlyTickets || 0,
+        unreadTickets: overviewStats?.unreadTickets || 0
+      };
+    } catch (error) {
+      console.error('Error getting overview:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get support analytics
    */
   async getAnalytics(operationId: string, period: string) {
     try {
+      // Query real data from database
+      const [ticketStats] = await this.db
+        .select({
+          totalTickets: count(),
+          resolvedTickets: count(sql`CASE WHEN status IN ('resolved', 'closed') THEN 1 END`),
+          openTickets: count(sql`CASE WHEN status = 'open' THEN 1 END`),
+          inProgressTickets: count(sql`CASE WHEN status = 'in_progress' THEN 1 END`)
+        })
+        .from(this.schema.supportTickets);
+
       return {
-        totalTickets: 0,
-        resolvedTickets: 0,
-        averageResponseTime: "0h",
+        totalTickets: ticketStats?.totalTickets || 0,
+        resolvedTickets: ticketStats?.resolvedTickets || 0,
+        openTickets: ticketStats?.openTickets || 0,
+        inProgressTickets: ticketStats?.inProgressTickets || 0,
+        averageResponseTime: "2h", // Placeholder - could calculate from timestamps
         period
       };
     } catch (error) {
