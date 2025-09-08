@@ -45,7 +45,8 @@ export default function CustomerSupportSettings() {
     logo: "/images/n1-lblue.png",
     primaryColor: "#2563eb",
     backgroundColor: "#f8fafc",
-    textColor: "#333333"
+    textColor: "#333333",
+    logoAlignment: "center" as "left" | "center" | "right"
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -718,6 +719,41 @@ export default function CustomerSupportSettings() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Logo Alignment */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                        <h4 className="text-sm font-semibold text-gray-200">Alinhamento da Logo</h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        {(["left", "center", "right"] as const).map((alignment) => (
+                          <button
+                            key={alignment}
+                            onClick={() => setDesignConfig(prev => ({ ...prev, logoAlignment: alignment }))}
+                            className={`p-3 rounded-lg border text-xs font-medium transition-all ${
+                              designConfig.logoAlignment === alignment
+                                ? 'bg-purple-600/30 border-purple-500 text-purple-200'
+                                : 'bg-gray-700/50 border-gray-600 text-gray-300 hover:bg-gray-600/50'
+                            }`}
+                          >
+                            <div className="flex flex-col items-center gap-1">
+                              <div className={`w-6 h-2 bg-current rounded-sm ${
+                                alignment === 'left' ? 'self-start' : 
+                                alignment === 'center' ? 'self-center' : 
+                                'self-end'
+                              }`}></div>
+                              <span className="capitalize">
+                                {alignment === 'left' ? 'Esquerda' : 
+                                 alignment === 'center' ? 'Centro' : 
+                                 'Direita'}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     
                     <div className="space-y-2">
                       <input
@@ -897,11 +933,19 @@ export default function CustomerSupportSettings() {
                   {/* Email Preview */}
                   <div className="max-w-lg mx-auto space-y-4">
                     {/* Email Header */}
-                    <div className="text-center pb-4 border-b" style={{ borderColor: `${designConfig.primaryColor}30` }}>
+                    <div className={`pb-4 border-b ${
+                      designConfig.logoAlignment === 'left' ? 'text-left' :
+                      designConfig.logoAlignment === 'right' ? 'text-right' :
+                      'text-center'
+                    }`} style={{ borderColor: `${designConfig.primaryColor}30` }}>
                       <img
                         src={designConfig.logo}
                         alt="Logo"
-                        className="h-12 mx-auto mb-2"
+                        className={`h-12 mb-2 ${
+                          designConfig.logoAlignment === 'left' ? 'mr-auto' :
+                          designConfig.logoAlignment === 'right' ? 'ml-auto' :
+                          'mx-auto'
+                        }`}
                         onLoad={() => console.log('✅ Logo carregada:', designConfig.logo)}
                         onError={(e) => {
                           console.log('❌ Erro ao carregar logo:', designConfig.logo);
