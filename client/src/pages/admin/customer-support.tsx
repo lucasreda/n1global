@@ -385,23 +385,21 @@ export default function CustomerSupportPage() {
 
   if (isNotConfigured) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center py-12">
-          <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h2 className="mt-4 text-lg font-semibold">Suporte de Clientes Não Configurado</h2>
-          <p className="mt-2 text-muted-foreground max-w-md mx-auto">
-            Configure o sistema de suporte de clientes para sua operação. Isso inclui categorização automática,
-            respostas com IA e gerenciamento de tickets.
-          </p>
-          <Button 
-            onClick={handleInitializeSupport}
-            disabled={isInitializing}
-            className="mt-6"
-            data-testid="button-configure-support"
-          >
-            {isInitializing ? "Configurando..." : "Configurar Suporte"}
-          </Button>
-        </div>
+      <div className="text-center py-12">
+        <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h2 className="mt-4 text-lg font-semibold">Suporte de Clientes Não Configurado</h2>
+        <p className="mt-2 text-muted-foreground max-w-md mx-auto">
+          Configure o sistema de suporte de clientes para sua operação. Isso inclui categorização automática,
+          respostas com IA e gerenciamento de tickets.
+        </p>
+        <Button 
+          onClick={handleInitializeSupport}
+          disabled={isInitializing}
+          className="mt-6"
+          data-testid="button-configure-support"
+        >
+          {isInitializing ? "Configurando..." : "Configurar Suporte"}
+        </Button>
       </div>
     );
   }
