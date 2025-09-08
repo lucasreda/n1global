@@ -695,12 +695,27 @@ export default function CustomerSupportSettings() {
                   
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center">
-                        <span className="text-xs text-gray-400">Logo</span>
+                      <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+                        {designConfig.logo ? (
+                          <img
+                            src={designConfig.logo}
+                            alt="Logo atual"
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-full h-full ${designConfig.logo ? 'hidden' : 'flex'} items-center justify-center`}>
+                          <span className="text-xs text-gray-400">Logo</span>
+                        </div>
                       </div>
                       <div className="flex-1 space-y-1">
                         <p className="text-xs text-gray-300">Logo atual</p>
-                        <p className="text-xs text-gray-500">N1 Global padrão</p>
+                        <p className="text-xs text-gray-500">
+                          {designConfig.logo && !designConfig.logo.includes('/images/') ? 'Logo personalizada' : 'N1 Global padrão'}
+                        </p>
                       </div>
                     </div>
                     
