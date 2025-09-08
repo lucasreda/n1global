@@ -12,6 +12,7 @@ import {
   supportResponses,
   supportConversations,
   supportMetrics,
+  customerSupportOperations,
   type SupportCategory,
   type SupportEmail,
   type SupportTicket,
@@ -944,6 +945,102 @@ SINAIS DE ALERTA (REVISAR):
   }
 
   /**
+   * Get design configuration for an operation by analyzing the email domain
+   */
+  private async getDesignConfigForEmail(email: SupportEmail): Promise<any> {
+    try {
+      // Extract domain from the 'to' email address
+      const toDomain = email.to.includes('@') ? email.to.split('@')[1] : null;
+      
+      if (!toDomain) {
+        console.log('⚠️ Could not extract domain from email:', email.to);
+        return this.getDefaultDesignConfig();
+      }
+
+      // Find operation by domain in customer support operations
+      const [operation] = await db
+        .select()
+        .from(customerSupportOperations)
+        .where(eq(customerSupportOperations.domain, toDomain))
+        .limit(1);
+
+      if (!operation) {
+        console.log('⚠️ No operation found for domain:', toDomain);
+        return this.getDefaultDesignConfig();
+      }
+
+      console.log('✅ Found operation for domain:', toDomain, '-> Operation:', operation.id);
+      
+      // Get design config for the operation
+      const brandingConfig = operation.brandingConfig || {};
+      
+      return {
+        logo: brandingConfig.logo || "/images/n1-lblue.png",
+        primaryColor: brandingConfig.primaryColor || "#2563eb",
+        backgroundColor: brandingConfig.backgroundColor || "#f8fafc",
+        textColor: brandingConfig.textColor || "#333333",
+        logoAlignment: brandingConfig.logoAlignment || "center",
+        secondaryTextColor: brandingConfig.secondaryTextColor || "#666666",
+        signature: brandingConfig.signature || {
+          name: "",
+          position: "",
+          phone: "",
+          email: "",
+          website: ""
+        },
+        card: brandingConfig.card || {
+          backgroundColor: "#ffffff",
+          backgroundOpacity: 1,
+          borderColor: "#e5e7eb",
+          borderRadius: 8,
+          borderWidth: {
+            top: 1,
+            right: 1,
+            bottom: 1,
+            left: 1
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Error getting design config for email:', error);
+      return this.getDefaultDesignConfig();
+    }
+  }
+
+  /**
+   * Get default design configuration
+   */
+  private getDefaultDesignConfig(): any {
+    return {
+      logo: "/images/n1-lblue.png",
+      primaryColor: "#2563eb",
+      backgroundColor: "#f8fafc",
+      textColor: "#333333",
+      logoAlignment: "center",
+      secondaryTextColor: "#666666",
+      signature: {
+        name: "",
+        position: "",
+        phone: "",
+        email: "",
+        website: ""
+      },
+      card: {
+        backgroundColor: "#ffffff",
+        backgroundOpacity: 1,
+        borderColor: "#e5e7eb",
+        borderRadius: 8,
+        borderWidth: {
+          top: 1,
+          right: 1,
+          bottom: 1,
+          left: 1
+        }
+      }
+    };
+  }
+
+  /**
    * Send AI-powered automatic response
    */
   async sendAIAutoResponse(
@@ -962,6 +1059,14 @@ SINAIS DE ALERTA (REVISAR):
       const aiResponse = await this.generateAIAutoResponse(email, category);
 
       console.log(`🤖 Resposta IA gerada - Assunto: "${aiResponse.subject}"`);
+
+      // Get design configuration for this email
+      const designConfig = await this.getDesignConfigForEmail(email);
+      console.log("🎨 Design config loaded:", {
+        logo: designConfig.logo,
+        primaryColor: designConfig.primaryColor,
+        hasSignature: !!(designConfig.signature?.name || designConfig.signature?.position || designConfig.signature?.phone || designConfig.signature?.email || designConfig.signature?.website)
+      });
 
       // Carregar template HTML
       const templatePath = path.join(process.cwd(), "email-templates", "ai-response-template.html");
@@ -984,10 +1089,67 @@ SINAIS DE ALERTA (REVISAR):
         ? 'https://n1global.app' 
         : 'https://ed22092a-b3ec-459c-966a-df5b32c8942a-00-261ipz4lh9ym0.spock.replit.dev';
       
-      const htmlContent = htmlTemplate
-        .replace("{{AI_RESPONSE_CONTENT}}", formattedContent)
-        .replace("{{BASE_URL}}", baseUrl);
-      console.log("🎨 Template processado - HTML final tem", htmlContent.length, "caracteres");
+      // Aplicar configurações de design no template
+      const logoUrl = designConfig.logo.startsWith('/') ? `${baseUrl}${designConfig.logo}` : designConfig.logo;
+      const cardOpacityHex = Math.round(designConfig.card.backgroundOpacity * 255).toString(16).padStart(2, '0');
+      const cardBackgroundWithOpacity = `${designConfig.card.backgroundColor}${cardOpacityHex}`;
+      
+      // Check if has custom signature
+      const hasCustomSignature = !!(designConfig.signature?.name || designConfig.signature?.position || designConfig.signature?.phone || designConfig.signature?.email || designConfig.signature?.website);
+      
+      let htmlContent = htmlTemplate
+        .replace(/{{AI_RESPONSE_CONTENT}}/g, formattedContent)
+        .replace(/{{LOGO_URL}}/g, logoUrl)
+        .replace(/{{LOGO_ALIGNMENT}}/g, designConfig.logoAlignment)
+        .replace(/{{PRIMARY_COLOR}}/g, designConfig.primaryColor)
+        .replace(/{{BACKGROUND_COLOR}}/g, designConfig.backgroundColor)
+        .replace(/{{TEXT_COLOR}}/g, designConfig.textColor)
+        .replace(/{{SECONDARY_TEXT_COLOR}}/g, designConfig.secondaryTextColor)
+        .replace(/{{CARD_BACKGROUND_COLOR}}/g, cardBackgroundWithOpacity)
+        .replace(/{{BORDER_COLOR}}/g, designConfig.card.borderColor)
+        .replace(/{{BORDER_RADIUS}}/g, designConfig.card.borderRadius.toString())
+        .replace(/{{BORDER_WIDTH_TOP}}/g, designConfig.card.borderWidth.top.toString())
+        .replace(/{{BORDER_WIDTH_RIGHT}}/g, designConfig.card.borderWidth.right.toString())
+        .replace(/{{BORDER_WIDTH_BOTTOM}}/g, designConfig.card.borderWidth.bottom.toString())
+        .replace(/{{BORDER_WIDTH_LEFT}}/g, designConfig.card.borderWidth.left.toString());
+
+      // Handle signature conditionals - show/hide elements based on signature data
+      if (hasCustomSignature) {
+        // Show custom signature, hide Sofia signature
+        htmlContent = htmlContent.replace(/id="custom-signature" style="display: none;"/g, 'id="custom-signature" style="display: block;"');
+        htmlContent = htmlContent.replace(/id="sofia-signature"/g, 'id="sofia-signature" style="display: none;"');
+        
+        // Show individual signature fields that have content
+        if (designConfig.signature.name) {
+          htmlContent = htmlContent.replace(/id="sig-name" style="margin: 5px 0 0 0; display: none;"/g, 'id="sig-name" style="margin: 5px 0 0 0; display: block;"');
+        }
+        if (designConfig.signature.position) {
+          htmlContent = htmlContent.replace(/id="sig-position" style="margin: 5px 0 0 0; font-size: 12px; display: none;"/g, 'id="sig-position" style="margin: 5px 0 0 0; font-size: 12px; display: block;"');
+        }
+        if (designConfig.signature.phone) {
+          htmlContent = htmlContent.replace(/id="sig-phone" style="margin: 2px 0; display: none;"/g, 'id="sig-phone" style="margin: 2px 0; display: block;"');
+        }
+        if (designConfig.signature.email) {
+          htmlContent = htmlContent.replace(/id="sig-email" style="margin: 2px 0; display: none;"/g, 'id="sig-email" style="margin: 2px 0; display: block;"');
+        }
+        if (designConfig.signature.website) {
+          htmlContent = htmlContent.replace(/id="sig-website" style="margin: 2px 0; display: none;"/g, 'id="sig-website" style="margin: 2px 0; display: block;"');
+        }
+      } else {
+        // Show Sofia signature, hide custom signature
+        htmlContent = htmlContent.replace(/id="custom-signature" style="display: none;"/g, 'id="custom-signature" style="display: none;"');
+        htmlContent = htmlContent.replace(/id="sofia-signature"/g, 'id="sofia-signature" style="display: block;"');
+      }
+      
+      // Replace signature variables
+      htmlContent = htmlContent
+        .replace(/{{SIGNATURE_NAME}}/g, designConfig.signature.name || '')
+        .replace(/{{SIGNATURE_POSITION}}/g, designConfig.signature.position || '')
+        .replace(/{{SIGNATURE_PHONE}}/g, designConfig.signature.phone || '')
+        .replace(/{{SIGNATURE_EMAIL}}/g, designConfig.signature.email || '')
+        .replace(/{{SIGNATURE_WEBSITE}}/g, designConfig.signature.website || '');
+
+      console.log("🎨 Template processado com configurações personalizadas - HTML final tem", htmlContent.length, "caracteres");
 
       // Enviar email com resposta da IA
       const mailgunResponse = await mg.messages.create(

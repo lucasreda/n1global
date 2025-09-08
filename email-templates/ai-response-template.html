@@ -5,20 +5,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Resposta Automática - Sofia</title>
     </head>
-    <body>
+    <body style="margin: 0; padding: 0; background-color: {{BACKGROUND_COLOR}};">
         <!-- Layout de Email para Respostas da IA (Sofia) -->
         <div
             style="
                 font-family: Arial, sans-serif;
                 max-width: 600px;
                 margin: 0 auto;
+                padding: 20px;
+                background-color: {{BACKGROUND_COLOR}};
             "
         >
             <!-- Header com Logo -->
-            <div style="text-align: left; margin-bottom: 20px">
+            <div style="text-align: {{LOGO_ALIGNMENT}}; margin-bottom: 20px">
                 <img
-                    src="{{BASE_URL}}/images/n1-lblue.png"
-                    alt="N1 Support Logo"
+                    src="{{LOGO_URL}}"
+                    alt="Logo"
                     style="
                         height: 30px;
                         width: auto;
@@ -33,11 +35,17 @@
             <!-- Conteúdo da Mensagem -->
             <div
                 style="
-                    background-color: #f8fafc;
+                    background-color: {{CARD_BACKGROUND_COLOR}};
                     padding: 20px;
-                    border-left: 4px solid #2563eb;
+                    border-top-width: {{BORDER_WIDTH_TOP}}px;
+                    border-right-width: {{BORDER_WIDTH_RIGHT}}px;
+                    border-bottom-width: {{BORDER_WIDTH_BOTTOM}}px;
+                    border-left-width: {{BORDER_WIDTH_LEFT}}px;
+                    border-color: {{BORDER_COLOR}};
+                    border-style: solid;
+                    border-radius: {{BORDER_RADIUS}}px;
                     margin: 20px 0;
-                    border-radius: 8px;
+                    color: {{TEXT_COLOR}};
                 "
             >
                 <!-- O conteúdo da IA formatado será inserido aqui -->
@@ -47,7 +55,7 @@
             <!-- Call to Action -->
             <p
                 style="
-                    color: #64748b;
+                    color: {{SECONDARY_TEXT_COLOR}};
                     font-size: 14px;
                     text-align: center;
                     margin-top: 30px;
@@ -62,26 +70,50 @@
             <hr
                 style="
                     border: none;
-                    border-top: 1px solid #e2e8f0;
+                    border-top: 1px solid {{PRIMARY_COLOR}}30;
                     margin: 30px 0;
                 "
             />
 
-            <!-- Footer -->
-            <div
-                style="
-                    text-align: center;
-                    color: #94a3b8;
-                    font-size: 12px;
-                    margin: 20px 0;
-                "
-            >
-                <p style="margin: 0">
-                    <strong>Sofia</strong> - Assistente IA do N1 Support
-                </p>
-                <p style="margin: 5px 0 0 0">
-                    Resposta automática baseada na sua solicitação
-                </p>
+            <!-- Custom Signature ou Sofia Default -->
+            <!-- Custom Signature Section -->
+            <div id="custom-signature" style="display: none;">
+                <div
+                    style="
+                        text-align: center;
+                        color: {{SECONDARY_TEXT_COLOR}};
+                        font-size: 14px;
+                        margin: 20px 0;
+                    "
+                >
+                    <p style="margin: 0; font-weight: bold;">Atenciosamente,</p>
+                    <p id="sig-name" style="margin: 5px 0 0 0; display: none;"><strong>{{SIGNATURE_NAME}}</strong></p>
+                    <p id="sig-position" style="margin: 5px 0 0 0; font-size: 12px; display: none;">{{SIGNATURE_POSITION}}</p>
+                    <div style="font-size: 12px; margin-top: 10px;">
+                        <p id="sig-phone" style="margin: 2px 0; display: none;">📞 {{SIGNATURE_PHONE}}</p>
+                        <p id="sig-email" style="margin: 2px 0; display: none;">✉️ {{SIGNATURE_EMAIL}}</p>
+                        <p id="sig-website" style="margin: 2px 0; display: none;">🌐 {{SIGNATURE_WEBSITE}}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sofia Default Section -->
+            <div id="sofia-signature">
+                <div
+                    style="
+                        text-align: center;
+                        color: {{SECONDARY_TEXT_COLOR}};
+                        font-size: 12px;
+                        margin: 20px 0;
+                    "
+                >
+                    <p style="margin: 0">
+                        <strong>Sofia</strong> - Assistente IA do N1 Support
+                    </p>
+                    <p style="margin: 5px 0 0 0">
+                        Resposta automática baseada na sua solicitação
+                    </p>
+                </div>
             </div>
         </div>
     </body>
