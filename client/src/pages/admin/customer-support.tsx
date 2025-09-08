@@ -435,7 +435,7 @@ export default function CustomerSupportPage() {
   };
 
   return (
-    <div className="space-y-6" style={{ marginLeft: '0 !important' }}>
+    <div className="space-y-6 [&>*]:!ml-0" style={{ marginLeft: '0 !important', transform: 'translateX(-16rem)' }}>
       {/* Header with Controls */}
       <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         <div>
