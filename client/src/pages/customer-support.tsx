@@ -1022,10 +1022,15 @@ export default function CustomerSupportPage() {
                             onBlur={(e) => {
                               // Só recolhe se não há texto, não está enviando e clicou fora da área de resposta
                               setTimeout(() => {
-                                const activeElement = document.activeElement;
-                                const clickedOutside = !activeElement || !e.currentTarget.contains(activeElement);
-                                if (!replyMessage.trim() && !isSendingReply && clickedOutside) {
-                                  setIsReplyExpanded(false);
+                                try {
+                                  const activeElement = document.activeElement;
+                                  const currentTarget = e.currentTarget;
+                                  const clickedOutside = !activeElement || !currentTarget || !currentTarget.contains(activeElement);
+                                  if (!replyMessage.trim() && !isSendingReply && clickedOutside) {
+                                    setIsReplyExpanded(false);
+                                  }
+                                } catch (error) {
+                                  console.error('Error in onBlur handler:', error);
                                 }
                               }, 100);
                             }}
