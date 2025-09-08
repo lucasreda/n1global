@@ -436,16 +436,16 @@ export default function CustomerSupportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div>
+        <div className="flex items-center gap-3">
           <h1 className="font-bold text-white" style={{ fontSize: '22px' }}>Suporte de Clientes</h1>
-          <p className="text-gray-400">Visualize e gerencie todos os tickets de suporte</p>
+          {(supportConfig as any)?.emailDomain && (
+            <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs px-3 py-1">
+              suporte@{(supportConfig as any).emailDomain}
+            </Badge>
+          )}
         </div>
-        {(supportConfig as any)?.emailDomain && (
-          <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs px-3 py-1">
-            suporte@{(supportConfig as any).emailDomain}
-          </Badge>
-        )}
+        <p className="text-gray-400">Visualize e gerencie todos os tickets de suporte</p>
       </div>
       
       {/* Header with Controls */}
