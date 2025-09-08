@@ -770,7 +770,7 @@ export default function CustomerSupportPage() {
 
       {/* Modal para Ver Ticket */}
       <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
-        <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto flex flex-col">
+        <DialogContent className="max-w-5xl h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
@@ -808,9 +808,9 @@ export default function CustomerSupportPage() {
           </DialogHeader>
           
           {selectedTicket && (
-            <div className="flex-1 overflow-hidden flex flex-col space-y-6">
+            <div className="flex-1 overflow-hidden flex flex-col space-y-4 min-h-0">
               {/* Header - Informações Principais do Ticket */}
-              <div className="bg-slate-800/50 rounded-lg p-4">
+              <div className="bg-slate-800/50 rounded-lg p-4 flex-shrink-0">
                 <h2 className="text-xl font-semibold text-slate-200 mb-3 flex items-center">
                   <MessageSquare className="h-5 w-5 mr-2" />
                   {selectedTicket.ticket.subject}
@@ -874,7 +874,7 @@ export default function CustomerSupportPage() {
 
               {/* IA Information */}
               {(selectedTicket.ticket.aiConfidence || selectedTicket.ticket.aiReasoning) && (
-                <div className="bg-slate-800/50 rounded-lg p-4">
+                <div className="bg-slate-800/50 rounded-lg p-4 flex-shrink-0">
                   <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
                     <AlertCircle className="h-4 w-4 mr-2" />
                     Análise da IA
@@ -899,14 +899,14 @@ export default function CustomerSupportPage() {
                 </div>
               )}
 
-              {/* Histórico de Conversação */}
+              {/* Histórico de Conversação - Flexível */}
               {selectedTicket.conversations && selectedTicket.conversations.length > 0 && (
-                <div className="bg-slate-800/50 rounded-lg p-4 mb-4">
-                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
+                <div className="bg-slate-800/50 rounded-lg p-4 mb-4 flex-1 min-h-0 flex flex-col">
+                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center flex-shrink-0">
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Histórico de Conversação ({selectedTicket.conversations.length})
                   </h3>
-                  <div id="conversation-history" className="space-y-4 max-h-[250px] overflow-y-auto pr-2 pb-2">
+                  <div id="conversation-history" className="space-y-4 overflow-y-auto pr-2 flex-1">
                     {selectedTicket.conversations.map((conv: any, index: number) => (
                       <div 
                         key={conv.id || index} 
