@@ -450,15 +450,6 @@ export default function CustomerSupportPage() {
             <Button 
               variant="outline" 
               size="sm"
-              className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors text-xs sm:text-sm" 
-              onClick={handleCreateTestData}
-            >
-              <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Dados de Teste</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
               className="bg-green-900/30 border-green-500/50 text-green-300 hover:bg-green-800/50 hover:text-green-200 transition-colors text-xs sm:text-sm" 
               onClick={() => setIsNewMessageModalOpen(true)}
               data-testid="button-send-message"
