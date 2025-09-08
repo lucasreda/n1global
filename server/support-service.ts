@@ -978,7 +978,15 @@ SINAIS DE ALERTA (REVISAR):
       
       // Substituir placeholder com conteúdo formatado
       const formattedContent = this.formatAIResponseForEmail(aiResponse.content);
-      const htmlContent = htmlTemplate.replace("{{AI_RESPONSE_CONTENT}}", formattedContent);
+      
+      // Detectar URL base para as imagens
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://n1global.app' 
+        : 'https://ed22092a-b3ec-459c-966a-df5b32c8942a-00-261ipz4lh9ym0.spock.replit.dev';
+      
+      const htmlContent = htmlTemplate
+        .replace("{{AI_RESPONSE_CONTENT}}", formattedContent)
+        .replace("{{BASE_URL}}", baseUrl);
       console.log("🎨 Template processado - HTML final tem", htmlContent.length, "caracteres");
 
       // Enviar email com resposta da IA
