@@ -1585,12 +1585,18 @@ EXEMPLO DE FORMATAÇÃO:
         throw new Error('Empty response from OpenAI');
       }
 
-      // Clean content to avoid JSON parsing errors with control characters
-      const cleanedContent = content.replace(/[\n\r\t]/g, ' ').replace(/\\/g, '\\\\');
-      console.log('🤖 Sofia response raw:', cleanedContent);
+      console.log('🤖 Sofia response raw (before cleaning):', content);
+      
+      // Try to extract and parse JSON more carefully
+      let jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in AI response');
+      }
+      
+      console.log('🤖 Extracted JSON:', jsonMatch[0]);
 
       // Parse JSON response
-      const aiResponse = JSON.parse(cleanedContent);
+      const aiResponse = JSON.parse(jsonMatch[0]);
       
       if (!aiResponse.subject || !aiResponse.content) {
         throw new Error('Invalid AI response format');
@@ -1704,7 +1710,7 @@ EXEMPLO DE FORMATAÇÃO:
           senderEmail: fromAddress,
           subject: aiResponse.subject,
           content: aiResponse.content,
-          htmlContent: aiResponse.content.replace(/\n/g, '<br>'),
+          htmlContent: formattedContent,
           sentViaEmail: true,
         });
 
@@ -1726,17 +1732,22 @@ EXEMPLO DE FORMATAÇÃO:
   private formatAIContentToHtml(content: string): string {
     if (!content) return '';
     
+    // First, clean up any literal \n characters that might appear in the text
+    let cleanContent = content
+      .replace(/\\n\\n/g, '\n\n')  // Convert literal \n\n to actual line breaks
+      .replace(/\\n/g, '\n');      // Convert literal \n to actual line breaks
+    
     // Split into paragraphs based on double line breaks OR multiple spaces (3+ spaces)
-    let paragraphs = content.split(/\n\n+/);
+    let paragraphs = cleanContent.split(/\n\n+/);
     
     // If no double line breaks, try splitting by multiple spaces (AI often uses 3+ spaces for separation)
     if (paragraphs.length === 1) {
-      paragraphs = content.split(/\s{3,}/);
+      paragraphs = cleanContent.split(/\s{3,}/);
     }
     
     // If still one paragraph, split by sentences for better readability
     if (paragraphs.length === 1) {
-      paragraphs = content.split(/\.\s+/).map((p, i, arr) => 
+      paragraphs = cleanContent.split(/\.\s+/).map((p, i, arr) => 
         i === arr.length - 1 ? p : p + '.'
       ).filter(p => p.trim().length > 0);
     }
@@ -1753,7 +1764,9 @@ EXEMPLO DE FORMATAÇÃO:
         .replace(/(reembolso|devolu[çc][ãa]o)/gi, '<strong>$1</strong>')
         .replace(/(\d+\s+a\s+\d+\s+dias\s+[úu]teis)/gi, '<strong>$1</strong>')
         .replace(/(entrega|envio|enviado)/gi, '<strong>$1</strong>')
-        .replace(/(segunda\s+a\s+sexta[^,]*)/gi, '<strong>$1</strong>');
+        .replace(/(segunda\s+a\s+sexta[^,]*)/gi, '<strong>$1</strong>')
+        .replace(/(COD\s*-?\s*Cash\s+on\s+Delivery)/gi, '<strong>$1</strong>')
+        .replace(/(Na entrega)/gi, '<strong>$1</strong>');
       
       // Convert single line breaks to <br>
       formatted = formatted.replace(/\n/g, '<br>');
