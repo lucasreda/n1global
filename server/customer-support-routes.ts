@@ -1,40 +1,6 @@
-import { Request, Response, Express, NextFunction } from "express";
+import { Request, Response, Express } from "express";
 import { customerSupportService } from "./customer-support-service";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
-
-interface AuthRequest extends Request {
-  user?: any;
-}
-
-// Middleware to verify JWT token
-const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-
-  console.log("🔐 Customer Support Auth Debug:", {
-    hasAuthHeader: !!authHeader,
-    hasToken: !!token,
-    url: req.url,
-    method: req.method
-  });
-
-  if (!token) {
-    console.log("❌ No token provided in customer support");
-    return res.status(401).json({ message: "Token de acesso requerido" });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      console.log("❌ JWT verification failed in customer support:", err.message);
-      return res.status(403).json({ message: "Token inválido" });
-    }
-    console.log("✅ JWT verified for user in customer support:", user.email);
-    req.user = user;
-    next();
-  });
-};
+import { authenticateToken } from "./auth-middleware";
 
 export function registerCustomerSupportRoutes(app: Express) {
   /**
