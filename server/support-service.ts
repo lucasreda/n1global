@@ -551,6 +551,7 @@ REGRAS:
       emailId: email.id,
       categoryId: email.categoryId!,
       customerEmail: email.from,
+      customerName: email.from.split("@")[0], // Extract name from email
       subject: email.subject,
       description: email.textContent || email.htmlContent || "",
       priority: email.isUrgent ? "high" : "medium",
