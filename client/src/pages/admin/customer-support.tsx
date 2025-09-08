@@ -435,7 +435,8 @@ export default function CustomerSupportPage() {
   };
 
   return (
-    <div className="space-y-6" style={{ marginLeft: '-16rem !important' }}>
+    <div className="w-full" style={{ width: '100%', marginLeft: '0', paddingLeft: '0' }}>
+    <div className="space-y-6">
       {/* Header with Controls */}
       <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         <div>
@@ -1063,6 +1064,7 @@ export default function CustomerSupportPage() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }
