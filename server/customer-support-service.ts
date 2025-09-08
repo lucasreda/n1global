@@ -1502,10 +1502,12 @@ DIRETRIZES:
         throw new Error('Empty response from OpenAI');
       }
 
-      console.log('🤖 Sofia response raw:', content);
+      // Clean content to avoid JSON parsing errors with control characters
+      const cleanedContent = content.replace(/[\n\r\t]/g, ' ').replace(/\\/g, '\\\\');
+      console.log('🤖 Sofia response raw:', cleanedContent);
 
       // Parse JSON response
-      const aiResponse = JSON.parse(content);
+      const aiResponse = JSON.parse(cleanedContent);
       
       if (!aiResponse.subject || !aiResponse.content) {
         throw new Error('Invalid AI response format');
