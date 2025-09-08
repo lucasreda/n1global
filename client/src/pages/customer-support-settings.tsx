@@ -550,35 +550,199 @@ export default function CustomerSupportSettings() {
 
         {/* Aba Design */}
         <TabsContent value="design" className="space-y-6 mt-6">
-          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Palette className="w-5 h-5 text-purple-400" />
-                <CardTitle className="text-white" style={{ fontSize: '18px' }}>Personalização Visual</CardTitle>
-              </div>
-              <CardDescription>
-                Configure a aparência e branding dos emails e interface
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-center p-8 text-center">
-                <div className="space-y-2">
-                  <div className="w-16 h-16 mx-auto bg-purple-600/20 rounded-full flex items-center justify-center">
-                    <Palette className="w-8 h-8 text-purple-400" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[800px]">
+            {/* Painel de Configurações (Esquerda) */}
+            <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Palette className="w-5 h-5 text-purple-400" />
+                  <CardTitle className="text-white" style={{ fontSize: '18px' }}>Personalização do Template</CardTitle>
+                </div>
+                <CardDescription>
+                  Configure a aparência dos seus emails de suporte
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Logo Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                    <h3 className="text-sm font-semibold text-gray-200">Logo da Empresa</h3>
                   </div>
-                  <h3 className="text-lg font-medium text-gray-200">Configurações de Design</h3>
-                  <p className="text-sm text-gray-400 max-w-md">
-                    Personalize cores, logos, templates de email e outros elementos visuais do seu sistema de suporte.
-                  </p>
-                  <div className="pt-4">
-                    <Badge variant="outline" className="bg-purple-600/20 text-purple-400 border-purple-600/30">
-                      Em breve
-                    </Badge>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center">
+                        <span className="text-xs text-gray-400">Logo</span>
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-xs text-gray-300">Logo atual</p>
+                        <p className="text-xs text-gray-500">N1 Global padrão</p>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full bg-purple-600/20 border-purple-600/30 text-purple-300 hover:bg-purple-600/30"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Fazer Upload do Logo
+                    </Button>
+                    <p className="text-xs text-gray-400">
+                      Formatos aceitos: PNG, JPG. Tamanho máximo: 2MB
+                    </p>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+
+                <Separator className="bg-white/10" />
+
+                {/* Colors Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <h3 className="text-sm font-semibold text-gray-200">Cores do Template</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Primary Color */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-300">Cor Principal</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-500 rounded border border-white/20"></div>
+                        <Input
+                          type="text"
+                          value="#2563eb"
+                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="#2563eb"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Background Color */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-300">Cor de Fundo</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-50 rounded border border-white/20"></div>
+                        <Input
+                          type="text"
+                          value="#f8fafc"
+                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="#f8fafc"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Text Color */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-300">Cor do Texto</Label>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-800 rounded border border-white/20"></div>
+                        <Input
+                          type="text"
+                          value="#333333"
+                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="#333333"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="bg-white/10" />
+
+                {/* Save Button */}
+                <div className="space-y-3">
+                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Salvar Configurações
+                  </Button>
+                  
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <CheckCircle className="w-3 h-3 text-green-400" />
+                    <span>Alterações aplicadas automaticamente nos emails</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Preview do Template (Direita) */}
+            <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-green-400" />
+                    <CardTitle className="text-white" style={{ fontSize: '18px' }}>Preview do Email</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="bg-green-600/20 text-green-400 border-green-600/30 text-xs">
+                    Tempo Real
+                  </Badge>
+                </div>
+                <CardDescription>
+                  Visualização em tempo real do template de email
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="h-full">
+                <div className="bg-white rounded-lg p-4 h-[600px] overflow-y-auto border">
+                  {/* Email Preview */}
+                  <div className="max-w-lg mx-auto space-y-4">
+                    {/* Email Header */}
+                    <div className="text-center pb-4 border-b border-gray-200">
+                      <img
+                        src="/images/n1-lblue.png"
+                        alt="Logo"
+                        className="h-12 mx-auto mb-2"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling!.style.display = 'block';
+                        }}
+                      />
+                      <div className="hidden text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded">
+                        Logo da Empresa
+                      </div>
+                    </div>
+
+                    {/* Email Content */}
+                    <div className="bg-blue-50 p-4 border-l-4 border-blue-500 rounded-lg">
+                      <p className="text-gray-800 mb-3">
+                        <strong>Olá João,</strong>
+                      </p>
+                      
+                      <p className="text-gray-800 mb-3">
+                        Compreendo sua preocupação com o <strong>cancelamento do pedido</strong>.
+                      </p>
+                      
+                      <p className="text-gray-800 mb-3">
+                        Se a compra ainda não foi enviada, podemos <strong>cancelar imediatamente</strong>. 
+                        Caso já tenha sido enviada, o processo pode levar de <strong>2 a 7 dias úteis</strong> para o reembolso completo.
+                      </p>
+                      
+                      <p className="text-gray-800 mb-3">
+                        Estamos disponíveis para ajudar de <strong>segunda a sexta-feira, das 9h às 18h</strong>.
+                      </p>
+                      
+                      <p className="text-gray-800">
+                        Se precisar de mais alguma coisa, estarei aqui para ajudar! 😊
+                      </p>
+                    </div>
+
+                    {/* Email Footer */}
+                    <div className="text-center pt-4 border-t border-gray-200 space-y-2">
+                      <p className="text-sm text-gray-600">
+                        Se precisar de mais alguma coisa, pode responder diretamente a este email.
+                        <br />Estamos aqui para ajudar! 😊
+                      </p>
+                      
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p><strong>Sofia</strong> - Assistente IA do N1 Support</p>
+                        <p>Resposta automática baseada na sua solicitação</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
