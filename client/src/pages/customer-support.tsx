@@ -116,7 +116,8 @@ export default function CustomerSupportPage() {
 
   // Effect to scroll to last message when modal opens with conversations
   useEffect(() => {
-    if (isTicketModalOpen && selectedTicket?.conversations && selectedTicket.conversations.length > 0) {
+    const messages = selectedTicket?.conversations || selectedTicket?.messages || [];
+    if (isTicketModalOpen && messages && messages.length > 0) {
       const scrollAttempts = [100, 300, 600, 1000];
       scrollAttempts.forEach(delay => {
         setTimeout(() => {
@@ -124,7 +125,7 @@ export default function CustomerSupportPage() {
         }, delay);
       });
     }
-  }, [isTicketModalOpen, selectedTicket?.conversations?.length]);
+  }, [isTicketModalOpen, selectedTicket?.conversations?.length, selectedTicket?.messages?.length]);
 
   // Effect to adjust scroll when reply section expands
   useEffect(() => {
@@ -142,16 +143,22 @@ export default function CustomerSupportPage() {
 
   // Function to scroll to last message in conversation
   const scrollToLastMessage = () => {
-    const conversationContainer = document.getElementById('conversation-history');
-    if (conversationContainer) {
-      const messages = conversationContainer.children;
-      
-      if (messages.length > 0) {
-        const lastMessage = messages[messages.length - 1] as HTMLElement;
-        lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
-      } else {
-        conversationContainer.scrollTop = conversationContainer.scrollHeight;
+    try {
+      const conversationContainer = document.getElementById('conversation-history');
+      if (conversationContainer) {
+        const messages = conversationContainer.children;
+        
+        if (messages && messages.length > 0) {
+          const lastMessage = messages[messages.length - 1] as HTMLElement;
+          if (lastMessage && lastMessage.scrollIntoView) {
+            lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
+          }
+        } else {
+          conversationContainer.scrollTop = conversationContainer.scrollHeight;
+        }
       }
+    } catch (error) {
+      console.error('Error scrolling to last message:', error);
     }
   };
 
@@ -201,7 +208,8 @@ export default function CustomerSupportPage() {
       // Merge the full data with the original ticket response
       setSelectedTicket({
         ticket: response || ticketResponse, // Use full response if available
-        conversations: response?.messages || []
+        conversations: response?.messages || [],
+        messages: response?.messages || []
       });
       
       // Mark ticket as read if it wasn't read
@@ -213,7 +221,8 @@ export default function CustomerSupportPage() {
       // Fallback to original data
       setSelectedTicket({
         ticket: ticketResponse,
-        conversations: []
+        conversations: [],
+        messages: []
       });
     }
     
@@ -903,14 +912,14 @@ export default function CustomerSupportPage() {
               )}
 
               {/* Histórico de Conversação - Prioridade */}
-              {selectedTicket.conversations && selectedTicket.conversations.length > 0 && (
+              {((selectedTicket?.conversations && selectedTicket.conversations.length > 0) || (selectedTicket?.messages && selectedTicket.messages.length > 0)) && (
                 <div className="bg-slate-800/50 rounded-lg p-3 flex-1 min-h-0 flex flex-col overflow-hidden">
                   <h3 className="text-sm font-semibold text-slate-200 mb-2 flex items-center flex-shrink-0">
                     <MessageSquare className="h-4 w-4 mr-2" />
-                    Mensagens ({selectedTicket.conversations.length})
+                    Mensagens ({(selectedTicket?.messages || selectedTicket?.conversations || []).length})
                   </h3>
                   <div id="conversation-history" className="space-y-3 overflow-y-auto pr-2 flex-1" style={{ scrollBehavior: 'smooth' }}>
-                    {selectedTicket.conversations.map((conv: any, index: number) => (
+                    {(selectedTicket?.messages || selectedTicket?.conversations || []).map((conv: any, index: number) => (
                       <div 
                         key={conv.id || index} 
                         className={`p-2 rounded-lg border-l-3 ${
