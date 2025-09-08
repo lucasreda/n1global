@@ -445,7 +445,7 @@ export default function CustomerSupportPage() {
             </Badge>
           )}
         </div>
-        <p className="text-gray-400">Visualize e gerencie todos os tickets de suporte</p>
+        <p className="text-gray-400">Gerenciamento de atendimento ao cliente com IA</p>
       </div>
       
       {/* Header with Controls */}
@@ -453,9 +453,6 @@ export default function CustomerSupportPage() {
         <div>
           <div className="flex items-center gap-3">
           </div>
-          <p className="text-gray-400 mt-1 text-sm sm:text-base">
-            Gerenciamento de atendimento ao cliente com IA
-          </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <Button 
