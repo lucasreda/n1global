@@ -47,6 +47,8 @@ export default function CustomerSupportSettings() {
     backgroundColor: "#f8fafc",
     textColor: "#333333",
     logoAlignment: "center" as "left" | "center" | "right",
+    // Cor de textos secundários
+    secondaryTextColor: "#666666",
     // Assinatura personalizada
     signature: {
       name: "",
@@ -92,9 +94,10 @@ export default function CustomerSupportSettings() {
           : designConfigData.logo,
         // Preserve all new fields with defaults if not present
         logoAlignment: designConfigData.logoAlignment || designConfig.logoAlignment || "center",
+        secondaryTextColor: designConfigData.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
         signature: {
           ...designConfig.signature,
-          ...designConfigData.signature
+          ...(designConfigData.signature || {})
         },
         card: {
           ...designConfig.card,
@@ -173,10 +176,16 @@ export default function CustomerSupportSettings() {
         }
       }
 
+      console.log('💾 Salvando configuração completa:', config);
       return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, 'PUT', {
-        ...config,
         logo: logoUrl,
-        logoAlignment: config.logoAlignment || "center"
+        primaryColor: config.primaryColor,
+        backgroundColor: config.backgroundColor,
+        textColor: config.textColor,
+        logoAlignment: config.logoAlignment || "center",
+        secondaryTextColor: config.secondaryTextColor || "#666666",
+        signature: config.signature,
+        card: config.card
       });
     },
     onSuccess: () => {
@@ -898,7 +907,7 @@ export default function CustomerSupportSettings() {
 
                     {/* Text Color */}
                     <div className="space-y-2">
-                      <Label className="text-xs text-gray-300">Cor do Texto</Label>
+                      <Label className="text-xs text-gray-300">Cor do Texto Principal</Label>
                       <div className="flex items-center gap-3">
                         <div 
                           className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
@@ -918,6 +927,32 @@ export default function CustomerSupportSettings() {
                           onChange={(e) => setDesignConfig(prev => ({ ...prev, textColor: e.target.value }))}
                           className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
                           placeholder="#333333"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Secondary Text Color */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-300">Textos Secundários</Label>
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-8 h-8 rounded border border-white/20 cursor-pointer hover:scale-105 transition-transform" 
+                          style={{ backgroundColor: designConfig.secondaryTextColor }}
+                          onClick={() => document.getElementById('secondary-text-color-picker')?.click()}
+                        ></div>
+                        <input
+                          id="secondary-text-color-picker"
+                          type="color"
+                          value={designConfig.secondaryTextColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, secondaryTextColor: e.target.value }))}
+                          className="hidden"
+                        />
+                        <Input
+                          type="text"
+                          value={designConfig.secondaryTextColor}
+                          onChange={(e) => setDesignConfig(prev => ({ ...prev, secondaryTextColor: e.target.value }))}
+                          className="flex-1 h-8 bg-gray-800/50 border-gray-600/50 text-white text-xs"
+                          placeholder="#666666"
                         />
                       </div>
                     </div>
@@ -1314,9 +1349,9 @@ export default function CustomerSupportSettings() {
                             <p><strong>{designConfig.signature.name}</strong></p>
                           )}
                           {designConfig.signature.position && (
-                            <p className="text-xs" style={{ color: `${designConfig.textColor}CC` }}>{designConfig.signature.position}</p>
+                            <p className="text-xs" style={{ color: designConfig.secondaryTextColor }}>{designConfig.signature.position}</p>
                           )}
-                          <div className="space-y-1 text-xs" style={{ color: `${designConfig.textColor}99` }}>
+                          <div className="space-y-1 text-xs" style={{ color: designConfig.secondaryTextColor }}>
                             {designConfig.signature.phone && (
                               <p>📞 {designConfig.signature.phone}</p>
                             )}
@@ -1333,12 +1368,12 @@ export default function CustomerSupportSettings() {
 
                     {/* Email Footer */}
                     <div className="text-center pt-4 border-t space-y-2" style={{ borderColor: `${designConfig.primaryColor}30` }}>
-                      <p className="text-sm" style={{ color: `${designConfig.textColor}CC` }}>
+                      <p className="text-sm" style={{ color: designConfig.secondaryTextColor }}>
                         Se precisar de mais alguma coisa, pode responder diretamente a este email.
                         <br />Estamos aqui para ajudar! 😊
                       </p>
                       
-                      <div className="text-xs space-y-1" style={{ color: `${designConfig.textColor}99` }}>
+                      <div className="text-xs space-y-1" style={{ color: designConfig.secondaryTextColor }}>
                         <p><strong>Sofia</strong> - Assistente IA do N1 Support</p>
                         <p>Resposta automática baseada na sua solicitação</p>
                       </div>
