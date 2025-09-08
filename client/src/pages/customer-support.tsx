@@ -146,11 +146,13 @@ export default function CustomerSupportPage() {
       const response = await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketResponse.id}`, 'GET') as any;
       
       console.log('📋 Full ticket data:', response);
+      console.log('📋 Messages count:', response?.messages?.length || 0);
+      console.log('📋 First message:', response?.messages?.[0]);
       
       // Merge the full data with the original ticket response
       setSelectedTicket({
-        ticket: ticketResponse,
-        conversations: response.messages || []
+        ticket: response || ticketResponse, // Use full response if available
+        conversations: response?.messages || []
       });
       
       // Mark ticket as read if it wasn't read
