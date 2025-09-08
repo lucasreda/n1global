@@ -437,7 +437,7 @@ export default function CustomerSupportPage() {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
+    <div className="space-y-6">
       {/* Header with Controls */}
       <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
         <div>
