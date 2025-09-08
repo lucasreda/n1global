@@ -398,4 +398,56 @@ export function registerCustomerSupportRoutes(app: Express) {
       });
     }
   });
+
+  /**
+   * ENDPOINT DE TESTE - Simular email recebido para diagnosticar problemas
+   */
+  app.post("/api/webhooks/test-email-processing", async (req: Request, res: Response) => {
+    try {
+      console.log('🧪 TESTE DE PROCESSAMENTO DE EMAIL - INICIADO');
+      
+      // Simular um email de teste para o domínio configurado
+      const testEmail = {
+        from: 'teste.sofia@gmail.com',
+        to: 'suporte@garriguesmilano.com', // Domínio configurado no banco
+        subject: 'Preciso cancelar minha compra urgente',
+        textBody: 'Olá, preciso cancelar minha compra de hoje. Por favor me ajudem!',
+        htmlBody: '<p>Olá, preciso cancelar minha compra de hoje. Por favor me ajudem!</p>',
+        messageId: `test-${Date.now()}@test.com`,
+        inReplyTo: undefined,
+        references: undefined,
+        timestamp: new Date()
+      };
+
+      console.log('🧪 Email de teste:', testEmail);
+      
+      // Processar o email usando o mesmo fluxo do webhook
+      const result = await customerSupportService.processIncomingEmail(testEmail);
+      
+      console.log('🧪 Resultado do processamento:', result);
+      
+      if (result.success) {
+        res.status(200).json({ 
+          success: true, 
+          message: 'Teste concluído com sucesso!', 
+          ticketId: result.ticketId,
+          result 
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          error: result.error, 
+          message: 'Teste falhou!' 
+        });
+      }
+      
+    } catch (error) {
+      console.error('🧪 Erro no teste:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : String(error),
+        message: 'Teste quebrou!'
+      });
+    }
+  });
 }
