@@ -81,12 +81,7 @@ export function registerCustomerSupportRoutes(app: Express) {
     try {
       const { operationId } = req.params;
       
-      const metrics = {
-        openTickets: 5,
-        aiResponded: 7,
-        monthlyTickets: 7,
-        unreadTickets: 7
-      };
+      const metrics = await customerSupportService.getOverview(operationId);
       
       res.json(metrics);
     } catch (error) {
