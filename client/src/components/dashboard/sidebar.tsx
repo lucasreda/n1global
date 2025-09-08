@@ -44,7 +44,7 @@ const getNavigationForRole = (userRole: string) => {
     { name: "Pedidos", href: "/orders", icon: Package },
     { name: "Produtos", href: "/products", icon: ShoppingCart },
     { 
-      name: "Suporte de Clientes", 
+      name: "Suporte", 
       icon: MessageSquare,
       isDropdown: true,
       subItems: [
