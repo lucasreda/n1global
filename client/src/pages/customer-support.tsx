@@ -1006,6 +1006,16 @@ export default function CustomerSupportPage() {
           
           <div className="space-y-4">
             <div className="space-y-2">
+              <label className="text-sm font-medium">Remetente</label>
+              <Input
+                type="email"
+                value={`suporte@${(supportConfig as any)?.emailDomain || 'exemplo.com'}`}
+                disabled
+                className="bg-gray-700/50 text-gray-300 border-gray-600"
+              />
+            </div>
+            
+            <div className="space-y-2">
               <label className="text-sm font-medium">Email do Destinatário</label>
               <Input
                 type="email"
