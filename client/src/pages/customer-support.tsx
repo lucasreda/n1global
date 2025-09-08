@@ -437,44 +437,38 @@ export default function CustomerSupportPage() {
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-3">
-          <h1 className="font-bold text-white" style={{ fontSize: '22px' }}>Suporte de Clientes</h1>
-          {(supportConfig as any)?.emailDomain && (
-            <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs px-3 py-1">
-              suporte@{(supportConfig as any).emailDomain}
-            </Badge>
-          )}
-        </div>
-        <p className="text-gray-400">Gerenciamento de atendimento ao cliente com IA</p>
-      </div>
-      
-      {/* Header with Controls */}
-      <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
-        <div>
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <h1 className="font-bold text-white" style={{ fontSize: '22px' }}>Suporte de Clientes</h1>
+            {(supportConfig as any)?.emailDomain && (
+              <Badge variant="outline" className="bg-gray-800/50 border-gray-600/50 text-gray-300 text-xs px-3 py-1">
+                suporte@{(supportConfig as any).emailDomain}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors text-xs sm:text-sm" 
+              onClick={handleCreateTestData}
+            >
+              <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Dados de Teste</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="bg-green-900/30 border-green-500/50 text-green-300 hover:bg-green-800/50 hover:text-green-200 transition-colors text-xs sm:text-sm" 
+              onClick={() => setIsNewMessageModalOpen(true)}
+              data-testid="button-send-message"
+            >
+              <Send className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Enviar Mensagem</span>
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors text-xs sm:text-sm" 
-            onClick={handleCreateTestData}
-          >
-            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Dados de Teste</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="bg-green-900/30 border-green-500/50 text-green-300 hover:bg-green-800/50 hover:text-green-200 transition-colors text-xs sm:text-sm" 
-            onClick={() => setIsNewMessageModalOpen(true)}
-            data-testid="button-send-message"
-          >
-            <Send className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Enviar Mensagem</span>
-          </Button>
-        </div>
+        <p className="text-gray-400">Gerenciamento de atendimento ao cliente com IA</p>
       </div>
 
       {/* Overview Cards */}
