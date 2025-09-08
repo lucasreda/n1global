@@ -61,7 +61,15 @@ export default function CustomerSupportSettings() {
   useEffect(() => {
     if (designConfigData) {
       console.log('🔄 Updating design config from server:', designConfigData);
-      setDesignConfig(designConfigData);
+      // Convert Google Storage URLs to local object URLs if needed
+      const processedConfig = {
+        ...designConfigData,
+        logo: designConfigData.logo?.includes('storage.googleapis.com') 
+          ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
+          : designConfigData.logo
+      };
+      console.log('🔧 Processed config:', processedConfig);
+      setDesignConfig(processedConfig);
     }
   }, [designConfigData]);
 
@@ -879,7 +887,9 @@ export default function CustomerSupportSettings() {
                         src={designConfig.logo}
                         alt="Logo"
                         className="h-12 mx-auto mb-2"
+                        onLoad={() => console.log('✅ Logo carregada:', designConfig.logo)}
                         onError={(e) => {
+                          console.log('❌ Erro ao carregar logo:', designConfig.logo);
                           e.currentTarget.style.display = 'none';
                           (e.currentTarget.nextElementSibling as HTMLElement)!.style.display = 'block';
                         }}
