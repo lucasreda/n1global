@@ -1117,32 +1117,40 @@ export class CustomerSupportService {
         
         <!-- Footer -->
         <div style="text-align: center; color: #94a3b8; font-size: 12px; margin: 20px 0;">
-            <p style="margin: 0"><strong>${senderName}</strong> - Equipe de Suporte</p>
-            <p style="margin: 5px 0 0 0">${operation.operationName || 'Support'}</p>
+            <p style="margin: 0"><strong>{{SENDER_NAME}}</strong> - Equipe de Suporte</p>
+            <p style="margin: 5px 0 0 0">{{OPERATION_NAME}}</p>
         </div>
     </div>
 </body>
 </html>`;
       }
 
-      // Replace template variables
+      // Replace template variables (with safety checks)
       const baseUrl = process.env.NODE_ENV === 'production' 
         ? 'https://n1global.app' 
         : `https://${process.env.REPL_ID}-00-workspace.${process.env.REPLIT_CLUSTER}.replit.dev`;
       
+      // Safety checks for undefined values
+      const safeContent = (content || '').replace(/\n/g, '<br>');
+      const safeSenderName = senderName || 'Suporte';
+      const safeOperationName = operation?.operationName || 'Support';
+      
       const processedHtml = htmlTemplate
         .replace(/\{\{BASE_URL\}\}/g, baseUrl)
-        .replace(/\{\{AI_RESPONSE_CONTENT\}\}/g, content.replace(/\n/g, '<br>'))
-        .replace(/Sofia.*Assistente IA.*N1 Support/g, `${senderName} - Equipe de Suporte`)
-        .replace(/Resposta automática baseada na sua solicitação/g, `${operation.operationName || 'Support'}`);
+        .replace(/\{\{AI_RESPONSE_CONTENT\}\}/g, safeContent)
+        .replace(/Sofia.*Assistente IA.*N1 Support/g, `${safeSenderName} - Equipe de Suporte`)
+        .replace(/Resposta automática baseada na sua solicitação/g, safeOperationName)
+        .replace(/\{\{SENDER_NAME\}\}/g, safeSenderName)
+        .replace(/\{\{OPERATION_NAME\}\}/g, safeOperationName);
 
-      // Prepare email using client's domain
-      const fromAddress = `${senderEmail.split('@')[0]}@${operation.emailDomain || 'localhost'}`;
+      // Prepare email using client's domain (with safety checks)
+      const safeEmailPrefix = (senderEmail || 'suporte').split('@')[0];
+      const fromAddress = `${safeEmailPrefix}@${operation.emailDomain || 'localhost'}`;
       const emailData = {
-        from: `${senderName} <${fromAddress}>`,
+        from: `${safeSenderName} <${fromAddress}>`,
         to: ticket.customerEmail,
-        subject: `Re: ${subject} [${ticket.ticketNumber}]`,
-        text: content,
+        subject: `Re: ${subject || 'Sem assunto'} [${ticket.ticketNumber}]`,
+        text: content || '',
         html: processedHtml,
         'o:tag': ['customer-support'],
         'o:tracking': true,
@@ -1162,10 +1170,10 @@ export class CustomerSupportService {
       // Save message with actual sent data
       const message = await this.addMessage(operationId, ticketId, {
         sender: 'agent',
-        senderName,
+        senderName: safeSenderName,
         senderEmail: fromAddress,
         subject: emailData.subject,
-        content,
+        content: content || '',
         htmlContent: emailData.html,
         sentViaEmail: true,
       });
