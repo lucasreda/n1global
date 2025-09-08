@@ -565,9 +565,9 @@ export default function CustomerSupportPage() {
       </div>
 
       {/* Layout com Cards de Tipos na Esquerda e Filtros/Tickets na Direita */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 lg:gap-6">
+      <div className="flex flex-col xl:flex-row gap-6">
         {/* Coluna Esquerda - Cards dos Tipos de Email Empilhados */}
-        <div className="xl:col-span-3 space-y-4">
+        <div className="xl:w-80 xl:flex-shrink-0 space-y-4">
           {categoriesLoading ? (
             <div className="text-center py-8 text-slate-400">
               Carregando categorias...
@@ -621,7 +621,7 @@ export default function CustomerSupportPage() {
         </div>
 
         {/* Coluna Direita - Filtros e Lista de Tickets */}
-        <div className="xl:col-span-9 space-y-4">
+        <div className="flex-1 space-y-4">
           {/* Filtros */}
           <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
             <div className="mb-4">
