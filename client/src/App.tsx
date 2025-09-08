@@ -214,8 +214,8 @@ function Router() {
         <Route path="/inside/stores" component={isSuperAdmin ? () => <AdminLayout><AdminStores /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/global" component={isSuperAdmin ? () => <AdminLayout><AdminGlobal /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/support" component={isSuperAdmin ? () => <AdminLayout><AdminSupport /></AdminLayout> : () => <NotFound />} />
-        <Route path="/customer-support/settings" component={isAuthenticated ? () => <DashboardLayoutWithExchangeRate><CustomerSupportSettings /></DashboardLayoutWithExchangeRate> : () => <NotFound />} />
-        <Route path="/customer-support" component={isAuthenticated ? () => <DashboardLayoutWithExchangeRate><CustomerSupport /></DashboardLayoutWithExchangeRate> : () => <NotFound />} />
+        <Route path="/customer-support/settings" component={isAuthenticated ? CustomerSupportSettings : () => <NotFound />} />
+        <Route path="/customer-support" component={isAuthenticated ? CustomerSupport : () => <NotFound />} />
         <Route path="/inside/settings" component={isSuperAdmin ? () => <AdminLayout><AdminSettings /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside" component={isSuperAdmin ? () => <AdminLayout><AdminDashboard /></AdminLayout> : () => <NotFound />} />
         
