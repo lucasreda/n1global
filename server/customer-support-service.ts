@@ -1,4 +1,10 @@
+import { db } from "./db";
+import * as schema from "@shared/schema";
+import { eq } from "drizzle-orm";
+
 export class CustomerSupportService {
+  private db = db;
+  private schema = schema;
   /**
    * Initialize customer support for an operation
    */
@@ -54,9 +60,14 @@ export class CustomerSupportService {
    */
   async getDesignConfig(operationId: string) {
     try {
-      // For now, return from in-memory storage or database
-      // TODO: Add database schema for design configurations
-      return null; // Will return default config from routes
+      // Get from customerSupportOperations table brandingConfig field
+      const [operation] = await this.db
+        .select({ brandingConfig: this.schema.customerSupportOperations.brandingConfig })
+        .from(this.schema.customerSupportOperations)
+        .where(eq(this.schema.customerSupportOperations.operationId, operationId))
+        .limit(1);
+
+      return operation?.brandingConfig || null;
     } catch (error) {
       console.error('Error getting design config:', error);
       throw error;
@@ -74,9 +85,35 @@ export class CustomerSupportService {
     updatedAt: string;
   }) {
     try {
-      // For now, just return the config
-      // TODO: Save to database
       console.log(`💄 Saving design config for operation ${operationId}:`, config);
+      
+      // Check if operation support record exists
+      const [existingRecord] = await this.db
+        .select({ id: this.schema.customerSupportOperations.id })
+        .from(this.schema.customerSupportOperations)
+        .where(eq(this.schema.customerSupportOperations.operationId, operationId))
+        .limit(1);
+
+      if (existingRecord) {
+        // Update existing record
+        await this.db
+          .update(this.schema.customerSupportOperations)
+          .set({ 
+            brandingConfig: config,
+            updatedAt: new Date()
+          })
+          .where(eq(this.schema.customerSupportOperations.operationId, operationId));
+      } else {
+        // Create new record
+        await this.db
+          .insert(this.schema.customerSupportOperations)
+          .values({
+            operationId,
+            brandingConfig: config,
+            isActive: true
+          });
+      }
+
       return config;
     } catch (error) {
       console.error('Error saving design config:', error);
