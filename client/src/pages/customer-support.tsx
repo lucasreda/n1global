@@ -901,12 +901,12 @@ export default function CustomerSupportPage() {
 
               {/* Histórico de Conversação */}
               {selectedTicket.conversations && selectedTicket.conversations.length > 0 && (
-                <div className="bg-slate-800/50 rounded-lg p-4 flex-1 overflow-hidden">
+                <div className="bg-slate-800/50 rounded-lg p-4 min-h-[400px]">
                   <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center">
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Histórico de Conversação ({selectedTicket.conversations.length})
                   </h3>
-                  <div id="conversation-history" className="space-y-4 max-h-60 overflow-y-auto">
+                  <div id="conversation-history" className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                     {selectedTicket.conversations.map((conv: any, index: number) => (
                       <div 
                         key={conv.id || index} 
