@@ -1,6 +1,6 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, or, ilike, desc, count } from "drizzle-orm";
 
 export class CustomerSupportService {
   private db = db;
@@ -126,13 +126,28 @@ export class CustomerSupportService {
    */
   async getCategories(operationId: string) {
     try {
-      return [
-        { id: "1", name: "Dúvidas", active: true },
-        { id: "2", name: "Reclamações", active: true },
-        { id: "3", name: "Alteração de Endereço", active: true },
-        { id: "4", name: "Cancelamento", active: true },
-        { id: "5", name: "Manual", active: true }
-      ];
+      const categories = await this.db
+        .select({
+          id: this.schema.supportCategories.id,
+          name: this.schema.supportCategories.name,
+          displayName: this.schema.supportCategories.displayName,
+          description: this.schema.supportCategories.description,
+          isAutomated: this.schema.supportCategories.isAutomated,
+          priority: this.schema.supportCategories.priority,
+          color: this.schema.supportCategories.color
+        })
+        .from(this.schema.supportCategories)
+        .orderBy(this.schema.supportCategories.priority);
+
+      return categories.map(cat => ({
+        id: cat.id,
+        name: cat.displayName || cat.name,
+        description: cat.description,
+        isAutomated: cat.isAutomated,
+        priority: cat.priority,
+        color: cat.color,
+        active: true
+      }));
     } catch (error) {
       console.error('Error getting categories:', error);
       throw error;
@@ -144,10 +159,68 @@ export class CustomerSupportService {
    */
   async getTickets(operationId: string, filters: any) {
     try {
+      const { status, category, search, page = 1, limit = 50 } = filters;
+      
+      // Build where conditions
+      let whereConditions: any[] = [];
+      
+      // Filter by status
+      if (status && status !== 'all') {
+        whereConditions.push(eq(this.schema.supportTickets.status, status));
+      }
+      
+      // Filter by category
+      if (category && category !== 'all') {
+        whereConditions.push(eq(this.schema.supportTickets.categoryId, category));
+      }
+      
+      // Search in subject and customer email
+      if (search) {
+        whereConditions.push(
+          or(
+            ilike(this.schema.supportTickets.subject, `%${search}%`),
+            ilike(this.schema.supportTickets.customerEmail, `%${search}%`)
+          )
+        );
+      }
+
+      // Get tickets with category info
+      const tickets = await this.db
+        .select()
+        .from(this.schema.supportTickets)
+        .leftJoin(
+          this.schema.supportCategories,
+          eq(this.schema.supportTickets.categoryId, this.schema.supportCategories.id)
+        )
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(this.schema.supportTickets.createdAt))
+        .limit(parseInt(limit))
+        .offset((parseInt(page) - 1) * parseInt(limit));
+
+      // Get total count
+      const totalResult = await this.db
+        .select({ count: count() })
+        .from(this.schema.supportTickets)
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+      const total = totalResult[0]?.count || 0;
+
       return {
-        tickets: [],
-        total: 0,
-        page: filters.page || 1
+        tickets: tickets.map(row => ({
+          id: row.support_tickets.id,
+          ticketNumber: row.support_tickets.ticketNumber,
+          subject: row.support_tickets.subject,
+          customerEmail: row.support_tickets.customerEmail,
+          customerName: row.support_tickets.customerName,
+          status: row.support_tickets.status,
+          priority: row.support_tickets.priority || 'medium',
+          createdAt: row.support_tickets.createdAt,
+          lastActivity: row.support_tickets.lastActivity,
+          conversationCount: row.support_tickets.conversationCount || 0,
+          category: row.support_categories?.name || 'Sem categoria'
+        })),
+        total,
+        page: parseInt(page)
       };
     } catch (error) {
       console.error('Error getting tickets:', error);
@@ -160,12 +233,33 @@ export class CustomerSupportService {
    */
   async getTicket(operationId: string, ticketId: string) {
     try {
+      const ticket = await this.db
+        .select()
+        .from(this.schema.supportTickets)
+        .leftJoin(
+          this.schema.supportCategories,
+          eq(this.schema.supportTickets.categoryId, this.schema.supportCategories.id)
+        )
+        .where(eq(this.schema.supportTickets.id, ticketId))
+        .limit(1);
+
+      if (!ticket.length) {
+        throw new Error('Ticket not found');
+      }
+
+      const row = ticket[0];
       return {
-        id: ticketId,
-        ticketNumber: "SUP-202509-0001",
-        subject: "Test ticket",
-        status: "open",
-        category: "Dúvidas"
+        id: row.support_tickets.id,
+        ticketNumber: row.support_tickets.ticketNumber,
+        subject: row.support_tickets.subject,
+        customerEmail: row.support_tickets.customerEmail,
+        customerName: row.support_tickets.customerName,
+        status: row.support_tickets.status,
+        priority: row.support_tickets.priority || 'medium',
+        createdAt: row.support_tickets.createdAt,
+        description: row.support_tickets.description,
+        resolution: row.support_tickets.resolution,
+        category: row.support_categories?.name || 'Sem categoria'
       };
     } catch (error) {
       console.error('Error getting ticket:', error);
