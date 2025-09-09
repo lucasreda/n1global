@@ -965,7 +965,7 @@ SINAIS DE ALERTA (REVISAR):
       const [operation] = await db
         .select()
         .from(customerSupportOperations)
-        .where(eq(customerSupportOperations.domain, toDomain))
+        .where(eq(customerSupportOperations.emailDomain, toDomain))
         .limit(1);
 
       if (!operation) {
