@@ -791,7 +791,7 @@ export default function CustomerSupportPage() {
                     <div key={ticket.id} className="relative bg-black/10 backdrop-blur-sm border border-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20 cursor-pointer" style={{boxShadow: '0 4px 16px rgba(31, 38, 135, 0.2)'}}
                           onClick={() => handleViewTicket(ticket)}>
                         {!ticket.email?.hasAutoResponse && !ticket.isRead && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-blue-400 border-2 border-slate-900" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-blue-400 border-2 border-slate-900 z-10" />
                         )}
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
