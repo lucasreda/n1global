@@ -155,10 +155,10 @@ export function registerSupportRoutes(app: Express) {
         from: from || sender,
         to: to || recipient,
         subject: subject || '',
-        text: text || bodyPlain || '',
-        html: html || bodyHtml || '',
+        textContent: text || bodyPlain || '',
+        htmlContent: html || bodyHtml || '',
         attachments: [], // We can process attachments later if needed
-        message_id: messageId || `mg_${Date.now()}`
+        messageId: messageId || `mg_${Date.now()}`
       };
       
       // Process the email

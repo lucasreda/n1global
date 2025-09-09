@@ -463,7 +463,7 @@ REGRAS:
 
     // Save email
     const emailData: InsertSupportEmail = {
-      messageId: message_id,
+      messageId: messageId,
       from,
       to,
       subject,
