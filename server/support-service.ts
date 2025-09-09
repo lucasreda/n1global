@@ -1174,11 +1174,8 @@ SINAIS DE ALERTA (REVISAR):
       if (email.messageId) {
         threadingHeaders["h:In-Reply-To"] = email.messageId;
         
-        // Build References header: original references + original messageId
-        const references = email.references 
-          ? `${email.references} ${email.messageId}`
-          : email.messageId;
-        threadingHeaders["h:References"] = references;
+        // Build References header: just use the original messageId for now
+        threadingHeaders["h:References"] = email.messageId;
       }
 
       console.log("🧵 Threading headers:", {
