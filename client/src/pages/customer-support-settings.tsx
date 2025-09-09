@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface SupportConfig {
@@ -356,10 +356,14 @@ export default function CustomerSupportSettings() {
 
       {/* Tabs Container */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-black/20 backdrop-blur-sm border border-white/10">
+        <TabsList className="grid w-full grid-cols-3 bg-black/20 backdrop-blur-sm border border-white/10">
           <TabsTrigger value="general" className="flex items-center gap-2 data-[state=active]:bg-white/10">
             <Cog className="w-4 h-4" />
             Geral
+          </TabsTrigger>
+          <TabsTrigger value="ai-training" className="flex items-center gap-2 data-[state=active]:bg-white/10">
+            <Bot className="w-4 h-4" />
+            Treinamento IA
           </TabsTrigger>
           <TabsTrigger value="design" className="flex items-center gap-2 data-[state=active]:bg-white/10">
             <Palette className="w-4 h-4" />
@@ -707,6 +711,33 @@ export default function CustomerSupportSettings() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        {/* Aba Treinamento IA */}
+        <TabsContent value="ai-training" className="space-y-6 mt-6">
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-purple-400" />
+                <CardTitle className="text-white" style={{ fontSize: '18px' }}>Treinamento da IA Sofia</CardTitle>
+              </div>
+              <CardDescription>
+                Configure e treine a IA para respostas mais precisas para esta operação
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="text-center py-12">
+                <Bot className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-white mb-2">Treinamento IA - Em Breve</h3>
+                <p className="text-gray-400 mb-4">
+                  Esta funcionalidade permitirá treinar a Sofia com dados específicos da sua operação
+                </p>
+                <Badge variant="outline" className="bg-purple-600/20 text-purple-400 border-purple-600/30">
+                  Em Desenvolvimento
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Aba Design */}
