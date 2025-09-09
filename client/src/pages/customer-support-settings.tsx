@@ -297,8 +297,8 @@ export default function CustomerSupportSettings() {
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             >
-              <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Bot className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 flex items-center justify-center mb-4">
+                <Bot className="w-8 h-8 text-blue-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">IA Sofia</h3>
               <p className="text-gray-400 text-sm">
@@ -312,8 +312,8 @@ export default function CustomerSupportSettings() {
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             >
-              <div className="w-12 h-12 bg-green-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-green-400" />
+              <div className="w-12 h-12 flex items-center justify-center mb-4">
+                <Zap className="w-8 h-8 text-green-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Resposta Instantânea</h3>
               <p className="text-gray-400 text-sm">
@@ -327,8 +327,8 @@ export default function CustomerSupportSettings() {
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             >
-              <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-purple-400" />
+              <div className="w-12 h-12 flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-purple-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Totalmente Personalizável</h3>
               <p className="text-gray-400 text-sm">
@@ -342,8 +342,8 @@ export default function CustomerSupportSettings() {
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             >
-              <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Heart className="w-6 h-6 text-orange-400" />
+              <div className="w-12 h-12 flex items-center justify-center mb-4">
+                <Heart className="w-8 h-8 text-orange-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Experiência Humanizada</h3>
               <p className="text-gray-400 text-sm">
@@ -357,8 +357,8 @@ export default function CustomerSupportSettings() {
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             >
-              <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Star className="w-6 h-6 text-yellow-400" />
+              <div className="w-12 h-12 flex items-center justify-center mb-4">
+                <Star className="w-8 h-8 text-yellow-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Gestão Inteligente</h3>
               <p className="text-gray-400 text-sm">
@@ -372,8 +372,8 @@ export default function CustomerSupportSettings() {
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             >
-              <div className="w-12 h-12 bg-red-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Clock className="w-6 h-6 text-red-400" />
+              <div className="w-12 h-12 flex items-center justify-center mb-4">
+                <Clock className="w-8 h-8 text-red-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Disponível 24/7</h3>
               <p className="text-gray-400 text-sm">
