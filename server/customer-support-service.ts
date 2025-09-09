@@ -28,13 +28,32 @@ export class CustomerSupportService {
    */
   async getOperationSupport(operationId: string) {
     try {
-      // TODO: Get from database
+      // Get from customerSupportOperations table
+      const [operation] = await this.db
+        .select()
+        .from(this.schema.customerSupportOperations)
+        .where(eq(this.schema.customerSupportOperations.operationId, operationId))
+        .limit(1);
+
+      if (!operation) {
+        // Return default config with service deactivated
+        return {
+          emailDomain: null,
+          emailPrefix: "suporte",
+          isCustomDomain: false,
+          domainVerified: false,
+          mailgunDomainName: null,
+          isActive: false
+        };
+      }
+
       return {
-        emailDomain: "garriguesmilano.com",
-        emailPrefix: "support",
-        isCustomDomain: true,
-        domainVerified: true,
-        mailgunDomainName: "garriguesmilano.com"
+        emailDomain: operation.emailDomain,
+        emailPrefix: operation.emailPrefix,
+        isCustomDomain: operation.isCustomDomain,
+        domainVerified: operation.domainVerified,
+        mailgunDomainName: operation.mailgunDomainName,
+        isActive: operation.isActive
       };
     } catch (error) {
       console.error('Error getting operation support:', error);
@@ -643,6 +662,70 @@ export class CustomerSupportService {
       };
     } catch (error) {
       console.error('Error getting DNS records:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update service activation status for an operation
+   */
+  async updateServiceStatus(operationId: string, isActive: boolean) {
+    try {
+      console.log(`🔄 Updating service status for operation ${operationId}: ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+      
+      // Update or create the customer support operation record
+      const [existingOperation] = await this.db
+        .select()
+        .from(this.schema.customerSupportOperations)
+        .where(eq(this.schema.customerSupportOperations.operationId, operationId))
+        .limit(1);
+
+      if (existingOperation) {
+        // Update existing record
+        const [updatedOperation] = await this.db
+          .update(this.schema.customerSupportOperations)
+          .set({ 
+            isActive,
+            updatedAt: new Date()
+          })
+          .where(eq(this.schema.customerSupportOperations.operationId, operationId))
+          .returning();
+
+        return {
+          operationId,
+          isActive,
+          emailDomain: updatedOperation.emailDomain,
+          emailPrefix: updatedOperation.emailPrefix,
+          isCustomDomain: updatedOperation.isCustomDomain,
+          domainVerified: updatedOperation.domainVerified,
+          mailgunDomainName: updatedOperation.mailgunDomainName,
+        };
+      } else {
+        // Create new record
+        const [newOperation] = await this.db
+          .insert(this.schema.customerSupportOperations)
+          .values({
+            operationId,
+            isActive,
+            emailPrefix: 'suporte',
+            aiEnabled: true,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+
+        return {
+          operationId,
+          isActive,
+          emailDomain: newOperation.emailDomain,
+          emailPrefix: newOperation.emailPrefix,
+          isCustomDomain: newOperation.isCustomDomain,
+          domainVerified: newOperation.domainVerified,
+          mailgunDomainName: newOperation.mailgunDomainName,
+        };
+      }
+    } catch (error) {
+      console.error('Error updating service status:', error);
       throw error;
     }
   }

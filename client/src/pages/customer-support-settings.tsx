@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -20,6 +21,7 @@ interface SupportConfig {
   isCustomDomain: boolean;
   domainVerified: boolean;
   mailgunDomainName?: string;
+  isActive: boolean;
 }
 
 interface DnsRecord {
@@ -40,6 +42,7 @@ export default function CustomerSupportSettings() {
   const [emailPrefix, setEmailPrefix] = useState("");
   const [customDomain, setCustomDomain] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
 
   // Design configuration states
   const [designConfig, setDesignConfig] = useState({
@@ -429,6 +432,42 @@ export default function CustomerSupportSettings() {
     });
   };
 
+  // Service activation mutation
+  const activateServiceMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/customer-support/${currentOperationId}/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ isActive: true })
+      });
+      if (!response.ok) throw new Error('Failed to activate service');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Serviço ativado",
+        description: "O serviço de suporte ao cliente foi ativado com sucesso.",
+      });
+      refetch();
+      setIsActivationModalOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao ativar o serviço de suporte.",
+        variant: "destructive",
+      });
+      setIsActivationModalOpen(false);
+    }
+  });
+
+  const handleActivateService = () => {
+    activateServiceMutation.mutate();
+  };
+
   // Show loading while waiting for operation ID to load
   if (!currentOperationId) {
     return (
@@ -458,6 +497,189 @@ export default function CustomerSupportSettings() {
         <div className="text-center">
           <p className="text-red-400">Erro ao carregar configurações</p>
           <p className="text-muted-foreground text-sm mt-2">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If service is not active, show promotional screen
+  if (!supportConfig?.isActive) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">Suporte ao Cliente</h1>
+            <p className="text-muted-foreground">
+              Transforme o atendimento da sua operação {currentOperationName}
+            </p>
+          </div>
+        </div>
+
+        {/* Hero Section */}
+        <Card className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-blue-500/30">
+          <CardContent className="p-8">
+            <div className="text-center space-y-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/20 mb-4">
+                <MessageSquare className="w-8 h-8 text-blue-400" />
+              </div>
+              
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold text-white">
+                  Revolucione seu Atendimento ao Cliente
+                </h2>
+                <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+                  Sistema completo de suporte com IA integrada, gestão de tickets e análises em tempo real.
+                  Aumente a satisfação dos clientes e otimize sua operação.
+                </p>
+              </div>
+
+              <Dialog open={isActivationModalOpen} onOpenChange={setIsActivationModalOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="lg" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
+                    disabled={activateServiceMutation.isPending}
+                    data-testid="button-activate-support"
+                  >
+                    {activateServiceMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Ativando...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5 mr-2" />
+                        Ativar Suporte ao Cliente
+                      </>
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-gray-900 border-gray-700">
+                  <DialogHeader>
+                    <DialogTitle className="text-white">Confirmar Ativação do Serviço</DialogTitle>
+                    <DialogDescription className="text-gray-300">
+                      O serviço de Suporte ao Cliente é cobrado sob demanda baseado no uso. 
+                      Você será cobrado apenas pelos recursos utilizados.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="bg-yellow-600/20 border border-yellow-600/30 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                        <div className="text-sm text-yellow-200">
+                          <p className="font-medium mb-1">Cobrança sob demanda</p>
+                          <p>Este serviço será cobrado baseado no volume de tickets processados e recursos utilizados.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsActivationModalOpen(false)}
+                        className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={handleActivateService}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={activateServiceMutation.isPending}
+                      >
+                        {activateServiceMutation.isPending ? 'Ativando...' : 'Confirmar Ativação'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Benefits Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-green-600/20 flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-green-400" />
+                </div>
+                <h3 className="font-semibold text-white">IA Integrada</h3>
+              </div>
+              <p className="text-gray-300 text-sm">
+                Sofia, nossa assistente virtual empática, responde automaticamente aos clientes com precisão e personalização.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-blue-400" />
+                </div>
+                <h3 className="font-semibold text-white">Gestão Inteligente</h3>
+              </div>
+              <p className="text-gray-300 text-sm">
+                Sistema completo de tickets com categorização automática, priorização e acompanhamento em tempo real.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-purple-400" />
+                </div>
+                <h3 className="font-semibold text-white">Análises Detalhadas</h3>
+              </div>
+              <p className="text-gray-300 text-sm">
+                Métricas em tempo real, relatórios de satisfação e insights para otimizar seu atendimento.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-orange-600/20 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-orange-400" />
+                </div>
+                <h3 className="font-semibold text-white">Email Profissional</h3>
+              </div>
+              <p className="text-gray-300 text-sm">
+                Templates personalizados, domínio próprio e integração completa com provedores de email.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-red-400" />
+                </div>
+                <h3 className="font-semibold text-white">Multi-Agente</h3>
+              </div>
+              <p className="text-gray-300 text-sm">
+                Suporte para múltiplos agentes, distribuição automática de tickets e colaboração em equipe.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-indigo-400" />
+                </div>
+                <h3 className="font-semibold text-white">Segurança Avançada</h3>
+              </div>
+              <p className="text-gray-300 text-sm">
+                Proteção de dados, backup automático e conformidade com regulamentações de privacidade.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );

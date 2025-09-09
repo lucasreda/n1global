@@ -645,4 +645,32 @@ export function registerCustomerSupportRoutes(app: Express) {
       });
     }
   });
+
+  /**
+   * Activate customer support service for an operation
+   */
+  app.post("/api/customer-support/:operationId/activate", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      
+      const operation = await customerSupportService.updateServiceStatus(operationId, isActive);
+      
+      res.json({
+        success: true,
+        operation,
+        message: isActive ? "Service activated successfully" : "Service deactivated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating service status:', error);
+      res.status(500).json({ 
+        message: "Failed to update service status",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 }
