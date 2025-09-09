@@ -221,7 +221,10 @@ export class CustomerSupportService {
           eq(this.schema.supportTickets.emailId, this.schema.supportEmails.id)
         )
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-        .orderBy(desc(this.schema.supportTickets.createdAt))
+        .orderBy(
+          this.schema.supportTickets.isRead, // Unread first (false < true)
+          desc(this.schema.supportTickets.createdAt) // Then by newest first
+        )
         .limit(parseInt(limit))
         .offset((parseInt(page) - 1) * parseInt(limit));
 
@@ -255,7 +258,8 @@ export class CustomerSupportService {
             hasAutoResponse: row.email.hasAutoResponse,
             autoResponseSentAt: row.email.autoResponseSentAt,
             status: row.email.status
-          } : null
+          } : null,
+          isRead: row.ticket.isRead
         })),
         total,
         page: parseInt(page)
