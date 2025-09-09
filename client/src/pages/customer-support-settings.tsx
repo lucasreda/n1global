@@ -208,25 +208,26 @@ export default function CustomerSupportSettings() {
     if (designConfigData) {
       console.log('🔄 Updating design config from server:', designConfigData);
       // Convert Google Storage URLs to local object URLs if needed
+      const serverData = designConfigData as any;
       const processedConfig = {
         ...designConfig, // Start with current state to preserve defaults
-        ...designConfigData,
-        logo: designConfigData?.logo?.includes?.('storage.googleapis.com') 
-          ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
-          : designConfigData?.logo || designConfig.logo,
+        ...serverData,
+        logo: serverData?.logo?.includes?.('storage.googleapis.com') 
+          ? serverData.logo.replace(/.*\/\.private\//, '/objects/') 
+          : serverData?.logo || designConfig.logo,
         // Preserve all new fields with defaults if not present
-        logoAlignment: designConfigData?.logoAlignment || designConfig.logoAlignment || "center",
-        secondaryTextColor: designConfigData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
+        logoAlignment: serverData?.logoAlignment || designConfig.logoAlignment || "center",
+        secondaryTextColor: serverData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
         signature: {
           ...designConfig.signature,
-          ...(designConfigData?.signature || {})
+          ...(serverData?.signature || {})
         },
         card: {
           ...designConfig.card,
-          ...(designConfigData?.card || {}),
+          ...(serverData?.card || {}),
           borderWidth: {
             ...designConfig.card.borderWidth,
-            ...(designConfigData?.card?.borderWidth || {})
+            ...(serverData?.card?.borderWidth || {})
           }
         }
       };
