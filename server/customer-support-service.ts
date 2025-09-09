@@ -174,6 +174,8 @@ export class CustomerSupportService {
     try {
       const { status, category, search, page = 1, limit = 50 } = filters;
       
+      console.log(`🔍 Filters received:`, { status, category, search, page, limit });
+      
       // Build where conditions
       let whereConditions: any[] = [];
       
@@ -244,7 +246,7 @@ export class CustomerSupportService {
       const total = totalResult[0]?.count || 0;
       const totalPages = Math.ceil(total / parseInt(limit));
       
-      console.log(`🎫 Pagination debug: page=${page}, limit=${limit}, total=${total}, totalPages=${totalPages}`);
+      console.log(`🎫 Pagination debug: originalPage=${filters.page}, page=${page}, limit=${limit}, total=${total}, totalPages=${totalPages}`);
 
       const result = {
         tickets: tickets.map(row => ({

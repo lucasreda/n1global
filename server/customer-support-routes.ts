@@ -122,6 +122,7 @@ export function registerCustomerSupportRoutes(app: Express) {
         category: categoryId === 'all' ? undefined : categoryId as string,
         search: search as string,
         assignedTo: assignedTo as string | undefined,
+        page: pageNum,
         limit: limitNum,
         offset
       };
