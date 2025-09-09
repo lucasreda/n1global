@@ -190,30 +190,10 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden">
-      {/* Background Video */}
-      <div className="absolute inset-0 w-full h-full">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="w-full h-full object-cover"
-          style={{ filter: 'brightness(0.5)' }}
-        >
-          <source src="https://werocketz.com/wp-content/uploads/2025/06/bg1-3.mp4" type="video/mp4" />
-          {/* Fallback para navegadores que não suportam o vídeo */}
-          <div className="w-full h-full bg-gradient-to-br from-gray-900 to-gray-700"></div>
-        </video>
-      </div>
-      
-      {/* Overlay escuro para melhor contraste */}
-      <div className="absolute inset-0 bg-black/30"></div>
-      
+    <div className="min-h-screen bg-background relative overflow-x-hidden">
       {/* Background gradient and blur effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background/30 via-secondary/10 to-background/30"></div>
-      <div className="absolute inset-0 opacity-10">
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary/20 to-background"></div>
+      <div className="absolute inset-0 opacity-30">
         <div className="absolute top-20 left-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-80 h-80 bg-chart-1/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-chart-2/20 rounded-full blur-3xl"></div>
@@ -248,8 +228,25 @@ export default function Landing() {
 
       <div className="relative z-50">
         {/* Hero Section */}
-        <section className="min-h-screen sm:py-20 lg:py-32 flex items-center">
-          <div className="container mx-auto px-4 sm:px-6">
+        <section className="min-h-screen sm:py-20 lg:py-32 flex items-center relative overflow-hidden">
+          {/* Background Video - apenas no hero */}
+          <div className="absolute inset-0 w-full h-full">
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              className="w-full h-full object-cover"
+              style={{ filter: 'brightness(0.4)' }}
+            >
+              <source src="https://werocketz.com/wp-content/uploads/2025/06/bg1-3.mp4" type="video/mp4" />
+            </video>
+          </div>
+          
+          {/* Overlay escuro para melhor contraste no hero */}
+          <div className="absolute inset-0 bg-black/40"></div>
+          <div className="container mx-auto px-4 sm:px-6 relative z-10">
             <div className="text-center max-w-4xl mx-auto -translate-y-5 sm:-translate-y-5">
               <h1 className="text-[30px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
                 {displayedText.split('\n').map((line, index) => (
