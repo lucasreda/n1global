@@ -10,9 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageCircle, Zap, Users, Heart, Star, Clock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface SupportConfig {
   emailDomain: string;
@@ -40,6 +41,10 @@ export default function CustomerSupportSettings() {
   const [emailPrefix, setEmailPrefix] = useState("");
   const [customDomain, setCustomDomain] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Support service activation states
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [supportServiceActive, setSupportServiceActive] = useState(false);
 
   // Design configuration states
   const [designConfig, setDesignConfig] = useState({
@@ -95,12 +100,24 @@ export default function CustomerSupportSettings() {
     staleTime: 0
   });
 
+  // Get current operation data including support service status
+  const currentOperation = operations.find(op => op.id === selectedOperation);
+
   // Update local AI directives state when data from server changes
   useEffect(() => {
     if (aiDirectivesData && Array.isArray(aiDirectivesData)) {
       setAiDirectives(aiDirectivesData);
     }
   }, [aiDirectivesData]);
+
+  // Update support service active state when operation changes
+  useEffect(() => {
+    if (currentOperation && 'supportServiceActive' in currentOperation) {
+      setSupportServiceActive(currentOperation.supportServiceActive);
+    } else {
+      setSupportServiceActive(false); // Default to false if not available
+    }
+  }, [currentOperation]);
 
   // Functions for AI directives management
   const getDirectiveTypeIcon = (type: string) => {
@@ -195,6 +212,211 @@ export default function CustomerSupportSettings() {
       });
     },
   });
+
+  // Activate support service mutation
+  const activateSupportMutation = useMutation({
+    mutationFn: async (active: boolean) => {
+      return apiRequest(`/api/operations/${currentOperationId}/support-service`, 'PUT', {
+        supportServiceActive: active
+      });
+    },
+    onSuccess: () => {
+      setSupportServiceActive(true);
+      queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
+      toast({
+        title: "Serviço de suporte ativado",
+        description: "O serviço de suporte ao cliente foi ativado com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao ativar serviço",
+        description: error.message || "Erro ao ativar o serviço de suporte",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle support service activation
+  const handleActivateSupport = () => {
+    setShowActivationModal(true);
+  };
+
+  const confirmActivation = () => {
+    activateSupportMutation.mutate(true);
+    setShowActivationModal(false);
+  };
+
+  // If support service is not active, show promotional page
+  if (!supportServiceActive) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900">
+        <div className="container mx-auto px-4 py-12">
+          
+          {/* Hero Section */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-6">
+              <MessageCircle className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-5xl font-bold text-white mb-6">
+              Transforme seu Atendimento ao Cliente
+            </h1>
+            <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+              Active o sistema de suporte inteligente da {currentOperationName} e ofereça um atendimento personalizado e eficiente para seus clientes.
+            </p>
+            
+            {/* Main CTA */}
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 max-w-md mx-auto mb-12">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-white font-medium">Ativar Serviço de Suporte</span>
+                <Switch
+                  checked={false}
+                  onCheckedChange={handleActivateSupport}
+                  className="data-[state=checked]:bg-blue-600"
+                  data-testid="toggle-support-service"
+                />
+              </div>
+              <p className="text-gray-300 text-sm">
+                Comece agora e pague apenas pelo que usar
+              </p>
+            </div>
+          </div>
+
+          {/* Benefits Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4">
+                  <Bot className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3">IA Sofia</h3>
+                <p className="text-gray-300">
+                  Assistente virtual empática que responde automaticamente a dúvidas, cancelamentos e alterações de endereço.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3">Resposta Instantânea</h3>
+                <p className="text-gray-300">
+                  Categorização automática e respostas em segundos para as principais demandas dos seus clientes.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3">Totalmente Personalizável</h3>
+                <p className="text-gray-300">
+                  Configure diretivas específicas da sua operação para respostas alinhadas com sua marca.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
+                  <Heart className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3">Experiência Humanizada</h3>
+                <p className="text-gray-300">
+                  Templates de email elegantes e assinatura personalizada para uma comunicação profissional.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center mb-4">
+                  <Star className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3">Gestão Inteligente</h3>
+                <p className="text-gray-300">
+                  Dashboard completo para acompanhar tickets, categorias e métricas de atendimento.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mb-4">
+                  <Clock className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3">Disponível 24/7</h3>
+                <p className="text-gray-300">
+                  Atendimento automático a qualquer hora, garantindo que seus clientes sempre tenham suporte.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Pricing Info */}
+          <div className="text-center">
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20 max-w-lg mx-auto">
+              <CardContent className="p-8">
+                <h3 className="text-2xl font-bold text-white mb-4">Modelo de Cobrança</h3>
+                <p className="text-gray-300 mb-6">
+                  Pague apenas pelo que usar. Cada email processado pela IA será cobrado conforme a tabela de preços.
+                </p>
+                <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-blue-300 font-medium">
+                    💡 Comece agora sem custos fixos
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+        </div>
+
+        {/* Activation Modal */}
+        <Dialog open={showActivationModal} onOpenChange={setShowActivationModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Ativar Serviço de Suporte</DialogTitle>
+              <DialogDescription className="space-y-3">
+                <p>
+                  Você está prestes a ativar o serviço de suporte ao cliente para sua operação.
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-yellow-800 text-sm font-medium">
+                    ⚠️ Esta funcionalidade é paga por demanda
+                  </p>
+                  <p className="text-yellow-700 text-sm mt-1">
+                    O valor será adicionado à sua fatura conforme o uso de emails processados pela IA.
+                  </p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowActivationModal(false)}
+                data-testid="button-cancel-activation"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={confirmActivation}
+                disabled={activateSupportMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+                data-testid="button-confirm-activation"
+              >
+                {activateSupportMutation.isPending ? "Ativando..." : "Ativar Serviço"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   // Get current design configuration
   const { data: designConfigData } = useQuery({
