@@ -349,8 +349,10 @@ export default function AdminSupport() {
       
       const data = await response.json();
       console.log('🐛 DEBUG: Dados brutos da API:', data);
-      console.log('🐛 DEBUG: Primeiro ticket:', data.tickets?.[0]);
+      console.log('🐛 DEBUG: Total de tickets:', data.tickets?.length);
+      console.log('🐛 DEBUG: Primeiro ticket completo:', JSON.stringify(data.tickets?.[0], null, 2));
       console.log('🐛 DEBUG: Email do primeiro ticket:', data.tickets?.[0]?.email);
+      console.log('🐛 DEBUG: hasAutoResponse do primeiro:', data.tickets?.[0]?.email?.hasAutoResponse);
       return { tickets: data.tickets || [], total: data.total || 0 };
     }
   });
@@ -639,7 +641,14 @@ export default function AdminSupport() {
                               <Badge className="bg-slate-700 text-slate-300 text-xs">
                                 {ticketResponse.category?.displayName}
                               </Badge>
-                              {ticketResponse.email?.hasAutoResponse && (
+                              {(() => {
+                                console.log(`🐛 BADGE DEBUG para ${ticketResponse.ticketNumber}:`, {
+                                  hasEmail: !!ticketResponse.email,
+                                  hasAutoResponse: ticketResponse.email?.hasAutoResponse,
+                                  emailObject: ticketResponse.email
+                                });
+                                return ticketResponse.email?.hasAutoResponse;
+                              })() && (
                                 <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs">
                                   🤖 Sofia IA
                                 </Badge>
