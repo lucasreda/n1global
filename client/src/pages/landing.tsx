@@ -190,32 +190,37 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden">
+    <div className="min-h-screen relative overflow-x-hidden">
       {/* Background Video */}
-      <video
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="fixed top-0 left-0 w-full h-full object-cover"
-        style={{ 
-          zIndex: -10,
-          filter: 'brightness(0.4)' 
-        }}
-      >
-        <source src="https://werocketz.com/wp-content/uploads/2025/06/bg1-3.mp4" type="video/mp4" />
-      </video>
+      <div className="absolute inset-0 w-full h-full">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="w-full h-full object-cover"
+          style={{ filter: 'brightness(0.5)' }}
+        >
+          <source src="https://werocketz.com/wp-content/uploads/2025/06/bg1-3.mp4" type="video/mp4" />
+          {/* Fallback para navegadores que não suportam o vídeo */}
+          <div className="w-full h-full bg-gradient-to-br from-gray-900 to-gray-700"></div>
+        </video>
+      </div>
+      
+      {/* Overlay escuro para melhor contraste */}
+      <div className="absolute inset-0 bg-black/30"></div>
       
       {/* Background gradient and blur effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background/50 via-secondary/10 to-background/50"></div>
-      <div className="absolute inset-0 opacity-20">
+      <div className="absolute inset-0 bg-gradient-to-br from-background/30 via-secondary/10 to-background/30"></div>
+      <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-80 h-80 bg-chart-1/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-chart-2/20 rounded-full blur-3xl"></div>
       </div>
 
       {/* Header */}
-      <header className="relative z-10">
+      <header className="relative z-50">
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <img 
@@ -241,7 +246,7 @@ export default function Landing() {
         </div>
       </header>
 
-      <div className="relative z-10">
+      <div className="relative z-50">
         {/* Hero Section */}
         <section className="min-h-screen sm:py-20 lg:py-32 flex items-center">
           <div className="container mx-auto px-4 sm:px-6">
