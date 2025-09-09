@@ -553,17 +553,17 @@ export class CustomerSupportService {
       }
 
       // Delegate to support service for actual email sending
-      const supportService = (await import('./support-service')).default;
+      const { supportService: importedSupportService } = await import('./support-service');
       
       // Use the real support service to send the email reply
-      await supportService.replyToTicket(
+      await importedSupportService.replyToTicket(
         ticketId,
         replyData.content || replyData.message,
         replyData.senderName || 'Equipe de Suporte'
       );
 
       // Add conversation entry
-      await supportService.addConversation(ticketId, {
+      await importedSupportService.addConversation(ticketId, {
         type: "email_out",
         from: `${replyData.senderName || 'Equipe de Suporte'} <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: ticket.customerEmail,
