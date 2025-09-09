@@ -243,7 +243,7 @@ export class CustomerSupportService {
 
       const total = totalResult[0]?.count || 0;
 
-      return {
+      const result = {
         tickets: tickets.map(row => ({
           id: row.ticket.id,
           ticketNumber: row.ticket.ticketNumber,
@@ -269,8 +269,13 @@ export class CustomerSupportService {
           isRead: row.ticket.isRead
         })),
         total,
-        page: parseInt(page)
+        page: parseInt(page),
+        totalPages: Math.ceil(total / limit)
       };
+
+      console.log(`📊 Tickets pagination: page=${page}, limit=${limit}, total=${total}, totalPages=${Math.ceil(total / limit)}`);
+      
+      return result;
     } catch (error) {
       console.error('Error getting tickets:', error);
       throw error;

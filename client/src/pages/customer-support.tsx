@@ -444,6 +444,7 @@ export default function CustomerSupportPage() {
       }
       
       const data = await response.json();
+      console.log('📋 Tickets response:', data);
       return data;
     }
   });
