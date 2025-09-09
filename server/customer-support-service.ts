@@ -1,6 +1,7 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
 import { eq, and, or, ilike, desc, count, sql } from "drizzle-orm";
+import { supportService } from "./support-service";
 
 export class CustomerSupportService {
   private db = db;
@@ -442,9 +443,26 @@ export class CustomerSupportService {
    */
   async processIncomingEmail(emailData: any) {
     try {
+      console.log('🔄 CustomerSupportService: Delegating to SupportService for real processing');
+      
+      // Use the real support service to process the email
+      const processedEmail = await supportService.processIncomingEmail({
+        from: emailData.from,
+        to: emailData.to,
+        subject: emailData.subject,
+        textContent: emailData.textBody,
+        htmlContent: emailData.htmlBody,
+        messageId: emailData.messageId,
+        inReplyTo: emailData.inReplyTo,
+        references: emailData.references,
+        timestamp: emailData.timestamp
+      });
+
+      console.log('✅ CustomerSupportService: Email processed by SupportService');
+      
       return {
         success: true,
-        ticketId: "processed-ticket-id",
+        ticketId: processedEmail.id,
         message: "Email processed successfully"
       };
     } catch (error) {

@@ -369,10 +369,13 @@ REGRAS:
       from,
       to,
       subject,
-      text,
-      html,
+      textContent: text,
+      htmlContent: html,
+      messageId,
       attachments = [],
-      message_id,
+      inReplyTo,
+      references,
+      timestamp,
     } = webhookData;
 
     console.log(`📧 Processing email - From: ${from}, Subject: ${subject}`);
@@ -394,7 +397,7 @@ REGRAS:
 
       // Save email
       const emailData: InsertSupportEmail = {
-        messageId: message_id,
+        messageId: messageId,
         from,
         to,
         subject,
@@ -421,7 +424,7 @@ REGRAS:
         to: to,
         subject: subject,
         content: text || html || "",
-        messageId: message_id,
+        messageId: messageId,
       });
 
       // Update ticket status to show new activity and mark as unread
