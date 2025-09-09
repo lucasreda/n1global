@@ -302,8 +302,8 @@ export default function AdminSupport() {
 
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
-    queryKey: ['/api/support/categories'],
-    enabled: true
+    queryKey: [`/api/customer-support/${selectedOperationId}/categories`],
+    enabled: !!selectedOperationId
   });
 
   // Overview metrics for cards
@@ -313,8 +313,8 @@ export default function AdminSupport() {
     monthlyTickets: number;
     unreadTickets: number;
   }>({
-    queryKey: ['/api/support/overview'],
-    enabled: true,
+    queryKey: [`/api/customer-support/${selectedOperationId}/overview`],
+    enabled: !!selectedOperationId,
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
@@ -326,8 +326,8 @@ export default function AdminSupport() {
   const shouldLoadTickets = hasSupportFilters || (selectedCategory === "all" && selectedTicketStatus === "all" && !supportSearchTerm.trim());
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: ['/api/support/tickets', selectedCategory, selectedTicketStatus, supportSearchTerm],
-    enabled: shouldLoadTickets,
+    queryKey: [`/api/customer-support/${selectedOperationId}/tickets`, selectedCategory, selectedTicketStatus, supportSearchTerm],
+    enabled: shouldLoadTickets && selectedOperationId,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (supportSearchTerm) params.append('search', supportSearchTerm);
@@ -336,7 +336,7 @@ export default function AdminSupport() {
       params.append('limit', '50');
       
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`/api/support/tickets?${params.toString()}`, {
+      const response = await fetch(`/api/customer-support/${selectedOperationId}/tickets?${params.toString()}`, {
         headers: {
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
