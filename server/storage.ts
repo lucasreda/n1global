@@ -207,7 +207,6 @@ export class DatabaseStorage implements IStorage {
         country: operations.country,
         currency: operations.currency, // CRITICAL: Include missing currency field
         status: operations.status,
-        supportServiceActive: operations.supportServiceActive,
         createdAt: operations.createdAt,
         updatedAt: operations.updatedAt,
         storeId: operations.storeId,
@@ -832,17 +831,6 @@ export class DatabaseStorage implements IStorage {
       soldQuantity,
       availableStock
     };
-  }
-
-  // Support service methods
-  async updateOperationSupportService(operationId: string, supportServiceActive: boolean): Promise<void> {
-    await db
-      .update(operations)
-      .set({ 
-        supportServiceActive,
-        updatedAt: new Date()
-      })
-      .where(eq(operations.id, operationId));
   }
 }
 

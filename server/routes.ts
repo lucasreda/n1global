@@ -1008,24 +1008,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update operation support service status
-  app.put("/api/operations/:operationId/support-service", authenticateToken, async (req: AuthRequest, res: Response) => {
-    try {
-      const { operationId } = req.params;
-      const { supportServiceActive } = req.body;
-
-      if (typeof supportServiceActive !== 'boolean') {
-        return res.status(400).json({ message: "supportServiceActive deve ser um valor booleano" });
-      }
-
-      await storage.updateOperationSupportService(operationId, supportServiceActive);
-      res.json({ success: true, supportServiceActive });
-    } catch (error) {
-      console.error("Update support service error:", error);
-      res.status(500).json({ message: "Erro ao atualizar serviço de suporte" });
-    }
-  });
-
   // Onboarding routes
   app.get("/api/user/onboarding-status", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

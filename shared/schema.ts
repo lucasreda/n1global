@@ -53,7 +53,6 @@ export const operations = pgTable("operations", {
   country: text("country").notNull(), // Country code e.g., "ES", "IT", "FR"
   currency: text("currency").notNull().default("EUR"), // Currency code e.g., "EUR", "PLN", "CZK"
   status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
-  supportServiceActive: boolean("support_service_active").notNull().default(false), // Customer support service status
   settings: jsonb("settings"), // Operation-specific settings
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
