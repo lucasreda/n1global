@@ -558,9 +558,7 @@ export class CustomerSupportService {
     try {
       console.log('📖 CustomerSupportService: Marking ticket as read...', { operationId, ticketId });
       
-      // Delegate to support service for actual database update
-      const supportService = (await import('./support-service')).default;
-      
+      // Use the direct database update instead of delegating
       const updatedTicket = await supportService.markTicketAsRead(ticketId);
       
       console.log('✅ CustomerSupportService: Ticket marked as read successfully');
