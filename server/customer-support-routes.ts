@@ -495,4 +495,48 @@ export function registerCustomerSupportRoutes(app: Express) {
       });
     }
   });
+
+  /**
+   * Send new message (creates new ticket)
+   */
+  app.post("/api/customer-support/:operationId/send-message", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { recipient, message } = req.body;
+      
+      console.log('📧 CustomerSupportRoutes: Send new message...', { operationId, recipient, message });
+      
+      if (!recipient || !message) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Recipient and message are required" 
+        });
+      }
+
+      // Delegate to support service for actual email sending and ticket creation
+      const supportService = (await import('./support-service')).default;
+      
+      const result = await supportService.sendNewMessage(
+        recipient.trim(),
+        message.trim(),
+        'Equipe de Suporte'
+      );
+      
+      console.log('✅ CustomerSupportRoutes: New message sent successfully');
+      
+      res.json({ 
+        success: true, 
+        message: "Mensagem enviada com sucesso!",
+        ticketId: result.ticketId
+      });
+      
+    } catch (error) {
+      console.error('❌ Error sending new message:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Falha ao enviar mensagem",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 }
