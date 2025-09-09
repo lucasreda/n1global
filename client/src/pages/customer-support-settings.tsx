@@ -92,6 +92,15 @@ export default function CustomerSupportSettings() {
   const [newDirectiveTitle, setNewDirectiveTitle] = useState('');
   const [newDirectiveContent, setNewDirectiveContent] = useState('');
   const [isAddingDirective, setIsAddingDirective] = useState(false);
+  
+  // Edit directive states
+  const [editingDirective, setEditingDirective] = useState<{
+    id: string;
+    type: 'store_info' | 'product_info' | 'response_style' | 'custom';
+    title: string;
+    content: string;
+  } | null>(null);
+  const [isEditingDirective, setIsEditingDirective] = useState(false);
 
   // Get AI directives data
   const { data: aiDirectivesData } = useQuery({
@@ -176,6 +185,47 @@ export default function CustomerSupportSettings() {
     );
     setAiDirectives(updatedDirectives);
     saveAiDirectivesMutation.mutate(updatedDirectives);
+  };
+
+  const startEditDirective = (directive: typeof aiDirectives[0]) => {
+    setEditingDirective({
+      id: directive.id,
+      type: directive.type,
+      title: directive.title,
+      content: directive.content
+    });
+    setIsEditingDirective(true);
+  };
+
+  const editDirective = () => {
+    if (!editingDirective?.title.trim() || !editingDirective?.content.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Título e conteúdo são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedDirectives = aiDirectives.map(d => 
+      d.id === editingDirective.id ? {
+        ...d,
+        type: editingDirective.type,
+        title: editingDirective.title.trim(),
+        content: editingDirective.content.trim()
+      } : d
+    );
+    
+    setAiDirectives(updatedDirectives);
+    setIsEditingDirective(false);
+    setEditingDirective(null);
+    
+    saveAiDirectivesMutation.mutate(updatedDirectives);
+    
+    toast({
+      title: "Diretiva atualizada",
+      description: "Diretiva foi atualizada com sucesso.",
+    });
   };
 
   // Save AI directives mutation
@@ -1197,6 +1247,15 @@ export default function CustomerSupportSettings() {
                                 className="data-[state=checked]:bg-blue-600"
                               />
                               <Button
+                                onClick={() => startEditDirective(directive)}
+                                size="sm"
+                                variant="ghost"
+                                className="text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 p-2"
+                                data-testid={`button-edit-${directive.id}`}
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </Button>
+                              <Button
                                 onClick={() => removeDirective(directive.id)}
                                 size="sm"
                                 variant="ghost"
@@ -1282,6 +1341,91 @@ export default function CustomerSupportSettings() {
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Adicionar Diretiva
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Modal para Editar Diretiva */}
+                  <Dialog open={isEditingDirective} onOpenChange={setIsEditingDirective}>
+                    <DialogContent className="bg-gray-900 border border-gray-700 text-white max-w-2xl">
+                      <DialogHeader>
+                        <div className="flex items-center gap-2">
+                          <Edit3 className="w-5 h-5 text-blue-400" />
+                          <DialogTitle className="text-white">Editar Diretiva da IA Sofia</DialogTitle>
+                        </div>
+                        <DialogDescription className="text-gray-300">
+                          Modifique a diretiva para personalizar as respostas da Sofia
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      {editingDirective && (
+                        <div className="space-y-4 py-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-gray-300 text-sm">Tipo</Label>
+                              <select
+                                value={editingDirective.type}
+                                onChange={(e) => setEditingDirective({
+                                  ...editingDirective,
+                                  type: e.target.value as any
+                                })}
+                                className="w-full mt-1 p-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm"
+                              >
+                                <option value="store_info">Informações da Loja</option>
+                                <option value="product_info">Informações do Produto</option>
+                                <option value="response_style">Estilo de Resposta</option>
+                                <option value="custom">Personalizada</option>
+                              </select>
+                            </div>
+                            <div>
+                              <Label className="text-gray-300 text-sm">Título</Label>
+                              <Input
+                                value={editingDirective.title}
+                                onChange={(e) => setEditingDirective({
+                                  ...editingDirective,
+                                  title: e.target.value
+                                })}
+                                placeholder="Ex: Tempo de entrega padrão"
+                                className="mt-1 bg-gray-700 border-gray-600 text-white"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-gray-300 text-sm">Conteúdo da Diretiva</Label>
+                            <Textarea
+                              value={editingDirective.content}
+                              onChange={(e) => setEditingDirective({
+                                ...editingDirective,
+                                content: e.target.value
+                              })}
+                              placeholder="Ex: Nossos produtos geralmente chegam em 2-3 dias úteis. Para produtos importados, o prazo pode ser de até 7 dias úteis."
+                              className="mt-1 bg-gray-700 border-gray-600 text-white"
+                              rows={4}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      <DialogFooter>
+                        <Button
+                          onClick={() => {
+                            setIsEditingDirective(false);
+                            setEditingDirective(null);
+                          }}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          onClick={editDirective}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          data-testid="button-save-edit-directive"
+                        >
+                          <Edit3 className="w-4 h-4 mr-2" />
+                          Salvar Alterações
                         </Button>
                       </DialogFooter>
                     </DialogContent>
