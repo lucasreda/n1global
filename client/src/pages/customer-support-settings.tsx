@@ -213,6 +213,140 @@ export default function CustomerSupportSettings() {
     },
   });
 
+  // Get current design configuration
+  const { data: designConfigData } = useQuery({
+    queryKey: [`/api/customer-support/${currentOperationId}/design-config`],
+    enabled: !!currentOperationId && supportServiceActive,
+    staleTime: 0 // Always fetch fresh data
+  });
+
+  // Update local state when data from server changes
+  useEffect(() => {
+    if (designConfigData) {
+      console.log('🔄 Updating design config from server:', designConfigData);
+      // Convert Google Storage URLs to local object URLs if needed
+      const processedConfig = {
+        ...designConfig, // Start with current state to preserve defaults
+        ...designConfigData,
+        logo: designConfigData?.logo?.includes?.('storage.googleapis.com') 
+          ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
+          : designConfigData?.logo || designConfig.logo,
+        // Preserve all new fields with defaults if not present
+        logoAlignment: designConfigData?.logoAlignment || designConfig.logoAlignment || "center",
+        secondaryTextColor: designConfigData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
+        signature: {
+          ...designConfig.signature,
+          ...(designConfigData?.signature || {})
+        },
+        card: {
+          ...designConfig.card,
+          ...(designConfigData?.card || {}),
+          borderWidth: {
+            ...designConfig.card.borderWidth,
+            ...(designConfigData?.card?.borderWidth || {})
+          }
+        }
+      };
+      console.log('🔧 Processed config:', processedConfig);
+      setDesignConfig(processedConfig);
+    }
+  }, [designConfigData, designConfig.signature, designConfig.card, designConfig.logoAlignment, designConfig.secondaryTextColor, designConfig.logo]);
+
+  // Save design configuration mutation
+  const saveMutation = useMutation({
+    mutationFn: async (config: typeof designConfig) => {
+      let logoUrl = config.logo;
+      
+      // Upload logo if a new file was selected
+      if (logoFile) {
+        setIsUploadingLogo(true);
+        try {
+          console.log('🔄 Iniciando upload do logo...');
+          
+          // Get upload URL
+          console.log('🔗 Solicitando URL de upload...');
+          const uploadResponse = await fetch(`/api/objects/upload`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+              'Content-Type': 'application/json'
+            }
+          }).then(async res => {
+            if (res.status === 401 || res.status === 403) {
+              // Token expirado, redirecionar para login
+              localStorage.removeItem('auth_token');
+              localStorage.removeItem('user');
+              window.location.href = '/';
+              throw new Error('Sessão expirada. Redirecionando para login...');
+            }
+            if (!res.ok) {
+              const errorText = await res.text();
+              throw new Error(`Erro ao obter URL de upload: ${res.status} ${res.statusText} - ${errorText}`);
+            }
+            return res.json();
+          });
+          console.log('✅ URL de upload obtida:', uploadResponse.uploadURL);
+          
+          // Upload file
+          console.log('📤 Fazendo upload do arquivo...');
+          const uploadResult = await fetch(uploadResponse.uploadURL, {
+            method: 'PUT',
+            body: logoFile,
+            headers: {
+              'Content-Type': logoFile.type,
+            }
+          });
+          
+          if (!uploadResult.ok) {
+            throw new Error(`Erro no upload: ${uploadResult.status} ${uploadResult.statusText}`);
+          }
+          
+          // Convert the upload URL to our object serving endpoint
+          const urlPath = new URL(uploadResponse.uploadURL).pathname;
+          const bucketName = uploadResponse.uploadURL.split('/')[3];
+          const objectPath = urlPath.replace(`/${bucketName}/`, '');
+          logoUrl = `/objects/${objectPath.replace('.private/', '')}`;
+          console.log('✅ Upload concluído:', logoUrl);
+        } catch (error) {
+          console.error('❌ Erro detalhado no upload:', error);
+          throw new Error(`Erro no upload do logo: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        } finally {
+          setIsUploadingLogo(false);
+        }
+      }
+
+      const dataToSave = {
+        logo: logoUrl,
+        primaryColor: config.primaryColor,
+        backgroundColor: config.backgroundColor,
+        textColor: config.textColor,
+        logoAlignment: config.logoAlignment || "center",
+        secondaryTextColor: config.secondaryTextColor || "#666666",
+        signature: config.signature,
+        card: config.card
+      };
+      console.log('💾 Dados que serão enviados para salvar:', dataToSave);
+      console.log('🎨 Card config detalhado:', config.card);
+      return apiRequest(`/api/customer-support/${currentOperationId}/design-config`, 'PUT', dataToSave);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configurações salvas!",
+        description: "As configurações de design foram salvas com sucesso.",
+      });
+      setLogoFile(null); // Clear the selected file
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/design-config`] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Erro ao salvar configurações:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: error.message || "Erro ao salvar as configurações",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Activate support service mutation
   const activateSupportMutation = useMutation({
     mutationFn: async (active: boolean) => {
@@ -443,47 +577,25 @@ export default function CustomerSupportSettings() {
     );
   }
 
-  // Get current design configuration
-  const { data: designConfigData } = useQuery({
-    queryKey: [`/api/customer-support/${currentOperationId}/design-config`],
+  // Main component content (after service activation)
+  
+  // Get current support configuration  
+  const { data: supportConfigData, isLoading: isSupportConfigLoading, refetch, error } = useQuery<SupportConfig>({
+    queryKey: [`/api/customer-support/config/${currentOperationId}`],
     enabled: !!currentOperationId,
-    staleTime: 0 // Always fetch fresh data
+    retry: 3,
+    retryDelay: 1000,
   });
 
-  // Update local state when data from server changes
-  useEffect(() => {
-    if (designConfigData) {
-      console.log('🔄 Updating design config from server:', designConfigData);
-      // Convert Google Storage URLs to local object URLs if needed
-      const processedConfig = {
-        ...designConfig, // Start with current state to preserve defaults
-        ...designConfigData,
-        logo: designConfigData?.logo?.includes?.('storage.googleapis.com') 
-          ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
-          : designConfigData?.logo || designConfig.logo,
-        // Preserve all new fields with defaults if not present
-        logoAlignment: designConfigData?.logoAlignment || designConfig.logoAlignment || "center",
-        secondaryTextColor: designConfigData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
-        signature: {
-          ...designConfig.signature,
-          ...(designConfigData?.signature || {})
-        },
-        card: {
-          ...designConfig.card,
-          ...(designConfigData?.card || {}),
-          borderWidth: {
-            ...designConfig.card.borderWidth,
-            ...(designConfigData?.card?.borderWidth || {})
-          }
-        }
-      };
-      console.log('🔧 Processed config:', processedConfig);
-      setDesignConfig(processedConfig);
-    }
-  }, [designConfigData]);
+  // Get DNS records for the domain
+  const { data: dnsRecordsData } = useQuery<{ success: boolean; dnsRecords: DnsRecord[] }>({
+    queryKey: [`/api/customer-support/${currentOperationId}/dns-records/${supportConfigData?.emailDomain}`],
+    enabled: !!currentOperationId && !!supportConfigData?.emailDomain,
+    retry: 1,
+  });
 
-  // Save design configuration mutation
-  const saveMutation = useMutation({
+  // Configure domain mutation
+  const configureDomainMutation = useMutation({
     mutationFn: async (config: typeof designConfig) => {
       let logoUrl = config.logo;
       
@@ -581,7 +693,7 @@ export default function CustomerSupportSettings() {
   };
 
   // Get current support configuration
-  const { data: supportConfig, isLoading, refetch, error } = useQuery<SupportConfig>({
+  const { data: supportConfig, isLoading: isSupportLoading, refetch: refetchSupport, error: supportError } = useQuery<SupportConfig>({
     queryKey: [`/api/customer-support/config/${currentOperationId}`],
     enabled: !!currentOperationId,
     retry: 3,
@@ -589,7 +701,7 @@ export default function CustomerSupportSettings() {
   });
 
   // Get DNS records for the domain
-  const { data: dnsRecordsData } = useQuery<{ success: boolean; dnsRecords: DnsRecord[] }>({
+  const { data: dnsRecordsDataSupport } = useQuery<{ success: boolean; dnsRecords: DnsRecord[] }>({
     queryKey: [`/api/customer-support/${currentOperationId}/dns-records/${supportConfig?.emailDomain}`],
     enabled: !!currentOperationId && !!supportConfig?.emailDomain,
     retry: 1,
@@ -597,37 +709,7 @@ export default function CustomerSupportSettings() {
 
   // Configuration loaded successfully
 
-  // Configure domain mutation
-  const configureDomainMutation = useMutation({
-    mutationFn: async ({ domain, emailPrefix }: { domain: string; emailPrefix: string }) => {
-      const response = await fetch(`/api/customer-support/${currentOperationId}/configure-domain`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify({ domain, emailPrefix, isCustomDomain: true })
-      });
-      if (!response.ok) throw new Error('Failed to configure domain');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Email configurado",
-        description: "O email foi configurado com sucesso. Aguarde a verificação.",
-      });
-      refetch();
-      setEmailPrefix("");
-      setCustomDomain("");
-    },
-    onError: () => {
-      toast({
-        title: "Erro",
-        description: "Falha ao configurar o domínio.",
-        variant: "destructive",
-      });
-    }
-  });
+  // Domain configuration logic is handled by the mutation defined at the top
 
   // Verify domain mutation
   const verifyDomainMutation = useMutation({
@@ -649,7 +731,7 @@ export default function CustomerSupportSettings() {
         description: data.message,
         variant: data.verified ? "default" : "destructive",
       });
-      refetch();
+      refetchSupport();
     },
     onError: () => {
       toast({
