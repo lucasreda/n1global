@@ -488,30 +488,30 @@ export default function CustomerSupportPage() {
   const getStatusBadge = (status: string) => {
     switch (status?.toString()?.toLowerCase()) {
       case 'open':
-        return <Badge className="text-blue-400 border-blue-600/30 text-xs">Aberto</Badge>;
+        return <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30">Aberto</Badge>;
       case 'in_progress':
-        return <Badge className="text-yellow-400 border-yellow-600/30 text-xs">Em Andamento</Badge>;
+        return <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30">Em Andamento</Badge>;
       case 'resolved':
-        return <Badge className="text-green-400 border-green-600/30 text-xs">Resolvido</Badge>;
+        return <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Resolvido</Badge>;
       case 'closed':
-        return <Badge className="text-gray-400 border-gray-600/30 text-xs">Fechado</Badge>;
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">Fechado</Badge>;
       default:
-        return <Badge className="text-gray-400 border-gray-600/30 text-xs">{status}</Badge>;
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">{status}</Badge>;
     }
   };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority?.toString()?.toLowerCase()) {
       case 'urgent':
-        return <Badge className="text-red-400 border-red-600/30 text-xs">Urgente</Badge>;
+        return <Badge className="bg-red-600/20 text-red-400 border-red-600/30">Urgente</Badge>;
       case 'high':
-        return <Badge className="text-orange-400 border-orange-600/30 text-xs">Alto</Badge>;
+        return <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30">Alto</Badge>;
       case 'medium':
-        return <Badge className="text-blue-400 border-blue-600/30 text-xs">Médio</Badge>;
+        return <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30">Médio</Badge>;
       case 'low':
-        return <Badge className="text-gray-400 border-gray-600/30 text-xs">Baixo</Badge>;
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">Baixo</Badge>;
       default:
-        return <Badge className="text-gray-400 border-gray-600/30 text-xs">{priority}</Badge>;
+        return <Badge className="bg-gray-600/20 text-gray-400 border-gray-600/30">{priority}</Badge>;
     }
   };
 
@@ -656,13 +656,13 @@ export default function CustomerSupportPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       {category.isAutomated ? (
-                        <Badge className="text-green-400 border-green-600/30 text-xs">
-                          <CheckCircle className="w-2 h-2 mr-1" />
+                        <Badge className="bg-green-600/20 text-green-400 border-green-600/30 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" />
                           Auto
                         </Badge>
                       ) : (
-                        <Badge className="text-orange-400 border-orange-600/30 text-xs">
-                          <AlertCircle className="w-2 h-2 mr-1" />
+                        <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs">
+                          <AlertCircle className="w-3 h-3 mr-1" />
                           Manual
                         </Badge>
                       )}
@@ -797,13 +797,13 @@ export default function CustomerSupportPage() {
                           <div className="flex items-center gap-3">
                             <span className="font-mono text-xs text-slate-300">{ticket.ticketNumber}</span>
                             {ticket.isAutomated && (
-                              <Badge className="text-purple-400 border-purple-600/30 text-xs">
-                                <CheckCircle className="w-2 h-2 mr-1" />
+                              <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 text-xs">
+                                <CheckCircle className="w-3 h-3 mr-1" />
                                 IA
                               </Badge>
                             )}
                             {ticket.email?.hasAutoResponse && (
-                              <Badge className="text-blue-400 border-blue-600/30 text-xs">
+                              <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs">
                                 🤖 Sofia IA
                               </Badge>
                             )}
@@ -926,7 +926,7 @@ export default function CustomerSupportPage() {
                       <AlertCircle className="h-3 w-3 text-purple-400" />
                       <span className="text-xs text-slate-400">IA: {selectedTicket.ticket.aiConfidence}% confiança</span>
                     </div>
-                    <Badge className="text-purple-300 border-purple-600/30 text-xs">
+                    <Badge className="bg-purple-900/30 text-purple-300 text-xs">
                       {selectedTicket.ticket.categoryName}
                     </Badge>
                   </div>
