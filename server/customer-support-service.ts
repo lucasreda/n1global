@@ -222,8 +222,12 @@ export class CustomerSupportService {
         )
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
         .orderBy(
-          asc(this.schema.supportTickets.isRead), // Unread first (false before true)
-          desc(this.schema.supportTickets.createdAt) // Then by newest first
+          // First: AI responses go last (hasAutoResponse = true goes last)
+          this.schema.supportEmails.hasAutoResponse,
+          // Then: Unread tickets first (isRead = false goes first)
+          asc(this.schema.supportTickets.isRead),
+          // Finally: Newest first within each group
+          desc(this.schema.supportTickets.createdAt)
         )
         .limit(parseInt(limit))
         .offset((parseInt(page) - 1) * parseInt(limit));
