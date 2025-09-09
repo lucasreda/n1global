@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,6 +102,7 @@ export default function CustomerSupportPage() {
   const currentOperationId = selectedOperation;
   const currentOperationName = operations.find(op => op.id === selectedOperation)?.name;
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [supportSearchTerm, setSupportSearchTerm] = useState("");
@@ -400,6 +402,13 @@ export default function CustomerSupportPage() {
     retry: false,
     throwOnError: false,
   });
+
+  // Redirect to settings if service is inactive
+  useEffect(() => {
+    if (supportConfig && supportConfig.isActive === false) {
+      setLocation('/customer-support/settings');
+    }
+  }, [supportConfig, setLocation]);
 
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
