@@ -254,19 +254,22 @@ export default function CustomerSupportSettings() {
         <div className="container mx-auto px-4 py-12">
           
           {/* Hero Section */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-full mb-6">
               <MessageCircle className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-5xl font-bold text-white mb-6">
-              Transforme seu Atendimento ao Cliente
+            <h1 className="text-3xl font-bold text-white mb-4">
+              <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                Transforme
+              </span>{" "}
+              seu Atendimento ao Cliente
             </h1>
-            <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
+            <p className="text-lg text-gray-300 mb-6 max-w-2xl mx-auto">
               Active o sistema de suporte inteligente da {currentOperationName} e ofereça um atendimento personalizado e eficiente para seus clientes.
             </p>
             
             {/* Main CTA */}
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 max-w-md mx-auto mb-12">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 max-w-md mx-auto mb-8">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-white font-medium">Ativar Serviço de Suporte</span>
                 <Switch
@@ -283,9 +286,9 @@ export default function CustomerSupportSettings() {
           </div>
 
           {/* Benefits Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4">
                   <Bot className="w-6 h-6 text-white" />
                 </div>
@@ -297,7 +300,7 @@ export default function CustomerSupportSettings() {
             </Card>
 
             <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
@@ -309,7 +312,7 @@ export default function CustomerSupportSettings() {
             </Card>
 
             <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
                   <Users className="w-6 h-6 text-white" />
                 </div>
@@ -321,7 +324,7 @@ export default function CustomerSupportSettings() {
             </Card>
 
             <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
                   <Heart className="w-6 h-6 text-white" />
                 </div>
@@ -333,7 +336,7 @@ export default function CustomerSupportSettings() {
             </Card>
 
             <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center mb-4">
                   <Star className="w-6 h-6 text-white" />
                 </div>
@@ -345,7 +348,7 @@ export default function CustomerSupportSettings() {
             </Card>
 
             <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-6">
+              <CardContent className="p-5">
                 <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mb-4">
                   <Clock className="w-6 h-6 text-white" />
                 </div>
