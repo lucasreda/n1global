@@ -627,7 +627,7 @@ export default function AdminSupport() {
                     >
                       {/* Círculo azul para tickets não lidos */}
                       {!ticketResponse.isRead && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border border-slate-900 z-10" />
+                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border border-slate-900 z-10" style={{ backgroundColor: '#f87171' }} />
                       )}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-4">
