@@ -391,7 +391,7 @@ export default function CustomerSupportSettings() {
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/30">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <div className={`w-2 h-2 rounded-full ${supportConfig.domainVerified ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-white">
