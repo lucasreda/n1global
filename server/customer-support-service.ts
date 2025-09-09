@@ -242,6 +242,9 @@ export class CustomerSupportService {
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
 
       const total = totalResult[0]?.count || 0;
+      const totalPages = Math.ceil(total / parseInt(limit));
+      
+      console.log(`🎫 Pagination debug: page=${page}, limit=${limit}, total=${total}, totalPages=${totalPages}`);
 
       const result = {
         tickets: tickets.map(row => ({
@@ -270,10 +273,8 @@ export class CustomerSupportService {
         })),
         total,
         page: parseInt(page),
-        totalPages: Math.ceil(total / limit)
+        totalPages
       };
-
-      console.log(`📊 Tickets pagination: page=${page}, limit=${limit}, total=${total}, totalPages=${Math.ceil(total / limit)}`);
       
       return result;
     } catch (error) {
