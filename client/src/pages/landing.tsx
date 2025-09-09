@@ -200,7 +200,7 @@ export default function Landing() {
       </div>
 
       {/* Header */}
-      <header className="relative z-50">
+      <header className="absolute top-0 w-full z-50">
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <img 
@@ -215,7 +215,7 @@ export default function Landing() {
             <Button 
               onClick={handleLoginClick}
               variant="outline"
-              className="border-border/50 text-foreground hover:bg-background/80 px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200"
+              className="border-white/30 text-white hover:bg-white/10 px-4 sm:px-6 py-2 text-sm sm:text-base rounded-xl transition-all duration-200 backdrop-blur-sm"
               data-testid="button-login-header"
             >
               <LogIn className="h-4 w-4 mr-2" />
