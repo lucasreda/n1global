@@ -699,7 +699,7 @@ export default function CustomerSupportSettings() {
           </Card>
 
           {/* DNS Records */}
-          {supportConfig?.emailDomain && dnsRecordsData?.dnsRecords && (
+          {supportConfig?.emailDomain && dnsRecordsData?.dnsRecords && Array.isArray(dnsRecordsData.dnsRecords) && (
             <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Registros DNS</CardTitle>
