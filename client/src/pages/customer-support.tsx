@@ -438,8 +438,6 @@ export default function CustomerSupportPage() {
       }
       
       const data = await response.json();
-      console.log('🐛 CUSTOMER-SUPPORT DEBUG: Dados da API:', data);
-      console.log('🐛 CUSTOMER-SUPPORT DEBUG: Primeiro ticket:', JSON.stringify(data.tickets?.[0], null, 2));
       return data;
     }
   });
@@ -789,13 +787,7 @@ export default function CustomerSupportPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {supportTicketsResponse?.tickets?.map((ticket) => {
-                    console.log(`🐛 TICKET DEBUG ${ticket.ticketNumber}:`, {
-                      hasEmail: !!ticket.email,
-                      hasAutoResponse: ticket.email?.hasAutoResponse,
-                      emailObject: ticket.email
-                    });
-                    return (
+                  {supportTicketsResponse?.tickets?.map((ticket) => (
                     <div key={ticket.id} className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20 cursor-pointer" style={{boxShadow: '0 4px 16px rgba(31, 38, 135, 0.2)'}}
                           onClick={() => handleViewTicket(ticket)}>
                         <div className="flex items-center justify-between mb-3">
@@ -851,8 +843,7 @@ export default function CustomerSupportPage() {
                           </div>
                         </div>
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               )}
             </div>
