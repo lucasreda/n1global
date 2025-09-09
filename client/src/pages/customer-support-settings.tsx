@@ -1087,45 +1087,36 @@ export default function CustomerSupportSettings() {
       {supportConfig?.isActive && (
         <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Power className="w-5 h-5 text-red-400" />
-              <CardTitle className="text-white" style={{ fontSize: '18px' }}>Controle do Serviço</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-gray-400" />
+                <CardTitle className="text-white" style={{ fontSize: '18px' }}>Status do Serviço</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span className="text-sm text-gray-300">Ativo</span>
+              </div>
             </div>
             <CardDescription>
-              Gerenciar status do serviço de suporte ao cliente
+              Controle de ativação do sistema de suporte
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-green-600/10 border border-green-600/30 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <div>
-                  <p className="font-medium text-green-400">Serviço Ativo</p>
-                  <p className="text-sm text-green-300">O sistema de suporte está funcionando</p>
-                </div>
+            <div className="flex items-center justify-between py-2">
+              <div className="space-y-1">
+                <p className="text-sm text-gray-300">Sistema de Suporte</p>
+                <p className="text-xs text-gray-400">Processamento automático e IA ativados</p>
               </div>
               <Button
-                variant="destructive"
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsDeactivationModalOpen(true)}
-                className="bg-red-600 hover:bg-red-700"
+                className="text-gray-400 hover:text-red-400 hover:bg-red-600/10 border border-gray-600/30 hover:border-red-600/30"
                 data-testid="button-deactivate-service"
               >
                 <Power className="w-4 h-4 mr-2" />
-                Desativar Serviço
+                Desativar
               </Button>
-            </div>
-            
-            <div className="bg-yellow-600/20 border border-yellow-600/30 rounded p-3">
-              <div className="flex items-start gap-2">
-                <span className="text-yellow-400 text-lg">⚠️</span>
-                <div className="text-xs text-yellow-200">
-                  <p className="font-medium mb-1">Atenção:</p>
-                  <p className="text-yellow-100">
-                    Desativar o serviço irá parar todos os recursos de suporte automático e manual. 
-                    Tickets existentes serão mantidos mas novos emails não serão processados.
-                  </p>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
