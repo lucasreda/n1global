@@ -1,6 +1,9 @@
 import { Request, Response, Express } from "express";
 import { customerSupportService } from "./customer-support-service";
 import { authenticateToken } from "./auth-middleware";
+import { db } from "./db";
+import { aiDirectives, type AiDirective, type InsertAiDirective, insertAiDirectiveSchema } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 export function registerCustomerSupportRoutes(app: Express) {
   /**
@@ -563,6 +566,81 @@ export function registerCustomerSupportRoutes(app: Express) {
       res.status(500).json({ 
         success: false,
         message: "Falha ao enviar mensagem",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Get AI directives for an operation
+   */
+  app.get("/api/customer-support/:operationId/ai-directives", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+
+      const directives = await db
+        .select()
+        .from(aiDirectives)
+        .where(eq(aiDirectives.operationId, operationId))
+        .orderBy(aiDirectives.sortOrder, aiDirectives.createdAt);
+
+      res.json(directives);
+    } catch (error) {
+      console.error('Error getting AI directives:', error);
+      res.status(500).json({ 
+        message: "Failed to get AI directives",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Save AI directives for an operation
+   */
+  app.post("/api/customer-support/:operationId/ai-directives", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { directives } = req.body;
+
+      if (!Array.isArray(directives)) {
+        return res.status(400).json({ message: "Directives must be an array" });
+      }
+
+      // Delete existing directives for this operation
+      await db
+        .delete(aiDirectives)
+        .where(eq(aiDirectives.operationId, operationId));
+
+      // Insert new directives
+      if (directives.length > 0) {
+        const directivesToInsert = directives.map((directive, index) => ({
+          operationId,
+          type: directive.type,
+          title: directive.title,
+          content: directive.content,
+          isActive: directive.isActive,
+          sortOrder: index
+        }));
+
+        await db.insert(aiDirectives).values(directivesToInsert);
+      }
+
+      // Return the updated directives
+      const updatedDirectives = await db
+        .select()
+        .from(aiDirectives)
+        .where(eq(aiDirectives.operationId, operationId))
+        .orderBy(aiDirectives.sortOrder, aiDirectives.createdAt);
+
+      res.json({ 
+        success: true,
+        message: "AI directives saved successfully",
+        directives: updatedDirectives
+      });
+    } catch (error) {
+      console.error('Error saving AI directives:', error);
+      res.status(500).json({ 
+        message: "Failed to save AI directives",
         error: error instanceof Error ? error.message : String(error)
       });
     }

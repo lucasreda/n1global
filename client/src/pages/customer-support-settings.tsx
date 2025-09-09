@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 interface SupportConfig {
   emailDomain: string;
@@ -74,6 +75,120 @@ export default function CustomerSupportSettings() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
+  // AI Training states
+  const [aiDirectives, setAiDirectives] = useState<Array<{
+    id: string;
+    type: 'store_info' | 'product_info' | 'response_style' | 'custom';
+    title: string;
+    content: string;
+    isActive: boolean;
+  }>>([]);
+  const [newDirectiveType, setNewDirectiveType] = useState<'store_info' | 'product_info' | 'response_style' | 'custom'>('store_info');
+  const [newDirectiveTitle, setNewDirectiveTitle] = useState('');
+  const [newDirectiveContent, setNewDirectiveContent] = useState('');
+  const [isAddingDirective, setIsAddingDirective] = useState(false);
+
+  // Get AI directives data
+  const { data: aiDirectivesData } = useQuery({
+    queryKey: [`/api/customer-support/${currentOperationId}/ai-directives`],
+    enabled: !!currentOperationId,
+    staleTime: 0
+  });
+
+  // Update local AI directives state when data from server changes
+  useEffect(() => {
+    if (aiDirectivesData && Array.isArray(aiDirectivesData)) {
+      setAiDirectives(aiDirectivesData);
+    }
+  }, [aiDirectivesData]);
+
+  // Functions for AI directives management
+  const getDirectiveTypeIcon = (type: string) => {
+    switch (type) {
+      case 'store_info': return <Globe className="w-4 h-4" />;
+      case 'product_info': return <Sparkles className="w-4 h-4" />;
+      case 'response_style': return <Bot className="w-4 h-4" />;
+      case 'custom': return <Lightbulb className="w-4 h-4" />;
+      default: return <Lightbulb className="w-4 h-4" />;
+    }
+  };
+
+  const getDirectiveTypeLabel = (type: string) => {
+    switch (type) {
+      case 'store_info': return 'Informações da Loja';
+      case 'product_info': return 'Informações do Produto';
+      case 'response_style': return 'Estilo de Resposta';
+      case 'custom': return 'Personalizada';
+      default: return 'Personalizada';
+    }
+  };
+
+  const addDirective = () => {
+    if (!newDirectiveTitle.trim() || !newDirectiveContent.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Título e conteúdo são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newDirective = {
+      id: Math.random().toString(36).substr(2, 9),
+      type: newDirectiveType,
+      title: newDirectiveTitle.trim(),
+      content: newDirectiveContent.trim(),
+      isActive: true
+    };
+
+    setAiDirectives([...aiDirectives, newDirective]);
+    setNewDirectiveTitle('');
+    setNewDirectiveContent('');
+    setIsAddingDirective(false);
+    
+    toast({
+      title: "Diretiva adicionada",
+      description: "Nova diretiva foi adicionada com sucesso.",
+    });
+  };
+
+  const removeDirective = (id: string) => {
+    setAiDirectives(aiDirectives.filter(d => d.id !== id));
+    toast({
+      title: "Diretiva removida",
+      description: "Diretiva foi removida com sucesso.",
+    });
+  };
+
+  const toggleDirective = (id: string) => {
+    setAiDirectives(aiDirectives.map(d => 
+      d.id === id ? { ...d, isActive: !d.isActive } : d
+    ));
+  };
+
+  // Save AI directives mutation
+  const saveAiDirectivesMutation = useMutation({
+    mutationFn: async (directives: typeof aiDirectives) => {
+      return apiRequest(`/api/customer-support/${currentOperationId}/ai-directives`, 'POST', {
+        directives
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configurações salvas",
+        description: "Diretivas da IA foram salvas com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/ai-directives`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Get current design configuration
   const { data: designConfigData } = useQuery({
     queryKey: [`/api/customer-support/${currentOperationId}/design-config`],
@@ -89,22 +204,22 @@ export default function CustomerSupportSettings() {
       const processedConfig = {
         ...designConfig, // Start with current state to preserve defaults
         ...designConfigData,
-        logo: designConfigData.logo?.includes('storage.googleapis.com') 
+        logo: designConfigData?.logo?.includes?.('storage.googleapis.com') 
           ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
-          : designConfigData.logo,
+          : designConfigData?.logo || designConfig.logo,
         // Preserve all new fields with defaults if not present
-        logoAlignment: designConfigData.logoAlignment || designConfig.logoAlignment || "center",
-        secondaryTextColor: designConfigData.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
+        logoAlignment: designConfigData?.logoAlignment || designConfig.logoAlignment || "center",
+        secondaryTextColor: designConfigData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
         signature: {
           ...designConfig.signature,
-          ...(designConfigData.signature || {})
+          ...(designConfigData?.signature || {})
         },
         card: {
           ...designConfig.card,
-          ...(designConfigData.card || {}),
+          ...(designConfigData?.card || {}),
           borderWidth: {
             ...designConfig.card.borderWidth,
-            ...(designConfigData.card?.borderWidth || {})
+            ...(designConfigData?.card?.borderWidth || {})
           }
         }
       };
@@ -715,29 +830,261 @@ export default function CustomerSupportSettings() {
 
         {/* Aba Treinamento IA */}
         <TabsContent value="ai-training" className="space-y-6 mt-6">
-          <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-purple-400" />
-                <CardTitle className="text-white" style={{ fontSize: '18px' }}>Treinamento da IA Sofia</CardTitle>
-              </div>
-              <CardDescription>
-                Configure e treine a IA para respostas mais precisas para esta operação
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center py-12">
-                <Bot className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-white mb-2">Treinamento IA - Em Breve</h3>
-                <p className="text-gray-400 mb-4">
-                  Esta funcionalidade permitirá treinar a Sofia com dados específicos da sua operação
-                </p>
-                <Badge variant="outline" className="bg-purple-600/20 text-purple-400 border-purple-600/30">
-                  Em Desenvolvimento
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Painel Principal - Diretivas */}
+            <div className="xl:col-span-2 space-y-6">
+              <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bot className="w-5 h-5 text-purple-400" />
+                      <CardTitle className="text-white" style={{ fontSize: '18px' }}>Diretivas da IA Sofia</CardTitle>
+                    </div>
+                    <Button
+                      onClick={() => setIsAddingDirective(true)}
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                      data-testid="button-add-directive"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Personalize as respostas da Sofia com informações específicas da sua operação
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Lista de Diretivas */}
+                  {aiDirectives.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Lightbulb className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+                      <p className="text-gray-400 mb-2">Nenhuma diretiva personalizada ainda</p>
+                      <p className="text-gray-500 text-sm">
+                        Adicione informações sobre sua loja, produtos ou estilo de resposta
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {aiDirectives.map((directive) => (
+                        <div
+                          key={directive.id}
+                          className={`p-4 rounded-lg border transition-all ${
+                            directive.isActive 
+                              ? 'bg-gray-800/50 border-gray-600/50' 
+                              : 'bg-gray-900/30 border-gray-700/30 opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="mt-1">
+                                {getDirectiveTypeIcon(directive.type)}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium text-white text-sm">{directive.title}</h4>
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-xs bg-transparent border-gray-600/50 text-gray-400"
+                                  >
+                                    {getDirectiveTypeLabel(directive.type)}
+                                  </Badge>
+                                </div>
+                                <p className="text-gray-300 text-sm leading-relaxed">
+                                  {directive.content}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={directive.isActive}
+                                onCheckedChange={() => toggleDirective(directive.id)}
+                                className="data-[state=checked]:bg-purple-600"
+                              />
+                              <Button
+                                onClick={() => removeDirective(directive.id)}
+                                size="sm"
+                                variant="ghost"
+                                className="text-gray-400 hover:text-red-400 hover:bg-red-500/10 p-2"
+                                data-testid={`button-remove-${directive.id}`}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Formulário para Adicionar Nova Diretiva */}
+                  {isAddingDirective && (
+                    <Card className="bg-gray-800/30 border border-purple-500/30">
+                      <CardContent className="p-4 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="w-4 h-4 text-purple-400" />
+                          <h4 className="font-medium text-white">Nova Diretiva</h4>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-gray-300 text-sm">Tipo</Label>
+                            <select
+                              value={newDirectiveType}
+                              onChange={(e) => setNewDirectiveType(e.target.value as any)}
+                              className="w-full mt-1 p-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm"
+                            >
+                              <option value="store_info">Informações da Loja</option>
+                              <option value="product_info">Informações do Produto</option>
+                              <option value="response_style">Estilo de Resposta</option>
+                              <option value="custom">Personalizada</option>
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-gray-300 text-sm">Título</Label>
+                            <Input
+                              value={newDirectiveTitle}
+                              onChange={(e) => setNewDirectiveTitle(e.target.value)}
+                              placeholder="Ex: Tempo de entrega padrão"
+                              className="mt-1 bg-gray-700 border-gray-600 text-white"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-gray-300 text-sm">Conteúdo da Diretiva</Label>
+                          <Textarea
+                            value={newDirectiveContent}
+                            onChange={(e) => setNewDirectiveContent(e.target.value)}
+                            placeholder="Ex: Nossos produtos geralmente chegam em 2-3 dias úteis. Para produtos importados, o prazo pode ser de até 7 dias úteis."
+                            className="mt-1 bg-gray-700 border-gray-600 text-white"
+                            rows={3}
+                          />
+                        </div>
+                        
+                        <div className="flex gap-3 pt-2">
+                          <Button
+                            onClick={addDirective}
+                            size="sm"
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                            data-testid="button-save-directive"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Adicionar
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setIsAddingDirective(false);
+                              setNewDirectiveTitle('');
+                              setNewDirectiveContent('');
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Botão Salvar */}
+                  {aiDirectives.length > 0 && (
+                    <div className="flex justify-end pt-4 border-t border-gray-700/50">
+                      <Button
+                        onClick={() => saveAiDirectivesMutation.mutate(aiDirectives)}
+                        disabled={saveAiDirectivesMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        data-testid="button-save-ai-directives"
+                      >
+                        {saveAiDirectivesMutation.isPending ? 'Salvando...' : 'Salvar Configurações'}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Painel Lateral - Info e Preview */}
+            <div className="space-y-6">
+              {/* Preview do Prompt */}
+              <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-yellow-400" />
+                    <CardTitle className="text-white text-sm">Preview do Prompt</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-xs text-gray-400 leading-relaxed">
+                    <div className="mb-2">
+                      <span className="text-gray-300 font-medium">Prompt Base:</span>
+                    </div>
+                    <div className="bg-gray-800/50 p-3 rounded border-l-2 border-blue-500">
+                      "Você é Sofia, a assistente virtual empática da {currentOperationName}. 
+                      Responda de forma amigável e personalizada..."
+                    </div>
+                  </div>
+                  
+                  {aiDirectives.filter(d => d.isActive).length > 0 && (
+                    <>
+                      <div className="text-xs text-gray-400">
+                        <span className="text-gray-300 font-medium">+ Suas Diretivas:</span>
+                      </div>
+                      <div className="space-y-2">
+                        {aiDirectives.filter(d => d.isActive).slice(0, 2).map((directive) => (
+                          <div key={directive.id} className="bg-purple-900/20 p-2 rounded border-l-2 border-purple-500">
+                            <div className="text-xs text-purple-300 font-medium mb-1">{directive.title}</div>
+                            <div className="text-xs text-gray-400 leading-relaxed">
+                              {directive.content.length > 80 
+                                ? `${directive.content.substring(0, 80)}...` 
+                                : directive.content}
+                            </div>
+                          </div>
+                        ))}
+                        {aiDirectives.filter(d => d.isActive).length > 2 && (
+                          <div className="text-xs text-gray-500 text-center">
+                            +{aiDirectives.filter(d => d.isActive).length - 2} mais diretivas...
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Guia de Boas Práticas */}
+              <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-green-400" />
+                    <CardTitle className="text-white text-sm">Dicas</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-3 text-xs text-gray-400">
+                    <div className="flex gap-2">
+                      <span className="text-green-400">•</span>
+                      <span>Use informações específicas do seu negócio</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-green-400">•</span>
+                      <span>Mantenha as diretivas claras e objetivas</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-green-400">•</span>
+                      <span>Desative diretivas temporárias quando necessário</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-green-400">•</span>
+                      <span>Teste as respostas após adicionar novas diretivas</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Aba Design */}

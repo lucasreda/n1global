@@ -1235,6 +1235,25 @@ export const supportConversations = pgTable("support_conversations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// AI training directives for custom prompt enhancement per operation
+export const aiDirectives = pgTable("ai_directives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  type: varchar("type", { length: 50 }).notNull(), // 'store_info', 'product_info', 'response_style', 'custom'
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0), // For custom ordering
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdx: index().on(table.operationId),
+    typeIdx: index().on(table.type),
+    activeIdx: index().on(table.isActive),
+  };
+});
+
 export const supportMetrics = pgTable("support_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -1485,6 +1504,16 @@ export type InsertSupportConversation = z.infer<typeof insertSupportConversation
 
 export type SupportMetrics = typeof supportMetrics.$inferSelect;
 export type InsertSupportMetrics = z.infer<typeof insertSupportMetricsSchema>;
+
+// AI Directives Schema and Types
+export const insertAiDirectiveSchema = createInsertSchema(aiDirectives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AiDirective = typeof aiDirectives.$inferSelect;
+export type InsertAiDirective = z.infer<typeof insertAiDirectiveSchema>;
 
 // ============================================================================
 // CUSTOMER SUPPORT TABLES (Multi-tenant for Operations)
