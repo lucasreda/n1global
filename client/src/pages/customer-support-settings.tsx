@@ -416,17 +416,6 @@ export default function CustomerSupportSettings() {
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-600/20"
-                    onClick={() => {
-                      setEmailPrefix(supportConfig.emailPrefix || "");
-                      setCustomDomain(supportConfig.emailDomain || "");
-                    }}
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
                     className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
                     onClick={() => {
                       // TODO: Implementar remoção
