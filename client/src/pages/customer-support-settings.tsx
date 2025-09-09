@@ -348,32 +348,33 @@ export default function CustomerSupportSettings() {
 
   useEffect(() => {
     if (currentOperation && 'supportServiceActive' in currentOperation) {
-      setSupportServiceActive(currentOperation.supportServiceActive);
+      setSupportServiceActive(Boolean(currentOperation.supportServiceActive));
     } else {
       setSupportServiceActive(false);
     }
   }, [currentOperation]);
 
   useEffect(() => {
-    if (designConfigData) {
+    if (designConfigData && typeof designConfigData === 'object') {
+      const configData = designConfigData as any;
       const processedConfig = {
         ...designConfig,
-        ...designConfigData,
-        logo: designConfigData?.logo?.includes?.('storage.googleapis.com') 
-          ? designConfigData.logo.replace(/.*\/\.private\//, '/objects/') 
-          : designConfigData?.logo || designConfig.logo,
-        logoAlignment: designConfigData?.logoAlignment || designConfig.logoAlignment || "center",
-        secondaryTextColor: designConfigData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
+        ...configData,
+        logo: configData?.logo?.includes?.('storage.googleapis.com') 
+          ? configData.logo.replace(/.*\/\.private\//, '/objects/') 
+          : configData?.logo || designConfig.logo,
+        logoAlignment: configData?.logoAlignment || designConfig.logoAlignment || "center",
+        secondaryTextColor: configData?.secondaryTextColor || designConfig.secondaryTextColor || "#666666",
         signature: {
           ...designConfig.signature,
-          ...(designConfigData?.signature || {})
+          ...(configData?.signature || {})
         },
         card: {
           ...designConfig.card,
-          ...(designConfigData?.card || {}),
+          ...(configData?.card || {}),
           borderWidth: {
             ...designConfig.card.borderWidth,
-            ...(designConfigData?.card?.borderWidth || {})
+            ...(configData?.card?.borderWidth || {})
           }
         }
       };
@@ -658,6 +659,62 @@ export default function CustomerSupportSettings() {
 
         {/* General Tab */}
         <TabsContent value="general" className="space-y-6 mt-6">
+          
+          {/* Emails Configurados */}
+          {supportConfig?.emailDomain && (
+            <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-green-400" />
+                    <CardTitle className="text-white" style={{ fontSize: '18px' }}>Emails Configurados</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="bg-green-600/20 text-green-400 border-green-600/30">
+                    1 email ativo
+                  </Badge>
+                </div>
+                <CardDescription>
+                  Emails de suporte configurados para esta operação
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/30">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${supportConfig.domainVerified ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                      <div className="space-y-1">
+                        <p className="text-white font-medium">
+                          {supportConfig.emailPrefix}@{supportConfig.emailDomain}
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          {supportConfig.domainVerified ? 'Domínio verificado' : 'Verificação pendente'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={supportConfig.domainVerified ? "default" : "secondary"}
+                        className={supportConfig.domainVerified ? "bg-green-600/20 text-green-400 border-green-600/30" : "bg-yellow-600/20 text-yellow-400 border-yellow-600/30"}
+                      >
+                        {supportConfig.domainVerified ? (
+                          <>
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Ativo
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Pendente
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
             <CardHeader>
               <CardTitle className="text-white">Configurar Domínio de Email</CardTitle>
