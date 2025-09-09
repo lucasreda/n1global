@@ -560,8 +560,8 @@ export default function CustomerSupportPage() {
           <>
             <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-abertos">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-green-500/20 rounded-lg">
-                  <MessageSquare className="w-6 h-6 text-green-400" />
+                <div className="p-2">
+                  <MessageSquare className="w-5 h-5 text-green-400" />
                 </div>
                 <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
                   ATIVO
@@ -577,8 +577,8 @@ export default function CustomerSupportPage() {
 
             <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-respondido-ia">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-blue-500/20 rounded-lg">
-                  <CheckCircle className="w-6 h-6 text-blue-400" />
+                <div className="p-2">
+                  <CheckCircle className="w-5 h-5 text-blue-400" />
                 </div>
                 <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">
                   IA
@@ -594,8 +594,8 @@ export default function CustomerSupportPage() {
 
             <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-mes">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-purple-500/20 rounded-lg">
-                  <Clock className="w-6 h-6 text-purple-400" />
+                <div className="p-2">
+                  <Clock className="w-5 h-5 text-purple-400" />
                 </div>
                 <span className="text-xs font-medium text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20">
                   MÊS
@@ -611,8 +611,8 @@ export default function CustomerSupportPage() {
 
             <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-nao-lidos">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-red-500/20 rounded-lg">
-                  <Mail className="w-6 h-6 text-red-400" />
+                <div className="p-2">
+                  <Mail className="w-5 h-5 text-red-400" />
                 </div>
                 <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/20">
                   NOVO
