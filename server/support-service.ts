@@ -976,7 +976,7 @@ SINAIS DE ALERTA (REVISAR):
       console.log('✅ Found operation for domain:', toDomain, '-> Operation:', operation.id);
       
       // Get design config for the operation
-      const brandingConfig = operation.brandingConfig || {};
+      const brandingConfig = (operation.brandingConfig as any) || {};
       
       return {
         logo: brandingConfig.logo || "/images/n1-lblue.png",
@@ -1006,7 +1006,7 @@ SINAIS DE ALERTA (REVISAR):
         }
       };
     } catch (error) {
-      console.error('Error getting design config for email:', error);
+      console.error('🚨 Error getting design config for email:', error);
       return this.getDefaultDesignConfig();
     }
   }
