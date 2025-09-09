@@ -250,7 +250,7 @@ export default function CustomerSupportSettings() {
   // If support service is not active, show promotional page
   if (!supportServiceActive) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900">
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800">
         <div className="container mx-auto px-4 py-12">
           
           {/* Hero Section */}
@@ -270,7 +270,10 @@ export default function CustomerSupportSettings() {
             </p>
             
             {/* Main CTA */}
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 max-w-md mx-auto mb-8">
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 max-w-md mx-auto mb-8 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+            >
               <div className="flex items-center justify-between mb-4">
                 <span className="text-white font-medium">Ativar Serviço de Suporte</span>
                 <Switch
@@ -288,94 +291,115 @@ export default function CustomerSupportSettings() {
 
           {/* Benefits Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-5">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4">
-                  <Bot className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">IA Sofia</h3>
-                <p className="text-gray-300">
-                  Assistente virtual empática que responde automaticamente a dúvidas, cancelamentos e alterações de endereço.
-                </p>
-              </CardContent>
-            </Card>
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-5 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center mb-4">
+                <Bot className="w-6 h-6 text-blue-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">IA Sofia</h3>
+              <p className="text-gray-400 text-sm">
+                Assistente virtual empática que responde automaticamente a dúvidas, cancelamentos e alterações de endereço.
+              </p>
+            </div>
 
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-5">
-                <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-4">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Resposta Instantânea</h3>
-                <p className="text-gray-300">
-                  Categorização automática e respostas em segundos para as principais demandas dos seus clientes.
-                </p>
-              </CardContent>
-            </Card>
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-5 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <div className="w-12 h-12 bg-green-600/20 rounded-lg flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-green-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Resposta Instantânea</h3>
+              <p className="text-gray-400 text-sm">
+                Categorização automática e respostas em segundos para as principais demandas dos seus clientes.
+              </p>
+            </div>
 
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-5">
-                <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Totalmente Personalizável</h3>
-                <p className="text-gray-300">
-                  Configure diretivas específicas da sua operação para respostas alinhadas com sua marca.
-                </p>
-              </CardContent>
-            </Card>
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-5 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center mb-4">
+                <Users className="w-6 h-6 text-purple-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Totalmente Personalizável</h3>
+              <p className="text-gray-400 text-sm">
+                Configure diretivas específicas da sua operação para respostas alinhadas com sua marca.
+              </p>
+            </div>
 
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-5">
-                <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
-                  <Heart className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Experiência Humanizada</h3>
-                <p className="text-gray-300">
-                  Templates de email elegantes e assinatura personalizada para uma comunicação profissional.
-                </p>
-              </CardContent>
-            </Card>
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-5 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center mb-4">
+                <Heart className="w-6 h-6 text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Experiência Humanizada</h3>
+              <p className="text-gray-400 text-sm">
+                Templates de email elegantes e assinatura personalizada para uma comunicação profissional.
+              </p>
+            </div>
 
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-5">
-                <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center mb-4">
-                  <Star className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Gestão Inteligente</h3>
-                <p className="text-gray-300">
-                  Dashboard completo para acompanhar tickets, categorias e métricas de atendimento.
-                </p>
-              </CardContent>
-            </Card>
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-5 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center mb-4">
+                <Star className="w-6 h-6 text-yellow-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Gestão Inteligente</h3>
+              <p className="text-gray-400 text-sm">
+                Dashboard completo para acompanhar tickets, categorias e métricas de atendimento.
+              </p>
+            </div>
 
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardContent className="p-5">
-                <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mb-4">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-3">Disponível 24/7</h3>
-                <p className="text-gray-300">
-                  Atendimento automático a qualquer hora, garantindo que seus clientes sempre tenham suporte.
-                </p>
-              </CardContent>
-            </Card>
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-5 hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <div className="w-12 h-12 bg-red-600/20 rounded-lg flex items-center justify-center mb-4">
+                <Clock className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Disponível 24/7</h3>
+              <p className="text-gray-400 text-sm">
+                Atendimento automático a qualquer hora, garantindo que seus clientes sempre tenham suporte.
+              </p>
+            </div>
           </div>
 
           {/* Pricing Info */}
           <div className="text-center">
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20 max-w-lg mx-auto">
-              <CardContent className="p-8">
-                <h3 className="text-2xl font-bold text-white mb-4">Modelo de Cobrança</h3>
-                <p className="text-gray-300 mb-6">
-                  Pague apenas pelo que usar. Cada email processado pela IA será cobrado conforme a tabela de preços.
+            <div 
+              className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-8 max-w-lg mx-auto hover:bg-black/30 transition-all duration-300"
+              style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+            >
+              <h3 className="text-xl font-bold text-white mb-4">Modelo de Cobrança</h3>
+              <p className="text-gray-400 mb-6">
+                Pague apenas pelo que usar. Cada email processado pela IA será cobrado conforme a tabela de preços.
+              </p>
+              <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-4">
+                <p className="text-blue-300 font-medium">
+                  💡 Comece agora sem custos fixos
                 </p>
-                <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-4">
-                  <p className="text-blue-300 font-medium">
-                    💡 Comece agora sem custos fixos
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
         </div>
