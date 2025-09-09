@@ -509,7 +509,7 @@ export default function CustomerSupportSettings() {
 
         {/* Hero Section */}
         <div className="text-center space-y-6 py-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/20 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
             <MessageSquare className="w-8 h-8 text-blue-400" />
           </div>
           
@@ -588,7 +588,7 @@ export default function CustomerSupportSettings() {
           <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-green-600/20 flex items-center justify-center">
+                <div className="w-10 h-10 flex items-center justify-center">
                   <Zap className="w-5 h-5 text-green-400" />
                 </div>
                 <h3 className="font-semibold text-white">IA Integrada</h3>
@@ -602,7 +602,7 @@ export default function CustomerSupportSettings() {
           <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center">
+                <div className="w-10 h-10 flex items-center justify-center">
                   <Clock className="w-5 h-5 text-blue-400" />
                 </div>
                 <h3 className="font-semibold text-white">Gestão Inteligente</h3>
@@ -616,7 +616,7 @@ export default function CustomerSupportSettings() {
           <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center">
+                <div className="w-10 h-10 flex items-center justify-center">
                   <BarChart3 className="w-5 h-5 text-purple-400" />
                 </div>
                 <h3 className="font-semibold text-white">Análises Detalhadas</h3>
@@ -630,7 +630,7 @@ export default function CustomerSupportSettings() {
           <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-orange-600/20 flex items-center justify-center">
+                <div className="w-10 h-10 flex items-center justify-center">
                   <Mail className="w-5 h-5 text-orange-400" />
                 </div>
                 <h3 className="font-semibold text-white">Email Profissional</h3>
@@ -644,7 +644,7 @@ export default function CustomerSupportSettings() {
           <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center">
+                <div className="w-10 h-10 flex items-center justify-center">
                   <Users className="w-5 h-5 text-red-400" />
                 </div>
                 <h3 className="font-semibold text-white">Multi-Agente</h3>
@@ -658,7 +658,7 @@ export default function CustomerSupportSettings() {
           <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center">
+                <div className="w-10 h-10 flex items-center justify-center">
                   <Shield className="w-5 h-5 text-indigo-400" />
                 </div>
                 <h3 className="font-semibold text-white">Segurança Avançada</h3>
