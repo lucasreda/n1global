@@ -837,13 +837,13 @@ export default function CustomerSupportSettings() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bot className="w-5 h-5 text-purple-400" />
+                      <Bot className="w-5 h-5 text-blue-400" />
                       <CardTitle className="text-white" style={{ fontSize: '18px' }}>Diretivas da IA Sofia</CardTitle>
                     </div>
                     <Button
                       onClick={() => setIsAddingDirective(true)}
                       size="sm"
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                       data-testid="button-add-directive"
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -899,7 +899,7 @@ export default function CustomerSupportSettings() {
                               <Switch
                                 checked={directive.isActive}
                                 onCheckedChange={() => toggleDirective(directive.id)}
-                                className="data-[state=checked]:bg-purple-600"
+                                className="data-[state=checked]:bg-blue-600"
                               />
                               <Button
                                 onClick={() => removeDirective(directive.id)}
@@ -919,10 +919,10 @@ export default function CustomerSupportSettings() {
 
                   {/* Formulário para Adicionar Nova Diretiva */}
                   {isAddingDirective && (
-                    <Card className="bg-gray-800/30 border border-purple-500/30">
+                    <Card className="bg-gray-800/30 border border-blue-500/30">
                       <CardContent className="p-4 space-y-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Sparkles className="w-4 h-4 text-purple-400" />
+                          <Sparkles className="w-4 h-4 text-blue-400" />
                           <h4 className="font-medium text-white">Nova Diretiva</h4>
                         </div>
                         
@@ -966,7 +966,7 @@ export default function CustomerSupportSettings() {
                           <Button
                             onClick={addDirective}
                             size="sm"
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
                             data-testid="button-save-directive"
                           >
                             <Plus className="w-4 h-4 mr-2" />
@@ -1034,8 +1034,8 @@ export default function CustomerSupportSettings() {
                       </div>
                       <div className="space-y-2">
                         {aiDirectives.filter(d => d.isActive).slice(0, 2).map((directive) => (
-                          <div key={directive.id} className="bg-purple-900/20 p-2 rounded border-l-2 border-purple-500">
-                            <div className="text-xs text-purple-300 font-medium mb-1">{directive.title}</div>
+                          <div key={directive.id} className="bg-blue-900/20 p-2 rounded border-l-2 border-blue-500">
+                            <div className="text-xs text-blue-300 font-medium mb-1">{directive.title}</div>
                             <div className="text-xs text-gray-400 leading-relaxed">
                               {directive.content.length > 80 
                                 ? `${directive.content.substring(0, 80)}...` 
