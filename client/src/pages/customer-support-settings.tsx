@@ -141,10 +141,13 @@ export default function CustomerSupportSettings() {
       isActive: true
     };
 
-    setAiDirectives([...aiDirectives, newDirective]);
+    const updatedDirectives = [...aiDirectives, newDirective];
+    setAiDirectives(updatedDirectives);
     setNewDirectiveTitle('');
     setNewDirectiveContent('');
     setIsAddingDirective(false);
+    
+    saveAiDirectivesMutation.mutate(updatedDirectives);
     
     toast({
       title: "Diretiva adicionada",
@@ -153,7 +156,9 @@ export default function CustomerSupportSettings() {
   };
 
   const removeDirective = (id: string) => {
-    setAiDirectives(aiDirectives.filter(d => d.id !== id));
+    const updatedDirectives = aiDirectives.filter(d => d.id !== id);
+    setAiDirectives(updatedDirectives);
+    saveAiDirectivesMutation.mutate(updatedDirectives);
     toast({
       title: "Diretiva removida",
       description: "Diretiva foi removida com sucesso.",
@@ -161,9 +166,11 @@ export default function CustomerSupportSettings() {
   };
 
   const toggleDirective = (id: string) => {
-    setAiDirectives(aiDirectives.map(d => 
+    const updatedDirectives = aiDirectives.map(d => 
       d.id === id ? { ...d, isActive: !d.isActive } : d
-    ));
+    );
+    setAiDirectives(updatedDirectives);
+    saveAiDirectivesMutation.mutate(updatedDirectives);
   };
 
   // Save AI directives mutation
@@ -989,19 +996,6 @@ export default function CustomerSupportSettings() {
                     </Card>
                   )}
 
-                  {/* Botão Salvar */}
-                  {aiDirectives.length > 0 && (
-                    <div className="flex justify-end pt-4 border-t border-gray-700/50">
-                      <Button
-                        onClick={() => saveAiDirectivesMutation.mutate(aiDirectives)}
-                        disabled={saveAiDirectivesMutation.isPending}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                        data-testid="button-save-ai-directives"
-                      >
-                        {saveAiDirectivesMutation.isPending ? 'Salvando...' : 'Salvar Configurações'}
-                      </Button>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </div>
