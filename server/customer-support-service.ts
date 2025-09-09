@@ -399,12 +399,19 @@ export class CustomerSupportService {
       // Get metrics for overview cards
       const [overviewStats] = await this.db
         .select({
-          openTickets: count(sql`CASE WHEN status = 'open' THEN 1 END`),
-          aiResponded: count(sql`CASE WHEN status = 'in_progress' THEN 1 END`),
-          monthlyTickets: count(sql`CASE WHEN created_at >= DATE_TRUNC('month', CURRENT_DATE) THEN 1 END`),
-          unreadTickets: count(sql`CASE WHEN is_read = false THEN 1 END`)
+          openTickets: count(sql`CASE WHEN ${this.schema.supportTickets.status} = 'open' THEN 1 END`),
+          aiResponded: count(sql`CASE WHEN ${this.schema.supportTickets.status} = 'in_progress' THEN 1 END`),
+          monthlyTickets: count(sql`CASE WHEN ${this.schema.supportTickets.createdAt} >= DATE_TRUNC('month', CURRENT_DATE) THEN 1 END`),
+          unreadTickets: count(sql`CASE 
+            WHEN ${this.schema.supportTickets.isRead} = false 
+            AND (${this.schema.supportEmails.hasAutoResponse} IS NULL OR ${this.schema.supportEmails.hasAutoResponse} = false)
+            THEN 1 END`)
         })
-        .from(this.schema.supportTickets);
+        .from(this.schema.supportTickets)
+        .leftJoin(
+          this.schema.supportEmails,
+          eq(this.schema.supportTickets.emailId, this.schema.supportEmails.id)
+        );
 
       console.log('📊 Overview stats raw:', overviewStats);
 
