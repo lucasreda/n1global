@@ -27,6 +27,7 @@ import {
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface SupportCategory {
   id: string;
@@ -100,7 +101,21 @@ export default function CustomerSupportPage() {
   const { selectedOperation, operations } = useCurrentOperation();
   const currentOperationId = selectedOperation;
   const currentOperationName = operations.find(op => op.id === selectedOperation)?.name;
+  const currentOperation = operations.find(op => op.id === selectedOperation);
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  // Check if support service is active
+  const supportServiceActive = currentOperation && 'supportServiceActive' in currentOperation 
+    ? currentOperation.supportServiceActive 
+    : false;
+
+  // Redirect to promotional page if support service is not active
+  useEffect(() => {
+    if (currentOperation && !supportServiceActive) {
+      setLocation('/customer-support/settings');
+    }
+  }, [currentOperation, supportServiceActive, setLocation]);
   
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [supportSearchTerm, setSupportSearchTerm] = useState("");
