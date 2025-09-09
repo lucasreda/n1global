@@ -222,11 +222,14 @@ export class CustomerSupportService {
         )
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
         .orderBy(
-          // Priority 1: Tickets without AI response first (human attention needed)
-          asc(sql`CASE WHEN ${this.schema.supportEmails.hasAutoResponse} IS NULL OR ${this.schema.supportEmails.hasAutoResponse} = false THEN 0 ELSE 1 END`),
-          // Priority 2: Unread tickets first within each group
-          asc(this.schema.supportTickets.isRead),
-          // Priority 3: Always newest first (within unread and read groups)
+          // Priority 1: Unread tickets without AI response first (with blue dot)
+          asc(sql`CASE 
+            WHEN ${this.schema.supportTickets.isRead} = false 
+            AND (${this.schema.supportEmails.hasAutoResponse} IS NULL OR ${this.schema.supportEmails.hasAutoResponse} = false) 
+            THEN 0 
+            ELSE 1 
+          END`),
+          // Priority 2: All other tickets by newest first
           desc(this.schema.supportTickets.createdAt)
         )
         .limit(parseInt(limit))
