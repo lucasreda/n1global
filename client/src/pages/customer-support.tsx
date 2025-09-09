@@ -565,6 +565,23 @@ export default function CustomerSupportPage() {
           ))
         ) : (
           <>
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-nao-lidos">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2">
+                  <Mail className="w-5 h-5 text-red-400" />
+                </div>
+                <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/20">
+                  NOVO
+                </span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {overviewMetrics ? overviewMetrics.unreadTickets : 0}
+              </h3>
+              <p className="text-gray-400 text-sm font-medium">
+                Não Lidos
+              </p>
+            </div>
+
             <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-abertos">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-2">
@@ -613,23 +630,6 @@ export default function CustomerSupportPage() {
               </h3>
               <p className="text-gray-400 text-sm font-medium">
                 Tickets no Mês
-              </p>
-            </div>
-
-            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-nao-lidos">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2">
-                  <Mail className="w-5 h-5 text-red-400" />
-                </div>
-                <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/20">
-                  NOVO
-                </span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                {overviewMetrics ? overviewMetrics.unreadTickets : 0}
-              </h3>
-              <p className="text-gray-400 text-sm font-medium">
-                Não Lidos
               </p>
             </div>
           </>
