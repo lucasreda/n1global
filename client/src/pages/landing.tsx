@@ -228,7 +228,7 @@ export default function Landing() {
 
       <div className="relative z-50">
         {/* Hero Section */}
-        <section className="min-h-screen sm:py-20 lg:py-32 flex items-center relative overflow-hidden">
+        <section className="min-h-screen sm:py-20 lg:py-32 flex items-center relative overflow-hidden bg-black">
           {/* Background Video - apenas no hero */}
           <div className="absolute top-[150px] left-0 right-0 bottom-0 sm:inset-0 w-full h-full">
             <video
