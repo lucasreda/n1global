@@ -1136,7 +1136,10 @@ export default function CustomerSupportSettings() {
                       <CardTitle className="text-white" style={{ fontSize: '18px' }}>Diretivas da IA Sofia</CardTitle>
                     </div>
                     <Button
-                      onClick={() => setIsAddingDirective(true)}
+                      onClick={() => {
+                        console.log('🔧 Button clicked - Opening add directive form');
+                        setIsAddingDirective(true);
+                      }}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                       data-testid="button-add-directive"
