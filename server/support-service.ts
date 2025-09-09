@@ -1156,7 +1156,7 @@ SINAIS DE ALERTA (REVISAR):
       console.log("🎨 Template processado com configurações personalizadas - HTML final tem", htmlContent.length, "caracteres");
 
       // Prepare threading headers for proper email conversation
-      const threadingHeaders: Record<string, string> = {
+      const threadingHeaders: any = {
         from: `Sofia - Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
         to: email.from,
         "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
