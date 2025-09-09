@@ -255,7 +255,7 @@ export default function CustomerSupportSettings() {
           
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <h1 className="text-3xl font-bold text-white mb-4">
+            <h1 className="text-3xl font-bold text-white mb-4 mt-10">
               Transforme seu{" "}
               <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                 Atendimento
