@@ -1,6 +1,6 @@
 import { db } from "./db";
 import * as schema from "@shared/schema";
-import { eq, and, or, ilike, desc, count, sql } from "drizzle-orm";
+import { eq, and, or, ilike, desc, asc, count, sql } from "drizzle-orm";
 import { supportService } from "./support-service";
 
 export class CustomerSupportService {
@@ -222,7 +222,7 @@ export class CustomerSupportService {
         )
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
         .orderBy(
-          this.schema.supportTickets.isRead, // Unread first (false < true)
+          asc(this.schema.supportTickets.isRead), // Unread first (false before true)
           desc(this.schema.supportTickets.createdAt) // Then by newest first
         )
         .limit(parseInt(limit))
