@@ -56,6 +56,11 @@ interface SupportTicket {
   conversationCount: number;
   isRead?: boolean;
   isAutomated: boolean;
+  email?: {
+    hasAutoResponse: boolean;
+    autoResponseSentAt: string;
+    status: string;
+  };
 }
 
 const getStatusBadge = (status: string) => {
@@ -420,6 +425,23 @@ export default function CustomerSupportPage() {
   const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
     queryKey: [`/api/customer-support/${currentOperationId}/tickets?limit=50`],
     enabled: !!supportConfig && !!currentOperationId,
+    queryFn: async () => {
+      const response = await fetch(`/api/customer-support/${currentOperationId}/tickets?limit=50`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem("auth_token")}`,
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('🐛 CUSTOMER-SUPPORT DEBUG: Dados da API:', data);
+      console.log('🐛 CUSTOMER-SUPPORT DEBUG: Primeiro ticket:', JSON.stringify(data.tickets?.[0], null, 2));
+      return data;
+    }
   });
 
   if (!currentOperationId) {
@@ -767,7 +789,13 @@ export default function CustomerSupportPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {supportTicketsResponse?.tickets?.map((ticket) => (
+                  {supportTicketsResponse?.tickets?.map((ticket) => {
+                    console.log(`🐛 TICKET DEBUG ${ticket.ticketNumber}:`, {
+                      hasEmail: !!ticket.email,
+                      hasAutoResponse: ticket.email?.hasAutoResponse,
+                      emailObject: ticket.email
+                    });
+                    return (
                     <div key={ticket.id} className="bg-black/10 backdrop-blur-sm border border-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20 cursor-pointer" style={{boxShadow: '0 4px 16px rgba(31, 38, 135, 0.2)'}}
                           onClick={() => handleViewTicket(ticket)}>
                         <div className="flex items-center justify-between mb-3">
@@ -778,6 +806,11 @@ export default function CustomerSupportPage() {
                               <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 text-xs">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 IA
+                              </Badge>
+                            )}
+                            {ticket.email?.hasAutoResponse && (
+                              <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs">
+                                🤖 Sofia IA
                               </Badge>
                             )}
                           </div>
@@ -818,7 +851,8 @@ export default function CustomerSupportPage() {
                           </div>
                         </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
