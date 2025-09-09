@@ -105,6 +105,8 @@ export default function CustomerSupportPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [supportSearchTerm, setSupportSearchTerm] = useState("");
   const [selectedTicketStatus, setSelectedTicketStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ticketsPerPage = 15;
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
@@ -241,7 +243,7 @@ export default function CustomerSupportPage() {
       await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketId}/mark-read`, 'PATCH');
       
       // Refresh tickets list and overview to update UI
-      await queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets?limit=50`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
       await queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/overview`] });
       
       // Force refetch tickets immediately
@@ -426,11 +428,11 @@ export default function CustomerSupportPage() {
   // Always show tickets when any filter is applied OR when showing all
   const shouldLoadTickets = true; // Simplificando: sempre carregar tickets
 
-  const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: [`/api/customer-support/${currentOperationId}/tickets?limit=50`],
+  const { data: supportTicketsResponse, isLoading: ticketsLoading, refetch: refetchTickets } = useQuery<{tickets: SupportTicket[], total: number, page: number, totalPages: number}>({
+    queryKey: [`/api/customer-support/${currentOperationId}/tickets`, currentPage, ticketsPerPage],
     enabled: !!supportConfig && !!currentOperationId,
     queryFn: async () => {
-      const response = await fetch(`/api/customer-support/${currentOperationId}/tickets?limit=50`, {
+      const response = await fetch(`/api/customer-support/${currentOperationId}/tickets?limit=${ticketsPerPage}&page=${currentPage}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem("auth_token")}`,
         },
@@ -716,7 +718,10 @@ export default function CustomerSupportPage() {
                     <Input
                       placeholder="Email, assunto, ticket..."
                       value={supportSearchTerm}
-                      onChange={(e) => setSupportSearchTerm(e.target.value)}
+                      onChange={(e) => {
+                        setSupportSearchTerm(e.target.value);
+                        setCurrentPage(1); // Reset página ao filtrar
+                      }}
                       className="pl-10 bg-slate-700 border-slate-600 text-white h-9"
                       data-testid="input-support-search"
                     />
@@ -725,7 +730,10 @@ export default function CustomerSupportPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs text-slate-400">Categoria</label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <Select value={selectedCategory} onValueChange={(value) => {
+                    setSelectedCategory(value);
+                    setCurrentPage(1); // Reset página ao filtrar
+                  }}>
                     <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm h-9" data-testid="select-category">
                       <SelectValue placeholder="Todas as categorias" />
                     </SelectTrigger>
@@ -742,7 +750,10 @@ export default function CustomerSupportPage() {
 
                 <div className="space-y-1">
                   <label className="text-xs text-slate-400">Status</label>
-                  <Select value={selectedTicketStatus} onValueChange={setSelectedTicketStatus}>
+                  <Select value={selectedTicketStatus} onValueChange={(value) => {
+                    setSelectedTicketStatus(value);
+                    setCurrentPage(1); // Reset página ao filtrar
+                  }}>
                     <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm h-9" data-testid="select-status">
                       <SelectValue placeholder="Todos os status" />
                     </SelectTrigger>
@@ -841,6 +852,71 @@ export default function CustomerSupportPage() {
                         </div>
                     </div>
                   ))}
+                </div>
+              )}
+              
+              {/* Paginação */}
+              {supportTicketsResponse && supportTicketsResponse.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
+                  <div className="text-sm text-slate-400">
+                    Página {currentPage} de {supportTicketsResponse.totalPages} 
+                    <span className="ml-2">({supportTicketsResponse.total} tickets no total)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage <= 1}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    >
+                      Anterior
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, supportTicketsResponse.totalPages) }, (_, i) => {
+                        const page = i + 1;
+                        return (
+                          <Button
+                            key={page}
+                            variant={page === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className={page === currentPage 
+                              ? "bg-blue-600 text-white hover:bg-blue-700"
+                              : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                            }
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                      {supportTicketsResponse.totalPages > 5 && (
+                        <>
+                          <span className="text-slate-400 px-2">...</span>
+                          <Button
+                            variant={supportTicketsResponse.totalPages === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(supportTicketsResponse.totalPages)}
+                            className={supportTicketsResponse.totalPages === currentPage 
+                              ? "bg-blue-600 text-white hover:bg-blue-700"
+                              : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                            }
+                          >
+                            {supportTicketsResponse.totalPages}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage >= supportTicketsResponse.totalPages}
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    >
+                      Próxima
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
