@@ -691,15 +691,23 @@ export default function CustomerSupportPage() {
 
         {/* Coluna Direita - Filtros e Lista de Tickets */}
         <div className="flex-1 space-y-4">
-          {/* Filtros */}
+
+          {/* Lista de Tickets */}
           <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
-            <div className="mb-4">
-              <h3 className="text-gray-100 flex items-center gap-2 text-lg font-semibold">
-                <Search className="h-4 w-4" />
-                Filtros de Tickets
+            <div className="mb-6">
+              <h3 className="text-gray-100 flex items-center justify-between text-lg font-semibold mb-4">
+                <span className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Tickets de Suporte
+                </span>
+                {supportTicketsResponse && (
+                  <span className="text-sm text-gray-400">
+                    {supportTicketsResponse.tickets?.length || 0} tickets
+                  </span>
+                )}
               </h3>
-            </div>
-            <div>
+              
+              {/* Filtros integrados */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs text-slate-400">Buscar</label>
@@ -749,23 +757,6 @@ export default function CustomerSupportPage() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Lista de Tickets */}
-          <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
-            <div className="mb-4">
-              <h3 className="text-gray-100 flex items-center justify-between text-lg font-semibold">
-                <span className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Tickets de Suporte
-                </span>
-                {supportTicketsResponse && (
-                  <span className="text-sm text-gray-400">
-                    {supportTicketsResponse.tickets?.length || 0} tickets
-                  </span>
-                )}
-              </h3>
-            </div>
             <div>
               {ticketsLoading ? (
                 <div className="text-center py-8 text-slate-400">
@@ -794,13 +785,9 @@ export default function CustomerSupportPage() {
                   {supportTicketsResponse?.tickets?.map((ticket) => (
                     <div key={ticket.id} className="relative bg-black/10 backdrop-blur-sm border border-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20 cursor-pointer" style={{boxShadow: '0 4px 16px rgba(31, 38, 135, 0.2)'}}
                           onClick={() => handleViewTicket(ticket)}>
-                        {(() => {
-                          const shouldShowBubble = !ticket.email?.hasAutoResponse && !ticket.isRead;
-                          console.log(`🔵 Ticket ${ticket.ticketNumber}: isRead=${ticket.isRead}, hasAutoResponse=${ticket.email?.hasAutoResponse}, showBubble=${shouldShowBubble}`);
-                          return shouldShowBubble ? (
-                            <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-blue-400 border-2 border-slate-900 z-10" />
-                          ) : null;
-                        })()}
+                        {!ticket.email?.hasAutoResponse && !ticket.isRead && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-blue-400 border-2 border-slate-900 z-10" />
+                        )}
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <span className="font-mono text-xs text-slate-300">{ticket.ticketNumber}</span>
