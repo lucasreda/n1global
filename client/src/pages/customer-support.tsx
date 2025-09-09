@@ -240,8 +240,12 @@ export default function CustomerSupportPage() {
     try {
       await apiRequest(`/api/customer-support/${currentOperationId}/tickets/${ticketId}/mark-read`, 'PATCH');
       
-      // Refresh tickets list to update UI
-      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets`] });
+      // Refresh tickets list and overview to update UI
+      await queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/tickets?limit=50`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/overview`] });
+      
+      // Force refetch tickets immediately
+      await refetchTickets();
     } catch (error) {
       console.error('❌ Error marking ticket as read:', error);
     }
