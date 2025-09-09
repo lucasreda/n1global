@@ -259,10 +259,11 @@ export default function CustomerSupportSettings() {
               <MessageCircle className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-4">
-              <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                Transforme
+              Transforme seu{" "}
+              <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
+                Atendimento
               </span>{" "}
-              seu Atendimento ao Cliente
+              ao Cliente
             </h1>
             <p className="text-lg text-gray-300 mb-6 max-w-2xl mx-auto">
               Active o sistema de suporte inteligente da {currentOperationName} e ofereça um atendimento personalizado e eficiente para seus clientes.
