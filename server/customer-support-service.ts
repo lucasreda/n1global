@@ -199,7 +199,18 @@ export class CustomerSupportService {
 
       // Get tickets with category and email info
       const tickets = await this.db
-        .select()
+        .select({
+          ticket: this.schema.supportTickets,
+          category: this.schema.supportCategories,
+          email: {
+            id: this.schema.supportEmails.id,
+            messageId: this.schema.supportEmails.messageId,
+            from: this.schema.supportEmails.from,
+            hasAutoResponse: this.schema.supportEmails.hasAutoResponse,
+            autoResponseSentAt: this.schema.supportEmails.autoResponseSentAt,
+            status: this.schema.supportEmails.status
+          }
+        })
         .from(this.schema.supportTickets)
         .leftJoin(
           this.schema.supportCategories,
@@ -224,26 +235,26 @@ export class CustomerSupportService {
 
       return {
         tickets: tickets.map(row => ({
-          id: row.support_tickets.id,
-          ticketNumber: row.support_tickets.ticketNumber,
-          subject: row.support_tickets.subject,
-          customerEmail: row.support_tickets.customerEmail,
-          customerName: row.support_tickets.customerName,
-          status: row.support_tickets.status,
-          priority: row.support_tickets.priority || 'medium',
-          createdAt: row.support_tickets.createdAt,
-          lastActivity: row.support_tickets.updatedAt || row.support_tickets.createdAt,
+          id: row.ticket.id,
+          ticketNumber: row.ticket.ticketNumber,
+          subject: row.ticket.subject,
+          customerEmail: row.ticket.customerEmail,
+          customerName: row.ticket.customerName,
+          status: row.ticket.status,
+          priority: row.ticket.priority || 'medium',
+          createdAt: row.ticket.createdAt,
+          lastActivity: row.ticket.updatedAt || row.ticket.createdAt,
           conversationCount: 0, // Could count from conversations table if needed
-          category: row.support_categories ? {
-            id: row.support_categories.id,
-            name: row.support_categories.name,
-            displayName: row.support_categories.displayName || row.support_categories.name,
-            color: row.support_categories.color
+          category: row.category ? {
+            id: row.category.id,
+            name: row.category.name,
+            displayName: row.category.displayName || row.category.name,
+            color: row.category.color
           } : null,
-          email: row.support_emails ? {
-            hasAutoResponse: row.support_emails.hasAutoResponse,
-            autoResponseSentAt: row.support_emails.autoResponseSentAt,
-            status: row.support_emails.status
+          email: row.email ? {
+            hasAutoResponse: row.email.hasAutoResponse,
+            autoResponseSentAt: row.email.autoResponseSentAt,
+            status: row.email.status
           } : null
         })),
         total,
