@@ -197,13 +197,17 @@ export class CustomerSupportService {
         );
       }
 
-      // Get tickets with category info
+      // Get tickets with category and email info
       const tickets = await this.db
         .select()
         .from(this.schema.supportTickets)
         .leftJoin(
           this.schema.supportCategories,
           eq(this.schema.supportTickets.categoryId, this.schema.supportCategories.id)
+        )
+        .leftJoin(
+          this.schema.supportEmails,
+          eq(this.schema.supportTickets.emailId, this.schema.supportEmails.id)
         )
         .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
         .orderBy(desc(this.schema.supportTickets.createdAt))
@@ -235,6 +239,11 @@ export class CustomerSupportService {
             name: row.support_categories.name,
             displayName: row.support_categories.displayName || row.support_categories.name,
             color: row.support_categories.color
+          } : null,
+          email: row.support_emails ? {
+            hasAutoResponse: row.support_emails.hasAutoResponse,
+            autoResponseSentAt: row.support_emails.autoResponseSentAt,
+            status: row.support_emails.status
           } : null
         })),
         total,
