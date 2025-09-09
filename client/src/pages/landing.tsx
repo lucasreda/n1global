@@ -244,8 +244,8 @@ export default function Landing() {
             </video>
           </div>
           
-          {/* Overlay escuro para melhor contraste no hero */}
-          <div className="absolute inset-0 bg-black/40"></div>
+          {/* Overlay gradiente para melhor contraste no hero */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
           <div className="container mx-auto px-4 sm:px-6 relative z-10">
             <div className="text-center max-w-4xl mx-auto -translate-y-5 sm:-translate-y-5">
               <h1 className="text-[30px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
