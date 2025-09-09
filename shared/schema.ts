@@ -1117,6 +1117,8 @@ export const supportEmails = pgTable("support_emails", {
   
   // Email details from webhook
   messageId: text("message_id").notNull().unique(), // Message ID
+  inReplyTo: text("in_reply_to"), // Message ID this email is replying to
+  references: text("references"), // Thread references for email threading
   from: text("from_email").notNull(), // Sender email
   to: text("to_email").notNull(), // Receiver email (support@n1.com)
   subject: text("subject").notNull(),
