@@ -230,7 +230,7 @@ export default function Landing() {
         {/* Hero Section */}
         <section className="min-h-screen sm:py-20 lg:py-32 flex items-center relative overflow-hidden bg-black">
           {/* Background Video - apenas no hero */}
-          <div className="absolute top-[150px] left-0 right-0 h-1/2 sm:inset-0 w-full sm:h-full">
+          <div className="absolute bottom-0 left-0 right-0 h-[70%] sm:inset-0 w-full sm:h-full">
             <video
               autoPlay
               muted
@@ -245,7 +245,7 @@ export default function Landing() {
           </div>
           
           {/* Overlay gradiente para melhor contraste no hero */}
-          <div className="absolute top-[150px] left-0 right-0 h-1/2 sm:inset-0 bg-gradient-to-b from-black/95 to-transparent sm:bg-gradient-to-r sm:from-black/80 sm:to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-[70%] sm:inset-0 bg-gradient-to-b from-black/95 to-transparent sm:bg-gradient-to-r sm:from-black/80 sm:to-transparent"></div>
           <div className="container mx-auto px-4 sm:px-6 relative z-10">
             <div className="text-center max-w-4xl mx-auto -translate-y-5 sm:-translate-y-5">
               <h1 className="text-[30px] sm:text-4xl lg:text-6xl xl:text-7xl font-bold text-foreground leading-tight mb-6 sm:mb-8 min-h-[120px] sm:min-h-[200px] xl:min-h-[240px] px-2">
