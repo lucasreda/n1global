@@ -348,6 +348,9 @@ export default function AdminSupport() {
       }
       
       const data = await response.json();
+      console.log('🐛 DEBUG: Dados brutos da API:', data);
+      console.log('🐛 DEBUG: Primeiro ticket:', data.tickets?.[0]);
+      console.log('🐛 DEBUG: Email do primeiro ticket:', data.tickets?.[0]?.email);
       return { tickets: data.tickets || [], total: data.total || 0 };
     }
   });
@@ -609,28 +612,32 @@ export default function AdminSupport() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {supportTicketsResponse.tickets.map((ticketResponse: any) => (
+                  {supportTicketsResponse.tickets.map((ticketResponse: any) => {
+                    console.log('🐛 DEBUG: ticketResponse:', ticketResponse);
+                    console.log('🐛 DEBUG: ticketResponse.email:', ticketResponse.email);
+                    console.log('🐛 DEBUG: hasAutoResponse:', ticketResponse.email?.hasAutoResponse);
+                    return (
                     <div 
-                      key={ticketResponse.ticket.id} 
+                      key={ticketResponse.id} 
                       className="relative border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors cursor-pointer" 
                       onClick={() => handleViewTicket(ticketResponse)}
-                      data-testid={`ticket-${ticketResponse.ticket.ticketNumber}`}
+                      data-testid={`ticket-${ticketResponse.ticketNumber}`}
                     >
                       {/* Círculo azul para tickets não lidos */}
-                      {!ticketResponse.ticket.isRead && (
+                      {!ticketResponse.isRead && (
                         <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border border-slate-900 z-10" />
                       )}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-4">
                           <div 
                             className="w-3 h-3 rounded-full flex-shrink-0 mt-1" 
-                            style={{ backgroundColor: ticketResponse.category.color }}
+                            style={{ backgroundColor: ticketResponse.category?.color }}
                           />
                           <div>
                             <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-medium text-white">{ticketResponse.ticket.ticketNumber}</h3>
+                              <h3 className="font-medium text-white">{ticketResponse.ticketNumber}</h3>
                               <Badge className="bg-slate-700 text-slate-300 text-xs">
-                                {ticketResponse.category.displayName}
+                                {ticketResponse.category?.displayName}
                               </Badge>
                               {ticketResponse.email?.hasAutoResponse && (
                                 <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs">
@@ -638,36 +645,36 @@ export default function AdminSupport() {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-slate-300 font-medium">{ticketResponse.ticket.subject}</p>
+                            <p className="text-sm text-slate-300 font-medium">{ticketResponse.subject}</p>
                             <p className="text-xs text-slate-400 mt-1">
-                              De: {ticketResponse.ticket.customerEmail}
-                              {ticketResponse.ticket.customerName && ` (${ticketResponse.ticket.customerName})`}
+                              De: {ticketResponse.customerEmail}
+                              {ticketResponse.customerName && ` (${ticketResponse.customerName})`}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           <Badge 
                             className={`text-xs ${
-                              ticketResponse.ticket.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
-                              ticketResponse.ticket.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
-                              ticketResponse.ticket.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
+                              ticketResponse.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
+                              ticketResponse.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
+                              ticketResponse.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
                               'bg-gray-600/20 text-gray-400 border-gray-600/30'
                             }`}
                           >
-                            {ticketResponse.ticket.status === 'open' ? 'Aberto' :
-                             ticketResponse.ticket.status === 'in_progress' ? 'Em Andamento' :
-                             ticketResponse.ticket.status === 'resolved' ? 'Resolvido' : 'Fechado'}
+                            {ticketResponse.status === 'open' ? 'Aberto' :
+                             ticketResponse.status === 'in_progress' ? 'Em Andamento' :
+                             ticketResponse.status === 'resolved' ? 'Resolvido' : 'Fechado'}
                           </Badge>
                           <Badge 
                             variant="outline" 
                             className={`text-xs ${
-                              ticketResponse.ticket.priority === 'high' ? 'border-red-600 text-red-400' :
-                              ticketResponse.ticket.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
+                              ticketResponse.priority === 'high' ? 'border-red-600 text-red-400' :
+                              ticketResponse.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
                               'border-slate-600 text-slate-400'
                             }`}
                           >
-                            {ticketResponse.ticket.priority === 'high' ? 'Alta' :
-                             ticketResponse.ticket.priority === 'medium' ? 'Média' : 'Baixa'}
+                            {ticketResponse.priority === 'high' ? 'Alta' :
+                             ticketResponse.priority === 'medium' ? 'Média' : 'Baixa'}
                           </Badge>
                           <div className="flex items-center text-slate-400">
                             <Eye className="h-4 w-4" />
@@ -679,23 +686,24 @@ export default function AdminSupport() {
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-1">
                             <Clock className="h-3 w-3" />
-                            <span>Criado: {new Date(ticketResponse.ticket.createdAt).toLocaleDateString('pt-BR')}</span>
+                            <span>Criado: {new Date(ticketResponse.createdAt).toLocaleDateString('pt-BR')}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <MessageSquare className="h-3 w-3" />
                             <span>0 mensagens</span>
                           </div>
-                          {ticketResponse.ticket.assignedToUserId && (
+                          {ticketResponse.assignedToUserId && (
                             <div className="flex items-center space-x-1">
                               <User className="h-3 w-3" />
                               <span>Atribuído</span>
                             </div>
                           )}
                         </div>
-                        <span>Última atividade: {new Date(ticketResponse.ticket.updatedAt || ticketResponse.ticket.createdAt).toLocaleDateString('pt-BR')}</span>
+                        <span>Última atividade: {new Date(ticketResponse.updatedAt || ticketResponse.createdAt).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
