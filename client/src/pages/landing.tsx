@@ -191,16 +191,30 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
+      {/* Background Video */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="min-w-full min-h-full w-auto h-auto object-cover"
+          style={{ filter: 'brightness(0.3)' }}
+        >
+          <source src="https://werocketz.com/wp-content/uploads/2025/06/bg1-3.mp4" type="video/mp4" />
+        </video>
+      </div>
+      
       {/* Background gradient and blur effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary/20 to-background"></div>
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 bg-gradient-to-br from-background/70 via-secondary/30 to-background/70 z-5"></div>
+      <div className="absolute inset-0 opacity-20 z-5">
         <div className="absolute top-20 left-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-80 h-80 bg-chart-1/20 rounded-full blur-3xl"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-chart-2/20 rounded-full blur-3xl"></div>
       </div>
 
       {/* Header */}
-      <header className="relative z-10">
+      <header className="relative z-20">
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <img 
@@ -226,7 +240,7 @@ export default function Landing() {
         </div>
       </header>
 
-      <div className="relative z-10">
+      <div className="relative z-20">
         {/* Hero Section */}
         <section className="min-h-screen sm:py-20 lg:py-32 flex items-center">
           <div className="container mx-auto px-4 sm:px-6">
