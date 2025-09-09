@@ -646,25 +646,34 @@ export default function CustomerSupportPage() {
             </div>
           ) : supportCategories && supportCategories.length > 0 ? (
             supportCategories.map((category) => (
-              <div key={category.id} className="bg-slate-900/60 backdrop-blur-sm border border-slate-700/50 rounded-lg p-3 transition-all duration-200 hover:bg-slate-800/70 hover:border-slate-600/60 cursor-pointer group" 
+              <div key={category.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20 cursor-pointer group" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} 
                     onClick={() => setSelectedCategory(category.id)}
                     data-testid={`card-category-${category.name}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
                       <div 
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
                         style={{ backgroundColor: category.color }}
                       />
                       <h3 className="font-medium text-white text-sm group-hover:text-blue-100 transition-colors">{category.displayName}</h3>
                     </div>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-2">
                       {category.isAutomated ? (
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                        <Badge className="bg-green-600/20 text-green-400 border-green-600/30 text-xs px-2 py-0.5">
+                          Auto
+                        </Badge>
                       ) : (
-                        <div className="w-1.5 h-1.5 bg-orange-400 rounded-full"></div>
+                        <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs px-2 py-0.5">
+                          Manual
+                        </Badge>
                       )}
-                      <span className="text-xs text-slate-400 font-mono">P{category.priority}</span>
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-400 truncate flex-1">{category.description}</p>
+                    <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs ml-2">
+                      P{category.priority}
+                    </Badge>
                   </div>
               </div>
             ))
