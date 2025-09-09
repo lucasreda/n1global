@@ -499,13 +499,43 @@ export class CustomerSupportService {
    */
   async sendEmailReply(operationId: string, ticketId: string, replyData: any) {
     try {
+      console.log('📧 CustomerSupportService: Sending email reply...', { operationId, ticketId, replyData });
+      
+      // Get ticket details
+      const ticket = await this.getTicket(operationId, ticketId);
+      if (!ticket) {
+        throw new Error(`Ticket ${ticketId} not found`);
+      }
+
+      // Delegate to support service for actual email sending
+      const supportService = (await import('./support-service')).default;
+      
+      // Use the real support service to send the email reply
+      await supportService.replyToTicket(
+        ticketId,
+        replyData.content || replyData.message,
+        replyData.senderName || 'Equipe de Suporte'
+      );
+
+      // Add conversation entry
+      await supportService.addConversation(ticketId, {
+        type: "email_out",
+        from: `${replyData.senderName || 'Equipe de Suporte'} <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: ticket.customerEmail,
+        subject: replyData.subject,
+        content: replyData.content || replyData.message,
+        messageId: `manual-reply-${Date.now()}@${process.env.MAILGUN_DOMAIN}`,
+      });
+
+      console.log('✅ CustomerSupportService: Email reply sent successfully');
+      
       return {
         success: true,
-        messageId: "reply-message-id",
+        messageId: `manual-reply-${Date.now()}@${process.env.MAILGUN_DOMAIN}`,
         sent: true
       };
     } catch (error) {
-      console.error('Error sending email reply:', error);
+      console.error('❌ Error sending email reply:', error);
       throw error;
     }
   }
