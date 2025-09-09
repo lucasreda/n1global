@@ -516,84 +516,80 @@ export default function CustomerSupportSettings() {
         </div>
 
         {/* Hero Section */}
-        <Card className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-blue-500/30">
-          <CardContent className="p-8">
-            <div className="text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/20 mb-4">
-                <MessageSquare className="w-8 h-8 text-blue-400" />
-              </div>
-              
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold text-white">
-                  Revolucione seu Atendimento ao Cliente
-                </h2>
-                <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-                  Sistema completo de suporte com IA integrada, gestão de tickets e análises em tempo real.
-                  Aumente a satisfação dos clientes e otimize sua operação.
-                </p>
-              </div>
+        <div className="text-center space-y-6 py-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/20 mb-4">
+            <MessageSquare className="w-8 h-8 text-blue-400" />
+          </div>
+          
+          <div className="space-y-3">
+            <h2 className="text-2xl font-bold text-white">
+              Revolucione seu Atendimento ao Cliente
+            </h2>
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+              Sistema completo de suporte com IA integrada, gestão de tickets e análises em tempo real.
+              Aumente a satisfação dos clientes e otimize sua operação.
+            </p>
+          </div>
 
-              <Dialog open={isActivationModalOpen} onOpenChange={setIsActivationModalOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    size="lg" 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
-                    disabled={activateServiceMutation.isPending}
-                    data-testid="button-activate-support"
-                  >
-                    {activateServiceMutation.isPending ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Ativando...
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-5 h-5 mr-2" />
-                        Ativar Suporte ao Cliente
-                      </>
-                    )}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-gray-900 border-gray-700">
-                  <DialogHeader>
-                    <DialogTitle className="text-white">Confirmar Ativação do Serviço</DialogTitle>
-                    <DialogDescription className="text-gray-300">
-                      O serviço de Suporte ao Cliente é cobrado sob demanda baseado no uso. 
-                      Você será cobrado apenas pelos recursos utilizados.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="bg-yellow-600/20 border border-yellow-600/30 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
-                        <div className="text-sm text-yellow-200">
-                          <p className="font-medium mb-1">Cobrança sob demanda</p>
-                          <p>Este serviço será cobrado baseado no volume de tickets processados e recursos utilizados.</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 justify-end">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsActivationModalOpen(false)}
-                        className="border-gray-600 text-gray-300 hover:bg-gray-800"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        onClick={handleActivateService}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        disabled={activateServiceMutation.isPending}
-                      >
-                        {activateServiceMutation.isPending ? 'Ativando...' : 'Confirmar Ativação'}
-                      </Button>
+          <Dialog open={isActivationModalOpen} onOpenChange={setIsActivationModalOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                size="lg" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
+                disabled={activateServiceMutation.isPending}
+                data-testid="button-activate-support"
+              >
+                {activateServiceMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Ativando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5 mr-2" />
+                    Ativar Suporte ao Cliente
+                  </>
+                )}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-gray-900 border-gray-700">
+              <DialogHeader>
+                <DialogTitle className="text-white">Confirmar Ativação do Serviço</DialogTitle>
+                <DialogDescription className="text-gray-300">
+                  O serviço de Suporte ao Cliente é cobrado sob demanda baseado no uso. 
+                  Você será cobrado apenas pelos recursos utilizados.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="bg-yellow-600/20 border border-yellow-600/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                    <div className="text-sm text-yellow-200">
+                      <p className="font-medium mb-1">Cobrança sob demanda</p>
+                      <p>Este serviço será cobrado baseado no volume de tickets processados e recursos utilizados.</p>
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardContent>
-        </Card>
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsActivationModalOpen(false)}
+                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleActivateService}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={activateServiceMutation.isPending}
+                  >
+                    {activateServiceMutation.isPending ? 'Ativando...' : 'Confirmar Ativação'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         {/* Benefits Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
