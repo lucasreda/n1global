@@ -506,14 +506,6 @@ export default function CustomerSupportSettings() {
   if (!supportConfig?.isActive) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Suporte ao Cliente</h1>
-            <p className="text-muted-foreground">
-              Transforme o atendimento da sua operação {currentOperationName}
-            </p>
-          </div>
-        </div>
 
         {/* Hero Section */}
         <div className="text-center space-y-6 py-8">
