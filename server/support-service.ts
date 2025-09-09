@@ -1155,17 +1155,43 @@ SINAIS DE ALERTA (REVISAR):
 
       console.log("🎨 Template processado com configurações personalizadas - HTML final tem", htmlContent.length, "caracteres");
 
+      // Prepare threading headers for proper email conversation
+      const threadingHeaders: Record<string, string> = {
+        from: `Sofia - Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: email.from,
+        "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
+        text: aiResponse.content,
+        html: htmlContent,
+      };
+
+      // Add "Re:" to subject if not already present
+      const originalSubject = email.subject;
+      threadingHeaders.subject = originalSubject.toLowerCase().startsWith('re:') 
+        ? aiResponse.subject 
+        : `Re: ${originalSubject}`;
+
+      // Add threading headers for proper conversation
+      if (email.messageId) {
+        threadingHeaders["h:In-Reply-To"] = email.messageId;
+        
+        // Build References header: original references + original messageId
+        const references = email.references 
+          ? `${email.references} ${email.messageId}`
+          : email.messageId;
+        threadingHeaders["h:References"] = references;
+      }
+
+      console.log("🧵 Threading headers:", {
+        "In-Reply-To": threadingHeaders["h:In-Reply-To"],
+        "References": threadingHeaders["h:References"],
+        subject: threadingHeaders.subject,
+        originalSubject: originalSubject
+      });
+
       // Enviar email com resposta da IA
       const mailgunResponse = await mg.messages.create(
         process.env.MAILGUN_DOMAIN || "",
-        {
-          from: `Sofia - Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
-          to: email.from,
-          "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
-          subject: aiResponse.subject,
-          text: aiResponse.content,
-          html: htmlContent,
-        },
+        threadingHeaders,
       );
 
       console.log("🤖 Email IA enviado via Mailgun:", mailgunResponse.status);
