@@ -554,27 +554,27 @@ export default function CustomerSupportPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-6 mt-8">
         {overviewLoading ? (
           Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-gray-600/50 rounded-lg"></div>
-                <div className="w-16 h-4 bg-gray-600/50 rounded"></div>
+            <div key={index} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-4 animate-pulse" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 bg-gray-600/50 rounded-lg"></div>
+                <div className="w-14 h-3 bg-gray-600/50 rounded"></div>
               </div>
-              <div className="w-32 h-8 bg-gray-600/50 rounded mb-2"></div>
-              <div className="w-20 h-4 bg-gray-600/50 rounded"></div>
+              <div className="w-28 h-6 bg-gray-600/50 rounded mb-1"></div>
+              <div className="w-16 h-3 bg-gray-600/50 rounded"></div>
             </div>
           ))
         ) : (
           <>
-            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-nao-lidos">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2">
-                  <Mail className="w-5 h-5 text-red-400" />
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-nao-lidos">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-1.5">
+                  <Mail className="w-4 h-4 text-red-400" />
                 </div>
-                <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-1 rounded-full border border-red-500/20">
+                <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
                   NOVO
                 </span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
                 {overviewMetrics ? overviewMetrics.unreadTickets : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
@@ -582,16 +582,16 @@ export default function CustomerSupportPage() {
               </p>
             </div>
 
-            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-abertos">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2">
-                  <MessageSquare className="w-5 h-5 text-green-400" />
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-abertos">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-1.5">
+                  <MessageSquare className="w-4 h-4 text-green-400" />
                 </div>
-                <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-1 rounded-full border border-green-500/20">
+                <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
                   ATIVO
                 </span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
                 {overviewMetrics ? overviewMetrics.openTickets : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
@@ -599,16 +599,16 @@ export default function CustomerSupportPage() {
               </p>
             </div>
 
-            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-respondido-ia">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2">
-                  <CheckCircle className="w-5 h-5 text-blue-400" />
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-respondido-ia">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-1.5">
+                  <CheckCircle className="w-4 h-4 text-blue-400" />
                 </div>
-                <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">
+                <span className="text-xs font-medium text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
                   IA
                 </span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
                 {overviewMetrics ? overviewMetrics.aiResponded : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
@@ -616,16 +616,16 @@ export default function CustomerSupportPage() {
               </p>
             </div>
 
-            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-mes">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2">
-                  <Clock className="w-5 h-5 text-purple-400" />
+            <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-4 transition-all duration-300 hover:bg-white/5 hover:border-white/20" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="card-tickets-mes">
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-1.5">
+                  <Clock className="w-4 h-4 text-purple-400" />
                 </div>
-                <span className="text-xs font-medium text-purple-400 bg-purple-500/10 px-2 py-1 rounded-full border border-purple-500/20">
+                <span className="text-xs font-medium text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
                   MÊS
                 </span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">
                 {overviewMetrics ? overviewMetrics.monthlyTickets : 0}
               </h3>
               <p className="text-gray-400 text-sm font-medium">
