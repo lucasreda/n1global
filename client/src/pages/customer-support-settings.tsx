@@ -11,7 +11,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users, Power } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -1136,10 +1136,7 @@ export default function CustomerSupportSettings() {
                       <CardTitle className="text-white" style={{ fontSize: '18px' }}>Diretivas da IA Sofia</CardTitle>
                     </div>
                     <Button
-                      onClick={() => {
-                        console.log('🔧 Button clicked - Opening add directive form');
-                        setIsAddingDirective(true);
-                      }}
+                      onClick={() => setIsAddingDirective(true)}
                       size="sm"
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                       data-testid="button-add-directive"
@@ -1215,15 +1212,20 @@ export default function CustomerSupportSettings() {
                     </div>
                   )}
 
-                  {/* Formulário para Adicionar Nova Diretiva */}
-                  {isAddingDirective && (
-                    <Card className="bg-gray-800/30 border border-blue-500/30">
-                      <CardContent className="p-4 space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Sparkles className="w-4 h-4 text-blue-400" />
-                          <h4 className="font-medium text-white">Nova Diretiva</h4>
+                  {/* Modal para Adicionar Nova Diretiva */}
+                  <Dialog open={isAddingDirective} onOpenChange={setIsAddingDirective}>
+                    <DialogContent className="bg-gray-900 border border-gray-700 text-white max-w-2xl">
+                      <DialogHeader>
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-blue-400" />
+                          <DialogTitle className="text-white">Nova Diretiva da IA Sofia</DialogTitle>
                         </div>
-                        
+                        <DialogDescription className="text-gray-300">
+                          Adicione uma nova diretiva para personalizar as respostas da Sofia
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <div className="space-y-4 py-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <Label className="text-gray-300 text-sm">Tipo</Label>
@@ -1256,36 +1258,34 @@ export default function CustomerSupportSettings() {
                             onChange={(e) => setNewDirectiveContent(e.target.value)}
                             placeholder="Ex: Nossos produtos geralmente chegam em 2-3 dias úteis. Para produtos importados, o prazo pode ser de até 7 dias úteis."
                             className="mt-1 bg-gray-700 border-gray-600 text-white"
-                            rows={3}
+                            rows={4}
                           />
                         </div>
-                        
-                        <div className="flex gap-3 pt-2">
-                          <Button
-                            onClick={addDirective}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            data-testid="button-save-directive"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Adicionar
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setIsAddingDirective(false);
-                              setNewDirectiveTitle('');
-                              setNewDirectiveContent('');
-                            }}
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                      </div>
+                      
+                      <DialogFooter>
+                        <Button
+                          onClick={() => {
+                            setIsAddingDirective(false);
+                            setNewDirectiveTitle('');
+                            setNewDirectiveContent('');
+                          }}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          onClick={addDirective}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          data-testid="button-save-directive"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Adicionar Diretiva
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
 
                 </CardContent>
               </Card>
