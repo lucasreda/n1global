@@ -410,11 +410,11 @@ export default function CustomerSupportSettings() {
                 <p>
                   Você está prestes a ativar o serviço de suporte ao cliente para sua operação.
                 </p>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-yellow-800 text-sm font-medium">
+                <div className="bg-yellow-600/20 border border-yellow-500/30 rounded-lg p-3">
+                  <p className="text-yellow-300 text-sm font-medium">
                     ⚠️ Esta funcionalidade é paga por demanda
                   </p>
-                  <p className="text-yellow-700 text-sm mt-1">
+                  <p className="text-yellow-200 text-sm mt-1">
                     O valor será adicionado à sua fatura conforme o uso de emails processados pela IA.
                   </p>
                 </div>
@@ -431,7 +431,7 @@ export default function CustomerSupportSettings() {
               <Button
                 onClick={confirmActivation}
                 disabled={activateSupportMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
                 data-testid="button-confirm-activation"
               >
                 {activateSupportMutation.isPending ? "Ativando..." : "Ativar Serviço"}
