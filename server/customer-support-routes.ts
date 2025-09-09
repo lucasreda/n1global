@@ -497,6 +497,33 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
+   * Mark ticket as read
+   */
+  app.patch("/api/customer-support/:operationId/tickets/:ticketId/mark-read", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId, ticketId } = req.params;
+      
+      console.log('📖 Marking ticket as read:', { operationId, ticketId });
+      
+      const result = await customerSupportService.markTicketAsRead(operationId, ticketId);
+      
+      if (result.success) {
+        res.json({ success: true, message: "Ticket marked as read" });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error marking ticket as read:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to mark ticket as read",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
    * Send new message (creates new ticket)
    */
   app.post("/api/customer-support/:operationId/send-message", authenticateToken, async (req: Request, res: Response) => {

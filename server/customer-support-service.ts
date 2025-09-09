@@ -541,6 +541,30 @@ export class CustomerSupportService {
   }
 
   /**
+   * Mark ticket as read
+   */
+  async markTicketAsRead(operationId: string, ticketId: string) {
+    try {
+      console.log('📖 CustomerSupportService: Marking ticket as read...', { operationId, ticketId });
+      
+      // Delegate to support service for actual database update
+      const supportService = (await import('./support-service')).default;
+      
+      const updatedTicket = await supportService.markTicketAsRead(ticketId);
+      
+      console.log('✅ CustomerSupportService: Ticket marked as read successfully');
+      
+      return {
+        success: true,
+        ticket: updatedTicket
+      };
+    } catch (error) {
+      console.error('❌ Error marking ticket as read:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get DNS records for domain verification
    */
   async getDnsRecords(domain: string) {

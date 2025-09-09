@@ -793,7 +793,9 @@ export default function CustomerSupportPage() {
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <span className="font-mono text-xs text-slate-300">{ticket.ticketNumber}</span>
-                            <div className={`w-2 h-2 rounded-full ${!ticket.isRead ? 'bg-blue-400' : 'bg-slate-600'}`} />
+                            {!ticket.email?.hasAutoResponse && !ticket.isRead && (
+                              <div className="w-2 h-2 rounded-full bg-blue-400" />
+                            )}
                             {ticket.isAutomated && (
                               <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 text-xs">
                                 <CheckCircle className="w-3 h-3 mr-1" />
