@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users, Power } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -43,6 +44,7 @@ export default function CustomerSupportSettings() {
   const [customDomain, setCustomDomain] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
+  const [isDeactivationModalOpen, setIsDeactivationModalOpen] = useState(false);
 
   // Design configuration states
   const [designConfig, setDesignConfig] = useState({
@@ -466,6 +468,42 @@ export default function CustomerSupportSettings() {
 
   const handleActivateService = () => {
     activateServiceMutation.mutate();
+  };
+
+  // Service deactivation mutation
+  const deactivateServiceMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/customer-support/${currentOperationId}/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ isActive: false })
+      });
+      if (!response.ok) throw new Error('Failed to deactivate service');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Serviço desativado",
+        description: "O serviço de suporte ao cliente foi desativado.",
+      });
+      refetch();
+      setIsDeactivationModalOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao desativar o serviço de suporte.",
+        variant: "destructive",
+      });
+      setIsDeactivationModalOpen(false);
+    }
+  });
+
+  const handleDeactivateService = () => {
+    deactivateServiceMutation.mutate();
   };
 
   // Show loading while waiting for operation ID to load
@@ -1038,6 +1076,54 @@ export default function CustomerSupportSettings() {
                       <li>• Use o botão "Verificar Domínio" após configurar</li>
                     </ul>
                   </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Service Control Card - Only show when service is active */}
+      {supportConfig?.isActive && (
+        <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Power className="w-5 h-5 text-red-400" />
+              <CardTitle className="text-white" style={{ fontSize: '18px' }}>Controle do Serviço</CardTitle>
+            </div>
+            <CardDescription>
+              Gerenciar status do serviço de suporte ao cliente
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-green-600/10 border border-green-600/30 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <div>
+                  <p className="font-medium text-green-400">Serviço Ativo</p>
+                  <p className="text-sm text-green-300">O sistema de suporte está funcionando</p>
+                </div>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={() => setIsDeactivationModalOpen(true)}
+                className="bg-red-600 hover:bg-red-700"
+                data-testid="button-deactivate-service"
+              >
+                <Power className="w-4 h-4 mr-2" />
+                Desativar Serviço
+              </Button>
+            </div>
+            
+            <div className="bg-yellow-600/20 border border-yellow-600/30 rounded p-3">
+              <div className="flex items-start gap-2">
+                <span className="text-yellow-400 text-lg">⚠️</span>
+                <div className="text-xs text-yellow-200">
+                  <p className="font-medium mb-1">Atenção:</p>
+                  <p className="text-yellow-100">
+                    Desativar o serviço irá parar todos os recursos de suporte automático e manual. 
+                    Tickets existentes serão mantidos mas novos emails não serão processados.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1957,6 +2043,68 @@ export default function CustomerSupportSettings() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Confirmação de Desativação */}
+      <AlertDialog open={isDeactivationModalOpen} onOpenChange={setIsDeactivationModalOpen}>
+        <AlertDialogContent className="bg-gray-900 border border-gray-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <Power className="w-5 h-5 text-red-400" />
+              Desativar Serviço de Suporte
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Tem certeza que deseja desativar o serviço de suporte ao cliente?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="py-4 space-y-3">
+            <div className="bg-red-600/20 border border-red-600/30 rounded p-3">
+              <p className="text-red-300 text-sm font-medium mb-2">
+                ⚠️ O que será desativado:
+              </p>
+              <ul className="text-red-200 text-sm space-y-1">
+                <li>• Processamento automático de emails</li>
+                <li>• Respostas automáticas da IA Sofia</li>
+                <li>• Criação de novos tickets</li>
+                <li>• Sistema de categorização automática</li>
+              </ul>
+            </div>
+            
+            <div className="bg-yellow-600/20 border border-yellow-600/30 rounded p-3">
+              <p className="text-yellow-300 text-sm font-medium mb-1">
+                📋 Será mantido:
+              </p>
+              <p className="text-yellow-200 text-sm">
+                Todos os tickets e conversas existentes permanecerão intactos. 
+                Você pode reativar o serviço a qualquer momento.
+              </p>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeactivateService}
+              disabled={deactivateServiceMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deactivateServiceMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Desativando...
+                </>
+              ) : (
+                <>
+                  <Power className="w-4 h-4 mr-2" />
+                  Confirmar Desativação
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
