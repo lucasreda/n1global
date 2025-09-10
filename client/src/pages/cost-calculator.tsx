@@ -598,13 +598,11 @@ export default function CostCalculator() {
                     <span className="text-xs text-gray-300">Lucro Diário</span>
                     <div className="text-right">
                       <p className={`text-lg font-bold ${results.dailyProfit > 0 ? 'text-green-400' : 'text-red-400'}`} data-testid="text-daily-profit">
+                        {formatBRL(convertedResults.dailyProfitBRL)}
+                      </p>
+                      <p className="text-xs text-gray-400">
                         {formatCurrency(results.dailyProfit)}
                       </p>
-                      {fields.currency !== 'BRL' && (
-                        <p className="text-xs text-gray-400">
-                          {formatBRL(convertedResults.dailyProfitBRL)}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -614,13 +612,11 @@ export default function CostCalculator() {
                     <span className="text-xs text-gray-300">Lucro Mensal</span>
                     <div className="text-right">
                       <p className={`text-xl font-bold ${results.monthlyProfit > 0 ? 'text-blue-400' : 'text-red-400'}`} data-testid="text-monthly-profit">
+                        {formatBRL(convertedResults.monthlyProfitBRL)}
+                      </p>
+                      <p className="text-xs text-gray-400">
                         {formatCurrency(results.monthlyProfit)}
                       </p>
-                      {fields.currency !== 'BRL' && (
-                        <p className="text-xs text-gray-400">
-                          {formatBRL(convertedResults.monthlyProfitBRL)}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -630,13 +626,11 @@ export default function CostCalculator() {
                     <span className="text-xs text-gray-300">Lucro Anual Projetado</span>
                     <div className="text-right">
                       <p className="text-lg font-bold text-purple-400">
+                        {formatBRL(convertedResults.monthlyProfitBRL * 12)}
+                      </p>
+                      <p className="text-xs text-gray-400">
                         {formatCurrency(results.monthlyProfit * 12)}
                       </p>
-                      {fields.currency !== 'BRL' && (
-                        <p className="text-xs text-gray-400">
-                          {formatBRL(convertedResults.monthlyProfitBRL * 12)}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
