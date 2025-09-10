@@ -105,6 +105,12 @@ export class SupportService {
     confidence: number;
     reasoning: string;
     requiresHuman: boolean;
+    sentiment: string;
+    emotion: string;
+    urgency: string;
+    tone: string;
+    hasTimeConstraint: boolean;
+    escalationRisk: number;
   }> {
     const categories = await this.getCategories();
     const categoryDescriptions = categories
@@ -139,8 +145,52 @@ Responda em JSON no seguinte formato:
   "categoryName": "nome_da_categoria",
   "confidence": 85,
   "reasoning": "explicação_da_escolha",
-  "requiresHuman": false
+  "requiresHuman": false,
+  "sentiment": "neutro",
+  "emotion": "calmo",
+  "urgency": "media",
+  "tone": "educado",
+  "hasTimeConstraint": false,
+  "escalationRisk": 2
 }
+
+ANÁLISE DE SENTIMENTO - CAMPOS OBRIGATÓRIOS:
+
+sentiment: Análise do sentimento geral
+- "muito_positivo": Cliente muito satisfeito, elogios
+- "positivo": Cliente satisfeito, tom amigável
+- "neutro": Tom neutral, informativo
+- "negativo": Cliente insatisfeito, frustração
+- "muito_negativo": Cliente muito irritado, raiva
+
+emotion: Estado emocional específico
+- "calmo": Cliente tranquilo, sem pressa
+- "ansioso": Cliente preocupado, querendo respostas
+- "frustrado": Cliente irritado com situação
+- "zangado": Cliente com raiva, tom agressivo
+- "preocupado": Cliente com dúvidas, incerto
+- "satisfeito": Cliente feliz, elogiando
+
+urgency: Nível de urgência percebido
+- "baixa": Dúvida simples, sem pressa
+- "media": Questão normal, tempo razoável
+- "alta": Cliente com pressa, precisa resolver logo
+- "critica": Situação urgente, requer ação imediata
+
+tone: Tom da comunicação
+- "formal": Linguagem profissional, educada
+- "informal": Linguagem casual, relaxada
+- "agressivo": Tom hostil, ameaçador
+- "educado": Tom respeitoso, cortês
+- "desesperado": Tom de desespero, urgência emocional
+
+hasTimeConstraint: true se menciona prazos, datas, "urgente", "rápido"
+
+escalationRisk: Risco de escalação (0-10)
+- 0-2: Baixo risco, cliente educado
+- 3-5: Risco médio, cliente insatisfeito mas controlado
+- 6-8: Risco alto, cliente irritado, pode escalar
+- 9-10: Risco crítico, cliente muito agressivo
 
 IMPORTANTE SOBRE requiresHuman:
 - DEFAULT é false (nossa IA Sofia pode responder a maioria dos casos)
@@ -248,6 +298,12 @@ REGRAS:
         confidence: Math.min(100, Math.max(0, result.confidence || 0)),
         reasoning: result.reasoning || "Categorização automática falhou",
         requiresHuman,
+        sentiment: result.sentiment || "neutro",
+        emotion: result.emotion || "calmo",
+        urgency: result.urgency || "media",
+        tone: result.tone || "educado",
+        hasTimeConstraint: result.hasTimeConstraint || false,
+        escalationRisk: Math.min(10, Math.max(0, result.escalationRisk || 0)),
       };
     } catch (error) {
       console.error("Erro na categorização por IA:", error);
@@ -256,6 +312,12 @@ REGRAS:
         confidence: 0,
         reasoning: "Erro na análise de IA - necessita revisão manual",
         requiresHuman: true,
+        sentiment: "neutro",
+        emotion: "calmo",
+        urgency: "media",
+        tone: "educado",
+        hasTimeConstraint: false,
+        escalationRisk: 5,
       };
     }
   }
