@@ -60,6 +60,48 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
+   * Get voice settings for an operation
+   */
+  app.get("/api/customer-support/:operationId/voice-settings", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      
+      const settings = await customerSupportService.getVoiceSettings(operationId);
+      
+      res.json(settings);
+    } catch (error) {
+      console.error('Error getting voice settings:', error);
+      res.status(500).json({ 
+        message: "Failed to get voice settings",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Save voice settings for an operation
+   */
+  app.post("/api/customer-support/:operationId/voice-settings", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const settings = req.body;
+      
+      const savedSettings = await customerSupportService.saveVoiceSettings(operationId, settings);
+      
+      res.json({
+        success: true,
+        settings: savedSettings
+      });
+    } catch (error) {
+      console.error('Error saving voice settings:', error);
+      res.status(500).json({ 
+        message: "Failed to save voice settings",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
    * Get categories for an operation
    */
   app.get("/api/customer-support/:operationId/categories", authenticateToken, async (req: Request, res: Response) => {

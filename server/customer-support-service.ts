@@ -24,6 +24,142 @@ export class CustomerSupportService {
   }
 
   /**
+   * Get voice settings for an operation
+   */
+  async getVoiceSettings(operationId: string) {
+    try {
+      const [settings] = await this.db
+        .select()
+        .from(this.schema.voiceSettings)
+        .where(eq(this.schema.voiceSettings.operationId, operationId))
+        .limit(1);
+
+      if (!settings) {
+        // Return default settings matching schema structure
+        return {
+          operationId,
+          isActive: false,
+          twilioPhoneNumber: null,
+          welcomeMessage: 'Olá! Como posso ajudá-lo hoje?',
+          operatingHours: {
+            monday: { enabled: true, start: '09:00', end: '18:00' },
+            tuesday: { enabled: true, start: '09:00', end: '18:00' },
+            wednesday: { enabled: true, start: '09:00', end: '18:00' },
+            thursday: { enabled: true, start: '09:00', end: '18:00' },
+            friday: { enabled: true, start: '09:00', end: '18:00' },
+            saturday: { enabled: false, start: '09:00', end: '18:00' },
+            sunday: { enabled: false, start: '09:00', end: '18:00' },
+            timezone: 'America/Sao_Paulo'
+          },
+          allowedCallTypes: ['doubts', 'address_change', 'cancellation'],
+          voiceInstructions: 'Você é Sofia, um assistente virtual empático da central de atendimento. Seja cordial e profissional.',
+          outOfHoursMessage: 'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.',
+          outOfHoursAction: 'voicemail',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+      }
+
+      return settings;
+    } catch (error) {
+      console.error('Error getting voice settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save voice settings for an operation
+   */
+  async saveVoiceSettings(operationId: string, settings: {
+    isActive?: boolean;
+    twilioPhoneNumber?: string;
+    welcomeMessage?: string;
+    operatingHours?: {
+      monday: { enabled: boolean; start: string; end: string };
+      tuesday: { enabled: boolean; start: string; end: string };
+      wednesday: { enabled: boolean; start: string; end: string };
+      thursday: { enabled: boolean; start: string; end: string };
+      friday: { enabled: boolean; start: string; end: string };
+      saturday: { enabled: boolean; start: string; end: string };
+      sunday: { enabled: boolean; start: string; end: string };
+      timezone: string;
+    };
+    allowedCallTypes?: string[];
+    voiceInstructions?: string;
+    outOfHoursMessage?: string;
+    outOfHoursAction?: string;
+  }) {
+    try {
+      console.log(`📞 Saving voice settings for operation ${operationId}:`, settings);
+
+      // Check if voice settings record exists
+      const [existingRecord] = await this.db
+        .select({ id: this.schema.voiceSettings.id })
+        .from(this.schema.voiceSettings)
+        .where(eq(this.schema.voiceSettings.operationId, operationId))
+        .limit(1);
+
+      if (existingRecord) {
+        // Update existing record
+        await this.db
+          .update(this.schema.voiceSettings)
+          .set({ 
+            isActive: settings.isActive !== undefined ? settings.isActive : false,
+            twilioPhoneNumber: settings.twilioPhoneNumber || null,
+            welcomeMessage: settings.welcomeMessage || 'Olá! Como posso ajudá-lo hoje?',
+            operatingHours: settings.operatingHours || {
+              monday: { enabled: true, start: '09:00', end: '18:00' },
+              tuesday: { enabled: true, start: '09:00', end: '18:00' },
+              wednesday: { enabled: true, start: '09:00', end: '18:00' },
+              thursday: { enabled: true, start: '09:00', end: '18:00' },
+              friday: { enabled: true, start: '09:00', end: '18:00' },
+              saturday: { enabled: false, start: '09:00', end: '18:00' },
+              sunday: { enabled: false, start: '09:00', end: '18:00' },
+              timezone: 'America/Sao_Paulo'
+            },
+            allowedCallTypes: settings.allowedCallTypes || ['doubts', 'address_change', 'cancellation'],
+            voiceInstructions: settings.voiceInstructions || 'Você é Sofia, um assistente virtual empático da central de atendimento.',
+            outOfHoursMessage: settings.outOfHoursMessage || 'Desculpe, nosso atendimento está fechado no momento.',
+            outOfHoursAction: settings.outOfHoursAction || 'voicemail',
+            updatedAt: new Date()
+          })
+          .where(eq(this.schema.voiceSettings.operationId, operationId));
+      } else {
+        // Create new record
+        await this.db
+          .insert(this.schema.voiceSettings)
+          .values({
+            operationId,
+            isActive: settings.isActive !== undefined ? settings.isActive : false,
+            twilioPhoneNumber: settings.twilioPhoneNumber || null,
+            welcomeMessage: settings.welcomeMessage || 'Olá! Como posso ajudá-lo hoje?',
+            operatingHours: settings.operatingHours || {
+              monday: { enabled: true, start: '09:00', end: '18:00' },
+              tuesday: { enabled: true, start: '09:00', end: '18:00' },
+              wednesday: { enabled: true, start: '09:00', end: '18:00' },
+              thursday: { enabled: true, start: '09:00', end: '18:00' },
+              friday: { enabled: true, start: '09:00', end: '18:00' },
+              saturday: { enabled: false, start: '09:00', end: '18:00' },
+              sunday: { enabled: false, start: '09:00', end: '18:00' },
+              timezone: 'America/Sao_Paulo'
+            },
+            allowedCallTypes: settings.allowedCallTypes || ['doubts', 'address_change', 'cancellation'],
+            voiceInstructions: settings.voiceInstructions || 'Você é Sofia, um assistente virtual empático da central de atendimento.',
+            outOfHoursMessage: settings.outOfHoursMessage || 'Desculpe, nosso atendimento está fechado no momento.',
+            outOfHoursAction: settings.outOfHoursAction || 'voicemail',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+      }
+
+      return settings;
+    } catch (error) {
+      console.error('Error saving voice settings:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get operation support config
    */
   async getOperationSupport(operationId: string) {
