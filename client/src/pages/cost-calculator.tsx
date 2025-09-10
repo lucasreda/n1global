@@ -658,7 +658,7 @@ export default function CostCalculator() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className={`text-5xl font-bold ${profitStatus.color}`} data-testid="text-profit-margin">
+                  <div className="text-blue-400 font-bold" style={{fontSize: '38px'}} data-testid="text-profit-margin">
                     {results.profitMargin.toFixed(1)}%
                   </div>
                   <div className="mt-2">
