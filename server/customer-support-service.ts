@@ -701,11 +701,19 @@ export class CustomerSupportService {
           mailgunDomainName: updatedOperation.mailgunDomainName,
         };
       } else {
+        // Buscar o nome da operação
+        const [operation] = await this.db
+          .select({ name: this.schema.operations.name })
+          .from(this.schema.operations)
+          .where(eq(this.schema.operations.id, operationId))
+          .limit(1);
+
         // Create new record
         const [newOperation] = await this.db
           .insert(this.schema.customerSupportOperations)
           .values({
             operationId,
+            operationName: operation?.name || null,
             isActive,
             emailPrefix: 'suporte',
             aiEnabled: true,
