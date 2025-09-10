@@ -137,28 +137,26 @@ export default function CustomerSupportSettings() {
 
   // Test call mutation
   const testCallMutation = useMutation({
-    mutationFn: async ({ message, phoneNumber }: { message: string; phoneNumber: string }) => {
+    mutationFn: async ({ phoneNumber }: { phoneNumber: string }) => {
       const response = await apiRequest(`/api/customer-support/${currentOperationId}/test-call`, 'POST', {
-        customerMessage: message,
         customerPhone: phoneNumber
       });
       return response.json();
     },
     onSuccess: (data) => {
-      // Add AI response to messages
-      setTestCallMessages(prev => [...prev, {
-        id: `ai-${Date.now()}`,
-        speaker: 'ai',
-        message: data.response,
-        timestamp: new Date()
-      }]);
+      // Show success message for real call
+      toast({
+        title: "Ligação Iniciada!",
+        description: `Sofia está ligando para ${testPhoneNumber}. Atenda o telefone!`,
+      });
       setIsAiResponding(false);
+      setIsTestCallModalOpen(false);
     },
     onError: (error) => {
       console.error('Test call error:', error);
       toast({
-        title: "Erro na Simulação",
-        description: "Não foi possível processar a resposta da IA",
+        title: "Erro na Ligação",
+        description: "Não foi possível iniciar a ligação. Verifique se o número Twilio está configurado.",
         variant: "destructive"
       });
       setIsAiResponding(false);
@@ -177,29 +175,6 @@ export default function CustomerSupportSettings() {
     }
     setIsAiResponding(true);
     testCallMutation.mutate({ 
-      message: "Olá, estou ligando para falar sobre meu pedido", 
-      phoneNumber: testPhoneNumber 
-    });
-  };
-
-  const handleCustomerResponse = () => {
-    if (!customerInput.trim() || isAiResponding) return;
-    
-    // Add customer message
-    setTestCallMessages(prev => [...prev, {
-      id: `customer-${Date.now()}`,
-      speaker: 'customer',
-      message: customerInput,
-      timestamp: new Date()
-    }]);
-    
-    const inputToSend = customerInput;
-    setCustomerInput("");
-    setIsAiResponding(true);
-    
-    // Send to AI for response
-    testCallMutation.mutate({ 
-      message: inputToSend, 
       phoneNumber: testPhoneNumber 
     });
   };
@@ -2667,134 +2642,71 @@ export default function CustomerSupportSettings() {
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Phone className="w-5 h-5 text-purple-400" />
-              Ligação Teste - Sofia IA
+              Ligação Real - Sofia IA
             </DialogTitle>
             <DialogDescription className="text-gray-300">
-              Simule uma chamada de vendas baseada nas suas diretivas de IA
+              Faça uma ligação real usando Twilio com base nas suas diretivas de IA
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col h-[500px]">
+          <div className="space-y-6">
             {/* Campo do número de telefone */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-4">
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
               <Label className="text-white text-sm font-medium mb-2 block">
-                📞 Número do Cliente (Simulação)
+                📞 Número do Cliente
               </Label>
               <Input
                 value={testPhoneNumber}
                 onChange={(e) => setTestPhoneNumber(e.target.value)}
                 placeholder="+55 11 99999-9999"
-                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 text-lg"
                 data-testid="input-test-phone-number"
               />
-              <p className="text-xs text-gray-400 mt-1">
-                Este número será usado apenas para simular a ligação da Sofia
+              <p className="text-xs text-gray-400 mt-2">
+                Sofia fará uma ligação REAL para este número usando Twilio
               </p>
             </div>
 
-            {/* Status da chamada */}
-            <div className="bg-purple-600/20 border border-purple-600/30 rounded-lg p-3 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-purple-300 font-medium">Chamada Simulada</span>
-                </div>
-                <div className="text-sm text-purple-300">
-                  Sofia (IA) → {testPhoneNumber || "Cliente"}
+            {/* Instruções da ligação */}
+            <div className="bg-purple-600/20 border border-purple-600/30 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Phone className="w-5 h-5 text-purple-400 mt-0.5" />
+                <div>
+                  <h4 className="text-purple-300 font-medium mb-2">Como funciona a ligação teste:</h4>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• Sofia ligará para o número inserido</li>
+                    <li>• Ela se apresentará usando suas diretivas de IA</li>
+                    <li>• Você pode conversar normalmente por voz</li>
+                    <li>• Sofia responderá baseada nas suas configurações</li>
+                  </ul>
                 </div>
               </div>
             </div>
 
-            {/* Área de conversa */}
-            <ScrollArea className="flex-1 border border-gray-700 rounded-lg bg-gray-800/50 p-4 mb-4">
-              <div className="space-y-4">
-                {testCallMessages.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8">
-                    <Phone className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>A Sofia iniciará a chamada assim que você responder...</p>
-                    <Button 
-                      onClick={handleStartTestCall}
-                      className="mt-4 bg-purple-600 hover:bg-purple-700"
-                      disabled={isAiResponding}
-                    >
-                      🚀 Iniciar Chamada Teste
-                    </Button>
-                  </div>
+            {/* Botão de iniciar ligação */}
+            <div className="text-center py-8">
+              <Button 
+                onClick={handleStartTestCall}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 text-lg"
+                disabled={isAiResponding}
+                data-testid="button-start-real-call"
+              >
+                {isAiResponding ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Iniciando ligação...
+                  </>
                 ) : (
-                  testCallMessages.map((message) => (
-                    <div key={message.id} className={`flex ${message.speaker === 'customer' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-lg p-3 ${
-                        message.speaker === 'customer' 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-purple-600/30 border border-purple-600/50 text-purple-100'
-                      }`}>
-                        <div className="flex items-center gap-2 mb-1">
-                          {message.speaker === 'customer' ? (
-                            <div className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
-                              <span className="text-xs font-medium">Você</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-purple-300 rounded-full"></div>
-                              <span className="text-xs font-medium text-purple-300">Sofia (IA)</span>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-sm leading-relaxed">{message.message}</p>
-                        <span className="text-xs opacity-75 mt-1 block">
-                          {message.timestamp.toLocaleTimeString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))
+                  <>
+                    <Phone className="w-5 h-5 mr-2" />
+                    🚀 Fazer Ligação Real
+                  </>
                 )}
-                
-                {isAiResponding && (
-                  <div className="flex justify-start">
-                    <div className="bg-purple-600/30 border border-purple-600/50 rounded-lg p-3 max-w-[80%]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-purple-300 rounded-full"></div>
-                        <span className="text-xs font-medium text-purple-300">Sofia (IA)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <span className="text-sm text-purple-300 ml-2">Sofia está respondendo...</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-
-            {/* Input de resposta */}
-            {testCallMessages.length > 0 && (
-              <div className="flex gap-2">
-                <Input
-                  value={customerInput}
-                  onChange={(e) => setCustomerInput(e.target.value)}
-                  placeholder="Digite sua resposta como cliente..."
-                  className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                  disabled={isAiResponding}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !isAiResponding && customerInput.trim()) {
-                      handleCustomerResponse();
-                    }
-                  }}
-                  data-testid="input-customer-response"
-                />
-                <Button
-                  onClick={handleCustomerResponse}
-                  disabled={!customerInput.trim() || isAiResponding}
-                  className="bg-blue-600 hover:bg-blue-700"
-                  data-testid="button-send-response"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+              </Button>
+              <p className="text-xs text-gray-400 mt-3">
+                Certifique-se de que seu telefone esteja próximo para atender a ligação
+              </p>
+            </div>
           </div>
 
           <DialogFooter className="border-t border-gray-700 pt-4">

@@ -1039,6 +1039,104 @@ Sofia:`;
       return "Olá! Obrigada por entrar em contato. Como posso ajudá-lo hoje? Estou aqui para esclarecer qualquer dúvida sobre nossos produtos e serviços.";
     }
   }
+
+  /**
+   * Validate public URL configuration for Twilio webhooks
+   */
+  private validatePublicUrl(): { isValid: boolean; domain?: string; protocol?: string; error?: string } {
+    const domain = process.env.REPLIT_DEV_DOMAIN;
+    
+    if (!domain) {
+      const error = 'REPLIT_DEV_DOMAIN environment variable not set. This is required for Twilio webhooks to function properly.';
+      console.error(`❌ ${error}`);
+      return { isValid: false, error };
+    }
+    
+    if (domain.includes('localhost') || domain.includes('127.0.0.1')) {
+      const error = 'Cannot use localhost URLs for Twilio webhooks. The webhook URLs must be publicly accessible for Twilio to reach them.';
+      console.error(`❌ ${error}`);
+      return { isValid: false, error };
+    }
+    
+    // Enforce HTTPS for webhook URLs for security
+    const protocol = 'https';
+    
+    if (!domain.includes('replit.dev') && !domain.includes('https')) {
+      const error = 'Webhook URLs must use HTTPS for security. Please ensure your REPLIT_DEV_DOMAIN is properly configured.';
+      console.error(`❌ ${error}`);
+      return { isValid: false, error };
+    }
+    
+    console.log(`✅ Using secure public URL: ${protocol}://${domain}`);
+    
+    return { isValid: true, domain, protocol };
+  }
+
+  async makeTestCall(operationId: string, customerPhone: string): Promise<{
+    callSid: string;
+    status: string;
+  }> {
+    try {
+      console.log(`📞 Making real test call to ${customerPhone} for operation ${operationId}`);
+
+      // Validate public URL configuration BEFORE proceeding
+      const urlValidation = this.validatePublicUrl();
+      if (!urlValidation.isValid) {
+        throw new Error(`Invalid public URL configuration: ${urlValidation.error}`);
+      }
+
+      // Initialize Twilio client
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      
+      if (!accountSid || !authToken) {
+        throw new Error('Twilio credentials not configured');
+      }
+
+      const twilio = require('twilio')(accountSid, authToken);
+
+      // Get operation's Twilio phone number
+      const voiceSettings = await this.db
+        .select()
+        .from(this.schema.voiceSettings)
+        .where(eq(this.schema.voiceSettings.operationId, operationId))
+        .limit(1);
+
+      const twilioPhoneNumber = voiceSettings[0]?.twilioPhoneNumber;
+      
+      if (!twilioPhoneNumber) {
+        throw new Error('No Twilio phone number configured for this operation. Please provision a number first.');
+      }
+
+      // Build TwiML URLs using validated domain (no fallback to localhost)
+      const webhookDomain = urlValidation.domain!;
+      const twimlUrl = `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}`;
+
+      console.log(`🔗 Using validated TwiML URL: ${twimlUrl}`);
+
+      // Make the call
+      const call = await twilio.calls.create({
+        to: customerPhone,
+        from: twilioPhoneNumber,
+        url: twimlUrl,
+        method: 'POST',
+        statusCallback: `https://${webhookDomain}/api/voice/call-status`,
+        statusCallbackMethod: 'POST',
+        statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      });
+
+      console.log(`✅ Test call initiated: ${call.sid}, status: ${call.status}`);
+
+      return {
+        callSid: call.sid,
+        status: call.status
+      };
+
+    } catch (error) {
+      console.error('❌ Error making test call:', error);
+      throw new Error(`Failed to make test call: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 }
 
 export const customerSupportService = new CustomerSupportService();

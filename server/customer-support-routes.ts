@@ -784,27 +784,32 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
-   * Test call simulation - generate AI response based on customer message
+   * Test call - make real phone call using Twilio
    */
   app.post("/api/customer-support/:operationId/test-call", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { customerMessage } = req.body;
+      const { customerPhone } = req.body;
 
-      if (!customerMessage) {
-        return res.status(400).json({ message: "Customer message is required" });
+      if (!customerPhone) {
+        return res.status(400).json({ message: "Customer phone number is required" });
       }
 
-      console.log(`🎯 Test Call for operation ${operationId}:`, customerMessage);
+      console.log(`📞 Making real test call for operation ${operationId} to ${customerPhone}`);
 
-      // Generate AI response using directives
-      const response = await customerSupportService.generateTestCallResponse(operationId, customerMessage);
+      // Make real Twilio call
+      const callResult = await customerSupportService.makeTestCall(operationId, customerPhone);
 
-      res.json({ response });
+      res.json({ 
+        success: true,
+        message: "Ligação iniciada com sucesso!",
+        callSid: callResult.callSid,
+        status: callResult.status
+      });
     } catch (error) {
-      console.error('❌ Error in test call simulation:', error);
+      console.error('❌ Error making test call:', error);
       res.status(500).json({ 
-        message: "Failed to process test call",
+        message: "Failed to make test call",
         error: error instanceof Error ? error.message : String(error)
       });
     }

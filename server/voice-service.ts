@@ -726,11 +726,42 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
+   * Validate public URL configuration for media streams
+   */
+  private validatePublicUrlForMediaStream(): { isValid: boolean; domain?: string; error?: string } {
+    const domain = process.env.REPLIT_DEV_DOMAIN;
+    
+    if (!domain) {
+      const error = 'REPLIT_DEV_DOMAIN environment variable not set. This is required for Twilio media streams to function properly.';
+      console.error(`❌ ${error}`);
+      return { isValid: false, error };
+    }
+    
+    if (domain.includes('localhost') || domain.includes('127.0.0.1')) {
+      const error = 'Cannot use localhost URLs for Twilio media streams. The stream URLs must be publicly accessible for Twilio to connect.';
+      console.error(`❌ ${error}`);
+      return { isValid: false, error };
+    }
+    
+    return { isValid: true, domain };
+  }
+
+  /**
    * Generate TwiML for media stream connection
    */
   private generateMediaStreamTwiML(callSid: string): string {
-    const domain = process.env.REPLIT_DEV_DOMAIN || 'localhost:5000';
-    const protocol = process.env.REPLIT_DEV_DOMAIN ? 'wss' : 'ws';
+    // Validate public URL configuration BEFORE generating stream URL
+    const urlValidation = this.validatePublicUrlForMediaStream();
+    if (!urlValidation.isValid) {
+      // If URL is invalid, fall back to a hangup with error message
+      console.error(`❌ Media stream failed: ${urlValidation.error}`);
+      return this.generateHangupTwiML('Desculpe, estamos com problemas técnicos no momento. Tente novamente mais tarde.');
+    }
+
+    const domain = urlValidation.domain!;
+    const protocol = 'wss'; // Always use secure WebSocket for production
+    
+    console.log(`✅ Using validated media stream URL: ${protocol}://${domain}/api/voice/media-stream/${callSid}`);
     
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -768,7 +799,126 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   /**
    * Normalize phone number for consistent storage
    */
-  private normalizePhoneNumber(phone: string): string {
+  /**
+   * Generate welcome message for test calls based on AI directives
+   */
+  async generateTestCallWelcomeMessage(operationId: string): Promise<string> {
+    try {
+      // Get active AI directives for the operation
+      const directives = await this.getActiveDirectives(operationId);
+      
+      // Build welcome message based on directives
+      const storeInfoDirectives = directives.filter(d => d.type === 'store_info');
+      const responseStyleDirectives = directives.filter(d => d.type === 'response_style');
+      
+      let welcomeMessage = "Olá! Aqui é a Sofia, assistente virtual";
+      
+      // Add store name if available
+      const storeNameDirective = storeInfoDirectives.find(d => 
+        d.title?.toLowerCase().includes('nome') || 
+        d.title?.toLowerCase().includes('empresa') ||
+        d.content?.toLowerCase().includes('empresa')
+      );
+      
+      if (storeNameDirective) {
+        welcomeMessage += ` da ${storeNameDirective.content}`;
+      }
+      
+      welcomeMessage += ". Esta é uma ligação de teste para demonstrar nosso sistema de atendimento automatizado.";
+      
+      return welcomeMessage;
+    } catch (error) {
+      console.error('Error generating test call welcome message:', error);
+      return "Olá! Aqui é a Sofia, sua assistente virtual. Esta é uma ligação de teste do nosso sistema de atendimento.";
+    }
+  }
+
+  /**
+   * Generate AI response for test calls (reuses existing logic but adapted for voice)
+   */
+  async generateTestCallResponse(operationId: string, customerMessage: string): Promise<string> {
+    try {
+      console.log(`🎯 Generating voice response for operation ${operationId}: "${customerMessage}"`);
+      
+      // Get active AI directives for the operation
+      const directives = await this.getActiveDirectives(operationId);
+      
+      // Build prompt specifically for voice conversation
+      const prompt = await this.buildTestCallPrompt(operationId, customerMessage, directives);
+      
+      // Call OpenAI for response
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 150, // Shorter for voice
+      });
+
+      const aiResponse = response.choices[0]?.message?.content?.trim() || 
+        "Entendo sua solicitação. Posso ajudá-lo com mais alguma informação?";
+      
+      console.log(`🤖 Generated voice response: "${aiResponse}"`);
+      
+      return aiResponse;
+    } catch (error) {
+      console.error('Error generating test call response:', error);
+      return "Obrigada por entrar em contato. Nossa equipe entrará em contato em breve.";
+    }
+  }
+
+  /**
+   * Build AI prompt specifically for test call responses
+   */
+  private async buildTestCallPrompt(
+    operationId: string, 
+    customerMessage: string, 
+    directives: any[]
+  ): Promise<string> {
+    // Group directives by type
+    const directivesByType = directives.reduce((acc, directive: any) => {
+      if (!acc[directive.type]) acc[directive.type] = [];
+      acc[directive.type].push(directive);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    // Build context sections
+    const storeInfoSection = directivesByType.store_info?.length > 0 
+      ? `INFORMAÇÕES DA EMPRESA:\n${directivesByType.store_info.map((d: any) => `- ${d.content}`).join('\n')}\n\n`
+      : '';
+
+    const productInfoSection = directivesByType.product_info?.length > 0 
+      ? `PRODUTOS E SERVIÇOS:\n${directivesByType.product_info.map((d: any) => `- ${d.content}`).join('\n')}\n\n`
+      : '';
+
+    const responseStyleSection = directivesByType.response_style?.length > 0 
+      ? `ESTILO DE ATENDIMENTO:\n${directivesByType.response_style.map((d: any) => `- ${d.content}`).join('\n')}\n\n`
+      : '';
+
+    const customSection = directivesByType.custom?.length > 0 
+      ? `INSTRUÇÕES ESPECÍFICAS:\n${directivesByType.custom.map((d: any) => `- ${d.title}: ${d.content}`).join('\n')}\n\n`
+      : '';
+
+    const prompt = `Você é Sofia, uma assistente virtual empática e profissional que atende clientes por telefone.
+
+${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}
+
+CONTEXTO:
+Esta é uma ligação de teste do sistema de atendimento automatizado. O cliente disse: "${customerMessage}"
+
+INSTRUÇÕES PARA RESPOSTA:
+- Seja natural e conversacional, como se estivesse falando ao telefone
+- Use linguagem clara e objetiva adequada para fala
+- Seja empática e prestativa
+- Mantenha a resposta concisa (máximo 2-3 frases)
+- Aplique as instruções personalizadas da empresa
+- Se apropriado, ofereça ajuda adicional ou próximos passos
+
+Responda apenas com o texto que você falará para o cliente:`;
+
+    return prompt;
+  }
+
+  public normalizePhoneNumber(phone: string): string {
     // Remove all non-digits
     return phone.replace(/\D/g, '');
   }

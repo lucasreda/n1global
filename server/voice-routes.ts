@@ -2,9 +2,103 @@ import { Router } from "express";
 import { VoiceService } from "./voice-service";
 import { WebSocketServer } from 'ws';
 import OpenAI from 'openai';
+import crypto from 'crypto';
+import { db } from "./db";
+import { voiceCalls, InsertVoiceCall } from "@shared/schema";
 
 const router = Router();
 const voiceService = new VoiceService();
+
+/**
+ * Twilio Webhook Security Middleware - Validates Twilio signature using official Twilio algorithm
+ */
+function validateTwilioSignature(req: any, res: any, next: any) {
+  try {
+    const twilioSignature = req.get('X-Twilio-Signature');
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    
+    // In production, always require TWILIO_AUTH_TOKEN
+    if (!authToken) {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('❌ TWILIO_AUTH_TOKEN not set in production - rejecting request');
+        return res.status(403).json({ error: 'Forbidden: Auth token not configured' });
+      } else {
+        console.warn('⚠️ TWILIO_AUTH_TOKEN not set - skipping signature validation in development');
+        return next();
+      }
+    }
+    
+    if (!twilioSignature) {
+      console.error('❌ Missing Twilio signature header');
+      return res.status(403).json({ error: 'Forbidden: Missing Twilio signature' });
+    }
+    
+    // Get the full URL that Twilio called
+    const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    
+    // Build data to sign using Twilio's exact algorithm: URL + concat(sorted keys + values)
+    // Twilio concatenates URL + each parameter name + value (NO delimiters like = or &)
+    const sortedKeys = Object.keys(req.body || {}).sort();
+    let dataToSign = url;
+    for (const key of sortedKeys) {
+      dataToSign += key + req.body[key]; // Just key + value, no = or & delimiters
+    }
+    
+    // Create expected signature using Twilio's official algorithm
+    const expectedSignature = crypto
+      .createHmac('sha1', authToken)
+      .update(dataToSign)
+      .digest('base64');
+    
+    // Twilio's X-Twilio-Signature header is pure base64 WITHOUT "sha1=" prefix
+    // Compare signatures using timing-safe comparison
+    if (!crypto.timingSafeEqual(
+      Buffer.from(twilioSignature, 'utf8'),
+      Buffer.from(expectedSignature, 'utf8')
+    )) {
+      console.error('❌ Invalid Twilio signature');
+      console.error(`Expected: ${expectedSignature}`);
+      console.error(`Provided: ${twilioSignature}`);
+      console.error(`Data signed: ${dataToSign}`);
+      return res.status(403).json({ error: 'Forbidden: Invalid signature' });
+    }
+    
+    console.log('✅ Twilio signature validated successfully');
+    next();
+  } catch (error) {
+    console.error('❌ Error validating Twilio signature:', error);
+    return res.status(403).json({ error: 'Forbidden: Signature validation failed' });
+  }
+}
+
+/**
+ * Validate public URL configuration
+ */
+function validatePublicUrl(): { isValid: boolean; domain?: string; protocol?: string } {
+  const domain = process.env.REPLIT_DEV_DOMAIN;
+  
+  if (!domain) {
+    console.error('❌ REPLIT_DEV_DOMAIN environment variable not set - required for Twilio webhooks');
+    return { isValid: false };
+  }
+  
+  if (domain.includes('localhost') || domain.includes('127.0.0.1')) {
+    console.error('❌ Cannot use localhost URLs for Twilio webhooks - must be publicly accessible');
+    return { isValid: false };
+  }
+  
+  // Enforce HTTPS for webhook URLs for security
+  const protocol = 'https';
+  
+  if (!domain.includes('replit.dev') && !domain.includes('https')) {
+    console.error('❌ Webhook URLs must use HTTPS for security');
+    return { isValid: false };
+  }
+  
+  console.log(`✅ Using secure public URL: ${protocol}://${domain}`);
+  
+  return { isValid: true, domain, protocol };
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -21,7 +115,7 @@ const activeConnections = new Map<string, {
 /**
  * Twilio Webhook: Incoming call
  */
-router.post("/incoming-call", async (req, res) => {
+router.post("/incoming-call", validateTwilioSignature, async (req, res) => {
   try {
     console.log("📞 Incoming call webhook:", req.body);
     
@@ -43,7 +137,7 @@ router.post("/incoming-call", async (req, res) => {
 /**
  * Twilio Webhook: Call status updates
  */
-router.post("/call-status", async (req, res) => {
+router.post("/call-status", validateTwilioSignature, async (req, res) => {
   try {
     console.log("📞 Call status update:", req.body);
     
@@ -59,7 +153,132 @@ router.post("/call-status", async (req, res) => {
 /**
  * Twilio Webhook: Transcription callback
  */
-router.post("/transcription", async (req, res) => {
+/**
+ * Twilio Webhook: Test call handler - handles outbound test calls
+ */
+router.post("/test-call-handler", validateTwilioSignature, async (req, res) => {
+  try {
+    console.log("🎯 Test call handler:", req.body);
+    
+    const { operationId } = req.query;
+    const { CallSid, From, To } = req.body;
+    
+    if (!operationId) {
+      throw new Error('Operation ID is required');
+    }
+
+    // Validate public URL configuration
+    const urlValidation = validatePublicUrl();
+    if (!urlValidation.isValid) {
+      throw new Error('Invalid public URL configuration - cannot process Twilio webhooks');
+    }
+
+    // Create call record for outbound test call
+    const callRecord: InsertVoiceCall = {
+      operationId: operationId as string,
+      twilioCallSid: CallSid,
+      twilioAccountSid: req.body.AccountSid,
+      direction: 'outbound',
+      fromNumber: From, // Twilio number making the call
+      toNumber: To, // Customer number receiving the call
+      status: 'initiated', // Proper initial status for new calls
+      customerPhone: voiceService.normalizePhoneNumber(To), // Customer is the To number in outbound calls
+      startTime: new Date(),
+    };
+
+    try {
+      await db.insert(voiceCalls).values(callRecord);
+      console.log(`📞 Created call record for test call ${CallSid}`);
+    } catch (dbError) {
+      console.error('Error creating call record:', dbError);
+      // Continue with call even if DB insert fails, but log it
+    }
+
+    // Generate welcome message using AI directives
+    const welcomeMessage = await voiceService.generateTestCallWelcomeMessage(operationId as string);
+    
+    // Create TwiML response for the test call
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Camila-Neural" language="pt-BR">${welcomeMessage}</Say>
+    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${CallSid}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+        <Say voice="Polly.Camila-Neural" language="pt-BR">Como posso ajudá-lo hoje?</Say>
+    </Gather>
+    <Say voice="Polly.Camila-Neural" language="pt-BR">Desculpe, não consegui ouvir sua resposta. Até logo!</Say>
+    <Hangup />
+</Response>`;
+
+    console.log(`🎯 Generated TwiML for test call ${CallSid}`);
+    
+    res.set('Content-Type', 'text/xml');
+    res.send(twiml);
+  } catch (error) {
+    console.error("❌ Error handling test call:", error);
+    res.set('Content-Type', 'text/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Camila-Neural" language="pt-BR">Desculpe, estamos com problemas técnicos no momento.</Say>
+    <Hangup />
+</Response>`);
+  }
+});
+
+/**
+ * Twilio Webhook: Test call response handler - processes customer responses during test calls
+ */
+router.post("/test-call-response", validateTwilioSignature, async (req, res) => {
+  try {
+    console.log("🎯 Test call response:", req.body);
+    
+    const { operationId, callSid } = req.query;
+    const { SpeechResult } = req.body;
+    
+    if (!operationId || !callSid) {
+      throw new Error('Operation ID and Call SID are required');
+    }
+
+    if (SpeechResult) {
+      console.log(`🗣️ Customer said: "${SpeechResult}"`);
+      
+      // Generate AI response using existing voice service logic
+      const aiResponse = await voiceService.generateTestCallResponse(operationId as string, SpeechResult);
+      
+      // Create TwiML with AI response and continue conversation
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Camila-Neural" language="pt-BR">${aiResponse}</Say>
+    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${callSid}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+        <Say voice="Polly.Camila-Neural" language="pt-BR">Posso ajudar com mais alguma coisa?</Say>
+    </Gather>
+    <Say voice="Polly.Camila-Neural" language="pt-BR">Obrigada por entrar em contato! Até logo.</Say>
+    <Hangup />
+</Response>`;
+
+      res.set('Content-Type', 'text/xml');
+      res.send(twiml);
+    } else {
+      // No speech detected, end call politely
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Camila-Neural" language="pt-BR">Não consegui ouvir sua resposta. Obrigada por ligar, até logo!</Say>
+    <Hangup />
+</Response>`;
+
+      res.set('Content-Type', 'text/xml');
+      res.send(twiml);
+    }
+  } catch (error) {
+    console.error("❌ Error processing test call response:", error);
+    res.set('Content-Type', 'text/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Camila-Neural" language="pt-BR">Desculpe, tivemos um problema técnico. Até logo!</Say>
+    <Hangup />
+</Response>`);
+  }
+});
+
+router.post("/transcription", validateTwilioSignature, async (req, res) => {
   try {
     console.log("📝 Transcription received:", req.body);
     
