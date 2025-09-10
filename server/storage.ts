@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, User, Order, Product, ShippingProvider, Operation, UserProduct, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, LinkProductBySku } from "@shared/schema";
+import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, aiDirectives, User, Order, Product, ShippingProvider, Operation, UserProduct, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, LinkProductBySku } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -350,12 +350,129 @@ export class DatabaseStorage implements IStorage {
         });
       console.log("✅ User access granted");
 
+      // Create default AI directives for the new operation
+      console.log("🤖 Creating default AI directives for operation");
+      await this.createDefaultAIDirectives(operation.id);
+      console.log("✅ Default AI directives created");
+
       console.log("🏭 Creating operation - Complete", operation);
       return operation;
     } catch (error) {
       console.error("❌ Error creating operation or granting access:", error);
       throw error;
     }
+  }
+
+  /**
+   * Create default AI directives for a new operation
+   */
+  private async createDefaultAIDirectives(operationId: string): Promise<void> {
+    const defaultDirectives = [
+      {
+        operationId,
+        type: 'store_info',
+        title: 'Informações Básicas da Empresa',
+        content: 'Tempo de entrega: 2 a 7 dias úteis (maioria chega em até 3 dias úteis)',
+        isActive: true,
+        sortOrder: 1
+      },
+      {
+        operationId,
+        type: 'store_info',
+        title: 'Forma de Pagamento',
+        content: 'Pagamento: Na entrega (COD - Cash on Delivery)',
+        isActive: true,
+        sortOrder: 2
+      },
+      {
+        operationId,
+        type: 'store_info',
+        title: 'Horário de Atendimento',
+        content: 'Horário: Segunda a sexta, 9h às 18h',
+        isActive: true,
+        sortOrder: 3
+      },
+      {
+        operationId,
+        type: 'response_style',
+        title: 'Tom de Atendimento',
+        content: 'Utilize sempre um tom empático, profissional e acolhedor. Demonstre compreensão pelos sentimentos do cliente.',
+        isActive: true,
+        sortOrder: 4
+      },
+      {
+        operationId,
+        type: 'response_style',
+        title: 'Personalização',
+        content: 'Personalize sempre as respostas com o nome do cliente quando disponível. Evite respostas genéricas.',
+        isActive: true,
+        sortOrder: 5
+      },
+      {
+        operationId,
+        type: 'response_style',
+        title: 'Proatividade',
+        content: 'Antecipe dúvidas relacionadas e ofereça informações úteis adicionais quando pertinente.',
+        isActive: true,
+        sortOrder: 6
+      }
+    ];
+
+    try {
+      await db.insert(aiDirectives).values(defaultDirectives);
+      console.log(`✅ Created ${defaultDirectives.length} default AI directives for operation ${operationId}`);
+    } catch (error) {
+      console.error('❌ Error creating default AI directives:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if an operation has any AI directives
+   */
+  async hasAIDirectives(operationId: string): Promise<boolean> {
+    const directive = await db
+      .select()
+      .from(aiDirectives)
+      .where(eq(aiDirectives.operationId, operationId))
+      .limit(1);
+    
+    return directive.length > 0;
+  }
+
+  /**
+   * Populate default AI directives for operations that don't have any
+   */
+  async populateDirectivesForExistingOperations(): Promise<{success: number, errors: number}> {
+    console.log('🔍 Searching for operations without AI directives...');
+    
+    // Get all operations
+    const allOperations = await db.select().from(operations);
+    console.log(`📋 Found ${allOperations.length} total operations`);
+    
+    let success = 0;
+    let errors = 0;
+    
+    for (const operation of allOperations) {
+      try {
+        // Check if operation already has directives
+        const hasDirectives = await this.hasAIDirectives(operation.id);
+        
+        if (!hasDirectives) {
+          console.log(`🤖 Creating default directives for operation: ${operation.name} (${operation.id})`);
+          await this.createDefaultAIDirectives(operation.id);
+          success++;
+        } else {
+          console.log(`✅ Operation ${operation.name} already has directives, skipping`);
+        }
+      } catch (error) {
+        console.error(`❌ Error processing operation ${operation.id}:`, error);
+        errors++;
+      }
+    }
+    
+    console.log(`📊 Population complete: ${success} operations populated, ${errors} errors`);
+    return { success, errors };
   }
 
   async createShippingProvider(data: InsertShippingProvider, storeId: string, operationId: string): Promise<ShippingProvider> {
