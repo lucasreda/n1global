@@ -107,7 +107,6 @@ export default function CustomerSupportSettings() {
   const [voiceSettings, setVoiceSettings] = useState({
     isActive: false,
     twilioPhoneNumber: '',
-    welcomeMessage: 'Olá! Como posso ajudá-lo hoje?',
     operatingHours: {
       monday: { enabled: true, start: '09:00', end: '18:00' },
       tuesday: { enabled: true, start: '09:00', end: '18:00' },
@@ -119,7 +118,6 @@ export default function CustomerSupportSettings() {
       timezone: 'America/Sao_Paulo'
     },
     allowedCallTypes: ['doubts', 'address_change', 'cancellation'],
-    voiceInstructions: 'Você é Sofia, um assistente virtual empático da central de atendimento. Seja cordial e profissional.',
     outOfHoursMessage: 'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.',
     outOfHoursAction: 'voicemail'
   });
@@ -1378,31 +1376,6 @@ export default function CustomerSupportSettings() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="welcome-message" className="text-sm font-medium text-white">Mensagem de Boas-vindas</Label>
-                  <Textarea
-                    id="welcome-message"
-                    value={voiceSettings.welcomeMessage}
-                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, welcomeMessage: e.target.value }))}
-                    placeholder="Olá! Como posso ajudá-lo hoje?"
-                    className="bg-white/5 border-white/10 text-white placeholder-gray-400"
-                    rows={3}
-                    data-testid="textarea-welcome-message"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="voice-instructions" className="text-sm font-medium text-white">Instruções para IA</Label>
-                  <Textarea
-                    id="voice-instructions"
-                    value={voiceSettings.voiceInstructions}
-                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, voiceInstructions: e.target.value }))}
-                    placeholder="Instruções específicas para o atendimento por voz..."
-                    className="bg-white/5 border-white/10 text-white placeholder-gray-400"
-                    rows={4}
-                    data-testid="textarea-voice-instructions"
-                  />
-                </div>
 
                 <Button 
                   onClick={handleSaveVoiceSettings}

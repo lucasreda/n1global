@@ -1817,7 +1817,6 @@ export const voiceSettings = pgTable("voice_settings", {
   // Basic settings
   isActive: boolean("is_active").notNull().default(false),
   twilioPhoneNumber: text("twilio_phone_number"), // Associated Twilio phone number
-  welcomeMessage: text("welcome_message").default("Olá! Como posso ajudá-lo hoje?"),
   
   // Operating hours
   operatingHours: jsonb("operating_hours").$type<{
