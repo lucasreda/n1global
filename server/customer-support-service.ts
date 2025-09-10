@@ -923,6 +923,122 @@ export class CustomerSupportService {
       throw error;
     }
   }
+
+  async generateTestCallResponse(operationId: string, customerMessage: string): Promise<string> {
+    try {
+      console.log(`🎯 Generating test call response for operation ${operationId}`);
+      
+      // Get all active AI directives for the operation
+      const directives = await this.db
+        .select()
+        .from(this.schema.aiDirectives)
+        .where(
+          and(
+            eq(this.schema.aiDirectives.operationId, operationId),
+            eq(this.schema.aiDirectives.isActive, true)
+          )
+        );
+
+      console.log(`📋 Found ${directives.length} active directives`);
+
+      // Build context from directives
+      let context = "Você é Sofia, uma assistente de vendas por telefone empática e eficiente. Você está em uma ligação simulada onde deve:\n\n";
+      
+      // Group directives by type
+      const storeInfo = directives.filter(d => d.type === 'store_info');
+      const productInfo = directives.filter(d => d.type === 'product_info');
+      const responseStyle = directives.filter(d => d.type === 'response_style');
+      const custom = directives.filter(d => d.type === 'custom');
+
+      if (storeInfo.length > 0) {
+        context += "**INFORMAÇÕES DA LOJA:**\n";
+        storeInfo.forEach(directive => {
+          context += `- ${directive.title}: ${directive.content}\n`;
+        });
+        context += "\n";
+      }
+
+      if (productInfo.length > 0) {
+        context += "**INFORMAÇÕES DOS PRODUTOS:**\n";
+        productInfo.forEach(directive => {
+          context += `- ${directive.title}: ${directive.content}\n`;
+        });
+        context += "\n";
+      }
+
+      if (responseStyle.length > 0) {
+        context += "**ESTILO DE RESPOSTA:**\n";
+        responseStyle.forEach(directive => {
+          context += `- ${directive.title}: ${directive.content}\n`;
+        });
+        context += "\n";
+      }
+
+      if (custom.length > 0) {
+        context += "**INSTRUÇÕES PERSONALIZADAS:**\n";
+        custom.forEach(directive => {
+          context += `- ${directive.title}: ${directive.content}\n`;
+        });
+        context += "\n";
+      }
+
+      context += `
+**CONTEXTO DA LIGAÇÃO:**
+Esta é uma simulação de atendimento telefônico onde você deve demonstrar suas habilidades baseadas nas diretivas acima.
+
+**SUA MISSÃO:**
+- Ser empática e profissional
+- Tentar convencer o cliente usando as informações fornecidas
+- Resolver dúvidas e objeções
+- Manter o tom conversacional de uma ligação telefônica
+- Aplicar todas as instruções personalizadas
+
+**RESPOSTA:**
+Responda como Sofia em uma ligação telefônica real, usando as diretivas acima.
+
+Cliente: ${customerMessage}
+
+Sofia:`;
+
+      // Call OpenAI API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: context
+            }
+          ],
+          max_tokens: 300,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error:', errorText);
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices[0]?.message?.content?.trim() || 'Desculpe, não consegui processar sua mensagem no momento.';
+
+      console.log('🤖 AI Response generated successfully');
+      return aiResponse;
+
+    } catch (error) {
+      console.error('❌ Error generating test call response:', error);
+      
+      // Fallback response
+      return "Olá! Obrigada por entrar em contato. Como posso ajudá-lo hoje? Estou aqui para esclarecer qualquer dúvida sobre nossos produtos e serviços.";
+    }
+  }
 }
 
 export const customerSupportService = new CustomerSupportService();

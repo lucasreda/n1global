@@ -134,6 +134,64 @@ export default function CustomerSupportSettings() {
   const [customerInput, setCustomerInput] = useState("");
   const [isAiResponding, setIsAiResponding] = useState(false);
 
+  // Test call mutation
+  const testCallMutation = useMutation({
+    mutationFn: async ({ message }: { message: string }) => {
+      const response = await apiRequest(`/api/customer-support/${currentOperationId}/test-call`, {
+        method: 'POST',
+        body: JSON.stringify({ customerMessage: message })
+      });
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Add AI response to messages
+      setTestCallMessages(prev => [...prev, {
+        id: `ai-${Date.now()}`,
+        speaker: 'ai',
+        message: data.response,
+        timestamp: new Date()
+      }]);
+      setIsAiResponding(false);
+    },
+    onError: (error) => {
+      console.error('Test call error:', error);
+      toast({
+        title: "Erro na Simulação",
+        description: "Não foi possível processar a resposta da IA",
+        variant: "destructive"
+      });
+      setIsAiResponding(false);
+    }
+  });
+
+  // Handler functions
+  const handleStartTestCall = async () => {
+    setIsAiResponding(true);
+    testCallMutation.mutate({ message: "Olá, estou ligando para falar sobre meu pedido" });
+  };
+
+  const handleCustomerResponse = () => {
+    if (!customerInput.trim() || isAiResponding) return;
+    
+    // Add customer message
+    setTestCallMessages(prev => [...prev, {
+      id: `customer-${Date.now()}`,
+      speaker: 'customer',
+      message: customerInput,
+      timestamp: new Date()
+    }]);
+    
+    const inputToSend = customerInput;
+    setCustomerInput("");
+    setIsAiResponding(true);
+    
+    // Send to AI for response
+    testCallMutation.mutate({ message: inputToSend });
+  };
+
   // Get AI directives data
   const { data: aiDirectivesData } = useQuery({
     queryKey: [`/api/customer-support/${currentOperationId}/ai-directives`],

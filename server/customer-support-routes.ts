@@ -784,6 +784,33 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
+   * Test call simulation - generate AI response based on customer message
+   */
+  app.post("/api/customer-support/:operationId/test-call", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { customerMessage } = req.body;
+
+      if (!customerMessage) {
+        return res.status(400).json({ message: "Customer message is required" });
+      }
+
+      console.log(`🎯 Test Call for operation ${operationId}:`, customerMessage);
+
+      // Generate AI response using directives
+      const response = await customerSupportService.generateTestCallResponse(operationId, customerMessage);
+
+      res.json({ response });
+    } catch (error) {
+      console.error('❌ Error in test call simulation:', error);
+      res.status(500).json({ 
+        message: "Failed to process test call",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
    * Populate default AI directives for existing operations that don't have any
    * This is an admin route to fix production environments
    */
