@@ -455,7 +455,7 @@ export default function CostCalculator() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm flex items-center gap-2">
                   <Truck size={16} />
-                  Custos Operacionais
+                  Custos Adicionais
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -664,20 +664,56 @@ export default function CostCalculator() {
                 </div>
 
                 <div className="space-y-2 pt-3 border-t border-gray-700">
+                  {/* Breakdown dos custos principais */}
+                  <div className="text-xs space-y-1 mb-2 bg-gray-800/30 p-2 rounded">
+                    <div className="text-gray-500 font-semibold mb-1">Composição dos custos:</div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>• Produto ({results.confirmedOrders.toFixed(0)}×{fields.productCost}€)</span>
+                      <span>{formatCurrency(results.confirmedOrders * fields.productCost)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>• Frete ({results.confirmedOrders.toFixed(0)}×{fields.shippingCost}€)</span>
+                      <span>{formatCurrency(results.confirmedOrders * fields.shippingCost)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>• Devolução ({results.returnedOrders.toFixed(0)}×{fields.returnCost}€)</span>
+                      <span>{formatCurrency(results.returnedOrders * fields.returnCost)}</span>
+                    </div>
+                    {fields.insurance > 0 && (
+                      <div className="flex justify-between text-gray-500">
+                        <span>• Seguro</span>
+                        <span>{formatCurrency(results.confirmedOrders * fields.insurance)}</span>
+                      </div>
+                    )}
+                    {fields.storage > 0 && (
+                      <div className="flex justify-between text-gray-500">
+                        <span>• Armazenagem</span>
+                        <span>{formatCurrency(results.confirmedOrders * fields.storage)}</span>
+                      </div>
+                    )}
+                    {fields.platformFee > 0 && (
+                      <div className="flex justify-between text-gray-500">
+                        <span>• Taxa ({fields.platformFee}%)</span>
+                        <span>{formatCurrency(results.dailyRevenue * fields.platformFee / 100)}</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-400">Custos Operacionais</span>
+                    <span className="text-xs text-gray-400 font-semibold">
+                      Subtotal (Produto+Frete+Devolução+Extras)
+                    </span>
                     <span className="text-sm text-gray-300">
                       {formatCurrency(results.totalCostWithoutMarketing)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-400">Marketing</span>
+                    <span className="text-xs text-gray-400">+ Marketing/CPA</span>
                     <span className="text-sm text-gray-300">
                       {formatCurrency(results.marketingCosts)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-gray-700">
-                    <span className="text-xs text-gray-400">Custo Total</span>
+                    <span className="text-xs text-gray-400 font-semibold">CUSTO TOTAL</span>
                     <span className="text-sm font-bold text-red-400" data-testid="text-daily-costs">
                       {formatCurrency(results.dailyCosts)}
                     </span>
@@ -736,7 +772,7 @@ export default function CostCalculator() {
                 </div>
 
                 <div className="p-2 bg-gray-800/50 rounded space-y-1">
-                  <div className="text-gray-400 font-semibold mb-2">📉 Custos:</div>
+                  <div className="text-gray-400 font-semibold mb-2">📉 Detalhamento dos Custos:</div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Produto:</span>
                     <span className="text-white">{results.confirmedOrders.toFixed(0)} × {formatCurrency(fields.productCost)} = {formatCurrency(results.confirmedOrders * fields.productCost)}</span>
