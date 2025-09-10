@@ -3,6 +3,7 @@ import * as schema from "@shared/schema";
 import { eq, and, or, ilike, desc, asc, count, sql } from "drizzle-orm";
 import { supportService } from "./support-service";
 import { twilioProvisioningService } from "./twilio-provisioning-service";
+import twilio from 'twilio';
 
 export class CustomerSupportService {
   private db = db;
@@ -1093,7 +1094,7 @@ Sofia:`;
         throw new Error('Twilio credentials not configured');
       }
 
-      const twilio = require('twilio')(accountSid, authToken);
+      const twilioClient = twilio(accountSid, authToken);
 
       // Get operation's Twilio phone number
       const voiceSettings = await this.db
@@ -1115,7 +1116,7 @@ Sofia:`;
       console.log(`🔗 Using validated TwiML URL: ${twimlUrl}`);
 
       // Make the call
-      const call = await twilio.calls.create({
+      const call = await twilioClient.calls.create({
         to: customerPhone,
         from: twilioPhoneNumber,
         url: twimlUrl,
