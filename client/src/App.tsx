@@ -328,24 +328,9 @@ function AppContent() {
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
   const isInvestor = user?.role === 'investor';
   const isAdminInvestimento = user?.role === 'admin_investimento';
-  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
-
   useEffect(() => {
     checkAuth();
-    
-    // Auto-login for development if not authenticated and not explicitly logged out
-    const wasLoggedOut = localStorage.getItem('user_logged_out');
-    if (!isAuthenticated && !isLoading && !autoLoginAttempted && !wasLoggedOut) {
-      setAutoLoginAttempted(true);
-      login('fresh@teste.com', 'password123')
-        .then(() => {
-          console.log('Auto-login successful');
-        })
-        .catch((error) => {
-          console.log('Auto-login failed:', error);
-        });
-    }
-  }, [checkAuth, isAuthenticated, isLoading, autoLoginAttempted, login]);
+  }, [checkAuth]);
 
   if (isLoading) {
     return (
