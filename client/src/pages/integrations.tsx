@@ -103,20 +103,8 @@ export default function Integrations() {
 
   return (
     <div className="space-y-6">
-      <DashboardHeader 
-        title="Integrações" 
-        subtitle="Configure e gerencie as integrações com plataformas e serviços" 
-      />
-      
       {/* Integrações de E-commerce */}
       <div className="glassmorphism rounded-2xl p-6">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-            <Store className="text-green-400" size={20} />
-          </div>
-          <h3 className="text-xl font-semibold text-white">Plataformas de E-commerce</h3>
-        </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {ecommerceIntegrations.map((integration) => {
             const statusInfo = getStatusInfo(integration.status);
