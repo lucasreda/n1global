@@ -1808,3 +1808,149 @@ export type InsertCustomerSupportMessage = z.infer<typeof insertCustomerSupportM
 
 export type CustomerSupportEmail = typeof customerSupportEmails.$inferSelect;
 export type InsertCustomerSupportEmail = z.infer<typeof insertCustomerSupportEmailSchema>;
+
+// Voice Support System Tables
+export const voiceSettings = pgTable("voice_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  
+  // Basic settings
+  isActive: boolean("is_active").notNull().default(false),
+  twilioPhoneNumber: text("twilio_phone_number"), // Associated Twilio phone number
+  welcomeMessage: text("welcome_message").default("Olá! Como posso ajudá-lo hoje?"),
+  
+  // Operating hours
+  operatingHours: jsonb("operating_hours").$type<{
+    monday: { enabled: boolean; start: string; end: string };
+    tuesday: { enabled: boolean; start: string; end: string };
+    wednesday: { enabled: boolean; start: string; end: string };
+    thursday: { enabled: boolean; start: string; end: string };
+    friday: { enabled: boolean; start: string; end: string };
+    saturday: { enabled: boolean; start: string; end: string };
+    sunday: { enabled: boolean; start: string; end: string };
+    timezone: string;
+  }>().default({
+    monday: { enabled: true, start: "09:00", end: "18:00" },
+    tuesday: { enabled: true, start: "09:00", end: "18:00" },
+    wednesday: { enabled: true, start: "09:00", end: "18:00" },
+    thursday: { enabled: true, start: "09:00", end: "18:00" },
+    friday: { enabled: true, start: "09:00", end: "18:00" },
+    saturday: { enabled: false, start: "09:00", end: "18:00" },
+    sunday: { enabled: false, start: "09:00", end: "18:00" },
+    timezone: "Europe/Madrid"
+  }),
+  
+  // Voice AI settings
+  voiceModel: text("voice_model").default("alloy"), // OpenAI voice model
+  language: text("language").default("pt"), // Primary language
+  maxCallDuration: integer("max_call_duration").default(600), // Max call duration in seconds
+  
+  // Call routing
+  fallbackToHuman: boolean("fallback_to_human").default(true), // Transfer to human if needed
+  humanFallbackNumber: text("human_fallback_number"), // Phone number for human fallback
+  
+  // Out of hours settings
+  outOfHoursMessage: text("out_of_hours_message").default("Nosso horário de atendimento é de segunda a sexta, das 9h às 18h. Deixe sua mensagem que retornaremos em breve."),
+  outOfHoursAction: text("out_of_hours_action").default("voicemail"), // 'voicemail', 'hangup', 'redirect'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const voiceCalls = pgTable("voice_calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  // Twilio call data
+  twilioCallSid: text("twilio_call_sid").notNull().unique(),
+  twilioAccountSid: text("twilio_account_sid"),
+  
+  // Call details
+  direction: text("direction").notNull(), // 'inbound', 'outbound'
+  fromNumber: text("from_number").notNull(),
+  toNumber: text("to_number").notNull(),
+  status: text("status").notNull(), // 'queued', 'ringing', 'in-progress', 'completed', 'failed', 'busy', 'no-answer'
+  
+  // Customer information
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"), // Normalized phone number
+  
+  // Call metrics
+  duration: integer("duration"), // Call duration in seconds
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  
+  // AI conversation data
+  aiResponseGenerated: boolean("ai_response_generated").default(false),
+  conversationSummary: text("conversation_summary"), // AI-generated summary
+  detectedIntent: text("detected_intent"), // What the customer wanted
+  satisfactionLevel: text("satisfaction_level"), // 'satisfied', 'neutral', 'unsatisfied'
+  
+  // Integration with support system
+  relatedTicketId: varchar("related_ticket_id").references(() => supportTickets.id), // Link to support ticket if created
+  categoryId: varchar("category_id").references(() => supportCategories.id), // Categorized call
+  
+  // Call recording and transcription
+  recordingUrl: text("recording_url"), // Twilio recording URL
+  transcription: text("transcription"), // Full call transcription
+  
+  // Metadata
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata"), // Additional call data from Twilio
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const voiceConversations = pgTable("voice_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  callId: varchar("call_id").notNull().references(() => voiceCalls.id, { onDelete: 'cascade' }),
+  
+  // Message details
+  type: text("type").notNull(), // 'customer_speech', 'ai_response', 'system_message'
+  speaker: text("speaker").notNull(), // 'customer', 'ai', 'system'
+  
+  // Content
+  content: text("content").notNull(), // Transcribed or AI response text
+  audioUrl: text("audio_url"), // URL to audio segment if available
+  
+  // Timing
+  timestamp: timestamp("timestamp").notNull(), // When in the call this occurred
+  duration: integer("duration"), // Duration of this segment in milliseconds
+  
+  // AI processing
+  confidence: decimal("confidence", { precision: 5, scale: 4 }), // Speech recognition confidence
+  sentiment: text("sentiment"), // 'positive', 'neutral', 'negative'
+  emotion: text("emotion"), // Detected emotion
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Zod schemas for voice tables
+export const insertVoiceSettingsSchema = createInsertSchema(voiceSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVoiceConversationSchema = createInsertSchema(voiceConversations).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Voice Types
+export type VoiceSettings = typeof voiceSettings.$inferSelect;
+export type InsertVoiceSettings = z.infer<typeof insertVoiceSettingsSchema>;
+
+export type VoiceCall = typeof voiceCalls.$inferSelect;
+export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
+
+export type VoiceConversation = typeof voiceConversations.$inferSelect;
+export type InsertVoiceConversation = z.infer<typeof insertVoiceConversationSchema>;

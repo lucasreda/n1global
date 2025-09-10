@@ -18,6 +18,7 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
 import { registerSupportRoutes } from "./support-routes";
 import { registerCustomerSupportRoutes } from "./customer-support-routes";
+import voiceRoutes, { setupVoiceWebSocket } from "./voice-routes";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -4927,6 +4928,13 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   // Register customer support system routes
   registerCustomerSupportRoutes(app);
 
+  // Register voice support routes
+  app.use("/api/voice", voiceRoutes);
+
   const httpServer = createServer(app);
+  
+  // Setup voice WebSocket server
+  setupVoiceWebSocket(httpServer);
+  
   return httpServer;
 }
