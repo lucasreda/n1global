@@ -274,10 +274,10 @@ export default function CostCalculator() {
     <TooltipProvider>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <DashboardHeader 
-            title="Calculadora de Lucro COD" 
-            subtitle="Metodologia precisa: Receita dos entregues - Custos dos confirmados" 
-          />
+          <div>
+            <h1 className="text-3xl font-bold text-white">Calculadora de Lucro COD</h1>
+            <p className="text-gray-400 mt-1">Metodologia precisa: Receita dos entregues - Custos dos confirmados</p>
+          </div>
           <Link href="/tools">
             <Button variant="outline" size="sm" className="text-gray-400 hover:text-white">
               ← Voltar
