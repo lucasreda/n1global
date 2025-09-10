@@ -79,18 +79,18 @@ interface ConvertedResults {
 
 export default function CostCalculator() {
   const [fields, setFields] = useState<CalculatorFields>({
-    deliveryRate: 85,
-    salePrice: 49.90,
-    confirmationRate: 70,
+    deliveryRate: 55, // Alinhado com a planilha
+    salePrice: 70.00, // Preço da planilha em EUR
+    confirmationRate: 98, // Taxa da planilha
     shippingCost: 7.50,
-    productCost: 15.00,
-    cpa: 25.00,
-    ordersPerDay: 100,
-    currency: 'BRL',
+    productCost: 12.50, // Custo da planilha
+    cpa: 12.00, // CPA da planilha
+    ordersPerDay: 32, // Volume diário da planilha
+    currency: 'EUR',
     insurance: 0,
     storage: 0,
     cpaOnConfirmed: false,
-    returnCost: 7.50, // Custo logística reversa igual ao frete
+    returnCost: 7.50, // Custo de devolução igual ao frete
     platformFee: 0
   });
 
@@ -126,42 +126,46 @@ export default function CostCalculator() {
     staleTime: 10 * 60 * 1000
   });
 
-  // Cálculo principal corrigido baseado em práticas de COD
+  // Cálculo seguindo exatamente a lógica da planilha do usuário
   useEffect(() => {
-    // PASSO 1: Fluxo de pedidos
+    // PASSO 1: Volume de Pedidos (igual à planilha)
     const confirmedOrders = fields.ordersPerDay * (fields.confirmationRate / 100);
     const deliveredOrders = confirmedOrders * (fields.deliveryRate / 100);
     const returnedOrders = confirmedOrders - deliveredOrders;
     
-    // PASSO 2: Receita (apenas pedidos entregues geram receita)
+    // PASSO 2: Receita (apenas dos entregues - como na planilha)
     const grossRevenue = deliveredOrders * fields.salePrice;
     
-    // PASSO 3: Custos Operacionais
-    // 3.1 - Custos aplicados sobre pedidos CONFIRMADOS (produto já foi enviado)
+    // PASSO 3: Custos (seguindo a planilha)
+    // 3.1 - Custo do Produto (sobre confirmados)
     const productCosts = confirmedOrders * fields.productCost;
+    
+    // 3.2 - Custo de Envio/Frete (sobre confirmados)
     const shippingCosts = confirmedOrders * fields.shippingCost;
+    
+    // 3.3 - Custo de Devolução/Recusados (sobre devolvidos)
+    const returnCosts = returnedOrders * fields.returnCost;
+    
+    // 3.4 - Custos adicionais (seguro e armazenagem sobre confirmados)
     const insuranceCosts = confirmedOrders * fields.insurance;
     const storageCosts = confirmedOrders * fields.storage;
     
-    // 3.2 - Custo de devolução (sobre pedidos devolvidos/recusados)
-    const returnCosts = returnedOrders * fields.returnCost;
-    
-    // 3.3 - Marketing (CPA)
+    // 3.5 - Marketing/CPA (sobre confirmados ou total conforme config)
     const marketingCosts = fields.cpaOnConfirmed 
       ? confirmedOrders * fields.cpa 
       : fields.ordersPerDay * fields.cpa;
     
-    // 3.4 - Taxa da plataforma (sobre receita bruta dos entregues)
+    // 3.6 - Taxa da plataforma/gateway (sobre receita)
     const platformFees = grossRevenue * (fields.platformFee / 100);
     
-    // PASSO 4: Custos Totais
-    const totalCostWithoutMarketing = productCosts + shippingCosts + insuranceCosts + storageCosts + returnCosts + platformFees;
+    // PASSO 4: Custo Total (soma de todos os custos)
+    const totalCostWithoutMarketing = productCosts + shippingCosts + returnCosts + insuranceCosts + storageCosts + platformFees;
     const dailyCosts = totalCostWithoutMarketing + marketingCosts;
     
-    // PASSO 5: Lucros
-    const netRevenue = grossRevenue - platformFees; // Receita líquida após taxa
-    const grossProfit = grossRevenue - (productCosts + shippingCosts + insuranceCosts + storageCosts + returnCosts); // Lucro bruto sem marketing
-    const dailyProfit = grossRevenue - dailyCosts; // Lucro líquido do dia
+    // PASSO 5: Lucro (Receita - Custos)
+    const netRevenue = grossRevenue - platformFees;
+    const grossProfit = grossRevenue - (productCosts + shippingCosts); // Lucro bruto básico
+    const dailyProfit = grossRevenue - dailyCosts; // Lucro líquido final
     
     // Métricas derivadas
     const profitMargin = grossRevenue > 0 ? (dailyProfit / grossRevenue) * 100 : 0; // Margem sobre receita bruta
@@ -271,8 +275,8 @@ export default function CostCalculator() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <DashboardHeader 
-            title="Calculadora de Lucro Avançada" 
-            subtitle="Análise completa de rentabilidade com cálculos precisos" 
+            title="Calculadora de Lucro COD" 
+            subtitle="Metodologia precisa: Receita dos entregues - Custos dos confirmados" 
           />
           <Link href="/tools">
             <Button variant="outline" size="sm" className="text-gray-400 hover:text-white">
@@ -735,20 +739,26 @@ export default function CostCalculator() {
                   <div className="text-gray-400 font-semibold mb-2">📉 Custos:</div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Produto:</span>
-                    <span className="text-white">{results.confirmedOrders.toFixed(0)} × {formatCurrency(fields.productCost)}</span>
+                    <span className="text-white">{results.confirmedOrders.toFixed(0)} × {formatCurrency(fields.productCost)} = {formatCurrency(results.confirmedOrders * fields.productCost)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Frete:</span>
-                    <span className="text-white">{results.confirmedOrders.toFixed(0)} × {formatCurrency(fields.shippingCost)}</span>
+                    <span className="text-white">{results.confirmedOrders.toFixed(0)} × {formatCurrency(fields.shippingCost)} = {formatCurrency(results.confirmedOrders * fields.shippingCost)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Devoluções:</span>
-                    <span className="text-white">{results.returnedOrders.toFixed(0)} × {formatCurrency(fields.returnCost)}</span>
+                    <span className="text-white">{results.returnedOrders.toFixed(0)} × {formatCurrency(fields.returnCost)} = {formatCurrency(results.returnedOrders * fields.returnCost)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Marketing:</span>
-                    <span className="text-white">{formatCurrency(results.marketingCosts)}</span>
+                    <span className="text-gray-500">Marketing/CPA:</span>
+                    <span className="text-white">{fields.cpaOnConfirmed ? results.confirmedOrders.toFixed(0) : fields.ordersPerDay} × {formatCurrency(fields.cpa)} = {formatCurrency(results.marketingCosts)}</span>
                   </div>
+                  {fields.platformFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Taxa Plataforma:</span>
+                      <span className="text-white">{fields.platformFee}% de {formatCurrency(results.dailyRevenue)} = {formatCurrency(results.dailyRevenue * fields.platformFee / 100)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-gray-700 pt-1">
                     <span className="text-gray-400">= Custo Total:</span>
                     <span className="text-red-400 font-bold">{formatCurrency(results.dailyCosts)}</span>
@@ -756,13 +766,21 @@ export default function CostCalculator() {
                 </div>
 
                 <div className="p-2 bg-blue-500/10 rounded border border-blue-500/20">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-500 text-xs">Receita - Custos:</span>
+                    <span className="text-gray-400 text-xs">{formatCurrency(results.dailyRevenue)} - {formatCurrency(results.dailyCosts)}</span>
+                  </div>
                   <div className="flex justify-between">
-                    <span className="text-blue-400">Lucro Líquido:</span>
-                    <span className="text-white font-bold">{formatCurrency(results.dailyProfit)}</span>
+                    <span className="text-blue-400 font-semibold">Lucro Líquido:</span>
+                    <span className={`font-bold ${results.dailyProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(results.dailyProfit)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-blue-400">Margem:</span>
-                    <span className="text-white font-bold">{results.profitMargin.toFixed(2)}%</span>
+                    <span className={`font-bold ${results.profitMargin >= 30 ? 'text-green-400' : results.profitMargin >= 20 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {results.profitMargin.toFixed(2)}%
+                    </span>
                   </div>
                 </div>
               </CardContent>
