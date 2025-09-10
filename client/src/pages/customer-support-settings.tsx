@@ -599,13 +599,33 @@ export default function CustomerSupportSettings() {
       setVoiceSettings(prev => ({ ...prev, twilioPhoneNumber: data.phoneNumber }));
       queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/voice-settings`] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Error provisioning number:', error);
+      
+      // Handle specific error types
+      if (error.response?.data?.trialLimitation) {
+        toast({
+          title: "Limitação da Conta Trial",
+          description: error.response.data.error || "Conta Twilio trial permite apenas um número. É necessário fazer upgrade para um plano pago.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (error.response?.data?.noNumbersAvailable) {
+        toast({
+          title: "Números Indisponíveis",
+          description: error.response.data.error || "Não foram encontrados números disponíveis no momento. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Erro ao provisionar",
-        description: "Falha ao provisionar número Twilio.",
+        description: error.response?.data?.error || "Falha ao provisionar número Twilio.",
         variant: "destructive",
       });
-      console.error('Error provisioning number:', error);
     }
   });
 

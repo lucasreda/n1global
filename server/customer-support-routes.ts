@@ -1,6 +1,7 @@
 import { Request, Response, Express } from "express";
 import { customerSupportService } from "./customer-support-service";
 import { authenticateToken } from "./auth-middleware";
+import { validateOperationAccess } from "./middleware/operation-access";
 import { db } from "./db";
 import { storage } from "./storage";
 import { aiDirectives, type AiDirective, type InsertAiDirective, insertAiDirectiveSchema } from "@shared/schema";
@@ -104,7 +105,7 @@ export function registerCustomerSupportRoutes(app: Express) {
   /**
    * Provision Twilio phone number for an operation
    */
-  app.post("/api/customer-support/:operationId/provision-number", authenticateToken, async (req: Request, res: Response) => {
+  app.post("/api/customer-support/:operationId/provision-number", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
     try {
       const { operationId } = req.params;
       
@@ -117,6 +118,26 @@ export function registerCustomerSupportRoutes(app: Express) {
       });
     } catch (error) {
       console.error('Error provisioning Twilio number:', error);
+      
+      // Handle specific Twilio errors
+      if (error instanceof Error && error.message.includes('Trial accounts are allowed only one Twilio number')) {
+        res.status(400).json({ 
+          message: "Conta Twilio trial permite apenas um número",
+          error: "Para provisionar números adicionais, é necessário fazer upgrade da conta Twilio para um plano pago.",
+          trialLimitation: true
+        });
+        return;
+      }
+
+      if (error instanceof Error && error.message.includes('No available phone numbers found')) {
+        res.status(400).json({ 
+          message: "Nenhum número disponível encontrado",
+          error: "Não foram encontrados números disponíveis nas regiões suportadas. Tente novamente mais tarde.",
+          noNumbersAvailable: true
+        });
+        return;
+      }
+
       res.status(500).json({ 
         message: "Falha ao provisionar número Twilio",
         error: error instanceof Error ? error.message : String(error)
@@ -127,7 +148,7 @@ export function registerCustomerSupportRoutes(app: Express) {
   /**
    * Release Twilio phone number for an operation
    */
-  app.delete("/api/customer-support/:operationId/release-number", authenticateToken, async (req: Request, res: Response) => {
+  app.delete("/api/customer-support/:operationId/release-number", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
     try {
       const { operationId } = req.params;
       
