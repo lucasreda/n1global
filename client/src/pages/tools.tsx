@@ -7,8 +7,8 @@ export default function Tools() {
   const tools = [
     {
       id: "cost-calculator",
-      name: "Calculadora de Custos",
-      description: "Calcule custos de produtos, envio e margens de lucro",
+      name: "Calculadora de Lucro COD",
+      description: "Metodologia precisa para calcular o lucro da sua oferta",
       icon: Calculator,
       color: "blue",
       status: "active"
