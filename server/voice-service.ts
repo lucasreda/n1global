@@ -802,7 +802,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   /**
    * Generate welcome message for test calls based on AI directives
    */
-  async generateTestCallWelcomeMessage(operationId: string): Promise<string> {
+  async generateTestCallWelcomeMessage(operationId: string, callType: 'test' | 'sales' = 'test'): Promise<string> {
     try {
       // Get active AI directives for the operation
       const directives = await this.getActiveDirectives(operationId);
@@ -810,6 +810,13 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       // Build welcome message based on directives
       const storeInfoDirectives = directives.filter(d => d.type === 'store_info');
       const responseStyleDirectives = directives.filter(d => d.type === 'response_style');
+      
+      // Group directives by type for easier access
+      const directivesByType = directives.reduce((acc, directive: any) => {
+        if (!acc[directive.type]) acc[directive.type] = [];
+        acc[directive.type].push(directive);
+        return acc;
+      }, {} as Record<string, any[]>);
       
       let welcomeMessage = "Olá! Aqui é a Sofia, assistente virtual";
       
@@ -824,7 +831,23 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         welcomeMessage += ` da ${storeNameDirective.content}`;
       }
       
-      welcomeMessage += ". Esta é uma ligação de teste para demonstrar nosso sistema de atendimento automatizado.";
+      // Add context based on call type
+      if (callType === 'sales') {
+        welcomeMessage += ". Estou entrando em contato porque acredito que nossos produtos podem ser muito úteis para você. ";
+        
+        // Add product highlight if available
+        const productDirective = directivesByType.product_info?.find(d => 
+          d.content && d.content.length > 10
+        );
+        
+        if (productDirective) {
+          welcomeMessage += "Gostaria de conhecer um pouco sobre o que oferecemos?";
+        } else {
+          welcomeMessage += "Posso apresentar brevemente nossos serviços?";
+        }
+      } else {
+        welcomeMessage += ". Esta é uma ligação de teste para demonstrar nosso sistema de atendimento automatizado.";
+      }
       
       return welcomeMessage;
     } catch (error) {
@@ -836,7 +859,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   /**
    * Generate AI response for test calls (reuses existing logic but adapted for voice)
    */
-  async generateTestCallResponse(operationId: string, customerMessage: string): Promise<string> {
+  async generateTestCallResponse(operationId: string, customerMessage: string, callType: 'test' | 'sales' = 'test'): Promise<string> {
     try {
       console.log(`🎯 Generating voice response for operation ${operationId}: "${customerMessage}"`);
       
@@ -844,7 +867,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const directives = await this.getActiveDirectives(operationId);
       
       // Build prompt specifically for voice conversation
-      const prompt = await this.buildTestCallPrompt(operationId, customerMessage, directives);
+      const prompt = await this.buildTestCallPrompt(operationId, customerMessage, directives, callType);
       
       // Call OpenAI for response
       const response = await openai.chat.completions.create({
@@ -872,7 +895,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   private async buildTestCallPrompt(
     operationId: string, 
     customerMessage: string, 
-    directives: any[]
+    directives: any[],
+    callType: 'test' | 'sales' = 'test'
   ): Promise<string> {
     // Group directives by type
     const directivesByType = directives.reduce((acc, directive: any) => {
@@ -898,20 +922,48 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       ? `INSTRUÇÕES ESPECÍFICAS:\n${directivesByType.custom.map((d: any) => `- ${d.title}: ${d.content}`).join('\n')}\n\n`
       : '';
 
-    const prompt = `Você é Sofia, uma assistente virtual empática e profissional que atende clientes por telefone.
+    // Define different contexts based on call type
+    const contextSection = callType === 'sales' 
+      ? `CONTEXTO DA LIGAÇÃO:
+Esta é uma ligação de contato comercial/vendas para um potencial cliente. Seu objetivo é:
+- Apresentar os produtos/serviços da empresa de forma atrativa
+- Identificar necessidades do cliente e demonstrar como podemos ajudar
+- Despertar interesse e conduzir à conversão/venda
+- Ser persuasiva mas nunca insistente ou agressiva
+- Focar nos benefícios e diferenciais competitivos
 
-${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}
+O cliente disse: "${customerMessage}"`
+      : `CONTEXTO DA LIGAÇÃO:
+Esta é uma ligação de teste do sistema de atendimento automatizado para demonstrar as capacidades da IA.
 
-CONTEXTO:
-Esta é uma ligação de teste do sistema de atendimento automatizado. O cliente disse: "${customerMessage}"
+O cliente disse: "${customerMessage}"`;
 
-INSTRUÇÕES PARA RESPOSTA:
+    const instructionsSection = callType === 'sales'
+      ? `INSTRUÇÕES PARA RESPOSTA DE VENDAS:
+- Seja calorosa, confiante e profissional desde o primeiro contato
+- Use linguagem persuasiva mas respeitosa, adequada para fala
+- Identifique dores/necessidades do cliente e apresente soluções
+- Destaque benefícios únicos e diferenciais competitivos
+- Crie senso de urgência quando apropriado (ofertas limitadas, etc.)
+- Conduza a conversa para próximos passos (agendamento, proposta, etc.)
+- Mantenha a resposta focada mas completa (máximo 3-4 frases)
+- Se o cliente demonstrar interesse, seja mais específica sobre produtos/preços
+- Se houver objeções, responda com empatia e apresente contrapontos`
+      : `INSTRUÇÕES PARA RESPOSTA:
 - Seja natural e conversacional, como se estivesse falando ao telefone
 - Use linguagem clara e objetiva adequada para fala
 - Seja empática e prestativa
 - Mantenha a resposta concisa (máximo 2-3 frases)
 - Aplique as instruções personalizadas da empresa
-- Se apropriado, ofereça ajuda adicional ou próximos passos
+- Se apropriado, ofereça ajuda adicional ou próximos passos`;
+
+    const prompt = `Você é Sofia, uma assistente virtual empática e profissional que atende clientes por telefone.
+
+${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}
+
+${contextSection}
+
+${instructionsSection}
 
 Responda apenas com o texto que você falará para o cliente:`;
 

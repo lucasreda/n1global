@@ -789,16 +789,21 @@ export function registerCustomerSupportRoutes(app: Express) {
   app.post("/api/customer-support/:operationId/test-call", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { customerPhone } = req.body;
+      const { customerPhone, callType = 'test' } = req.body;
 
       if (!customerPhone) {
         return res.status(400).json({ message: "Customer phone number is required" });
       }
 
-      console.log(`📞 Making real test call for operation ${operationId} to ${customerPhone}`);
+      // Validate callType
+      if (callType && !['test', 'sales'].includes(callType)) {
+        return res.status(400).json({ message: "CallType must be 'test' or 'sales'" });
+      }
+
+      console.log(`📞 Making real ${callType} call for operation ${operationId} to ${customerPhone}`);
 
       // Make real Twilio call
-      const callResult = await customerSupportService.makeTestCall(operationId, customerPhone);
+      const callResult = await customerSupportService.makeTestCall(operationId, customerPhone, callType);
 
       res.json({ 
         success: true,

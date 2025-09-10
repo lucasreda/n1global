@@ -161,12 +161,15 @@ router.post("/test-call-handler", validateTwilioSignature, async (req, res) => {
   try {
     console.log("🎯 Test call handler:", req.body);
     
-    const { operationId } = req.query;
+    const { operationId, callType = 'test' } = req.query;
     const { CallSid, From, To } = req.body;
     
     if (!operationId) {
       throw new Error('Operation ID is required');
     }
+    
+    // Validate callType
+    const validCallType = callType === 'sales' ? 'sales' : 'test';
 
     // Validate public URL configuration
     const urlValidation = validatePublicUrl();
@@ -195,14 +198,14 @@ router.post("/test-call-handler", validateTwilioSignature, async (req, res) => {
       // Continue with call even if DB insert fails, but log it
     }
 
-    // Generate welcome message using AI directives
-    const welcomeMessage = await voiceService.generateTestCallWelcomeMessage(operationId as string);
+    // Generate welcome message using AI directives with call type
+    const welcomeMessage = await voiceService.generateTestCallWelcomeMessage(operationId as string, validCallType);
     
     // Create TwiML response for the test call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="Polly.Camila-Neural" language="pt-BR">${welcomeMessage}</Say>
-    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${CallSid}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${CallSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
         <Say voice="Polly.Camila-Neural" language="pt-BR">Como posso ajudá-lo hoje?</Say>
     </Gather>
     <Say voice="Polly.Camila-Neural" language="pt-BR">Desculpe, não consegui ouvir sua resposta. Até logo!</Say>
@@ -231,24 +234,27 @@ router.post("/test-call-response", validateTwilioSignature, async (req, res) => 
   try {
     console.log("🎯 Test call response:", req.body);
     
-    const { operationId, callSid } = req.query;
+    const { operationId, callSid, callType = 'test' } = req.query;
     const { SpeechResult } = req.body;
     
     if (!operationId || !callSid) {
       throw new Error('Operation ID and Call SID are required');
     }
+    
+    // Validate callType
+    const validCallType = callType === 'sales' ? 'sales' : 'test';
 
     if (SpeechResult) {
       console.log(`🗣️ Customer said: "${SpeechResult}"`);
       
-      // Generate AI response using existing voice service logic
-      const aiResponse = await voiceService.generateTestCallResponse(operationId as string, SpeechResult);
+      // Generate AI response using existing voice service logic with call type
+      const aiResponse = await voiceService.generateTestCallResponse(operationId as string, SpeechResult, validCallType);
       
       // Create TwiML with AI response and continue conversation
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="Polly.Camila-Neural" language="pt-BR">${aiResponse}</Say>
-    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${callSid}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${callSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
         <Say voice="Polly.Camila-Neural" language="pt-BR">Posso ajudar com mais alguma coisa?</Say>
     </Gather>
     <Say voice="Polly.Camila-Neural" language="pt-BR">Obrigada por entrar em contato! Até logo.</Say>

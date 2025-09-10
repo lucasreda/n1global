@@ -1073,12 +1073,12 @@ Sofia:`;
     return { isValid: true, domain, protocol };
   }
 
-  async makeTestCall(operationId: string, customerPhone: string): Promise<{
+  async makeTestCall(operationId: string, customerPhone: string, callType: 'test' | 'sales' = 'test'): Promise<{
     callSid: string;
     status: string;
   }> {
     try {
-      console.log(`📞 Making real test call to ${customerPhone} for operation ${operationId}`);
+      console.log(`📞 Making real ${callType} call to ${customerPhone} for operation ${operationId}`);
 
       // Validate public URL configuration BEFORE proceeding
       const urlValidation = this.validatePublicUrl();
@@ -1111,7 +1111,7 @@ Sofia:`;
 
       // Build TwiML URLs using validated domain (no fallback to localhost)
       const webhookDomain = urlValidation.domain!;
-      const twimlUrl = `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}`;
+      const twimlUrl = `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}&callType=${callType}`;
 
       console.log(`🔗 Using validated TwiML URL: ${twimlUrl}`);
 

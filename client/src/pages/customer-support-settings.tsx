@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SupportConfig {
   emailDomain: string;
@@ -134,12 +135,14 @@ export default function CustomerSupportSettings() {
   const [customerInput, setCustomerInput] = useState("");
   const [isAiResponding, setIsAiResponding] = useState(false);
   const [testPhoneNumber, setTestPhoneNumber] = useState("+55 11 99999-9999");
+  const [callType, setCallType] = useState<'test' | 'sales'>('test');
 
   // Test call mutation
   const testCallMutation = useMutation({
-    mutationFn: async ({ phoneNumber }: { phoneNumber: string }) => {
+    mutationFn: async ({ phoneNumber, callType }: { phoneNumber: string; callType: 'test' | 'sales' }) => {
       const response = await apiRequest(`/api/customer-support/${currentOperationId}/test-call`, 'POST', {
-        customerPhone: phoneNumber
+        customerPhone: phoneNumber,
+        callType: callType
       });
       return response.json();
     },
@@ -175,7 +178,8 @@ export default function CustomerSupportSettings() {
     }
     setIsAiResponding(true);
     testCallMutation.mutate({ 
-      phoneNumber: testPhoneNumber 
+      phoneNumber: testPhoneNumber,
+      callType: callType 
     });
   };
 
@@ -2667,17 +2671,61 @@ export default function CustomerSupportSettings() {
               </p>
             </div>
 
+            {/* Seletor do tipo de ligação */}
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+              <Label className="text-white text-sm font-medium mb-2 block">
+                🎯 Tipo de Ligação
+              </Label>
+              <Select value={callType} onValueChange={(value: 'test' | 'sales') => setCallType(value)}>
+                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                  <SelectValue placeholder="Selecione o tipo de ligação" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="test" className="text-white hover:bg-gray-700">
+                    🧪 Ligação de Teste
+                  </SelectItem>
+                  <SelectItem value="sales" className="text-white hover:bg-gray-700">
+                    💼 Ligação de Vendas/Contato Frio
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-400 mt-2">
+                {callType === 'sales' ? 
+                  'Sofia será direcionada para prospecção e conversão de vendas' :
+                  'Sofia demonstrará as capacidades do sistema de atendimento'
+                }
+              </p>
+            </div>
+
             {/* Instruções da ligação */}
-            <div className="bg-purple-600/20 border border-purple-600/30 rounded-lg p-4">
+            <div className={`border rounded-lg p-4 ${callType === 'sales' ? 'bg-green-600/20 border-green-600/30' : 'bg-purple-600/20 border-purple-600/30'}`}>
               <div className="flex items-start gap-3">
-                <Phone className="w-5 h-5 text-purple-400 mt-0.5" />
+                {callType === 'sales' ? (
+                  <div className="w-5 h-5 mt-0.5 text-green-400">💼</div>
+                ) : (
+                  <Phone className="w-5 h-5 text-purple-400 mt-0.5" />
+                )}
                 <div>
-                  <h4 className="text-purple-300 font-medium mb-2">Como funciona a ligação teste:</h4>
+                  <h4 className={`font-medium mb-2 ${callType === 'sales' ? 'text-green-300' : 'text-purple-300'}`}>
+                    {callType === 'sales' ? 'Como funciona a ligação de vendas:' : 'Como funciona a ligação teste:'}
+                  </h4>
                   <ul className="text-sm text-gray-300 space-y-1">
-                    <li>• Sofia ligará para o número inserido</li>
-                    <li>• Ela se apresentará usando suas diretivas de IA</li>
-                    <li>• Você pode conversar normalmente por voz</li>
-                    <li>• Sofia responderá baseada nas suas configurações</li>
+                    {callType === 'sales' ? (
+                      <>
+                        <li>• Sofia se apresentará como vendedora da empresa</li>
+                        <li>• Fará abordagem de contato frio profissional</li>
+                        <li>• Destacará produtos/serviços e benefícios únicos</li>
+                        <li>• Tentará identificar necessidades e conduzir à venda</li>
+                        <li>• Usará técnicas persuasivas mas respeitosas</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Sofia ligará para o número inserido</li>
+                        <li>• Ela se apresentará usando suas diretivas de IA</li>
+                        <li>• Você pode conversar normalmente por voz</li>
+                        <li>• Sofia responderá baseada nas suas configurações</li>
+                      </>
+                    )}
                   </ul>
                 </div>
               </div>
