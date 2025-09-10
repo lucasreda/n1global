@@ -34,7 +34,7 @@ export class TwilioProvisioningService {
 
       // Try multiple countries in order of preference
       const countriesToTry = [countryCode, 'US', 'CA', 'GB'];
-      let availableNumbers = [];
+      let availableNumbers: any[] = [];
       let usedCountry = countryCode;
 
       for (const country of countriesToTry) {
@@ -57,7 +57,7 @@ export class TwilioProvisioningService {
             console.log(`ℹ️ No available numbers in ${country}, trying next...`);
           }
         } catch (error) {
-          console.log(`⚠️ Error checking ${country}: ${error.message}`);
+          console.log(`⚠️ Error checking ${country}: ${(error as Error).message}`);
           continue;
         }
       }
@@ -72,9 +72,9 @@ export class TwilioProvisioningService {
 
       purchasedNumber = await this.client.incomingPhoneNumbers.create({
         phoneNumber,
-        voiceUrl: `${webhookDomain}/api/voice/incoming-call`,
+        voiceUrl: `https://${webhookDomain}/api/voice/incoming-call`,
         voiceMethod: 'POST',
-        statusCallback: `${webhookDomain}/api/voice/call-status`,
+        statusCallback: `https://${webhookDomain}/api/voice/call-status`,
         statusCallbackMethod: 'POST',
         friendlyName: `Voice Support - Operation ${operationId.substring(0, 8)}`
       });
@@ -191,12 +191,8 @@ export class TwilioProvisioningService {
               sunday: { enabled: false, start: '09:00', end: '18:00' },
               timezone: 'America/Sao_Paulo'
             },
-            allowedCallTypes: ['doubts', 'address_change', 'cancellation'],
-            voiceInstructions: 'Você é Sofia, um assistente virtual empático da central de atendimento.',
             outOfHoursMessage: 'Desculpe, nosso atendimento está fechado no momento.',
-            outOfHoursAction: 'voicemail',
-            createdAt: new Date(),
-            updatedAt: new Date()
+            outOfHoursAction: 'voicemail'
           });
       }
     } catch (error) {
