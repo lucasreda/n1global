@@ -164,31 +164,11 @@ export function MultiProviderPanel() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6">
       {/* Header com título padronizado */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Package className="text-blue-400" size={20} />
-          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Provedores de Fulfillment</h2>
-        </div>
-        <Button
-          onClick={() => syncAllMutation.mutate()}
-          disabled={syncAllMutation.isPending || syncInProgress}
-          className="gradient-blue text-white"
-          data-testid="button-sync-all-providers"
-        >
-          {syncAllMutation.isPending || syncInProgress ? (
-            <>
-              <Loader2 className="mr-2 animate-spin" size={16} />
-              Sincronizando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2" size={16} />
-              Sincronizar Todos
-            </>
-          )}
-        </Button>
+      <div className="flex items-center space-x-3 mb-6">
+        <Package className="text-blue-400" size={20} />
+        <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Provedores de Fulfillment</h2>
       </div>
 
       {providersLoading ? (
