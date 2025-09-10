@@ -133,17 +133,15 @@ export default function CustomerSupportSettings() {
   }>>([]);
   const [customerInput, setCustomerInput] = useState("");
   const [isAiResponding, setIsAiResponding] = useState(false);
+  const [testPhoneNumber, setTestPhoneNumber] = useState("+55 11 99999-9999");
 
   // Test call mutation
   const testCallMutation = useMutation({
-    mutationFn: async ({ message }: { message: string }) => {
-      const response = await apiRequest(`/api/customer-support/${currentOperationId}/test-call`, {
-        method: 'POST',
-        body: JSON.stringify({ customerMessage: message })
+    mutationFn: async ({ message, phoneNumber }: { message: string; phoneNumber: string }) => {
+      const response = await apiRequest(`/api/customer-support/${currentOperationId}/test-call`, 'POST', {
+        customerMessage: message,
+        customerPhone: phoneNumber
       });
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
       return response.json();
     },
     onSuccess: (data) => {
@@ -169,8 +167,19 @@ export default function CustomerSupportSettings() {
 
   // Handler functions
   const handleStartTestCall = async () => {
+    if (!testPhoneNumber.trim()) {
+      toast({
+        title: "Número Obrigatório",
+        description: "Por favor, insira o número de telefone do cliente",
+        variant: "destructive"
+      });
+      return;
+    }
     setIsAiResponding(true);
-    testCallMutation.mutate({ message: "Olá, estou ligando para falar sobre meu pedido" });
+    testCallMutation.mutate({ 
+      message: "Olá, estou ligando para falar sobre meu pedido", 
+      phoneNumber: testPhoneNumber 
+    });
   };
 
   const handleCustomerResponse = () => {
@@ -189,7 +198,10 @@ export default function CustomerSupportSettings() {
     setIsAiResponding(true);
     
     // Send to AI for response
-    testCallMutation.mutate({ message: inputToSend });
+    testCallMutation.mutate({ 
+      message: inputToSend, 
+      phoneNumber: testPhoneNumber 
+    });
   };
 
   // Get AI directives data
@@ -657,7 +669,8 @@ export default function CustomerSupportSettings() {
   // Provision number mutation
   const provisionNumberMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/customer-support/${currentOperationId}/provision-number`, 'POST');
+      const response = await apiRequest(`/api/customer-support/${currentOperationId}/provision-number`, 'POST');
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -2662,15 +2675,32 @@ export default function CustomerSupportSettings() {
           </DialogHeader>
 
           <div className="flex flex-col h-[500px]">
+            {/* Campo do número de telefone */}
+            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-4">
+              <Label className="text-white text-sm font-medium mb-2 block">
+                📞 Número do Cliente (Simulação)
+              </Label>
+              <Input
+                value={testPhoneNumber}
+                onChange={(e) => setTestPhoneNumber(e.target.value)}
+                placeholder="+55 11 99999-9999"
+                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                data-testid="input-test-phone-number"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Este número será usado apenas para simular a ligação da Sofia
+              </p>
+            </div>
+
             {/* Status da chamada */}
             <div className="bg-purple-600/20 border border-purple-600/30 rounded-lg p-3 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-purple-300 font-medium">Chamada Ativa</span>
+                  <span className="text-purple-300 font-medium">Chamada Simulada</span>
                 </div>
                 <div className="text-sm text-purple-300">
-                  Sofia (IA) → Cliente
+                  Sofia (IA) → {testPhoneNumber || "Cliente"}
                 </div>
               </div>
             </div>
@@ -2774,6 +2804,7 @@ export default function CustomerSupportSettings() {
                 setTestCallMessages([]);
                 setCustomerInput("");
                 setIsAiResponding(false);
+                setTestPhoneNumber("+55 11 99999-9999");
               }}
               variant="outline"
               className="border-gray-600 text-gray-300 hover:bg-gray-700"
