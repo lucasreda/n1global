@@ -3,7 +3,22 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calculator, TrendingUp, TrendingDown, Minus, Globe } from "lucide-react";
+import { 
+  Calculator, 
+  TrendingUp, 
+  TrendingDown, 
+  Package, 
+  Truck, 
+  Target,
+  DollarSign,
+  Percent,
+  ArrowRight,
+  Info,
+  Globe,
+  AlertCircle,
+  CheckCircle2,
+  XCircle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import {
@@ -13,20 +28,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
+import { Progress } from "@/components/ui/progress";
 
 interface CalculatorFields {
-  deliveryRate: number; // Taxa de entregado (%)
-  salePrice: number; // Preço de venda
-  confirmationRate: number; // Taxa de confirmação (%)
-  shippingCost: number; // Custo do envio
-  productCost: number; // Custo do produto
-  cpa: number; // Custo por aquisição
-  ordersPerDay: number; // Pedidos por dia
-  currency: string; // Moeda selecionada
-  insurance: number; // Seguro
-  storage: number; // Armazenagem
-  cpaOnConfirmed: boolean; // CPA sobre confirmados ou total
+  deliveryRate: number;
+  salePrice: number;
+  confirmationRate: number;
+  shippingCost: number;
+  productCost: number;
+  cpa: number;
+  ordersPerDay: number;
+  currency: string;
+  insurance: number;
+  storage: number;
+  cpaOnConfirmed: boolean;
+  returnCost: number; // Custo de devolução
+  platformFee: number; // Taxa da plataforma (%)
 }
 
 interface CalculationResults {
@@ -35,9 +59,15 @@ interface CalculationResults {
   dailyProfit: number;
   profitMargin: number;
   monthlyProfit: number;
-  grossProfit: number; // Lucro bruto (sem marketing)
-  totalCostWithoutMarketing: number; // CT sem marketing
-  valueReceived: number; // Valor efetivamente recebido
+  grossProfit: number;
+  totalCostWithoutMarketing: number;
+  netRevenue: number; // Receita líquida após devoluções
+  marketingCosts: number;
+  unitProfit: number; // Lucro por unidade
+  breakEvenPoint: number; // Ponto de equilíbrio
+  confirmedOrders: number;
+  deliveredOrders: number;
+  returnedOrders: number;
 }
 
 interface ConvertedResults {
@@ -49,17 +79,19 @@ interface ConvertedResults {
 
 export default function CostCalculator() {
   const [fields, setFields] = useState<CalculatorFields>({
-    deliveryRate: 85, // 85%
-    salePrice: 29.90,
-    confirmationRate: 70, // 70%
+    deliveryRate: 85,
+    salePrice: 49.90,
+    confirmationRate: 70,
     shippingCost: 7.50,
-    productCost: 12.50,
-    cpa: 15.00,
-    ordersPerDay: 50,
+    productCost: 15.00,
+    cpa: 25.00,
+    ordersPerDay: 100,
     currency: 'BRL',
-    insurance: 0, // Seguro
-    storage: 0, // Armazenagem
-    cpaOnConfirmed: false // CPA sobre total por padrão
+    insurance: 1.50,
+    storage: 2.00,
+    cpaOnConfirmed: false,
+    returnCost: 5.00,
+    platformFee: 5
   });
 
   const [results, setResults] = useState<CalculationResults>({
@@ -70,7 +102,13 @@ export default function CostCalculator() {
     monthlyProfit: 0,
     grossProfit: 0,
     totalCostWithoutMarketing: 0,
-    valueReceived: 0
+    netRevenue: 0,
+    marketingCosts: 0,
+    unitProfit: 0,
+    breakEvenPoint: 0,
+    confirmedOrders: 0,
+    deliveredOrders: 0,
+    returnedOrders: 0
   });
 
   const [convertedResults, setConvertedResults] = useState<ConvertedResults>({
@@ -80,77 +118,90 @@ export default function CostCalculator() {
     monthlyProfitBRL: 0
   });
 
-
-  // Buscar taxas de câmbio para conversão
+  // Buscar taxas de câmbio
   const { data: exchangeRates } = useQuery({
     queryKey: ['/api/currency/rates'],
     enabled: fields.currency !== 'BRL',
-    refetchInterval: 15 * 60 * 1000, // Atualizar a cada 15 minutos
-    staleTime: 10 * 60 * 1000 // 10 minutos
+    refetchInterval: 15 * 60 * 1000,
+    staleTime: 10 * 60 * 1000
   });
 
-  // Calcula lucro em tempo real sempre que os campos mudam
+  // Cálculo principal corrigido
   useEffect(() => {
+    // Fluxo de pedidos
     const confirmedOrders = fields.ordersPerDay * (fields.confirmationRate / 100);
     const deliveredOrders = confirmedOrders * (fields.deliveryRate / 100);
-    const refusedOrders = confirmedOrders - deliveredOrders;
+    const returnedOrders = confirmedOrders - deliveredOrders;
     
-    // Receita diária (apenas pedidos entregues geram receita)
-    const dailyRevenue = deliveredOrders * fields.salePrice;
+    // Receita bruta (apenas pedidos entregues)
+    const grossRevenue = deliveredOrders * fields.salePrice;
     
-    // Custos diários
-    const productCosts = confirmedOrders * fields.productCost; // Produto é enviado para pedidos confirmados
-    const shippingCosts = confirmedOrders * fields.shippingCost; // Envio para pedidos confirmados
-    const insuranceCosts = confirmedOrders * fields.insurance; // Seguro para confirmados
-    const storageCosts = confirmedOrders * fields.storage; // Armazenagem para confirmados
+    // Taxa da plataforma sobre receita bruta
+    const platformFees = grossRevenue * (fields.platformFee / 100);
     
-    // Marketing: CPA sobre confirmados ou sobre total de pedidos
+    // Receita líquida após taxa da plataforma
+    const netRevenue = grossRevenue - platformFees;
+    
+    // Custos operacionais (aplicados a todos os pedidos confirmados)
+    const productCosts = confirmedOrders * fields.productCost;
+    const shippingCosts = confirmedOrders * fields.shippingCost;
+    const insuranceCosts = confirmedOrders * fields.insurance;
+    const storageCosts = confirmedOrders * fields.storage;
+    const returnCosts = returnedOrders * fields.returnCost;
+    
+    // Marketing baseado na configuração
     const marketingCosts = fields.cpaOnConfirmed 
       ? confirmedOrders * fields.cpa 
       : fields.ordersPerDay * fields.cpa;
     
-    const totalCostWithoutMarketing = productCosts + shippingCosts + insuranceCosts + storageCosts;
+    // Custos totais
+    const totalCostWithoutMarketing = productCosts + shippingCosts + insuranceCosts + storageCosts + returnCosts + platformFees;
     const dailyCosts = totalCostWithoutMarketing + marketingCosts;
     
-    // Valor efetivamente recebido (considera recusas)
-    const valueReceived = dailyRevenue - (refusedOrders * fields.shippingCost);
+    // Lucros
+    const grossProfit = netRevenue - (productCosts + shippingCosts + insuranceCosts + storageCosts + returnCosts);
+    const dailyProfit = netRevenue - dailyCosts;
     
-    // Lucro bruto (sem marketing)
-    const grossProfit = dailyRevenue - totalCostWithoutMarketing;
-    
-    // Lucro líquido (com marketing)
-    const dailyProfit = dailyRevenue - dailyCosts;
-    
-    // Margem de lucro (%)
-    const profitMargin = dailyRevenue > 0 ? (dailyProfit / dailyRevenue) * 100 : 0;
-    
-    // Lucro mensal (considerando 30 dias)
+    // Métricas derivadas
+    const profitMargin = netRevenue > 0 ? (dailyProfit / netRevenue) * 100 : 0;
     const monthlyProfit = dailyProfit * 30;
+    const unitProfit = deliveredOrders > 0 ? dailyProfit / deliveredOrders : 0;
+    
+    // Ponto de equilíbrio (quantos pedidos entregues para lucro zero)
+    const fixedCosts = marketingCosts + storageCosts;
+    const variableCostPerUnit = fields.productCost + fields.shippingCost + fields.insurance + (fields.returnCost * (1 - fields.deliveryRate / 100));
+    const contributionMargin = fields.salePrice * (1 - fields.platformFee / 100) - variableCostPerUnit;
+    const breakEvenPoint = contributionMargin > 0 ? Math.ceil(fixedCosts / contributionMargin) : 0;
 
     setResults({
-      dailyRevenue,
+      dailyRevenue: grossRevenue,
       dailyCosts,
       dailyProfit,
       profitMargin,
       monthlyProfit,
       grossProfit,
       totalCostWithoutMarketing,
-      valueReceived
+      netRevenue,
+      marketingCosts,
+      unitProfit,
+      breakEvenPoint,
+      confirmedOrders,
+      deliveredOrders,
+      returnedOrders
     });
 
-    // Conversão para BRL se a moeda selecionada não for BRL
+    // Conversão de moeda
     if (fields.currency !== 'BRL' && exchangeRates) {
       const rate = exchangeRates[fields.currency] || 1;
       setConvertedResults({
-        dailyRevenueBRL: dailyRevenue * rate,
+        dailyRevenueBRL: grossRevenue * rate,
         dailyCostsBRL: dailyCosts * rate,
         dailyProfitBRL: dailyProfit * rate,
         monthlyProfitBRL: monthlyProfit * rate
       });
     } else {
-      // Se for BRL, usar os valores originais
       setConvertedResults({
-        dailyRevenueBRL: dailyRevenue,
+        dailyRevenueBRL: grossRevenue,
         dailyCostsBRL: dailyCosts,
         dailyProfitBRL: dailyProfit,
         monthlyProfitBRL: monthlyProfit
@@ -160,21 +211,12 @@ export default function CostCalculator() {
 
   const handleFieldChange = (field: keyof CalculatorFields, value: string | boolean) => {
     if (field === 'currency') {
-      setFields(prev => ({
-        ...prev,
-        [field]: value
-      }));
+      setFields(prev => ({ ...prev, [field]: value as string }));
     } else if (field === 'cpaOnConfirmed') {
-      setFields(prev => ({
-        ...prev,
-        [field]: value as boolean
-      }));
+      setFields(prev => ({ ...prev, [field]: value as boolean }));
     } else {
       const numValue = parseFloat(value as string) || 0;
-      setFields(prev => ({
-        ...prev,
-        [field]: numValue
-      }));
+      setFields(prev => ({ ...prev, [field]: numValue }));
     }
   };
 
@@ -183,6 +225,13 @@ export default function CostCalculator() {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: fields.currency
+    }).format(value);
+  };
+
+  const formatBRL = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
     }).format(value);
   };
 
@@ -201,360 +250,546 @@ export default function CostCalculator() {
     { value: 'USD', label: 'Dólar ($)', flag: '🇺🇸' }
   ];
 
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(2)}%`;
+  const getProfitStatus = () => {
+    if (results.profitMargin > 30) return { icon: TrendingUp, color: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20", label: "Excelente" };
+    if (results.profitMargin > 15) return { icon: CheckCircle2, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20", label: "Bom" };
+    if (results.profitMargin > 0) return { icon: AlertCircle, color: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20", label: "Baixo" };
+    return { icon: XCircle, color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20", label: "Prejuízo" };
   };
 
-  const getProfitIcon = () => {
-    if (results.profitMargin > 20) return <TrendingUp className="text-green-400" size={20} />;
-    if (results.profitMargin > 0) return <Minus className="text-yellow-400" size={20} />;
-    return <TrendingDown className="text-red-400" size={20} />;
-  };
-
-  const getProfitColor = () => {
-    if (results.profitMargin > 20) return "text-green-400";
-    if (results.profitMargin > 0) return "text-yellow-400";
-    return "text-red-400";
-  };
+  const profitStatus = getProfitStatus();
+  const ProfitIcon = profitStatus.icon;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <DashboardHeader 
-          title="Calculadora de Custos" 
-          subtitle="Calcule margens de lucro e otimize sua operação em tempo real" 
-        />
-        <Link href="/tools">
-          <Button variant="outline" size="sm" className="text-gray-400 hover:text-white">
-            ← Voltar para Ferramentas
-          </Button>
-        </Link>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <DashboardHeader 
+            title="Calculadora de Lucro Avançada" 
+            subtitle="Análise completa de rentabilidade com cálculos precisos" 
+          />
+          <Link href="/tools">
+            <Button variant="outline" size="sm" className="text-gray-400 hover:text-white">
+              ← Voltar
+            </Button>
+          </Link>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Campos de Entrada */}
-        <Card className="glassmorphism border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center space-x-2">
-              <Calculator className="text-blue-400" size={20} />
-              <span>Parâmetros de Cálculo</span>
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Ajuste os valores para calcular o lucro estimado
-            </CardDescription>
-            
-            {/* Seletor de Moeda */}
-            <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-              <Label className="text-blue-400 text-sm font-medium mb-2 flex items-center space-x-2">
-                <Globe size={16} />
-                <span>Moeda</span>
-              </Label>
-              <Select value={fields.currency} onValueChange={(value) => handleFieldChange('currency', value)}>
-                <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                  <SelectValue placeholder="Selecionar moeda" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700">
-                  {currencies.map((currency) => (
-                    <SelectItem 
-                      key={currency.value} 
-                      value={currency.value}
-                      className="text-white hover:bg-gray-800"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <span>{currency.flag}</span>
-                        <span>{currency.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="ordersPerDay" className="text-gray-300">Pedidos por Dia</Label>
-                <Input
-                  id="ordersPerDay"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={fields.ordersPerDay}
-                  onChange={(e) => handleFieldChange('ordersPerDay', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-orders-per-day"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="confirmationRate" className="text-gray-300">Taxa de Confirmação (%)</Label>
-                <Input
-                  id="confirmationRate"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={fields.confirmationRate}
-                  onChange={(e) => handleFieldChange('confirmationRate', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-confirmation-rate"
-                />
-              </div>
-            </div>
+        {/* Layout em 3 colunas no desktop */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Coluna 1: Inputs principais */}
+          <div className="space-y-4">
+            {/* Card de Moeda */}
+            <Card className="glassmorphism border-gray-700 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <Globe size={16} />
+                  Moeda Base
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select value={fields.currency} onValueChange={(value) => handleFieldChange('currency', value)}>
+                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency.value} value={currency.value} className="text-white hover:bg-gray-800">
+                        <div className="flex items-center gap-2">
+                          <span>{currency.flag}</span>
+                          <span>{currency.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="deliveryRate" className="text-gray-300">Taxa de Entregado (%)</Label>
-                <Input
-                  id="deliveryRate"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={fields.deliveryRate}
-                  onChange={(e) => handleFieldChange('deliveryRate', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-delivery-rate"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="salePrice" className="text-gray-300">Preço de Venda ({getCurrencySymbol()})</Label>
-                <Input
-                  id="salePrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fields.salePrice}
-                  onChange={(e) => handleFieldChange('salePrice', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-sale-price"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="productCost" className="text-gray-300">Custo do Produto ({getCurrencySymbol()})</Label>
-                <Input
-                  id="productCost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fields.productCost}
-                  onChange={(e) => handleFieldChange('productCost', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-product-cost"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="shippingCost" className="text-gray-300">Custo do Envio ({getCurrencySymbol()})</Label>
-                <Input
-                  id="shippingCost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fields.shippingCost}
-                  onChange={(e) => handleFieldChange('shippingCost', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-shipping-cost"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="insurance" className="text-gray-300">Seguro ({getCurrencySymbol()})</Label>
-                <Input
-                  id="insurance"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fields.insurance}
-                  onChange={(e) => handleFieldChange('insurance', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-insurance"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="storage" className="text-gray-300">Armazenagem ({getCurrencySymbol()})</Label>
-                <Input
-                  id="storage"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={fields.storage}
-                  onChange={(e) => handleFieldChange('storage', e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white"
-                  data-testid="input-storage"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="cpa" className="text-gray-300">CPA - Custo por Aquisição ({getCurrencySymbol()})</Label>
-              <Input
-                id="cpa"
-                type="number"
-                min="0"
-                step="0.01"
-                value={fields.cpa}
-                onChange={(e) => handleFieldChange('cpa', e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white"
-                data-testid="input-cpa"
-              />
-              <div className="flex items-center space-x-2 mt-2">
-                <input
-                  type="checkbox"
-                  id="cpaOnConfirmed"
-                  checked={fields.cpaOnConfirmed}
-                  onChange={(e) => handleFieldChange('cpaOnConfirmed', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500"
-                />
-                <Label htmlFor="cpaOnConfirmed" className="text-xs text-gray-400">
-                  CPA sobre pedidos confirmados (ao invés de todos os pedidos)
-                </Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Resultados */}
-        <Card className="glassmorphism border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center space-x-2">
-              {getProfitIcon()}
-              <span>Resultados do Cálculo</span>
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Lucro estimado baseado nos parâmetros informados
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Margem de Lucro - Destaque Principal */}
-            <div className="text-center p-4 glassmorphism-light rounded-xl">
-              <div className="text-sm text-gray-400 mb-1">Margem de Lucro</div>
-              <div className={`text-3xl font-bold ${getProfitColor()}`} data-testid="text-profit-margin">
-                {formatPercentage(results.profitMargin)}
-              </div>
-            </div>
-
-            {/* Métricas Diárias */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <div className="text-xs text-blue-400 mb-1">Receita Diária</div>
-                {fields.currency !== 'BRL' && (
-                  <div className="text-sm text-green-400 mb-1">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyRevenueBRL)}
+            {/* Card de Volume */}
+            <Card className="glassmorphism border-gray-700 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-green-500 to-teal-500" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <Package size={16} />
+                  Volume & Conversão
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-gray-300 text-xs">Pedidos por Dia</Label>
+                  <Input
+                    type="number"
+                    value={fields.ordersPerDay}
+                    onChange={(e) => handleFieldChange('ordersPerDay', e.target.value)}
+                    className="bg-gray-800 border-gray-600 text-white"
+                    data-testid="input-orders-per-day"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-300 text-xs flex items-center gap-1">
+                      Taxa Confirmação
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info size={12} className="text-gray-500" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>% de pedidos que são confirmados</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={fields.confirmationRate}
+                        onChange={(e) => handleFieldChange('confirmationRate', e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white pr-8"
+                        data-testid="input-confirmation-rate"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                    </div>
                   </div>
-                )}
-                <div className="text-lg font-semibold text-white" data-testid="text-daily-revenue">
-                  {formatCurrency(results.dailyRevenue)}
-                </div>
-              </div>
-              
-              <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                <div className="text-xs text-red-400 mb-1">Custos Diários</div>
-                {fields.currency !== 'BRL' && (
-                  <div className="text-sm text-green-400 mb-1">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyCostsBRL)}
+                  <div>
+                    <Label className="text-gray-300 text-xs flex items-center gap-1">
+                      Taxa Entrega
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info size={12} className="text-gray-500" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>% de pedidos confirmados que são entregues</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={fields.deliveryRate}
+                        onChange={(e) => handleFieldChange('deliveryRate', e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white pr-8"
+                        data-testid="input-delivery-rate"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                    </div>
                   </div>
-                )}
-                <div className="text-lg font-semibold text-white" data-testid="text-daily-costs">
-                  {formatCurrency(results.dailyCosts)}
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Lucro Diário e Mensal */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
-                <span className="text-gray-300">Lucro Diário:</span>
-                <div className="text-right">
-                  {fields.currency !== 'BRL' && (
-                    <div className="text-sm text-green-400 mb-1">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyProfitBRL)}
-                    </div>
-                  )}
-                  <span className={`font-semibold ${getProfitColor()}`} data-testid="text-daily-profit">
-                    {formatCurrency(results.dailyProfit)}
-                  </span>
+            {/* Card de Preços */}
+            <Card className="glassmorphism border-gray-700 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-yellow-500 to-orange-500" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <DollarSign size={16} />
+                  Valores Unitários
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-gray-300 text-xs">Preço de Venda ({getCurrencySymbol()})</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={fields.salePrice}
+                    onChange={(e) => handleFieldChange('salePrice', e.target.value)}
+                    className="bg-gray-800 border-gray-600 text-white"
+                    data-testid="input-sale-price"
+                  />
                 </div>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
-                <span className="text-gray-300">Lucro Mensal:</span>
-                <div className="text-right">
-                  {fields.currency !== 'BRL' && (
-                    <div className="text-sm text-green-400 mb-1">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.monthlyProfitBRL)}
-                    </div>
-                  )}
-                  <span className={`font-semibold ${getProfitColor()}`} data-testid="text-monthly-profit">
-                    {formatCurrency(results.monthlyProfit)}
-                  </span>
+                <div>
+                  <Label className="text-gray-300 text-xs">Custo do Produto ({getCurrencySymbol()})</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={fields.productCost}
+                    onChange={(e) => handleFieldChange('productCost', e.target.value)}
+                    className="bg-gray-800 border-gray-600 text-white"
+                    data-testid="input-product-cost"
+                  />
                 </div>
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-300 text-xs">Frete ({getCurrencySymbol()})</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={fields.shippingCost}
+                      onChange={(e) => handleFieldChange('shippingCost', e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white"
+                      data-testid="input-shipping-cost"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-300 text-xs">Devolução ({getCurrencySymbol()})</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={fields.returnCost}
+                      onChange={(e) => handleFieldChange('returnCost', e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-            {/* Métricas Adicionais */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
-                <span className="text-gray-300">Lucro Bruto (sem marketing):</span>
-                <div className="text-right">
-                  {fields.currency !== 'BRL' && (
-                    <div className="text-sm text-green-400 mb-1">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(convertedResults.dailyRevenueBRL - (results.totalCostWithoutMarketing * (exchangeRates?.[fields.currency] || 1)))}
-                    </div>
-                  )}
-                  <span className={`font-semibold ${results.grossProfit > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {formatCurrency(results.grossProfit)}
-                  </span>
+          {/* Coluna 2: Inputs secundários e custos */}
+          <div className="space-y-4">
+            {/* Card de Custos Adicionais */}
+            <Card className="glassmorphism border-gray-700 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <Truck size={16} />
+                  Custos Operacionais
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-300 text-xs">Seguro ({getCurrencySymbol()})</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={fields.insurance}
+                      onChange={(e) => handleFieldChange('insurance', e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white"
+                      data-testid="input-insurance"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-300 text-xs">Armazenagem ({getCurrencySymbol()})</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={fields.storage}
+                      onChange={(e) => handleFieldChange('storage', e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white"
+                      data-testid="input-storage"
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex justify-between items-center p-3 glassmorphism-light rounded-lg">
-                <span className="text-gray-300">Valor Efetivamente Recebido:</span>
-                <div className="text-right">
-                  {fields.currency !== 'BRL' && (
-                    <div className="text-sm text-green-400 mb-1">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(results.valueReceived * (exchangeRates?.[fields.currency] || 1))}
-                    </div>
-                  )}
-                  <span className="font-semibold text-white">
-                    {formatCurrency(results.valueReceived)}
-                  </span>
+                <div>
+                  <Label className="text-gray-300 text-xs flex items-center gap-1">
+                    Taxa da Plataforma
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info size={12} className="text-gray-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>% sobre a receita bruta</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={fields.platformFee}
+                      onChange={(e) => handleFieldChange('platformFee', e.target.value)}
+                      className="bg-gray-800 border-gray-600 text-white pr-8"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Breakdown dos Pedidos */}
-            <div className="mt-6 p-4 bg-gray-800/30 rounded-lg">
-              <div className="text-sm text-gray-400 mb-3 font-medium">Breakdown dos Pedidos:</div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Pedidos totais/dia:</span>
-                  <span className="text-white">{fields.ordersPerDay}</span>
+            {/* Card de Marketing */}
+            <Card className="glassmorphism border-gray-700 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-red-500 to-rose-500" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <Target size={16} />
+                  Marketing & Aquisição
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-gray-300 text-xs">CPA - Custo por Aquisição ({getCurrencySymbol()})</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={fields.cpa}
+                    onChange={(e) => handleFieldChange('cpa', e.target.value)}
+                    className="bg-gray-800 border-gray-600 text-white"
+                    data-testid="input-cpa"
+                  />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Pedidos confirmados:</span>
-                  <span className="text-white">{Math.round(fields.ordersPerDay * (fields.confirmationRate / 100))}</span>
+                <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="cpaOnConfirmed"
+                    checked={fields.cpaOnConfirmed}
+                    onChange={(e) => handleFieldChange('cpaOnConfirmed', e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-800 border-gray-600 rounded"
+                  />
+                  <Label htmlFor="cpaOnConfirmed" className="text-xs text-gray-300 cursor-pointer">
+                    CPA apenas sobre pedidos confirmados
+                  </Label>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Pedidos entregues:</span>
-                  <span className="text-white">{Math.round(fields.ordersPerDay * (fields.confirmationRate / 100) * (fields.deliveryRate / 100))}</span>
+                <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <p className="text-xs text-blue-400">
+                    Custo total de marketing:
+                  </p>
+                  <p className="text-lg font-bold text-white">
+                    {formatCurrency(results.marketingCosts)}/dia
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Pedidos recusados:</span>
-                  <span className="text-white">{Math.round(fields.ordersPerDay * (fields.confirmationRate / 100) * (1 - fields.deliveryRate / 100))}</span>
+              </CardContent>
+            </Card>
+
+            {/* Card de Fluxo de Pedidos */}
+            <Card className="glassmorphism border-gray-700 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-cyan-500 to-blue-500" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm">Fluxo de Pedidos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-2 bg-gray-800/50 rounded">
+                    <span className="text-xs text-gray-400">Total</span>
+                    <span className="text-sm font-bold text-white">{fields.ordersPerDay}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowRight size={14} className="text-gray-500" />
+                    <div className="flex-1 flex items-center justify-between p-2 bg-blue-500/10 rounded border border-blue-500/20">
+                      <span className="text-xs text-blue-400">Confirmados</span>
+                      <span className="text-sm font-bold text-white">{Math.round(results.confirmedOrders)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowRight size={14} className="text-gray-500" />
+                    <div className="flex-1 flex items-center justify-between p-2 bg-green-500/10 rounded border border-green-500/20">
+                      <span className="text-xs text-green-400">Entregues</span>
+                      <span className="text-sm font-bold text-white">{Math.round(results.deliveredOrders)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowRight size={14} className="text-gray-500" />
+                    <div className="flex-1 flex items-center justify-between p-2 bg-red-500/10 rounded border border-red-500/20">
+                      <span className="text-xs text-red-400">Devoluções</span>
+                      <span className="text-sm font-bold text-white">{Math.round(results.returnedOrders)}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Coluna 3: Resultados */}
+          <div className="space-y-4">
+            {/* Card de Lucro Principal */}
+            <Card className={`glassmorphism overflow-hidden ${profitStatus.border}`}>
+              <div className={`h-2 ${profitStatus.bg}`} />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <ProfitIcon size={20} className={profitStatus.color} />
+                    Margem de Lucro
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded ${profitStatus.bg} ${profitStatus.color}`}>
+                    {profitStatus.label}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center">
+                  <div className={`text-5xl font-bold ${profitStatus.color}`} data-testid="text-profit-margin">
+                    {results.profitMargin.toFixed(1)}%
+                  </div>
+                  <div className="mt-2">
+                    <Progress 
+                      value={Math.max(0, Math.min(100, results.profitMargin))} 
+                      className="h-2 bg-gray-800"
+                    />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400">Lucro/Unidade</p>
+                      <p className="text-lg font-bold text-white">
+                        {formatCurrency(results.unitProfit)}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400">Break Even</p>
+                      <p className="text-lg font-bold text-white">
+                        {results.breakEvenPoint} un/dia
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card de Receitas e Custos */}
+            <Card className="glassmorphism border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm">Análise Financeira Diária</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-400">Receita Bruta</span>
+                    <span className="text-sm font-bold text-white" data-testid="text-daily-revenue">
+                      {formatCurrency(results.dailyRevenue)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-400">Taxa Plataforma</span>
+                    <span className="text-sm text-red-400">
+                      -{formatCurrency(results.dailyRevenue * (fields.platformFee / 100))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-700">
+                    <span className="text-xs text-gray-400">Receita Líquida</span>
+                    <span className="text-sm font-bold text-green-400">
+                      {formatCurrency(results.netRevenue)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-gray-700">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-400">Custos Operacionais</span>
+                    <span className="text-sm text-gray-300">
+                      {formatCurrency(results.totalCostWithoutMarketing)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-400">Marketing</span>
+                    <span className="text-sm text-gray-300">
+                      {formatCurrency(results.marketingCosts)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-700">
+                    <span className="text-xs text-gray-400">Custo Total</span>
+                    <span className="text-sm font-bold text-red-400" data-testid="text-daily-costs">
+                      {formatCurrency(results.dailyCosts)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card de Lucros */}
+            <Card className="glassmorphism border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm">Projeção de Lucros</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className={`p-3 rounded-lg ${results.dailyProfit > 0 ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-300">Lucro Diário</span>
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${results.dailyProfit > 0 ? 'text-green-400' : 'text-red-400'}`} data-testid="text-daily-profit">
+                        {formatCurrency(results.dailyProfit)}
+                      </p>
+                      {fields.currency !== 'BRL' && (
+                        <p className="text-xs text-gray-400">
+                          {formatBRL(convertedResults.dailyProfitBRL)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`p-3 rounded-lg ${results.monthlyProfit > 0 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-300">Lucro Mensal</span>
+                    <div className="text-right">
+                      <p className={`text-xl font-bold ${results.monthlyProfit > 0 ? 'text-blue-400' : 'text-red-400'}`} data-testid="text-monthly-profit">
+                        {formatCurrency(results.monthlyProfit)}
+                      </p>
+                      {fields.currency !== 'BRL' && (
+                        <p className="text-xs text-gray-400">
+                          {formatBRL(convertedResults.monthlyProfitBRL)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-gray-800/30 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-300">Lucro Anual Projetado</span>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-purple-400">
+                        {formatCurrency(results.monthlyProfit * 12)}
+                      </p>
+                      {fields.currency !== 'BRL' && (
+                        <p className="text-xs text-gray-400">
+                          {formatBRL(convertedResults.monthlyProfitBRL * 12)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Insights e Recomendações */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card className="glassmorphism border-gray-700">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Info size={20} className="text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white mb-1">Eficiência Operacional</h4>
+                  <p className="text-xs text-gray-400">
+                    Sua operação converte {(results.deliveredOrders / fields.ordersPerDay * 100).toFixed(1)}% dos pedidos em vendas efetivas.
+                    {results.deliveredOrders / fields.ordersPerDay < 0.5 && " Considere melhorar as taxas de confirmação e entrega."}
+                  </p>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="glassmorphism border-gray-700">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <Target size={20} className="text-green-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white mb-1">Otimização de Marketing</h4>
+                  <p className="text-xs text-gray-400">
+                    Seu CPA representa {((results.marketingCosts / results.dailyCosts) * 100).toFixed(1)}% dos custos totais.
+                    {results.marketingCosts / results.dailyCosts > 0.3 && " Avalie estratégias para reduzir o custo de aquisição."}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glassmorphism border-gray-700">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <TrendingUp size={20} className="text-purple-400" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white mb-1">Potencial de Crescimento</h4>
+                  <p className="text-xs text-gray-400">
+                    Com {results.breakEvenPoint} vendas/dia você atinge o break-even.
+                    {results.deliveredOrders > results.breakEvenPoint * 1.5 
+                      ? " Excelente margem de segurança!" 
+                      : " Aumente o volume para melhorar a rentabilidade."}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
