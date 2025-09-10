@@ -290,8 +290,7 @@ export default function CostCalculator() {
           {/* Coluna 1: Inputs principais */}
           <div className="space-y-4">
             {/* Card de Moeda */}
-            <Card className="glassmorphism border-gray-700 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500" />
+            <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm flex items-center gap-2">
                   <Globe size={16} />
@@ -318,8 +317,7 @@ export default function CostCalculator() {
             </Card>
 
             {/* Card de Volume */}
-            <Card className="glassmorphism border-gray-700 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-green-500 to-teal-500" />
+            <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm flex items-center gap-2">
                   <Package size={16} />
@@ -389,8 +387,7 @@ export default function CostCalculator() {
             </Card>
 
             {/* Card de Preços */}
-            <Card className="glassmorphism border-gray-700 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-yellow-500 to-orange-500" />
+            <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm flex items-center gap-2">
                   <DollarSign size={16} />
@@ -450,8 +447,7 @@ export default function CostCalculator() {
           {/* Coluna 2: Inputs secundários e custos */}
           <div className="space-y-4">
             {/* Card de Custos Adicionais */}
-            <Card className="glassmorphism border-gray-700 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
+            <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm flex items-center gap-2">
                   <Truck size={16} />
@@ -510,8 +506,7 @@ export default function CostCalculator() {
             </Card>
 
             {/* Card de Marketing */}
-            <Card className="glassmorphism border-gray-700 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-red-500 to-rose-500" />
+            <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm flex items-center gap-2">
                   <Target size={16} />
@@ -554,8 +549,7 @@ export default function CostCalculator() {
             </Card>
 
             {/* Card de Fluxo de Pedidos */}
-            <Card className="glassmorphism border-gray-700 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-cyan-500 to-blue-500" />
+            <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-sm">Fluxo de Pedidos</CardTitle>
               </CardHeader>
@@ -650,8 +644,7 @@ export default function CostCalculator() {
             </Card>
 
             {/* Card de Margem de Lucro */}
-            <Card className={`glassmorphism overflow-hidden ${profitStatus.border}`}>
-              <div className={`h-2 ${profitStatus.bg}`} />
+            <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white flex items-center justify-between">
                   <span className="flex items-center gap-2">
