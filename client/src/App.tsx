@@ -336,7 +336,7 @@ function AppContent() {
     // Auto-login for development if not authenticated
     if (!isAuthenticated && !isLoading && !autoLoginAttempted) {
       setAutoLoginAttempted(true);
-      login('fresh@teste.com', 'fresh@123')
+      login('fresh@teste.com', 'password123')
         .then(() => {
           console.log('Auto-login successful');
         })

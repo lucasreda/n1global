@@ -708,12 +708,15 @@ export class CustomerSupportService {
           .where(eq(this.schema.operations.id, operationId))
           .limit(1);
 
-        // Create new record
+        // Create new record with default email domain
+        const defaultDomain = `suporte-${operation?.name?.toLowerCase().replace(/\s+/g, '-') || 'operacao'}@mg.cod-dashboard.app`;
+        
         const [newOperation] = await this.db
           .insert(this.schema.customerSupportOperations)
           .values({
             operationId,
             operationName: operation?.name || null,
+            emailDomain: defaultDomain,
             isActive,
             emailPrefix: 'suporte',
             aiEnabled: true,
