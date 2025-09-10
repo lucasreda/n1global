@@ -1131,6 +1131,14 @@ export const supportEmails = pgTable("support_emails", {
   aiConfidence: integer("ai_confidence"), // 0-100 confidence score
   aiReasoning: text("ai_reasoning"), // Why AI chose this category
   
+  // Sentiment Analysis
+  sentiment: text("sentiment"), // 'muito_positivo' | 'positivo' | 'neutro' | 'negativo' | 'muito_negativo'
+  emotion: text("emotion"), // 'calmo' | 'ansioso' | 'frustrado' | 'zangado' | 'preocupado' | 'satisfeito'
+  urgency: text("urgency"), // 'baixa' | 'media' | 'alta' | 'critica'
+  tone: text("tone"), // 'formal' | 'informal' | 'agressivo' | 'educado' | 'desesperado'
+  hasTimeConstraint: boolean("has_time_constraint"), // Mentions deadlines/urgency
+  escalationRisk: integer("escalation_risk"), // 0-10 risk score
+  
   // Processing status
   status: text("status").notNull().default("received"), // 'received', 'categorized', 'responded', 'closed'
   isUrgent: boolean("is_urgent").notNull().default(false),
