@@ -165,9 +165,12 @@ export function MultiProviderPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Header com botão de sync unificado */}
+      {/* Header com título padronizado */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-white">Provedores de Fulfillment</h2>
+        <div className="flex items-center space-x-3">
+          <Package className="text-blue-400" size={20} />
+          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Provedores de Fulfillment</h2>
+        </div>
         <Button
           onClick={() => syncAllMutation.mutate()}
           disabled={syncAllMutation.isPending || syncInProgress}
@@ -198,45 +201,26 @@ export function MultiProviderPanel() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {providers?.map((provider: Provider) => (
-            <Card key={provider.type} className="glassmorphism border-0" data-testid={`provider-card-${provider.type}`}>
-              <CardHeader>
-                <CardTitle className="text-white flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Package className="text-blue-400" size={20} />
-                    <span>{provider.name}</span>
-                  </div>
-                  <Badge 
-                    variant={provider.configured ? "default" : "secondary"}
-                    className={provider.configured ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"}
-                    data-testid={`status-${provider.type}`}
-                  >
-                    {provider.configured ? "Configurado" : "Pendente"}
-                  </Badge>
-                </CardTitle>
-                <CardDescription className="text-gray-300">
-                  {provider.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-center">
-                  {provider.configured ? (
-                    <CheckCircle className="text-green-400" size={48} />
-                  ) : (
-                    <AlertCircle className="text-yellow-400" size={48} />
-                  )}
+            <div key={provider.type} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`provider-card-${provider.type}`}>
+              <div className="flex items-center space-x-3 mb-4">
+                <Package className="text-blue-400" size={30} />
+                <div>
+                  <h4 className="text-white font-medium">{provider.name}</h4>
+                  <p className="text-gray-400 text-sm">{provider.description}</p>
                 </div>
-                
-                <Button
-                  variant="outline"
-                  className="w-full text-blue-400 border-blue-400/30 hover:bg-blue-400/10"
-                  onClick={() => handleConfigureProvider(provider.type)}
-                  data-testid={`button-configure-${provider.type}`}
-                >
-                  <Settings size={16} className="mr-2" />
-                  {provider.configured ? "Reconfigurar" : "Configurar"}
-                </Button>
-              </CardContent>
-            </Card>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                onClick={() => handleConfigureProvider(provider.type)}
+                data-testid={`button-configure-${provider.type}`}
+              >
+                <Settings size={16} className="mr-2" />
+                {provider.configured ? "Reconfigurar" : "Configurar"}
+              </Button>
+            </div>
           ))}
         </div>
       )}
