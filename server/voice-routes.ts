@@ -34,7 +34,8 @@ function validateTwilioSignature(req: any, res: any, next: any) {
     }
     
     // Get the full URL that Twilio called
-    const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    // Force HTTPS as Twilio always uses HTTPS for webhooks, even when server sees HTTP due to proxy
+    const url = `https://${req.get('host')}${req.originalUrl}`;
     
     // Build data to sign using Twilio's exact algorithm: URL + concat(sorted keys + values)
     // Twilio concatenates URL + each parameter name + value (NO delimiters like = or &)
