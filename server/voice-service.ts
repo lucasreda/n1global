@@ -804,8 +804,11 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
    */
   async generateTestCallWelcomeMessage(operationId: string, callType: 'test' | 'sales' = 'test'): Promise<string> {
     try {
+      console.log(`🎯 Generating welcome message for operation ${operationId}, type: ${callType}`);
+      
       // Get active AI directives for the operation
       const directives = await this.getActiveDirectives(operationId);
+      console.log(`📋 Found ${directives.length} directives for operation ${operationId}`);
       
       // Build welcome message based on directives
       const storeInfoDirectives = directives.filter(d => d.type === 'store_info');
@@ -829,6 +832,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       
       if (storeNameDirective) {
         welcomeMessage += ` da ${storeNameDirective.content}`;
+        console.log(`🏪 Added store name: ${storeNameDirective.content}`);
       }
       
       // Add context based on call type
@@ -845,14 +849,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         } else {
           welcomeMessage += "Posso apresentar brevemente nossos serviços?";
         }
+        console.log(`💼 Sales welcome message generated for ${operationId}`);
       } else {
         welcomeMessage += ". Esta é uma ligação de teste para demonstrar nosso sistema de atendimento automatizado.";
+        console.log(`🧪 Test welcome message generated for ${operationId}`);
       }
       
+      console.log(`✅ Final welcome message: "${welcomeMessage}"`);
       return welcomeMessage;
     } catch (error) {
-      console.error('Error generating test call welcome message:', error);
-      return "Olá! Aqui é a Sofia, sua assistente virtual. Esta é uma ligação de teste do nosso sistema de atendimento.";
+      console.error('❌ Error generating test call welcome message:', error);
+      const fallbackMessage = "Olá! Aqui é a Sofia, sua assistente virtual. Esta é uma ligação de teste do nosso sistema de atendimento.";
+      console.log(`🔄 Using fallback message: "${fallbackMessage}"`);
+      return fallbackMessage;
     }
   }
 
@@ -861,15 +870,18 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
    */
   async generateTestCallResponse(operationId: string, customerMessage: string, callType: 'test' | 'sales' = 'test'): Promise<string> {
     try {
-      console.log(`🎯 Generating voice response for operation ${operationId}: "${customerMessage}"`);
+      console.log(`🎯 Generating voice response for operation ${operationId}, type: ${callType}, message: "${customerMessage}"`);
       
       // Get active AI directives for the operation
       const directives = await this.getActiveDirectives(operationId);
+      console.log(`📋 Found ${directives.length} directives for response generation`);
       
       // Build prompt specifically for voice conversation
       const prompt = await this.buildTestCallPrompt(operationId, customerMessage, directives, callType);
+      console.log(`📝 Built prompt for OpenAI (length: ${prompt.length} chars)`);
       
       // Call OpenAI for response
+      console.log(`🤖 Calling OpenAI GPT-4 for voice response...`);
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
@@ -880,12 +892,15 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const aiResponse = response.choices[0]?.message?.content?.trim() || 
         "Entendo sua solicitação. Posso ajudá-lo com mais alguma informação?";
       
-      console.log(`🤖 Generated voice response: "${aiResponse}"`);
+      console.log(`✅ OpenAI response received: "${aiResponse}"`);
+      console.log(`🎭 Response type: ${callType}, Language check: ${aiResponse.includes('ã') || aiResponse.includes('ç') ? 'Portuguese' : 'Possible English'}`);
       
       return aiResponse;
     } catch (error) {
-      console.error('Error generating test call response:', error);
-      return "Obrigada por entrar em contato. Nossa equipe entrará em contato em breve.";
+      console.error('❌ Error generating test call response:', error);
+      const fallbackResponse = "Obrigada por entrar em contato. Nossa equipe entrará em contato em breve.";
+      console.log(`🔄 Using fallback response: "${fallbackResponse}"`);
+      return fallbackResponse;
     }
   }
 
