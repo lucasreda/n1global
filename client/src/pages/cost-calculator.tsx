@@ -49,8 +49,8 @@ interface CalculatorFields {
   insurance: number;
   storage: number;
   cpaOnConfirmed: boolean;
-  returnCost: number; // Custo de devolução
-  platformFee: number; // Taxa da plataforma (%)
+  returnCost: number; // Custo adicional por devolução (logística reversa)
+  platformFee: number; // Taxa da plataforma/gateway (%)
 }
 
 interface CalculationResults {
@@ -87,11 +87,11 @@ export default function CostCalculator() {
     cpa: 25.00,
     ordersPerDay: 100,
     currency: 'BRL',
-    insurance: 1.50,
-    storage: 2.00,
+    insurance: 0,
+    storage: 0,
     cpaOnConfirmed: false,
-    returnCost: 5.00,
-    platformFee: 5
+    returnCost: 7.50, // Custo logística reversa igual ao frete
+    platformFee: 0
   });
 
   const [results, setResults] = useState<CalculationResults>({
@@ -126,52 +126,58 @@ export default function CostCalculator() {
     staleTime: 10 * 60 * 1000
   });
 
-  // Cálculo principal corrigido
+  // Cálculo principal corrigido baseado em práticas de COD
   useEffect(() => {
-    // Fluxo de pedidos
+    // PASSO 1: Fluxo de pedidos
     const confirmedOrders = fields.ordersPerDay * (fields.confirmationRate / 100);
     const deliveredOrders = confirmedOrders * (fields.deliveryRate / 100);
     const returnedOrders = confirmedOrders - deliveredOrders;
     
-    // Receita bruta (apenas pedidos entregues)
+    // PASSO 2: Receita (apenas pedidos entregues geram receita)
     const grossRevenue = deliveredOrders * fields.salePrice;
     
-    // Taxa da plataforma sobre receita bruta
-    const platformFees = grossRevenue * (fields.platformFee / 100);
-    
-    // Receita líquida após taxa da plataforma
-    const netRevenue = grossRevenue - platformFees;
-    
-    // Custos operacionais (aplicados a todos os pedidos confirmados)
+    // PASSO 3: Custos Operacionais
+    // 3.1 - Custos aplicados sobre pedidos CONFIRMADOS (produto já foi enviado)
     const productCosts = confirmedOrders * fields.productCost;
     const shippingCosts = confirmedOrders * fields.shippingCost;
     const insuranceCosts = confirmedOrders * fields.insurance;
     const storageCosts = confirmedOrders * fields.storage;
+    
+    // 3.2 - Custo de devolução (sobre pedidos devolvidos/recusados)
     const returnCosts = returnedOrders * fields.returnCost;
     
-    // Marketing baseado na configuração
+    // 3.3 - Marketing (CPA)
     const marketingCosts = fields.cpaOnConfirmed 
       ? confirmedOrders * fields.cpa 
       : fields.ordersPerDay * fields.cpa;
     
-    // Custos totais
+    // 3.4 - Taxa da plataforma (sobre receita bruta dos entregues)
+    const platformFees = grossRevenue * (fields.platformFee / 100);
+    
+    // PASSO 4: Custos Totais
     const totalCostWithoutMarketing = productCosts + shippingCosts + insuranceCosts + storageCosts + returnCosts + platformFees;
     const dailyCosts = totalCostWithoutMarketing + marketingCosts;
     
-    // Lucros
-    const grossProfit = netRevenue - (productCosts + shippingCosts + insuranceCosts + storageCosts + returnCosts);
-    const dailyProfit = netRevenue - dailyCosts;
+    // PASSO 5: Lucros
+    const netRevenue = grossRevenue - platformFees; // Receita líquida após taxa
+    const grossProfit = grossRevenue - (productCosts + shippingCosts + insuranceCosts + storageCosts + returnCosts); // Lucro bruto sem marketing
+    const dailyProfit = grossRevenue - dailyCosts; // Lucro líquido do dia
     
     // Métricas derivadas
-    const profitMargin = netRevenue > 0 ? (dailyProfit / netRevenue) * 100 : 0;
+    const profitMargin = grossRevenue > 0 ? (dailyProfit / grossRevenue) * 100 : 0; // Margem sobre receita bruta
     const monthlyProfit = dailyProfit * 30;
     const unitProfit = deliveredOrders > 0 ? dailyProfit / deliveredOrders : 0;
     
-    // Ponto de equilíbrio (quantos pedidos entregues para lucro zero)
-    const fixedCosts = marketingCosts + storageCosts;
-    const variableCostPerUnit = fields.productCost + fields.shippingCost + fields.insurance + (fields.returnCost * (1 - fields.deliveryRate / 100));
-    const contributionMargin = fields.salePrice * (1 - fields.platformFee / 100) - variableCostPerUnit;
-    const breakEvenPoint = contributionMargin > 0 ? Math.ceil(fixedCosts / contributionMargin) : 0;
+    // Ponto de equilíbrio simplificado
+    const revenuePerDelivered = fields.salePrice;
+    const costPerConfirmed = fields.productCost + fields.shippingCost + fields.insurance + fields.storage;
+    const costPerReturned = fields.returnCost;
+    const avgCostPerDelivered = deliveredOrders > 0 
+      ? (costPerConfirmed * confirmedOrders + costPerReturned * returnedOrders + marketingCosts + platformFees) / deliveredOrders
+      : 0;
+    const breakEvenPoint = revenuePerDelivered > avgCostPerDelivered 
+      ? Math.ceil(dailyCosts / (revenuePerDelivered - avgCostPerDelivered))
+      : 0;
 
     setResults({
       dailyRevenue: grossRevenue,
@@ -671,6 +677,92 @@ export default function CostCalculator() {
                     <span className="text-sm font-bold text-red-400" data-testid="text-daily-costs">
                       {formatCurrency(results.dailyCosts)}
                     </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card de Memória de Cálculo */}
+            <Card className="glassmorphism border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <Calculator size={16} />
+                  Memória de Cálculo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                <div className="p-2 bg-gray-800/50 rounded space-y-1">
+                  <div className="text-gray-400 font-semibold mb-2">📊 Volume de Pedidos:</div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Pedidos/dia:</span>
+                    <span className="text-white">{fields.ordersPerDay}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">× Taxa confirmação:</span>
+                    <span className="text-white">{fields.confirmationRate}%</span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-700 pt-1">
+                    <span className="text-gray-400">= Confirmados:</span>
+                    <span className="text-green-400 font-bold">{results.confirmedOrders.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <span className="text-gray-500">× Taxa entrega:</span>
+                    <span className="text-white">{fields.deliveryRate}%</span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-700 pt-1">
+                    <span className="text-gray-400">= Entregues:</span>
+                    <span className="text-blue-400 font-bold">{results.deliveredOrders.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">= Devolvidos:</span>
+                    <span className="text-red-400 font-bold">{results.returnedOrders.toFixed(0)}</span>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-gray-800/50 rounded space-y-1">
+                  <div className="text-gray-400 font-semibold mb-2">💰 Receita:</div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Entregues × Preço:</span>
+                    <span className="text-white">{results.deliveredOrders.toFixed(0)} × {formatCurrency(fields.salePrice)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-700 pt-1">
+                    <span className="text-gray-400">= Receita Bruta:</span>
+                    <span className="text-green-400 font-bold">{formatCurrency(results.dailyRevenue)}</span>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-gray-800/50 rounded space-y-1">
+                  <div className="text-gray-400 font-semibold mb-2">📉 Custos:</div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Produto:</span>
+                    <span className="text-white">{results.confirmedOrders.toFixed(0)} × {formatCurrency(fields.productCost)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Frete:</span>
+                    <span className="text-white">{results.confirmedOrders.toFixed(0)} × {formatCurrency(fields.shippingCost)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Devoluções:</span>
+                    <span className="text-white">{results.returnedOrders.toFixed(0)} × {formatCurrency(fields.returnCost)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Marketing:</span>
+                    <span className="text-white">{formatCurrency(results.marketingCosts)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-700 pt-1">
+                    <span className="text-gray-400">= Custo Total:</span>
+                    <span className="text-red-400 font-bold">{formatCurrency(results.dailyCosts)}</span>
+                  </div>
+                </div>
+
+                <div className="p-2 bg-blue-500/10 rounded border border-blue-500/20">
+                  <div className="flex justify-between">
+                    <span className="text-blue-400">Lucro Líquido:</span>
+                    <span className="text-white font-bold">{formatCurrency(results.dailyProfit)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-400">Margem:</span>
+                    <span className="text-white font-bold">{results.profitMargin.toFixed(2)}%</span>
                   </div>
                 </div>
               </CardContent>
