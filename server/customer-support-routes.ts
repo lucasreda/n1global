@@ -2,6 +2,7 @@ import { Request, Response, Express } from "express";
 import { customerSupportService } from "./customer-support-service";
 import { authenticateToken } from "./auth-middleware";
 import { db } from "./db";
+import { storage } from "./storage";
 import { aiDirectives, type AiDirective, type InsertAiDirective, insertAiDirectiveSchema } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -669,6 +670,30 @@ export function registerCustomerSupportRoutes(app: Express) {
       console.error('Error updating service status:', error);
       res.status(500).json({ 
         message: "Failed to update service status",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Populate default AI directives for existing operations that don't have any
+   * This is an admin route to fix production environments
+   */
+  app.post("/api/customer-support/admin/populate-default-directives", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      console.log('🚀 Admin: Populating default AI directives for existing operations...');
+      
+      const result = await storage.populateDirectivesForExistingOperations();
+      
+      res.json({
+        success: true,
+        message: `Population completed: ${result.success} operations updated, ${result.errors} errors`,
+        details: result
+      });
+    } catch (error) {
+      console.error('❌ Admin: Error populating default directives:', error);
+      res.status(500).json({ 
+        message: "Failed to populate default directives",
         error: error instanceof Error ? error.message : String(error)
       });
     }
