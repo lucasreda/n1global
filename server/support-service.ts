@@ -884,6 +884,12 @@ REGRAS:
           escalationRisk: categorization.escalationRisk,
         };
         await this.sendAIAutoResponse(savedEmail, category[0], sentimentData, orderContext);
+        
+        // Execute automatic actions if any were suggested
+        if (orderContext && orderContext.suggestedActions.length > 0) {
+          console.log(`🎯 Executing ${orderContext.suggestedActions.length} automatic actions...`);
+          await this.executeAutomaticActions(orderContext.suggestedActions, operationId);
+        }
       } else if (categoryName !== "reclamacoes" && categoryName !== "manual") {
         // Fallback to template system for other automated categories
         console.log(
@@ -2413,6 +2419,88 @@ RESPOSTA EXCELENTE DEVE TER:
 `;
 
     return prompt;
+  }
+
+  /**
+   * Execute automatic actions suggested by the AI system
+   */
+  private async executeAutomaticActions(
+    suggestedActions: EmailOrderContext['suggestedActions'],
+    operationId: string
+  ): Promise<void> {
+    console.log(`🎯 Starting execution of ${suggestedActions.length} automatic actions`);
+
+    for (const action of suggestedActions) {
+      try {
+        console.log(`🔄 Executing action: ${action.action} for order ${action.orderId}`);
+        
+        switch (action.action) {
+          case 'cancel_order':
+            await this.executeOrderCancellation(action.orderId, operationId, action.reason);
+            break;
+            
+          case 'update_address':
+            console.log(`📍 Address update for order ${action.orderId} - manual verification required`);
+            // Note: Address updates require new address data, so we can't fully automate this
+            // The AI will ask the customer for the new address details
+            break;
+            
+          case 'provide_tracking':
+            console.log(`📦 Tracking info for order ${action.orderId} - already included in AI response`);
+            // Tracking information is already provided in the AI response
+            break;
+            
+          default:
+            console.log(`⚠️ Unknown action type: ${action.action}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error executing action ${action.action} for order ${action.orderId}:`, error);
+        // Continue with other actions even if one fails
+      }
+    }
+    
+    console.log(`✅ Completed execution of automatic actions`);
+  }
+
+  /**
+   * Execute order cancellation automatically
+   */
+  private async executeOrderCancellation(
+    orderId: string,
+    operationId: string,
+    reason: string
+  ): Promise<void> {
+    try {
+      console.log(`🚫 Attempting automatic cancellation of order ${orderId}`);
+      
+      const result = await customerOrderService.cancelOrder(operationId, orderId, {
+        reason: reason,
+        cancelledBy: 'Sofia AI Assistant'
+      });
+
+      if (result.success) {
+        console.log(`✅ Order ${orderId} cancelled successfully: ${result.message}`);
+        
+        // Log the automatic action for audit trail
+        const auditLog = {
+          action: 'cancel_order',
+          orderId: orderId,
+          operationId: operationId,
+          executedBy: 'Sofia AI Assistant',
+          reason: reason,
+          timestamp: new Date(),
+          result: 'success'
+        };
+        
+        console.log(`📋 Audit log:`, auditLog);
+        
+      } else {
+        console.warn(`⚠️ Order ${orderId} cancellation failed: ${result.message}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error during automatic cancellation of order ${orderId}:`, error);
+    }
   }
 }
 
