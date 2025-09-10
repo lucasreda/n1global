@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users, Power, Phone } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users, Power, Phone, Send, Mic, MicOff } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
@@ -121,6 +122,17 @@ export default function CustomerSupportSettings() {
     outOfHoursMessage: 'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.',
     outOfHoursAction: 'voicemail'
   });
+
+  // Test call states
+  const [isTestCallModalOpen, setIsTestCallModalOpen] = useState(false);
+  const [testCallMessages, setTestCallMessages] = useState<Array<{
+    id: string;
+    speaker: 'ai' | 'customer';
+    message: string;
+    timestamp: Date;
+  }>>([]);
+  const [customerInput, setCustomerInput] = useState("");
+  const [isAiResponding, setIsAiResponding] = useState(false);
 
   // Get AI directives data
   const { data: aiDirectivesData } = useQuery({
@@ -1376,6 +1388,31 @@ export default function CustomerSupportSettings() {
                   </p>
                 </div>
 
+                {/* Test Call Feature */}
+                <div className="border-t border-white/10 pt-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium text-white">Ligação Teste</Label>
+                        <p className="text-sm text-gray-400 mt-1">Simule uma chamada de vendas com base nas suas diretivas</p>
+                      </div>
+                      <Button
+                        onClick={() => setIsTestCallModalOpen(true)}
+                        disabled={!voiceSettings.isActive || !voiceSettings.twilioPhoneNumber}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+                        size="sm"
+                        data-testid="button-test-call"
+                      >
+                        🎯 Fazer Ligação Teste
+                      </Button>
+                    </div>
+                    {(!voiceSettings.isActive || !voiceSettings.twilioPhoneNumber) && (
+                      <p className="text-xs text-amber-400">
+                        ⚠️ Ative o serviço de voz e provisione um número para testar
+                      </p>
+                    )}
+                  </div>
+                </div>
 
                 <Button 
                   onClick={handleSaveVoiceSettings}
@@ -2552,6 +2589,142 @@ export default function CustomerSupportSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Ligação Teste */}
+      <Dialog open={isTestCallModalOpen} onOpenChange={setIsTestCallModalOpen}>
+        <DialogContent className="bg-gray-900 border border-gray-700 max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Phone className="w-5 h-5 text-purple-400" />
+              Ligação Teste - Sofia IA
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Simule uma chamada de vendas baseada nas suas diretivas de IA
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col h-[500px]">
+            {/* Status da chamada */}
+            <div className="bg-purple-600/20 border border-purple-600/30 rounded-lg p-3 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-purple-300 font-medium">Chamada Ativa</span>
+                </div>
+                <div className="text-sm text-purple-300">
+                  Sofia (IA) → Cliente
+                </div>
+              </div>
+            </div>
+
+            {/* Área de conversa */}
+            <ScrollArea className="flex-1 border border-gray-700 rounded-lg bg-gray-800/50 p-4 mb-4">
+              <div className="space-y-4">
+                {testCallMessages.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8">
+                    <Phone className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>A Sofia iniciará a chamada assim que você responder...</p>
+                    <Button 
+                      onClick={handleStartTestCall}
+                      className="mt-4 bg-purple-600 hover:bg-purple-700"
+                      disabled={isAiResponding}
+                    >
+                      🚀 Iniciar Chamada Teste
+                    </Button>
+                  </div>
+                ) : (
+                  testCallMessages.map((message) => (
+                    <div key={message.id} className={`flex ${message.speaker === 'customer' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] rounded-lg p-3 ${
+                        message.speaker === 'customer' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-purple-600/30 border border-purple-600/50 text-purple-100'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {message.speaker === 'customer' ? (
+                            <div className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                              <span className="text-xs font-medium">Você</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-purple-300 rounded-full"></div>
+                              <span className="text-xs font-medium text-purple-300">Sofia (IA)</span>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm leading-relaxed">{message.message}</p>
+                        <span className="text-xs opacity-75 mt-1 block">
+                          {message.timestamp.toLocaleTimeString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+                
+                {isAiResponding && (
+                  <div className="flex justify-start">
+                    <div className="bg-purple-600/30 border border-purple-600/50 rounded-lg p-3 max-w-[80%]">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 bg-purple-300 rounded-full"></div>
+                        <span className="text-xs font-medium text-purple-300">Sofia (IA)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <span className="text-sm text-purple-300 ml-2">Sofia está respondendo...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            {/* Input de resposta */}
+            {testCallMessages.length > 0 && (
+              <div className="flex gap-2">
+                <Input
+                  value={customerInput}
+                  onChange={(e) => setCustomerInput(e.target.value)}
+                  placeholder="Digite sua resposta como cliente..."
+                  className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+                  disabled={isAiResponding}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !isAiResponding && customerInput.trim()) {
+                      handleCustomerResponse();
+                    }
+                  }}
+                  data-testid="input-customer-response"
+                />
+                <Button
+                  onClick={handleCustomerResponse}
+                  disabled={!customerInput.trim() || isAiResponding}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-send-response"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="border-t border-gray-700 pt-4">
+            <Button
+              onClick={() => {
+                setIsTestCallModalOpen(false);
+                setTestCallMessages([]);
+                setCustomerInput("");
+                setIsAiResponding(false);
+              }}
+              variant="outline"
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Encerrar Chamada
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
