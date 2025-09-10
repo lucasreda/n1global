@@ -119,7 +119,7 @@ export default function CostCalculator() {
   });
 
   // Buscar taxas de câmbio
-  const { data: exchangeRates } = useQuery({
+  const { data: exchangeRates } = useQuery<Record<string, number>>({
     queryKey: ['/api/currency/rates'],
     enabled: fields.currency !== 'BRL',
     refetchInterval: 15 * 60 * 1000,
