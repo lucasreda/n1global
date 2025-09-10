@@ -45,6 +45,7 @@ export default function CustomerSupportSettings() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
   const [isDeactivationModalOpen, setIsDeactivationModalOpen] = useState(false);
+  const [showDnsInstructions, setShowDnsInstructions] = useState(false);
 
   // Design configuration states
   const [designConfig, setDesignConfig] = useState({
@@ -428,6 +429,7 @@ export default function CustomerSupportSettings() {
       refetch();
       setEmailPrefix("");
       setCustomDomain("");
+      setShowDnsInstructions(true); // Mostrar instruções DNS após configurar
     },
     onError: () => {
       toast({
@@ -459,6 +461,9 @@ export default function CustomerSupportSettings() {
         variant: data.verified ? "default" : "destructive",
       });
       refetch();
+      if (data.verified) {
+        setShowDnsInstructions(false); // Esconder instruções se verificado
+      }
     },
     onError: () => {
       toast({
@@ -1009,7 +1014,7 @@ export default function CustomerSupportSettings() {
       </div>
 
       {/* DNS Instructions */}
-      {supportConfig?.emailDomain && !supportConfig.domainVerified && (
+      {supportConfig?.emailDomain && !supportConfig.domainVerified && showDnsInstructions && (
         <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
           <CardHeader>
             <CardTitle className="text-white" style={{ fontSize: '18px' }}>Instruções de Configuração DNS</CardTitle>
