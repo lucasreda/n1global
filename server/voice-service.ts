@@ -450,7 +450,7 @@ export class VoiceService {
   }
 
   /**
-   * Build AI prompt for voice conversation
+   * Build AI prompt for voice conversation (intelligent & dynamic using AI directives)
    */
   private async buildVoiceConversationPrompt(
     call: VoiceCall,
@@ -459,14 +459,14 @@ export class VoiceService {
     directives: any[],
     customerContext: any
   ): Promise<string> {
-    // Group directives by type (similar to email support)
+    // Group directives by type (same as email support)
     const directivesByType = directives.reduce((acc, directive: any) => {
       if (!acc[directive.type]) acc[directive.type] = [];
       acc[directive.type].push(directive);
       return acc;
     }, {} as Record<string, any[]>);
 
-    // Build sections similar to email support
+    // Build store information section using directives
     const storeInfoSection = directivesByType.store_info?.length > 0 
       ? `INFORMAÇÕES DA EMPRESA:
 ${directivesByType.store_info.map((d: any) => `- ${d.content}`).join('\n')}
@@ -477,42 +477,183 @@ ${directivesByType.store_info.map((d: any) => `- ${d.content}`).join('\n')}
 - Horário: Segunda a sexta, 9h às 18h
 `;
 
+    // Build product information section using directives
+    const productInfoSection = directivesByType.product_info?.length > 0 
+      ? `
+INFORMAÇÕES DOS PRODUTOS:
+${directivesByType.product_info.map((d: any) => `- ${d.content}`).join('\n')}
+` 
+      : '';
+
+    // Build response style section using directives
+    const responseStyleSection = directivesByType.response_style?.length > 0 
+      ? `
+DIRETRIZES DE ATENDIMENTO PERSONALIZADAS:
+${directivesByType.response_style.map((d: any) => `- ${d.content}`).join('\n')}
+` 
+      : '';
+
+    // Build custom directives section
+    const customSection = directivesByType.custom?.length > 0 
+      ? `
+DIRETRIZES ESPECÍFICAS DA OPERAÇÃO:
+${directivesByType.custom.map((d: any) => `- ${d.title}: ${d.content}`).join('\n')}
+` 
+      : '';
+
+    // Analyze customer message for emotional context and intent
+    const emotionalAnalysis = this.analyzeVoiceEmotionalContext(customerMessage);
+    
+    // Build emotional context section for voice
+    const emotionalContextSection = `
+CONTEXTO EMOCIONAL DO CLIENTE (VOZ):
+- Tom detectado: ${emotionalAnalysis.tone}
+- Urgência: ${emotionalAnalysis.urgency}
+- Intenção principal: ${emotionalAnalysis.intent}
+- Necessita atenção especial: ${emotionalAnalysis.needsSpecialAttention ? 'Sim' : 'Não'}
+
+INSTRUÇÕES BASEADAS NO CONTEXTO EMOCIONAL:
+${emotionalAnalysis.tone === 'irritado' || emotionalAnalysis.tone === 'frustrado' ? 
+  '- Use voz mais calma e empática\n- Demonstre compreensão imediata da situação\n- Priorize soluções rápidas' : ''}
+${emotionalAnalysis.urgency === 'alta' ? 
+  '- Cliente demonstra urgência - seja mais direta e eficaz\n- Evite explicações longas, foque na solução' : ''}
+${emotionalAnalysis.needsSpecialAttention ? 
+  '- ATENÇÃO: Situação requer cuidado especial - seja extra empática\n- Considere transferir para atendimento humano se necessário' : ''}
+${emotionalAnalysis.intent === 'reclamação' ? 
+  '- Cliente está reclamando - ouça ativamente e valide os sentimentos\n- Ofereça soluções concretas' : ''}
+
+`;
+
+    // Build customer context section with intelligence
     const customerContextSection = customerContext ? `
-CONTEXTO DO CLIENTE:
-- Total de pedidos: ${customerContext.totalOrders}
-- Pedidos entregues: ${customerContext.deliveredOrders}
-- Valor total gasto: €${customerContext.totalValue}
-- Tipo de cliente: ${customerContext.customerType}
+PERFIL DO CLIENTE:
+- Histórico: ${customerContext.totalOrders} pedidos (${customerContext.deliveredOrders} entregues)
+- Valor total: €${customerContext.totalValue}
+- Categoria: ${customerContext.customerType}
+- Reputação: ${customerContext.customerType === 'VIP' ? 'Cliente VIP - tratamento prioritário' : 'Cliente regular'}
 ` : '';
 
+    // Build conversation history with context awareness
     const conversationHistorySection = conversationHistory.length > 0 ? `
-HISTÓRICO DA CONVERSA:
-${conversationHistory.map(msg => `${msg.speaker === 'customer' ? 'Cliente' : 'IA'}: ${msg.content}`).join('\n')}
+HISTÓRICO DA LIGAÇÃO:
+${conversationHistory.slice(-5).map((msg, index) => {
+      const isRecent = index >= conversationHistory.length - 3;
+      const prefix = isRecent ? '🔥 ' : '';
+      return `${prefix}${msg.speaker === 'customer' ? 'Cliente' : 'Sofia'}: ${msg.content}`;
+    }).join('\n')}
+${conversationHistory.length > 5 ? '\n(Mostrando apenas as 5 mensagens mais recentes)' : ''}
 ` : '';
 
-    const prompt = `Você é Sofia, uma assistente virtual empática que atende clientes por telefone. Esta é uma conversa de voz, então suas respostas devem ser naturais, concisas e adequadas para fala.
+    // Build the complete intelligent prompt
+    const prompt = `
+Você é Sofia, uma assistente virtual experiente e altamente empática que atende clientes por telefone. Sua personalidade é acolhedora, profissional e adaptável ao estado emocional do cliente.
 
-${storeInfoSection}
-${customerContextSection}
-${conversationHistorySection}
+${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}${customerContextSection}${conversationHistorySection}
 
 MENSAGEM ATUAL DO CLIENTE: "${customerMessage}"
 
-INSTRUÇÕES PARA RESPOSTA DE VOZ:
-- Seja concisa e natural (máximo 2-3 frases)
-- Use linguagem falada, não escrita
-- Seja empática e acolhedora
-- Se necessário transferir para humano, diga claramente
-- Foque na necessidade imediata do cliente
+INSTRUÇÕES AVANÇADAS PARA RESPOSTA DE VOZ:
+- Adapte sua resposta ao tom emocional detectado
+- Seja concisa mas completa (máximo 3-4 frases para situações complexas, 1-2 para simples)
+- Use linguagem natural e conversacional adequada para fala
+- Se o cliente estiver irritado, comece sempre validando o sentimento antes da solução
+- Para clientes VIP, use tratamento mais personalizado
+- Se detectar que o assunto é complexo, ofereça callback ou transferência para especialista
 
-FORMATO DE RESPOSTA:
-Responda APENAS com o texto que você falará para o cliente. Não use formatação especial nem instruções extras.
+DETECÇÃO INTELIGENTE DE INTENÇÕES:
+- Dúvidas sobre pedidos → Forneça informações específicas e oferece rastreamento
+- Cancelamentos → Entenda o motivo primeiro, depois processe com empatia  
+- Problemas de entrega → Seja proativa em oferecer soluções
+- Alteração de dados → Confirme informações antes de processar
+- Reclamações → Escute ativamente, valide sentimentos, foque na resolução
 
-Se detectar uma situação que precisa de ticket de suporte, termine sua resposta com " [CRIAR_TICKET:categoria]" onde categoria pode ser: duvidas, reclamacoes, alteracao_endereco, cancelamento, manual.
+FORMATO DE RESPOSTA INTELIGENTE:
+Responda APENAS com o texto natural que você falará para o cliente. Use tom adequado ao contexto emocional.
 
-Exemplo: "Entendo sua preocupação com o pedido. Vou verificar isso para você imediatamente. [CRIAR_TICKET:duvidas]"`;
+Para criar tickets automáticos, termine com: " [CRIAR_TICKET:categoria:prioridade]"
+Categorias: duvidas, reclamacoes, alteracao_endereco, cancelamento, manual
+Prioridades: baixa, media, alta, urgente
+
+Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso imediatamente para você. [CRIAR_TICKET:reclamacoes:alta]"
+`;
 
     return prompt;
+  }
+
+  /**
+   * Analyze voice emotional context for intelligent response adaptation
+   */
+  private analyzeVoiceEmotionalContext(customerMessage: string): {
+    tone: string;
+    urgency: string;
+    intent: string;
+    needsSpecialAttention: boolean;
+  } {
+    const msg = customerMessage.toLowerCase();
+    
+    // Tone analysis
+    let tone = 'neutro';
+    if (msg.includes('irritado') || msg.includes('raiva') || msg.includes('revoltado') || 
+        msg.includes('absurdo') || msg.includes('inaceitável') || msg.includes('péssimo') ||
+        msg.includes('horrível') || msg.includes('furioso')) {
+      tone = 'irritado';
+    } else if (msg.includes('frustrado') || msg.includes('desapontado') || msg.includes('chateado') ||
+               msg.includes('decepcionado') || msg.includes('triste')) {
+      tone = 'frustrado';
+    } else if (msg.includes('preocupado') || msg.includes('ansioso') || msg.includes('nervoso') ||
+               msg.includes('inquieto') || msg.includes('receoso')) {
+      tone = 'preocupado';
+    } else if (msg.includes('satisfeito') || msg.includes('contente') || msg.includes('feliz') ||
+               msg.includes('grato') || msg.includes('obrigado')) {
+      tone = 'positivo';
+    }
+
+    // Urgency analysis
+    let urgency = 'baixa';
+    if (msg.includes('urgente') || msg.includes('imediatamente') || msg.includes('agora mesmo') ||
+        msg.includes('emergência') || msg.includes('preciso hoje') || msg.includes('já') ||
+        msg.includes('rápido') || msg.includes('quanto antes')) {
+      urgency = 'alta';
+    } else if (msg.includes('logo') || msg.includes('breve') || msg.includes('em breve') ||
+               msg.includes('quando possível') || msg.includes('assim que')) {
+      urgency = 'média';
+    }
+
+    // Intent analysis  
+    let intent = 'consulta_geral';
+    if (msg.includes('cancelar') || msg.includes('cancelamento') || msg.includes('não quero mais') ||
+        msg.includes('desistir') || msg.includes('estornar')) {
+      intent = 'cancelamento';
+    } else if (msg.includes('reclamação') || msg.includes('problema') || msg.includes('defeito') ||
+               msg.includes('errado') || msg.includes('não funcionou') || msg.includes('ruim') ||
+               msg.includes('péssimo') || msg.includes('insatisfeito')) {
+      intent = 'reclamação';
+    } else if (msg.includes('endereço') || msg.includes('mudança') || msg.includes('mudar') ||
+               msg.includes('alterar') || msg.includes('correção') || msg.includes('corrigir')) {
+      intent = 'alteracao_endereco';
+    } else if (msg.includes('pedido') || msg.includes('compra') || msg.includes('produto') ||
+               msg.includes('entrega') || msg.includes('chegou') || msg.includes('onde está')) {
+      intent = 'consulta_pedido';
+    } else if (msg.includes('dúvida') || msg.includes('pergunta') || msg.includes('como') ||
+               msg.includes('quando') || msg.includes('informação')) {
+      intent = 'duvida';
+    }
+
+    // Special attention analysis
+    const needsSpecialAttention = (
+      tone === 'irritado' || 
+      urgency === 'alta' || 
+      intent === 'reclamação' ||
+      msg.includes('advogado') || msg.includes('procon') || msg.includes('processo') ||
+      msg.includes('judicial') || msg.includes('consumidor') || msg.includes('denúncia')
+    );
+
+    return {
+      tone,
+      urgency,
+      intent,
+      needsSpecialAttention
+    };
   }
 
   /**
@@ -522,34 +663,47 @@ Exemplo: "Entendo sua preocupação com o pedido. Vou verificar isso para você 
     response: string;
     shouldCreateTicket: boolean;
     suggestedCategory?: string;
+    priority?: string;
     detectedIntent?: string;
   } {
-    // Check if AI wants to create a ticket
-    const ticketMatch = aiResponse.match(/\[CRIAR_TICKET:(\w+)\]/);
+    // Check if AI wants to create a ticket with enhanced format [CRIAR_TICKET:categoria:prioridade]
+    const ticketMatch = aiResponse.match(/\[CRIAR_TICKET:(\w+)(?::(\w+))?\]/);
     const shouldCreateTicket = !!ticketMatch;
     const suggestedCategory = ticketMatch?.[1] || undefined;
+    const priority = ticketMatch?.[2] || 'media'; // Default to media priority
     
     // Clean response text
-    const response = aiResponse.replace(/\[CRIAR_TICKET:\w+\]/, '').trim();
+    const response = aiResponse.replace(/\[CRIAR_TICKET:\w+(?::\w+)?\]/, '').trim();
     
-    // Simple intent detection based on keywords
+    // Enhanced intent detection based on keywords and context
     let detectedIntent = 'general_inquiry';
     const lowerResponse = response.toLowerCase();
     
-    if (lowerResponse.includes('cancelar') || lowerResponse.includes('cancelamento')) {
+    if (lowerResponse.includes('cancelar') || lowerResponse.includes('cancelamento') ||
+        lowerResponse.includes('desistir') || lowerResponse.includes('não quero mais')) {
       detectedIntent = 'cancellation';
-    } else if (lowerResponse.includes('endereço') || lowerResponse.includes('mudar')) {
+    } else if (lowerResponse.includes('endereço') || lowerResponse.includes('mudar') ||
+               lowerResponse.includes('alterar dados') || lowerResponse.includes('correção')) {
       detectedIntent = 'address_change';
-    } else if (lowerResponse.includes('problema') || lowerResponse.includes('reclamação')) {
+    } else if (lowerResponse.includes('problema') || lowerResponse.includes('reclamação') ||
+               lowerResponse.includes('defeito') || lowerResponse.includes('insatisfeito')) {
       detectedIntent = 'complaint';
-    } else if (lowerResponse.includes('pedido') || lowerResponse.includes('entrega')) {
+    } else if (lowerResponse.includes('pedido') || lowerResponse.includes('entrega') ||
+               lowerResponse.includes('onde está') || lowerResponse.includes('rastrear')) {
       detectedIntent = 'order_inquiry';
+    } else if (lowerResponse.includes('dúvida') || lowerResponse.includes('informação') ||
+               lowerResponse.includes('como funciona') || lowerResponse.includes('prazo')) {
+      detectedIntent = 'information_request';
+    } else if (lowerResponse.includes('pagamento') || lowerResponse.includes('cobrança') ||
+               lowerResponse.includes('valor') || lowerResponse.includes('preço')) {
+      detectedIntent = 'billing_inquiry';
     }
 
     return {
       response,
       shouldCreateTicket,
       suggestedCategory,
+      priority,
       detectedIntent,
     };
   }
