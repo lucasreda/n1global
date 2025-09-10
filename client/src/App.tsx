@@ -333,8 +333,9 @@ function AppContent() {
   useEffect(() => {
     checkAuth();
     
-    // Auto-login for development if not authenticated
-    if (!isAuthenticated && !isLoading && !autoLoginAttempted) {
+    // Auto-login for development if not authenticated and not explicitly logged out
+    const wasLoggedOut = localStorage.getItem('user_logged_out');
+    if (!isAuthenticated && !isLoading && !autoLoginAttempted && !wasLoggedOut) {
       setAutoLoginAttempted(true);
       login('fresh@teste.com', 'password123')
         .then(() => {
