@@ -102,6 +102,51 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
+   * Provision Twilio phone number for an operation
+   */
+  app.post("/api/customer-support/:operationId/provision-number", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      
+      const phoneNumber = await customerSupportService.provisionTwilioNumber(operationId);
+      
+      res.json({
+        success: true,
+        phoneNumber,
+        message: "Número Twilio provisionado com sucesso"
+      });
+    } catch (error) {
+      console.error('Error provisioning Twilio number:', error);
+      res.status(500).json({ 
+        message: "Falha ao provisionar número Twilio",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
+   * Release Twilio phone number for an operation
+   */
+  app.delete("/api/customer-support/:operationId/release-number", authenticateToken, async (req: Request, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      
+      await customerSupportService.releaseTwilioNumber(operationId);
+      
+      res.json({
+        success: true,
+        message: "Número Twilio liberado com sucesso"
+      });
+    } catch (error) {
+      console.error('Error releasing Twilio number:', error);
+      res.status(500).json({ 
+        message: "Falha ao liberar número Twilio",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
    * Get categories for an operation
    */
   app.get("/api/customer-support/:operationId/categories", authenticateToken, async (req: Request, res: Response) => {

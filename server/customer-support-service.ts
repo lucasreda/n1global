@@ -2,6 +2,7 @@ import { db } from "./db";
 import * as schema from "@shared/schema";
 import { eq, and, or, ilike, desc, asc, count, sql } from "drizzle-orm";
 import { supportService } from "./support-service";
+import { twilioProvisioningService } from "./twilio-provisioning-service";
 
 export class CustomerSupportService {
   private db = db;
@@ -155,6 +156,52 @@ export class CustomerSupportService {
       return settings;
     } catch (error) {
       console.error('Error saving voice settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Provision a Twilio phone number for an operation
+   */
+  async provisionTwilioNumber(operationId: string): Promise<string> {
+    try {
+      console.log(`📞 Provisioning Twilio number for operation ${operationId}...`);
+      
+      // Check if a number is already provisioned
+      const [existingSettings] = await this.db
+        .select()
+        .from(this.schema.voiceSettings)
+        .where(eq(this.schema.voiceSettings.operationId, operationId))
+        .limit(1);
+
+      if (existingSettings?.twilioPhoneNumber) {
+        console.log(`ℹ️ Operation ${operationId} already has provisioned number: ${existingSettings.twilioPhoneNumber}`);
+        return existingSettings.twilioPhoneNumber;
+      }
+
+      // Provision new number via Twilio API
+      const phoneNumber = await twilioProvisioningService.provisionPhoneNumber(operationId);
+      
+      console.log(`✅ Successfully provisioned number ${phoneNumber} for operation ${operationId}`);
+      return phoneNumber;
+    } catch (error) {
+      console.error('Error provisioning Twilio number:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Release a Twilio phone number for an operation
+   */
+  async releaseTwilioNumber(operationId: string): Promise<void> {
+    try {
+      console.log(`🗑️ Releasing Twilio number for operation ${operationId}...`);
+      
+      await twilioProvisioningService.releasePhoneNumber(operationId);
+      
+      console.log(`✅ Successfully released Twilio number for operation ${operationId}`);
+    } catch (error) {
+      console.error('Error releasing Twilio number:', error);
       throw error;
     }
   }

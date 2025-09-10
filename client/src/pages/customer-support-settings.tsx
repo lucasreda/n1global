@@ -586,6 +586,52 @@ export default function CustomerSupportSettings() {
     saveVoiceSettingsMutation.mutate(voiceSettings);
   };
 
+  // Provision number mutation
+  const provisionNumberMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/customer-support/${currentOperationId}/provision-number`, 'POST');
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Número provisionado",
+        description: `Número ${data.phoneNumber} foi provisionado com sucesso!`,
+      });
+      setVoiceSettings(prev => ({ ...prev, twilioPhoneNumber: data.phoneNumber }));
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/voice-settings`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao provisionar",
+        description: "Falha ao provisionar número Twilio.",
+        variant: "destructive",
+      });
+      console.error('Error provisioning number:', error);
+    }
+  });
+
+  // Release number mutation
+  const releaseNumberMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest(`/api/customer-support/${currentOperationId}/release-number`, 'DELETE');
+    },
+    onSuccess: () => {
+      toast({
+        title: "Número liberado",
+        description: "Número Twilio foi liberado com sucesso!",
+      });
+      setVoiceSettings(prev => ({ ...prev, twilioPhoneNumber: '' }));
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/voice-settings`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro ao liberar",
+        description: "Falha ao liberar número Twilio.",
+        variant: "destructive",
+      });
+      console.error('Error releasing number:', error);
+    }
+  });
+
   // Service deactivation mutation
   const deactivateServiceMutation = useMutation({
     mutationFn: async () => {
@@ -1270,16 +1316,46 @@ export default function CustomerSupportSettings() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone-number" className="text-sm font-medium text-white">Número Twilio</Label>
-                  <Input
-                    id="phone-number"
-                    value={voiceSettings.twilioPhoneNumber}
-                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, twilioPhoneNumber: e.target.value }))}
-                    placeholder="+5511999999999"
-                    className="bg-white/5 border-white/10 text-white placeholder-gray-400"
-                    data-testid="input-phone-number"
-                  />
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-white">Número Twilio</Label>
+                  {voiceSettings.twilioPhoneNumber ? (
+                    <div className="bg-white/5 border border-white/10 rounded-md p-3 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4 text-green-400" />
+                        <span className="text-white font-mono">{voiceSettings.twilioPhoneNumber}</span>
+                        <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Provisionado</Badge>
+                      </div>
+                      <Button
+                        onClick={() => releaseNumberMutation.mutate()}
+                        disabled={releaseNumberMutation.isPending}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-600/30 text-red-400 hover:bg-red-600/20"
+                        data-testid="button-release-number"
+                      >
+                        {releaseNumberMutation.isPending ? "Liberando..." : "Liberar"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="bg-white/5 border border-white/10 rounded-md p-3 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-400">Nenhum número provisionado</span>
+                      </div>
+                      <Button
+                        onClick={() => provisionNumberMutation.mutate()}
+                        disabled={provisionNumberMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700"
+                        size="sm"
+                        data-testid="button-provision-number"
+                      >
+                        {provisionNumberMutation.isPending ? "Provisionando..." : "Provisionar Número"}
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-400">
+                    O número é provisionado automaticamente via API Twilio e configurado para esta operação.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
