@@ -116,7 +116,7 @@ export default function Integrations() {
             const IconComponent = integration.icon;
             
             return (
-              <div key={integration.id} className="p-6" data-testid={`integration-${integration.id}`}>
+              <div key={integration.id} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`integration-${integration.id}`}>
                 <div className="flex items-center space-x-3 mb-4">
                   <IconComponent className={`text-${integration.color}-400`} size={30} />
                   <div>
