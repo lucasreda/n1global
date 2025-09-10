@@ -68,10 +68,10 @@ export default function Tools() {
 
   return (
     <div className="space-y-6">
-      <DashboardHeader 
-        title="Ferramentas" 
-        subtitle="Utilitários e ferramentas para otimizar sua operação" 
-      />
+      <div>
+        <h1 className="font-bold text-white" style={{fontSize: '22px'}}>Ferramentas</h1>
+        <p className="text-gray-400 mt-1">Utilitários e ferramentas para otimizar sua operação</p>
+      </div>
       
       {/* Grid de Ferramentas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
