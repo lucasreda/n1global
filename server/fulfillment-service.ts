@@ -143,7 +143,7 @@ class EuropeanFulfillmentService {
       return data.token;
     } catch (error) {
       console.error("💥 European Fulfillment authentication error:", error);
-      throw new Error("Failed to authenticate with European Fulfillment Center");
+      throw new Error("Failed to authenticate with N1 Warehouse");
     }
   }
 
@@ -187,7 +187,7 @@ class EuropeanFulfillmentService {
         data: {
           lead_number: mockLeadNumber,
           status: "pending",
-          message: "Simulação: Lead seria enviado para European Fulfillment Center"
+          message: "Simulação: Lead seria enviado para N1 Warehouse"
         }
       };
     }
@@ -224,7 +224,7 @@ class EuropeanFulfillmentService {
       
       return {
         success: true,
-        message: "Lead criado com sucesso na European Fulfillment Center",
+        message: "Lead criado com sucesso na N1 Warehouse",
         lead_number: leadNumber,
         data: response
       };

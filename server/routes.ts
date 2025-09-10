@@ -1896,7 +1896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // European Fulfillment Center Integration Routes
+  // N1 Warehouse Integration Routes
   
   // Test connection
   app.get("/api/integrations/european-fulfillment/test", authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -2105,7 +2105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const leadData = req.body;
       
-      // Try to send to European Fulfillment Center
+      // Try to send to N1 Warehouse
       const result = await europeanFulfillmentService.createLead(leadData);
       
       res.status(201).json(result);
@@ -2121,7 +2121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Lead não encontrado" });
       }
 
-      // Get status from European Fulfillment Center
+      // Get status from N1 Warehouse
       const service = new EuropeanFulfillmentService();
       const status = await service.getLeadStatus(lead.leadNumber);
       

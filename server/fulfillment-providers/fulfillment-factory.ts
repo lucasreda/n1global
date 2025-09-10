@@ -74,8 +74,8 @@ export class FulfillmentProviderFactory {
    */
   static getAvailableProviders(): Array<{ type: ProviderType; name: string; status: string }> {
     return [
-      { type: 'european_fulfillment', name: 'European Fulfillment Center', status: 'active' },
-      { type: 'elogy', name: 'eLogy Logistics', status: 'active' }
+      { type: 'european_fulfillment', name: 'N1 Warehouse 1', status: 'active' },
+      { type: 'elogy', name: 'N1 Warehouse 2', status: 'active' }
     ];
   }
 

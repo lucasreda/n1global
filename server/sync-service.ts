@@ -70,7 +70,7 @@ export class SyncService {
   }
   
   private async syncEuropeanFulfillment(jobId: string, type: string, logs: string[]) {
-    logs.push(`Starting European Fulfillment sync: ${type}`);
+    logs.push(`Starting N1 Warehouse sync: ${type}`);
     
     let ordersProcessed = 0;
     let ordersCreated = 0;
@@ -79,7 +79,7 @@ export class SyncService {
     
     try {
       // Get all leads from API (without pagination limits)
-      console.log(`📊 Fetching all leads from European Fulfillment API...`);
+      console.log(`📊 Fetching all leads from N1 Warehouse API...`);
       const allLeads = await this.fetchAllLeads();
       logs.push(`Fetched ${allLeads.length} leads from API`);
       

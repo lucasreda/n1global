@@ -595,12 +595,12 @@ export class ShopifySyncService {
     
     console.log(`📊 Resultados do Match:`);
     console.log(`   Pedidos Shopify analisados: ${totalShopifyOrders}`);
-    console.log(`   Leads European Fulfillment: ${totalCarrierLeads}`);
+    console.log(`   Leads N1 Warehouse: ${totalCarrierLeads}`);
     console.log(`   Matches encontrados: ${matched}`);
     console.log(`   Pedidos não processados por esta transportadora: ${totalShopifyOrders - matched}`);
     
     if (matched > 0) {
-      console.log(`✅ Sistema funcionando corretamente - ${matched} pedidos sincronizados com European Fulfillment`);
+      console.log(`✅ Sistema funcionando corretamente - ${matched} pedidos sincronizados com N1 Warehouse`);
     }
     
     if (totalShopifyOrders - matched > 0) {
