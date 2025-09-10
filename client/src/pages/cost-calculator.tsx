@@ -646,7 +646,7 @@ export default function CostCalculator() {
             {/* Card de Margem de Lucro */}
             <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center justify-between">
+                <CardTitle className="text-white flex items-center justify-between text-lg">
                   <span className="flex items-center gap-2">
                     <ProfitIcon size={20} className={profitStatus.color} />
                     Margem de Lucro
