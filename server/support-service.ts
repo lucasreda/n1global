@@ -1822,13 +1822,56 @@ REGRAS:
   }
 
   /**
-   * Get operation ID from email (implement based on your email routing logic)
+   * Get operation ID from email based on email domain mapping
    */
   private async getOperationIdFromEmail(email: SupportEmail): Promise<string> {
-    // For now, return the first operation - you can implement proper routing later
-    // This could be based on email domain, to field, etc.
-    const operationsList = await db.select().from(operations).limit(1);
-    return operationsList[0]?.id || 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4';
+    try {
+      console.log('🔍 Getting operation ID for email:', { to: email.to, from: email.from });
+      
+      // Extract domain from the 'to' email address
+      const toDomain = email.to.includes('@') ? email.to.split('@')[1] : null;
+      
+      if (!toDomain) {
+        console.log('⚠️ Could not extract domain from email:', email.to);
+        // Fallback to first operation
+        const operationsList = await db.select().from(operations).limit(1);
+        const fallbackId = operationsList[0]?.id || 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4';
+        console.log('⚠️ Using fallback operation ID:', fallbackId);
+        return fallbackId;
+      }
+
+      console.log('🔍 Extracted domain:', toDomain);
+
+      // Find operation by domain in customer support operations
+      const [operation] = await db
+        .select({
+          operationId: customerSupportOperations.operationId,
+          emailDomain: customerSupportOperations.emailDomain
+        })
+        .from(customerSupportOperations)
+        .where(eq(customerSupportOperations.emailDomain, toDomain))
+        .limit(1);
+
+      if (!operation) {
+        console.log('⚠️ No operation found for domain:', toDomain);
+        // Fallback to first operation
+        const operationsList = await db.select().from(operations).limit(1);
+        const fallbackId = operationsList[0]?.id || 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4';
+        console.log('⚠️ Using fallback operation ID:', fallbackId);
+        return fallbackId;
+      }
+
+      console.log('✅ Found operation for domain:', toDomain, '-> Operation ID:', operation.operationId);
+      return operation.operationId;
+      
+    } catch (error) {
+      console.error('❌ Error getting operation ID from email:', error);
+      // Fallback to first operation in case of error
+      const operationsList = await db.select().from(operations).limit(1);
+      const fallbackId = operationsList[0]?.id || 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4';
+      console.log('⚠️ Using fallback operation ID due to error:', fallbackId);
+      return fallbackId;
+    }
   }
 
   /**
