@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users, Power } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Settings, Mail, Shield, Trash2, Edit3, Palette, Cog, Upload, Bot, Plus, X, Lightbulb, Sparkles, MessageSquare, Zap, Clock, BarChart3, Users, Power, Phone } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
@@ -103,9 +103,37 @@ export default function CustomerSupportSettings() {
   } | null>(null);
   const [isEditingDirective, setIsEditingDirective] = useState(false);
 
+  // Voice settings states
+  const [voiceSettings, setVoiceSettings] = useState({
+    isActive: false,
+    twilioPhoneNumber: '',
+    welcomeMessage: 'Olá! Como posso ajudá-lo hoje?',
+    operatingHours: {
+      monday: { enabled: true, start: '09:00', end: '18:00' },
+      tuesday: { enabled: true, start: '09:00', end: '18:00' },
+      wednesday: { enabled: true, start: '09:00', end: '18:00' },
+      thursday: { enabled: true, start: '09:00', end: '18:00' },
+      friday: { enabled: true, start: '09:00', end: '18:00' },
+      saturday: { enabled: false, start: '09:00', end: '18:00' },
+      sunday: { enabled: false, start: '09:00', end: '18:00' },
+      timezone: 'America/Sao_Paulo'
+    },
+    allowedCallTypes: ['doubts', 'address_change', 'cancellation'],
+    voiceInstructions: 'Você é Sofia, um assistente virtual empático da central de atendimento. Seja cordial e profissional.',
+    outOfHoursMessage: 'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.',
+    outOfHoursAction: 'voicemail'
+  });
+
   // Get AI directives data
   const { data: aiDirectivesData } = useQuery({
     queryKey: [`/api/customer-support/${currentOperationId}/ai-directives`],
+    enabled: !!currentOperationId,
+    staleTime: 0
+  });
+
+  // Get voice settings data
+  const { data: voiceSettingsData, isLoading: voiceSettingsLoading } = useQuery({
+    queryKey: [`/api/customer-support/${currentOperationId}/voice-settings`],
     enabled: !!currentOperationId,
     staleTime: 0
   });
@@ -116,6 +144,13 @@ export default function CustomerSupportSettings() {
       setAiDirectives(aiDirectivesData);
     }
   }, [aiDirectivesData]);
+
+  // Update local voice settings state when data from server changes
+  useEffect(() => {
+    if (voiceSettingsData) {
+      setVoiceSettings(voiceSettingsData);
+    }
+  }, [voiceSettingsData]);
 
   // Functions for AI directives management
   const getDirectiveTypeIcon = (type: string) => {
@@ -525,6 +560,32 @@ export default function CustomerSupportSettings() {
     activateServiceMutation.mutate();
   };
 
+  // Voice settings mutation
+  const saveVoiceSettingsMutation = useMutation({
+    mutationFn: async (settings: typeof voiceSettings) => {
+      return await apiRequest(`/api/customer-support/${currentOperationId}/voice-settings`, 'POST', settings);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Configurações de voz salvas",
+        description: "As configurações de voz foram salvas com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/voice-settings`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar configurações de voz.",
+        variant: "destructive",
+      });
+      console.error('Error saving voice settings:', error);
+    }
+  });
+
+  const handleSaveVoiceSettings = () => {
+    saveVoiceSettingsMutation.mutate(voiceSettings);
+  };
+
   // Service deactivation mutation
   const deactivateServiceMutation = useMutation({
     mutationFn: async () => {
@@ -782,10 +843,14 @@ export default function CustomerSupportSettings() {
 
       {/* Tabs Container */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-black/20 backdrop-blur-sm border border-white/10">
+        <TabsList className="grid w-full grid-cols-4 bg-black/20 backdrop-blur-sm border border-white/10">
           <TabsTrigger value="general" className="flex items-center gap-2 data-[state=active]:bg-white/10">
             <Cog className="w-4 h-4" />
             Geral
+          </TabsTrigger>
+          <TabsTrigger value="voice" className="flex items-center gap-2 data-[state=active]:bg-white/10">
+            <Phone className="w-4 h-4" />
+            Voz
           </TabsTrigger>
           <TabsTrigger value="ai-training" className="flex items-center gap-2 data-[state=active]:bg-white/10">
             <Bot className="w-4 h-4" />
@@ -1176,6 +1241,176 @@ export default function CustomerSupportSettings() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        {/* Aba Configurações de Voz */}
+        <TabsContent value="voice" className="space-y-6 mt-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Configurações Básicas */}
+            <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Phone className="w-5 h-5" />
+                  Configurações Básicas
+                </CardTitle>
+                <CardDescription className="text-gray-300">
+                  Configure o atendimento por voz da Sofia
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium text-white">Ativar Atendimento por Voz</Label>
+                    <p className="text-sm text-gray-400">Permite que clientes façam chamadas para suporte</p>
+                  </div>
+                  <Switch 
+                    checked={voiceSettings.isActive}
+                    onCheckedChange={(checked) => setVoiceSettings(prev => ({ ...prev, isActive: checked }))}
+                    data-testid="switch-voice-active"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone-number" className="text-sm font-medium text-white">Número Twilio</Label>
+                  <Input
+                    id="phone-number"
+                    value={voiceSettings.twilioPhoneNumber}
+                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, twilioPhoneNumber: e.target.value }))}
+                    placeholder="+5511999999999"
+                    className="bg-white/5 border-white/10 text-white placeholder-gray-400"
+                    data-testid="input-phone-number"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="welcome-message" className="text-sm font-medium text-white">Mensagem de Boas-vindas</Label>
+                  <Textarea
+                    id="welcome-message"
+                    value={voiceSettings.welcomeMessage}
+                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, welcomeMessage: e.target.value }))}
+                    placeholder="Olá! Como posso ajudá-lo hoje?"
+                    className="bg-white/5 border-white/10 text-white placeholder-gray-400"
+                    rows={3}
+                    data-testid="textarea-welcome-message"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="voice-instructions" className="text-sm font-medium text-white">Instruções para IA</Label>
+                  <Textarea
+                    id="voice-instructions"
+                    value={voiceSettings.voiceInstructions}
+                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, voiceInstructions: e.target.value }))}
+                    placeholder="Instruções específicas para o atendimento por voz..."
+                    className="bg-white/5 border-white/10 text-white placeholder-gray-400"
+                    rows={4}
+                    data-testid="textarea-voice-instructions"
+                  />
+                </div>
+
+                <Button 
+                  onClick={handleSaveVoiceSettings}
+                  disabled={saveVoiceSettingsMutation.isPending}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-save-voice-settings"
+                >
+                  {saveVoiceSettingsMutation.isPending ? "Salvando..." : "Salvar Configurações"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Horários de Funcionamento */}
+            <Card className="bg-black/20 backdrop-blur-sm border border-white/10">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Horário de Funcionamento
+                </CardTitle>
+                <CardDescription className="text-gray-300">
+                  Defina os horários em que o atendimento por voz estará disponível
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {Object.entries(voiceSettings.operatingHours).map(([day, hours]) => {
+                  if (day === 'timezone') return null;
+                  
+                  const dayLabels = {
+                    monday: 'Segunda-feira',
+                    tuesday: 'Terça-feira', 
+                    wednesday: 'Quarta-feira',
+                    thursday: 'Quinta-feira',
+                    friday: 'Sexta-feira',
+                    saturday: 'Sábado',
+                    sunday: 'Domingo'
+                  };
+                  
+                  return (
+                    <div key={day} className="flex items-center justify-between space-x-4">
+                      <div className="flex items-center space-x-2 min-w-[120px]">
+                        <Switch 
+                          checked={hours.enabled}
+                          onCheckedChange={(checked) => setVoiceSettings(prev => ({
+                            ...prev,
+                            operatingHours: {
+                              ...prev.operatingHours,
+                              [day]: { ...hours, enabled: checked }
+                            }
+                          }))}
+                          data-testid={`switch-${day}`}
+                        />
+                        <span className="text-sm text-white">{dayLabels[day as keyof typeof dayLabels]}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="time"
+                          value={hours.start}
+                          onChange={(e) => setVoiceSettings(prev => ({
+                            ...prev,
+                            operatingHours: {
+                              ...prev.operatingHours,
+                              [day]: { ...hours, start: e.target.value }
+                            }
+                          }))}
+                          className="w-24 bg-white/5 border-white/10 text-white"
+                          disabled={!hours.enabled}
+                          data-testid={`input-${day}-start`}
+                        />
+                        <span className="text-gray-400">às</span>
+                        <Input
+                          type="time"
+                          value={hours.end}
+                          onChange={(e) => setVoiceSettings(prev => ({
+                            ...prev,
+                            operatingHours: {
+                              ...prev.operatingHours,
+                              [day]: { ...hours, end: e.target.value }
+                            }
+                          }))}
+                          className="w-24 bg-white/5 border-white/10 text-white"
+                          disabled={!hours.enabled}
+                          data-testid={`input-${day}-end`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <Separator className="bg-white/10" />
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-white">Mensagem Fora do Horário</Label>
+                  <Textarea
+                    value={voiceSettings.outOfHoursMessage}
+                    onChange={(e) => setVoiceSettings(prev => ({ ...prev, outOfHoursMessage: e.target.value }))}
+                    placeholder="Mensagem quando fora do horário de funcionamento"
+                    className="bg-white/5 border-white/10 text-white placeholder-gray-400"
+                    rows={3}
+                    data-testid="textarea-out-of-hours-message"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Aba Treinamento IA */}

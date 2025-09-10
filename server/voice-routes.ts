@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { VoiceService } from "./voice-service";
-import WebSocket from 'ws';
+import { WebSocketServer } from 'ws';
 import OpenAI from 'openai';
 
 const router = Router();
@@ -83,7 +83,7 @@ router.post("/transcription", async (req, res) => {
  * WebSocket handler for Twilio Media Streams + OpenAI Realtime API
  */
 export function setupVoiceWebSocket(server: any) {
-  const wss = new WebSocket.Server({ 
+  const wss = new WebSocketServer({ 
     server,
     path: '/api/voice/media-stream'
   });
