@@ -593,7 +593,63 @@ export default function CostCalculator() {
 
           {/* Coluna 3: Resultados */}
           <div className="space-y-4">
-            {/* Card de Lucro Principal */}
+            {/* Card de Projeção de Lucros */}
+            <Card className="glassmorphism border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-sm">Projeção de Lucros</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className={`p-3 rounded-lg ${results.dailyProfit > 0 ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-300">Lucro Diário</span>
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${results.dailyProfit > 0 ? 'text-green-400' : 'text-red-400'}`} data-testid="text-daily-profit">
+                        {formatCurrency(results.dailyProfit)}
+                      </p>
+                      {fields.currency !== 'BRL' && (
+                        <p className="text-xs text-gray-400">
+                          {formatBRL(convertedResults.dailyProfitBRL)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`p-3 rounded-lg ${results.monthlyProfit > 0 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-300">Lucro Mensal</span>
+                    <div className="text-right">
+                      <p className={`text-xl font-bold ${results.monthlyProfit > 0 ? 'text-blue-400' : 'text-red-400'}`} data-testid="text-monthly-profit">
+                        {formatCurrency(results.monthlyProfit)}
+                      </p>
+                      {fields.currency !== 'BRL' && (
+                        <p className="text-xs text-gray-400">
+                          {formatBRL(convertedResults.monthlyProfitBRL)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-gray-800/30 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-300">Lucro Anual Projetado</span>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-purple-400">
+                        {formatCurrency(results.monthlyProfit * 12)}
+                      </p>
+                      {fields.currency !== 'BRL' && (
+                        <p className="text-xs text-gray-400">
+                          {formatBRL(convertedResults.monthlyProfitBRL * 12)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card de Margem de Lucro */}
             <Card className={`glassmorphism overflow-hidden ${profitStatus.border}`}>
               <div className={`h-2 ${profitStatus.bg}`} />
               <CardHeader className="pb-3">
@@ -817,62 +873,6 @@ export default function CostCalculator() {
                     <span className={`font-bold ${results.profitMargin >= 30 ? 'text-green-400' : results.profitMargin >= 20 ? 'text-yellow-400' : 'text-red-400'}`}>
                       {results.profitMargin.toFixed(2)}%
                     </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Card de Lucros */}
-            <Card className="glassmorphism border-gray-700">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white text-sm">Projeção de Lucros</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className={`p-3 rounded-lg ${results.dailyProfit > 0 ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-300">Lucro Diário</span>
-                    <div className="text-right">
-                      <p className={`text-lg font-bold ${results.dailyProfit > 0 ? 'text-green-400' : 'text-red-400'}`} data-testid="text-daily-profit">
-                        {formatCurrency(results.dailyProfit)}
-                      </p>
-                      {fields.currency !== 'BRL' && (
-                        <p className="text-xs text-gray-400">
-                          {formatBRL(convertedResults.dailyProfitBRL)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`p-3 rounded-lg ${results.monthlyProfit > 0 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-300">Lucro Mensal</span>
-                    <div className="text-right">
-                      <p className={`text-xl font-bold ${results.monthlyProfit > 0 ? 'text-blue-400' : 'text-red-400'}`} data-testid="text-monthly-profit">
-                        {formatCurrency(results.monthlyProfit)}
-                      </p>
-                      {fields.currency !== 'BRL' && (
-                        <p className="text-xs text-gray-400">
-                          {formatBRL(convertedResults.monthlyProfitBRL)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-gray-800/30 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-gray-300">Lucro Anual Projetado</span>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-purple-400">
-                        {formatCurrency(results.monthlyProfit * 12)}
-                      </p>
-                      {fields.currency !== 'BRL' && (
-                        <p className="text-xs text-gray-400">
-                          {formatBRL(convertedResults.monthlyProfitBRL * 12)}
-                        </p>
-                      )}
-                    </div>
                   </div>
                 </div>
               </CardContent>
