@@ -57,11 +57,12 @@ function validateTwilioSignature(req: any, res: any, next: any) {
       .digest('base64');
     
     // Twilio's X-Twilio-Signature header is pure base64 WITHOUT "sha1=" prefix
-    // Compare signatures using timing-safe comparison
-    if (!crypto.timingSafeEqual(
-      Buffer.from(twilioSignature, 'utf8'),
-      Buffer.from(expectedSignature, 'utf8')
-    )) {
+    // Compare signatures using timing-safe comparison (need same length buffers)
+    const providedBuffer = Buffer.from(twilioSignature, 'utf8');
+    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+    
+    if (providedBuffer.length !== expectedBuffer.length || 
+        !crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
       console.error('❌ Invalid Twilio signature');
       console.error(`Expected: ${expectedSignature}`);
       console.error(`Provided: ${twilioSignature}`);
