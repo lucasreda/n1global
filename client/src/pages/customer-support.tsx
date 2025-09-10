@@ -946,12 +946,12 @@ export default function CustomerSupportPage() {
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm">
                         <XCircle className="h-4 w-4 mr-1" />
-                        Fechar
+                        Encerrar
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Fechar Ticket</AlertDialogTitle>
+                        <AlertDialogTitle>Encerrar Ticket</AlertDialogTitle>
                         <AlertDialogDescription>
                           Tem certeza que deseja marcar este ticket como resolvido? Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
@@ -959,7 +959,7 @@ export default function CustomerSupportPage() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction onClick={handleCloseTicket} disabled={isClosingTicket}>
-                          {isClosingTicket ? "Fechando..." : "Fechar Ticket"}
+                          {isClosingTicket ? "Encerrando..." : "Encerrar Ticket"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
