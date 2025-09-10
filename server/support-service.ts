@@ -1878,7 +1878,9 @@ REGRAS:
    * Get active AI directives for an operation
    */
   private async getActiveDirectives(operationId: string) {
-    return await db
+    console.log('🔍 Getting AI directives for operation:', operationId);
+    
+    const directives = await db
       .select()
       .from(aiDirectives)
       .where(and(
@@ -1886,6 +1888,13 @@ REGRAS:
         eq(aiDirectives.isActive, true)
       ))
       .orderBy(aiDirectives.sortOrder, aiDirectives.createdAt);
+    
+    console.log(`📋 Found ${directives.length} active directives for operation ${operationId}:`);
+    directives.forEach((directive, index) => {
+      console.log(`  ${index + 1}. [${directive.type}] ${directive.title}: ${directive.content.substring(0, 100)}...`);
+    });
+    
+    return directives;
   }
 
   /**
@@ -1904,6 +1913,7 @@ REGRAS:
       escalationRisk: number;
     }
   ): Promise<string> {
+    console.log('🛠️ Building dynamic prompt with', directives.length, 'directives');
     const customerName = email.from.split("@")[0];
 
     // Group directives by type
@@ -1913,16 +1923,29 @@ REGRAS:
       return acc;
     }, {} as Record<string, any[]>);
 
+    console.log('📊 Directives grouped by type:', {
+      store_info: directivesByType.store_info?.length || 0,
+      product_info: directivesByType.product_info?.length || 0,
+      response_style: directivesByType.response_style?.length || 0,
+      custom: directivesByType.custom?.length || 0
+    });
+
     // Build store information section
     const storeInfoSection = directivesByType.store_info?.length > 0 
-      ? `INFORMAÇÕES DA EMPRESA:
+      ? (() => {
+          console.log('✅ Using custom store_info directives');
+          return `INFORMAÇÕES DA EMPRESA:
 ${directivesByType.store_info.map(d => `- ${d.content}`).join('\n')}
-` 
-      : `INFORMAÇÕES DA EMPRESA:
+`;
+        })()
+      : (() => {
+          console.log('⚠️ Using fallback store_info (hardcoded)');
+          return `INFORMAÇÕES DA EMPRESA:
 - Tempo de entrega: 2 a 7 dias úteis (maioria chega em até 3 dias úteis)
 - Pagamento: Na entrega (COD - Cash on Delivery)  
 - Horário: Segunda a sexta, 9h às 18h
 `;
+        })();
 
     // Build product information section
     const productInfoSection = directivesByType.product_info?.length > 0 
