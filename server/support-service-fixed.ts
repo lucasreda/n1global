@@ -153,7 +153,15 @@ export class SupportService {
   private async buildDynamicPrompt(
     email: SupportEmail,
     category: SupportCategory,
-    directives: any[]
+    directives: any[],
+    sentimentData?: {
+      sentiment: string;
+      emotion: string;
+      urgency: string;
+      tone: string;
+      hasTimeConstraint: boolean;
+      escalationRisk: number;
+    }
   ): Promise<string> {
     const customerName = email.from.split("@")[0];
 
@@ -199,11 +207,33 @@ ${directivesByType.custom.map(d => `- ${d.title}: ${d.content}`).join('\n')}
 ` 
       : '';
 
+    // Build emotional context section
+    const emotionalContextSection = sentimentData ? `
+CONTEXTO EMOCIONAL DO CLIENTE:
+- Sentimento: ${sentimentData.sentiment}
+- Emoção: ${sentimentData.emotion}
+- Urgência: ${sentimentData.urgency}
+- Tom: ${sentimentData.tone}
+- Prazo mencionado: ${sentimentData.hasTimeConstraint ? 'Sim' : 'Não'}
+- Risco de escalação: ${sentimentData.escalationRisk}/10
+
+INSTRUÇÕES BASEADAS NO CONTEXTO EMOCIONAL:
+${sentimentData.sentiment === 'muito_negativo' || sentimentData.sentiment === 'negativo' ? 
+  '- Use linguagem mais empática e acolhedora\n- Ofereça soluções prioritárias\n- Demonstre compreensão da frustração' : ''}
+${sentimentData.escalationRisk >= 7 ? 
+  '- ATENÇÃO: Alto risco de escalação - seja especialmente cuidadosa\n- Ofereça escalação para supervisor se necessário' : ''}
+${sentimentData.hasTimeConstraint ? 
+  '- Cliente mencionou prazo - priorize urgência na resposta' : ''}
+${sentimentData.emotion === 'ansioso' || sentimentData.emotion === 'preocupado' ? 
+  '- Cliente demonstra ansiedade - tranquilize e forneça informações claras' : ''}
+
+` : '';
+
     // Construct the complete prompt
     const prompt = `
 Você é Sofia, uma agente de atendimento ao cliente experiente e empática. 
 
-${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}
+${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}
 EMAIL ORIGINAL:
 Remetente: ${email.from}
 Assunto: ${email.subject}  
