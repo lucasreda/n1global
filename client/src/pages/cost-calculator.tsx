@@ -682,7 +682,10 @@ export default function CostCalculator() {
             {/* Card de Receitas e Custos */}
             <Card className="glassmorphism border-gray-700">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white text-sm">Análise Financeira Diária</CardTitle>
+                <CardTitle className="text-white text-sm">Calculadora de Lucro COD</CardTitle>
+                <CardDescription className="text-gray-400 text-xs">
+                  Metodologia precisa para calcular o lucro da sua oferta
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
