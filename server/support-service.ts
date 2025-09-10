@@ -5,6 +5,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { db } from "./db";
+import { customerOrderService, type CustomerOrderMatch, type OrderActionResult } from "./customer-order-service";
 import {
   supportCategories,
   supportEmails,
@@ -23,6 +24,39 @@ import {
   type InsertSupportTicket,
   type InsertSupportConversation,
 } from "@shared/schema";
+
+// Interfaces for order integration
+export interface EmailOrderContext {
+  customerOrders: CustomerOrderMatch[];
+  customerStats: {
+    totalOrders: number;
+    totalValue: number;
+    deliveredOrders: number;
+    cancelledOrders: number;
+    lastOrderDate?: Date;
+    customerType: 'new' | 'returning' | 'vip';
+  };
+  extractedOrderIds: string[];
+  suggestedActions: {
+    action: 'cancel_order' | 'update_address' | 'provide_tracking' | 'none';
+    orderId?: string;
+    reason?: string;
+    requiresApproval?: boolean;
+  }[];
+}
+
+export interface OrderActionRequest {
+  action: 'cancel_order' | 'update_address';
+  orderId: string;
+  reason?: string;
+  newAddress?: {
+    customerAddress?: string;
+    customerCity?: string;
+    customerState?: string;
+    customerCountry?: string;
+    customerZip?: string;
+  };
+}
 import { eq, and, or, inArray, ilike, desc, sql, count } from "drizzle-orm";
 
 const openai = new OpenAI({
@@ -92,6 +126,217 @@ export class SupportService {
       .select()
       .from(supportCategories)
       .orderBy(desc(supportCategories.priority));
+  }
+
+  /**
+   * Enrich email with customer order information
+   */
+  async enrichEmailWithOrderContext(
+    email: SupportEmail,
+    operationId: string
+  ): Promise<EmailOrderContext> {
+    console.log('🔍 Enriching email with order context for:', email.from);
+
+    // Extract customer information
+    const customerEmail = email.from;
+    const customerName = email.from.split('@')[0];
+    
+    // Extract potential order IDs from email content
+    const extractedOrderIds = this.extractOrderIdsFromEmail(
+      email.subject, 
+      email.textContent || email.htmlContent || ''
+    );
+
+    try {
+      // Find customer orders
+      const customerOrders = await customerOrderService.findCustomerOrders(
+        operationId,
+        customerEmail,
+        undefined, // phone - not available from email
+        customerName
+      );
+
+      // Get customer statistics
+      const customerStats = await customerOrderService.getCustomerStats(
+        operationId,
+        customerEmail
+      );
+
+      // Analyze email content for suggested actions
+      const suggestedActions = await this.analyzeSuggestedActions(
+        email,
+        customerOrders,
+        extractedOrderIds
+      );
+
+      console.log(`✅ Found ${customerOrders.length} orders for customer ${customerEmail}`);
+      console.log(`📊 Customer stats: ${customerStats.totalOrders} total orders, ${customerStats.customerType} type`);
+      console.log(`🎯 Suggested actions: ${suggestedActions.length} actions identified`);
+
+      return {
+        customerOrders,
+        customerStats,
+        extractedOrderIds,
+        suggestedActions
+      };
+
+    } catch (error) {
+      console.error('❌ Error enriching email with order context:', error);
+      return {
+        customerOrders: [],
+        customerStats: {
+          totalOrders: 0,
+          totalValue: 0,
+          deliveredOrders: 0,
+          cancelledOrders: 0,
+          customerType: 'new'
+        },
+        extractedOrderIds,
+        suggestedActions: []
+      };
+    }
+  }
+
+  /**
+   * Extract order IDs from email content
+   */
+  private extractOrderIdsFromEmail(subject: string, content: string): string[] {
+    const orderIds: string[] = [];
+    const fullText = `${subject} ${content}`.toLowerCase();
+    
+    // Common order ID patterns
+    const patterns = [
+      /(?:pedido|order|nº|número|#)\s*:?\s*([A-Z0-9\-]{5,20})/gi,
+      /(?:NT-|ORD-|PED-|#)([A-Z0-9\-]{4,15})/gi,
+      /\b([A-Z]{2,3}-\d{4,8})\b/gi,
+      /\b(NT\d{6,8})\b/gi
+    ];
+
+    patterns.forEach(pattern => {
+      const matches = fullText.matchAll(pattern);
+      for (const match of matches) {
+        if (match[1] && !orderIds.includes(match[1])) {
+          orderIds.push(match[1].toUpperCase());
+        }
+      }
+    });
+
+    console.log(`🔍 Extracted order IDs from email: ${orderIds.join(', ') || 'none'}`);
+    return orderIds;
+  }
+
+  /**
+   * Analyze email content to suggest automatic actions
+   */
+  private async analyzeSuggestedActions(
+    email: SupportEmail,
+    customerOrders: CustomerOrderMatch[],
+    extractedOrderIds: string[]
+  ): Promise<EmailOrderContext['suggestedActions']> {
+    const actions: EmailOrderContext['suggestedActions'] = [];
+    const content = `${email.subject} ${email.textContent || email.htmlContent || ''}`.toLowerCase();
+
+    // Cancelamento
+    if (content.includes('cancelar') || content.includes('cancel')) {
+      // Priorizar pedidos específicos mencionados
+      if (extractedOrderIds.length > 0) {
+        extractedOrderIds.forEach(orderId => {
+          const matchingOrder = customerOrders.find(o => o.order.id === orderId);
+          if (matchingOrder) {
+            actions.push({
+              action: 'cancel_order',
+              orderId: orderId,
+              reason: 'Cliente solicitou cancelamento por email'
+            });
+          }
+        });
+      } else if (customerOrders.length > 0) {
+        // Usar o pedido mais recente se nenhum ID específico foi mencionado
+        const recentOrder = customerOrders
+          .filter(o => o.confidence === 'high')
+          .sort((a, b) => {
+            const dateA = new Date(a.order.orderDate || 0);
+            const dateB = new Date(b.order.orderDate || 0);
+            return dateB.getTime() - dateA.getTime();
+          })[0];
+
+        if (recentOrder) {
+          actions.push({
+            action: 'cancel_order',
+            orderId: recentOrder.order.id,
+            reason: 'Cliente solicitou cancelamento por email (pedido mais recente)'
+          });
+        }
+      }
+    }
+
+    // Alteração de endereço
+    if (content.includes('endereço') || content.includes('endereco') || 
+        content.includes('mudar') || content.includes('alterar')) {
+      if (extractedOrderIds.length > 0) {
+        extractedOrderIds.forEach(orderId => {
+          const matchingOrder = customerOrders.find(o => o.order.id === orderId);
+          if (matchingOrder) {
+            actions.push({
+              action: 'update_address',
+              orderId: orderId,
+              reason: 'Cliente solicitou alteração de endereço'
+            });
+          }
+        });
+      } else if (customerOrders.length > 0) {
+        const recentOrder = customerOrders
+          .filter(o => o.confidence === 'high')
+          .sort((a, b) => {
+            const dateA = new Date(a.order.orderDate || 0);
+            const dateB = new Date(b.order.orderDate || 0);
+            return dateB.getTime() - dateA.getTime();
+          })[0];
+
+        if (recentOrder) {
+          actions.push({
+            action: 'update_address',
+            orderId: recentOrder.order.id,
+            reason: 'Cliente solicitou alteração de endereço (pedido mais recente)'
+          });
+        }
+      }
+    }
+
+    // Rastreamento
+    if (content.includes('rastrear') || content.includes('tracking') || 
+        content.includes('acompanhar') || content.includes('onde está')) {
+      if (extractedOrderIds.length > 0) {
+        extractedOrderIds.forEach(orderId => {
+          const matchingOrder = customerOrders.find(o => o.order.id === orderId);
+          if (matchingOrder) {
+            actions.push({
+              action: 'provide_tracking',
+              orderId: orderId,
+              reason: 'Cliente solicitou informações de rastreamento'
+            });
+          }
+        });
+      } else if (customerOrders.length > 0) {
+        const recentOrder = customerOrders
+          .filter(o => o.confidence === 'high')
+          .sort((a, b) => {
+            const dateA = new Date(a.order.orderDate || 0);
+            const dateB = new Date(b.order.orderDate || 0);
+            return dateB.getTime() - dateA.getTime();
+          })[0];
+
+        if (recentOrder) {
+          actions.push({
+            action: 'provide_tracking',
+            orderId: recentOrder.order.id,
+            reason: 'Cliente solicitou informações de rastreamento (pedido mais recente)'
+          });
+        }
+      }
+    }
+
+    return actions;
   }
 
   /**
@@ -525,6 +770,46 @@ REGRAS:
 
     const categoryId = category[0]?.id || null;
 
+    // Get operation ID from email destination
+    const operationId = await this.getOperationIdFromEmail({ to });
+    console.log(`🏢 Email mapped to operation: ${operationId}`);
+
+    // Create a temporary email object for enrichment
+    const tempEmail: SupportEmail = {
+      id: '',
+      messageId: messageId,
+      from,
+      to,
+      subject,
+      textContent: text,
+      htmlContent: html,
+      attachments: attachments.length > 0 ? attachments : null,
+      categoryId,
+      aiConfidence: categorization.confidence,
+      aiReasoning: categorization.reasoning,
+      status: "categorized",
+      requiresHuman: categorization.requiresHuman,
+      rawData: webhookData,
+      sentiment: categorization.sentiment,
+      emotion: categorization.emotion,
+      urgency: categorization.urgency,
+      tone: categorization.tone,
+      hasTimeConstraint: categorization.hasTimeConstraint,
+      escalationRisk: categorization.escalationRisk,
+      hasAutoResponse: false,
+      autoResponseSentAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Enrich email with order context
+    let orderContext: EmailOrderContext | null = null;
+    if (operationId) {
+      console.log('🔍 Enriching email with order context...');
+      orderContext = await this.enrichEmailWithOrderContext(tempEmail, operationId);
+      console.log(`📦 Order context: ${orderContext.customerOrders.length} orders, ${orderContext.suggestedActions.length} actions`);
+    }
+
     // Save email
     const emailData: InsertSupportEmail = {
       messageId: messageId,
@@ -598,7 +883,7 @@ REGRAS:
           hasTimeConstraint: categorization.hasTimeConstraint,
           escalationRisk: categorization.escalationRisk,
         };
-        await this.sendAIAutoResponse(savedEmail, category[0], sentimentData);
+        await this.sendAIAutoResponse(savedEmail, category[0], sentimentData, orderContext);
       } else if (categoryName !== "reclamacoes" && categoryName !== "manual") {
         // Fallback to template system for other automated categories
         console.log(
@@ -671,7 +956,8 @@ REGRAS:
       tone: string;
       hasTimeConstraint: boolean;
       escalationRisk: number;
-    }
+    },
+    orderContext?: EmailOrderContext
   ): Promise<{ subject: string; content: string }> {
     const customerName = email.from.split("@")[0];
 
@@ -682,7 +968,7 @@ REGRAS:
     const directives = await this.getActiveDirectives(operationId);
     
     // Build dynamic prompt
-    const prompt = await this.buildDynamicPrompt(email, category, directives, sentimentData);
+    const prompt = await this.buildDynamicPrompt(email, category, directives, sentimentData, orderContext);
 
     let content = "{}"; // Declarar fora do try para acessar no catch
     
@@ -950,7 +1236,8 @@ REGRAS:
       tone: string;
       hasTimeConstraint: boolean;
       escalationRisk: number;
-    }
+    },
+    orderContext?: EmailOrderContext
   ): Promise<void> {
     console.log(
       `🤖 Gerando resposta automática IA para categoria: ${category.name}`,
@@ -961,7 +1248,7 @@ REGRAS:
 
     try {
       // Gerar resposta com IA
-      const aiResponse = await this.generateAIAutoResponse(email, category, sentimentData);
+      const aiResponse = await this.generateAIAutoResponse(email, category, sentimentData, orderContext);
 
       console.log(`🤖 Resposta IA gerada - Assunto: "${aiResponse.subject}"`);
 
@@ -1911,7 +2198,8 @@ REGRAS:
       tone: string;
       hasTimeConstraint: boolean;
       escalationRisk: number;
-    }
+    },
+    orderContext?: EmailOrderContext
   ): Promise<string> {
     console.log('🛠️ Building dynamic prompt with', directives.length, 'directives');
     const customerName = email.from.split("@")[0];
@@ -1993,11 +2281,69 @@ ${sentimentData.emotion === 'ansioso' || sentimentData.emotion === 'preocupado' 
 
 ` : '';
 
+    // Build order context section
+    const orderContextSection = orderContext && orderContext.customerOrders.length > 0 ? (() => {
+      console.log('📦 Adding order context to prompt:', orderContext.customerOrders.length, 'orders');
+      
+      const ordersInfo = orderContext.customerOrders
+        .slice(0, 5) // Limite de 5 pedidos para não sobrecarregar o prompt
+        .map(orderMatch => {
+          const order = orderMatch.order;
+          return `  • Pedido ${order.id} (${orderMatch.confidence} confiança):
+    - Status: ${order.status || 'Não informado'}
+    - Data: ${order.orderDate ? new Date(order.orderDate).toLocaleDateString('pt-BR') : 'Não informada'}
+    - Valor: ${order.orderValue ? `€${order.orderValue}` : 'Não informado'}
+    - Produtos: ${order.products?.length || 0} itens
+    - Endereço: ${order.customerAddress || 'Não informado'}${order.trackingCode ? `
+    - Rastreamento: ${order.trackingCode}` : ''}`;
+        }).join('\n');
+
+      const customerStats = orderContext.customerStats;
+      const suggestedActions = orderContext.suggestedActions;
+
+      return `
+INFORMAÇÕES DOS PEDIDOS DO CLIENTE:
+📊 Estatísticas do Cliente:
+- Total de pedidos: ${customerStats.totalOrders}
+- Pedidos entregues: ${customerStats.deliveredOrders}
+- Pedidos cancelados: ${customerStats.cancelledOrders}
+- Valor total: €${customerStats.totalValue.toFixed(2)}
+- Tipo de cliente: ${customerStats.customerType === 'vip' ? 'VIP (cliente fiel)' : 
+                     customerStats.customerType === 'frequent' ? 'Frequente' : 'Novo'}
+
+📋 Pedidos Encontrados:
+${ordersInfo}
+
+🎯 Ações Sugeridas Automaticamente:
+${suggestedActions.length > 0 ? 
+  suggestedActions.map(action => 
+    `- ${action.action === 'cancel_order' ? 'CANCELAR' : 
+        action.action === 'update_address' ? 'ALTERAR ENDEREÇO' : 
+        action.action === 'provide_tracking' ? 'FORNECER RASTREAMENTO' : action.action} 
+     do pedido ${action.orderId}: ${action.reason}`
+  ).join('\n') : 
+  '- Nenhuma ação automática identificada'}
+
+INSTRUÇÕES ESPECÍFICAS PARA PEDIDOS:
+${suggestedActions.some(a => a.action === 'cancel_order') ? 
+  '🚨 CANCELAMENTO DETECTADO: Se o cliente realmente quer cancelar, confirme o pedido específico e execute o cancelamento automaticamente.' : ''}
+${suggestedActions.some(a => a.action === 'update_address') ? 
+  '📍 ALTERAÇÃO DE ENDEREÇO DETECTADA: Se o cliente quer alterar endereço, confirme os novos dados e execute a alteração.' : ''}
+${suggestedActions.some(a => a.action === 'provide_tracking') ? 
+  '📦 RASTREAMENTO SOLICITADO: Forneça informações detalhadas de rastreamento se disponível.' : ''}
+${customerStats.customerType === 'vip' ? 
+  '👑 CLIENTE VIP: Ofereça atendimento premium, prioridade e considere benefícios extras.' : ''}
+${customerStats.cancelledOrders > customerStats.deliveredOrders ? 
+  '⚠️ PERFIL DE RISCO: Cliente tem muitos cancelamentos - seja especialmente atencioso.' : ''}
+
+`;
+    })() : '';
+
     // Construct the complete prompt
     const prompt = `
 Você é Sofia, uma agente de atendimento ao cliente experiente e empática. 
 
-${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}
+${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}${orderContextSection}
 EMAIL ORIGINAL:
 Remetente: ${email.from}
 Assunto: ${email.subject}  

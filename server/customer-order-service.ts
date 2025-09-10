@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { orders, operations } from "@shared/schema";
-import { eq, and, or, desc, isNotNull } from "drizzle-orm";
+import { eq, and, or, desc, isNotNull, sql } from "drizzle-orm";
+import { like } from "drizzle-orm";
 import type { Order } from "@shared/schema";
 
 export interface CustomerOrderMatch {
@@ -101,8 +102,7 @@ export class CustomerOrderService {
           .where(
             and(
               eq(orders.operationId, operationId),
-              // @ts-ignore - Drizzle LIKE syntax
-              db.sql`${orders.customerPhone} LIKE ${phonePattern}`
+              like(orders.customerPhone, phonePattern)
             )
           )
           .orderBy(desc(orders.orderDate));
@@ -134,9 +134,8 @@ export class CustomerOrderService {
           .where(
             and(
               eq(orders.operationId, operationId),
-              // @ts-ignore - Drizzle LIKE syntax
-              db.sql`LOWER(${orders.customerName}) LIKE ${namePattern}`,
-              db.sql`${orders.customerPhone} LIKE ${phonePattern}`
+              sql`LOWER(${orders.customerName}) LIKE ${namePattern}`,
+              like(orders.customerPhone, phonePattern)
             )
           )
           .orderBy(desc(orders.orderDate));
