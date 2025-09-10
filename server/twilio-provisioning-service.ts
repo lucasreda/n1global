@@ -21,8 +21,16 @@ export class TwilioProvisioningService {
    * Provision a phone number for an operation
    */
   async provisionPhoneNumber(operationId: string, countryCode: string = 'BR'): Promise<string> {
+    let purchasedNumber = null;
+    
     try {
       console.log(`📞 Provisioning Twilio phone number for operation ${operationId}...`);
+
+      // Validate webhook domain
+      const webhookDomain = process.env.REPLIT_DEV_DOMAIN;
+      if (!webhookDomain) {
+        throw new Error('REPLIT_DEV_DOMAIN environment variable is not set');
+      }
 
       // Search for available phone numbers
       const availableNumbers = await this.client.availablePhoneNumbers(countryCode)
@@ -41,19 +49,31 @@ export class TwilioProvisioningService {
       const phoneNumber = availableNumbers[0].phoneNumber;
       console.log(`📱 Found available number: ${phoneNumber}`);
 
-      const purchasedNumber = await this.client.incomingPhoneNumbers.create({
+      purchasedNumber = await this.client.incomingPhoneNumbers.create({
         phoneNumber,
-        voiceUrl: `${process.env.REPLIT_DEV_DOMAIN}/api/voice/incoming-call`,
+        voiceUrl: `${webhookDomain}/api/voice/incoming-call`,
         voiceMethod: 'POST',
-        statusCallback: `${process.env.REPLIT_DEV_DOMAIN}/api/voice/call-status`,
+        statusCallback: `${webhookDomain}/api/voice/call-status`,
         statusCallbackMethod: 'POST',
         friendlyName: `Voice Support - Operation ${operationId.substring(0, 8)}`
       });
 
       console.log(`✅ Successfully provisioned number: ${purchasedNumber.phoneNumber} for operation ${operationId}`);
 
-      // Update voice settings with the new phone number
-      await this.updateVoiceSettingsWithNumber(operationId, purchasedNumber.phoneNumber);
+      // Update voice settings with the new phone number (transactional)
+      try {
+        await this.updateVoiceSettingsWithNumber(operationId, purchasedNumber.phoneNumber, purchasedNumber.sid);
+      } catch (dbError) {
+        // Compensation: Release the purchased number if DB update fails
+        console.error(`❌ Database update failed, releasing purchased number ${purchasedNumber.phoneNumber}...`);
+        try {
+          await this.client.incomingPhoneNumbers(purchasedNumber.sid).remove();
+          console.log(`🔄 Successfully released orphaned number ${purchasedNumber.phoneNumber}`);
+        } catch (releaseError) {
+          console.error(`⚠️ Failed to release orphaned number ${purchasedNumber.phoneNumber}:`, releaseError);
+        }
+        throw dbError;
+      }
 
       return purchasedNumber.phoneNumber;
     } catch (error) {
@@ -113,7 +133,7 @@ export class TwilioProvisioningService {
   /**
    * Update voice settings with provisioned phone number
    */
-  private async updateVoiceSettingsWithNumber(operationId: string, phoneNumber: string): Promise<void> {
+  private async updateVoiceSettingsWithNumber(operationId: string, phoneNumber: string, twilioSid?: string): Promise<void> {
     try {
       // Check if voice settings record exists
       const [existingRecord] = await db
