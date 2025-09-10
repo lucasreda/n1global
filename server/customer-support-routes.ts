@@ -107,7 +107,7 @@ export function registerCustomerSupportRoutes(app: Express) {
    */
   app.post("/api/customer-support/:operationId/provision-number", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
     try {
-      const { operationId } = req.params;
+      const operationId = req.validatedOperationId || req.params.operationId;
       
       const phoneNumber = await customerSupportService.provisionTwilioNumber(operationId);
       
@@ -150,7 +150,7 @@ export function registerCustomerSupportRoutes(app: Express) {
    */
   app.delete("/api/customer-support/:operationId/release-number", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
     try {
-      const { operationId } = req.params;
+      const operationId = req.validatedOperationId || req.params.operationId;
       
       await customerSupportService.releaseTwilioNumber(operationId);
       
