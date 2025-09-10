@@ -275,7 +275,7 @@ export default function CostCalculator() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Calculadora de Lucro COD</h1>
+            <h1 className="font-bold text-white" style={{fontSize: '22px'}}>Calculadora de Lucro COD</h1>
             <p className="text-gray-400 mt-1">Metodologia precisa: Receita dos entregues - Custos dos confirmados</p>
           </div>
           <Link href="/tools">
