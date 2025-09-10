@@ -92,7 +92,7 @@ export default function Integrations() {
   const ecommerceIntegrations = [
     {
       id: "shopify",
-      name: "Shopify Store",
+      name: "Shopify",
       status: getShopifyStatus(),
       description: "Integração com loja Shopify para importar pedidos e produtos",
       icon: ShopifyIcon,
