@@ -111,6 +111,12 @@ export default function Integrations() {
       
       {/* Integrações de E-commerce */}
       <div className="p-6">
+        {/* Título da Seção */}
+        <div className="flex items-center space-x-3 mb-6">
+          <Store className="text-blue-400" size={20} />
+          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Plataformas</h2>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {ecommerceIntegrations.map((integration) => {
             const IconComponent = integration.icon;
