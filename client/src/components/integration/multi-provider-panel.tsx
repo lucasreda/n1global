@@ -200,10 +200,12 @@ export function MultiProviderPanel() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {providers?.map((provider: Provider) => (
+          {providers?.map((provider: Provider, index: number) => (
             <div key={provider.type} className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid={`provider-card-${provider.type}`}>
               <div className="flex items-center space-x-3 mb-4">
-                <Package className="text-blue-400" size={30} />
+                <div className="text-blue-400 text-3xl font-bold w-8 h-8 flex items-center justify-center">
+                  {index + 1}
+                </div>
                 <div>
                   <h4 className="text-white font-medium">{provider.name}</h4>
                   <p className="text-gray-400 text-sm">{provider.description}</p>

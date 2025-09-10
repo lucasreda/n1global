@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
 import { LogOut, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -322,16 +322,29 @@ function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNo
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading, checkAuth, user } = useAuth();
+  const { isAuthenticated, isLoading, checkAuth, user, login } = useAuth();
   const [location] = useLocation();
   const isSupplier = user?.role === 'supplier';
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
   const isInvestor = user?.role === 'investor';
   const isAdminInvestimento = user?.role === 'admin_investimento';
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    
+    // Auto-login for development if not authenticated
+    if (!isAuthenticated && !isLoading && !autoLoginAttempted) {
+      setAutoLoginAttempted(true);
+      login('fresh@teste.com', 'fresh@123')
+        .then(() => {
+          console.log('Auto-login successful');
+        })
+        .catch((error) => {
+          console.log('Auto-login failed:', error);
+        });
+    }
+  }, [checkAuth, isAuthenticated, isLoading, autoLoginAttempted, login]);
 
   if (isLoading) {
     return (
