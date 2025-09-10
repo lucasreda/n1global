@@ -103,6 +103,12 @@ export default function Integrations() {
 
   return (
     <div className="space-y-6">
+      {/* Título da Página */}
+      <div className="px-6 pt-6">
+        <h1 className="text-white font-semibold mb-2" style={{ fontSize: '22px' }}>Integrações</h1>
+        <p className="text-gray-400 text-sm">Configure e gerencie as integrações com plataformas e serviços</p>
+      </div>
+      
       {/* Integrações de E-commerce */}
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
