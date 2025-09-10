@@ -34,6 +34,14 @@ export class SupportService {
   async generateAIAutoResponse(
     email: SupportEmail,
     category: SupportCategory,
+    sentimentData?: {
+      sentiment: string;
+      emotion: string;
+      urgency: string;
+      tone: string;
+      hasTimeConstraint: boolean;
+      escalationRisk: number;
+    }
   ): Promise<{ subject: string; content: string }> {
     const customerName = email.from.split("@")[0];
 
@@ -44,7 +52,7 @@ export class SupportService {
     const directives = await this.getActiveDirectives(operationId);
     
     // Build dynamic prompt
-    const prompt = await this.buildDynamicPrompt(email, category, directives);
+    const prompt = await this.buildDynamicPrompt(email, category, directives, sentimentData);
 
     let content = "{}"; // Declarar fora do try para acessar no catch
     

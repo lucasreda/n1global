@@ -540,6 +540,12 @@ REGRAS:
       status: "categorized",
       requiresHuman: categorization.requiresHuman,
       rawData: webhookData,
+      sentiment: categorization.sentiment,
+      emotion: categorization.emotion,
+      urgency: categorization.urgency,
+      tone: categorization.tone,
+      hasTimeConstraint: categorization.hasTimeConstraint,
+      escalationRisk: categorization.escalationRisk,
     };
 
     const [savedEmail] = await db
@@ -584,7 +590,15 @@ REGRAS:
         ["duvidas", "alteracao_endereco", "cancelamento"].includes(categoryName)
       ) {
         console.log(`🤖 Enviando resposta IA para categoria: ${categoryName}`);
-        await this.sendAIAutoResponse(savedEmail, category[0]);
+        const sentimentData = {
+          sentiment: categorization.sentiment,
+          emotion: categorization.emotion,
+          urgency: categorization.urgency,
+          tone: categorization.tone,
+          hasTimeConstraint: categorization.hasTimeConstraint,
+          escalationRisk: categorization.escalationRisk,
+        };
+        await this.sendAIAutoResponse(savedEmail, category[0], sentimentData);
       } else if (categoryName !== "reclamacoes" && categoryName !== "manual") {
         // Fallback to template system for other automated categories
         console.log(
@@ -650,6 +664,14 @@ REGRAS:
   async generateAIAutoResponse(
     email: SupportEmail,
     category: SupportCategory,
+    sentimentData?: {
+      sentiment: string;
+      emotion: string;
+      urgency: string;
+      tone: string;
+      hasTimeConstraint: boolean;
+      escalationRisk: number;
+    }
   ): Promise<{ subject: string; content: string }> {
     const customerName = email.from.split("@")[0];
 
@@ -660,7 +682,7 @@ REGRAS:
     const directives = await this.getActiveDirectives(operationId);
     
     // Build dynamic prompt
-    const prompt = await this.buildDynamicPrompt(email, category, directives);
+    const prompt = await this.buildDynamicPrompt(email, category, directives, sentimentData);
 
     let content = "{}"; // Declarar fora do try para acessar no catch
     
@@ -921,6 +943,14 @@ REGRAS:
   async sendAIAutoResponse(
     email: SupportEmail,
     category: SupportCategory,
+    sentimentData?: {
+      sentiment: string;
+      emotion: string;
+      urgency: string;
+      tone: string;
+      hasTimeConstraint: boolean;
+      escalationRisk: number;
+    }
   ): Promise<void> {
     console.log(
       `🤖 Gerando resposta automática IA para categoria: ${category.name}`,
@@ -931,7 +961,7 @@ REGRAS:
 
     try {
       // Gerar resposta com IA
-      const aiResponse = await this.generateAIAutoResponse(email, category);
+      const aiResponse = await this.generateAIAutoResponse(email, category, sentimentData);
 
       console.log(`🤖 Resposta IA gerada - Assunto: "${aiResponse.subject}"`);
 
@@ -1821,7 +1851,15 @@ REGRAS:
   private async buildDynamicPrompt(
     email: SupportEmail,
     category: SupportCategory,
-    directives: any[]
+    directives: any[],
+    sentimentData?: {
+      sentiment: string;
+      emotion: string;
+      urgency: string;
+      tone: string;
+      hasTimeConstraint: boolean;
+      escalationRisk: number;
+    }
   ): Promise<string> {
     const customerName = email.from.split("@")[0];
 
@@ -1867,11 +1905,33 @@ ${directivesByType.custom.map(d => `- ${d.title}: ${d.content}`).join('\n')}
 ` 
       : '';
 
+    // Build emotional context section
+    const emotionalContextSection = sentimentData ? `
+CONTEXTO EMOCIONAL DO CLIENTE:
+- Sentimento: ${sentimentData.sentiment}
+- Emoção: ${sentimentData.emotion}
+- Urgência: ${sentimentData.urgency}
+- Tom: ${sentimentData.tone}
+- Prazo mencionado: ${sentimentData.hasTimeConstraint ? 'Sim' : 'Não'}
+- Risco de escalação: ${sentimentData.escalationRisk}/10
+
+INSTRUÇÕES BASEADAS NO CONTEXTO EMOCIONAL:
+${sentimentData.sentiment === 'muito_negativo' || sentimentData.sentiment === 'negativo' ? 
+  '- Use linguagem mais empática e acolhedora\n- Ofereça soluções prioritárias\n- Demonstre compreensão da frustração' : ''}
+${sentimentData.escalationRisk >= 7 ? 
+  '- ATENÇÃO: Alto risco de escalação - seja especialmente cuidadosa\n- Ofereça escalação para supervisor se necessário' : ''}
+${sentimentData.hasTimeConstraint ? 
+  '- Cliente mencionou prazo - priorize urgência na resposta' : ''}
+${sentimentData.emotion === 'ansioso' || sentimentData.emotion === 'preocupado' ? 
+  '- Cliente demonstra ansiedade - tranquilize e forneça informações claras' : ''}
+
+` : '';
+
     // Construct the complete prompt
     const prompt = `
 Você é Sofia, uma agente de atendimento ao cliente experiente e empática. 
 
-${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}
+${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}
 EMAIL ORIGINAL:
 Remetente: ${email.from}
 Assunto: ${email.subject}  
