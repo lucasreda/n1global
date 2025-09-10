@@ -944,7 +944,7 @@ export default function CustomerSupportPage() {
                 {selectedTicket?.ticket?.status !== 'resolved' && selectedTicket?.ticket?.status !== 'closed' && (
                   <AlertDialog open={isCloseConfirmOpen} onOpenChange={setIsCloseConfirmOpen}>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" className="mr-2">
                         <XCircle className="h-4 w-4 mr-1" />
                         Encerrar
                       </Button>
