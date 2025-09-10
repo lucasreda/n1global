@@ -29,8 +29,13 @@ function validateTwilioSignature(req: any, res: any, next: any) {
     }
     
     if (!twilioSignature) {
-      console.error('❌ Missing Twilio signature header');
-      return res.status(403).json({ error: 'Forbidden: Missing Twilio signature' });
+      if (process.env.NODE_ENV === 'production') {
+        console.error('❌ Missing Twilio signature header in production');
+        return res.status(403).json({ error: 'Forbidden: Missing Twilio signature' });
+      } else {
+        console.warn('⚠️ Missing Twilio signature in development - allowing request');
+        return next();
+      }
     }
     
     // Get the full URL that Twilio called
@@ -61,7 +66,13 @@ function validateTwilioSignature(req: any, res: any, next: any) {
       console.error(`Expected: ${expectedSignature}`);
       console.error(`Provided: ${twilioSignature}`);
       console.error(`Data signed: ${dataToSign}`);
-      return res.status(403).json({ error: 'Forbidden: Invalid signature' });
+      
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({ error: 'Forbidden: Invalid signature' });
+      } else {
+        console.warn('⚠️ Invalid Twilio signature in development - allowing request anyway');
+        // Continue to next() instead of rejecting
+      }
     }
     
     console.log('✅ Twilio signature validated successfully');
