@@ -74,6 +74,7 @@ export class TwilioProvisioningService {
         phoneNumber,
         voiceUrl: `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}&callType=sales`,
         voiceMethod: 'POST',
+        voiceApplicationSid: '', // Ensure no TwiML App overrides our URL
         statusCallback: `https://${webhookDomain}/api/voice/call-status`,
         statusCallbackMethod: 'POST',
         friendlyName: `Voice Support - Operation ${operationId.substring(0, 8)}`
@@ -138,10 +139,13 @@ export class TwilioProvisioningService {
         return;
       }
 
-      // Update the webhook URL to use Sofia's endpoint
+      // Update the webhook URL to use Sofia's endpoint and clear any TwiML App
       await this.client.incomingPhoneNumbers(phoneNumbers[0].sid).update({
         voiceUrl: `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}&callType=sales`,
-        voiceMethod: 'POST'
+        voiceMethod: 'POST',
+        voiceApplicationSid: '', // Clear any TwiML App that could override voiceUrl
+        statusCallback: `https://${webhookDomain}/api/voice/call-status`,
+        statusCallbackMethod: 'POST'
       });
 
       console.log(`✅ Successfully updated webhook config for ${settings.twilioPhoneNumber} to use Sofia endpoint`);
