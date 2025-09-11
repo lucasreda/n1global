@@ -190,6 +190,7 @@ export default function Creatives() {
   const createAnalysisMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("/api/creatives/analyses", "POST", {
+        operationId, // Include the operationId in the request
         creativeIds: Array.from(selectedCreatives),
         analysisType,
         model: analysisModel

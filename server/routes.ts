@@ -3017,8 +3017,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/creatives/analyses", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const { creativeIds, analysisType = "audit", model = "gpt-4-turbo-preview", options } = req.body;
-      const operationId = req.operationId!;
+      const { operationId, creativeIds, analysisType = "audit", model = "gpt-4-turbo-preview", options } = req.body;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "Operation ID is required" });
+      }
       
       if (!creativeIds || !Array.isArray(creativeIds) || creativeIds.length === 0) {
         return res.status(400).json({ message: "Creative IDs are required" });
