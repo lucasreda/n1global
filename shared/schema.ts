@@ -723,6 +723,7 @@ export const adCreatives = pgTable("ad_creatives", {
   
   // Analysis tracking
   isAnalyzed: boolean("is_analyzed").default(false),
+  isNew: boolean("is_new").default(true),
   lastSync: timestamp("last_sync"),
   
   // Raw data from provider

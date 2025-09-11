@@ -940,10 +940,13 @@ export class FacebookAdsService {
         
         return existing[0];
       } else {
-        // Insert new
+        // Insert new - mark as new creative
         const [newCreative] = await db
           .insert(adCreatives)
-          .values(creativeData)
+          .values({
+            ...creativeData,
+            isNew: true
+          })
           .returning();
         
         return newCreative;
