@@ -389,6 +389,78 @@ export default function Creatives() {
         </div>
       </Card>
 
+      {/* New Creatives Section */}
+      {newCreatives.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-green-500" />
+              Novos Criativos ({newCreatives.length})
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+            {newCreatives.map((creative: AdCreative) => (
+              <div 
+                key={creative.id} 
+                className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                onClick={() => toggleCreativeSelection(creative.id)}
+                data-testid={`card-new-creative-${creative.id}`}
+              >
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={selectedCreatives.has(creative.id)}
+                    onCheckedChange={() => toggleCreativeSelection(creative.id)}
+                    className="mt-1"
+                    data-testid={`checkbox-new-creative-${creative.id}`}
+                  />
+                  
+                  <div className="flex-1 min-w-0">
+                    {/* Thumbnail */}
+                    {creative.thumbnailUrl && (
+                      <div className="w-full h-24 bg-muted rounded-md overflow-hidden mb-2">
+                        <img 
+                          src={creative.thumbnailUrl} 
+                          alt={creative.name || 'Novo Criativo'}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Content */}
+                    <div className="space-y-1">
+                      <h3 className="font-medium text-sm truncate" title={creative.name || 'Sem nome'}>
+                        {creative.name || 'Sem nome'}
+                      </h3>
+                      {creative.primaryText && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {creative.primaryText}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="text-xs">
+                          Novo
+                        </Badge>
+                        <span>•</span>
+                        <span>{creative.impressions?.toLocaleString() || 0} impressões</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {newCreatives.length > 0 && (
+            <div className="mt-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Estes criativos ainda não foram analisados. Selecione-os para incluir na análise.
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Best Ads Section */}
