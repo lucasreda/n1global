@@ -34,7 +34,8 @@ class CreativeAnalysisService {
   
   // Pricing per 1K tokens (in USD)
   private modelPricing: Record<string, { input: number; output: number }> = {
-    'gpt-4-vision-preview': { input: 0.01, output: 0.03 },
+    'gpt-4o': { input: 0.005, output: 0.015 }, // Updated GPT-4o pricing
+    'gpt-4-vision-preview': { input: 0.01, output: 0.03 }, // Legacy (deprecated)
     'gpt-4': { input: 0.03, output: 0.06 },
     'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
     'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 }
@@ -163,28 +164,19 @@ class CreativeAnalysisService {
     model: string,
     options?: any
   ): Promise<void> {
-    console.log("🚀 Starting processJob:", { jobId, creativeIds, analysisType, model });
-    
     const job = this.jobStore.get(jobId);
-    if (!job) {
-      console.error("❌ Job not found in store:", jobId);
-      return;
-    }
+    if (!job) return;
     
-    console.log("✅ Job found, updating status to running");
     job.status = 'running';
     job.startedAt = new Date();
     job.currentStep = 'Fetching creatives';
     
     try {
       // Fetch creative data
-      console.log("📊 Fetching creatives from database...");
       const creatives = await db
         .select()
         .from(adCreatives)
         .where(inArray(adCreatives.id, creativeIds));
-      
-      console.log(`✅ Found ${creatives.length} creatives:`, creatives.map(c => ({ id: c.id, imageUrl: !!c.imageUrl, videoUrl: !!c.videoUrl })));
       
       const results = [];
       let totalInputTokens = 0;
@@ -206,9 +198,7 @@ class CreativeAnalysisService {
         
         try {
           // Perform analysis based on type
-          console.log(`🧠 Starting analysis for creative ${creative.id}...`);
           const analysis = await this.analyzeCreative(creative, analysisType, model);
-          console.log(`✅ Analysis completed for creative ${creative.id}`);
           
           if (analysis) {
             results.push(analysis);
@@ -291,21 +281,12 @@ class CreativeAnalysisService {
     analysisType: string,
     model: string
   ): Promise<any> {
-    console.log("🔬 analyzeCreative called:", {
-      creativeId: creative.id,
-      hasImageUrl: !!creative.imageUrl,
-      hasVideoUrl: !!creative.videoUrl,
-      analysisType,
-      model
-    });
-    
     try {
       const prompt = this.buildAnalysisPrompt(creative, analysisType);
-      console.log("📝 Prompt built, length:", prompt.length);
       
-      // Use GPT-4 Vision if creative has visual content
+      // Use GPT-4o for vision (supports both text and images)
       const shouldUseVision = creative.imageUrl || creative.videoUrl;
-      const selectedModel = shouldUseVision ? 'gpt-4-vision-preview' : 'gpt-4-turbo-preview';
+      const selectedModel = shouldUseVision ? 'gpt-4o' : 'gpt-4-turbo-preview';
       
       // Prepare messages with visual content if available
       const messages: any[] = [
@@ -342,7 +323,6 @@ class CreativeAnalysisService {
       }
       
       // Call OpenAI API
-      console.log("🚀 Calling OpenAI API with model:", selectedModel);
       const completion = await this.openai.chat.completions.create({
         model: selectedModel,
         messages,
@@ -352,12 +332,6 @@ class CreativeAnalysisService {
       
       const response = completion.choices[0].message.content;
       const usage = completion.usage;
-      
-      console.log("✅ OpenAI response received:", {
-        responseLength: response?.length || 0,
-        inputTokens: usage?.prompt_tokens || 0,
-        outputTokens: usage?.completion_tokens || 0
-      });
       
       // Parse response
       const analysis = this.parseAnalysisResponse(response, analysisType);
