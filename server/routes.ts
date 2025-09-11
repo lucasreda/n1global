@@ -2934,24 +2934,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🎨 Refreshing creatives for ${accounts.length} Facebook accounts`);
           
           for (const account of accounts) {
-            if (account.credentials) {
-              const creds = account.credentials as any;
-              const accessToken = creds.accessToken;
-              
-              if (accessToken) {
-                console.log(`🎨 Fetching creatives for account ${account.accountId}`);
-                try {
-                  await facebookAdsService.fetchCreativesForCampaigns(
-                    account.accountId,
-                    accessToken,
-                    campaignIdArray,
-                    datePeriod as string,
-                    operationId
-                  );
-                } catch (error) {
-                  console.error(`🎨 Error fetching creatives for account ${account.accountId}:`, error);
-                }
+            const accessToken = account.accessToken;
+            
+            if (accessToken) {
+              console.log(`🎨 Fetching creatives for account ${account.accountId} (${account.name})`);
+              try {
+                await facebookAdsService.fetchCreativesForCampaigns(
+                  account.accountId,
+                  accessToken,
+                  campaignIdArray,
+                  datePeriod as string,
+                  operationId
+                );
+              } catch (error) {
+                console.error(`🎨 Error fetching creatives for account ${account.accountId}:`, error);
               }
+            } else {
+              console.log(`🎨 Account ${account.accountId} (${account.name}) has no access token`);
             }
           }
         }
