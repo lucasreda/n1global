@@ -3016,6 +3016,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/creatives/analyses", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    console.log("📋 RAW REQUEST BODY:", req.body);
+    console.log("📋 REQUEST BODY TYPE:", typeof req.body);
+    console.log("📋 REQUEST BODY KEYS:", Object.keys(req.body || {}));
+    
     try {
       const { operationId, creativeIds, analysisType = "audit", model = "gpt-4-turbo-preview", options } = req.body;
       
