@@ -850,6 +850,57 @@ export class FacebookAdsService {
     return creatives;
   }
 
+  /**
+   * Resolve Facebook video/image URLs to CDN URLs using Graph API
+   */
+  async resolveMediaUrl(mediaId: string, mediaType: 'video' | 'image', accountId: string): Promise<string | null> {
+    try {
+      // Import required modules
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const { adAccounts } = await import("@shared/schema");
+
+      // Get account from database
+      const account = await db
+        .select()
+        .from(adAccounts)
+        .where(eq(adAccounts.accountId, accountId))
+        .limit(1);
+
+      if (account.length === 0 || !account[0].accessToken) {
+        console.warn(`No access token found for account ${accountId}`);
+        return null;
+      }
+
+      const accessToken = account[0].accessToken;
+
+      if (mediaType === 'video') {
+        // Use Graph API to get video source URL
+        const url = `${this.baseUrl}/${mediaId}?fields=source&access_token=${accessToken}`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          const data = await response.json() as { source?: string };
+          return data.source || null; // CDN URL without token
+        }
+      } else if (mediaType === 'image') {
+        // Use Graph API to get image URL
+        const url = `${this.baseUrl}/${mediaId}/picture?redirect=0&access_token=${accessToken}`;
+        const response = await fetch(url);
+        
+        if (response.ok) {
+          const data = await response.json() as { data?: { url?: string } };
+          return data.data?.url || null; // CDN URL without token
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.warn(`Failed to resolve ${mediaType} URL for ${mediaId}:`, error);
+      return null;
+    }
+  }
+
   private extractConversions(insights: any): number {
     // Tenta extrair conversões de diferentes campos da API do Facebook
     if (insights?.conversions) {
@@ -908,14 +959,16 @@ export class FacebookAdsService {
       // Check for video in object_story_spec.video_data
       if (creative.object_story_spec?.video_data?.video_id) {
         type = 'video';
-        videoUrl = `https://www.facebook.com/video.php?v=${creative.object_story_spec.video_data.video_id}`;
+        // Store the video ID for Graph API access, not a direct URL
+        videoUrl = creative.object_story_spec.video_data.video_id;
         // Use image_url from video_data as thumbnail if available
         imageUrl = creative.object_story_spec.video_data.image_url || creative.image_url || null;
       } 
       // Check for direct video_id (backup method)
       else if (creative.video_id) {
         type = 'video';
-        videoUrl = `https://www.facebook.com/video.php?v=${creative.video_id}`;
+        // Store the video ID for Graph API access, not a direct URL
+        videoUrl = creative.video_id;
       } 
       // Check for image
       else if (creative.image_url) {

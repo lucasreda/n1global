@@ -12,6 +12,7 @@ import { AudioAnalysisService } from './audio-analysis-service';
 import { KeyframeExtractionService } from './keyframe-extraction-service';
 import { VisualAnalysisService } from './visual-analysis-service';
 import { FusionAnalysisService } from './fusion-analysis-service';
+import { facebookAdsService } from './facebook-ads-service';
 
 // In-memory job store for real-time progress tracking
 interface AnalysisJob {
@@ -80,13 +81,23 @@ class CreativeAnalysisService {
       'Initializing': 1,
       'Queued': 1,
       'Fetching creatives': 2,
+      'Resolving media URLs': 3,
+      'Extracting audio': 4,
+      'Analyzing audio': 5,
+      'Extracting keyframes': 6,
+      'Analyzing visuals': 7,
+      'Processing keyframes': 8,
+      'Fusing insights': 9,
       'Analysis complete': 10,
       'Failed': -1
     };
     
     // Handle dynamic steps like "Analyzing creative X of Y"
     if (stepName.includes('Analyzing creative')) {
-      return 5; // Analysis phase
+      return 3; // Start of creative analysis
+    }
+    if (stepName.includes('Processing frame')) {
+      return 8; // Frame processing phase
     }
     
     return stepMap[stepName] || 0;
@@ -330,8 +341,26 @@ class CreativeAnalysisService {
         try {
           console.log(`🎥 Video creative detected, performing complete analysis...`);
           
-          // Extract and analyze audio
-          const audioBuffer = await this.audioAnalysisService.extractAudioFromVideo(creative.videoUrl);
+          // Step 1a: Resolve media URL for Facebook videos
+          let resolvedVideoUrl = creative.videoUrl;
+          if (creative.network === 'facebook') {
+            console.log(`🔗 Resolving Facebook video URL for videoId: ${creative.videoUrl}`);
+            const resolvedUrl = await facebookAdsService.resolveMediaUrl(
+              creative.videoUrl, 
+              'video', 
+              creative.accountId
+            );
+            if (resolvedUrl) {
+              resolvedVideoUrl = resolvedUrl;
+              console.log(`✅ Facebook video URL resolved successfully`);
+            } else {
+              console.warn(`⚠️ Failed to resolve Facebook video URL, using original: ${creative.videoUrl}`);
+            }
+          }
+          
+          // Step 1b: Extract and analyze audio
+          const audioBuffer = await this.audioAnalysisService.extractAudioFromVideo(resolvedVideoUrl);
+          
           audioAnalysis = await this.audioAnalysisService.analyzeAudio(audioBuffer, {
             detectMusic: true,
             analyzeQuality: true,
@@ -340,15 +369,16 @@ class CreativeAnalysisService {
           totalCost += audioAnalysis.cost;
           console.log(`🔊 Audio analysis completed (cost: $${audioAnalysis.cost.toFixed(4)})`);
           
-          // Extract keyframes
-          keyframes = await this.keyframeExtractionService.extractKeyframes(creative.videoUrl, {
+          // Step 1c: Extract keyframes
+          
+          keyframes = await this.keyframeExtractionService.extractKeyframes(resolvedVideoUrl, {
             maxKeyframes: 7,
             minInterval: 2,
             includeMetadata: true
           });
           console.log(`🖼️ Extracted ${keyframes.length} keyframes`);
           
-          // Analyze visuals
+          // Step 1d: Analyze visuals
           visualAnalysis = await this.visualAnalysisService.analyzeKeyframes(keyframes, {
             includeProducts: true,
             detectText: true,
@@ -358,7 +388,8 @@ class CreativeAnalysisService {
           totalCost += visualAnalysis.cost;
           console.log(`👁️ Visual analysis completed (cost: $${visualAnalysis.cost.toFixed(4)})`);
           
-          // Fuse audio and visual insights
+          // Step 1e: Fuse audio and visual insights
+          
           fusedInsights = await this.fusionAnalysisService.fuseAnalyses(
             audioAnalysis,
             visualAnalysis,
@@ -381,9 +412,13 @@ class CreativeAnalysisService {
         try {
           console.log(`🖼️ Image creative detected, performing visual analysis...`);
           
+          // Step 2a: Analyze image
+          
           visualAnalysis = await this.visualAnalysisService.analyzeImage(creative.imageUrl);
           totalCost += visualAnalysis.cost;
           console.log(`👁️ Image analysis completed (cost: $${visualAnalysis.cost.toFixed(4)})`);
+          
+          // Step 2b: Generate insights for static image
           
           // For images, we don't have audio, so no fusion needed
           fusedInsights = {

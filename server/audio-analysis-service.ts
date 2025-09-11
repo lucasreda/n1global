@@ -41,11 +41,14 @@ export class AudioAnalysisService {
     
     try {
       // Step 1: Transcription with Whisper
-      // Create a proper File-like object for Node.js
-      const audioFile = new Blob([audioBuffer], { type: 'audio/mp3' });
+      // Create a proper File object for OpenAI SDK
+      const audioFile = new File([audioBuffer], 'audio.mp3', { 
+        type: 'audio/mp3',
+        lastModified: Date.now()
+      });
       
       const transcriptionResponse = await this.openai.audio.transcriptions.create({
-        file: audioFile as any, // OpenAI SDK expects File but accepts Blob in Node.js
+        file: audioFile,
         model: 'whisper-1',
         language: 'pt', // Portuguese
         response_format: 'verbose_json',
