@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -381,25 +380,21 @@ export default function Creatives() {
         </div>
       </Card>
 
-      {/* Tabs */}
-      <Tabs defaultValue="best-ads" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="best-ads" data-testid="tab-best-ads">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Melhores Ads ({creatives.length})
-          </TabsTrigger>
-          <TabsTrigger value="analyzed" data-testid="tab-analyzed">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Analisados ({analyzedCreatives.length})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Best Ads Tab */}
-        <TabsContent value="best-ads" className="space-y-4">
-          {/* Analysis Controls */}
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Best Ads Section */}
+        <div className="space-y-4">
           <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                Melhores Ads ({creatives.length})
+              </h2>
+            </div>
+            
+            {/* Analysis Controls */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
@@ -412,7 +407,9 @@ export default function Creatives() {
                 <span className="text-sm text-muted-foreground">
                   {selectedCreatives.size} de {creatives.length} selecionados
                 </span>
+              </div>
 
+              <div className="flex items-center gap-4 flex-wrap">
                 <Select value={analysisType} onValueChange={setAnalysisType}>
                   <SelectTrigger className="w-[180px]" data-testid="select-analysis-type">
                     <SelectValue />
@@ -461,21 +458,21 @@ export default function Creatives() {
                     <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
 
-              <Button
-                onClick={() => createAnalysisMutation.mutate()}
-                disabled={selectedCreatives.size === 0 || createAnalysisMutation.isPending}
-                data-testid="button-analyze"
-              >
-                <Brain className="w-4 h-4 mr-2" />
-                Analisar {selectedCreatives.size > 0 && `(${selectedCreatives.size})`}
-                {costEstimate && (
-                  <span className="ml-2 text-xs opacity-80">
-                    ~{formatCurrency(costEstimate.estimatedCostBRL)}
-                  </span>
-                )}
-              </Button>
+                <Button
+                  onClick={() => createAnalysisMutation.mutate()}
+                  disabled={selectedCreatives.size === 0 || createAnalysisMutation.isPending}
+                  data-testid="button-analyze"
+                >
+                  <Brain className="w-4 h-4 mr-2" />
+                  Analisar {selectedCreatives.size > 0 && `(${selectedCreatives.size})`}
+                  {costEstimate && (
+                    <span className="ml-2 text-xs opacity-80">
+                      ~{formatCurrency(costEstimate.estimatedCostBRL)}
+                    </span>
+                  )}
+                </Button>
+              </div>
             </div>
           </Card>
 
@@ -491,7 +488,7 @@ export default function Creatives() {
               </p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
               {creatives.map((creative) => (
                 <Card 
                   key={creative.id}
@@ -573,24 +570,31 @@ export default function Creatives() {
               ))}
             </div>
           )}
-        </TabsContent>
+        </div>
 
-        {/* Analyzed Tab */}
-        <TabsContent value="analyzed" className="space-y-4">
-          {analyzedCreatives.length === 0 ? (
-            <Card className="p-12 text-center">
-              <p className="text-muted-foreground">
-                Nenhum criativo analisado ainda. Selecione criativos e clique em Analisar.
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-4">
+        {/* Analyzed Section */}
+        <div className="space-y-4">
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-primary" />
+                Analisados ({analyzedCreatives.length})
+              </h2>
+            
+            {analyzedCreatives.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-muted-foreground">
+                  Nenhum criativo analisado ainda. Selecione criativos e clique em Analisar.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[800px] overflow-y-auto">
               {analyzedCreatives.map((item: any) => (
-                <Card key={item.analysis.id} className="p-6">
-                  <div className="flex items-start gap-6">
+                <Card key={item.analysis.id} className="p-4">
+                  <div className="flex items-start gap-4">
                     {/* Thumbnail */}
                     {item.creative.thumbnailUrl && (
-                      <div className="w-32 h-32 bg-muted rounded-md overflow-hidden flex-shrink-0">
+                      <div className="w-24 h-24 bg-muted rounded-md overflow-hidden flex-shrink-0">
                         <img 
                           src={item.creative.thumbnailUrl} 
                           alt={item.creative.name || 'Creative'}
@@ -600,46 +604,40 @@ export default function Creatives() {
                     )}
 
                     {/* Analysis Results */}
-                    <div className="flex-1 space-y-4">
+                    <div className="flex-1 space-y-3">
                       <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-sm line-clamp-1">
                             {item.creative.headline || item.creative.name || 'Criativo'}
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
                             {getAnalysisTypeIcon(item.analysis.analysisType)}
-                            <span className="text-sm text-muted-foreground">
-                              {item.analysis.analysisType === 'audit' && 'Auditoria Completa'}
-                              {item.analysis.analysisType === 'angles' && 'Ângulos de Marketing'}
-                              {item.analysis.analysisType === 'copy' && 'Otimização de Copy'}
-                              {item.analysis.analysisType === 'variants' && 'Variações Geradas'}
-                              {item.analysis.analysisType === 'performance' && 'Análise de Performance'}
+                            <span className="text-xs text-muted-foreground">
+                              {item.analysis.analysisType === 'audit' && 'Auditoria'}
+                              {item.analysis.analysisType === 'angles' && 'Ângulos'}
+                              {item.analysis.analysisType === 'copy' && 'Copy'}
+                              {item.analysis.analysisType === 'variants' && 'Variações'}
+                              {item.analysis.analysisType === 'performance' && 'Performance'}
                             </span>
-                            <Badge variant="outline">
-                              {item.analysis.model}
+                            <Badge variant="outline" className="text-xs py-0">
+                              {item.analysis.model.replace('-preview', '')}
                             </Badge>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Custo da análise</p>
-                          <p className="font-medium">
-                            {formatCurrency(parseFloat(item.analysis.actualCost || "0") * 5.5)}
-                          </p>
                         </div>
                       </div>
 
                       {/* Insights */}
                       {item.analysis.insights && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium flex items-center gap-2">
-                            <Eye className="w-4 h-4" />
-                            Insights
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-medium flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            Principais Insights
                           </h4>
-                          <div className="space-y-1">
+                          <div className="space-y-0.5">
                             {(Array.isArray(item.analysis.insights) ? item.analysis.insights : [item.analysis.insights])
-                              .slice(0, 3)
+                              .slice(0, 2)
                               .map((insight: string, idx: number) => (
-                                <p key={idx} className="text-sm text-muted-foreground">
+                                <p key={idx} className="text-xs text-muted-foreground line-clamp-2">
                                   • {insight}
                                 </p>
                               ))}
@@ -649,16 +647,16 @@ export default function Creatives() {
 
                       {/* Recommendations */}
                       {item.analysis.recommendations && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium flex items-center gap-2">
-                            <Zap className="w-4 h-4" />
-                            Recomendações
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-medium flex items-center gap-1">
+                            <Zap className="w-3 h-3" />
+                            Ações Recomendadas
                           </h4>
-                          <div className="space-y-1">
+                          <div className="space-y-0.5">
                             {(Array.isArray(item.analysis.recommendations) ? item.analysis.recommendations : [item.analysis.recommendations])
-                              .slice(0, 3)
+                              .slice(0, 2)
                               .map((rec: string, idx: number) => (
-                                <p key={idx} className="text-sm text-muted-foreground">
+                                <p key={idx} className="text-xs text-muted-foreground line-clamp-2">
                                   • {rec}
                                 </p>
                               ))}
@@ -681,10 +679,12 @@ export default function Creatives() {
                   </div>
                 </Card>
               ))}
+              </div>
+            )}
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </Card>
+        </div>
+      </div>
 
       {/* Analysis Progress Sheet */}
       <Sheet open={analysisSheetOpen} onOpenChange={setAnalysisSheetOpen}>
