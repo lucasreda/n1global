@@ -3133,21 +3133,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/creatives/new", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.query.operationId as string;
+      const campaignIds = req.query.campaignIds as string;
+      
       const { db } = await import("./db");
       const { adCreatives } = await import("@shared/schema");
-      const { and, eq } = await import("drizzle-orm");
+      const { and, eq, inArray } = await import("drizzle-orm");
       
-      // Get new creatives that haven't been analyzed yet
+      let whereConditions = [
+        eq(adCreatives.operationId, operationId),
+        eq(adCreatives.isNew, true),
+        eq(adCreatives.isAnalyzed, false)
+      ];
+      
+      // If specific campaign IDs are provided, filter by them
+      if (campaignIds) {
+        const campaignIdArray = campaignIds.split(',').filter(id => id.trim());
+        if (campaignIdArray.length > 0) {
+          whereConditions.push(inArray(adCreatives.campaignId, campaignIdArray));
+        }
+      }
+      
+      // Get new creatives that haven't been analyzed yet from selected campaigns
       const newCreatives = await db
         .select()
         .from(adCreatives)
-        .where(
-          and(
-            eq(adCreatives.operationId, operationId),
-            eq(adCreatives.isNew, true),
-            eq(adCreatives.isAnalyzed, false)
-          )
-        )
+        .where(and(...whereConditions))
         .orderBy(adCreatives.createdAt);
       
       res.json(newCreatives);

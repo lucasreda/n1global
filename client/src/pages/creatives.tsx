@@ -100,14 +100,19 @@ export default function Creatives() {
     enabled: !!operationId
   });
 
-  // Fetch new creatives that haven't been analyzed
+  // Fetch new creatives that haven't been analyzed - only from selected campaigns
   const { data: newCreatives = [] } = useQuery({
-    queryKey: ["/api/creatives/new", operationId],
+    queryKey: ["/api/creatives/new", selectedCampaignIds, operationId],
     queryFn: async () => {
-      const response = await apiRequest(`/api/creatives/new?operationId=${operationId}`, "GET");
+      // Only fetch if there are selected campaigns
+      if (selectedCampaignIds.length === 0) {
+        return [];
+      }
+      const campaignParam = `&campaignIds=${selectedCampaignIds.join(',')}`;
+      const response = await apiRequest(`/api/creatives/new?operationId=${operationId}${campaignParam}`, "GET");
       return response.json() as Promise<AdCreative[]>;
     },
-    enabled: !!operationId
+    enabled: !!operationId && selectedCampaignIds.length > 0
   });
 
   // Fetch cost estimate
