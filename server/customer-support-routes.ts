@@ -168,6 +168,28 @@ export function registerCustomerSupportRoutes(app: Express) {
   });
 
   /**
+   * Update Twilio phone number webhook configuration
+   */
+  app.post("/api/customer-support/:operationId/update-webhook", authenticateToken, validateOperationAccess, async (req: Request, res: Response) => {
+    try {
+      const operationId = req.validatedOperationId || req.params.operationId;
+      
+      await customerSupportService.updateTwilioWebhook(operationId);
+      
+      res.json({ 
+        success: true,
+        message: "Webhook configuration updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating webhook configuration:', error);
+      res.status(500).json({ 
+        message: "Failed to update webhook configuration",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  /**
    * Get categories for an operation
    */
   app.get("/api/customer-support/:operationId/categories", authenticateToken, async (req: Request, res: Response) => {

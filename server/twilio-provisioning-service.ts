@@ -72,7 +72,7 @@ export class TwilioProvisioningService {
 
       purchasedNumber = await this.client.incomingPhoneNumbers.create({
         phoneNumber,
-        voiceUrl: `https://${webhookDomain}/api/voice/incoming-call`,
+        voiceUrl: `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}&callType=sales`,
         voiceMethod: 'POST',
         statusCallback: `https://${webhookDomain}/api/voice/call-status`,
         statusCallbackMethod: 'POST',
@@ -99,6 +99,54 @@ export class TwilioProvisioningService {
       return purchasedNumber.phoneNumber;
     } catch (error) {
       console.error(`❌ Error provisioning phone number for operation ${operationId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update existing phone number webhook configuration
+   */
+  async updatePhoneNumberConfig(operationId: string): Promise<void> {
+    try {
+      console.log(`🔧 Updating phone number webhook config for operation ${operationId}...`);
+
+      // Validate webhook domain
+      const webhookDomain = process.env.REPLIT_DEV_DOMAIN;
+      if (!webhookDomain) {
+        throw new Error('REPLIT_DEV_DOMAIN environment variable is not set');
+      }
+
+      // Get the current phone number for this operation
+      const [settings] = await db
+        .select()
+        .from(voiceSettings)
+        .where(eq(voiceSettings.operationId, operationId))
+        .limit(1);
+
+      if (!settings?.twilioPhoneNumber) {
+        console.log(`ℹ️ No phone number found for operation ${operationId}`);
+        return;
+      }
+
+      // Find the phone number SID
+      const phoneNumbers = await this.client.incomingPhoneNumbers.list({
+        phoneNumber: settings.twilioPhoneNumber
+      });
+
+      if (phoneNumbers.length === 0) {
+        console.log(`⚠️ Phone number ${settings.twilioPhoneNumber} not found in Twilio account`);
+        return;
+      }
+
+      // Update the webhook URL to use Sofia's endpoint
+      await this.client.incomingPhoneNumbers(phoneNumbers[0].sid).update({
+        voiceUrl: `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}&callType=sales`,
+        voiceMethod: 'POST'
+      });
+
+      console.log(`✅ Successfully updated webhook config for ${settings.twilioPhoneNumber} to use Sofia endpoint`);
+    } catch (error) {
+      console.error(`❌ Error updating phone number config for operation ${operationId}:`, error);
       throw error;
     }
   }

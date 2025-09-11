@@ -208,6 +208,22 @@ export class CustomerSupportService {
   }
 
   /**
+   * Update Twilio phone number webhook configuration
+   */
+  async updateTwilioWebhook(operationId: string): Promise<void> {
+    try {
+      console.log(`🔧 Updating Twilio webhook for operation ${operationId}...`);
+      
+      await twilioProvisioningService.updatePhoneNumberConfig(operationId);
+      
+      console.log(`✅ Successfully updated Twilio webhook for operation ${operationId}`);
+    } catch (error) {
+      console.error('Error updating Twilio webhook:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get operation support config
    */
   async getOperationSupport(operationId: string) {
