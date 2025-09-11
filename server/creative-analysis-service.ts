@@ -298,37 +298,68 @@ class CreativeAnalysisService {
         }
       ];
 
+      // Try with image first, fall back to text-only if image fails
+      let completion;
+      let usedVision = false;
+      
       if (shouldUseVision && creative.imageUrl) {
-        messages.push({
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: prompt
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: creative.imageUrl,
-                detail: "high"
+        try {
+          // First try with vision
+          messages.push({
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt + "\n\nNOTA: Analise também o elemento visual da imagem do criativo."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: creative.imageUrl,
+                  detail: "high"
+                }
               }
-            }
-          ]
-        });
+            ]
+          });
+          
+          completion = await this.openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages,
+            temperature: 0.7,
+            max_tokens: 3000
+          });
+          usedVision = true;
+          
+        } catch (imageError: any) {
+          console.log("⚠️ Vision analysis failed, falling back to text-only:", imageError.message);
+          // Fall back to text-only analysis
+          messages.pop(); // Remove the vision message
+          messages.push({
+            role: "user",
+            content: prompt + "\n\nNOTA: Análise baseada apenas em dados textuais, pois a imagem não estava acessível."
+          });
+          
+          completion = await this.openai.chat.completions.create({
+            model: 'gpt-4-turbo-preview',
+            messages,
+            temperature: 0.7,
+            max_tokens: 3000
+          });
+        }
       } else {
+        // Text-only analysis
         messages.push({
           role: "user",
           content: prompt
         });
+        
+        completion = await this.openai.chat.completions.create({
+          model: selectedModel,
+          messages,
+          temperature: 0.7,
+          max_tokens: 3000
+        });
       }
-      
-      // Call OpenAI API
-      const completion = await this.openai.chat.completions.create({
-        model: selectedModel,
-        messages,
-        temperature: 0.7,
-        max_tokens: 3000 // Increased for more detailed analysis
-      });
       
       const response = completion.choices[0].message.content;
       const usage = completion.usage;
