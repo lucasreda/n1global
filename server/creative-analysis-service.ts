@@ -117,7 +117,7 @@ class CreativeAnalysisService {
         analysisType,
         provider: 'openai',
         model,
-        costEstimate: (estimatedCost / creativeIds.length).toString(),
+        costEstimate: (estimatedCost / creativeIds.length).toFixed(4),
         progress: 0,
         currentStep: 'Queued'
       });
@@ -198,7 +198,7 @@ class CreativeAnalysisService {
                 insights: analysis.insights,
                 recommendations: analysis.recommendations,
                 scores: analysis.scores,
-                actualCost: analysis.cost.toString(),
+                actualCost: analysis.cost.toFixed(4),
                 inputTokens: analysis.inputTokens,
                 outputTokens: analysis.outputTokens,
                 progress: 100,
