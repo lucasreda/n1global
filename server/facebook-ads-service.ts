@@ -769,7 +769,7 @@ export class FacebookAdsService {
         'campaign_id',
         'adset_id',
         'creative{id,name,title,body,object_story_spec,thumbnail_url,image_url,video_id,call_to_action_type,link_url}',
-        `insights.date_preset(${datePeriod}){impressions,clicks,spend,cpm,cpc,ctr,conversions,cost_per_conversion}`
+        `insights.date_preset(${datePeriod}){impressions,clicks,spend,cpm,cpc,ctr,conversions,cost_per_conversion,actions,action_values}`
       ].join(',');
       
       // Remove effective_status filter to get all ads, not just active ones
@@ -850,10 +850,33 @@ export class FacebookAdsService {
     return creatives;
   }
 
+  private extractConversions(insights: any): number {
+    // Tenta extrair conversões de diferentes campos da API do Facebook
+    if (insights?.conversions) {
+      return parseInt(insights.conversions);
+    }
+    
+    // Verifica no campo actions para diferentes tipos de conversão
+    if (insights?.actions && Array.isArray(insights.actions)) {
+      for (const action of insights.actions) {
+        // Procura por ações de conversão comuns
+        if (action.action_type?.includes('conversion') || 
+            action.action_type === 'purchase' ||
+            action.action_type === 'lead' ||
+            action.action_type === 'complete_registration') {
+          return parseInt(action.value || '0');
+        }
+      }
+    }
+    
+    return 0; // Sem conversões encontradas
+  }
+
   private async upsertCreative(ad: FacebookApiAd, operationId: string, accountId: string, period: string): Promise<AdCreative | null> {
     try {
       const insights = ad.insights?.data?.[0];
       const creative = ad.creative;
+      
       
       if (!creative) {
         return null;
@@ -915,7 +938,7 @@ export class FacebookAdsService {
         cpm: insights?.cpm || "0",
         cpc: insights?.cpc || "0",
         ctr: insights?.ctr || "0",
-        conversions: insights?.conversions ? parseInt(insights.conversions) : 0,
+        conversions: this.extractConversions(insights),
         conversionRate: "0", // Calculate if needed
         roas: "0", // Calculate if needed
         providerData: ad
