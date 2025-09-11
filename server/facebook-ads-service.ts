@@ -134,7 +134,7 @@ export class FacebookAdsService {
     return campaigns;
   }
 
-  async getCampaignsWithPeriod(datePeriod: string = "last_30d", storeId?: string, operationId?: string): Promise<any[]> {
+  async getCampaignsWithPeriod(datePeriod: string = "last_30d", storeId?: string, operationId?: string, preloadedRates?: any): Promise<any[]> {
     // CRITICAL: Use unified adAccounts table with operation isolation
     const { adAccounts } = await import("@shared/schema");
     const { and } = await import("drizzle-orm");

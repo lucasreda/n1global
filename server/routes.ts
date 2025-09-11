@@ -3129,7 +3129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use Facebook Ads service to get campaigns with live data for the specific period
       const { facebookAdsService } = await import("./facebook-ads-service");
-      const campaignsWithLiveData = await facebookAdsService.getCampaignsWithPeriod(period, storeId, operationId);
+      const campaignsWithLiveData = await facebookAdsService.getCampaignsWithPeriod(period, storeId, operationId, undefined);
       
       res.json(campaignsWithLiveData);
     } catch (error) {
