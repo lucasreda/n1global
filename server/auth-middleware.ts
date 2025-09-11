@@ -34,3 +34,37 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     next();
   });
 };
+
+// Middleware to verify JWT token from header OR query parameter (for SSE)
+export const authenticateTokenOrQuery = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers["authorization"];
+  let token = authHeader && authHeader.split(" ")[1];
+  
+  // If no token in header, check query parameter
+  if (!token && req.query.token) {
+    token = req.query.token as string;
+  }
+
+  console.log("🔐 SSE Auth Debug:", {
+    hasAuthHeader: !!authHeader,
+    hasQueryToken: !!req.query.token,
+    hasToken: !!token,
+    url: req.url,
+    method: req.method
+  });
+
+  if (!token) {
+    console.log("❌ No token provided (header or query)");
+    return res.status(401).json({ message: "Token de acesso requerido" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) {
+      console.log("❌ JWT verification failed:", err.message);
+      return res.status(403).json({ message: "Token inválido" });
+    }
+    console.log("✅ JWT verified for user (SSE):", user.email);
+    req.user = user;
+    next();
+  });
+};

@@ -142,10 +142,9 @@ export default function Creatives() {
       return;
     }
     
-    // Create EventSource with authentication
+    // Create EventSource with authentication via query parameter
     const eventSource = new EventSource(
-      `/api/creatives/analyses/${currentJobId}/stream`,
-      { withCredentials: true }
+      `/api/creatives/analyses/${currentJobId}/stream?token=${encodeURIComponent(token)}`
     );
     
     eventSource.onmessage = (event) => {

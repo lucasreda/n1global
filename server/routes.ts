@@ -27,7 +27,7 @@ interface AuthRequest extends Request {
   user?: any;
 }
 
-import { authenticateToken } from "./auth-middleware";
+import { authenticateToken, authenticateTokenOrQuery } from "./auth-middleware";
 
 // Middleware to verify super admin role
 const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -3062,8 +3062,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // SSE endpoint for real-time job updates
-  app.get("/api/creatives/analyses/:jobId/stream", authenticateToken, async (req: AuthRequest, res: Response) => {
+  // SSE endpoint for real-time job updates (accepts token in query param)
+  app.get("/api/creatives/analyses/:jobId/stream", authenticateTokenOrQuery, async (req: AuthRequest, res: Response) => {
     try {
       const { jobId } = req.params;
       
