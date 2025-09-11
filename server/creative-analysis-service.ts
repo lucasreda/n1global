@@ -8,6 +8,10 @@ import {
   type InsertCreativeAnalysis
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { AudioAnalysisService } from './audio-analysis-service';
+import { KeyframeExtractionService } from './keyframe-extraction-service';
+import { VisualAnalysisService } from './visual-analysis-service';
+import { FusionAnalysisService } from './fusion-analysis-service';
 
 // In-memory job store for real-time progress tracking
 interface AnalysisJob {
@@ -32,6 +36,12 @@ class CreativeAnalysisService {
   private openai: OpenAI;
   private jobStore: Map<string, AnalysisJob> = new Map();
   
+  // New hybrid analysis services (optional, may not be available without API key)
+  private audioAnalysisService?: AudioAnalysisService;
+  private keyframeExtractionService?: KeyframeExtractionService;
+  private visualAnalysisService?: VisualAnalysisService;
+  private fusionAnalysisService?: FusionAnalysisService;
+  
   // Pricing per 1K tokens (in USD)
   private modelPricing: Record<string, { input: number; output: number }> = {
     'gpt-4o': { input: 0.005, output: 0.015 }, // Updated GPT-4o pricing
@@ -44,9 +54,24 @@ class CreativeAnalysisService {
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      console.warn('⚠️ OpenAI API key not configured');
+      console.warn('⚠️ OpenAI API key not configured - hybrid analysis disabled');
+      this.openai = new OpenAI({ apiKey: 'dummy' }); // Dummy instance to prevent crashes
+      return;
     }
+    
     this.openai = new OpenAI({ apiKey });
+    
+    // Initialize hybrid analysis services only if API key is available
+    try {
+      this.audioAnalysisService = new AudioAnalysisService();
+      this.keyframeExtractionService = new KeyframeExtractionService();
+      this.visualAnalysisService = new VisualAnalysisService();
+      this.fusionAnalysisService = new FusionAnalysisService();
+      console.log('✅ Hybrid analysis services initialized successfully');
+    } catch (error) {
+      console.error('⚠️ Failed to initialize hybrid analysis services:', error);
+      // Services will remain undefined, fallback to legacy analysis
+    }
   }
 
   // Map step names to numbers for database compatibility
@@ -208,7 +233,7 @@ class CreativeAnalysisService {
             totalOutputTokens += analysis.outputTokens || 0;
             totalCost += analysis.cost || 0;
             
-            // Update database
+            // Update database with hybrid analysis data
             await db
               .update(creativeAnalyses)
               .set({
@@ -221,7 +246,11 @@ class CreativeAnalysisService {
                 inputTokens: analysis.inputTokens,
                 outputTokens: analysis.outputTokens,
                 progress: 100,
-                completedAt: new Date()
+                completedAt: new Date(),
+                // Store hybrid analysis data
+                audioAnalysis: analysis.audioAnalysis,
+                visualAnalysis: analysis.visualAnalysis,
+                fusionAnalysis: analysis.fusedInsights
               })
               .where(and(
                 eq(creativeAnalyses.creativeId, creative.id),
@@ -275,13 +304,163 @@ class CreativeAnalysisService {
     }
   }
 
-  // Analyze individual creative
+  // Analyze individual creative using hybrid architecture
   private async analyzeCreative(
     creative: AdCreative,
     analysisType: string,
     model: string
   ): Promise<any> {
     try {
+      let totalCost = 0;
+      let audioAnalysis = null;
+      let visualAnalysis = null;
+      let keyframes = null;
+      let fusedInsights = null;
+      
+      console.log(`🎯 Starting hybrid analysis for creative: ${creative.name} (${creative.type})`);
+      
+      // Check if hybrid analysis services are available
+      if (!this.audioAnalysisService || !this.visualAnalysisService || !this.fusionAnalysisService || !this.keyframeExtractionService) {
+        console.log(`⚠️ Hybrid analysis services not available, falling back to legacy analysis`);
+        return this.legacyAnalyzeCreative(creative, analysisType, model);
+      }
+      
+      // Step 1: Handle video creatives with complete audio + visual analysis
+      if (creative.type === 'video' && creative.videoUrl) {
+        try {
+          console.log(`🎥 Video creative detected, performing complete analysis...`);
+          
+          // Extract and analyze audio
+          const audioBuffer = await this.audioAnalysisService.extractAudioFromVideo(creative.videoUrl);
+          audioAnalysis = await this.audioAnalysisService.analyzeAudio(audioBuffer, {
+            detectMusic: true,
+            analyzeQuality: true,
+            detectCTAs: true
+          });
+          totalCost += audioAnalysis.cost;
+          console.log(`🔊 Audio analysis completed (cost: $${audioAnalysis.cost.toFixed(4)})`);
+          
+          // Extract keyframes
+          keyframes = await this.keyframeExtractionService.extractKeyframes(creative.videoUrl, {
+            maxKeyframes: 7,
+            minInterval: 2,
+            includeMetadata: true
+          });
+          console.log(`🖼️ Extracted ${keyframes.length} keyframes`);
+          
+          // Analyze visuals
+          visualAnalysis = await this.visualAnalysisService.analyzeKeyframes(keyframes, {
+            includeProducts: true,
+            detectText: true,
+            analyzeComposition: true,
+            brandAnalysis: true
+          });
+          totalCost += visualAnalysis.cost;
+          console.log(`👁️ Visual analysis completed (cost: $${visualAnalysis.cost.toFixed(4)})`);
+          
+          // Fuse audio and visual insights
+          fusedInsights = await this.fusionAnalysisService.fuseAnalyses(
+            audioAnalysis,
+            visualAnalysis,
+            {
+              type: 'video',
+              campaignGoal: 'performance',
+              targetAudience: 'general'
+            }
+          );
+          console.log(`🧠 Fusion analysis completed`);
+          
+        } catch (error) {
+          console.warn(`⚠️ Hybrid video analysis failed, falling back to legacy: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          // Fallback to legacy analysis for videos
+          return this.legacyAnalyzeCreative(creative, analysisType, model);
+        }
+        
+      // Step 2: Handle image creatives with visual analysis only
+      } else if (creative.type === 'image' && creative.imageUrl) {
+        try {
+          console.log(`🖼️ Image creative detected, performing visual analysis...`);
+          
+          visualAnalysis = await this.visualAnalysisService.analyzeImage(creative.imageUrl);
+          totalCost += visualAnalysis.cost;
+          console.log(`👁️ Image analysis completed (cost: $${visualAnalysis.cost.toFixed(4)})`);
+          
+          // For images, we don't have audio, so no fusion needed
+          fusedInsights = {
+            overallScore: visualAnalysis.visualQuality,
+            timeline: [],
+            audioVisualSync: 'not_applicable',
+            narrativeFlow: 'Imagem estática',
+            ctaAlignment: 'Baseado apenas em elementos visuais',
+            predictedPerformance: {
+              ctr: visualAnalysis.visualQuality * 0.15, // Simple estimation
+              cvr: visualAnalysis.visualQuality * 0.08,
+              engagement: visualAnalysis.visualQuality > 7 ? 'alto' : visualAnalysis.visualQuality > 5 ? 'médio' : 'baixo'
+            },
+            keyStrengths: visualAnalysis.insights.slice(0, 3),
+            improvements: ['Considere criar variações em vídeo para maior engajamento'],
+            processingTime: visualAnalysis.processingTime
+          };
+          
+        } catch (error) {
+          console.warn(`⚠️ Image analysis failed, falling back to legacy: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return this.legacyAnalyzeCreative(creative, analysisType, model);
+        }
+        
+      // Step 3: Fallback for other types or missing URLs
+      } else {
+        console.log(`📝 Text-only creative or missing media, using legacy analysis...`);
+        return this.legacyAnalyzeCreative(creative, analysisType, model);
+      }
+      
+      // Build comprehensive analysis result
+      const analysis = this.buildHybridAnalysisResult(
+        creative,
+        audioAnalysis,
+        visualAnalysis,
+        keyframes,
+        fusedInsights,
+        analysisType
+      );
+      
+      console.log(`✅ Hybrid analysis completed for ${creative.name}. Total cost: $${totalCost.toFixed(4)}`);
+      
+      return {
+        result: analysis,
+        insights: analysis.insights || [],
+        recommendations: analysis.recommendations || [],
+        scores: analysis.scores || {},
+        
+        // Store detailed analysis data for future reference
+        audioAnalysis,
+        keyframes,
+        visualAnalysis,
+        fusedInsights,
+        
+        inputTokens: Math.floor(totalCost * 200), // Estimate tokens from cost
+        outputTokens: Math.floor(totalCost * 100),
+        cost: totalCost
+      };
+      
+    } catch (error) {
+      console.error('Error in hybrid creative analysis:', error);
+      throw error;
+    }
+  }
+
+  // Legacy analysis method for fallback
+  private async legacyAnalyzeCreative(
+    creative: AdCreative,
+    analysisType: string,
+    model: string
+  ): Promise<any> {
+    try {
+      // Check if OpenAI API key is available
+      if (!process.env.OPENAI_API_KEY) {
+        console.warn(`⚠️ No OpenAI API key available, returning placeholder analysis for ${creative.name}`);
+        return this.createPlaceholderAnalysis(creative, 'API key não configurada');
+      }
+
       const prompt = this.buildAnalysisPrompt(creative, analysisType);
       
       // Use GPT-4o for vision (supports both text and images)
@@ -383,9 +562,110 @@ class CreativeAnalysisService {
       };
       
     } catch (error) {
-      console.error('Error in creative analysis:', error);
+      console.error('Error in legacy creative analysis:', error);
       throw error;
     }
+  }
+
+  // Create placeholder analysis when services are not available
+  private createPlaceholderAnalysis(creative: AdCreative, reason: string): any {
+    return {
+      result: {
+        summary: `Análise não disponível: ${reason}`,
+        type: 'placeholder_analysis',
+        insights: [
+          `Análise do criativo "${creative.name}" não pôde ser realizada`,
+          `Motivo: ${reason}`,
+          'Para ativar análises completas, configure a chave da API OpenAI'
+        ],
+        recommendations: [
+          'Configure a variável de ambiente OPENAI_API_KEY',
+          'Tente novamente após a configuração da API key'
+        ],
+        scores: {},
+        strengths: [],
+        weaknesses: [],
+        optimization_opportunities: []
+      },
+      insights: [`Análise indisponível: ${reason}`],
+      recommendations: ['Configure OPENAI_API_KEY para análises completas'],
+      scores: {},
+      inputTokens: 0,
+      outputTokens: 0,
+      cost: 0
+    };
+  }
+
+  // Build hybrid analysis result combining all services
+  private buildHybridAnalysisResult(
+    creative: AdCreative,
+    audioAnalysis: any,
+    visualAnalysis: any,
+    keyframes: any,
+    fusedInsights: any,
+    analysisType: string
+  ): any {
+    // Combine insights from all analysis services
+    const insights = [];
+    const recommendations = [];
+    const scores: any = {};
+
+    // Add audio insights
+    if (audioAnalysis) {
+      insights.push(`🔊 Áudio: ${audioAnalysis.transcript.length > 0 ? 'Transcrição clara detectada' : 'Sem áudio detectado'}`);
+      if (audioAnalysis.musicDetected) {
+        insights.push(`🎵 Música: ${audioAnalysis.musicType || 'Música de fundo detectada'}`);
+      }
+      insights.push(...audioAnalysis.ctaAudio.map((cta: string) => `📢 CTA Áudio: ${cta}`));
+      scores.audio_quality = audioAnalysis.audioQuality;
+    }
+
+    // Add visual insights  
+    if (visualAnalysis) {
+      if (visualAnalysis.keyframes) {
+        insights.push(`👁️ Visual: ${visualAnalysis.keyframes.length} keyframes analisados`);
+        insights.push(`🏷️ Produtos: ${visualAnalysis.products.join(', ')}`);
+        insights.push(`📝 Textos: ${visualAnalysis.textOnScreen.join(', ')}`);
+      } else {
+        insights.push(`🖼️ Imagem: Qualidade visual ${visualAnalysis.visualQuality}/10`);
+        insights.push(`🏷️ Elementos: ${visualAnalysis.objects.join(', ')}`);
+        insights.push(`📝 Textos: ${visualAnalysis.text.join(', ')}`);
+      }
+      scores.visual_quality = visualAnalysis.visualQuality;
+      scores.logo_visibility = visualAnalysis.logoVisibility;
+    }
+
+    // Add fusion insights
+    if (fusedInsights) {
+      insights.push(`🧠 Score Geral: ${fusedInsights.overallScore}/10`);
+      insights.push(`🎯 Performance Prevista: CTR ${fusedInsights.predictedPerformance.ctr}%, CVR ${fusedInsights.predictedPerformance.cvr}%`);
+      
+      recommendations.push(...fusedInsights.keyStrengths.map((strength: string) => `✅ ${strength}`));
+      recommendations.push(...fusedInsights.improvements.map((improvement: string) => `🔧 ${improvement}`));
+      
+      scores.overall_performance = fusedInsights.overallScore;
+      scores.predicted_ctr = fusedInsights.predictedPerformance.ctr;
+      scores.predicted_cvr = fusedInsights.predictedPerformance.cvr;
+    }
+
+    // Build final analysis structure
+    return {
+      summary: `Análise Híbrida Completa: ${creative.name}`,
+      type: 'hybrid_analysis',
+      insights,
+      recommendations,
+      scores,
+      strengths: fusedInsights?.keyStrengths || [],
+      weaknesses: fusedInsights?.improvements || [],
+      optimization_opportunities: [
+        ...(audioAnalysis ? [`Otimizar qualidade de áudio (atual: ${audioAnalysis.audioQuality}/10)`] : []),
+        ...(visualAnalysis ? [`Melhorar impacto visual (atual: ${visualAnalysis.visualQuality}/10)`] : []),
+        ...((fusedInsights?.audioVisualSync === 'poor') ? ['Melhorar sincronização áudio-visual'] : [])
+      ],
+      timeline: fusedInsights?.timeline || [],
+      fusionScore: fusedInsights?.overallScore || null,
+      analysisMethod: 'OpenAI Whisper + GPT-4o Vision + Fusion Intelligence'
+    };
   }
 
   // Build analysis prompt based on type

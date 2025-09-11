@@ -1,4 +1,4 @@
-import { createCanvas, loadImage, Canvas } from 'canvas';
+// Canvas removed due to native dependencies issues in Replit environment
 
 /**
  * Keyframe Extraction Service - Intelligently extract key moments from videos
@@ -127,31 +127,20 @@ export class KeyframeExtractionService {
   }
 
   /**
-   * Create a placeholder frame (in production, this would be actual video frame)
+   * Create a placeholder frame metadata (without actual image generation)
    */
   private async createPlaceholderFrame(timestamp: number): Promise<Buffer> {
-    const canvas = createCanvas(1920, 1080);
-    const ctx = canvas.getContext('2d');
+    // Create a simple JSON metadata buffer instead of actual image
+    // In production, this would be replaced with actual video frame extraction using FFmpeg
+    const frameMetadata = {
+      timestamp,
+      width: 1920,
+      height: 1080,
+      description: `Keyframe at ${timestamp}s`,
+      type: 'placeholder'
+    };
     
-    // Create gradient background
-    const gradient = ctx.createLinearGradient(0, 0, 1920, 1080);
-    gradient.addColorStop(0, '#667eea');
-    gradient.addColorStop(1, '#764ba2');
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 1920, 1080);
-    
-    // Add timestamp text
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 72px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Frame at ${timestamp}s`, 960, 540);
-    
-    // Add frame info
-    ctx.font = '36px Arial';
-    ctx.fillText('Keyframe Extracted', 960, 620);
-    
-    return canvas.toBuffer('image/jpeg', { quality: 0.8 });
+    return Buffer.from(JSON.stringify(frameMetadata), 'utf-8');
   }
 
   /**
@@ -169,13 +158,26 @@ export class KeyframeExtractionService {
     description: string;
     confidence: number;
     frameType: 'hook' | 'product' | 'cta' | 'transition' | 'end';
+    isPlaceholder: boolean;
   }>> {
     const analyzedFrames = [];
     
     for (const frame of frames) {
-      // Convert to base64 for storage/display
-      const base64 = frame.imageBuffer.toString('base64');
-      const dataUrl = `data:image/jpeg;base64,${base64}`;
+      // Check if this is a placeholder frame (JSON metadata instead of actual image)
+      let isPlaceholder = false;
+      let dataUrl = '';
+      let base64 = '';
+      
+      try {
+        // Try to parse as JSON to detect placeholder
+        JSON.parse(frame.imageBuffer.toString('utf-8'));
+        isPlaceholder = true;
+        // For placeholders, don't create fake image URLs
+      } catch {
+        // This is actual image data
+        base64 = frame.imageBuffer.toString('base64');
+        dataUrl = `data:image/jpeg;base64,${base64}`;
+      }
       
       // Classify frame type based on timestamp position
       const frameType = this.classifyFrameType(frame.timestamp, frames[frames.length - 1].timestamp);
@@ -185,11 +187,12 @@ export class KeyframeExtractionService {
       
       analyzedFrames.push({
         timestamp: frame.timestamp,
-        url: dataUrl,
-        base64: base64,
+        url: dataUrl, // Empty for placeholders
+        base64: base64, // Empty for placeholders
         description,
-        confidence: 0.85, // Placeholder confidence
-        frameType
+        confidence: isPlaceholder ? 0.1 : 0.85, // Low confidence for placeholders
+        frameType,
+        isPlaceholder
       });
     }
     
@@ -266,7 +269,7 @@ export class KeyframeExtractionService {
   }
 
   /**
-   * Convert frame to different formats
+   * Convert frame to different formats (placeholder implementation)
    */
   async convertFrameFormat(
     imageBuffer: Buffer, 
@@ -274,57 +277,13 @@ export class KeyframeExtractionService {
     quality: number = 0.8
   ): Promise<Buffer> {
     try {
-      const canvas = createCanvas(1920, 1080);
-      const ctx = canvas.getContext('2d');
-      
-      const image = await loadImage(imageBuffer);
-      ctx.drawImage(image, 0, 0, 1920, 1080);
-      
-      if (format === 'png') {
-        return canvas.toBuffer('image/png');
-      } else if (format === 'webp') {
-        // Note: canvas doesn't support WebP directly, fall back to JPEG
-        return canvas.toBuffer('image/jpeg', { quality });
-      } else {
-        return canvas.toBuffer('image/jpeg', { quality });
-      }
+      // Placeholder implementation - would use FFmpeg or similar in production
+      console.warn('⚠️ Format conversion not implemented without canvas dependency');
+      return imageBuffer; // Return original buffer for now
       
     } catch (error) {
       throw new Error(`Format conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  /**
-   * Resize frame for optimal processing
-   */
-  async resizeFrame(
-    imageBuffer: Buffer, 
-    maxWidth: number = 1920, 
-    maxHeight: number = 1080
-  ): Promise<Buffer> {
-    try {
-      const image = await loadImage(imageBuffer);
-      
-      // Calculate aspect ratio and new dimensions
-      const aspectRatio = image.width / image.height;
-      let newWidth = maxWidth;
-      let newHeight = maxHeight;
-      
-      if (aspectRatio > maxWidth / maxHeight) {
-        newHeight = Math.floor(maxWidth / aspectRatio);
-      } else {
-        newWidth = Math.floor(maxHeight * aspectRatio);
-      }
-      
-      const canvas = createCanvas(newWidth, newHeight);
-      const ctx = canvas.getContext('2d');
-      
-      ctx.drawImage(image, 0, 0, newWidth, newHeight);
-      
-      return canvas.toBuffer('image/jpeg', { quality: 0.9 });
-      
-    } catch (error) {
-      throw new Error(`Frame resize failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
 }

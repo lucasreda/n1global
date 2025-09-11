@@ -31,6 +31,7 @@ export class VisualAnalysisService {
     base64?: string;
     description: string;
     frameType: string;
+    isPlaceholder?: boolean;
   }>, options?: {
     includeProducts?: boolean;
     detectText?: boolean;
@@ -91,6 +92,7 @@ export class VisualAnalysisService {
     base64?: string;
     description: string;
     frameType: string;
+    isPlaceholder?: boolean;
   }>): Promise<Array<{
     timestamp: number;
     url: string;
@@ -103,6 +105,21 @@ export class VisualAnalysisService {
     const analyzedFrames = [];
 
     for (const keyframe of keyframes) {
+      // Skip placeholder keyframes to avoid sending invalid data to GPT-4o
+      if (keyframe.isPlaceholder || !keyframe.url) {
+        console.log(`⚠️ Skipping placeholder keyframe at ${keyframe.timestamp}s`);
+        analyzedFrames.push({
+          timestamp: keyframe.timestamp,
+          url: keyframe.url,
+          description: keyframe.description + ' (placeholder - não analisado)',
+          objects: [],
+          text: [],
+          visualScore: 1, // Very low score for placeholders
+          insights: ['Keyframe placeholder - análise visual não disponível']
+        });
+        continue;
+      }
+
       const analysis = await this.analyzeKeyframe(keyframe);
       analyzedFrames.push({
         timestamp: keyframe.timestamp,
