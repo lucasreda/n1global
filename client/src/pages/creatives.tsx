@@ -310,6 +310,19 @@ export default function Creatives() {
     }
   };
 
+  const startAnalysis = () => {
+    if (selectedCreatives.size === 0) {
+      toast({
+        title: "Nenhum criativo selecionado",
+        description: "Selecione pelo menos um criativo para analisar",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    createAnalysisMutation.mutate();
+  };
+
 
   return (
     <div className="p-6 space-y-6">
@@ -368,16 +381,18 @@ export default function Creatives() {
         </div>
       </Card>
 
-      {/* New Creatives Section - 50% width */}
-      {newCreatives.length > 0 && (
-        <div className="w-1/2">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold flex items-center gap-3">
-                <Sparkles className="w-6 h-6 text-green-500" />
-                Novos Criativos ({newCreatives.length})
-              </h2>
-            </div>
+      {/* Cards Section - Two cards side by side */}
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* New Creatives Section - 50% width */}
+        {newCreatives.length > 0 && (
+          <div className="w-full md:w-1/2">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold flex items-center gap-3">
+                  <Sparkles className="w-6 h-6 text-green-500" />
+                  Novos Criativos ({newCreatives.length})
+                </h2>
+              </div>
             
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {newCreatives.map((creative: AdCreative) => (
@@ -388,7 +403,13 @@ export default function Creatives() {
                       ? 'ring-2 ring-primary bg-primary/5 border-primary/20' 
                       : 'hover:border-border'
                   }`}
-                  onClick={() => toggleCreativeSelection(creative.id)}
+                  onClick={(e) => {
+                    // Only toggle if not clicking on checkbox
+                    if ((e.target as HTMLElement).closest('button[role="checkbox"]')) {
+                      return;
+                    }
+                    toggleCreativeSelection(creative.id);
+                  }}
                   data-testid={`card-new-creative-${creative.id}`}
                 >
                   <div className="flex items-center gap-4">
@@ -462,15 +483,134 @@ export default function Creatives() {
             </div>
             
             {newCreatives.length > 0 && (
-              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                <p className="text-sm text-muted-foreground text-center">
-                  Estes criativos ainda não foram analisados. Selecione-os para incluir na análise.
+              <div className="mt-6 space-y-4">
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground text-center">
+                    Estes criativos ainda não foram analisados. Selecione-os para incluir na análise.
+                  </p>
+                </div>
+                
+                {/* Analisar Button */}
+                <div className="flex justify-center">
+                  <Button
+                    onClick={startAnalysis}
+                    disabled={selectedCreatives.size === 0 || createAnalysisMutation.isPending}
+                    className="w-full max-w-xs"
+                    data-testid="button-analyze-creatives"
+                  >
+                    {createAnalysisMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Brain className="w-4 h-4 mr-2" />
+                    )}
+                    Analisar {selectedCreatives.size > 0 ? `(${selectedCreatives.size})` : ''}
+                  </Button>
+                </div>
+              </div>
+            )}
+            </Card>
+          </div>
+        )}
+
+        {/* Analyzed Creatives Section - 50% width */}
+        <div className={newCreatives.length > 0 ? "w-full md:w-1/2" : "w-full"}>
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold flex items-center gap-3">
+                <Brain className="w-6 h-6 text-blue-500" />
+                Criativos Analisados ({analyzedCreatives.length})
+              </h2>
+            </div>
+            
+            {analyzedCreatives.length === 0 ? (
+              <div className="text-center py-12">
+                <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">Nenhum criativo analisado ainda</p>
+                <p className="text-sm text-muted-foreground">
+                  Selecione criativos novos e clique em "Analisar" para começar
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                {analyzedCreatives.map((creative: AdCreative) => (
+                  <div 
+                    key={creative.id} 
+                    className="group relative border border-border/50 rounded-xl p-4 hover:bg-muted/30 transition-all duration-200"
+                    data-testid={`card-analyzed-creative-${creative.id}`}
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Thumbnail - small and square */}
+                      <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                        {creative.thumbnailUrl ? (
+                          <img 
+                            src={creative.thumbnailUrl} 
+                            alt={creative.name || 'Criativo Analisado'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-muted flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-sm truncate mb-1" title={creative.name || 'Sem nome'}>
+                              {creative.name || 'Sem nome'}
+                            </h3>
+                            <Badge variant="default" className="text-xs px-2 py-0.5 bg-blue-500 hover:bg-blue-600">
+                              Analisado
+                            </Badge>
+                          </div>
+                          
+                          {/* Priority Metrics */}
+                          <div className="flex items-center gap-6 ml-4">
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">CPM</p>
+                              <p className="text-sm font-medium text-blue-600">
+                                {creative.cpm ? formatCurrency(Number(creative.cpm)) : '--'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">CPC</p>
+                              <p className="text-sm font-medium text-green-600">
+                                {creative.cpc ? formatCurrency(Number(creative.cpc)) : '--'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">CTR</p>
+                              <p className="text-sm font-medium text-purple-600">
+                                {creative.ctr ? `${(Number(creative.ctr) * 100).toFixed(2)}%` : '--'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Resultados</p>
+                              <p className="text-sm font-medium text-orange-600">
+                                {creative.conversions !== null && creative.conversions !== undefined ? creative.conversions : '--'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {analyzedCreatives.length > 0 && (
+              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
+                  Estes criativos foram analisados pela IA e estão prontos para insights detalhados.
                 </p>
               </div>
             )}
           </Card>
         </div>
-      )}
+      </div>
 
 
       {/* Analysis Progress Sheet */}
