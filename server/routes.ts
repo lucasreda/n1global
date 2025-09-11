@@ -2892,7 +2892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { facebookAdsService } = await import("./facebook-ads-service");
       const { adAccounts } = await import("@shared/schema");
       const { db } = await import("./db");
-      const { eq, and } = await import("drizzle-orm");
+      const { eq, and, inArray } = await import("drizzle-orm");
       
       // If refresh is requested, fetch fresh data from Facebook
       if (refresh === "true") {
@@ -2940,16 +2940,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🎨 Accounts details:`, accounts.map(a => ({ id: a.id, accountId: a.accountId, name: a.name })));
           console.log(`🎨 Refreshing creatives for ${accounts.length} Facebook accounts`);
           
+          // Import campaigns schema to filter by account
+          const { campaigns } = await import("@shared/schema");
+          
           for (const account of accounts) {
             const accessToken = account.accessToken;
             
             if (accessToken) {
               console.log(`🎨 Fetching creatives for account ${account.accountId} (${account.name})`);
+              
+              // Filter campaign IDs that belong to this specific account
+              const accountCampaigns = await db
+                .select({ campaignId: campaigns.campaignId })
+                .from(campaigns)
+                .where(and(
+                  eq(campaigns.accountId, account.accountId),
+                  inArray(campaigns.campaignId, campaignIdArray)
+                ));
+              
+              const accountCampaignIds = accountCampaigns.map(c => c.campaignId).filter(Boolean) as string[];
+              
+              if (accountCampaignIds.length === 0) {
+                console.log(`🎨 No campaigns to fetch for account ${account.accountId}`);
+                continue;
+              }
+              
+              console.log(`🎨 Fetching ${accountCampaignIds.length} campaigns for account ${account.accountId}: ${accountCampaignIds.join(',')}`);
+              
               try {
                 await facebookAdsService.fetchCreativesForCampaigns(
                   account.accountId,
                   accessToken,
-                  campaignIdArray,
+                  accountCampaignIds,
                   datePeriod as string,
                   operationId as string
                 );
