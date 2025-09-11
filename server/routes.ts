@@ -2962,21 +2962,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               if (accountCampaignIds.length === 0) {
                 console.log(`🎨 No campaigns to fetch for account ${account.accountId}`);
-                continue;
-              }
-              
-              console.log(`🎨 Fetching ${accountCampaignIds.length} campaigns for account ${account.accountId}: ${accountCampaignIds.join(',')}`);
-              
-              try {
-                await facebookAdsService.fetchCreativesForCampaigns(
-                  account.accountId,
-                  accessToken,
-                  accountCampaignIds,
-                  datePeriod as string,
-                  operationId as string
-                );
-              } catch (error) {
-                console.error(`🎨 Error fetching creatives for account ${account.accountId}:`, error);
+                console.log(`🎨 Fetching ALL ads for account ${account.accountId} (no campaign filter)`);
+                
+                // Try fetching without campaign filter to see if any ads exist
+                try {
+                  await facebookAdsService.fetchCreativesForCampaigns(
+                    account.accountId,
+                    accessToken,
+                    [], // Empty array = fetch all ads
+                    datePeriod as string,
+                    operationId as string
+                  );
+                } catch (error) {
+                  console.error(`🎨 Error fetching all creatives for account ${account.accountId}:`, error);
+                }
+              } else {
+                console.log(`🎨 Fetching ${accountCampaignIds.length} campaigns for account ${account.accountId}: ${accountCampaignIds.join(',')}`);
+                
+                try {
+                  await facebookAdsService.fetchCreativesForCampaigns(
+                    account.accountId,
+                    accessToken,
+                    accountCampaignIds,
+                    datePeriod as string,
+                    operationId as string
+                  );
+                } catch (error) {
+                  console.error(`🎨 Error fetching creatives for account ${account.accountId}:`, error);
+                }
               }
             } else {
               console.log(`🎨 Account ${account.accountId} (${account.name}) has no access token`);
