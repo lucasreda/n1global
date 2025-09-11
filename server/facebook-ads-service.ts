@@ -900,13 +900,30 @@ export class FacebookAdsService {
         }
       }
       
-      // Determine creative type
+      // Determine creative type and extract URLs
       let type: string = 'unknown';
-      if (creative.video_id) {
+      let videoUrl: string | null = null;
+      let imageUrl: string | null = null;
+      
+      // Check for video in object_story_spec.video_data
+      if (creative.object_story_spec?.video_data?.video_id) {
         type = 'video';
-      } else if (creative.image_url) {
+        videoUrl = `https://www.facebook.com/video.php?v=${creative.object_story_spec.video_data.video_id}`;
+        // Use image_url from video_data as thumbnail if available
+        imageUrl = creative.object_story_spec.video_data.image_url || creative.image_url || null;
+      } 
+      // Check for direct video_id (backup method)
+      else if (creative.video_id) {
+        type = 'video';
+        videoUrl = `https://www.facebook.com/video.php?v=${creative.video_id}`;
+      } 
+      // Check for image
+      else if (creative.image_url) {
         type = 'image';
-      } else if (creative.object_story_spec?.link_data?.child_attachments) {
+        imageUrl = creative.image_url;
+      } 
+      // Check for carousel
+      else if (creative.object_story_spec?.link_data?.child_attachments) {
         type = 'carousel';
       }
       
@@ -924,8 +941,8 @@ export class FacebookAdsService {
         status: ad.status.toLowerCase(),
         type,
         thumbnailUrl: creative.thumbnail_url || null,
-        imageUrl: creative.image_url || null,
-        videoUrl: creative.video_id ? `https://www.facebook.com/video.php?v=${creative.video_id}` : null,
+        imageUrl: imageUrl,
+        videoUrl: videoUrl,
         primaryText: primaryText || null,
         headline: headline || null,
         description: null, // Facebook doesn't always provide this separately
