@@ -104,6 +104,16 @@ export default function Creatives() {
     enabled: !!operationId
   });
 
+  // Fetch new creatives that haven't been analyzed
+  const { data: newCreatives = [] } = useQuery({
+    queryKey: ["/api/creatives/new", operationId],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/creatives/new?operationId=${operationId}`, "GET");
+      return response.json() as Promise<AdCreative[]>;
+    },
+    enabled: !!operationId
+  });
+
   // Fetch cost estimate
   const { data: costEstimate } = useQuery({
     queryKey: ["/api/creatives/estimate", selectedCreatives.size, analysisType, analysisModel],
