@@ -3016,7 +3016,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/creatives/analyses", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
-    console.log("📋 RAW REQUEST BODY:", req.body);
+    console.log("🚨 ROUTE HIT - ANALYSES REQUEST RECEIVED");
+    console.log("📋 RAW REQUEST BODY:", JSON.stringify(req.body));
     console.log("📋 REQUEST BODY TYPE:", typeof req.body);
     console.log("📋 REQUEST BODY KEYS:", Object.keys(req.body || {}));
     
