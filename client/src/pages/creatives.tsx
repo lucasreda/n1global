@@ -137,6 +137,13 @@ export default function Creatives() {
     
     // Get auth token for SSE connection
     const token = localStorage.getItem("token");
+    console.log("🔑 SSE Token Check:", {
+      hasToken: !!token,
+      tokenLength: token?.length,
+      tokenStart: token?.substring(0, 10) + "...",
+      jobId: currentJobId
+    });
+    
     if (!token) {
       console.error("No auth token for SSE");
       return;
