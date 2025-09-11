@@ -50,7 +50,6 @@ export default function Creatives() {
   const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
-  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [selectedCreatives, setSelectedCreatives] = useState<Set<string>>(new Set());
   const [analysisType, setAnalysisType] = useState("audit");
   const [analysisModel, setAnalysisModel] = useState("gpt-4-turbo-preview");
@@ -71,7 +70,7 @@ export default function Creatives() {
   });
 
   // Fetch campaigns
-  const { data: campaigns = [] } = useQuery({
+  const { data: allCampaigns = [] } = useQuery({
     queryKey: ["/api/campaigns", selectedPeriod, operationId],
     queryFn: async () => {
       const response = await apiRequest(`/api/campaigns?period=${selectedPeriod}&operationId=${operationId}`, "GET");
@@ -80,20 +79,28 @@ export default function Creatives() {
     enabled: !!operationId
   });
 
-  // Fetch creatives
+  // Filter only selected campaigns from Ads page
+  const selectedCampaignsFromAds = allCampaigns.filter((campaign: any) => campaign.isSelected);
+  const selectedCampaignIds = selectedCampaignsFromAds.map((campaign: any) => campaign.campaignId);
+
+  // Fetch creatives - only from selected campaigns
   const { 
     data: creatives = [], 
     isLoading: creativesLoading,
     refetch: refetchCreatives 
   } = useQuery({
-    queryKey: ["/api/creatives", selectedAccount, selectedCampaigns, selectedPeriod, operationId],
+    queryKey: ["/api/creatives", selectedAccount, selectedCampaignIds, selectedPeriod, operationId],
     queryFn: async () => {
+      // Only fetch if there are selected campaigns
+      if (selectedCampaignIds.length === 0) {
+        return [];
+      }
       const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
-      const campaignParam = selectedCampaigns.length > 0 ? `&campaignIds=${selectedCampaigns.join(',')}` : "";
+      const campaignParam = `&campaignIds=${selectedCampaignIds.join(',')}`;
       const response = await apiRequest(`/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}`, "GET");
       return response.json() as Promise<AdCreative[]>;
     },
-    enabled: !!operationId
+    enabled: !!operationId && selectedCampaignIds.length > 0
   });
 
   // Fetch analyzed creatives
@@ -207,8 +214,12 @@ export default function Creatives() {
   // Refresh creatives from Facebook
   const refreshCreativesMutation = useMutation({
     mutationFn: async () => {
+      // Only refresh if there are selected campaigns
+      if (selectedCampaignIds.length === 0) {
+        throw new Error("Nenhuma campanha selecionada");
+      }
       const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
-      const campaignParam = selectedCampaigns.length > 0 ? `&campaignIds=${selectedCampaigns.join(',')}` : "";
+      const campaignParam = `&campaignIds=${selectedCampaignIds.join(',')}`;
       const response = await apiRequest(`/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}&refresh=true`, "GET");
       return response.json();
     },
@@ -217,6 +228,13 @@ export default function Creatives() {
       toast({
         title: "Atualizado",
         description: "Criativos sincronizados com Facebook Ads"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao sincronizar criativos",
+        variant: "destructive"
       });
     }
   });
@@ -315,68 +333,64 @@ export default function Creatives() {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex gap-4 flex-wrap">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[180px]" data-testid="select-period">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Hoje</SelectItem>
-              <SelectItem value="yesterday">Ontem</SelectItem>
-              <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
-              <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
-              <SelectItem value="last_90d">Últimos 90 dias</SelectItem>
-              <SelectItem value="lifetime">Todo o período</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          <div className="flex gap-4 flex-wrap items-center">
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-[180px]" data-testid="select-period">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="yesterday">Ontem</SelectItem>
+                <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="last_90d">Últimos 90 dias</SelectItem>
+                <SelectItem value="lifetime">Todo o período</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-            <SelectTrigger className="w-[200px]" data-testid="select-account">
-              <SelectValue placeholder="Conta de anúncios" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as contas</SelectItem>
-              {adAccounts.filter(acc => acc.network === 'facebook').map(account => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+              <SelectTrigger className="w-[200px]" data-testid="select-account">
+                <SelectValue placeholder="Conta de anúncios" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as contas</SelectItem>
+                {adAccounts.filter(acc => acc.network === 'facebook').map(account => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select 
-            value={selectedCampaigns.length > 0 ? "custom" : "all"}
-            onValueChange={(value) => {
-              if (value === "all") {
-                setSelectedCampaigns([]);
-              }
-            }}
-          >
-            <SelectTrigger className="w-[200px]" data-testid="select-campaigns">
-              <SelectValue placeholder="Campanhas">
-                {selectedCampaigns.length === 0 ? "Todas as campanhas" : `${selectedCampaigns.length} selecionadas`}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as campanhas</SelectItem>
-              {campaigns.map(campaign => (
-                <div key={campaign.campaignId} className="flex items-center px-2 py-1">
-                  <Checkbox
-                    checked={selectedCampaigns.includes(campaign.campaignId)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedCampaigns([...selectedCampaigns, campaign.campaignId]);
-                      } else {
-                        setSelectedCampaigns(selectedCampaigns.filter(id => id !== campaign.campaignId));
-                      }
-                    }}
-                    data-testid={`checkbox-campaign-${campaign.campaignId}`}
-                  />
-                  <span className="ml-2 text-sm">{campaign.name}</span>
-                </div>
+            {/* Campaign Info */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Target className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {selectedCampaignsFromAds.length > 0 
+                  ? `${selectedCampaignsFromAds.length} campanhas selecionadas na página de Anúncios`
+                  : "Nenhuma campanha selecionada"
+                }
+              </span>
+            </div>
+          </div>
+
+          {/* Show selected campaigns */}
+          {selectedCampaignsFromAds.length === 0 ? (
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <p className="text-sm text-yellow-400">
+                Para analisar criativos, primeiro selecione as campanhas desejadas na página de Anúncios.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {selectedCampaignsFromAds.map((campaign: any) => (
+                <Badge key={campaign.campaignId} variant="secondary" className="text-xs">
+                  {campaign.name}
+                </Badge>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          )}
         </div>
       </Card>
 
