@@ -197,25 +197,29 @@ router.all("/test-call-handler", async (req, res) => {
       throw new Error('Invalid public URL configuration - cannot process Twilio webhooks');
     }
 
-    // Create call record for outbound test call
-    const callRecord: InsertVoiceCall = {
-      operationId: operationId as string,
-      twilioCallSid: CallSid,
-      twilioAccountSid: params.AccountSid,
-      direction: 'outbound',
-      fromNumber: From, // Twilio number making the call
-      toNumber: To, // Customer number receiving the call
-      status: 'initiated', // Proper initial status for new calls
-      customerPhone: voiceService.normalizePhoneNumber(To), // Customer is the To number in outbound calls
-      startTime: new Date(),
-    };
+    // Create call record for outbound test call (only if we have call data)
+    if (CallSid && From && To) {
+      const callRecord: InsertVoiceCall = {
+        operationId: operationId as string,
+        twilioCallSid: CallSid,
+        twilioAccountSid: params.AccountSid,
+        direction: 'outbound',
+        fromNumber: From, // Twilio number making the call
+        toNumber: To, // Customer number receiving the call
+        status: 'initiated', // Proper initial status for new calls
+        customerPhone: voiceService.normalizePhoneNumber(To), // Customer is the To number in outbound calls
+        startTime: new Date(),
+      };
 
-    try {
-      await db.insert(voiceCalls).values(callRecord);
-      console.log(`📞 Created call record for test call ${CallSid}`);
-    } catch (dbError) {
-      console.error('Error creating call record:', dbError);
-      // Continue with call even if DB insert fails, but log it
+      try {
+        await db.insert(voiceCalls).values(callRecord);
+        console.log(`📞 Created call record for test call ${CallSid}`);
+      } catch (dbError) {
+        console.error('Error creating call record:', dbError);
+        // Continue with call even if DB insert fails, but log it
+      }
+    } else {
+      console.log('📞 Initial TwiML request - no call data to record yet');
     }
 
     // Generate welcome message using AI directives with call type
@@ -223,17 +227,18 @@ router.all("/test-call-handler", async (req, res) => {
     
     // Create TwiML response for the test call with absolute URL
     const baseUrl = `${urlValidation.protocol}://${urlValidation.domain}`;
+    const callSidParam = CallSid ? `&amp;callSid=${CallSid}` : '';
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="Polly.Camila-Neural" language="pt-BR">${welcomeMessage}</Say>
-    <Gather action="${baseUrl}/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${CallSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+    <Gather action="${baseUrl}/api/voice/test-call-response?operationId=${operationId}${callSidParam}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
         <Say voice="Polly.Camila-Neural" language="pt-BR">Como posso ajudá-lo hoje?</Say>
     </Gather>
     <Say voice="Polly.Camila-Neural" language="pt-BR">Desculpe, não consegui ouvir sua resposta. Até logo!</Say>
     <Hangup />
 </Response>`;
 
-    console.log(`🎯 Generated TwiML for test call ${CallSid}`);
+    console.log(`🎯 Generated TwiML for test call ${CallSid || 'initial request'}`);
     
     res.set('Content-Type', 'text/xml');
     res.send(twiml);
@@ -261,8 +266,8 @@ router.all("/test-call-response", async (req, res) => {
     const { operationId, callSid, callType = 'test' } = params;
     const { SpeechResult } = params;
     
-    if (!operationId || !callSid) {
-      throw new Error('Operation ID and Call SID are required');
+    if (!operationId) {
+      throw new Error('Operation ID is required');
     }
     
     // Validate callType
@@ -282,10 +287,11 @@ router.all("/test-call-response", async (req, res) => {
       
       // Create TwiML with AI response and continue conversation using absolute URL
       const baseUrl = `${urlValidation.protocol}://${urlValidation.domain}`;
+      const callSidParam = callSid ? `&amp;callSid=${callSid}` : '';
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="Polly.Camila-Neural" language="pt-BR">${aiResponse}</Say>
-    <Gather action="${baseUrl}/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${callSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+    <Gather action="${baseUrl}/api/voice/test-call-response?operationId=${operationId}${callSidParam}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
         <Say voice="Polly.Camila-Neural" language="pt-BR">Posso ajudar com mais alguma coisa?</Say>
     </Gather>
     <Say voice="Polly.Camila-Neural" language="pt-BR">Obrigada por entrar em contato! Até logo.</Say>
