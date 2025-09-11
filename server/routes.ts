@@ -2960,23 +2960,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               const accountCampaignIds = accountCampaigns.map(c => c.campaignId).filter(Boolean) as string[];
               
-              if (accountCampaignIds.length === 0) {
-                console.log(`🎨 No campaigns to fetch for account ${account.accountId}`);
-                console.log(`🎨 Fetching ALL ads for account ${account.accountId} (no campaign filter)`);
-                
-                // Try fetching without campaign filter to see if any ads exist
-                try {
-                  await facebookAdsService.fetchCreativesForCampaigns(
-                    account.accountId,
-                    accessToken,
-                    [], // Empty array = fetch all ads
-                    datePeriod as string,
-                    operationId as string
-                  );
-                } catch (error) {
-                  console.error(`🎨 Error fetching all creatives for account ${account.accountId}:`, error);
-                }
-              } else {
+              // Always try to fetch all ads to see what's available
+              console.log(`🎨 Fetching ALL ads for account ${account.accountId} to check availability`);
+              
+              try {
+                await facebookAdsService.fetchCreativesForCampaigns(
+                  account.accountId,
+                  accessToken,
+                  [], // Empty array = fetch all ads
+                  datePeriod as string,
+                  operationId as string
+                );
+              } catch (error) {
+                console.error(`🎨 Error fetching all creatives for account ${account.accountId}:`, error);
+              }
+              
+              if (accountCampaignIds.length > 0) {
                 console.log(`🎨 Fetching ${accountCampaignIds.length} campaigns for account ${account.accountId}: ${accountCampaignIds.join(',')}`);
                 
                 try {

@@ -756,6 +756,11 @@ export class FacebookAdsService {
         ? `&filtering=[{"field":"campaign_id","operator":"IN","value":${JSON.stringify(campaignIds)}}]`
         : '';
       
+      // If no campaigns specified, log that we're fetching ALL ads
+      if (campaignIds.length === 0) {
+        console.log(`🎨 Fetching ALL ads for account ${accountId} (no campaign filter)`);
+      }
+      
       // Fetch ads with creative data and insights - removed effective_status filter to get all ads
       const fields = [
         'id',
