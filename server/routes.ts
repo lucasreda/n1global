@@ -2878,6 +2878,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Creative Intelligence Routes
+  app.get("/api/creatives", authenticateToken, storeContext, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { accountId, campaignIds, datePeriod = "last_30d", refresh = "false" } = req.query;
+      const operationId = req.operationId!;
+      
+      // Import services
+      const { facebookAdsService } = await import("./facebook-ads-service");
+      const { adAccounts } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // If refresh is requested, fetch fresh data from Facebook
+      if (refresh === "true" && accountId) {
+        // Get account credentials
+        const account = await db
+          .select()
+          .from(adAccounts)
+          .where(and(
+            eq(adAccounts.id, accountId as string),
+            eq(adAccounts.operationId, operationId)
+          ))
+          .limit(1);
+        
+        if (account.length > 0 && account[0].credentials) {
+          const creds = account[0].credentials as any;
+          const accessToken = creds.accessToken;
+          
+          if (accessToken) {
+            const campaignIdArray = campaignIds ? (campaignIds as string).split(',') : [];
+            await facebookAdsService.fetchCreativesForCampaigns(
+              account[0].accountId,
+              accessToken,
+              campaignIdArray,
+              datePeriod as string,
+              operationId
+            );
+          }
+        }
+      }
+      
+      // Get best creatives from database
+      const filters = {
+        accountId: accountId as string | undefined,
+        campaignIds: campaignIds ? (campaignIds as string).split(',') : undefined,
+        period: datePeriod as string,
+        minImpressions: 1000,
+        limit: 50
+      };
+      
+      const creatives = await facebookAdsService.getBestCreatives(operationId, filters);
+      
+      res.json(creatives);
+    } catch (error) {
+      console.error("Error fetching creatives:", error);
+      res.status(500).json({ message: "Error fetching creatives" });
+    }
+  });
+
+  app.post("/api/creatives/analyses", authenticateToken, storeContext, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { creativeIds, analysisType = "audit", model = "gpt-4-turbo-preview", options } = req.body;
+      const operationId = req.operationId!;
+      
+      if (!creativeIds || !Array.isArray(creativeIds) || creativeIds.length === 0) {
+        return res.status(400).json({ message: "Creative IDs are required" });
+      }
+      
+      const { creativeAnalysisService } = await import("./creative-analysis-service");
+      
+      const jobId = await creativeAnalysisService.createAnalysisJob(
+        operationId,
+        creativeIds,
+        analysisType,
+        model,
+        options
+      );
+      
+      res.json({ jobId, status: "queued" });
+    } catch (error) {
+      console.error("Error creating analysis job:", error);
+      res.status(500).json({ message: "Error creating analysis job" });
+    }
+  });
+
+  app.get("/api/creatives/analyses/:jobId", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { jobId } = req.params;
+      
+      const { creativeAnalysisService } = await import("./creative-analysis-service");
+      const job = creativeAnalysisService.getJobStatus(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching job status:", error);
+      res.status(500).json({ message: "Error fetching job status" });
+    }
+  });
+
+  app.get("/api/creatives/analyzed", authenticateToken, storeContext, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const operationId = req.operationId!;
+      
+      const { creativeAnalysisService } = await import("./creative-analysis-service");
+      const analyzedCreatives = await creativeAnalysisService.getAnalyzedCreatives(operationId);
+      
+      res.json(analyzedCreatives);
+    } catch (error) {
+      console.error("Error fetching analyzed creatives:", error);
+      res.status(500).json({ message: "Error fetching analyzed creatives" });
+    }
+  });
+
+  app.get("/api/creatives/estimate", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { creativeCount = "1", analysisType = "audit", model = "gpt-4-turbo-preview" } = req.query;
+      
+      const { creativeAnalysisService } = await import("./creative-analysis-service");
+      const { currencyService } = await import("./currency-service");
+      
+      const estimate = await creativeAnalysisService.estimateCost(
+        parseInt(creativeCount as string),
+        analysisType as string,
+        model as string
+      );
+      
+      // Convert USD to BRL
+      const estimatedCostBRL = await currencyService.convertToBRL(estimate.estimatedCost, "USD");
+      
+      res.json({
+        estimatedCostUSD: estimate.estimatedCost,
+        estimatedCostBRL,
+        estimatedTokens: estimate.estimatedTokens,
+        perCreativeCostUSD: estimate.estimatedCost / parseInt(creativeCount as string),
+        perCreativeCostBRL: estimatedCostBRL / parseInt(creativeCount as string)
+      });
+    } catch (error) {
+      console.error("Error estimating cost:", error);
+      res.status(500).json({ message: "Error estimating cost" });
+    }
+  });
+
   // Get unified campaigns (Facebook + Google)
   app.get("/api/campaigns", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {

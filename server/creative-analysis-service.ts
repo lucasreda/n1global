@@ -33,7 +33,7 @@ class CreativeAnalysisService {
   private jobStore: Map<string, AnalysisJob> = new Map();
   
   // Pricing per 1K tokens (in USD)
-  private modelPricing = {
+  private modelPricing: Record<string, { input: number; output: number }> = {
     'gpt-4-vision-preview': { input: 0.01, output: 0.03 },
     'gpt-4': { input: 0.03, output: 0.06 },
     'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
@@ -55,7 +55,7 @@ class CreativeAnalysisService {
     model: string = 'gpt-4-turbo-preview'
   ): Promise<{ estimatedCost: number; estimatedTokens: number }> {
     // Estimate tokens based on analysis type
-    const tokensPerCreative = {
+    const tokensPerCreative: Record<string, number> = {
       'audit': 2000,      // Full creative audit
       'angles': 1500,     // Marketing angles analysis
       'copy': 1000,       // Copy optimization
@@ -327,7 +327,7 @@ Ad Creative Analysis:
   - Conversions: ${creative.conversions}
 `;
 
-    const prompts = {
+    const prompts: Record<string, string> = {
       'audit': `${baseInfo}
 Perform a comprehensive audit of this ad creative. Analyze:
 1. Copy effectiveness and messaging clarity
@@ -416,7 +416,7 @@ Provide specific KPI targets and optimization strategies.`
         }
         
         // Extract scores if present
-        const scoreMatches = section.matchAll(/(\w+):\s*(\d+)\/10/g);
+        const scoreMatches = Array.from(section.matchAll(/(\w+):\s*(\d+)\/10/g));
         for (const match of scoreMatches) {
           scores[match[1].toLowerCase()] = parseInt(match[2]);
         }
