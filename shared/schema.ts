@@ -743,8 +743,8 @@ export const creativeAnalyses = pgTable("creative_analyses", {
   // Analysis details
   status: text("status").notNull(), // 'queued', 'running', 'completed', 'failed'
   analysisType: text("analysis_type").notNull(), // 'audit', 'angles', 'copy', 'variants', 'performance'
-  provider: text("provider").notNull().default("openai"), // 'openai', 'anthropic', etc.
-  model: text("model"), // 'gpt-4-vision-preview', 'gpt-4', etc.
+  provider: text("provider").notNull().default("hybrid"), // 'openai', 'hybrid' (whisper+gpt4o)
+  model: text("model"), // 'gpt-4o', 'whisper-1', etc.
   
   // Cost tracking
   costEstimate: decimal("cost_estimate", { precision: 10, scale: 4 }).default("0"),
@@ -752,7 +752,63 @@ export const creativeAnalyses = pgTable("creative_analyses", {
   inputTokens: integer("input_tokens").default(0),
   outputTokens: integer("output_tokens").default(0),
   
-  // Analysis results
+  // Audio analysis results (Whisper)
+  audioAnalysis: jsonb("audio_analysis").$type<{
+    transcript?: string;
+    audioQuality?: number;
+    voiceStyle?: string;
+    musicDetected?: boolean;
+    musicType?: string;
+    silencePercentage?: number;
+    speechRate?: number;
+    ctaAudio?: string[];
+    duration?: number;
+  }>(),
+  audioProcessingTime: integer("audio_processing_time"), // milliseconds
+  audioCost: decimal("audio_cost", { precision: 10, scale: 4 }).default("0"),
+  
+  // Visual analysis results (GPT-4o with keyframes)
+  visualAnalysis: jsonb("visual_analysis").$type<{
+    keyframes?: Array<{
+      timestamp: number;
+      url: string;
+      description: string;
+      objects: string[];
+      text: string[];
+    }>;
+    products?: string[];
+    people?: number;
+    logoVisibility?: number;
+    textOnScreen?: string[];
+    colors?: string[];
+    composition?: string;
+    visualQuality?: number;
+  }>(),
+  visualProcessingTime: integer("visual_processing_time"), // milliseconds
+  visualCost: decimal("visual_cost", { precision: 10, scale: 4 }).default("0"),
+  
+  // Fusion analysis results (Combined insights)
+  fusionAnalysis: jsonb("fusion_analysis").$type<{
+    overallScore?: number;
+    timeline?: Array<{
+      timeRange: string;
+      audioEvent?: string;
+      visualEvent?: string;
+      syncQuality?: number;
+    }>;
+    audioVisualSync?: string; // 'perfect', 'good', 'poor'
+    narrativeFlow?: string;
+    ctaAlignment?: string;
+    predictedPerformance?: {
+      ctr?: number;
+      cvr?: number;
+      engagement?: string;
+    };
+    keyStrengths?: string[];
+    improvements?: string[];
+  }>(),
+  
+  // Legacy analysis results (for backward compatibility)
   result: jsonb("result"), // Structured analysis output
   insights: jsonb("insights"), // Key insights extracted
   recommendations: jsonb("recommendations"), // Actionable recommendations
