@@ -265,21 +265,50 @@ class CreativeAnalysisService {
     try {
       const prompt = this.buildAnalysisPrompt(creative, analysisType);
       
+      // Use GPT-4 Vision if creative has visual content
+      const shouldUseVision = creative.imageUrl || creative.videoUrl;
+      const selectedModel = shouldUseVision ? 'gpt-4-vision-preview' : 'gpt-4-turbo-preview';
+      
+      // Prepare messages with visual content if available
+      const messages: any[] = [
+        {
+          role: "system",
+          content: `Você é um especialista em marketing digital com foco na otimização de criativos para Facebook Ads. 
+          Sua expertise inclui análise visual, psicologia do consumidor, copywriting persuasivo e performance de campanhas.
+          Forneça insights acionáveis e recomendações específicas em português brasileiro.`
+        }
+      ];
+
+      if (shouldUseVision && creative.imageUrl) {
+        messages.push({
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: creative.imageUrl,
+                detail: "high"
+              }
+            }
+          ]
+        });
+      } else {
+        messages.push({
+          role: "user",
+          content: prompt
+        });
+      }
+      
       // Call OpenAI API
       const completion = await this.openai.chat.completions.create({
-        model: model === 'gpt-4-vision-preview' && creative.imageUrl ? 'gpt-4-vision-preview' : 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert marketing analyst specializing in Facebook Ads creative optimization. Analyze the provided ad creative and provide actionable insights."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
+        model: selectedModel,
+        messages,
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 3000 // Increased for more detailed analysis
       });
       
       const response = completion.choices[0].message.content;
@@ -312,32 +341,117 @@ class CreativeAnalysisService {
   // Build analysis prompt based on type
   private buildAnalysisPrompt(creative: AdCreative, analysisType: string): string {
     const baseInfo = `
-Ad Creative Analysis:
-- Name: ${creative.name}
-- Type: ${creative.type}
+CREATIVE INTELLIGENCE - ANÁLISE COMPLETA:
+
+=== INFORMAÇÕES BÁSICAS ===
+- Nome: ${creative.name}
+- Tipo: ${creative.type}
 - Headline: ${creative.headline || 'N/A'}
-- Primary Text: ${creative.primaryText || 'N/A'}
+- Texto Principal: ${creative.primaryText || 'N/A'}
 - CTA: ${creative.ctaType || 'N/A'}
-- Performance Metrics:
-  - Impressions: ${creative.impressions}
-  - Clicks: ${creative.clicks}
-  - CTR: ${creative.ctr}%
-  - CPC: ${creative.cpc}
-  - Spend: ${creative.spend}
-  - Conversions: ${creative.conversions}
+- URL da Imagem: ${creative.imageUrl || 'N/A'}
+- URL do Vídeo: ${creative.videoUrl || 'N/A'}
+
+=== PERFORMANCE ATUAL ===
+- Impressões: ${creative.impressions}
+- Cliques: ${creative.clicks}
+- CTR: ${creative.ctr}%
+- CPC: ${creative.cpc}
+- Investimento: ${creative.spend}
+- Conversões: ${creative.conversions}
+
+=== ANÁLISE SOLICITADA ===
+Por favor, realize uma análise COMPLETA e DETALHADA do criativo, incluindo:
 `;
 
     const prompts: Record<string, string> = {
       'audit': `${baseInfo}
-Perform a comprehensive audit of this ad creative. Analyze:
-1. Copy effectiveness and messaging clarity
-2. Visual appeal and brand consistency (if applicable)
-3. Call-to-action strength and placement
-4. Target audience alignment
-5. Performance metrics interpretation
-6. Competitive positioning
 
-Provide specific scores (1-10) for each aspect and actionable recommendations.`,
+🎯 ANÁLISE COMPLETA DO CRIATIVO:
+
+1. **ANÁLISE VISUAL & VÍDEO**
+   - Qualidade e resolução da imagem/vídeo
+   - Composição visual e hierarquia
+   - Cores dominantes e psicologia das cores
+   - Elementos visuais que chamam atenção
+   - Se vídeo: ritmo, transições, elementos visuais
+   - Consistência com identidade da marca
+
+2. **ANÁLISE DE ÁUDIO** (se aplicável)
+   - Qualidade do áudio
+   - Tom de voz e energia
+   - Música de fundo e efeitos sonoros
+   - Sincronização com elementos visuais
+   - Impacto emocional do áudio
+
+3. **ANÁLISE DE COPY & MENSAGEM**
+   - Clareza e impacto do headline
+   - Persuasão do texto principal
+   - Tom de voz e personalidade da marca
+   - Estrutura e flow da mensagem
+   - Benefit vs feature presentation
+   - Legibilidade e formatação
+
+4. **GATILHOS EMOCIONAIS & PSICOLÓGICOS**
+   - Gatilhos de urgência (tempo limitado)
+   - Gatilhos de escassez (quantidade limitada)
+   - Social proof (depoimentos, números)
+   - Autoridade (especialistas, certificações)
+   - Reciprocidade (ofertas, bônus)
+   - Medo da perda (FOMO)
+   - Aspiração e desejo
+
+5. **GANCHOS & ATENÇÃO**
+   - Hook inicial (primeiros 3 segundos)
+   - Elementos de surpresa ou curiosidade
+   - Padrão interrupt (quebra de expectativa)
+   - Storytelling e narrativa
+   - Proposta de valor única
+
+6. **CALL-TO-ACTION (CTA)**
+   - Clareza e específicidade do CTA
+   - Posicionamento e visibilidade
+   - Urgência e motivação para ação
+   - Facilidade de compreensão
+   - Design e contraste visual
+
+7. **PERFORMANCE & CONVERSÃO**
+   - Análise das métricas atuais
+   - Benchmarking com padrões do setor
+   - Potencial de otimização
+   - Audience-creative fit
+   - Funnel stage appropriateness
+
+8. **COMPETITIVE INTELLIGENCE**
+   - Diferenciação vs concorrentes
+   - Trends e padrões do mercado
+   - Oportunidades de positioning
+
+**FORMATO DA RESPOSTA:**
+Por favor, estruture sua resposta em JSON com:
+{
+  "scores": {
+    "visual_impact": (1-10),
+    "copy_effectiveness": (1-10),
+    "emotional_triggers": (1-10),
+    "cta_strength": (1-10),
+    "overall_performance": (1-10)
+  },
+  "insights": [
+    "insight detalhado 1",
+    "insight detalhado 2"
+  ],
+  "recommendations": [
+    "recomendação específica 1",
+    "recomendação específica 2"
+  ],
+  "strengths": ["força 1", "força 2"],
+  "weaknesses": ["fraqueza 1", "fraqueza 2"],
+  "optimization_opportunities": [
+    "oportunidade 1",
+    "oportunidade 2"
+  ]
+}`,
 
       'angles': `${baseInfo}
 Identify and analyze the marketing angles used in this creative:

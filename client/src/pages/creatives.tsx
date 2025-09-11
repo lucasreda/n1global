@@ -323,6 +323,77 @@ export default function Creatives() {
     createAnalysisMutation.mutate();
   };
 
+  // Get detailed step description based on current step and progress
+  const getDetailedStepDescription = (currentStep: string, progress: number): string => {
+    const stepDescriptions: Record<string, string> = {
+      'Initializing': 'Preparando o sistema de análise e carregando modelos de IA...',
+      'Fetching creatives': 'Coletando dados dos criativos selecionados e metadados...',
+      'Analysis complete': 'Análise concluída! Todos os insights foram gerados com sucesso.'
+    };
+
+    // Handle dynamic steps for individual creative analysis
+    if (currentStep.includes('Analyzing creative')) {
+      const match = currentStep.match(/Analyzing creative (\d+) of (\d+)/);
+      if (match) {
+        const [, current, total] = match;
+        return `Analisando criativo ${current} de ${total}: Extraindo elementos visuais, copy, gatilhos emocionais, CTAs e performance...`;
+      }
+    }
+
+    return stepDescriptions[currentStep] || 'Processando análise detalhada com IA...';
+  };
+
+  // Get analysis steps with status based on progress
+  const getAnalysisSteps = (currentStep: string, progress: number) => {
+    const steps = [
+      {
+        title: 'Inicializando Análise',
+        description: 'Carregando modelos de IA e preparando pipeline de análise',
+        status: progress > 0 ? 'completed' : currentStep === 'Initializing' ? 'active' : 'pending'
+      },
+      {
+        title: 'Coletando Dados',
+        description: 'Extraindo informações dos criativos e dados de performance',
+        status: progress > 10 ? 'completed' : currentStep === 'Fetching creatives' ? 'active' : 'pending'
+      },
+      {
+        title: 'Análise de Conteúdo Visual',
+        description: 'Analisando elementos visuais, cores, composição e hierarquia visual',
+        status: progress > 25 ? 'completed' : (progress > 10 && progress <= 25) ? 'active' : 'pending'
+      },
+      {
+        title: 'Análise de Copy & Mensagem',
+        description: 'Avaliando headlines, copy principal, tom de voz e clareza da mensagem',
+        status: progress > 40 ? 'completed' : (progress > 25 && progress <= 40) ? 'active' : 'pending'
+      },
+      {
+        title: 'Identificação de Gatilhos',
+        description: 'Detectando gatilhos emocionais, urgência, escassez e social proof',
+        status: progress > 60 ? 'completed' : (progress > 40 && progress <= 60) ? 'active' : 'pending'
+      },
+      {
+        title: 'Análise de CTA & Conversão',
+        description: 'Avaliando call-to-actions, posicionamento e potencial de conversão',
+        status: progress > 75 ? 'completed' : (progress > 60 && progress <= 75) ? 'active' : 'pending'
+      },
+      {
+        title: 'Performance & Benchmarks',
+        description: 'Comparando métricas com benchmarks e identificando oportunidades',
+        status: progress > 90 ? 'completed' : (progress > 75 && progress <= 90) ? 'active' : 'pending'
+      },
+      {
+        title: 'Insights & Recomendações',
+        description: 'Gerando insights acionáveis e recomendações de otimização',
+        status: progress === 100 ? 'completed' : progress > 90 ? 'active' : 'pending'
+      }
+    ];
+
+    return steps.map(step => ({
+      ...step,
+      status: step.status as 'completed' | 'active' | 'pending'
+    }));
+  };
+
 
   return (
     <div className="p-6 space-y-6">
@@ -613,48 +684,88 @@ export default function Creatives() {
       </div>
 
 
-      {/* Analysis Progress Sheet */}
+      {/* Analysis Progress Popup */}
       <Sheet open={analysisSheetOpen} onOpenChange={setAnalysisSheetOpen}>
-        <SheetContent>
+        <SheetContent className="min-w-[500px]">
           <SheetHeader>
-            <SheetTitle>Análise em Progresso</SheetTitle>
+            <SheetTitle className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-primary" />
+              Creative Intelligence
+            </SheetTitle>
             <SheetDescription>
-              Analisando {selectedCreatives.size} criativos com IA
+              Analisando {selectedCreatives.size} criativos com IA avançada
             </SheetDescription>
           </SheetHeader>
           
           {jobStatus && (
-            <div className="mt-6 space-y-6">
-              {/* Overall Progress */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Progresso geral</span>
-                  <span>{jobStatus.progress}%</span>
+            <div className="mt-8 space-y-8">
+              {/* Overall Progress Bar */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold">Progresso Geral</span>
+                  <span className="text-2xl font-bold text-primary">{jobStatus.progress}%</span>
                 </div>
-                <Progress value={jobStatus.progress} />
-                <p className="text-xs text-muted-foreground">{jobStatus.currentStep}</p>
+                <Progress value={jobStatus.progress} className="h-3" />
+                
+                {/* Current Analysis Step */}
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    {jobStatus.status === 'running' && (
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    )}
+                    {jobStatus.status === 'completed' && (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    )}
+                    {jobStatus.status === 'failed' && (
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    )}
+                    <span className="font-medium">Status Atual</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {getDetailedStepDescription(jobStatus.currentStep, jobStatus.progress)}
+                  </p>
+                </div>
               </div>
 
-              {/* Status Badge */}
-              <div className="flex items-center gap-2">
-                {jobStatus.status === 'running' && (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span className="text-sm">Processando...</span>
-                  </>
-                )}
-                {jobStatus.status === 'completed' && (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm">Concluído!</span>
-                  </>
-                )}
-                {jobStatus.status === 'failed' && (
-                  <>
-                    <AlertCircle className="w-4 h-4 text-red-500" />
-                    <span className="text-sm">Erro: {jobStatus.error}</span>
-                  </>
-                )}
+              {/* Detailed Analysis Steps */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Etapas da Análise
+                </h3>
+                
+                <div className="space-y-3">
+                  {getAnalysisSteps(jobStatus.currentStep, jobStatus.progress).map((step, index) => (
+                    <div key={index} className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      step.status === 'completed' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' :
+                      step.status === 'active' ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' :
+                      'bg-muted/30 border-border/50'
+                    }`}>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        step.status === 'completed' ? 'bg-green-500' :
+                        step.status === 'active' ? 'bg-blue-500 animate-pulse' :
+                        'bg-muted-foreground/30'
+                      }`} />
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${
+                          step.status === 'completed' ? 'text-green-700 dark:text-green-300' :
+                          step.status === 'active' ? 'text-blue-700 dark:text-blue-300' :
+                          'text-muted-foreground'
+                        }`}>
+                          {step.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {step.description}
+                        </p>
+                      </div>
+                      {step.status === 'active' && (
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                      )}
+                      {step.status === 'completed' && (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Cost Tracking */}
