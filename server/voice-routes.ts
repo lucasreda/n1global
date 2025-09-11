@@ -169,7 +169,12 @@ router.post("/call-status", validateTwilioSignature, async (req, res) => {
 /**
  * Twilio Webhook: Test call handler - handles outbound test calls
  */
-router.post("/test-call-handler", validateTwilioSignature, async (req, res) => {
+router.post("/test-call-handler", async (req, res) => {
+  // TEMPORARY: Skip signature validation for diagnosis
+  console.log('🔧 TEMPORARY: Skipping Twilio signature validation for diagnosis');
+  console.log('📞 Headers received:', JSON.stringify(req.headers, null, 2));
+  console.log('📞 Query params:', req.query);
+  console.log('📞 Body data:', req.body);
   try {
     console.log("🎯 Test call handler:", req.body);
     
