@@ -291,8 +291,17 @@ class CreativeAnalysisService {
     analysisType: string,
     model: string
   ): Promise<any> {
+    console.log("🔬 analyzeCreative called:", {
+      creativeId: creative.id,
+      hasImageUrl: !!creative.imageUrl,
+      hasVideoUrl: !!creative.videoUrl,
+      analysisType,
+      model
+    });
+    
     try {
       const prompt = this.buildAnalysisPrompt(creative, analysisType);
+      console.log("📝 Prompt built, length:", prompt.length);
       
       // Use GPT-4 Vision if creative has visual content
       const shouldUseVision = creative.imageUrl || creative.videoUrl;
@@ -333,6 +342,7 @@ class CreativeAnalysisService {
       }
       
       // Call OpenAI API
+      console.log("🚀 Calling OpenAI API with model:", selectedModel);
       const completion = await this.openai.chat.completions.create({
         model: selectedModel,
         messages,
@@ -342,6 +352,12 @@ class CreativeAnalysisService {
       
       const response = completion.choices[0].message.content;
       const usage = completion.usage;
+      
+      console.log("✅ OpenAI response received:", {
+        responseLength: response?.length || 0,
+        inputTokens: usage?.prompt_tokens || 0,
+        outputTokens: usage?.completion_tokens || 0
+      });
       
       // Parse response
       const analysis = this.parseAnalysisResponse(response, analysisType);
