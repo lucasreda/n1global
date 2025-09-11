@@ -3019,7 +3019,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { operationId, creativeIds, analysisType = "audit", model = "gpt-4-turbo-preview", options } = req.body;
       
+      console.log("🔍 Analysis request body:", {
+        operationId,
+        creativeIds: creativeIds?.length || 0,
+        analysisType,
+        model,
+        hasOperationId: !!operationId
+      });
+      
       if (!operationId) {
+        console.error("❌ Missing operationId in request body");
         return res.status(400).json({ message: "Operation ID is required" });
       }
       
