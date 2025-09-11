@@ -4,12 +4,15 @@ import {
   facebookCampaigns, 
   facebookAdAccounts,
   facebookBusinessManagers,
+  adCreatives,
   type FacebookCampaign,
   type FacebookAdAccount,
   type FacebookBusinessManager,
+  type AdCreative,
   type InsertFacebookCampaign,
   type InsertFacebookAdAccount,
-  type InsertFacebookBusinessManager
+  type InsertFacebookBusinessManager,
+  type InsertAdCreative
 } from "@shared/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { currencyService } from './currency-service';
@@ -42,6 +45,38 @@ interface FacebookApiAccount {
   account_status: string;
   currency: string;
   timezone_name: string;
+}
+
+interface FacebookApiAd {
+  id: string;
+  name: string;
+  status: string;
+  campaign_id: string;
+  adset_id: string;
+  creative: {
+    id: string;
+    name?: string;
+    title?: string;
+    body?: string;
+    object_story_spec?: any;
+    thumbnail_url?: string;
+    image_url?: string;
+    video_id?: string;
+    call_to_action_type?: string;
+    link_url?: string;
+  };
+  insights?: {
+    data: Array<{
+      impressions: string;
+      clicks: string;
+      spend: string;
+      cpm: string;
+      cpc: string;
+      ctr: string;
+      conversions?: string;
+      cost_per_conversion?: string;
+    }>;
+  };
 }
 
 export class FacebookAdsService {
@@ -704,6 +739,204 @@ export class FacebookAdsService {
     }
     
     return await response.json();
+  }
+
+  async fetchCreativesForCampaigns(
+    accountId: string, 
+    accessToken: string, 
+    campaignIds: string[], 
+    datePeriod: string = "last_30d",
+    operationId: string
+  ): Promise<AdCreative[]> {
+    try {
+      // Build the filter for campaign IDs
+      const campaignFilter = campaignIds.length > 0 
+        ? `&filtering=[{"field":"campaign_id","operator":"IN","value":${JSON.stringify(campaignIds)}}]`
+        : '';
+      
+      // Fetch ads with creative data and insights
+      const fields = [
+        'id',
+        'name',
+        'status',
+        'campaign_id',
+        'adset_id',
+        'creative{id,name,title,body,object_story_spec,thumbnail_url,image_url,video_id,call_to_action_type,link_url}',
+        `insights.date_preset(${datePeriod}){impressions,clicks,spend,cpm,cpc,ctr,conversions,cost_per_conversion}`
+      ].join(',');
+      
+      const url = `${this.baseUrl}/act_${accountId}/ads?fields=${fields}&effective_status=['ACTIVE']${campaignFilter}&limit=500&access_token=${accessToken}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ads: ${response.statusText}`);
+      }
+      
+      const data = await response.json() as { data: FacebookApiAd[] };
+      
+      // Process and upsert creative data
+      const creatives: AdCreative[] = [];
+      
+      for (const ad of data.data || []) {
+        const creative = await this.upsertCreative(ad, operationId, accountId, datePeriod);
+        if (creative) {
+          creatives.push(creative);
+        }
+      }
+      
+      return creatives;
+    } catch (error) {
+      console.error('Error fetching creatives:', error);
+      throw error;
+    }
+  }
+
+  async getBestCreatives(
+    operationId: string, 
+    filters?: {
+      accountId?: string;
+      campaignIds?: string[];
+      period?: string;
+      minImpressions?: number;
+      limit?: number;
+    }
+  ): Promise<AdCreative[]> {
+    const { desc, gte } = await import("drizzle-orm");
+    
+    let whereConditions: any[] = [
+      eq(adCreatives.operationId, operationId),
+      eq(adCreatives.network, 'facebook')
+    ];
+    
+    if (filters?.accountId) {
+      whereConditions.push(eq(adCreatives.accountId, filters.accountId));
+    }
+    
+    if (filters?.campaignIds && filters.campaignIds.length > 0) {
+      whereConditions.push(inArray(adCreatives.campaignId, filters.campaignIds));
+    }
+    
+    if (filters?.minImpressions) {
+      whereConditions.push(gte(adCreatives.impressions, filters.minImpressions));
+    }
+    
+    const creatives = await db
+      .select()
+      .from(adCreatives)
+      .where(and(...whereConditions))
+      .orderBy(
+        desc(adCreatives.ctr),
+        adCreatives.cpc
+      )
+      .limit(filters?.limit || 50);
+    
+    return creatives;
+  }
+
+  private async upsertCreative(ad: FacebookApiAd, operationId: string, accountId: string, period: string): Promise<AdCreative | null> {
+    try {
+      const insights = ad.insights?.data?.[0];
+      const creative = ad.creative;
+      
+      if (!creative) {
+        return null;
+      }
+      
+      // Extract text from object_story_spec if available
+      let primaryText = creative.body;
+      let headline = creative.title;
+      let linkUrl = creative.link_url;
+      
+      if (creative.object_story_spec) {
+        const spec = creative.object_story_spec;
+        if (spec.link_data) {
+          primaryText = spec.link_data.message || primaryText;
+          headline = spec.link_data.name || headline;
+          linkUrl = spec.link_data.link || linkUrl;
+        } else if (spec.video_data) {
+          primaryText = spec.video_data.message || primaryText;
+          headline = spec.video_data.title || headline;
+          linkUrl = spec.video_data.call_to_action?.value?.link || linkUrl;
+        }
+      }
+      
+      // Determine creative type
+      let type: string = 'unknown';
+      if (creative.video_id) {
+        type = 'video';
+      } else if (creative.image_url) {
+        type = 'image';
+      } else if (creative.object_story_spec?.link_data?.child_attachments) {
+        type = 'carousel';
+      }
+      
+      // Convert spend to base currency if needed
+      let spend = insights?.spend ? parseFloat(insights.spend) : 0;
+      
+      const creativeData: InsertAdCreative = {
+        operationId,
+        network: 'facebook',
+        accountId,
+        campaignId: ad.campaign_id,
+        adId: ad.id,
+        creativeId: creative.id,
+        name: ad.name,
+        status: ad.status.toLowerCase(),
+        type,
+        thumbnailUrl: creative.thumbnail_url || null,
+        imageUrl: creative.image_url || null,
+        videoUrl: creative.video_id ? `https://www.facebook.com/video.php?v=${creative.video_id}` : null,
+        primaryText: primaryText || null,
+        headline: headline || null,
+        description: null, // Facebook doesn't always provide this separately
+        linkUrl: linkUrl || null,
+        ctaType: creative.call_to_action_type || null,
+        period,
+        impressions: insights?.impressions ? parseInt(insights.impressions) : 0,
+        clicks: insights?.clicks ? parseInt(insights.clicks) : 0,
+        spend: spend.toString(),
+        cpm: insights?.cpm || "0",
+        cpc: insights?.cpc || "0",
+        ctr: insights?.ctr || "0",
+        conversions: insights?.conversions ? parseInt(insights.conversions) : 0,
+        conversionRate: "0", // Calculate if needed
+        roas: "0", // Calculate if needed
+        lastSync: new Date(),
+        providerData: ad
+      };
+      
+      // Check if creative exists
+      const existing = await db
+        .select()
+        .from(adCreatives)
+        .where(eq(adCreatives.adId, ad.id))
+        .limit(1);
+      
+      if (existing.length > 0) {
+        // Update existing
+        await db
+          .update(adCreatives)
+          .set({
+            ...creativeData,
+            updatedAt: new Date()
+          })
+          .where(eq(adCreatives.adId, ad.id));
+        
+        return existing[0];
+      } else {
+        // Insert new
+        const [newCreative] = await db
+          .insert(adCreatives)
+          .values(creativeData)
+          .returning();
+        
+        return newCreative;
+      }
+    } catch (error) {
+      console.error('Error upserting creative:', error, ad);
+      return null;
+    }
   }
 
   private async upsertCampaign(campaignData: FacebookApiCampaign): Promise<void> {
