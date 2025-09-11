@@ -2892,30 +2892,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { eq, and } = await import("drizzle-orm");
       
       // If refresh is requested, fetch fresh data from Facebook
-      if (refresh === "true" && accountId) {
-        // Get account credentials
-        const account = await db
-          .select()
-          .from(adAccounts)
-          .where(and(
-            eq(adAccounts.id, accountId as string),
-            eq(adAccounts.operationId, operationId)
-          ))
-          .limit(1);
+      if (refresh === "true") {
+        const campaignIdArray = campaignIds ? (campaignIds as string).split(',') : [];
         
-        if (account.length > 0 && account[0].credentials) {
-          const creds = account[0].credentials as any;
-          const accessToken = creds.accessToken;
+        // If accountId is provided, fetch for that specific account
+        if (accountId) {
+          const account = await db
+            .select()
+            .from(adAccounts)
+            .where(and(
+              eq(adAccounts.id, accountId as string),
+              eq(adAccounts.operationId, operationId)
+            ))
+            .limit(1);
           
-          if (accessToken) {
-            const campaignIdArray = campaignIds ? (campaignIds as string).split(',') : [];
-            await facebookAdsService.fetchCreativesForCampaigns(
-              account[0].accountId,
-              accessToken,
-              campaignIdArray,
-              datePeriod as string,
-              operationId
-            );
+          if (account.length > 0 && account[0].credentials) {
+            const creds = account[0].credentials as any;
+            const accessToken = creds.accessToken;
+            
+            if (accessToken) {
+              await facebookAdsService.fetchCreativesForCampaigns(
+                account[0].accountId,
+                accessToken,
+                campaignIdArray,
+                datePeriod as string,
+                operationId
+              );
+            }
+          }
+        } else {
+          // No specific account, fetch for all accounts in the operation
+          const accounts = await db
+            .select()
+            .from(adAccounts)
+            .where(and(
+              eq(adAccounts.operationId, operationId),
+              eq(adAccounts.network, 'facebook'),
+              eq(adAccounts.isActive, true)
+            ));
+          
+          console.log(`🎨 Refreshing creatives for ${accounts.length} Facebook accounts`);
+          
+          for (const account of accounts) {
+            if (account.credentials) {
+              const creds = account.credentials as any;
+              const accessToken = creds.accessToken;
+              
+              if (accessToken) {
+                console.log(`🎨 Fetching creatives for account ${account.accountId}`);
+                try {
+                  await facebookAdsService.fetchCreativesForCampaigns(
+                    account.accountId,
+                    accessToken,
+                    campaignIdArray,
+                    datePeriod as string,
+                    operationId
+                  );
+                } catch (error) {
+                  console.error(`🎨 Error fetching creatives for account ${account.accountId}:`, error);
+                }
+              }
+            }
           }
         }
       }
