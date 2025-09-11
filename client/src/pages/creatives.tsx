@@ -394,7 +394,7 @@ export default function Creatives() {
                 </h2>
               </div>
             
-            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+            <div className="space-y-3 max-h-[350px] overflow-y-auto">
               {newCreatives.map((creative: AdCreative) => (
                 <div 
                   key={creative.id} 
