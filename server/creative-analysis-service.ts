@@ -48,6 +48,24 @@ class CreativeAnalysisService {
     this.openai = new OpenAI({ apiKey });
   }
 
+  // Map step names to numbers for database compatibility
+  private getStepNumber(stepName: string): number {
+    const stepMap: Record<string, number> = {
+      'Initializing': 1,
+      'Queued': 1,
+      'Fetching creatives': 2,
+      'Analysis complete': 10,
+      'Failed': -1
+    };
+    
+    // Handle dynamic steps like "Analyzing creative X of Y"
+    if (stepName.includes('Analyzing creative')) {
+      return 5; // Analysis phase
+    }
+    
+    return stepMap[stepName] || 0;
+  }
+
   // Estimate cost for analysis
   async estimateCost(
     creativeCount: number,
@@ -118,8 +136,8 @@ class CreativeAnalysisService {
         provider: 'openai',
         model,
         costEstimate: (estimatedCost / creativeIds.length).toFixed(4),
-        progress: 0,
-        currentStep: 'Queued'
+        progress: { percent: 0, step: 'Queued' }, // Store as JSON
+        currentStep: this.getStepNumber('Queued')
       });
     }
     

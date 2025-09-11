@@ -760,8 +760,8 @@ export const creativeAnalyses = pgTable("creative_analyses", {
   error: text("error"),
   
   // Progress tracking
-  progress: integer("progress").default(0), // 0-100
-  currentStep: text("current_step"),
+  progress: jsonb("progress"), // Store progress data as JSON
+  currentStep: integer("current_step").default(0), // Step number as integer
   
   // Timing
   startedAt: timestamp("started_at"),
