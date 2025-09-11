@@ -49,7 +49,6 @@ interface AnalysisJob {
 
 export default function Creatives() {
   const { toast } = useToast();
-  const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
   const [selectedCreatives, setSelectedCreatives] = useState<Set<string>>(new Set());
   const [analysisType, setAnalysisType] = useState("audit");
@@ -74,9 +73,9 @@ export default function Creatives() {
 
   // Fetch campaigns
   const { data: allCampaigns = [] } = useQuery({
-    queryKey: ["/api/campaigns", selectedPeriod, operationId],
+    queryKey: ["/api/campaigns", operationId],
     queryFn: async () => {
-      const response = await apiRequest(`/api/campaigns?period=${selectedPeriod}&operationId=${operationId}`, "GET");
+      const response = await apiRequest(`/api/campaigns?operationId=${operationId}`, "GET");
       return response.json() as Promise<Campaign[]>;
     },
     enabled: !!operationId
@@ -92,7 +91,7 @@ export default function Creatives() {
     isLoading: creativesLoading,
     refetch: refetchCreatives 
   } = useQuery({
-    queryKey: ["/api/creatives", selectedAccount, selectedCampaignIds, selectedPeriod, operationId],
+    queryKey: ["/api/creatives", selectedAccount, selectedCampaignIds, operationId],
     queryFn: async () => {
       // Only fetch if there are selected campaigns
       if (selectedCampaignIds.length === 0) {
@@ -100,7 +99,7 @@ export default function Creatives() {
       }
       const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
       const campaignParam = `&campaignIds=${selectedCampaignIds.join(',')}`;
-      const response = await apiRequest(`/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}`, "GET");
+      const response = await apiRequest(`/api/creatives?operationId=${operationId}${accountParam}${campaignParam}`, "GET");
       return response.json() as Promise<AdCreative[]>;
     },
     enabled: !!operationId && selectedCampaignIds.length > 0
@@ -223,14 +222,14 @@ export default function Creatives() {
       }
       const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
       const campaignParam = `&campaignIds=${selectedCampaignIds.join(',')}`;
-      const response = await apiRequest(`/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}&refresh=true`, "GET");
+      const response = await apiRequest(`/api/creatives?operationId=${operationId}${accountParam}${campaignParam}&refresh=true`, "GET");
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/creatives"] });
       toast({
         title: "Atualizado",
-        description: "Criativos sincronizados com Facebook Ads"
+        description: "Criativos sincronizados com Facebook Ads (dados históricos completos)"
       });
     },
     onError: (error: any) => {
@@ -321,7 +320,7 @@ export default function Creatives() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedAccount, selectedPeriod, selectedCampaignIds.length]);
+  }, [selectedAccount, selectedCampaignIds.length]);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -361,20 +360,6 @@ export default function Creatives() {
       <Card className="p-4">
         <div className="space-y-4">
           <div className="flex gap-4 flex-wrap items-center">
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="w-[180px]" data-testid="select-period">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Hoje</SelectItem>
-                <SelectItem value="yesterday">Ontem</SelectItem>
-                <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
-                <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
-                <SelectItem value="last_90d">Últimos 90 dias</SelectItem>
-                <SelectItem value="lifetime">Todo o período</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
               <SelectTrigger className="w-[200px]" data-testid="select-account">
                 <SelectValue placeholder="Conta de anúncios" />

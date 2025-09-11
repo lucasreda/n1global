@@ -134,7 +134,7 @@ export class FacebookAdsService {
     return campaigns;
   }
 
-  async getCampaignsWithPeriod(datePeriod: string = "last_30d", storeId?: string, operationId?: string, preloadedRates?: any): Promise<any[]> {
+  async getCampaignsWithPeriod(datePeriod: string = "lifetime", storeId?: string, operationId?: string, preloadedRates?: any): Promise<any[]> {
     // CRITICAL: Use unified adAccounts table with operation isolation
     const { adAccounts } = await import("@shared/schema");
     const { and } = await import("drizzle-orm");
@@ -256,7 +256,7 @@ export class FacebookAdsService {
     return campaignsWithLiveData;
   }
 
-  async syncCampaigns(datePeriod: string = "last_30d", storeId?: string, operationId?: string): Promise<{ synced: number; errors?: string[] }> {
+  async syncCampaigns(datePeriod: string = "lifetime", storeId?: string, operationId?: string): Promise<{ synced: number; errors?: string[] }> {
     // CRITICAL: Use unified adAccounts table with operation isolation
     const { adAccounts } = await import("@shared/schema");
     const { and } = await import("drizzle-orm");
@@ -379,7 +379,7 @@ export class FacebookAdsService {
     return data.data || [];
   }
 
-  private async fetchCampaignsFromAPI(accountId: string, accessToken: string, datePeriod: string = "last_30d"): Promise<any[]> {
+  private async fetchCampaignsFromAPI(accountId: string, accessToken: string, datePeriod: string = "lifetime"): Promise<any[]> {
     // Ensure account ID has the 'act_' prefix for Facebook API
     const formattedAccountId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
     
@@ -458,7 +458,7 @@ export class FacebookAdsService {
     }, 0);
   }
 
-  async getMarketingCostsByPeriod(period: string = "last_30d", storeId?: string | null, operationId?: string | null, preloadedRates?: any): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
+  async getMarketingCostsByPeriod(period: string = "lifetime", storeId?: string | null, operationId?: string | null, preloadedRates?: any): Promise<{ totalBRL: number; totalEUR: number; campaigns: any[] }> {
     // Buscar campanhas selecionadas e seus dados ao vivo para o período específico, filtradas por operação ou store
     const { campaigns, adAccounts } = await import("@shared/schema");
     const { and, eq, inArray, isNull } = await import("drizzle-orm");
