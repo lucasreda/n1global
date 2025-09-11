@@ -3016,24 +3016,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/creatives/analyses", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
-    console.log("🚨 ROUTE HIT - ANALYSES REQUEST RECEIVED");
-    console.log("📋 RAW REQUEST BODY:", JSON.stringify(req.body));
-    console.log("📋 REQUEST BODY TYPE:", typeof req.body);
-    console.log("📋 REQUEST BODY KEYS:", Object.keys(req.body || {}));
-    
     try {
       const { operationId, creativeIds, analysisType = "audit", model = "gpt-4-turbo-preview", options } = req.body;
       
-      console.log("🔍 Analysis request body:", {
-        operationId,
-        creativeIds: creativeIds?.length || 0,
-        analysisType,
-        model,
-        hasOperationId: !!operationId
-      });
-      
       if (!operationId) {
-        console.error("❌ Missing operationId in request body");
         return res.status(400).json({ message: "Operation ID is required" });
       }
       
