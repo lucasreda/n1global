@@ -2922,6 +2922,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } else {
           // No specific account, fetch for all accounts in the operation
+          console.log(`🎨 Looking for accounts with operationId: ${operationId}`);
+          
           const accounts = await db
             .select()
             .from(adAccounts)
@@ -2931,6 +2933,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(adAccounts.isActive, true)
             ));
           
+          console.log(`🎨 Query result:`, accounts.length, 'accounts found');
+          console.log(`🎨 Accounts details:`, accounts.map(a => ({ id: a.id, accountId: a.accountId, name: a.name })));
           console.log(`🎨 Refreshing creatives for ${accounts.length} Facebook accounts`);
           
           for (const account of accounts) {
