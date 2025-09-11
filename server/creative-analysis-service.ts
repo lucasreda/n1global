@@ -163,19 +163,28 @@ class CreativeAnalysisService {
     model: string,
     options?: any
   ): Promise<void> {
-    const job = this.jobStore.get(jobId);
-    if (!job) return;
+    console.log("🚀 Starting processJob:", { jobId, creativeIds, analysisType, model });
     
+    const job = this.jobStore.get(jobId);
+    if (!job) {
+      console.error("❌ Job not found in store:", jobId);
+      return;
+    }
+    
+    console.log("✅ Job found, updating status to running");
     job.status = 'running';
     job.startedAt = new Date();
     job.currentStep = 'Fetching creatives';
     
     try {
       // Fetch creative data
+      console.log("📊 Fetching creatives from database...");
       const creatives = await db
         .select()
         .from(adCreatives)
         .where(inArray(adCreatives.id, creativeIds));
+      
+      console.log(`✅ Found ${creatives.length} creatives:`, creatives.map(c => ({ id: c.id, imageUrl: !!c.imageUrl, videoUrl: !!c.videoUrl })));
       
       const results = [];
       let totalInputTokens = 0;
@@ -197,7 +206,9 @@ class CreativeAnalysisService {
         
         try {
           // Perform analysis based on type
+          console.log(`🧠 Starting analysis for creative ${creative.id}...`);
           const analysis = await this.analyzeCreative(creative, analysisType, model);
+          console.log(`✅ Analysis completed for creative ${creative.id}`);
           
           if (analysis) {
             results.push(analysis);
