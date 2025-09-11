@@ -3002,8 +3002,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accountId: accountId as string | undefined,
         campaignIds: campaignIds ? (campaignIds as string).split(',') : undefined,
         period: datePeriod as string,
-        minImpressions: 1000,
-        limit: 50
+        // Removed minImpressions filter to show all creatives
+        limit: 1000 // Increased limit to get all creatives
       };
       
       const creatives = await facebookAdsService.getBestCreatives(operationId as string, filters);

@@ -18,6 +18,7 @@ import {
   Loader2,
   RefreshCw,
   ChevronRight,
+  ChevronLeft,
   Image,
   Video,
   FileText,
@@ -55,6 +56,8 @@ export default function Creatives() {
   const [analysisModel, setAnalysisModel] = useState("gpt-4-turbo-preview");
   const [analysisSheetOpen, setAnalysisSheetOpen] = useState(false);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const creativesPerPage = 8;
 
   // Fetch operation from localStorage
   const operationId = localStorage.getItem("current_operation_id");
@@ -309,6 +312,29 @@ export default function Creatives() {
     }
   };
 
+  // Pagination logic
+  const totalPages = Math.ceil(creatives.length / creativesPerPage);
+  const startIndex = (currentPage - 1) * creativesPerPage;
+  const endIndex = startIndex + creativesPerPage;
+  const paginatedCreatives = creatives.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedAccount, selectedPeriod, selectedCampaignIds.length]);
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -404,6 +430,11 @@ export default function Creatives() {
                 <TrendingUp className="w-5 h-5 text-primary" />
                 Melhores Ads ({creatives.length})
               </h2>
+              {totalPages > 1 && (
+                <div className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </div>
+              )}
             </div>
             
             {/* Analysis Controls */}
@@ -503,7 +534,7 @@ export default function Creatives() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-4">
-              {creatives.map((creative) => (
+              {paginatedCreatives.map((creative) => (
                 <Card 
                   key={creative.id}
                   className={`p-4 cursor-pointer transition-all ${
@@ -583,6 +614,56 @@ export default function Creatives() {
                 </Card>
               ))}
             </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Mostrando {startIndex + 1}-{Math.min(endIndex, creatives.length)} de {creatives.length} criativos
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    data-testid="button-previous-page"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Anterior
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-8 h-8 p-0"
+                        data-testid={`button-page-${pageNum}`}
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    data-testid="button-next-page"
+                  >
+                    Próxima
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
           )}
         </div>
 

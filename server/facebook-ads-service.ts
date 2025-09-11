@@ -918,7 +918,6 @@ export class FacebookAdsService {
         conversions: insights?.conversions ? parseInt(insights.conversions) : 0,
         conversionRate: "0", // Calculate if needed
         roas: "0", // Calculate if needed
-        lastSync: new Date(),
         providerData: ad
       };
       
