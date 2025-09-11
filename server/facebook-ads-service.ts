@@ -749,12 +749,14 @@ export class FacebookAdsService {
     operationId: string
   ): Promise<AdCreative[]> {
     try {
+      console.log(`🎨 Fetching creatives for account ${accountId}, campaigns: ${campaignIds.join(',')}, period: ${datePeriod}`);
+      
       // Build the filter for campaign IDs
       const campaignFilter = campaignIds.length > 0 
         ? `&filtering=[{"field":"campaign_id","operator":"IN","value":${JSON.stringify(campaignIds)}}]`
         : '';
       
-      // Fetch ads with creative data and insights
+      // Fetch ads with creative data and insights - removed effective_status filter to get all ads
       const fields = [
         'id',
         'name',
@@ -765,26 +767,35 @@ export class FacebookAdsService {
         `insights.date_preset(${datePeriod}){impressions,clicks,spend,cpm,cpc,ctr,conversions,cost_per_conversion}`
       ].join(',');
       
-      const url = `${this.baseUrl}/act_${accountId}/ads?fields=${fields}&effective_status=['ACTIVE']${campaignFilter}&limit=500&access_token=${accessToken}`;
+      // Remove effective_status filter to get all ads, not just active ones
+      const url = `${this.baseUrl}/act_${accountId}/ads?fields=${fields}${campaignFilter}&limit=500&access_token=${accessToken}`;
+      
+      console.log(`🎨 Facebook API URL: ${url.replace(accessToken, 'HIDDEN')}`);
       
       const response = await fetch(url);
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`🎨 Facebook API error: ${response.status} ${response.statusText}`, errorText);
         throw new Error(`Failed to fetch ads: ${response.statusText}`);
       }
       
       const data = await response.json() as { data: FacebookApiAd[] };
       
+      console.log(`🎨 Facebook API returned ${data.data?.length || 0} ads`);
+      
       // Process and upsert creative data
       const creatives: AdCreative[] = [];
       
       for (const ad of data.data || []) {
+        console.log(`🎨 Processing ad ${ad.id} from campaign ${ad.campaign_id}`);
         const creative = await this.upsertCreative(ad, operationId, accountId, datePeriod);
         if (creative) {
           creatives.push(creative);
         }
       }
       
+      console.log(`🎨 Successfully processed ${creatives.length} creatives`);
       return creatives;
     } catch (error) {
       console.error('Error fetching creatives:', error);
