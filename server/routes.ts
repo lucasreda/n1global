@@ -3130,6 +3130,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/creatives/new", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const operationId = req.operationId!;
+      
+      const { db } = await import("./db");
+      const { adCreatives } = await import("@shared/schema");
+      const { and, eq } = await import("drizzle-orm");
+      
+      // Get new creatives that haven't been analyzed yet
+      const newCreatives = await db
+        .select()
+        .from(adCreatives)
+        .where(
+          and(
+            eq(adCreatives.operationId, operationId),
+            eq(adCreatives.isNew, true),
+            eq(adCreatives.isAnalyzed, false)
+          )
+        )
+        .orderBy(adCreatives.createdAt);
+      
+      res.json(newCreatives);
+    } catch (error) {
+      console.error("Error fetching new creatives:", error);
+      res.status(500).json({ message: "Error fetching new creatives" });
+    }
+  });
+
   app.get("/api/creatives/estimate", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { creativeCount = "1", analysisType = "audit", model = "gpt-4-turbo-preview" } = req.query;
