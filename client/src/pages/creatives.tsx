@@ -363,76 +363,108 @@ export default function Creatives() {
         </div>
       </Card>
 
-      {/* New Creatives Section */}
+      {/* New Creatives Section - 50% width */}
       {newCreatives.length > 0 && (
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-green-500" />
-              Novos Criativos ({newCreatives.length})
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-            {newCreatives.map((creative: AdCreative) => (
-              <div 
-                key={creative.id} 
-                className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer transition-colors"
-                onClick={() => toggleCreativeSelection(creative.id)}
-                data-testid={`card-new-creative-${creative.id}`}
-              >
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    checked={selectedCreatives.has(creative.id)}
-                    onCheckedChange={() => toggleCreativeSelection(creative.id)}
-                    className="mt-1"
-                    data-testid={`checkbox-new-creative-${creative.id}`}
-                  />
-                  
-                  <div className="flex-1 min-w-0">
-                    {/* Thumbnail */}
-                    {creative.thumbnailUrl && (
-                      <div className="w-full h-24 bg-muted rounded-md overflow-hidden mb-2">
+        <div className="w-1/2">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-green-500" />
+                Novos Criativos ({newCreatives.length})
+              </h2>
+            </div>
+            
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {newCreatives.map((creative: AdCreative) => (
+                <div 
+                  key={creative.id} 
+                  className={`group relative border border-border/50 rounded-xl p-4 hover:bg-muted/30 cursor-pointer transition-all duration-200 ${
+                    selectedCreatives.has(creative.id) 
+                      ? 'ring-2 ring-primary bg-primary/5 border-primary/20' 
+                      : 'hover:border-border'
+                  }`}
+                  onClick={() => toggleCreativeSelection(creative.id)}
+                  data-testid={`card-new-creative-${creative.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Checkbox */}
+                    <Checkbox
+                      checked={selectedCreatives.has(creative.id)}
+                      onCheckedChange={() => toggleCreativeSelection(creative.id)}
+                      className="flex-shrink-0"
+                      data-testid={`checkbox-new-creative-${creative.id}`}
+                    />
+                    
+                    {/* Thumbnail - small and square */}
+                    <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                      {creative.thumbnailUrl ? (
                         <img 
                           src={creative.thumbnailUrl} 
                           alt={creative.name || 'Novo Criativo'}
                           className="w-full h-full object-cover"
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
                     
                     {/* Content */}
-                    <div className="space-y-1">
-                      <h3 className="font-medium text-sm truncate" title={creative.name || 'Sem nome'}>
-                        {creative.name || 'Sem nome'}
-                      </h3>
-                      {creative.primaryText && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {creative.primaryText}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Badge variant="outline" className="text-xs">
-                          Novo
-                        </Badge>
-                        <span>•</span>
-                        <span>{creative.impressions?.toLocaleString() || 0} impressões</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-sm truncate mb-1" title={creative.name || 'Sem nome'}>
+                            {creative.name || 'Sem nome'}
+                          </h3>
+                          <Badge variant="outline" className="text-xs px-2 py-0.5">
+                            Novo
+                          </Badge>
+                        </div>
+                        
+                        {/* Priority Metrics */}
+                        <div className="flex items-center gap-6 ml-4">
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">CPM</p>
+                            <p className="text-sm font-medium text-blue-600">
+                              {creative.cpm ? formatCurrency(Number(creative.cpm)) : '--'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">CPC</p>
+                            <p className="text-sm font-medium text-green-600">
+                              {creative.cpc ? formatCurrency(Number(creative.cpc)) : '--'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">CTR</p>
+                            <p className="text-sm font-medium text-purple-600">
+                              {creative.ctr ? `${(Number(creative.ctr) * 100).toFixed(2)}%` : '--'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Resultados</p>
+                            <p className="text-sm font-medium text-orange-600">
+                              {creative.conversions || '--'}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          
-          {newCreatives.length > 0 && (
-            <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Estes criativos ainda não foram analisados. Selecione-os para incluir na análise.
-              </p>
+              ))}
             </div>
-          )}
-        </Card>
+            
+            {newCreatives.length > 0 && (
+              <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                <p className="text-sm text-muted-foreground text-center">
+                  Estes criativos ainda não foram analisados. Selecione-os para incluir na análise.
+                </p>
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
 
