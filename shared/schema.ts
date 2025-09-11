@@ -684,6 +684,90 @@ export const syncJobsRelations = relations(syncJobs, ({ one }) => ({
   }),
 }));
 
+// Ad Creatives - Store creative assets from Facebook/Google Ads
+export const adCreatives = pgTable("ad_creatives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
+  accountId: varchar("account_id").notNull(),
+  campaignId: varchar("campaign_id").notNull(),
+  adId: varchar("ad_id").notNull().unique(),
+  creativeId: varchar("creative_id"),
+  name: text("name"),
+  status: text("status"), // 'active', 'paused', 'archived'
+  type: text("type"), // 'image', 'video', 'carousel', 'collection', 'unknown'
+  
+  // Visual assets
+  thumbnailUrl: text("thumbnail_url"),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  
+  // Copy elements
+  primaryText: text("primary_text"),
+  headline: text("headline"),
+  description: text("description"),
+  linkUrl: text("link_url"),
+  ctaType: text("cta_type"), // 'LEARN_MORE', 'SHOP_NOW', etc.
+  
+  // Performance metrics
+  period: text("period"), // Date preset used for metrics
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  spend: decimal("spend", { precision: 12, scale: 2 }).default("0"),
+  cpm: decimal("cpm", { precision: 10, scale: 2 }).default("0"),
+  cpc: decimal("cpc", { precision: 10, scale: 2 }).default("0"),
+  ctr: decimal("ctr", { precision: 8, scale: 4 }).default("0"),
+  conversions: integer("conversions").default(0),
+  conversionRate: decimal("conversion_rate", { precision: 8, scale: 4 }).default("0"),
+  roas: decimal("roas", { precision: 10, scale: 2 }).default("0"),
+  
+  // Analysis tracking
+  isAnalyzed: boolean("is_analyzed").default(false),
+  lastSync: timestamp("last_sync"),
+  
+  // Raw data from provider
+  providerData: jsonb("provider_data"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Creative Analyses - Track AI analysis jobs and results
+export const creativeAnalyses = pgTable("creative_analyses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  creativeId: varchar("creative_id").references(() => adCreatives.id),
+  batchId: varchar("batch_id"), // For grouping multiple creatives in one analysis
+  
+  // Analysis details
+  status: text("status").notNull(), // 'queued', 'running', 'completed', 'failed'
+  analysisType: text("analysis_type").notNull(), // 'audit', 'angles', 'copy', 'variants', 'performance'
+  provider: text("provider").notNull().default("openai"), // 'openai', 'anthropic', etc.
+  model: text("model"), // 'gpt-4-vision-preview', 'gpt-4', etc.
+  
+  // Cost tracking
+  costEstimate: decimal("cost_estimate", { precision: 10, scale: 4 }).default("0"),
+  actualCost: decimal("actual_cost", { precision: 10, scale: 4 }).default("0"),
+  inputTokens: integer("input_tokens").default(0),
+  outputTokens: integer("output_tokens").default(0),
+  
+  // Analysis results
+  result: jsonb("result"), // Structured analysis output
+  insights: jsonb("insights"), // Key insights extracted
+  recommendations: jsonb("recommendations"), // Actionable recommendations
+  scores: jsonb("scores"), // Various scoring metrics
+  error: text("error"),
+  
+  // Progress tracking
+  progress: integer("progress").default(0), // 0-100
+  currentStep: text("current_step"),
+  
+  // Timing
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Facebook Ads Campaigns table
 export const facebookCampaigns = pgTable("facebook_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1311,6 +1395,20 @@ export const insertAdAccountSchema = createInsertSchema(adAccounts).omit({
   lastSync: true,
 });
 
+export const insertAdCreativeSchema = createInsertSchema(adCreatives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+export const insertCreativeAnalysisSchema = createInsertSchema(creativeAnalyses).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+  completedAt: true,
+});
+
 export const insertCampaignSchema = createInsertSchema(campaigns).omit({
   id: true,
   createdAt: true,
@@ -1399,6 +1497,12 @@ export type InsertFacebookBusinessManager = z.infer<typeof insertFacebookBusines
 
 export type AdAccount = typeof adAccounts.$inferSelect;
 export type InsertAdAccount = z.infer<typeof insertAdAccountSchema>;
+
+export type AdCreative = typeof adCreatives.$inferSelect;
+export type InsertAdCreative = z.infer<typeof insertAdCreativeSchema>;
+
+export type CreativeAnalysis = typeof creativeAnalyses.$inferSelect;
+export type InsertCreativeAnalysis = z.infer<typeof insertCreativeAnalysisSchema>;
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
