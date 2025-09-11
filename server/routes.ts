@@ -2882,7 +2882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Creative Intelligence Routes
   app.get("/api/creatives", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const { accountId, campaignIds, datePeriod = "last_30d", refresh = "false", operationId } = req.query;
+      const { accountId, campaignIds, datePeriod = "lifetime", refresh = "false", operationId } = req.query;
       
       if (!operationId) {
         return res.status(400).json({ message: "operationId is required" });

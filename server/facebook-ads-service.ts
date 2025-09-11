@@ -745,7 +745,7 @@ export class FacebookAdsService {
     accountId: string, 
     accessToken: string, 
     campaignIds: string[], 
-    datePeriod: string = "last_30d",
+    datePeriod: string = "lifetime",
     operationId: string
   ): Promise<AdCreative[]> {
     try {
