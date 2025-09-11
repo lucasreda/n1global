@@ -29,7 +29,7 @@ import {
   CheckCircle,
   AlertCircle
 } from "lucide-react";
-import type { AdCreative, Campaign, AdAccount } from "@shared/schema";
+import type { AdCreative, Campaign } from "@shared/schema";
 
 interface AnalysisJob {
   id: string;
@@ -49,7 +49,6 @@ interface AnalysisJob {
 
 export default function Creatives() {
   const { toast } = useToast();
-  const [selectedAccount, setSelectedAccount] = useState<string>("all");
   const [selectedCreatives, setSelectedCreatives] = useState<Set<string>>(new Set());
   const [analysisType, setAnalysisType] = useState("audit");
   const [analysisModel, setAnalysisModel] = useState("gpt-4-turbo-preview");
@@ -61,15 +60,6 @@ export default function Creatives() {
   // Fetch operation from localStorage
   const operationId = localStorage.getItem("current_operation_id");
 
-  // Fetch ad accounts
-  const { data: adAccounts = [] } = useQuery({
-    queryKey: ["/api/ad-accounts", operationId],
-    queryFn: async () => {
-      const response = await apiRequest(`/api/ad-accounts?operationId=${operationId}`, "GET");
-      return response.json() as Promise<AdAccount[]>;
-    },
-    enabled: !!operationId
-  });
 
   // Fetch campaigns
   const { data: allCampaigns = [] } = useQuery({
@@ -91,15 +81,14 @@ export default function Creatives() {
     isLoading: creativesLoading,
     refetch: refetchCreatives 
   } = useQuery({
-    queryKey: ["/api/creatives", selectedAccount, selectedCampaignIds, operationId],
+    queryKey: ["/api/creatives", selectedCampaignIds, operationId],
     queryFn: async () => {
       // Only fetch if there are selected campaigns
       if (selectedCampaignIds.length === 0) {
         return [];
       }
-      const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
       const campaignParam = `&campaignIds=${selectedCampaignIds.join(',')}`;
-      const response = await apiRequest(`/api/creatives?operationId=${operationId}${accountParam}${campaignParam}`, "GET");
+      const response = await apiRequest(`/api/creatives?operationId=${operationId}${campaignParam}`, "GET");
       return response.json() as Promise<AdCreative[]>;
     },
     enabled: !!operationId && selectedCampaignIds.length > 0
@@ -220,9 +209,8 @@ export default function Creatives() {
       if (selectedCampaignIds.length === 0) {
         throw new Error("Nenhuma campanha selecionada");
       }
-      const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
       const campaignParam = `&campaignIds=${selectedCampaignIds.join(',')}`;
-      const response = await apiRequest(`/api/creatives?operationId=${operationId}${accountParam}${campaignParam}&refresh=true`, "GET");
+      const response = await apiRequest(`/api/creatives?operationId=${operationId}${campaignParam}&refresh=true`, "GET");
       return response.json();
     },
     onSuccess: () => {
@@ -320,7 +308,7 @@ export default function Creatives() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedAccount, selectedCampaignIds.length]);
+  }, [selectedCampaignIds.length]);
 
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -360,20 +348,6 @@ export default function Creatives() {
       <Card className="p-4">
         <div className="space-y-4">
           <div className="flex gap-4 flex-wrap items-center">
-            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-              <SelectTrigger className="w-[200px]" data-testid="select-account">
-                <SelectValue placeholder="Conta de anúncios" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as contas</SelectItem>
-                {adAccounts.filter(acc => acc.network === 'facebook').map(account => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             {/* Campaign Info */}
             <div className="flex items-center gap-2 ml-auto">
               <Target className="w-4 h-4 text-muted-foreground" />

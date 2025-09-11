@@ -1463,7 +1463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (autoSync === 'true' && syncManager.shouldAutoSync()) {
         console.log('🔄 Iniciando sincronização automática (30min interval)');
         try {
-          await facebookAdsService.syncCampaigns(period as string || "lifetime", storeId);
+          await facebookAdsService.syncCampaigns(period as string || "maximum", storeId);
           syncManager.updateLastSyncTime();
           console.log('✅ Sincronização automática concluída');
         } catch (syncError) {
@@ -1471,7 +1471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const campaigns = await facebookAdsService.getCampaignsWithPeriod(period as string || "lifetime", storeId);
+      const campaigns = await facebookAdsService.getCampaignsWithPeriod(period as string || "maximum", storeId);
       res.json(campaigns);
     } catch (error) {
       console.error("Facebook campaigns error:", error);
@@ -1501,7 +1501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const storeId = (req as any).storeId;
       
       console.log('🔄 Iniciando sincronização por período');
-      const result = await facebookAdsService.syncCampaigns(period || "lifetime", storeId);
+      const result = await facebookAdsService.syncCampaigns(period || "maximum", storeId);
       syncManager.updateLastSyncTime();
       console.log('✅ Sincronização por período concluída');
       
@@ -1542,7 +1542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dashboardService = new DashboardService();
       
       console.log('🔄 Iniciando sincronização manual');
-      const result = await facebookAdsService.syncCampaigns(period || "lifetime");
+      const result = await facebookAdsService.syncCampaigns(period || "maximum");
       syncManager.updateLastSyncTime();
       
       // Invalida cache do dashboard após sincronização
@@ -1677,7 +1677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { FacebookAdsService } = await import("./facebook-ads-service");
         const facebookAdsService = new FacebookAdsService();
-        const syncResult = await facebookAdsService.syncCampaigns("lifetime", req.user.storeId);
+        const syncResult = await facebookAdsService.syncCampaigns("maximum", req.user.storeId);
         adsResult = {
           campaigns: syncResult.synced || 0,
           accounts: 4 // Fixed for now since we know there are 4 accounts
@@ -2882,7 +2882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Creative Intelligence Routes
   app.get("/api/creatives", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const { accountId, campaignIds, datePeriod = "lifetime", refresh = "false", operationId } = req.query;
+      const { accountId, campaignIds, datePeriod = "maximum", refresh = "false", operationId } = req.query;
       
       if (!operationId) {
         return res.status(400).json({ message: "operationId is required" });
@@ -3174,7 +3174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "operationId é obrigatório" });
       }
       
-      const period = req.query.period as string || 'lifetime';
+      const period = req.query.period as string || 'maximum';
       const autoSync = req.query.autoSync === 'true';
       
       // Auto-sync both Facebook and Google Ads if needed
@@ -3206,7 +3206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use Facebook Ads service to get campaigns with live data for the specific period
       const { facebookAdsService } = await import("./facebook-ads-service");
-      const campaignsWithLiveData = await facebookAdsService.getCampaignsWithPeriod(period || "lifetime", storeId, operationId, undefined);
+      const campaignsWithLiveData = await facebookAdsService.getCampaignsWithPeriod(period || "maximum", storeId, operationId, undefined);
       
       res.json(campaignsWithLiveData);
     } catch (error) {
