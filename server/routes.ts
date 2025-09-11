@@ -13,6 +13,7 @@ import { ElogyService } from "./fulfillment-providers/elogy-service";
 import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-factory";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
+import { validateOperationAccess as operationAccess } from "./middleware/operation-access";
 import { adminService } from "./admin-service";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { FacebookAdsService } from "./facebook-ads-service";
@@ -2879,7 +2880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Creative Intelligence Routes
-  app.get("/api/creatives", authenticateToken, storeContext, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/creatives", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { accountId, campaignIds, datePeriod = "last_30d", refresh = "false" } = req.query;
       const operationId = req.operationId!;
@@ -2937,7 +2938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/creatives/analyses", authenticateToken, storeContext, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/creatives/analyses", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const { creativeIds, analysisType = "audit", model = "gpt-4-turbo-preview", options } = req.body;
       const operationId = req.operationId!;
@@ -2981,7 +2982,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/creatives/analyzed", authenticateToken, storeContext, operationAccess, async (req: AuthRequest, res: Response) => {
+  // SSE endpoint for real-time job updates
+  app.get("/api/creatives/analyses/:jobId/stream", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { jobId } = req.params;
+      
+      // Set SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+      });
+
+      const { creativeAnalysisService } = await import("./creative-analysis-service");
+      
+      // Send initial job status
+      const initialJob = creativeAnalysisService.getJobStatus(jobId);
+      if (!initialJob) {
+        res.write(`data: ${JSON.stringify({ error: "Job not found" })}\n\n`);
+        res.end();
+        return;
+      }
+      
+      res.write(`data: ${JSON.stringify(initialJob)}\n\n`);
+      
+      // Set up interval to send updates
+      const intervalId = setInterval(() => {
+        const job = creativeAnalysisService.getJobStatus(jobId);
+        
+        if (!job) {
+          clearInterval(intervalId);
+          res.end();
+          return;
+        }
+        
+        res.write(`data: ${JSON.stringify(job)}\n\n`);
+        
+        // Close connection when job is complete or failed
+        if (job.status === 'completed' || job.status === 'failed') {
+          clearInterval(intervalId);
+          setTimeout(() => res.end(), 1000); // Give time for last message to be sent
+        }
+      }, 1000); // Send updates every second
+      
+      // Clean up on client disconnect
+      req.on('close', () => {
+        clearInterval(intervalId);
+        res.end();
+      });
+      
+    } catch (error) {
+      console.error("Error in SSE stream:", error);
+      res.write(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`);
+      res.end();
+    }
+  });
+
+  app.get("/api/creatives/analyzed", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.operationId!;
       

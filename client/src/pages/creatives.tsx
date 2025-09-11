@@ -65,7 +65,7 @@ export default function Creatives() {
   const { data: adAccounts = [] } = useQuery({
     queryKey: ["/api/ad-accounts", operationId],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/ad-accounts?operationId=${operationId}`);
+      const response = await apiRequest(`/api/ad-accounts?operationId=${operationId}`, "GET");
       return response.json() as Promise<AdAccount[]>;
     },
     enabled: !!operationId
@@ -75,7 +75,7 @@ export default function Creatives() {
   const { data: campaigns = [] } = useQuery({
     queryKey: ["/api/campaigns", selectedPeriod, operationId],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/campaigns?period=${selectedPeriod}&operationId=${operationId}`);
+      const response = await apiRequest(`/api/campaigns?period=${selectedPeriod}&operationId=${operationId}`, "GET");
       return response.json() as Promise<Campaign[]>;
     },
     enabled: !!operationId
@@ -91,9 +91,7 @@ export default function Creatives() {
     queryFn: async () => {
       const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
       const campaignParam = selectedCampaigns.length > 0 ? `&campaignIds=${selectedCampaigns.join(',')}` : "";
-      const response = await apiRequest("GET", 
-        `/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}`
-      );
+      const response = await apiRequest(`/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}`, "GET");
       return response.json() as Promise<AdCreative[]>;
     },
     enabled: !!operationId
@@ -103,7 +101,7 @@ export default function Creatives() {
   const { data: analyzedCreatives = [] } = useQuery({
     queryKey: ["/api/creatives/analyzed", operationId],
     queryFn: async () => {
-      const response = await apiRequest("GET", `/api/creatives/analyzed?operationId=${operationId}`);
+      const response = await apiRequest(`/api/creatives/analyzed?operationId=${operationId}`, "GET");
       return response.json();
     },
     enabled: !!operationId
@@ -113,36 +111,77 @@ export default function Creatives() {
   const { data: costEstimate } = useQuery({
     queryKey: ["/api/creatives/estimate", selectedCreatives.size, analysisType, analysisModel],
     queryFn: async () => {
-      const response = await apiRequest("GET", 
-        `/api/creatives/estimate?creativeCount=${selectedCreatives.size}&analysisType=${analysisType}&model=${analysisModel}`
-      );
+      const response = await apiRequest(`/api/creatives/estimate?creativeCount=${selectedCreatives.size}&analysisType=${analysisType}&model=${analysisModel}`, "GET");
       return response.json();
     },
     enabled: selectedCreatives.size > 0
   });
 
-  // Poll job status
-  const { data: jobStatus } = useQuery({
-    queryKey: ["/api/creatives/analyses", currentJobId],
-    queryFn: async () => {
-      if (!currentJobId) return null;
-      const response = await apiRequest("GET", `/api/creatives/analyses/${currentJobId}`);
-      return response.json() as Promise<AnalysisJob>;
-    },
-    enabled: !!currentJobId,
-    refetchInterval: (data) => {
-      if (!data) return false;
-      if (data.status === 'completed' || data.status === 'failed') {
-        return false;
-      }
-      return 2000; // Poll every 2 seconds
+  // Track job status with state instead of query
+  const [jobStatus, setJobStatus] = useState<AnalysisJob | null>(null);
+  
+  // Setup SSE for real-time job updates
+  useEffect(() => {
+    if (!currentJobId) {
+      setJobStatus(null);
+      return;
     }
-  });
+    
+    // Get auth token for SSE connection
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No auth token for SSE");
+      return;
+    }
+    
+    // Create EventSource with authentication
+    const eventSource = new EventSource(
+      `/api/creatives/analyses/${currentJobId}/stream`,
+      { withCredentials: true }
+    );
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.error) {
+          console.error("SSE error:", data.error);
+          eventSource.close();
+          return;
+        }
+        
+        setJobStatus(data as AnalysisJob);
+        
+        // Close connection when job is complete
+        if (data.status === 'completed' || data.status === 'failed') {
+          eventSource.close();
+        }
+      } catch (error) {
+        console.error("Failed to parse SSE data:", error);
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error("SSE connection error:", error);
+      eventSource.close();
+      
+      // Fall back to fetching once on error
+      apiRequest(`/api/creatives/analyses/${currentJobId}`, "GET")
+        .then(res => res.json())
+        .then(data => setJobStatus(data))
+        .catch(err => console.error("Failed to fetch job status:", err));
+    };
+    
+    // Cleanup on unmount or when jobId changes
+    return () => {
+      eventSource.close();
+    };
+  }, [currentJobId]);
 
   // Create analysis job
   const createAnalysisMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/creatives/analyses", {
+      const response = await apiRequest("/api/creatives/analyses", "POST", {
         creativeIds: Array.from(selectedCreatives),
         analysisType,
         model: analysisModel
@@ -171,9 +210,7 @@ export default function Creatives() {
     mutationFn: async () => {
       const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
       const campaignParam = selectedCampaigns.length > 0 ? `&campaignIds=${selectedCampaigns.join(',')}` : "";
-      const response = await apiRequest("GET", 
-        `/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}&refresh=true`
-      );
+      const response = await apiRequest(`/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}&refresh=true`, "GET");
       return response.json();
     },
     onSuccess: () => {
@@ -190,6 +227,12 @@ export default function Creatives() {
     if (jobStatus?.status === 'completed') {
       queryClient.invalidateQueries({ queryKey: ["/api/creatives/analyzed"] });
       queryClient.invalidateQueries({ queryKey: ["/api/creatives"] });
+      
+      // Clear the current job ID after successful completion
+      setTimeout(() => {
+        setCurrentJobId(null);
+        setJobStatus(null);
+      }, 3000);
       
       toast({
         title: "Análise concluída",
