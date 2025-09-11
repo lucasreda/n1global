@@ -442,16 +442,17 @@ export function setupVoiceWebSocket(server: any) {
       openaiWs.on('open', () => {
         console.log(`🤖 OpenAI connected for call ${callSid}`);
         
-        // Configure the session
+        // Configure the session with explicit Portuguese settings
         const sessionConfig = {
           type: 'session.update',
           session: {
             modalities: ['text', 'audio'],
-            voice: 'alloy',
+            voice: 'nova', // Nova voice has better Portuguese support
             input_audio_format: 'mulaw',
             output_audio_format: 'mulaw',
             input_audio_transcription: {
-              model: 'whisper-1'
+              model: 'whisper-1',
+              language: 'pt' // Explicit Portuguese language for transcription
             },
             turn_detection: {
               type: 'server_vad',
@@ -462,23 +463,25 @@ export function setupVoiceWebSocket(server: any) {
             tools: [],
             temperature: 0.7,
             max_response_output_tokens: 300,
-            instructions: `Você é Sofia, uma assistente virtual empática que atende clientes por telefone de uma empresa de e-commerce.
+            instructions: `IMPORTANTE: Você DEVE responder APENAS em português brasileiro. Nunca use inglês.
 
-Diretrizes:
-- Seja concisa e natural nas respostas (máximo 2-3 frases)
-- Use linguagem falada, não escrita
+Você é Sofia, assistente virtual da Seraphine. Você atende clientes brasileiros por telefone sobre e-commerce.
+
+REGRAS OBRIGATÓRIAS:
+- SEMPRE fale em português brasileiro
+- Seja concisa (máximo 2 frases)
+- Use linguagem natural e falada
 - Seja empática e acolhedora
-- Ajude com dúvidas sobre pedidos, entregas, pagamentos
-- Se não souber algo específico, ofereça transferir para um atendente humano
-- Mantenha sempre um tom profissional mas caloroso
+- Ajude com pedidos, entregas, pagamentos
 
-Informações da empresa:
-- Entregas: 2 a 7 dias úteis (maioria em até 3 dias)
-- Pagamento: Na entrega (COD)
-- Horário: Segunda a sexta, 9h às 18h
-- Suporte: Sempre disponível para ajudar
+INFORMAÇÕES DA EMPRESA:
+- Entregas: 2 a 7 dias úteis
+- Pagamento: COD (na entrega)
+- Atendimento: Segunda a sexta, 9h às 18h
 
-Responda sempre em português brasileiro.`
+Se não souber algo específico, ofereça transferir para atendente humano.
+
+LEMBRE-SE: Responda SOMENTE em português brasileiro!`
           }
         };
         
