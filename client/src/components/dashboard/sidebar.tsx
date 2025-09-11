@@ -14,7 +14,8 @@ import {
   Plus,
   Wrench,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import logoImage from "@assets/Dashboard_1756440445659.png";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ const getNavigationForRole = (userRole: string) => {
   if (userRole !== 'product_seller') {
     baseNavigation.splice(3, 0, { name: "Análises", href: "/analytics", icon: BarChart3 });
     baseNavigation.splice(4, 0, { name: "Anúncios", href: "/ads", icon: Target });
+    baseNavigation.splice(5, 0, { name: "Criativos", href: "/creatives", icon: Sparkles });
   }
 
   return baseNavigation;

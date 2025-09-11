@@ -1,0 +1,736 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Sparkles, 
+  TrendingUp, 
+  Eye, 
+  DollarSign,
+  Clock,
+  Loader2,
+  RefreshCw,
+  ChevronRight,
+  Image,
+  Video,
+  FileText,
+  Zap,
+  Brain,
+  Target,
+  BarChart3,
+  CheckCircle,
+  AlertCircle
+} from "lucide-react";
+import type { AdCreative, Campaign, AdAccount } from "@shared/schema";
+
+interface AnalysisJob {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  progress: number;
+  currentStep: string;
+  costEstimate: number;
+  actualCost: number;
+  perCreativeStatus: Array<{
+    creativeId: string;
+    status: 'pending' | 'analyzing' | 'completed' | 'failed';
+    progress: number;
+  }>;
+  results?: any;
+  error?: string;
+}
+
+export default function Creatives() {
+  const { toast } = useToast();
+  const [selectedPeriod, setSelectedPeriod] = useState("last_30d");
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
+  const [selectedCreatives, setSelectedCreatives] = useState<Set<string>>(new Set());
+  const [analysisType, setAnalysisType] = useState("audit");
+  const [analysisModel, setAnalysisModel] = useState("gpt-4-turbo-preview");
+  const [analysisSheetOpen, setAnalysisSheetOpen] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+
+  // Fetch operation from localStorage
+  const operationId = localStorage.getItem("current_operation_id");
+
+  // Fetch ad accounts
+  const { data: adAccounts = [] } = useQuery({
+    queryKey: ["/api/ad-accounts", operationId],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/ad-accounts?operationId=${operationId}`);
+      return response.json() as Promise<AdAccount[]>;
+    },
+    enabled: !!operationId
+  });
+
+  // Fetch campaigns
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ["/api/campaigns", selectedPeriod, operationId],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/campaigns?period=${selectedPeriod}&operationId=${operationId}`);
+      return response.json() as Promise<Campaign[]>;
+    },
+    enabled: !!operationId
+  });
+
+  // Fetch creatives
+  const { 
+    data: creatives = [], 
+    isLoading: creativesLoading,
+    refetch: refetchCreatives 
+  } = useQuery({
+    queryKey: ["/api/creatives", selectedAccount, selectedCampaigns, selectedPeriod, operationId],
+    queryFn: async () => {
+      const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
+      const campaignParam = selectedCampaigns.length > 0 ? `&campaignIds=${selectedCampaigns.join(',')}` : "";
+      const response = await apiRequest("GET", 
+        `/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}`
+      );
+      return response.json() as Promise<AdCreative[]>;
+    },
+    enabled: !!operationId
+  });
+
+  // Fetch analyzed creatives
+  const { data: analyzedCreatives = [] } = useQuery({
+    queryKey: ["/api/creatives/analyzed", operationId],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/creatives/analyzed?operationId=${operationId}`);
+      return response.json();
+    },
+    enabled: !!operationId
+  });
+
+  // Fetch cost estimate
+  const { data: costEstimate } = useQuery({
+    queryKey: ["/api/creatives/estimate", selectedCreatives.size, analysisType, analysisModel],
+    queryFn: async () => {
+      const response = await apiRequest("GET", 
+        `/api/creatives/estimate?creativeCount=${selectedCreatives.size}&analysisType=${analysisType}&model=${analysisModel}`
+      );
+      return response.json();
+    },
+    enabled: selectedCreatives.size > 0
+  });
+
+  // Poll job status
+  const { data: jobStatus } = useQuery({
+    queryKey: ["/api/creatives/analyses", currentJobId],
+    queryFn: async () => {
+      if (!currentJobId) return null;
+      const response = await apiRequest("GET", `/api/creatives/analyses/${currentJobId}`);
+      return response.json() as Promise<AnalysisJob>;
+    },
+    enabled: !!currentJobId,
+    refetchInterval: (data) => {
+      if (!data) return false;
+      if (data.status === 'completed' || data.status === 'failed') {
+        return false;
+      }
+      return 2000; // Poll every 2 seconds
+    }
+  });
+
+  // Create analysis job
+  const createAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/creatives/analyses", {
+        creativeIds: Array.from(selectedCreatives),
+        analysisType,
+        model: analysisModel
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setCurrentJobId(data.jobId);
+      setAnalysisSheetOpen(true);
+      toast({
+        title: "Análise iniciada",
+        description: `Analisando ${selectedCreatives.size} criativos`
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao iniciar análise",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Refresh creatives from Facebook
+  const refreshCreativesMutation = useMutation({
+    mutationFn: async () => {
+      const accountParam = selectedAccount !== "all" ? `&accountId=${selectedAccount}` : "";
+      const campaignParam = selectedCampaigns.length > 0 ? `&campaignIds=${selectedCampaigns.join(',')}` : "";
+      const response = await apiRequest("GET", 
+        `/api/creatives?operationId=${operationId}&datePeriod=${selectedPeriod}${accountParam}${campaignParam}&refresh=true`
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/creatives"] });
+      toast({
+        title: "Atualizado",
+        description: "Criativos sincronizados com Facebook Ads"
+      });
+    }
+  });
+
+  // Effect to clear job when analysis completes
+  useEffect(() => {
+    if (jobStatus?.status === 'completed') {
+      queryClient.invalidateQueries({ queryKey: ["/api/creatives/analyzed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/creatives"] });
+      
+      toast({
+        title: "Análise concluída",
+        description: `${selectedCreatives.size} criativos analisados com sucesso`
+      });
+      
+      setSelectedCreatives(new Set());
+      setTimeout(() => {
+        setCurrentJobId(null);
+        setAnalysisSheetOpen(false);
+      }, 3000);
+    }
+  }, [jobStatus?.status]);
+
+  const handleSelectAll = () => {
+    if (selectedCreatives.size === creatives.length) {
+      setSelectedCreatives(new Set());
+    } else {
+      setSelectedCreatives(new Set(creatives.map(c => c.id)));
+    }
+  };
+
+  const toggleCreativeSelection = (creativeId: string) => {
+    const newSelection = new Set(selectedCreatives);
+    if (newSelection.has(creativeId)) {
+      newSelection.delete(creativeId);
+    } else {
+      newSelection.add(creativeId);
+    }
+    setSelectedCreatives(newSelection);
+  };
+
+  const getCreativeIcon = (type: string) => {
+    switch (type) {
+      case 'video': return <Video className="w-4 h-4" />;
+      case 'image': return <Image className="w-4 h-4" />;
+      case 'carousel': return <BarChart3 className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const getAnalysisTypeIcon = (type: string) => {
+    switch (type) {
+      case 'audit': return <Eye className="w-4 h-4" />;
+      case 'angles': return <Target className="w-4 h-4" />;
+      case 'copy': return <FileText className="w-4 h-4" />;
+      case 'variants': return <Zap className="w-4 h-4" />;
+      case 'performance': return <TrendingUp className="w-4 h-4" />;
+      default: return <Brain className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-8 h-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Creative Intelligence</h1>
+            <p className="text-muted-foreground">Análise inteligente de criativos com IA</p>
+          </div>
+        </div>
+        
+        <Button 
+          onClick={() => refreshCreativesMutation.mutate()}
+          disabled={refreshCreativesMutation.isPending}
+          data-testid="button-refresh-creatives"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshCreativesMutation.isPending ? 'animate-spin' : ''}`} />
+          Sincronizar
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <Card className="p-4">
+        <div className="flex gap-4 flex-wrap">
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-[180px]" data-testid="select-period">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="yesterday">Ontem</SelectItem>
+              <SelectItem value="last_7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="last_30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="last_90d">Últimos 90 dias</SelectItem>
+              <SelectItem value="lifetime">Todo o período</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+            <SelectTrigger className="w-[200px]" data-testid="select-account">
+              <SelectValue placeholder="Conta de anúncios" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as contas</SelectItem>
+              {adAccounts.filter(acc => acc.network === 'facebook').map(account => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select 
+            value={selectedCampaigns.length > 0 ? "custom" : "all"}
+            onValueChange={(value) => {
+              if (value === "all") {
+                setSelectedCampaigns([]);
+              }
+            }}
+          >
+            <SelectTrigger className="w-[200px]" data-testid="select-campaigns">
+              <SelectValue placeholder="Campanhas">
+                {selectedCampaigns.length === 0 ? "Todas as campanhas" : `${selectedCampaigns.length} selecionadas`}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as campanhas</SelectItem>
+              {campaigns.map(campaign => (
+                <div key={campaign.campaignId} className="flex items-center px-2 py-1">
+                  <Checkbox
+                    checked={selectedCampaigns.includes(campaign.campaignId)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedCampaigns([...selectedCampaigns, campaign.campaignId]);
+                      } else {
+                        setSelectedCampaigns(selectedCampaigns.filter(id => id !== campaign.campaignId));
+                      }
+                    }}
+                    data-testid={`checkbox-campaign-${campaign.campaignId}`}
+                  />
+                  <span className="ml-2 text-sm">{campaign.name}</span>
+                </div>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs defaultValue="best-ads" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="best-ads" data-testid="tab-best-ads">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Melhores Ads ({creatives.length})
+          </TabsTrigger>
+          <TabsTrigger value="analyzed" data-testid="tab-analyzed">
+            <CheckCircle className="w-4 h-4 mr-2" />
+            Analisados ({analyzedCreatives.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Best Ads Tab */}
+        <TabsContent value="best-ads" className="space-y-4">
+          {/* Analysis Controls */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  data-testid="button-select-all"
+                >
+                  {selectedCreatives.size === creatives.length ? "Desmarcar todos" : "Selecionar todos"}
+                </Button>
+                
+                <span className="text-sm text-muted-foreground">
+                  {selectedCreatives.size} de {creatives.length} selecionados
+                </span>
+
+                <Select value={analysisType} onValueChange={setAnalysisType}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-analysis-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="audit">
+                      <div className="flex items-center">
+                        <Eye className="w-4 h-4 mr-2" />
+                        Auditoria Completa
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="angles">
+                      <div className="flex items-center">
+                        <Target className="w-4 h-4 mr-2" />
+                        Ângulos de Marketing
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="copy">
+                      <div className="flex items-center">
+                        <FileText className="w-4 h-4 mr-2" />
+                        Otimização de Copy
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="variants">
+                      <div className="flex items-center">
+                        <Zap className="w-4 h-4 mr-2" />
+                        Gerar Variações
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="performance">
+                      <div className="flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-2" />
+                        Análise de Performance
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={analysisModel} onValueChange={setAnalysisModel}>
+                  <SelectTrigger className="w-[180px]" data-testid="select-model">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-4-turbo-preview">GPT-4 Turbo</SelectItem>
+                    <SelectItem value="gpt-4-vision-preview">GPT-4 Vision</SelectItem>
+                    <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                onClick={() => createAnalysisMutation.mutate()}
+                disabled={selectedCreatives.size === 0 || createAnalysisMutation.isPending}
+                data-testid="button-analyze"
+              >
+                <Brain className="w-4 h-4 mr-2" />
+                Analisar {selectedCreatives.size > 0 && `(${selectedCreatives.size})`}
+                {costEstimate && (
+                  <span className="ml-2 text-xs opacity-80">
+                    ~{formatCurrency(costEstimate.estimatedCostBRL)}
+                  </span>
+                )}
+              </Button>
+            </div>
+          </Card>
+
+          {/* Creatives Grid */}
+          {creativesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : creatives.length === 0 ? (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">
+                Nenhum criativo encontrado. Sincronize suas campanhas do Facebook Ads.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {creatives.map((creative) => (
+                <Card 
+                  key={creative.id}
+                  className={`p-4 cursor-pointer transition-all ${
+                    selectedCreatives.has(creative.id) ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => toggleCreativeSelection(creative.id)}
+                  data-testid={`card-creative-${creative.id}`}
+                >
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedCreatives.has(creative.id)}
+                          onCheckedChange={() => toggleCreativeSelection(creative.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`checkbox-creative-${creative.id}`}
+                        />
+                        {getCreativeIcon(creative.type || 'unknown')}
+                        <Badge variant={creative.isAnalyzed ? "secondary" : "outline"}>
+                          {creative.isAnalyzed ? "Analisado" : "Novo"}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Thumbnail */}
+                    {creative.thumbnailUrl && (
+                      <div className="aspect-video bg-muted rounded-md overflow-hidden">
+                        <img 
+                          src={creative.thumbnailUrl} 
+                          alt={creative.name || 'Creative'}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Content */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm line-clamp-1">
+                        {creative.headline || creative.name || 'Sem título'}
+                      </h4>
+                      {creative.primaryText && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {creative.primaryText}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Metrics */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                      <div>
+                        <p className="text-xs text-muted-foreground">CTR</p>
+                        <p className="text-sm font-medium" data-testid={`text-ctr-${creative.id}`}>
+                          {parseFloat(creative.ctr || "0").toFixed(2)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">CPC</p>
+                        <p className="text-sm font-medium" data-testid={`text-cpc-${creative.id}`}>
+                          {formatCurrency(parseFloat(creative.cpc || "0"))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Impressões</p>
+                        <p className="text-sm font-medium" data-testid={`text-impressions-${creative.id}`}>
+                          {creative.impressions?.toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Gasto</p>
+                        <p className="text-sm font-medium" data-testid={`text-spend-${creative.id}`}>
+                          {formatCurrency(parseFloat(creative.spend || "0"))}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Analyzed Tab */}
+        <TabsContent value="analyzed" className="space-y-4">
+          {analyzedCreatives.length === 0 ? (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">
+                Nenhum criativo analisado ainda. Selecione criativos e clique em Analisar.
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {analyzedCreatives.map((item: any) => (
+                <Card key={item.analysis.id} className="p-6">
+                  <div className="flex items-start gap-6">
+                    {/* Thumbnail */}
+                    {item.creative.thumbnailUrl && (
+                      <div className="w-32 h-32 bg-muted rounded-md overflow-hidden flex-shrink-0">
+                        <img 
+                          src={item.creative.thumbnailUrl} 
+                          alt={item.creative.name || 'Creative'}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Analysis Results */}
+                    <div className="flex-1 space-y-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold">
+                            {item.creative.headline || item.creative.name || 'Criativo'}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            {getAnalysisTypeIcon(item.analysis.analysisType)}
+                            <span className="text-sm text-muted-foreground">
+                              {item.analysis.analysisType === 'audit' && 'Auditoria Completa'}
+                              {item.analysis.analysisType === 'angles' && 'Ângulos de Marketing'}
+                              {item.analysis.analysisType === 'copy' && 'Otimização de Copy'}
+                              {item.analysis.analysisType === 'variants' && 'Variações Geradas'}
+                              {item.analysis.analysisType === 'performance' && 'Análise de Performance'}
+                            </span>
+                            <Badge variant="outline">
+                              {item.analysis.model}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Custo da análise</p>
+                          <p className="font-medium">
+                            {formatCurrency(parseFloat(item.analysis.actualCost || "0") * 5.5)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Insights */}
+                      {item.analysis.insights && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium flex items-center gap-2">
+                            <Eye className="w-4 h-4" />
+                            Insights
+                          </h4>
+                          <div className="space-y-1">
+                            {(Array.isArray(item.analysis.insights) ? item.analysis.insights : [item.analysis.insights])
+                              .slice(0, 3)
+                              .map((insight: string, idx: number) => (
+                                <p key={idx} className="text-sm text-muted-foreground">
+                                  • {insight}
+                                </p>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recommendations */}
+                      {item.analysis.recommendations && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium flex items-center gap-2">
+                            <Zap className="w-4 h-4" />
+                            Recomendações
+                          </h4>
+                          <div className="space-y-1">
+                            {(Array.isArray(item.analysis.recommendations) ? item.analysis.recommendations : [item.analysis.recommendations])
+                              .slice(0, 3)
+                              .map((rec: string, idx: number) => (
+                                <p key={idx} className="text-sm text-muted-foreground">
+                                  • {rec}
+                                </p>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Scores */}
+                      {item.analysis.scores && Object.keys(item.analysis.scores).length > 0 && (
+                        <div className="flex gap-4">
+                          {Object.entries(item.analysis.scores).slice(0, 4).map(([key, value]: [string, any]) => (
+                            <div key={key} className="text-center">
+                              <p className="text-xs text-muted-foreground capitalize">{key}</p>
+                              <p className="text-lg font-bold">{value}/10</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Analysis Progress Sheet */}
+      <Sheet open={analysisSheetOpen} onOpenChange={setAnalysisSheetOpen}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Análise em Progresso</SheetTitle>
+            <SheetDescription>
+              Analisando {selectedCreatives.size} criativos com IA
+            </SheetDescription>
+          </SheetHeader>
+          
+          {jobStatus && (
+            <div className="mt-6 space-y-6">
+              {/* Overall Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Progresso geral</span>
+                  <span>{jobStatus.progress}%</span>
+                </div>
+                <Progress value={jobStatus.progress} />
+                <p className="text-xs text-muted-foreground">{jobStatus.currentStep}</p>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                {jobStatus.status === 'running' && (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-sm">Processando...</span>
+                  </>
+                )}
+                {jobStatus.status === 'completed' && (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-sm">Concluído!</span>
+                  </>
+                )}
+                {jobStatus.status === 'failed' && (
+                  <>
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <span className="text-sm">Erro: {jobStatus.error}</span>
+                  </>
+                )}
+              </div>
+
+              {/* Cost Tracking */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Custo estimado</p>
+                  <p className="font-medium">
+                    {formatCurrency(jobStatus.costEstimate * 5.5)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Custo atual</p>
+                  <p className="font-medium">
+                    {formatCurrency(jobStatus.actualCost * 5.5)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Per Creative Status */}
+              {jobStatus.perCreativeStatus && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Status por criativo</h4>
+                  <div className="space-y-2">
+                    {jobStatus.perCreativeStatus.map((creative, idx) => (
+                      <div key={creative.creativeId} className="flex items-center justify-between">
+                        <span className="text-sm">Criativo {idx + 1}</span>
+                        <Badge variant={
+                          creative.status === 'completed' ? 'default' :
+                          creative.status === 'analyzing' ? 'secondary' :
+                          creative.status === 'failed' ? 'destructive' :
+                          'outline'
+                        }>
+                          {creative.status === 'pending' && 'Aguardando'}
+                          {creative.status === 'analyzing' && 'Analisando'}
+                          {creative.status === 'completed' && 'Concluído'}
+                          {creative.status === 'failed' && 'Erro'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
