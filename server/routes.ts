@@ -3132,8 +3132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/creatives/new", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const operationId = req.operationId!;
-      
+      const operationId = req.query.operationId as string;
       const { db } = await import("./db");
       const { adCreatives } = await import("@shared/schema");
       const { and, eq } = await import("drizzle-orm");
