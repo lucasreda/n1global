@@ -450,7 +450,7 @@ export default function Creatives() {
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Resultados</p>
                             <p className="text-sm font-medium text-orange-600">
-                              {creative.conversions || '--'}
+                              {creative.conversions !== null && creative.conversions !== undefined ? creative.conversions : '--'}
                             </p>
                           </div>
                         </div>
