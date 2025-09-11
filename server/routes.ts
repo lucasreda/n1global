@@ -2882,8 +2882,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Creative Intelligence Routes
   app.get("/api/creatives", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const { accountId, campaignIds, datePeriod = "last_30d", refresh = "false" } = req.query;
-      const operationId = req.operationId!;
+      const { accountId, campaignIds, datePeriod = "last_30d", refresh = "false", operationId } = req.query;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId is required" });
+      }
       
       // Import services
       const { facebookAdsService } = await import("./facebook-ads-service");
@@ -2902,7 +2905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .from(adAccounts)
             .where(and(
               eq(adAccounts.id, accountId as string),
-              eq(adAccounts.operationId, operationId)
+              eq(adAccounts.operationId, operationId as string)
             ))
             .limit(1);
           
@@ -2916,7 +2919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 accessToken,
                 campaignIdArray,
                 datePeriod as string,
-                operationId
+                operationId as string
               );
             }
           }
@@ -2928,7 +2931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .select()
             .from(adAccounts)
             .where(and(
-              eq(adAccounts.operationId, operationId),
+              eq(adAccounts.operationId, operationId as string),
               eq(adAccounts.network, 'facebook'),
               eq(adAccounts.isActive, true)
             ));
@@ -2948,7 +2951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   accessToken,
                   campaignIdArray,
                   datePeriod as string,
-                  operationId
+                  operationId as string
                 );
               } catch (error) {
                 console.error(`🎨 Error fetching creatives for account ${account.accountId}:`, error);
@@ -2969,7 +2972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         limit: 50
       };
       
-      const creatives = await facebookAdsService.getBestCreatives(operationId, filters);
+      const creatives = await facebookAdsService.getBestCreatives(operationId as string, filters);
       
       res.json(creatives);
     } catch (error) {
