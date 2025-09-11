@@ -169,17 +169,20 @@ router.post("/call-status", validateTwilioSignature, async (req, res) => {
 /**
  * Twilio Webhook: Test call handler - handles outbound test calls
  */
-router.post("/test-call-handler", async (req, res) => {
+router.all("/test-call-handler", async (req, res) => {
   // TEMPORARY: Skip signature validation for diagnosis
   console.log('🔧 TEMPORARY: Skipping Twilio signature validation for diagnosis');
   console.log('📞 Headers received:', JSON.stringify(req.headers, null, 2));
   console.log('📞 Query params:', req.query);
   console.log('📞 Body data:', req.body);
   try {
-    console.log("🎯 Test call handler:", req.body);
+    // Merge query and body parameters (GET vs POST compatibility)
+    const params = { ...req.query, ...req.body };
+    console.log("🎯 Test call handler - Method:", req.method);
+    console.log("🎯 Test call handler - Params:", params);
     
-    const { operationId, callType = 'test' } = req.query;
-    const { CallSid, From, To } = req.body;
+    const { operationId, callType = 'test' } = params;
+    const { CallSid, From, To } = params;
     
     if (!operationId) {
       throw new Error('Operation ID is required');
@@ -198,7 +201,7 @@ router.post("/test-call-handler", async (req, res) => {
     const callRecord: InsertVoiceCall = {
       operationId: operationId as string,
       twilioCallSid: CallSid,
-      twilioAccountSid: req.body.AccountSid,
+      twilioAccountSid: params.AccountSid,
       direction: 'outbound',
       fromNumber: From, // Twilio number making the call
       toNumber: To, // Customer number receiving the call
@@ -218,11 +221,12 @@ router.post("/test-call-handler", async (req, res) => {
     // Generate welcome message using AI directives with call type
     const welcomeMessage = await voiceService.generateTestCallWelcomeMessage(operationId as string, validCallType);
     
-    // Create TwiML response for the test call
+    // Create TwiML response for the test call with absolute URL
+    const baseUrl = `${urlValidation.protocol}://${urlValidation.domain}`;
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="Polly.Camila-Neural" language="pt-BR">${welcomeMessage}</Say>
-    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${CallSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+    <Gather action="${baseUrl}/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${CallSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
         <Say voice="Polly.Camila-Neural" language="pt-BR">Como posso ajudá-lo hoje?</Say>
     </Gather>
     <Say voice="Polly.Camila-Neural" language="pt-BR">Desculpe, não consegui ouvir sua resposta. Até logo!</Say>
@@ -247,12 +251,15 @@ router.post("/test-call-handler", async (req, res) => {
 /**
  * Twilio Webhook: Test call response handler - processes customer responses during test calls
  */
-router.post("/test-call-response", validateTwilioSignature, async (req, res) => {
+router.all("/test-call-response", async (req, res) => {
   try {
-    console.log("🎯 Test call response:", req.body);
+    // Merge query and body parameters (GET vs POST compatibility)
+    const params = { ...req.query, ...req.body };
+    console.log("🎯 Test call response - Method:", req.method);
+    console.log("🎯 Test call response - Params:", params);
     
-    const { operationId, callSid, callType = 'test' } = req.query;
-    const { SpeechResult } = req.body;
+    const { operationId, callSid, callType = 'test' } = params;
+    const { SpeechResult } = params;
     
     if (!operationId || !callSid) {
       throw new Error('Operation ID and Call SID are required');
@@ -261,17 +268,24 @@ router.post("/test-call-response", validateTwilioSignature, async (req, res) => 
     // Validate callType
     const validCallType = callType === 'sales' ? 'sales' : 'test';
 
+    // Validate public URL configuration for absolute URLs
+    const urlValidation = validatePublicUrl();
+    if (!urlValidation.isValid) {
+      throw new Error('Invalid public URL configuration');
+    }
+
     if (SpeechResult) {
       console.log(`🗣️ Customer said: "${SpeechResult}"`);
       
       // Generate AI response using existing voice service logic with call type
       const aiResponse = await voiceService.generateTestCallResponse(operationId as string, SpeechResult, validCallType);
       
-      // Create TwiML with AI response and continue conversation
+      // Create TwiML with AI response and continue conversation using absolute URL
+      const baseUrl = `${urlValidation.protocol}://${urlValidation.domain}`;
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="Polly.Camila-Neural" language="pt-BR">${aiResponse}</Say>
-    <Gather action="/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${callSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
+    <Gather action="${baseUrl}/api/voice/test-call-response?operationId=${operationId}&amp;callSid=${callSid}&amp;callType=${validCallType}" method="POST" input="speech" timeout="10" speechTimeout="auto" language="pt-BR">
         <Say voice="Polly.Camila-Neural" language="pt-BR">Posso ajudar com mais alguma coisa?</Say>
     </Gather>
     <Say voice="Polly.Camila-Neural" language="pt-BR">Obrigada por entrar em contato! Até logo.</Say>
