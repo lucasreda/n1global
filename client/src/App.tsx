@@ -23,6 +23,7 @@ import CostCalculator from "@/pages/cost-calculator";
 import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Creatives from "@/pages/creatives";
+import CreativeDetails from "@/pages/creative-details";
 import Onboarding from "@/pages/onboarding";
 import InsidePage from "@/pages/inside";
 import AdminDashboard from "@/pages/admin/dashboard";
@@ -248,7 +249,7 @@ function Router() {
         {!isProductSeller && <Route path="/analytics" component={Analytics} />}
         <Route path="/integrations" component={Integrations} />
         {!isProductSeller && <Route path="/ads" component={Ads} />}
-        {!isProductSeller && <Route path="/creatives/:id" component={lazy(() => import("./pages/creative-details"))} />}
+        {!isProductSeller && <Route path="/creatives/:id" component={CreativeDetails} />}
         {!isProductSeller && <Route path="/creatives" component={Creatives} />}
         <Route path="/products" component={Products} />
         <Route path="/tools" component={Tools} />
