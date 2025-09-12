@@ -604,72 +604,93 @@ export default function Creatives() {
               </div>
             ) : (
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {analyzedCreatives.map((creative: AdCreative) => (
-                  <div 
-                    key={creative.id} 
-                    className="group relative border border-border/50 rounded-xl p-4 hover:bg-muted/30 transition-all duration-200"
-                    data-testid={`card-analyzed-creative-${creative.id}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      {/* Thumbnail - small and square */}
-                      <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-                        {creative.thumbnailUrl ? (
-                          <img 
-                            src={creative.thumbnailUrl} 
-                            alt={creative.name || 'Criativo Analisado'}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-sm truncate mb-1" title={creative.name || 'Sem nome'}>
-                              {creative.name || 'Sem nome'}
-                            </h3>
-                            <Badge variant="default" className="text-xs px-2 py-0.5 bg-blue-500 hover:bg-blue-600">
-                              Analisado
-                            </Badge>
-                          </div>
-                          
-                          {/* Priority Metrics */}
-                          <div className="flex items-center gap-6 ml-4">
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">CPM</p>
-                              <p className="text-sm font-medium text-blue-600">
-                                {creative.cpm ? formatCurrency(Number(creative.cpm)) : '--'}
-                              </p>
+                {analyzedCreatives.map((item: any) => {
+                  const creative = item.creative;
+                  const analysis = item.analysis;
+                  return (
+                    <div 
+                      key={creative.id} 
+                      className="group relative border border-border/50 rounded-xl p-4 hover:bg-muted/30 transition-all duration-200"
+                      data-testid={`card-analyzed-creative-${creative.id}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Thumbnail - small and square */}
+                        <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                          {creative.thumbnailUrl ? (
+                            <img 
+                              src={creative.thumbnailUrl} 
+                              alt={creative.name || 'Criativo Analisado'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-muted-foreground" />
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">CPC</p>
-                              <p className="text-sm font-medium text-green-600">
-                                {creative.cpc ? formatCurrency(Number(creative.cpc)) : '--'}
-                              </p>
+                          )}
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-sm truncate mb-1" title={creative.name || 'Sem nome'}>
+                                {creative.name || 'Sem nome'}
+                              </h3>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="default" className="text-xs px-2 py-0.5 bg-blue-500 hover:bg-blue-600">
+                                  Analisado
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {analysis.analysisType === 'audit' ? 'Auditoria' : analysis.analysisType}
+                                </span>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">CTR</p>
-                              <p className="text-sm font-medium text-purple-600">
-                                {creative.ctr ? `${(Number(creative.ctr) * 100).toFixed(2)}%` : '--'}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">Resultados</p>
-                              <p className="text-sm font-medium text-orange-600">
-                                {creative.conversions !== null && creative.conversions !== undefined ? creative.conversions : '--'}
-                              </p>
+                            
+                            {/* Priority Metrics */}
+                            <div className="flex items-center gap-6 ml-4">
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">CPM</p>
+                                <p className="text-sm font-medium text-blue-600">
+                                  {creative.cpm ? formatCurrency(Number(creative.cpm)) : '--'}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">CPC</p>
+                                <p className="text-sm font-medium text-green-600">
+                                  {creative.cpc ? formatCurrency(Number(creative.cpc)) : '--'}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">CTR</p>
+                                <p className="text-sm font-medium text-purple-600">
+                                  {creative.ctr ? `${(Number(creative.ctr) * 100).toFixed(2)}%` : '--'}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">Custo</p>
+                                <p className="text-sm font-medium text-emerald-600">
+                                  {analysis.actualCost ? `$${analysis.actualCost}` : '--'}
+                                </p>
+                              </div>
+                              
+                              {/* View Button */}
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="ml-4"
+                                onClick={() => window.location.href = `/creatives/${creative.id}`}
+                                data-testid={`button-view-${creative.id}`}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                Visualizar
+                              </Button>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             

@@ -3133,6 +3133,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/creatives/details/:id", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const creativeId = req.params.id;
+      
+      const { db } = await import("./db");
+      const { adCreatives, creativeAnalyses } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Get creative and its analysis
+      const result = await db
+        .select({
+          creative: adCreatives,
+          analysis: creativeAnalyses
+        })
+        .from(adCreatives)
+        .innerJoin(creativeAnalyses, eq(creativeAnalyses.creativeId, adCreatives.id))
+        .where(and(
+          eq(adCreatives.id, creativeId),
+          eq(creativeAnalyses.status, 'completed')
+        ))
+        .limit(1);
+      
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Creative or analysis not found" });
+      }
+      
+      res.json(result[0]);
+    } catch (error) {
+      console.error("Error fetching creative details:", error);
+      res.status(500).json({ message: "Error fetching creative details" });
+    }
+  });
+
   app.get("/api/creatives/new", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const operationId = req.query.operationId as string;

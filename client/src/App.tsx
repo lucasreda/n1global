@@ -248,6 +248,7 @@ function Router() {
         {!isProductSeller && <Route path="/analytics" component={Analytics} />}
         <Route path="/integrations" component={Integrations} />
         {!isProductSeller && <Route path="/ads" component={Ads} />}
+        {!isProductSeller && <Route path="/creatives/:id" component={lazy(() => import("./pages/creative-details"))} />}
         {!isProductSeller && <Route path="/creatives" component={Creatives} />}
         <Route path="/products" component={Products} />
         <Route path="/tools" component={Tools} />
