@@ -417,9 +417,25 @@ class CreativeAnalysisService {
         try {
           console.log(`🖼️ Image creative detected, performing visual analysis...`);
           
-          // Step 2a: Analyze image
+          // Step 2a: Resolve media URL for Facebook images
+          let resolvedImageUrl = creative.imageUrl;
+          if (creative.network === 'facebook' && creative.creativeId) {
+            console.log(`🔗 Resolving Facebook image URL for creativeId: ${creative.creativeId}`);
+            const resolvedUrl = await facebookAdsService.resolveMediaUrl(
+              creative.creativeId, 
+              'image', 
+              creative.accountId
+            );
+            if (resolvedUrl) {
+              resolvedImageUrl = resolvedUrl;
+              console.log(`✅ Facebook image URL resolved successfully`);
+            } else {
+              console.warn(`⚠️ Failed to resolve Facebook image URL, using original: ${creative.imageUrl}`);
+            }
+          }
           
-          visualAnalysis = await this.visualAnalysisService.analyzeImage(creative.imageUrl);
+          // Step 2b: Analyze image
+          visualAnalysis = await this.visualAnalysisService.analyzeImage(resolvedImageUrl);
           totalCost += visualAnalysis.cost;
           console.log(`👁️ Image analysis completed (cost: $${visualAnalysis.cost.toFixed(4)})`);
           
