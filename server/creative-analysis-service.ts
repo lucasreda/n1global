@@ -689,14 +689,15 @@ class CreativeAnalysisService {
 
     // Add audio insights
     if (audioAnalysis) {
-      insights.push(`🔊 Áudio: ${audioAnalysis.transcript.length > 0 ? 'Transcrição clara detectada' : 'Sem áudio detectado'}`);
+      const transcript = audioAnalysis.transcript || [];
+      insights.push(`🔊 Áudio: ${transcript.length > 0 ? 'Transcrição clara detectada' : 'Sem áudio detectado'}`);
       if (audioAnalysis.musicDetected) {
         insights.push(`🎵 Música: ${audioAnalysis.musicType || 'Música de fundo detectada'}`);
       }
       if (audioAnalysis.ctaAudio && Array.isArray(audioAnalysis.ctaAudio)) {
         insights.push(...audioAnalysis.ctaAudio.map((cta: string) => `📢 CTA Áudio: ${cta}`));
       }
-      scores.audio_quality = audioAnalysis.audioQuality;
+      scores.audio_quality = audioAnalysis.audioQuality || 0;
     }
 
     // Add visual insights  
