@@ -305,6 +305,30 @@ Timeline dos keyframes: ${keyframes.map(k => `${k.timestamp}s`).join(', ')}`
     const startTime = Date.now();
     
     try {
+      // Download image and convert to data URL to avoid Facebook CDN expiration issues
+      let finalImageUrl = imageUrl;
+      
+      if (imageUrl.includes('facebook.com') || imageUrl.includes('fbcdn.net')) {
+        console.log(`🔍 DEBUG: Downloading Facebook image to avoid CDN expiration: ${imageUrl}`);
+        try {
+          const imageResponse = await fetch(imageUrl);
+          if (imageResponse.ok) {
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const base64 = Buffer.from(imageBuffer).toString('base64');
+            
+            // Determine image type from response headers or URL
+            const contentType = imageResponse.headers.get('content-type') || 'image/png';
+            finalImageUrl = `data:${contentType};base64,${base64}`;
+            console.log(`✅ DEBUG: Facebook image downloaded and converted to data URL (${imageBuffer.byteLength} bytes)`);
+          } else {
+            console.warn(`⚠️ DEBUG: Failed to download Facebook image (${imageResponse.status}), using original URL`);
+          }
+        } catch (downloadError) {
+          console.warn(`⚠️ DEBUG: Error downloading Facebook image:`, downloadError);
+          console.warn(`⚠️ DEBUG: Falling back to original URL`);
+        }
+      }
+      
       const completion = await this.openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
@@ -332,7 +356,7 @@ Retorne um JSON com:
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageUrl,
+                  url: finalImageUrl,
                   detail: 'high'
                 }
               }
