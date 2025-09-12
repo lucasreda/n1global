@@ -182,7 +182,7 @@ VISUAL:
 - Produtos mostrados: ${visualAnalysis.products.join(', ')}
 - Textos na tela: ${visualAnalysis.textOnScreen.join(', ')}
 - Keyframes: ${visualAnalysis.keyframes.length}
-- Timeline: ${visualAnalysis.keyframes.map(k => `${k.timestamp}s: ${k.description}`).join(' | ')}`
+- Timeline: ${visualAnalysis.keyframes.map((k: any) => `${k.timestamp}s: ${k.description}`).join(' | ')}`
           }
         ],
         temperature: 0.3,

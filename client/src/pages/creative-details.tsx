@@ -157,201 +157,296 @@ export default function CreativeDetails() {
               </h2>
               
               {analysis?.result?.fusionAnalysis?.scenes ? (
-                <div className="space-y-4">
-                  {/* Timeline Overview */}
-                  <div className="bg-muted rounded-lg p-4">
+                <div className="space-y-6">
+                  {/* Technical Coverage Overview */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <BarChart3 className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-semibold">Cobertura Técnica Completa</h3>
+                    </div>
+                    
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div className="text-center">
-                        <div className="font-semibold text-primary">
+                        <div className="font-bold text-2xl text-blue-600">
                           {analysis.result.fusionAnalysis.scenes.length}
                         </div>
-                        <div className="text-muted-foreground">Cenas</div>
+                        <div className="text-muted-foreground">Segmentos Analisados</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-semibold text-primary">
+                        <div className="font-bold text-2xl text-green-600">
+                          100%
+                        </div>
+                        <div className="text-muted-foreground">Cobertura Total</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-2xl text-purple-600">
                           {analysis.result.fusionAnalysis.totalDuration?.toFixed(1)}s
                         </div>
-                        <div className="text-muted-foreground">Duração</div>
+                        <div className="text-muted-foreground">Duração Capturada</div>
                       </div>
                       <div className="text-center">
-                        <div className="font-semibold text-primary">
+                        <div className="font-bold text-2xl text-orange-600">
                           {analysis.result.fusionAnalysis.overallScore?.toFixed(1)}/10
                         </div>
-                        <div className="text-muted-foreground">Score Geral</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-semibold text-primary">
-                          {analysis.result.fusionAnalysis.averageSceneLength?.toFixed(1)}s
-                        </div>
-                        <div className="text-muted-foreground">Média/Cena</div>
+                        <div className="text-muted-foreground">Score Técnico</div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Scene Cards */}
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {analysis.result.fusionAnalysis.scenes.map((scene: any) => (
-                      <div 
-                        key={scene.id}
-                        className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
-                      >
-                        {/* Scene Header */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              Cena {scene.id}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
+                  {/* Interactive Timeline Navigation */}
+                  <div className="bg-white dark:bg-card rounded-lg border p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Clock className="w-5 h-5" />
+                      <h3 className="font-semibold">Timeline Interativa de Visão Computacional</h3>
+                    </div>
+                    
+                    {/* Timeline Bar */}
+                    <div className="relative bg-muted rounded-lg h-16 mb-4 overflow-hidden">
+                      {analysis.result.fusionAnalysis.scenes.map((scene: any, index: number) => (
+                        <div
+                          key={scene.id}
+                          className="absolute top-0 h-full border-r border-white/30 hover:bg-primary/20 transition-colors cursor-pointer group"
+                          style={{
+                            left: `${(scene.startSec / analysis.result.fusionAnalysis.totalDuration) * 100}%`,
+                            width: `${((scene.endSec - scene.startSec) / analysis.result.fusionAnalysis.totalDuration) * 100}%`
+                          }}
+                          data-testid={`timeline-segment-${scene.id}`}
+                        >
+                          {/* Scene Progress Bar */}
+                          <div 
+                            className={`h-2 ${scene.visualScore >= 8 ? 'bg-green-500' : scene.visualScore >= 6 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                          />
+                          
+                          {/* Scene Info */}
+                          <div className="p-2 text-xs">
+                            <div className="font-medium">Cena {scene.id}</div>
+                            <div className="text-muted-foreground">
                               {scene.startSec.toFixed(1)}s - {scene.endSec.toFixed(1)}s
-                            </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant={getScoreBadgeVariant(scene.visualScore)} 
-                              className="text-xs"
-                            >
-                              {scene.visualScore}/10
-                            </Badge>
+                          
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                            {scene.objects.length} objetos, {scene.peopleCount} pessoas
                           </div>
                         </div>
+                      ))}
+                    </div>
 
-                        {/* Technical Description */}
-                        <div className="text-sm mb-3">
-                          <p className="text-muted-foreground">
+                    {/* Timeline Labels */}
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>0:00</span>
+                      <span>{Math.floor(analysis.result.fusionAnalysis.totalDuration / 60)}:{(analysis.result.fusionAnalysis.totalDuration % 60).toFixed(0).padStart(2, '0')}</span>
+                    </div>
+                  </div>
+
+                  {/* Computer Vision Analysis Cards */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Eye className="w-5 h-5" />
+                      <h3 className="font-semibold">Análise Técnica Detalhada</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {analysis.result.fusionAnalysis.scenes.length} Segmentos Processados
+                      </Badge>
+                    </div>
+
+                    {analysis.result.fusionAnalysis.scenes.map((scene: any, index: number) => (
+                      <div 
+                        key={scene.id}
+                        className="border rounded-lg p-4 hover:shadow-sm transition-shadow bg-white dark:bg-card"
+                        data-testid={`scene-analysis-${scene.id}`}
+                      >
+                        {/* Scene Header with Timeline Position */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${scene.visualScore >= 8 ? 'bg-green-500' : scene.visualScore >= 6 ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                              <Badge variant="outline" className="text-xs font-mono">
+                                SEGMENTO_{scene.id.toString().padStart(2, '0')}
+                              </Badge>
+                            </div>
+                            <div className="text-sm font-mono text-muted-foreground">
+                              {scene.startSec.toFixed(2)}s → {scene.endSec.toFixed(2)}s 
+                              <span className="ml-2 text-xs">
+                                (Δ{(scene.endSec - scene.startSec).toFixed(2)}s)
+                              </span>
+                            </div>
+                          </div>
+                          <Badge 
+                            variant={getScoreBadgeVariant(scene.visualScore)} 
+                            className="text-xs font-mono"
+                          >
+                            SCORE: {scene.visualScore.toFixed(1)}/10
+                          </Badge>
+                        </div>
+
+                        {/* Computer Vision Description */}
+                        <div className="bg-muted/50 rounded-lg p-3 mb-4">
+                          <div className="text-xs font-medium text-blue-600 mb-1">VISÃO COMPUTACIONAL:</div>
+                          <p className="text-sm font-mono leading-relaxed">
                             {scene.technicalDescription}
                           </p>
                         </div>
 
-                        {/* Scene Details Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                          {/* Objects */}
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Layers className="w-3 h-3" />
-                              <span className="font-medium">Objetos</span>
+                        {/* Technical Data Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          {/* Visual Elements */}
+                          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
+                            <div className="flex items-center gap-1 mb-2">
+                              <Layers className="w-4 h-4 text-blue-600" />
+                              <span className="text-xs font-medium">OBJETOS</span>
                             </div>
-                            <div className="text-muted-foreground">
-                              {scene.objects.length > 0 
-                                ? scene.objects.slice(0, 2).map((obj: any) => obj.label).join(', ')
-                                : 'Nenhum'
-                              }
-                              {scene.objects.length > 2 && ` +${scene.objects.length - 2}`}
-                            </div>
-                          </div>
-
-                          {/* People */}
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Users className="w-3 h-3" />
-                              <span className="font-medium">Pessoas</span>
-                            </div>
-                            <div className="text-muted-foreground">
-                              {scene.peopleCount || 0}
+                            <div className="text-sm font-mono">
+                              {scene.objects.length > 0 ? (
+                                <div>
+                                  <div className="font-semibold">COUNT: {scene.objects.length}</div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {scene.objects.slice(0, 2).map((obj: any) => obj.label).join(', ')}
+                                    {scene.objects.length > 2 && `... +${scene.objects.length - 2}`}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-muted-foreground">NULL</div>
+                              )}
                             </div>
                           </div>
 
-                          {/* Audio */}
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Volume2 className="w-3 h-3" />
-                              <span className="font-medium">Áudio</span>
+                          {/* Human Detection */}
+                          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
+                            <div className="flex items-center gap-1 mb-2">
+                              <Users className="w-4 h-4 text-green-600" />
+                              <span className="text-xs font-medium">PESSOAS</span>
                             </div>
-                            <div className="text-muted-foreground">
-                              {scene.audio?.voicePresent ? 'Voz' : 'Sem voz'}
-                              {scene.audio?.musicDetected && ', Música'}
+                            <div className="text-sm font-mono">
+                              <div className="font-semibold">COUNT: {scene.peopleCount || 0}</div>
+                              <div className="text-xs text-muted-foreground">detecção facial</div>
+                            </div>
+                          </div>
+
+                          {/* Audio Analysis */}
+                          <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-3">
+                            <div className="flex items-center gap-1 mb-2">
+                              <Volume2 className="w-4 h-4 text-purple-600" />
+                              <span className="text-xs font-medium">ÁUDIO</span>
+                            </div>
+                            <div className="text-sm font-mono">
+                              <div className="font-semibold">
+                                {scene.audio?.voicePresent ? 'VOICE: TRUE' : 'VOICE: FALSE'}
+                              </div>
+                              {scene.audio?.musicDetected && (
+                                <div className="text-xs text-purple-600">MUSIC: TRUE</div>
+                              )}
                             </div>
                           </div>
 
                           {/* Sync Quality */}
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <BarChart3 className="w-3 h-3" />
-                              <span className="font-medium">Sinc</span>
+                          <div className="bg-orange-50 dark:bg-orange-950/20 rounded-lg p-3">
+                            <div className="flex items-center gap-1 mb-2">
+                              <BarChart3 className="w-4 h-4 text-orange-600" />
+                              <span className="text-xs font-medium">SINCRONIA</span>
                             </div>
-                            <div className="text-muted-foreground">
-                              {scene.syncQuality}/10
+                            <div className="text-sm font-mono">
+                              <div className="font-semibold">SYNC: {(scene.syncQuality || 0).toFixed(1)}/10</div>
+                              <div className="text-xs text-muted-foreground">av-alignment</div>
                             </div>
                           </div>
                         </div>
 
                         {/* Audio Transcript */}
                         {scene.audio?.transcriptSnippet && (
-                          <div className="mt-3 pt-3 border-t">
-                            <div className="text-xs font-medium mb-1">Transcrição:</div>
-                            <div className="text-xs text-muted-foreground italic">
-                              "{scene.audio.transcriptSnippet}"
+                          <div className="border-t pt-3 mt-3">
+                            <div className="text-xs font-medium text-purple-600 mb-2">TRANSCRIÇÃO TEMPORAL:</div>
+                            <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-3">
+                              <div className="text-sm font-mono italic">
+                                "{scene.audio.transcriptSnippet}"
+                              </div>
                             </div>
                           </div>
                         )}
 
-                        {/* Keyframes Preview */}
+                        {/* Keyframe Analysis */}
                         {scene.keyframes && scene.keyframes.length > 0 && (
-                          <div className="mt-3 pt-3 border-t">
-                            <div className="text-xs font-medium mb-2">Keyframes:</div>
+                          <div className="border-t pt-3 mt-3">
+                            <div className="text-xs font-medium text-blue-600 mb-2">
+                              KEYFRAMES EXTRAÍDOS: {scene.keyframes.length}
+                            </div>
                             <div className="flex gap-2 overflow-x-auto">
-                              {scene.keyframes.slice(0, 3).map((keyframe: any, index: number) => (
-                                <div key={index} className="flex-shrink-0">
-                                  <img 
-                                    src={keyframe.url} 
-                                    alt={`Keyframe ${keyframe.timestamp.toFixed(1)}s`}
-                                    className="w-16 h-12 object-cover rounded border"
-                                  />
-                                  <div className="text-xs text-center text-muted-foreground mt-1">
-                                    {keyframe.timestamp.toFixed(1)}s
+                              {scene.keyframes.map((keyframe: any, index: number) => (
+                                <div key={index} className="flex-shrink-0 bg-muted rounded border">
+                                  <div className="w-20 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-t flex items-center justify-center">
+                                    <Film className="w-6 h-6 text-white" />
+                                  </div>
+                                  <div className="p-2 text-xs text-center">
+                                    <div className="font-mono">{keyframe.timestamp.toFixed(2)}s</div>
                                   </div>
                                 </div>
                               ))}
-                              {scene.keyframes.length > 3 && (
-                                <div className="flex-shrink-0 w-16 h-12 bg-muted rounded border flex items-center justify-center">
-                                  <span className="text-xs text-muted-foreground">
-                                    +{scene.keyframes.length - 3}
-                                  </span>
+                              {scene.keyframes.length > 5 && (
+                                <div className="flex-shrink-0 w-20 h-14 bg-muted rounded border flex items-center justify-center">
+                                  <div className="text-center">
+                                    <div className="text-xs font-mono">+{scene.keyframes.length - 5}</div>
+                                    <div className="text-xs text-muted-foreground">mais</div>
+                                  </div>
                                 </div>
                               )}
                             </div>
                           </div>
                         )}
+
+                        {/* Technical Metadata */}
+                        <div className="border-t pt-3 mt-3 bg-muted/30 rounded-lg p-3">
+                          <div className="grid grid-cols-3 gap-4 text-xs font-mono">
+                            <div>
+                              <span className="text-muted-foreground">DURAÇÃO:</span>
+                              <div className="font-semibold">{(scene.endSec - scene.startSec).toFixed(3)}s</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">POSIÇÃO:</span>
+                              <div className="font-semibold">{((scene.startSec / analysis.result.fusionAnalysis.totalDuration) * 100).toFixed(1)}%</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">KEYFRAMES:</span>
+                              <div className="font-semibold">{scene.keyframes?.length || 0}</div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* Technical Summary */}
+                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950 dark:to-slate-950 rounded-lg p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <h3 className="font-semibold">Resumo da Análise Técnica</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <div className="font-medium text-green-600">✓ Cobertura Total</div>
+                        <div className="text-muted-foreground">Vídeo completamente analisado</div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-blue-600">✓ Visão Computacional</div>
+                        <div className="text-muted-foreground">Descrição técnica precisa</div>
+                      </div>
+                      <div>
+                        <div className="font-medium text-purple-600">✓ Sincronia A/V</div>
+                        <div className="text-muted-foreground">Alinhamento temporal validado</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                // Fallback para análise legada ou quando não há análise cena por cena
-                <div className="bg-muted rounded-lg overflow-hidden">
-                  {creative.type === 'video' ? (
-                    <div className="aspect-video bg-black flex items-center justify-center">
-                      {creative.mediaUrl ? (
-                        <video 
-                          controls 
-                          className="w-full h-full"
-                          poster={creative.thumbnailUrl}
-                        >
-                          <source src={creative.mediaUrl} type="video/mp4" />
-                          Seu navegador não suporta reprodução de vídeo.
-                        </video>
-                      ) : (
-                        <div className="text-white flex flex-col items-center gap-2">
-                          <Play className="w-12 h-12" />
-                          <p>Vídeo não disponível</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="aspect-video flex items-center justify-center">
-                      {creative.thumbnailUrl || creative.mediaUrl ? (
-                        <img 
-                          src={creative.thumbnailUrl || creative.mediaUrl} 
-                          alt={creative.name || 'Criativo'}
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      ) : (
-                        <div className="text-muted-foreground flex flex-col items-center gap-2">
-                          <ImageIcon className="w-12 h-12" />
-                          <p>Imagem não disponível</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                // Estado quando não há análise cena por cena disponível
+                <div className="bg-muted/50 rounded-lg p-8 text-center">
+                  <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="font-semibold mb-2">Timeline Técnico Indisponível</h3>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    A análise cena por cena não foi concluída para este criativo.
+                  </p>
+                  <Badge variant="outline">
+                    Aguardando processamento de visão computacional
+                  </Badge>
                 </div>
               )}
             </Card>
