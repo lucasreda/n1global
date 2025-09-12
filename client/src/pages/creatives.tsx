@@ -163,6 +163,13 @@ export default function Creatives() {
         // Close connection when job is complete
         if (data.status === 'completed' || data.status === 'failed') {
           eventSource.close();
+          
+          // Invalidate cache when analysis is completed to refresh the analyzed creatives list
+          if (data.status === 'completed') {
+            queryClient.invalidateQueries({ queryKey: ["/api/creatives/analyzed"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/creatives/new"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/creatives"] });
+          }
         }
       } catch (error) {
         console.error("Failed to parse SSE data:", error);
@@ -609,7 +616,7 @@ export default function Creatives() {
                   const analysis = item.analysis;
                   return (
                     <div 
-                      key={creative.id} 
+                      key={`analyzed-${creative.id}-${analysis.id}`} 
                       className="group relative border border-border/50 rounded-xl p-4 hover:bg-muted/30 transition-all duration-200"
                       data-testid={`card-analyzed-creative-${creative.id}`}
                     >

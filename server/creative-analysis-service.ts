@@ -717,7 +717,13 @@ class CreativeAnalysisService {
     // Add fusion insights
     if (fusedInsights) {
       insights.push(`🧠 Score Geral: ${fusedInsights.overallScore}/10`);
-      insights.push(`🎯 Performance Prevista: CTR ${fusedInsights.predictedPerformance.ctr}%, CVR ${fusedInsights.predictedPerformance.cvr}%`);
+      
+      // Safe access to nested properties
+      if (fusedInsights.predictedPerformance) {
+        insights.push(`🎯 Performance Prevista: CTR ${fusedInsights.predictedPerformance.ctr}%, CVR ${fusedInsights.predictedPerformance.cvr}%`);
+        scores.predicted_ctr = fusedInsights.predictedPerformance.ctr;
+        scores.predicted_cvr = fusedInsights.predictedPerformance.cvr;
+      }
       
       if (fusedInsights.keyStrengths && Array.isArray(fusedInsights.keyStrengths)) {
         recommendations.push(...fusedInsights.keyStrengths.map((strength: string) => `✅ ${strength}`));
@@ -727,8 +733,6 @@ class CreativeAnalysisService {
       }
       
       scores.overall_performance = fusedInsights.overallScore;
-      scores.predicted_ctr = fusedInsights.predictedPerformance.ctr;
-      scores.predicted_cvr = fusedInsights.predictedPerformance.cvr;
     }
 
     // Build final analysis structure
