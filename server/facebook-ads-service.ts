@@ -899,19 +899,46 @@ export class FacebookAdsService {
           console.warn(`❌ DEBUG: Video API failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
       } else if (mediaType === 'image') {
-        // Use Graph API to get image URL
-        const url = `${this.baseUrl}/${mediaId}/picture?redirect=0&access_token=${accessToken}`;
-        console.log(`🔍 DEBUG: Making image API call to: ${this.baseUrl}/${mediaId}/picture?redirect=0&access_token=***`);
+        // For AdCreatives, we need to get the creative details first
+        const url = `${this.baseUrl}/${mediaId}?fields=image_url,thumbnail_url,object_story_spec&access_token=${accessToken}`;
+        console.log(`🔍 DEBUG: Making AdCreative API call to: ${this.baseUrl}/${mediaId}?fields=image_url,thumbnail_url,object_story_spec&access_token=***`);
         const response = await fetch(url);
         
-        console.log(`🔍 DEBUG: Image API response status: ${response.status} ${response.statusText}`);
+        console.log(`🔍 DEBUG: AdCreative API response status: ${response.status} ${response.statusText}`);
         if (response.ok) {
-          const data = await response.json() as { data?: { url?: string } };
-          console.log(`✅ DEBUG: Image API response data:`, data);
-          return data.data?.url || null; // CDN URL without token
+          const data = await response.json() as { 
+            image_url?: string; 
+            thumbnail_url?: string;
+            object_story_spec?: {
+              photo_data?: {
+                image_hash?: string;
+                url?: string;
+              }
+            }
+          };
+          console.log(`✅ DEBUG: AdCreative API response data:`, data);
+          
+          // Try different fields in order of preference
+          if (data.image_url) {
+            console.log(`✅ DEBUG: Using image_url: ${data.image_url}`);
+            return data.image_url;
+          }
+          
+          if (data.thumbnail_url) {
+            console.log(`✅ DEBUG: Using thumbnail_url: ${data.thumbnail_url}`);
+            return data.thumbnail_url;
+          }
+          
+          if (data.object_story_spec?.photo_data?.url) {
+            console.log(`✅ DEBUG: Using object_story_spec.photo_data.url: ${data.object_story_spec.photo_data.url}`);
+            return data.object_story_spec.photo_data.url;
+          }
+          
+          console.warn(`⚠️ DEBUG: No usable image URL found in AdCreative response`);
+          return null;
         } else {
           const errorText = await response.text();
-          console.warn(`❌ DEBUG: Image API failed: ${response.status} ${response.statusText} - ${errorText}`);
+          console.warn(`❌ DEBUG: AdCreative API failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
       }
 
