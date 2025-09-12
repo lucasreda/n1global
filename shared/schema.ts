@@ -2114,3 +2114,132 @@ export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 
 export type VoiceConversation = typeof voiceConversations.$inferSelect;
 export type InsertVoiceConversation = z.infer<typeof insertVoiceConversationSchema>;
+
+// ========================================
+// Scene-by-Scene Technical Analysis Types
+// ========================================
+
+// Object detected in a scene with precision details
+export interface SceneObject {
+  label: string;
+  count: number;
+  confidence?: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+// Text elements found in a scene
+export interface SceneText {
+  content: string;
+  position?: 'top' | 'center' | 'bottom' | 'overlay';
+  fontSize?: 'small' | 'medium' | 'large';
+  fontStyle?: string;
+  color?: string;
+}
+
+// Camera and visual composition details
+export interface SceneComposition {
+  shotType: 'extreme-close-up' | 'close-up' | 'medium' | 'wide' | 'extreme-wide' | 'over-shoulder';
+  cameraMovement: 'static' | 'pan' | 'tilt' | 'zoom-in' | 'zoom-out' | 'dolly' | 'handheld';
+  cameraAngle: 'eye-level' | 'high-angle' | 'low-angle' | 'dutch-angle';
+  lighting: 'natural' | 'artificial' | 'mixed' | 'dramatic' | 'soft' | 'harsh';
+  depth: 'shallow' | 'deep' | 'medium';
+}
+
+// Transition details between scenes
+export interface SceneTransition {
+  type: 'cut' | 'fade' | 'dissolve' | 'wipe' | 'zoom' | 'morph';
+  duration: number; // in seconds
+  effect?: string; // Additional effect description
+}
+
+// Audio characteristics for this scene
+export interface SceneAudio {
+  transcriptSnippet: string;
+  voicePresent: boolean;
+  voiceStyle?: 'professional' | 'casual' | 'emotional' | 'energetic' | 'calm';
+  musicDetected: boolean;
+  musicType?: 'instrumental' | 'vocal' | 'electronic' | 'ambient' | 'upbeat';
+  soundEffects?: string[];
+  audioQuality: number; // 1-10 scale
+  volume: 'quiet' | 'normal' | 'loud';
+  ctas?: string[]; // Call-to-actions detected in audio
+}
+
+// Complete scene description with technical analysis
+export interface SceneDescription {
+  id: number;
+  startSec: number;
+  endSec: number;
+  durationSec: number;
+  
+  // Technical visual description
+  technicalDescription: string; // Detailed technical description like Google Vision
+  
+  // Visual elements breakdown
+  objects: SceneObject[];
+  text: SceneText[];
+  peopleCount: number;
+  dominantColors: string[]; // Hex color codes
+  brandElements: string[]; // Logos, brand colors, etc.
+  
+  // Composition and cinematography
+  composition: SceneComposition;
+  
+  // Scene transitions
+  transitionIn?: SceneTransition;
+  transitionOut?: SceneTransition;
+  
+  // Motion and dynamics
+  motionIntensity: number; // 1-10 scale
+  visualComplexity: number; // 1-10 scale
+  
+  // Audio synchronized to this scene
+  audio: SceneAudio;
+  
+  // Quality and engagement scores
+  visualScore: number; // 1-10 technical quality
+  engagementScore: number; // 1-10 predicted engagement
+  syncQuality: number; // 1-10 audio-visual synchronization
+  
+  // Keyframes representing this scene
+  keyframes: Array<{
+    timestamp: number;
+    url: string;
+    description: string;
+  }>;
+}
+
+// Complete timeline analysis result
+export interface SceneTimeline {
+  scenes: SceneDescription[];
+  totalDuration: number;
+  overallScore: number;
+  overallSummary: string;
+  
+  // Aggregated insights
+  totalObjects: SceneObject[];
+  allTextContent: string[];
+  dominantColorPalette: string[];
+  averageSceneLength: number;
+  
+  // Quality metrics
+  technicalQuality: number; // 1-10
+  narrativeFlow: number; // 1-10
+  audioVisualSync: number; // 1-10
+  brandConsistency: number; // 1-10
+  
+  // Actionable insights
+  keyStrengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  
+  // Processing metadata
+  analysisVersion: string;
+  processingTime: number; // milliseconds
+  totalCost: number;
+}

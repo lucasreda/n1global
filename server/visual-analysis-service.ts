@@ -406,6 +406,280 @@ Retorne um JSON com:
     return inputCost + outputCost;
   }
 
+  // ========================================
+  // SCENE-BY-SCENE TECHNICAL ANALYSIS
+  // ========================================
+
+  /**
+   * Analyze scenes with technical precision (Google Vision alternative)
+   */
+  async analyzeScenes(sceneSegments: Array<{
+    id: number;
+    startSec: number;
+    endSec: number;
+    durationSec: number;
+    keyframes: Array<{
+      timestamp: number;
+      url: string;
+      tempPath?: string;
+    }>;
+  }>): Promise<Array<{
+    id: number;
+    startSec: number;
+    endSec: number;
+    durationSec: number;
+    technicalDescription: string;
+    objects: Array<{
+      label: string;
+      count: number;
+      confidence?: number;
+      boundingBox?: { x: number; y: number; width: number; height: number };
+    }>;
+    text: Array<{
+      content: string;
+      position?: string;
+      fontSize?: string;
+      fontStyle?: string;
+      color?: string;
+    }>;
+    peopleCount: number;
+    dominantColors: string[];
+    brandElements: string[];
+    composition: {
+      shotType: string;
+      cameraMovement: string;
+      cameraAngle: string;
+      lighting: string;
+      depth: string;
+    };
+    transitionIn?: { type: string; duration: number; effect?: string };
+    transitionOut?: { type: string; duration: number; effect?: string };
+    motionIntensity: number;
+    visualComplexity: number;
+    visualScore: number;
+    engagementScore: number;
+    keyframes: Array<{
+      timestamp: number;
+      url: string;
+      description: string;
+    }>;
+  }>> {
+    console.log(`🎬 Starting technical scene analysis for ${sceneSegments.length} scenes`);
+    
+    const analyzedScenes = [];
+    
+    for (const scene of sceneSegments) {
+      if (scene.keyframes.length === 0) {
+        console.warn(`⚠️ Scene ${scene.id} has no keyframes, skipping`);
+        continue;
+      }
+
+      console.log(`🔍 Analyzing scene ${scene.id} (${scene.startSec.toFixed(2)}s-${scene.endSec.toFixed(2)}s) with ${scene.keyframes.length} keyframes`);
+      
+      try {
+        const sceneAnalysis = await this.performTechnicalSceneAnalysis(scene);
+        analyzedScenes.push(sceneAnalysis);
+        
+        console.log(`✅ Scene ${scene.id} analysis complete - ${sceneAnalysis.objects.length} objects, ${sceneAnalysis.text.length} text elements detected`);
+      } catch (error) {
+        console.error(`❌ Failed to analyze scene ${scene.id}:`, error);
+        
+        // Fallback analysis for failed scenes
+        analyzedScenes.push(this.createFallbackSceneAnalysis(scene));
+      }
+    }
+
+    console.log(`✅ Technical scene analysis complete: ${analyzedScenes.length} scenes processed`);
+    return analyzedScenes;
+  }
+
+  /**
+   * Perform detailed technical analysis for a single scene using multiple keyframes
+   */
+  private async performTechnicalSceneAnalysis(scene: {
+    id: number;
+    startSec: number;
+    endSec: number;
+    durationSec: number;
+    keyframes: Array<{
+      timestamp: number;
+      url: string;
+    }>;
+  }): Promise<any> {
+    try {
+      // Prepare image content for GPT-4o Vision
+      const imageContent = scene.keyframes.map((keyframe, index) => ({
+        type: 'image_url' as const,
+        image_url: {
+          url: keyframe.url,
+          detail: 'high' as const
+        }
+      }));
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        max_tokens: 2000,
+        temperature: 0.2, // Low temperature for consistent technical analysis
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: 'system',
+            content: `Você é um especialista em análise visual técnica, equivalente ao Google Vision API. Analise esta cena de vídeo publicitário com máxima precisão técnica.
+
+INSTRUÇÕES CRÍTICAS:
+- Analise TODAS as imagens em conjunto como uma única cena temporal
+- Forneça descrição técnica detalhada nível profissional
+- Identifique TODOS os objetos, pessoas, textos, cores com precisão
+- Analise composição cinematográfica, iluminação, movimento de câmera
+- Detecte transições e mudanças visuais entre frames
+- Retorne JSON estruturado válido com todos os campos obrigatórios
+
+CAMPOS OBRIGATÓRIOS NO JSON:
+{
+  "technicalDescription": "string - Descrição técnica completa da cena, detalhando composição, elementos visuais, iluminação, movimento, ação, produtos, pessoas, textos visíveis, cores dominantes e qualidade técnica",
+  "objects": [{"label": "string", "count": number, "confidence": number}],
+  "text": [{"content": "string", "position": "string", "fontSize": "string", "color": "string"}],
+  "peopleCount": number,
+  "dominantColors": ["#hex"],
+  "brandElements": ["string"],
+  "composition": {
+    "shotType": "close-up|medium|wide|extreme-wide",
+    "cameraMovement": "static|pan|tilt|zoom-in|zoom-out|dolly",
+    "cameraAngle": "eye-level|high-angle|low-angle|dutch-angle",
+    "lighting": "natural|artificial|mixed|dramatic|soft|harsh",
+    "depth": "shallow|deep|medium"
+  },
+  "transitionIn": {"type": "cut|fade|dissolve", "duration": number, "effect": "string"},
+  "transitionOut": {"type": "cut|fade|dissolve", "duration": number, "effect": "string"},
+  "motionIntensity": number,
+  "visualComplexity": number,
+  "visualScore": number,
+  "engagementScore": number
+}`
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Análise técnica da Cena ${scene.id}:
+Duração: ${scene.startSec.toFixed(2)}s a ${scene.endSec.toFixed(2)}s (${scene.durationSec.toFixed(2)}s total)
+Keyframes: ${scene.keyframes.length} imagens sequenciais
+
+Forneça análise técnica completa como alternativa ao Google Vision API:`
+              },
+              ...imageContent
+            ]
+          }
+        ]
+      });
+
+      const analysisText = completion.choices[0]?.message?.content;
+      if (!analysisText) {
+        throw new Error('Empty response from GPT-4o');
+      }
+
+      let analysisData;
+      try {
+        analysisData = JSON.parse(analysisText);
+      } catch (parseError) {
+        console.warn(`⚠️ Failed to parse JSON, using text analysis for scene ${scene.id}`);
+        throw new Error(`Invalid JSON response: ${parseError}`);
+      }
+
+      // Validate and structure the response
+      return {
+        id: scene.id,
+        startSec: scene.startSec,
+        endSec: scene.endSec,
+        durationSec: scene.durationSec,
+        technicalDescription: analysisData.technicalDescription || 'Análise técnica não disponível',
+        objects: Array.isArray(analysisData.objects) ? analysisData.objects : [],
+        text: Array.isArray(analysisData.text) ? analysisData.text : [],
+        peopleCount: typeof analysisData.peopleCount === 'number' ? analysisData.peopleCount : 0,
+        dominantColors: Array.isArray(analysisData.dominantColors) ? analysisData.dominantColors : [],
+        brandElements: Array.isArray(analysisData.brandElements) ? analysisData.brandElements : [],
+        composition: analysisData.composition || {
+          shotType: 'medium',
+          cameraMovement: 'static',
+          cameraAngle: 'eye-level',
+          lighting: 'natural',
+          depth: 'medium'
+        },
+        transitionIn: analysisData.transitionIn,
+        transitionOut: analysisData.transitionOut,
+        motionIntensity: typeof analysisData.motionIntensity === 'number' ? analysisData.motionIntensity : 5,
+        visualComplexity: typeof analysisData.visualComplexity === 'number' ? analysisData.visualComplexity : 5,
+        visualScore: typeof analysisData.visualScore === 'number' ? analysisData.visualScore : 7,
+        engagementScore: typeof analysisData.engagementScore === 'number' ? analysisData.engagementScore : 6,
+        keyframes: scene.keyframes.map(kf => ({
+          timestamp: kf.timestamp,
+          url: kf.url,
+          description: `Keyframe em ${kf.timestamp.toFixed(2)}s`
+        }))
+      };
+
+    } catch (error) {
+      console.error(`❌ Technical scene analysis failed for scene ${scene.id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create fallback analysis when GPT-4o analysis fails
+   */
+  private createFallbackSceneAnalysis(scene: {
+    id: number;
+    startSec: number;
+    endSec: number;
+    durationSec: number;
+    keyframes: Array<{ timestamp: number; url: string }>;
+  }): any {
+    return {
+      id: scene.id,
+      startSec: scene.startSec,
+      endSec: scene.endSec,
+      durationSec: scene.durationSec,
+      technicalDescription: `Cena ${scene.id} (${scene.startSec.toFixed(2)}s-${scene.endSec.toFixed(2)}s): Análise técnica não disponível devido a erro no processamento. Cena com duração de ${scene.durationSec.toFixed(2)} segundos contendo ${scene.keyframes.length} keyframes.`,
+      objects: [],
+      text: [],
+      peopleCount: 0,
+      dominantColors: [],
+      brandElements: [],
+      composition: {
+        shotType: 'medium',
+        cameraMovement: 'static',
+        cameraAngle: 'eye-level',
+        lighting: 'natural',
+        depth: 'medium'
+      },
+      motionIntensity: 3,
+      visualComplexity: 3,
+      visualScore: 3,
+      engagementScore: 3,
+      keyframes: scene.keyframes.map(kf => ({
+        timestamp: kf.timestamp,
+        url: kf.url,
+        description: `Keyframe em ${kf.timestamp.toFixed(2)}s (análise indisponível)`
+      }))
+    };
+  }
+
+  /**
+   * Calculate cost for scene-based analysis
+   */
+  calculateSceneAnalysisCost(sceneCount: number, avgKeyframesPerScene: number): number {
+    // More complex analysis with multiple images per scene
+    const avgTokensPerScene = 1200 + (avgKeyframesPerScene * 600); // Higher token usage for detailed analysis
+    const totalInputTokens = sceneCount * avgTokensPerScene;
+    const totalOutputTokens = sceneCount * 400; // More detailed output per scene
+    
+    const inputCost = (totalInputTokens / 1000) * this.modelPricing['gpt-4o'].input;
+    const outputCost = (totalOutputTokens / 1000) * this.modelPricing['gpt-4o'].output;
+    
+    return inputCost + outputCost;
+  }
+
   /**
    * Compare two sets of keyframes (for A/B testing)
    */

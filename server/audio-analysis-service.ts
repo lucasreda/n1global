@@ -230,6 +230,315 @@ Base sua análise na clareza da transcrição e completude do conteúdo.`
     }
   }
 
+  // ========================================
+  // SCENE-BASED AUDIO ALIGNMENT
+  // ========================================
+
+  /**
+   * Analyze audio with detailed timestamps for scene alignment
+   */
+  async analyzeAudioWithTimestamps(audioBuffer: Buffer): Promise<{
+    transcript: string;
+    duration: number;
+    words: Array<{
+      word: string;
+      start: number;
+      end: number;
+      confidence?: number;
+    }>;
+    segments: Array<{
+      text: string;
+      start: number;
+      end: number;
+      avgLogprob?: number;
+      noSpeechProb?: number;
+    }>;
+    processingTime: number;
+    cost: number;
+  }> {
+    const startTime = Date.now();
+    
+    try {
+      // Create File object for Whisper API - Node.js compatible
+      let audioFile: File;
+      try {
+        // Try Web File API (Node 18+)
+        audioFile = new File([audioBuffer], 'audio.mp3', { 
+          type: 'audio/mp3',
+          lastModified: Date.now()
+        });
+      } catch {
+        // Fallback for older Node.js versions
+        const Blob = require('buffer').Blob || global.Blob;
+        if (Blob) {
+          audioFile = new Blob([audioBuffer], { type: 'audio/mp3' }) as any;
+          (audioFile as any).name = 'audio.mp3';
+        } else {
+          // Last resort - create a minimal File-like object
+          audioFile = Object.assign(audioBuffer, {
+            name: 'audio.mp3',
+            type: 'audio/mp3',
+            size: audioBuffer.length,
+            lastModified: Date.now()
+          }) as any;
+        }
+      }
+      
+      // Use Whisper with detailed timestamp data
+      const transcriptionResponse = await this.openai.audio.transcriptions.create({
+        file: audioFile,
+        model: 'whisper-1',
+        language: 'pt',
+        response_format: 'verbose_json',
+        timestamp_granularities: ['word', 'segment']
+      });
+
+      const processingTime = Date.now() - startTime;
+      const cost = this.calculateCost(transcriptionResponse.duration || 0);
+
+      return {
+        transcript: transcriptionResponse.text,
+        duration: transcriptionResponse.duration || 0,
+        words: (transcriptionResponse as any).words || [],
+        segments: (transcriptionResponse as any).segments || [],
+        processingTime,
+        cost
+      };
+      
+    } catch (error) {
+      console.error('❌ Audio analysis with timestamps failed:', error);
+      throw new Error(`Audio analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Align transcript segments with scene timeline
+   */
+  alignTranscriptWithScenes(
+    transcriptData: {
+      transcript: string;
+      words: Array<{ word: string; start: number; end: number; confidence?: number }>;
+      segments: Array<{ text: string; start: number; end: number }>;
+    },
+    sceneSegments: Array<{
+      id: number;
+      startSec: number;
+      endSec: number;
+      durationSec: number;
+    }>
+  ): Array<{
+    sceneId: number;
+    startSec: number;
+    endSec: number;
+    audio: {
+      transcriptSnippet: string;
+      voicePresent: boolean;
+      voiceStyle?: string;
+      musicDetected: boolean;
+      musicType?: string;
+      soundEffects?: string[];
+      audioQuality: number;
+      volume: 'quiet' | 'normal' | 'loud';
+      ctas?: string[];
+    };
+    wordsInScene: Array<{ word: string; start: number; end: number; confidence?: number }>;
+    segmentsInScene: Array<{ text: string; start: number; end: number }>;
+  }> {
+    console.log(`🎵 Aligning transcript with ${sceneSegments.length} scenes`);
+    
+    const alignedScenes = sceneSegments.map(scene => {
+      // Find words that fall within this scene's time range
+      const wordsInScene = transcriptData.words.filter(word => 
+        word.start >= scene.startSec && word.end <= scene.endSec
+      );
+
+      // Find segments that overlap with this scene
+      const segmentsInScene = transcriptData.segments.filter(segment => 
+        this.hasTimeOverlap(segment, scene)
+      );
+
+      // Extract transcript snippet for this scene
+      const transcriptSnippet = segmentsInScene
+        .map(segment => segment.text.trim())
+        .join(' ')
+        .trim();
+
+      // Analyze audio characteristics for this scene
+      const audioAnalysis = this.analyzeSceneAudio(transcriptSnippet, wordsInScene, scene);
+
+      console.log(`🎵 Scene ${scene.id}: ${wordsInScene.length} words, ${segmentsInScene.length} segments`);
+
+      return {
+        sceneId: scene.id,
+        startSec: scene.startSec,
+        endSec: scene.endSec,
+        audio: audioAnalysis,
+        wordsInScene,
+        segmentsInScene
+      };
+    });
+
+    console.log(`✅ Audio alignment complete for all scenes`);
+    return alignedScenes;
+  }
+
+  /**
+   * Check if two time ranges overlap
+   */
+  private hasTimeOverlap(
+    segment: { start: number; end: number },
+    scene: { startSec: number; endSec: number }
+  ): boolean {
+    return segment.start < scene.endSec && segment.end > scene.startSec;
+  }
+
+  /**
+   * Analyze audio characteristics for a specific scene
+   */
+  private analyzeSceneAudio(
+    transcriptSnippet: string,
+    words: Array<{ word: string; start: number; end: number; confidence?: number }>,
+    scene: { startSec: number; endSec: number; durationSec: number }
+  ) {
+    const voicePresent = transcriptSnippet.length > 0;
+    
+    // Calculate speech rate (words per minute)
+    const speechRate = voicePresent ? (words.length / scene.durationSec) * 60 : 0;
+    
+    // Detect CTAs in transcript
+    const ctaKeywords = [
+      'compre', 'comprar', 'adquira', 'garanta', 'aproveite', 'clique', 'acesse',
+      'visite', 'ligue', 'contate', 'cadastre-se', 'inscreva-se', 'baixe',
+      'download', 'oferta', 'desconto', 'promoção', 'agora', 'hoje',
+      'últimos dias', 'por tempo limitado'
+    ];
+    
+    const ctas = ctaKeywords.filter(keyword => 
+      transcriptSnippet.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    // Analyze voice style based on transcript content
+    let voiceStyle: string | undefined;
+    if (voicePresent) {
+      if (transcriptSnippet.includes('!') || transcriptSnippet.includes('incrível')) {
+        voiceStyle = 'energetic';
+      } else if (transcriptSnippet.includes('profissional') || transcriptSnippet.includes('qualidade')) {
+        voiceStyle = 'professional';
+      } else if (transcriptSnippet.includes('você') || transcriptSnippet.includes('seu')) {
+        voiceStyle = 'casual';
+      } else {
+        voiceStyle = 'neutral';
+      }
+    }
+
+    // Estimate audio quality based on word confidence
+    const avgConfidence = words.length > 0 
+      ? words.reduce((sum, word) => sum + (word.confidence || 0.8), 0) / words.length
+      : 0.5;
+    const audioQuality = Math.round(avgConfidence * 10);
+
+    // Estimate volume based on speech density
+    let volume: 'quiet' | 'normal' | 'loud';
+    if (speechRate < 100) {
+      volume = 'quiet';
+    } else if (speechRate > 180) {
+      volume = 'loud';
+    } else {
+      volume = 'normal';
+    }
+
+    // Simple music detection (would need more advanced analysis in production)
+    const musicIndicators = ['música', 'instrumental', 'beat', 'som'];
+    const musicDetected = musicIndicators.some(indicator => 
+      transcriptSnippet.toLowerCase().includes(indicator)
+    );
+
+    return {
+      transcriptSnippet,
+      voicePresent,
+      voiceStyle,
+      musicDetected,
+      musicType: musicDetected ? 'instrumental' : undefined,
+      soundEffects: [], // Would need advanced audio analysis
+      audioQuality,
+      volume,
+      ctas: ctas.length > 0 ? ctas : undefined
+    };
+  }
+
+  /**
+   * Calculate audio-visual sync quality for scenes
+   */
+  calculateSyncQuality(
+    alignedScenes: Array<{
+      sceneId: number;
+      audio: { transcriptSnippet: string; voicePresent: boolean; ctas?: string[] };
+    }>,
+    visualScenes: Array<{
+      id: number;
+      text: Array<{ content: string }>;
+      objects: Array<{ label: string }>;
+      brandElements: string[];
+    }>
+  ): Array<{
+    sceneId: number;
+    syncQuality: number;
+    syncAnalysis: {
+      audioVisualMatch: number;
+      ctaTextAlignment: number;
+      brandMention: number;
+    };
+  }> {
+    return alignedScenes.map(audioScene => {
+      const visualScene = visualScenes.find(v => v.id === audioScene.sceneId);
+      
+      if (!visualScene) {
+        return {
+          sceneId: audioScene.sceneId,
+          syncQuality: 3,
+          syncAnalysis: {
+            audioVisualMatch: 3,
+            ctaTextAlignment: 3,
+            brandMention: 3
+          }
+        };
+      }
+
+      // Check if audio matches visual text
+      const visualTexts = visualScene.text.map(t => t.content.toLowerCase());
+      const audioText = audioScene.audio.transcriptSnippet.toLowerCase();
+      
+      let audioVisualMatch = 5; // Default neutral
+      for (const visualText of visualTexts) {
+        if (audioText.includes(visualText) || visualText.includes(audioText.substring(0, 20))) {
+          audioVisualMatch = Math.min(10, audioVisualMatch + 2);
+        }
+      }
+
+      // Check CTA alignment
+      const ctaTextAlignment = audioScene.audio.ctas && audioScene.audio.ctas.length > 0 
+        ? (visualTexts.some(vt => audioScene.audio.ctas!.some(cta => vt.includes(cta))) ? 9 : 6)
+        : 5;
+
+      // Check brand mention alignment
+      const brandMention = visualScene.brandElements.length > 0 && audioScene.audio.voicePresent
+        ? (visualScene.brandElements.some(brand => audioText.includes(brand.toLowerCase())) ? 8 : 4)
+        : 5;
+
+      const syncQuality = Math.round((audioVisualMatch + ctaTextAlignment + brandMention) / 3);
+
+      return {
+        sceneId: audioScene.sceneId,
+        syncQuality,
+        syncAnalysis: {
+          audioVisualMatch,
+          ctaTextAlignment,
+          brandMention
+        }
+      };
+    });
+  }
+
   /**
    * Validate if file is a valid audio/video format
    */

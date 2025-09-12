@@ -12,6 +12,7 @@ import { AudioAnalysisService } from './audio-analysis-service';
 import { KeyframeExtractionService } from './keyframe-extraction-service';
 import { VisualAnalysisService } from './visual-analysis-service';
 import { FusionAnalysisService } from './fusion-analysis-service';
+import { SceneSegmentationService } from './scene-segmentation-service';
 import { facebookAdsService } from './facebook-ads-service';
 
 // In-memory job store for real-time progress tracking
@@ -42,6 +43,7 @@ class CreativeAnalysisService {
   private keyframeExtractionService?: KeyframeExtractionService;
   private visualAnalysisService?: VisualAnalysisService;
   private fusionAnalysisService?: FusionAnalysisService;
+  private sceneSegmentationService?: SceneSegmentationService;
   
   // Pricing per 1K tokens (in USD)
   private modelPricing: Record<string, { input: number; output: number }> = {
@@ -68,6 +70,7 @@ class CreativeAnalysisService {
       this.keyframeExtractionService = new KeyframeExtractionService();
       this.visualAnalysisService = new VisualAnalysisService();
       this.fusionAnalysisService = new FusionAnalysisService();
+      this.sceneSegmentationService = new SceneSegmentationService();
       console.log('✅ Hybrid analysis services initialized successfully');
     } catch (error) {
       console.error('⚠️ Failed to initialize hybrid analysis services:', error);
@@ -336,15 +339,19 @@ class CreativeAnalysisService {
         return this.legacyAnalyzeCreative(creative, analysisType, model);
       }
       
-      // Step 1: Handle video creatives with complete audio + visual analysis
+      // Step 1: Handle video creatives with new scene-by-scene analysis
       if (creative.type === 'video' && creative.videoUrl) {
         try {
-          console.log(`🎥 Video creative detected, performing complete analysis...`);
+          console.log(`🎥 Video creative detected, performing scene-by-scene analysis...`);
+          
+          // Check if scene analysis services are available
+          if (!this.sceneSegmentationService) {
+            throw new Error('Scene segmentation service not available');
+          }
           
           // Step 1a: Resolve media URL for Facebook videos
           let resolvedVideoUrl = creative.videoUrl;
           if (creative.network === 'facebook') {
-            // Extract video ID from Facebook URL if it's a complete URL
             const videoId = creative.videoUrl.includes('facebook.com/video.php?v=') 
               ? creative.videoUrl.match(/v=([^&]+)/)?.[1] || creative.videoUrl
               : creative.videoUrl;
@@ -363,51 +370,70 @@ class CreativeAnalysisService {
             }
           }
           
-          // Step 1b: Extract and analyze audio
-          const audioBuffer = await this.audioAnalysisService.extractAudioFromVideo(resolvedVideoUrl);
-          
-          audioAnalysis = await this.audioAnalysisService.analyzeAudio(audioBuffer, {
-            detectMusic: true,
-            analyzeQuality: true,
-            detectCTAs: true
+          // Step 1b: Scene Segmentation - Detect scenes and extract keyframes per scene
+          console.log(`🎬 Starting scene segmentation...`);
+          const sceneSegments = await this.sceneSegmentationService.segmentScenes(resolvedVideoUrl, {
+            minSceneDuration: 2.0,
+            maxScenes: 15,
+            keyframesPerScene: 3,
+            enableTransitionDetection: true
           });
-          totalCost += audioAnalysis.cost;
-          console.log(`🔊 Audio analysis completed (cost: $${audioAnalysis.cost.toFixed(4)})`);
+          console.log(`✂️ Detected ${sceneSegments.length} scenes`);
           
-          // Step 1c: Extract keyframes
+          // Step 1c: Audio Analysis with timestamps
+          console.log(`🎵 Analyzing audio with timestamps...`);
+          const audioBuffer = await this.audioAnalysisService!.extractAudioFromVideo(resolvedVideoUrl);
+          const audioWithTimestamps = await this.audioAnalysisService!.analyzeAudioWithTimestamps(audioBuffer);
+          totalCost += audioWithTimestamps.cost;
           
-          keyframes = await this.keyframeExtractionService.extractKeyframes(resolvedVideoUrl, {
-            maxKeyframes: 7,
-            minInterval: 2,
-            includeMetadata: true
-          });
-          console.log(`🖼️ Extracted ${keyframes.length} keyframes`);
-          
-          // Step 1d: Analyze visuals
-          visualAnalysis = await this.visualAnalysisService.analyzeKeyframes(keyframes, {
-            includeProducts: true,
-            detectText: true,
-            analyzeComposition: true,
-            brandAnalysis: true
-          });
-          totalCost += visualAnalysis.cost;
-          console.log(`👁️ Visual analysis completed (cost: $${visualAnalysis.cost.toFixed(4)})`);
-          
-          // Step 1e: Fuse audio and visual insights
-          
-          fusedInsights = await this.fusionAnalysisService.fuseAnalyses(
-            audioAnalysis,
-            visualAnalysis,
-            {
-              type: 'video',
-              campaignGoal: 'performance',
-              targetAudience: 'general'
-            }
+          // Step 1d: Align audio with scene timeline
+          console.log(`🎵 Aligning audio with scene timeline...`);
+          const alignedAudioScenes = this.audioAnalysisService!.alignTranscriptWithScenes(
+            audioWithTimestamps,
+            sceneSegments
           );
-          console.log(`🧠 Fusion analysis completed`);
+          
+          // Step 1e: Technical visual analysis for each scene
+          console.log(`👁️ Performing technical scene analysis...`);
+          const analyzedVisualScenes = await this.visualAnalysisService!.analyzeScenes(sceneSegments);
+          const visualCost = this.visualAnalysisService!.calculateSceneAnalysisCost(
+            sceneSegments.length,
+            3 // average keyframes per scene
+          );
+          totalCost += visualCost;
+          
+          // Step 1f: Calculate audio-visual sync quality
+          console.log(`🔄 Calculating sync quality...`);
+          const syncQualityData = this.audioAnalysisService!.calculateSyncQuality(
+            alignedAudioScenes,
+            analyzedVisualScenes
+          );
+          
+          // Step 1g: Create structured scene timeline
+          console.log(`🔥 Creating structured scene timeline...`);
+          fusedInsights = await this.fusionAnalysisService!.createSceneTimeline(
+            analyzedVisualScenes,
+            alignedAudioScenes,
+            syncQualityData
+          );
+          totalCost += fusedInsights.totalCost;
+          
+          console.log(`✅ Scene-by-scene analysis completed! Overall score: ${fusedInsights.overallScore.toFixed(1)}/10`);
+          
+          // Update legacy variables for compatibility
+          audioAnalysis = {
+            transcript: audioWithTimestamps.transcript,
+            duration: audioWithTimestamps.duration,
+            cost: audioWithTimestamps.cost
+          };
+          
+          visualAnalysis = {
+            keyframes: fusedInsights.scenes.flatMap(scene => scene.keyframes),
+            cost: visualCost
+          };
           
         } catch (error) {
-          console.warn(`⚠️ Hybrid video analysis failed, falling back to legacy: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.warn(`⚠️ Scene-by-scene analysis failed, falling back to legacy: ${error instanceof Error ? error.message : 'Unknown error'}`);
           // Fallback to legacy analysis for videos
           return this.legacyAnalyzeCreative(creative, analysisType, model);
         }
