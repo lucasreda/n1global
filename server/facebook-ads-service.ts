@@ -854,6 +854,8 @@ export class FacebookAdsService {
    * Resolve Facebook video/image URLs to CDN URLs using Graph API
    */
   async resolveMediaUrl(mediaId: string, mediaType: 'video' | 'image', accountId: string): Promise<string | null> {
+    console.log(`🔍 DEBUG: Resolving ${mediaType} URL for mediaId: ${mediaId}, accountId: ${accountId}`);
+    
     try {
       // Import required modules
       const { db } = await import("./db");
@@ -861,42 +863,62 @@ export class FacebookAdsService {
       const { adAccounts } = await import("@shared/schema");
 
       // Get account from database
+      console.log(`🔍 DEBUG: Looking up account ${accountId} in database...`);
       const account = await db
         .select()
         .from(adAccounts)
         .where(eq(adAccounts.accountId, accountId))
         .limit(1);
 
-      if (account.length === 0 || !account[0].accessToken) {
-        console.warn(`No access token found for account ${accountId}`);
+      if (account.length === 0) {
+        console.warn(`❌ DEBUG: Account ${accountId} not found in database`);
         return null;
       }
 
+      if (!account[0].accessToken) {
+        console.warn(`❌ DEBUG: No access token found for account ${accountId}`);
+        return null;
+      }
+
+      console.log(`✅ DEBUG: Found account ${accountId} with access token`);
       const accessToken = account[0].accessToken;
 
       if (mediaType === 'video') {
         // Use Graph API to get video source URL
         const url = `${this.baseUrl}/${mediaId}?fields=source&access_token=${accessToken}`;
+        console.log(`🔍 DEBUG: Making video API call to: ${this.baseUrl}/${mediaId}?fields=source&access_token=***`);
         const response = await fetch(url);
         
+        console.log(`🔍 DEBUG: Video API response status: ${response.status} ${response.statusText}`);
         if (response.ok) {
           const data = await response.json() as { source?: string };
+          console.log(`✅ DEBUG: Video API response data:`, data);
           return data.source || null; // CDN URL without token
+        } else {
+          const errorText = await response.text();
+          console.warn(`❌ DEBUG: Video API failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
       } else if (mediaType === 'image') {
         // Use Graph API to get image URL
         const url = `${this.baseUrl}/${mediaId}/picture?redirect=0&access_token=${accessToken}`;
+        console.log(`🔍 DEBUG: Making image API call to: ${this.baseUrl}/${mediaId}/picture?redirect=0&access_token=***`);
         const response = await fetch(url);
         
+        console.log(`🔍 DEBUG: Image API response status: ${response.status} ${response.statusText}`);
         if (response.ok) {
           const data = await response.json() as { data?: { url?: string } };
+          console.log(`✅ DEBUG: Image API response data:`, data);
           return data.data?.url || null; // CDN URL without token
+        } else {
+          const errorText = await response.text();
+          console.warn(`❌ DEBUG: Image API failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
       }
 
+      console.log(`❌ DEBUG: No valid response received`);
       return null;
     } catch (error) {
-      console.warn(`Failed to resolve ${mediaType} URL for ${mediaId}:`, error);
+      console.error(`❌ DEBUG: Exception in resolveMediaUrl for ${mediaType} ${mediaId}:`, error);
       return null;
     }
   }
