@@ -693,7 +693,9 @@ class CreativeAnalysisService {
       if (audioAnalysis.musicDetected) {
         insights.push(`🎵 Música: ${audioAnalysis.musicType || 'Música de fundo detectada'}`);
       }
-      insights.push(...audioAnalysis.ctaAudio.map((cta: string) => `📢 CTA Áudio: ${cta}`));
+      if (audioAnalysis.ctaAudio && Array.isArray(audioAnalysis.ctaAudio)) {
+        insights.push(...audioAnalysis.ctaAudio.map((cta: string) => `📢 CTA Áudio: ${cta}`));
+      }
       scores.audio_quality = audioAnalysis.audioQuality;
     }
 
@@ -701,12 +703,12 @@ class CreativeAnalysisService {
     if (visualAnalysis) {
       if (visualAnalysis.keyframes) {
         insights.push(`👁️ Visual: ${visualAnalysis.keyframes.length} keyframes analisados`);
-        insights.push(`🏷️ Produtos: ${visualAnalysis.products.join(', ')}`);
-        insights.push(`📝 Textos: ${visualAnalysis.textOnScreen.join(', ')}`);
+        insights.push(`🏷️ Produtos: ${(visualAnalysis.products || []).join(', ')}`);
+        insights.push(`📝 Textos: ${(visualAnalysis.textOnScreen || []).join(', ')}`);
       } else {
         insights.push(`🖼️ Imagem: Qualidade visual ${visualAnalysis.visualQuality}/10`);
-        insights.push(`🏷️ Elementos: ${visualAnalysis.objects.join(', ')}`);
-        insights.push(`📝 Textos: ${visualAnalysis.text.join(', ')}`);
+        insights.push(`🏷️ Elementos: ${(visualAnalysis.objects || []).join(', ')}`);
+        insights.push(`📝 Textos: ${(visualAnalysis.text || []).join(', ')}`);
       }
       scores.visual_quality = visualAnalysis.visualQuality;
       scores.logo_visibility = visualAnalysis.logoVisibility;
@@ -717,8 +719,12 @@ class CreativeAnalysisService {
       insights.push(`🧠 Score Geral: ${fusedInsights.overallScore}/10`);
       insights.push(`🎯 Performance Prevista: CTR ${fusedInsights.predictedPerformance.ctr}%, CVR ${fusedInsights.predictedPerformance.cvr}%`);
       
-      recommendations.push(...fusedInsights.keyStrengths.map((strength: string) => `✅ ${strength}`));
-      recommendations.push(...fusedInsights.improvements.map((improvement: string) => `🔧 ${improvement}`));
+      if (fusedInsights.keyStrengths && Array.isArray(fusedInsights.keyStrengths)) {
+        recommendations.push(...fusedInsights.keyStrengths.map((strength: string) => `✅ ${strength}`));
+      }
+      if (fusedInsights.improvements && Array.isArray(fusedInsights.improvements)) {
+        recommendations.push(...fusedInsights.improvements.map((improvement: string) => `🔧 ${improvement}`));
+      }
       
       scores.overall_performance = fusedInsights.overallScore;
       scores.predicted_ctr = fusedInsights.predictedPerformance.ctr;
