@@ -204,7 +204,7 @@ export class SceneSegmentationService {
         .frames(1)
         .size('640x360') // Reasonable size for analysis
         .output(outputPath)
-        .on('end', resolve)
+        .on('end', () => resolve())
         .on('error', reject)
         .run();
     });

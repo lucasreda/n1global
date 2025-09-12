@@ -372,12 +372,7 @@ class CreativeAnalysisService {
           
           // Step 1b: Scene Segmentation - Detect scenes and extract keyframes per scene
           console.log(`🎬 Starting scene segmentation...`);
-          const sceneSegments = await this.sceneSegmentationService.segmentScenes(resolvedVideoUrl, {
-            minSceneDuration: 2.0,
-            maxScenes: 15,
-            keyframesPerScene: 3,
-            enableTransitionDetection: true
-          });
+          const sceneSegments = await this.sceneSegmentationService.segmentVideo(resolvedVideoUrl);
           console.log(`✂️ Detected ${sceneSegments.length} scenes`);
           
           // Step 1c: Audio Analysis with timestamps
