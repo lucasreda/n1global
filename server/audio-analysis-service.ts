@@ -347,9 +347,12 @@ Base sua análise na clareza da transcrição e completude do conteúdo.`
     console.log(`🎵 Aligning transcript with ${sceneSegments.length} scenes`);
     
     const alignedScenes = sceneSegments.map(scene => {
-      // Find words that fall within this scene's time range
+      // Find words that OVERLAP with this scene's time range (more inclusive)
       const wordsInScene = transcriptData.words.filter(word => 
-        word.start >= scene.startSec && word.end <= scene.endSec
+        this.hasTimeOverlap(
+          { start: word.start, end: word.end },
+          { startSec: scene.startSec, endSec: scene.endSec }
+        )
       );
 
       // Find segments that overlap with this scene
