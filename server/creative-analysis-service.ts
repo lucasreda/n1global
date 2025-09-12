@@ -752,7 +752,13 @@ class CreativeAnalysisService {
       ],
       timeline: fusedInsights?.timeline || [],
       fusionScore: fusedInsights?.overallScore || null,
-      analysisMethod: 'OpenAI Whisper + GPT-4o Vision + Fusion Intelligence'
+      analysisMethod: 'OpenAI Whisper + GPT-4o Vision + Fusion Intelligence',
+      // Add the structure that the frontend expects for Timeline Técnico
+      fusionAnalysis: {
+        scenes: fusedInsights?.timeline || [],
+        totalDuration: fusedInsights?.totalDuration || 0,
+        overallScore: fusedInsights?.overallScore || 0
+      }
     };
   }
 
