@@ -948,6 +948,8 @@ Provide specific KPI targets and optimization strategies.`
 
   // Get analyzed creatives
   async getAnalyzedCreatives(operationId: string): Promise<any[]> {
+    console.log(`🔍 DEBUG: getAnalyzedCreatives called with operationId: ${operationId}`);
+    
     const analyses = await db
       .select({
         analysis: creativeAnalyses,
@@ -960,6 +962,15 @@ Provide specific KPI targets and optimization strategies.`
         eq(creativeAnalyses.status, 'completed')
       ))
       .orderBy(creativeAnalyses.completedAt);
+    
+    console.log(`🔍 DEBUG: Found ${analyses.length} analyzed creatives`);
+    if (analyses.length > 0) {
+      console.log(`🔍 DEBUG: First result:`, {
+        creativeId: analyses[0].analysis.creativeId,
+        status: analyses[0].analysis.status,
+        completedAt: analyses[0].analysis.completedAt
+      });
+    }
     
     return analyses;
   }
