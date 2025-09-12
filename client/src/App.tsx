@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy } from "react";
 import { Switch, Route } from "wouter";
 import { LogOut, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
