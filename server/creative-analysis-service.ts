@@ -750,12 +750,12 @@ class CreativeAnalysisService {
         ...(visualAnalysis ? [`Melhorar impacto visual (atual: ${visualAnalysis.visualQuality}/10)`] : []),
         ...((fusedInsights?.audioVisualSync === 'poor') ? ['Melhorar sincronização áudio-visual'] : [])
       ],
-      timeline: fusedInsights?.timeline || [],
+      timeline: fusedInsights?.scenes || [],
       fusionScore: fusedInsights?.overallScore || null,
       analysisMethod: 'OpenAI Whisper + GPT-4o Vision + Fusion Intelligence',
       // Add the structure that the frontend expects for Timeline Técnico
       fusionAnalysis: {
-        scenes: fusedInsights?.timeline || [],
+        scenes: fusedInsights?.scenes || [],
         totalDuration: fusedInsights?.totalDuration || 0,
         overallScore: fusedInsights?.overallScore || 0
       }
