@@ -344,9 +344,14 @@ class CreativeAnalysisService {
           // Step 1a: Resolve media URL for Facebook videos
           let resolvedVideoUrl = creative.videoUrl;
           if (creative.network === 'facebook') {
-            console.log(`🔗 Resolving Facebook video URL for videoId: ${creative.videoUrl}`);
+            // Extract video ID from Facebook URL if it's a complete URL
+            const videoId = creative.videoUrl.includes('facebook.com/video.php?v=') 
+              ? creative.videoUrl.match(/v=([^&]+)/)?.[1] || creative.videoUrl
+              : creative.videoUrl;
+            
+            console.log(`🔗 Resolving Facebook video URL for videoId: ${videoId}`);
             const resolvedUrl = await facebookAdsService.resolveMediaUrl(
-              creative.videoUrl, 
+              videoId, 
               'video', 
               creative.accountId
             );
