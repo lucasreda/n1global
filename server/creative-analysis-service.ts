@@ -106,6 +106,29 @@ class CreativeAnalysisService {
     return stepMap[stepName] || 0;
   }
 
+  // Download video to temporary file
+  private async downloadVideoTemp(videoUrl: string): Promise<string> {
+    const response = await fetch(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to download video: ${response.status}`);
+    }
+    
+    const buffer = await response.arrayBuffer();
+    const tempPath = `/tmp/video_${Date.now()}.mp4`;
+    
+    // Import fs at runtime to avoid top-level dependency
+    const fs = await import('fs/promises');
+    await fs.writeFile(tempPath, Buffer.from(buffer));
+    
+    console.log(`✅ Video downloaded to: ${tempPath}`);
+    return tempPath;
+  }
+
   // Estimate cost for analysis
   async estimateCost(
     creativeCount: number,
@@ -377,7 +400,9 @@ class CreativeAnalysisService {
           
           // Step 1c: Audio Analysis with timestamps
           console.log(`🎵 Analyzing audio with timestamps...`);
-          const audioBuffer = await this.audioAnalysisService!.extractAudioFromVideo(resolvedVideoUrl);
+          // Download video and extract audio properly
+          const tempVideoPath = await this.downloadVideoTemp(resolvedVideoUrl);
+          const audioBuffer = await this.sceneSegmentationService.extractAudioFromVideo(tempVideoPath);
           const audioWithTimestamps = await this.audioAnalysisService!.analyzeAudioWithTimestamps(audioBuffer);
           totalCost += audioWithTimestamps.cost;
           

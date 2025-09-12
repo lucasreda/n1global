@@ -97,6 +97,38 @@ export class SceneSegmentationService {
   }
 
   /**
+   * Extract audio from video as WAV for Whisper compatibility
+   */
+  async extractAudioFromVideo(videoPath: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      console.log(`🎵 Extracting audio from: ${videoPath}`);
+      
+      const chunks: Buffer[] = [];
+      
+      // Extract as WAV with optimal settings for Whisper
+      ffmpeg(videoPath)
+        .noVideo()
+        .audioCodec('pcm_s16le')  // PCM 16-bit for WAV
+        .audioChannels(1)          // Mono for better transcription
+        .audioFrequency(16000)     // 16kHz as recommended by Whisper
+        .format('wav')             // WAV format for Whisper
+        .on('error', (err) => {
+          console.error('❌ Audio extraction error:', err);
+          reject(err);
+        })
+        .on('end', () => {
+          const audioBuffer = Buffer.concat(chunks);
+          console.log(`✅ Audio extracted as WAV: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+          resolve(audioBuffer);
+        })
+        .pipe()
+        .on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+    });
+  }
+
+  /**
    * Detect scene changes using ffmpeg scene filter
    */
   private async detectSceneChanges(videoPath: string, duration: number): Promise<number[]> {
@@ -117,9 +149,8 @@ export class SceneSegmentationService {
           const sceneMatch = stderrLine.match(/pts_time:([\d.]+)/);
           if (sceneMatch) {
             const timestamp = parseFloat(sceneMatch[1]);
-            if (timestamp > this.config.minSceneDuration) {
-              sceneTimestamps.push(timestamp);
-            }
+            // Collect ALL timestamps first, filter later for better partitioning
+            sceneTimestamps.push(timestamp);
           }
         })
         .on('end', () => {
@@ -245,25 +276,67 @@ export class SceneSegmentationService {
       // 3. Detect scene changes
       const sceneTimestamps = await this.detectSceneChanges(tempVideoPath, duration);
 
-      // 4. Create scene segments
-      const sceneSegments: SceneSegment[] = [];
+      // 4. Create scene segments with post-processing for gap-free partitioning
+      const rawSegments: SceneSegment[] = [];
+      
+      // First pass: create all segments
       for (let i = 0; i < sceneTimestamps.length - 1; i++) {
         const startSec = sceneTimestamps[i];
         const endSec = sceneTimestamps[i + 1];
         const durationSec = endSec - startSec;
 
-        // Skip very short scenes
-        if (durationSec < this.config.minSceneDuration) {
-          continue;
-        }
-
-        sceneSegments.push({
+        rawSegments.push({
           id: i + 1,
           startSec,
           endSec,
           durationSec,
           keyframes: []
         });
+      }
+      
+      // Second pass: merge short scenes with neighbors and ensure no gaps
+      const sceneSegments: SceneSegment[] = [];
+      let currentSegment: SceneSegment | null = null;
+      
+      for (const segment of rawSegments) {
+        if (segment.durationSec < this.config.minSceneDuration) {
+          // Merge with previous segment if exists
+          if (currentSegment) {
+            currentSegment.endSec = segment.endSec;
+            currentSegment.durationSec = currentSegment.endSec - currentSegment.startSec;
+          } else {
+            // Start new segment even if short (will merge with next)
+            currentSegment = { ...segment };
+          }
+        } else {
+          // Add previous segment if exists
+          if (currentSegment) {
+            sceneSegments.push(currentSegment);
+          }
+          // Start new segment
+          currentSegment = { ...segment };
+        }
+      }
+      
+      // Add last segment
+      if (currentSegment) {
+        sceneSegments.push(currentSegment);
+      }
+      
+      // Renumber segments and ensure perfect coverage
+      for (let i = 0; i < sceneSegments.length; i++) {
+        sceneSegments[i].id = i + 1;
+        // Ensure no gaps between segments
+        if (i > 0) {
+          sceneSegments[i].startSec = sceneSegments[i - 1].endSec;
+        }
+      }
+      
+      // Ensure last segment ends at video duration
+      if (sceneSegments.length > 0) {
+        sceneSegments[sceneSegments.length - 1].endSec = duration;
+        sceneSegments[sceneSegments.length - 1].durationSec = 
+          duration - sceneSegments[sceneSegments.length - 1].startSec;
       }
 
       console.log(`🎬 Created ${sceneSegments.length} scene segments`);

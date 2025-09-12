@@ -41,23 +41,32 @@ export class AudioAnalysisService {
     
     try {
       // Step 1: Transcription with Whisper
-      // Create a proper File object for OpenAI SDK
-      const audioFile = new File([audioBuffer], 'audio.mp3', { 
-        type: 'audio/mp3',
+      // Create a proper File object for OpenAI SDK with correct MIME type
+      const audioFile = new File([audioBuffer], 'audio.wav', { 
+        type: 'audio/wav',
         lastModified: Date.now()
       });
       
       const transcriptionResponse = await this.openai.audio.transcriptions.create({
         file: audioFile,
         model: 'whisper-1',
-        language: 'pt', // Portuguese
+        // Remove language to auto-detect the original language
         response_format: 'verbose_json',
         timestamp_granularities: ['word', 'segment']
       });
 
-      // Step 2: Extract basic audio metrics
+      // Step 2: Extract complete transcript with all timestamps
       const transcript = transcriptionResponse.text;
       const duration = transcriptionResponse.duration || 0;
+      const language = (transcriptionResponse as any).language || 'unknown';
+      const words = (transcriptionResponse as any).words || [];
+      const segments = (transcriptionResponse as any).segments || [];
+      
+      console.log(`🎵 Transcription complete:`);
+      console.log(`   Language detected: ${language}`);
+      console.log(`   Total words: ${words.length}`);
+      console.log(`   Total segments: ${segments.length}`);
+      console.log(`   Duration: ${duration}s`);
       
       // Step 3: Analyze transcript content for insights
       const contentAnalysis = await this.analyzeTranscriptContent(transcript);
@@ -262,36 +271,41 @@ Base sua análise na clareza da transcrição e completude do conteúdo.`
       // Create File object for Whisper API - Node.js compatible
       let audioFile: File;
       try {
-        // Try Web File API (Node 18+)
-        audioFile = new File([audioBuffer], 'audio.mp3', { 
-          type: 'audio/mp3',
+        // Try Web File API (Node 18+) with correct WAV format
+        audioFile = new File([audioBuffer], 'audio.wav', { 
+          type: 'audio/wav',
           lastModified: Date.now()
         });
       } catch {
-        // Fallback for older Node.js versions
+        // Fallback for older Node.js versions with correct WAV format
         const Blob = require('buffer').Blob || global.Blob;
         if (Blob) {
-          audioFile = new Blob([audioBuffer], { type: 'audio/mp3' }) as any;
-          (audioFile as any).name = 'audio.mp3';
+          audioFile = new Blob([audioBuffer], { type: 'audio/wav' }) as any;
+          (audioFile as any).name = 'audio.wav';
         } else {
           // Last resort - create a minimal File-like object
           audioFile = Object.assign(audioBuffer, {
-            name: 'audio.mp3',
-            type: 'audio/mp3',
+            name: 'audio.wav',
+            type: 'audio/wav',
             size: audioBuffer.length,
             lastModified: Date.now()
           }) as any;
         }
       }
       
-      // Use Whisper with detailed timestamp data
+      // Use Whisper with auto language detection for original language transcription
       const transcriptionResponse = await this.openai.audio.transcriptions.create({
         file: audioFile,
         model: 'whisper-1',
-        language: 'pt',
+        // No language specified - Whisper will auto-detect
         response_format: 'verbose_json',
         timestamp_granularities: ['word', 'segment']
       });
+      
+      const language = (transcriptionResponse as any).language || 'unknown';
+      console.log(`🎵 Detected language: ${language}`);
+      console.log(`🎵 Total words with timestamps: ${((transcriptionResponse as any).words || []).length}`);
+      console.log(`🎵 Total segments: ${((transcriptionResponse as any).segments || []).length}`);
 
       const processingTime = Date.now() - startTime;
       const cost = this.calculateCost(transcriptionResponse.duration || 0);
@@ -347,18 +361,18 @@ Base sua análise na clareza da transcrição e completude do conteúdo.`
     console.log(`🎵 Aligning transcript with ${sceneSegments.length} scenes`);
     
     const alignedScenes = sceneSegments.map(scene => {
-      // Find words that OVERLAP with this scene's time range (more inclusive)
-      const wordsInScene = transcriptData.words.filter(word => 
-        this.hasTimeOverlap(
-          { start: word.start, end: word.end },
-          { startSec: scene.startSec, endSec: scene.endSec }
-        )
-      );
+      // Find words that fall within this scene's time range (precise alignment)
+      const wordsInScene = transcriptData.words.filter(word => {
+        // Include word if its center point falls within the scene
+        const wordCenter = (word.start + word.end) / 2;
+        return wordCenter >= scene.startSec && wordCenter < scene.endSec;
+      });
 
-      // Find segments that overlap with this scene
-      const segmentsInScene = transcriptData.segments.filter(segment => 
-        this.hasTimeOverlap(segment, scene)
-      );
+      // Find segments that overlap with this scene  
+      const segmentsInScene = transcriptData.segments.filter(segment => {
+        // Include segment if it overlaps with the scene
+        return segment.start < scene.endSec && segment.end > scene.startSec;
+      });
 
       // Extract transcript snippet for this scene
       const transcriptSnippet = segmentsInScene
@@ -370,6 +384,12 @@ Base sua análise na clareza da transcrição e completude do conteúdo.`
       const audioAnalysis = this.analyzeSceneAudio(transcriptSnippet, wordsInScene, scene);
 
       console.log(`🎵 Scene ${scene.id}: ${wordsInScene.length} words, ${segmentsInScene.length} segments`);
+      
+      // Log first and last word timestamps for validation
+      if (wordsInScene.length > 0) {
+        console.log(`   First word: "${wordsInScene[0].word}" at ${wordsInScene[0].start.toFixed(2)}s`);
+        console.log(`   Last word: "${wordsInScene[wordsInScene.length - 1].word}" at ${wordsInScene[wordsInScene.length - 1].end.toFixed(2)}s`);
+      }
 
       return {
         sceneId: scene.id,
@@ -381,7 +401,18 @@ Base sua análise na clareza da transcrição e completude do conteúdo.`
       };
     });
 
+    // Validation: Check coverage and completeness
+    const totalWordsInScenes = alignedScenes.reduce((sum, scene) => sum + scene.wordsInScene.length, 0);
+    const coveragePercentage = (totalWordsInScenes / transcriptData.words.length) * 100;
+    
     console.log(`✅ Audio alignment complete for all scenes`);
+    console.log(`📊 Transcript coverage: ${totalWordsInScenes}/${transcriptData.words.length} words (${coveragePercentage.toFixed(1)}%)`);
+    
+    // Warn if coverage is less than 95%
+    if (coveragePercentage < 95) {
+      console.warn(`⚠️ Low transcript coverage: ${coveragePercentage.toFixed(1)}%. Some words may be missing between scenes.`);
+    }
+    
     return alignedScenes;
   }
 

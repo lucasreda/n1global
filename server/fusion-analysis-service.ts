@@ -523,10 +523,23 @@ CONTEXTO:
     
     console.log(`🔥 Creating structured scene timeline for ${visualScenes.length} scenes`);
 
-    // Merge visual and audio data per scene
+    // Merge visual and audio data per scene with complete transcript
     const fusedScenes = visualScenes.map(visualScene => {
       const audioScene = audioScenes.find(a => a.sceneId === visualScene.id);
       const syncData = syncQualityData.find(s => s.sceneId === visualScene.id);
+      
+      // Build complete transcript with timestamps for this scene
+      let completeTranscript = '';
+      let transcriptWithTimestamps: Array<{word: string; start: number; end: number}> = [];
+      
+      if (audioScene && (audioScene as any).wordsInScene) {
+        // Build word-by-word transcript with precise timestamps
+        transcriptWithTimestamps = (audioScene as any).wordsInScene;
+        completeTranscript = (audioScene as any).wordsInScene.map((w: any) => w.word).join(' ');
+      } else if (audioScene && (audioScene as any).segmentsInScene) {
+        // Fallback to segments if words not available
+        completeTranscript = (audioScene as any).segmentsInScene.map((s: any) => s.text).join(' ');
+      }
 
       return {
         id: visualScene.id,
@@ -544,8 +557,17 @@ CONTEXTO:
         transitionOut: visualScene.transitionOut,
         motionIntensity: visualScene.motionIntensity,
         visualComplexity: visualScene.visualComplexity,
-        audio: audioScene ? audioScene.audio : {
+        audio: audioScene ? {
+          ...audioScene.audio,
+          transcriptSnippet: completeTranscript,
+          transcriptWithTimestamps: transcriptWithTimestamps,
+          wordsInScene: (audioScene as any).wordsInScene || [],
+          segmentsInScene: (audioScene as any).segmentsInScene || []
+        } : {
           transcriptSnippet: '',
+          transcriptWithTimestamps: [],
+          wordsInScene: [],
+          segmentsInScene: [],
           voicePresent: false,
           musicDetected: false,
           audioQuality: 3,
