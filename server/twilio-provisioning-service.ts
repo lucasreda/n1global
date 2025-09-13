@@ -232,17 +232,6 @@ export class TwilioProvisioningService {
             operationId,
             isActive: false,
             twilioPhoneNumber: phoneNumber,
-            welcomeMessage: 'Olá! Como posso ajudá-lo hoje?',
-            operatingHours: {
-              monday: { enabled: true, start: '09:00', end: '18:00' },
-              tuesday: { enabled: true, start: '09:00', end: '18:00' },
-              wednesday: { enabled: true, start: '09:00', end: '18:00' },
-              thursday: { enabled: true, start: '09:00', end: '18:00' },
-              friday: { enabled: true, start: '09:00', end: '18:00' },
-              saturday: { enabled: false, start: '09:00', end: '18:00' },
-              sunday: { enabled: false, start: '09:00', end: '18:00' },
-              timezone: 'America/Sao_Paulo'
-            },
             outOfHoursMessage: 'Desculpe, nosso atendimento está fechado no momento.',
             outOfHoursAction: 'voicemail'
           });
