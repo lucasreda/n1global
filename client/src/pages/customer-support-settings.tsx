@@ -134,7 +134,7 @@ export default function CustomerSupportSettings() {
   }>>([]);
   const [customerInput, setCustomerInput] = useState("");
   const [isAiResponding, setIsAiResponding] = useState(false);
-  const [testPhoneNumber, setTestPhoneNumber] = useState("+55 11 99999-9999");
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
   const [callType, setCallType] = useState<'test' | 'sales'>('test');
 
   // Test call mutation
@@ -2665,12 +2665,12 @@ export default function CustomerSupportSettings() {
               <Input
                 value={testPhoneNumber}
                 onChange={(e) => setTestPhoneNumber(e.target.value)}
-                placeholder="+55 11 99999-9999"
+                placeholder="Ex: +55 11 99999-9999 ou +1 555 123-4567"
                 className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 text-lg"
                 data-testid="input-test-phone-number"
               />
               <p className="text-xs text-gray-400 mt-2">
-                Sofia fará uma ligação REAL para este número usando Twilio
+                ✅ Sofia fará uma ligação REAL usando nosso número Twilio (+16814916952)
               </p>
             </div>
 
@@ -2767,7 +2767,7 @@ export default function CustomerSupportSettings() {
                 setTestCallMessages([]);
                 setCustomerInput("");
                 setIsAiResponding(false);
-                setTestPhoneNumber("+55 11 99999-9999");
+                setTestPhoneNumber("");
               }}
               variant="outline"
               className="border-gray-600 text-gray-300 hover:bg-gray-700"
