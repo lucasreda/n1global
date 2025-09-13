@@ -207,7 +207,10 @@ export default function CustomerSupportSettings() {
   // Update local voice settings state when data from server changes
   useEffect(() => {
     if (voiceSettingsData) {
-      setVoiceSettings(voiceSettingsData);
+      setVoiceSettings({
+        ...voiceSettings,
+        ...voiceSettingsData
+      });
     }
   }, [voiceSettingsData]);
 
@@ -1488,7 +1491,7 @@ export default function CustomerSupportSettings() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {Object.entries(voiceSettings.operatingHours).map(([day, hours]) => {
-                  if (day === 'timezone') return null;
+                  if (day === 'timezone' || typeof hours === 'string') return null;
                   
                   const dayLabels = {
                     monday: 'Segunda-feira',
