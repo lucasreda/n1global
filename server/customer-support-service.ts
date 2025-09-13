@@ -75,7 +75,6 @@ export class CustomerSupportService {
   async saveVoiceSettings(operationId: string, settings: {
     isActive?: boolean;
     twilioPhoneNumber?: string;
-    welcomeMessage?: string;
     operatingHours?: {
       monday: { enabled: boolean; start: string; end: string };
       tuesday: { enabled: boolean; start: string; end: string };
@@ -86,8 +85,6 @@ export class CustomerSupportService {
       sunday: { enabled: boolean; start: string; end: string };
       timezone: string;
     };
-    allowedCallTypes?: string[];
-    voiceInstructions?: string;
     outOfHoursMessage?: string;
     outOfHoursAction?: string;
   }) {
@@ -108,7 +105,6 @@ export class CustomerSupportService {
           .set({ 
             isActive: settings.isActive !== undefined ? settings.isActive : false,
             twilioPhoneNumber: settings.twilioPhoneNumber || null,
-            welcomeMessage: settings.welcomeMessage || 'Olá! Como posso ajudá-lo hoje?',
             operatingHours: settings.operatingHours || {
               monday: { enabled: true, start: '09:00', end: '18:00' },
               tuesday: { enabled: true, start: '09:00', end: '18:00' },
@@ -119,8 +115,6 @@ export class CustomerSupportService {
               sunday: { enabled: false, start: '09:00', end: '18:00' },
               timezone: 'America/Sao_Paulo'
             },
-            allowedCallTypes: settings.allowedCallTypes || ['doubts', 'address_change', 'cancellation'],
-            voiceInstructions: settings.voiceInstructions || 'Você é Sofia, um assistente virtual empático da central de atendimento.',
             outOfHoursMessage: settings.outOfHoursMessage || 'Desculpe, nosso atendimento está fechado no momento.',
             outOfHoursAction: settings.outOfHoursAction || 'voicemail',
             updatedAt: new Date()
@@ -134,7 +128,6 @@ export class CustomerSupportService {
             operationId,
             isActive: settings.isActive !== undefined ? settings.isActive : false,
             twilioPhoneNumber: settings.twilioPhoneNumber || null,
-            welcomeMessage: settings.welcomeMessage || 'Olá! Como posso ajudá-lo hoje?',
             operatingHours: settings.operatingHours || {
               monday: { enabled: true, start: '09:00', end: '18:00' },
               tuesday: { enabled: true, start: '09:00', end: '18:00' },
@@ -145,8 +138,6 @@ export class CustomerSupportService {
               sunday: { enabled: false, start: '09:00', end: '18:00' },
               timezone: 'America/Sao_Paulo'
             },
-            allowedCallTypes: settings.allowedCallTypes || ['doubts', 'address_change', 'cancellation'],
-            voiceInstructions: settings.voiceInstructions || 'Você é Sofia, um assistente virtual empático da central de atendimento.',
             outOfHoursMessage: settings.outOfHoursMessage || 'Desculpe, nosso atendimento está fechado no momento.',
             outOfHoursAction: settings.outOfHoursAction || 'voicemail',
             createdAt: new Date(),
@@ -1151,6 +1142,39 @@ Sofia:`;
 
     } catch (error) {
       console.error('❌ Error making test call:', error);
+      
+      // Handle specific Twilio errors with detailed messages
+      if (error && typeof error === 'object' && 'code' in error) {
+        const twilioError = error as any;
+        switch (twilioError.code) {
+          case 10005:
+            throw new Error('Voice calling está desabilitado na sua conta Twilio. Acesse Console Twilio → Account → Settings → Voice → Geographic Permissions e habilite "Outbound Calls" para Brasil (+55).');
+          case 20003:
+            throw new Error('Credenciais Twilio inválidas. Verifique se TWILIO_ACCOUNT_SID e TWILIO_AUTH_TOKEN estão corretos nos Secrets.');
+          case 13224:
+            throw new Error(`Contas Trial não podem ligar para números não verificados. Adicione ${customerPhone} como número verificado no Console Twilio ou faça upgrade da conta.`);
+          case 21211:
+            throw new Error(`Número de destino inválido: ${customerPhone}. Use formato internacional com código do país (ex: +55 11 99999-9999).`);
+          case 21215:
+            throw new Error(`O número de destino ${customerPhone} não é válido ou não está verificado na sua conta Trial. Adicione o número como verificado no Console Twilio.`);
+          case 21217:
+            throw new Error(`Permissões geográficas não habilitadas para ${customerPhone}. Acesse Console → Voice → Geographic Permissions e habilite o país/região de destino.`);
+          case 21612:
+            throw new Error('Saldo insuficiente na conta Twilio. Adicione créditos ou faça upgrade da conta Trial.');
+          case 21606:
+            throw new Error('O número Twilio de origem não está configurado para voice calls. Verifique as configurações no Console.');
+          case 21218:
+            throw new Error('Sua conta Twilio não tem permissão para fazer chamadas para este destino. Verifique Geographic Permissions.');
+          case 21219:
+            throw new Error('Limite de chamadas por minuto excedido. Aguarde alguns minutos antes de tentar novamente.');
+          case 20429:
+            throw new Error('Muitas requisições simultâneas. Aguarde alguns segundos antes de tentar novamente.');
+          default:
+            const moreInfo = twilioError.moreInfo || `https://www.twilio.com/docs/errors/${twilioError.code}`;
+            throw new Error(`Erro Twilio (${twilioError.code}): ${twilioError.message}. Mais informações: ${moreInfo}`);
+        }
+      }
+      
       throw new Error(`Failed to make test call: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
