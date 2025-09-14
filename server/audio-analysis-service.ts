@@ -469,7 +469,10 @@ Base sua análise na clareza da transcrição e completude do conteúdo.`
     const avgConfidence = words.length > 0 
       ? words.reduce((sum, word) => sum + (word.confidence || 0.8), 0) / words.length
       : 0.5;
-    const audioQuality = Math.round(avgConfidence * 10);
+    
+    // Ensure minimum audio quality of 3 for detected speech, 1 for no speech
+    const baseQuality = words.length > 0 ? 3 : 1;
+    const audioQuality = Math.max(baseQuality, Math.round(avgConfidence * 10));
 
     // Estimate volume based on speech density
     let volume: 'quiet' | 'normal' | 'loud';
