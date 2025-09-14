@@ -2,8 +2,7 @@ import { db } from "./db";
 import * as schema from "@shared/schema";
 import { eq, and, or, ilike, desc, asc, count, sql } from "drizzle-orm";
 import { supportService } from "./support-service";
-import { twilioProvisioningService } from "./twilio-provisioning-service";
-import twilio from 'twilio';
+import { telnyxProvisioningService } from "./telnyx-provisioning-service";
 
 export class CustomerSupportService {
   private db = db;
@@ -41,7 +40,7 @@ export class CustomerSupportService {
         return {
           operationId,
           isActive: false,
-          twilioPhoneNumber: null,
+          telnyxPhoneNumber: null,
           welcomeMessage: 'Olá! Como posso ajudá-lo hoje?',
           operatingHours: {
             monday: { enabled: true, start: '09:00', end: '18:00' },
@@ -74,7 +73,7 @@ export class CustomerSupportService {
    */
   async saveVoiceSettings(operationId: string, settings: {
     isActive?: boolean;
-    twilioPhoneNumber?: string;
+    telnyxPhoneNumber?: string;
     operatingHours?: {
       monday: { enabled: boolean; start: string; end: string };
       tuesday: { enabled: boolean; start: string; end: string };
@@ -104,7 +103,7 @@ export class CustomerSupportService {
           .update(this.schema.voiceSettings)
           .set({ 
             isActive: settings.isActive !== undefined ? settings.isActive : false,
-            twilioPhoneNumber: settings.twilioPhoneNumber || null,
+            telnyxPhoneNumber: settings.telnyxPhoneNumber || null,
             operatingHours: settings.operatingHours || {
               monday: { enabled: true, start: '09:00', end: '18:00' },
               tuesday: { enabled: true, start: '09:00', end: '18:00' },
@@ -127,7 +126,7 @@ export class CustomerSupportService {
           .values({
             operationId,
             isActive: settings.isActive !== undefined ? settings.isActive : false,
-            twilioPhoneNumber: settings.twilioPhoneNumber || null,
+            telnyxPhoneNumber: settings.telnyxPhoneNumber || null,
             operatingHours: settings.operatingHours || {
               monday: { enabled: true, start: '09:00', end: '18:00' },
               tuesday: { enabled: true, start: '09:00', end: '18:00' },
@@ -153,11 +152,11 @@ export class CustomerSupportService {
   }
 
   /**
-   * Provision a Twilio phone number for an operation
+   * Provision a Telnyx phone number for an operation
    */
-  async provisionTwilioNumber(operationId: string): Promise<string> {
+  async provisionTelnyxNumber(operationId: string): Promise<string> {
     try {
-      console.log(`📞 Provisioning Twilio number for operation ${operationId}...`);
+      console.log(`📞 Provisioning Telnyx number for operation ${operationId}...`);
       
       // Check if a number is already provisioned
       const [existingSettings] = await this.db
@@ -166,50 +165,50 @@ export class CustomerSupportService {
         .where(eq(this.schema.voiceSettings.operationId, operationId))
         .limit(1);
 
-      if (existingSettings?.twilioPhoneNumber) {
-        console.log(`ℹ️ Operation ${operationId} already has provisioned number: ${existingSettings.twilioPhoneNumber}`);
-        return existingSettings.twilioPhoneNumber;
+      if (existingSettings?.telnyxPhoneNumber) {
+        console.log(`ℹ️ Operation ${operationId} already has provisioned number: ${existingSettings.telnyxPhoneNumber}`);
+        return existingSettings.telnyxPhoneNumber;
       }
 
-      // Provision new number via Twilio API
-      const phoneNumber = await twilioProvisioningService.provisionPhoneNumber(operationId);
+      // Provision new number via Telnyx API
+      const phoneNumber = await telnyxProvisioningService.provisionPhoneNumber(operationId);
       
       console.log(`✅ Successfully provisioned number ${phoneNumber} for operation ${operationId}`);
       return phoneNumber;
     } catch (error) {
-      console.error('Error provisioning Twilio number:', error);
+      console.error('Error provisioning Telnyx number:', error);
       throw error;
     }
   }
 
   /**
-   * Release a Twilio phone number for an operation
+   * Release a Telnyx phone number for an operation
    */
-  async releaseTwilioNumber(operationId: string): Promise<void> {
+  async releaseTelnyxNumber(operationId: string): Promise<void> {
     try {
-      console.log(`🗑️ Releasing Twilio number for operation ${operationId}...`);
+      console.log(`🗑️ Releasing Telnyx number for operation ${operationId}...`);
       
-      await twilioProvisioningService.releasePhoneNumber(operationId);
+      await telnyxProvisioningService.releasePhoneNumber(operationId);
       
-      console.log(`✅ Successfully released Twilio number for operation ${operationId}`);
+      console.log(`✅ Successfully released Telnyx number for operation ${operationId}`);
     } catch (error) {
-      console.error('Error releasing Twilio number:', error);
+      console.error('Error releasing Telnyx number:', error);
       throw error;
     }
   }
 
   /**
-   * Update Twilio phone number webhook configuration
+   * Update Telnyx phone number webhook configuration
    */
-  async updateTwilioWebhook(operationId: string): Promise<void> {
+  async updateTelnyxWebhook(operationId: string): Promise<void> {
     try {
-      console.log(`🔧 Updating Twilio webhook for operation ${operationId}...`);
+      console.log(`🔧 Updating Telnyx webhook for operation ${operationId}...`);
       
-      await twilioProvisioningService.updatePhoneNumberConfig(operationId);
+      await telnyxProvisioningService.updatePhoneNumberConfig(operationId);
       
-      console.log(`✅ Successfully updated Twilio webhook for operation ${operationId}`);
+      console.log(`✅ Successfully updated Telnyx webhook for operation ${operationId}`);
     } catch (error) {
-      console.error('Error updating Twilio webhook:', error);
+      console.error('Error updating Telnyx webhook:', error);
       throw error;
     }
   }

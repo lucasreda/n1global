@@ -22,16 +22,18 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-interface TwilioCallWebhookData {
-  AccountSid: string;
-  CallSid: string;
-  From: string;
-  To: string;
-  Direction: string;
-  CallStatus: string;
-  Duration?: string;
-  StartTime?: string;
-  EndTime?: string;
+interface TelnyxCallWebhookData {
+  call_control_id: string;
+  call_leg_id: string;
+  from: string;
+  to: string;
+  direction: string;
+  state: string;
+  duration?: string;
+  start_time?: string;
+  end_time?: string;
+  event_type: string;
+  occurred_at: string;
 }
 
 export class VoiceService {
@@ -140,15 +142,15 @@ export class VoiceService {
   }
 
   /**
-   * Handle incoming call from Twilio
+   * Handle incoming call from Telnyx
    */
-  async handleIncomingCall(callData: TwilioCallWebhookData): Promise<string> {
+  async handleIncomingCall(callData: TelnyxCallWebhookData): Promise<any> {
     try {
       // Extract operation from phone number (will need routing logic)
-      const operationId = await this.getOperationFromPhoneNumber(callData.To);
+      const operationId = await this.getOperationFromPhoneNumber(callData.to);
       
       if (!operationId) {
-        return this.generateHangupTwiML('Número não encontrado');
+        return this.generateHangupCommand('Número não encontrado');
       }
 
       const availability = await this.isVoiceServiceAvailable(operationId);
@@ -160,43 +162,43 @@ export class VoiceService {
       // Create call record
       const callRecord: InsertVoiceCall = {
         operationId,
-        twilioCallSid: callData.CallSid,
-        twilioAccountSid: callData.AccountSid,
-        direction: callData.Direction.toLowerCase() as 'inbound' | 'outbound',
-        fromNumber: callData.From,
-        toNumber: callData.To,
-        status: callData.CallStatus.toLowerCase(),
-        customerPhone: this.normalizePhoneNumber(callData.From),
-        startTime: callData.StartTime ? new Date(callData.StartTime) : new Date(),
+        telnyxCallControlId: callData.call_control_id,
+        telnyxCallLegId: callData.call_leg_id,
+        direction: callData.direction.toLowerCase() as 'inbound' | 'outbound',
+        fromNumber: callData.from,
+        toNumber: callData.to,
+        status: callData.state.toLowerCase(),
+        customerPhone: this.normalizePhoneNumber(callData.from),
+        startTime: callData.start_time ? new Date(callData.start_time) : new Date(),
       };
 
       await db.insert(voiceCalls).values(callRecord);
 
-      // Generate TwiML to connect to media stream
-      return this.generateMediaStreamTwiML(callData.CallSid);
+      // Generate Telnyx commands to answer and start media stream
+      return this.generateAnswerAndStreamCommands(callData.call_control_id);
       
     } catch (error) {
       console.error('Error handling incoming call:', error);
-      return this.generateHangupTwiML('Erro interno do servidor');
+      return this.generateHangupCommand('Erro interno do servidor');
     }
   }
 
   /**
-   * Handle call status updates from Twilio
+   * Handle call status updates from Telnyx
    */
-  async handleCallStatusUpdate(callData: TwilioCallWebhookData): Promise<void> {
+  async handleCallStatusUpdate(callData: TelnyxCallWebhookData): Promise<void> {
     try {
       await db
         .update(voiceCalls)
         .set({
-          status: callData.CallStatus.toLowerCase(),
-          duration: callData.Duration ? parseInt(callData.Duration) : null,
-          endTime: callData.EndTime ? new Date(callData.EndTime) : null,
+          status: callData.state.toLowerCase(),
+          duration: callData.duration ? parseInt(callData.duration) : null,
+          endTime: callData.end_time ? new Date(callData.end_time) : null,
           updatedAt: new Date(),
         })
-        .where(eq(voiceCalls.twilioCallSid, callData.CallSid));
+        .where(eq(voiceCalls.telnyxCallControlId, callData.call_control_id));
 
-      console.log(`📞 Call ${callData.CallSid} status updated to ${callData.CallStatus}`);
+      console.log(`📞 Call ${callData.call_control_id} status updated to ${callData.state}`);
     } catch (error) {
       console.error('Error updating call status:', error);
     }
@@ -220,7 +222,7 @@ export class VoiceService {
       const [call] = await db
         .select()
         .from(voiceCalls)
-        .where(eq(voiceCalls.twilioCallSid, callSid))
+        .where(eq(voiceCalls.telnyxCallControlId, callSid))
         .limit(1);
 
       if (!call) {
@@ -311,7 +313,7 @@ export class VoiceService {
       const [call] = await db
         .select()
         .from(voiceCalls)
-        .where(eq(voiceCalls.twilioCallSid, callSid))
+        .where(eq(voiceCalls.telnyxCallControlId, callSid))
         .limit(1);
 
       if (!call) {
@@ -347,7 +349,7 @@ export class VoiceService {
         .insert(customerSupportEmails)
         .values({
           operationId: call.operationId,
-          messageId: `voice-${call.twilioCallSid}`,
+          messageId: `voice-${call.telnyxCallControlId}`,
           fromEmail: call.customerEmail || `${call.customerPhone}@voice.local`,
           toEmail: 'suporte@voice.local',
           subject: `Chamada de voz - ${call.detectedIntent || 'Atendimento geral'}`,
@@ -718,11 +720,11 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     const action = settings?.outOfHoursAction || 'voicemail';
     
     if (action === 'hangup') {
-      return this.generateHangupTwiML(message);
+      return this.generateHangupCommand(message);
     }
     
-    // Default to voicemail
-    return this.generateVoicemailTwiML(message);
+    // Default to hangup (Telnyx doesn't support voicemail in the same way)
+    return this.generateHangupCommand(message);
   }
 
   /**
@@ -747,40 +749,32 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Generate TwiML for media stream connection
+   * Generate Telnyx commands to answer call and start media stream
    */
-  private generateMediaStreamTwiML(callSid: string): string {
-    // Validate public URL configuration BEFORE generating stream URL
-    const urlValidation = this.validatePublicUrlForMediaStream();
-    if (!urlValidation.isValid) {
-      // If URL is invalid, fall back to a hangup with error message
-      console.error(`❌ Media stream failed: ${urlValidation.error}`);
-      return this.generateHangupTwiML('Desculpe, estamos com problemas técnicos no momento. Tente novamente mais tarde.');
+  private async generateAnswerAndStreamCommands(callControlId: string): Promise<any> {
+    try {
+      // For Telnyx, we need to return commands to answer and potentially speak
+      return {
+        command: 'answer',
+        call_control_id: callControlId,
+        client_state: 'call_answered',
+        webhook_url: `https://${process.env.REPLIT_DOMAIN || 'localhost:5000'}/api/voice/telnyx-call-status`
+      };
+    } catch (error) {
+      console.error('Error generating answer command:', error);
+      return this.generateHangupCommand('Desculpe, estamos com problemas técnicos no momento. Tente novamente mais tarde.');
     }
-
-    const domain = urlValidation.domain!;
-    const protocol = 'wss'; // Always use secure WebSocket for production
-    
-    console.log(`✅ Using validated media stream URL: ${protocol}://${domain}/api/voice/media-stream/${callSid}`);
-    
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="Polly.Camila-Neural" language="pt-BR">Olá! Sou a Sofia, sua assistente virtual. Como posso ajudá-lo hoje?</Say>
-    <Connect>
-        <Stream url="${protocol}://${domain}/api/voice/media-stream/${callSid}" />
-    </Connect>
-</Response>`;
   }
 
   /**
-   * Generate TwiML for hangup
+   * Generate Telnyx command for hangup
    */
-  private generateHangupTwiML(message: string): string {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="Polly.Camila-Neural" language="pt-BR">${message}</Say>
-    <Hangup />
-</Response>`;
+  private generateHangupCommand(message: string): any {
+    return {
+      command: 'hangup',
+      client_state: 'call_ending',
+      cause: 'normal_clearing'
+    };
   }
 
   /**

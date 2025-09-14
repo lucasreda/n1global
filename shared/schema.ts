@@ -1977,7 +1977,7 @@ export const voiceSettings = pgTable("voice_settings", {
   
   // Basic settings
   isActive: boolean("is_active").notNull().default(false),
-  twilioPhoneNumber: text("twilio_phone_number"), // Associated Twilio phone number
+  telnyxPhoneNumber: text("telnyx_phone_number"), // Associated Telnyx phone number
   
   // Operating hours
   operatingHours: jsonb("operating_hours").$type<{
@@ -2021,9 +2021,9 @@ export const voiceCalls = pgTable("voice_calls", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   operationId: varchar("operation_id").notNull().references(() => operations.id),
   
-  // Twilio call data
-  twilioCallSid: text("twilio_call_sid").notNull().unique(),
-  twilioAccountSid: text("twilio_account_sid"),
+  // Telnyx call data
+  telnyxCallControlId: text("telnyx_call_control_id").notNull().unique(),
+  telnyxCallLegId: text("telnyx_call_leg_id"),
   
   // Call details
   direction: text("direction").notNull(), // 'inbound', 'outbound'
@@ -2052,12 +2052,12 @@ export const voiceCalls = pgTable("voice_calls", {
   categoryId: varchar("category_id").references(() => supportCategories.id), // Categorized call
   
   // Call recording and transcription
-  recordingUrl: text("recording_url"), // Twilio recording URL
+  recordingUrl: text("recording_url"), // Telnyx recording URL
   transcription: text("transcription"), // Full call transcription
   
   // Metadata
   userAgent: text("user_agent"),
-  metadata: jsonb("metadata"), // Additional call data from Twilio
+  metadata: jsonb("metadata"), // Additional call data from Telnyx
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

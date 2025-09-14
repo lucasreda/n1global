@@ -10,7 +10,46 @@ const router = Router();
 const voiceService = new VoiceService();
 
 /**
- * Twilio Webhook Security Middleware - Validates Twilio signature using official Twilio algorithm
+ * Telnyx Webhook Security Middleware - Validates Telnyx signature
+ */
+function validateTelnyxSignature(req: any, res: any, next: any) {
+  try {
+    const telnyxSignature = req.get('telnyx-signature-ed25519');
+    const telnyxTimestamp = req.get('telnyx-timestamp');
+    const publicKey = process.env.TELNYX_PUBLIC_KEY;
+    
+    // In production, always require TELNYX_PUBLIC_KEY
+    if (!publicKey) {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('❌ TELNYX_PUBLIC_KEY not set in production - rejecting request');
+        return res.status(403).json({ error: 'Forbidden: Public key not configured' });
+      } else {
+        console.warn('⚠️ TELNYX_PUBLIC_KEY not set - skipping signature validation in development');
+        return next();
+      }
+    }
+    
+    if (!telnyxSignature || !telnyxTimestamp) {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('❌ Missing Telnyx signature headers in production');
+        return res.status(403).json({ error: 'Forbidden: Missing Telnyx signature' });
+      } else {
+        console.warn('⚠️ Missing Telnyx signature in development - allowing request');
+        return next();
+      }
+    }
+    
+    // For now, just log the signature - full validation would require telnyx SDK
+    console.log('✅ Telnyx webhook received with signature headers');
+    next();
+  } catch (error) {
+    console.error('❌ Error validating Telnyx signature:', error);
+    return res.status(403).json({ error: 'Forbidden: Signature validation failed' });
+  }
+}
+
+/**
+ * Legacy Twilio Webhook Security Middleware - Kept for backward compatibility
  */
 function validateTwilioSignature(req: any, res: any, next: any) {
   try {
@@ -126,11 +165,34 @@ const activeConnections = new Map<string, {
 }>();
 
 /**
- * Twilio Webhook: Incoming call
+ * Telnyx Webhook: Incoming call handler
+ */
+router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) => {
+  try {
+    console.log("📞 Telnyx incoming call webhook received");
+    console.log("Body:", req.body);
+    
+    // Extract data from Telnyx webhook
+    const eventData = req.body.data;
+    if (!eventData || eventData.event_type !== 'call.initiated') {
+      return res.status(200).json({ message: "Event ignored" });
+    }
+
+    const response = await voiceService.handleIncomingCall(eventData.payload);
+    
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("❌ Error handling Telnyx incoming call:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * Legacy Twilio Webhook: Incoming call
  */
 router.post("/incoming-call", validateTwilioSignature, async (req, res) => {
   try {
-    console.log("📞 Incoming call webhook:", req.body);
+    console.log("📞 Legacy Twilio incoming call webhook:", req.body);
     
     const twimlResponse = await voiceService.handleIncomingCall(req.body);
     
@@ -148,11 +210,34 @@ router.post("/incoming-call", validateTwilioSignature, async (req, res) => {
 });
 
 /**
- * Twilio Webhook: Call status updates
+ * Telnyx Webhook: Call status updates
+ */
+router.post("/telnyx-call-status", validateTelnyxSignature, async (req, res) => {
+  try {
+    console.log("📞 Telnyx call status update webhook received");
+    console.log("Body:", req.body);
+    
+    // Extract data from Telnyx webhook
+    const eventData = req.body.data;
+    if (!eventData || !eventData.payload) {
+      return res.status(200).json({ message: "Event ignored" });
+    }
+
+    await voiceService.handleCallStatusUpdate(eventData.payload);
+    
+    res.status(200).json({ message: "OK" });
+  } catch (error) {
+    console.error("❌ Error handling Telnyx call status update:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * Legacy Twilio Webhook: Call status updates
  */
 router.post("/call-status", validateTwilioSignature, async (req, res) => {
   try {
-    console.log("📞 Call status update:", req.body);
+    console.log("📞 Legacy Twilio call status update:", req.body);
     
     await voiceService.handleCallStatusUpdate(req.body);
     

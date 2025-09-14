@@ -108,7 +108,7 @@ export default function CustomerSupportSettings() {
   // Voice settings states
   const [voiceSettings, setVoiceSettings] = useState({
     isActive: false,
-    twilioPhoneNumber: '',
+    telnyxPhoneNumber: '',
     operatingHours: {
       monday: { enabled: true, start: '09:00', end: '18:00' },
       tuesday: { enabled: true, start: '09:00', end: '18:00' },
@@ -159,7 +159,7 @@ export default function CustomerSupportSettings() {
       console.error('Test call error:', error);
       toast({
         title: "Erro na Ligação",
-        description: "Não foi possível iniciar a ligação. Verifique se o número Twilio está configurado.",
+        description: "Não foi possível iniciar a ligação. Verifique se o número Telnyx está configurado.",
         variant: "destructive"
       });
       setIsAiResponding(false);
@@ -659,7 +659,7 @@ export default function CustomerSupportSettings() {
         title: "Número provisionado",
         description: `Número ${data.phoneNumber} foi provisionado com sucesso!`,
       });
-      setVoiceSettings(prev => ({ ...prev, twilioPhoneNumber: data.phoneNumber }));
+      setVoiceSettings(prev => ({ ...prev, telnyxPhoneNumber: data.phoneNumber }));
       queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/voice-settings`] });
     },
     onError: (error: any) => {
@@ -669,7 +669,7 @@ export default function CustomerSupportSettings() {
       if (error.response?.data?.trialLimitation) {
         toast({
           title: "Limitação da Conta Trial",
-          description: error.response.data.error || "Conta Twilio trial permite apenas um número. É necessário fazer upgrade para um plano pago.",
+          description: error.response.data.error || "Limite da conta Telnyx atingido. Verifique seu plano e limite de números.",
           variant: "destructive",
         });
         return;
@@ -686,7 +686,7 @@ export default function CustomerSupportSettings() {
 
       toast({
         title: "Erro ao provisionar",
-        description: error.response?.data?.error || "Falha ao provisionar número Twilio.",
+        description: error.response?.data?.error || "Falha ao provisionar número Telnyx.",
         variant: "destructive",
       });
     }
@@ -700,15 +700,15 @@ export default function CustomerSupportSettings() {
     onSuccess: () => {
       toast({
         title: "Número liberado",
-        description: "Número Twilio foi liberado com sucesso!",
+        description: "Número Telnyx foi liberado com sucesso!",
       });
-      setVoiceSettings(prev => ({ ...prev, twilioPhoneNumber: '' }));
+      setVoiceSettings(prev => ({ ...prev, telnyxPhoneNumber: '' }));
       queryClient.invalidateQueries({ queryKey: [`/api/customer-support/${currentOperationId}/voice-settings`] });
     },
     onError: (error) => {
       toast({
         title: "Erro ao liberar",
-        description: "Falha ao liberar número Twilio.",
+        description: "Falha ao liberar número Telnyx.",
         variant: "destructive",
       });
       console.error('Error releasing number:', error);
@@ -1400,12 +1400,12 @@ export default function CustomerSupportSettings() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-white">Número Twilio</Label>
-                  {voiceSettings.twilioPhoneNumber ? (
+                  <Label className="text-sm font-medium text-white">Número Telnyx</Label>
+                  {voiceSettings.telnyxPhoneNumber ? (
                     <div className="bg-white/5 border border-white/10 rounded-md p-3 flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Phone className="w-4 h-4 text-green-400" />
-                        <span className="text-white font-mono">{voiceSettings.twilioPhoneNumber}</span>
+                        <span className="text-white font-mono">{voiceSettings.telnyxPhoneNumber}</span>
                         <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Provisionado</Badge>
                       </div>
                       <Button
@@ -1437,7 +1437,7 @@ export default function CustomerSupportSettings() {
                     </div>
                   )}
                   <p className="text-sm text-gray-400">
-                    O número é provisionado automaticamente via API Twilio e configurado para esta operação.
+                    O número é provisionado automaticamente via API Telnyx e configurado para esta operação.
                   </p>
                 </div>
 
@@ -1451,7 +1451,7 @@ export default function CustomerSupportSettings() {
                       </div>
                       <Button
                         onClick={() => setIsTestCallModalOpen(true)}
-                        disabled={!voiceSettings.isActive || !voiceSettings.twilioPhoneNumber}
+                        disabled={!voiceSettings.isActive || !voiceSettings.telnyxPhoneNumber}
                         className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
                         size="sm"
                         data-testid="button-test-call"
@@ -1459,7 +1459,7 @@ export default function CustomerSupportSettings() {
                         🎯 Fazer Ligação Teste
                       </Button>
                     </div>
-                    {(!voiceSettings.isActive || !voiceSettings.twilioPhoneNumber) && (
+                    {(!voiceSettings.isActive || !voiceSettings.telnyxPhoneNumber) && (
                       <p className="text-xs text-amber-400">
                         ⚠️ Ative o serviço de voz e provisione um número para testar
                       </p>
@@ -2652,7 +2652,7 @@ export default function CustomerSupportSettings() {
               Ligação Real - Sofia IA
             </DialogTitle>
             <DialogDescription className="text-gray-300">
-              Faça uma ligação real usando Twilio com base nas suas diretivas de IA
+              Faça uma ligação real usando Telnyx com base nas suas diretivas de IA
             </DialogDescription>
           </DialogHeader>
 
@@ -2670,7 +2670,7 @@ export default function CustomerSupportSettings() {
                 data-testid="input-test-phone-number"
               />
               <p className="text-xs text-gray-400 mt-2">
-                ✅ Sofia fará uma ligação REAL usando nosso número Twilio (+16814916952)
+                ✅ Sofia fará uma ligação REAL usando nosso número Telnyx
               </p>
             </div>
 
