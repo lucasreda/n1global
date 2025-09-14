@@ -1026,16 +1026,55 @@ Provide specific KPI targets and optimization strategies.`
       ))
       .orderBy(creativeAnalyses.completedAt);
     
-    console.log(`🔍 DEBUG: Found ${analyses.length} analyzed creatives`);
-    if (analyses.length > 0) {
-      console.log(`🔍 DEBUG: First result:`, {
-        creativeId: analyses[0].analysis.creativeId,
-        status: analyses[0].analysis.status,
-        completedAt: analyses[0].analysis.completedAt
+    console.log(`🔍 DEBUG: Found ${analyses.length} total analyzed creatives (including duplicates)`);
+    
+    // Remove duplicates by keeping only the most recent analysis for each creative
+    const uniqueAnalyses = new Map<string, any>();
+    
+    for (const analysis of analyses) {
+      const creativeId = analysis.analysis.creativeId;
+      
+      // Skip if creativeId is null
+      if (!creativeId) {
+        console.warn('⚠️ Skipping analysis with null creativeId');
+        continue;
+      }
+      
+      const existing = uniqueAnalyses.get(creativeId);
+      
+      // Keep the most recent analysis (latest completedAt)
+      if (!existing) {
+        uniqueAnalyses.set(creativeId, analysis);
+      } else {
+        // Compare dates safely
+        const currentDate = analysis.analysis.completedAt ? new Date(analysis.analysis.completedAt) : new Date(0);
+        const existingDate = existing.analysis.completedAt ? new Date(existing.analysis.completedAt) : new Date(0);
+        
+        if (currentDate > existingDate) {
+          uniqueAnalyses.set(creativeId, analysis);
+        }
+      }
+    }
+    
+    const uniqueResults = Array.from(uniqueAnalyses.values());
+    
+    // Sort by completedAt descending to maintain consistent UI ordering (most recent first)
+    uniqueResults.sort((a, b) => {
+      const dateA = a.analysis.completedAt ? new Date(a.analysis.completedAt) : new Date(0);
+      const dateB = b.analysis.completedAt ? new Date(b.analysis.completedAt) : new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    console.log(`🔍 DEBUG: After deduplication: ${uniqueResults.length} unique analyzed creatives`);
+    if (uniqueResults.length > 0) {
+      console.log(`🔍 DEBUG: First unique result:`, {
+        creativeId: uniqueResults[0].analysis.creativeId,
+        status: uniqueResults[0].analysis.status,
+        completedAt: uniqueResults[0].analysis.completedAt
       });
     }
     
-    return analyses;
+    return uniqueResults;
   }
 }
 
