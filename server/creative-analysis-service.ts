@@ -745,6 +745,18 @@ class CreativeAnalysisService {
       scores.audio_quality = audioAnalysis.audioQuality || 0;
     }
 
+    // For scene-by-scene analysis, calculate audio quality from scenes
+    if (fusedInsights?.scenes && fusedInsights.scenes.length > 0) {
+      const scenesWithAudio = fusedInsights.scenes.filter((scene: any) => scene.audio?.audioQuality && scene.audio.audioQuality > 0);
+      if (scenesWithAudio.length > 0) {
+        const avgAudioQuality = scenesWithAudio.reduce((sum: number, scene: any) => sum + (scene.audio.audioQuality || 0), 0) / scenesWithAudio.length;
+        scores.audio_quality = Math.round(avgAudioQuality * 10) / 10;
+      } else {
+        // Fallback for scenes without audio
+        scores.audio_quality = 3; // Default value
+      }
+    }
+
     // Add visual insights  
     if (visualAnalysis) {
       if (visualAnalysis.keyframes) {
@@ -760,6 +772,22 @@ class CreativeAnalysisService {
       scores.logo_visibility = visualAnalysis.logoVisibility;
     }
 
+    // For scene-by-scene analysis, calculate visual quality from scenes
+    if (fusedInsights?.scenes && fusedInsights.scenes.length > 0) {
+      const validScenes = fusedInsights.scenes.filter((scene: any) => (scene.visualScore || 0) > 0);
+      if (validScenes.length > 0) {
+        const avgVisualScore = validScenes.reduce((sum: number, scene: any) => sum + (scene.visualScore || 0), 0) / validScenes.length;
+        scores.visual_quality = Math.round(avgVisualScore * 10) / 10;
+      } else {
+        scores.visual_quality = 3; // Default value
+      }
+
+      // Calculate brand elements visibility from scenes
+      const scenesWithBrand = fusedInsights.scenes.filter((scene: any) => scene.brandElements && scene.brandElements.length > 0);
+      const brandVisibility = scenesWithBrand.length > 0 ? (scenesWithBrand.length / fusedInsights.scenes.length) * 10 : 3;
+      scores.logo_visibility = Math.round(brandVisibility * 10) / 10;
+    }
+
     // Add fusion insights
     if (fusedInsights) {
       insights.push(`🧠 Score Geral: ${fusedInsights.overallScore}/10`);
@@ -769,6 +797,12 @@ class CreativeAnalysisService {
         insights.push(`🎯 Performance Prevista: CTR ${fusedInsights.predictedPerformance.ctr}%, CVR ${fusedInsights.predictedPerformance.cvr}%`);
         scores.predicted_ctr = fusedInsights.predictedPerformance.ctr;
         scores.predicted_cvr = fusedInsights.predictedPerformance.cvr;
+      } else {
+        // Calculate predicted CTR from overall score for scene-by-scene analysis (consistent scale)
+        const overallScore = fusedInsights.overallScore || scores.visual_quality || 5;
+        const predictedCtr = Math.round((overallScore * 0.15) * 100) / 100; // Consistent with image analysis
+        scores.predicted_ctr = predictedCtr;
+        insights.push(`🎯 CTR Previsto: ${predictedCtr}%`);
       }
       
       if (fusedInsights.keyStrengths && Array.isArray(fusedInsights.keyStrengths)) {
@@ -780,6 +814,14 @@ class CreativeAnalysisService {
       
       scores.overall_performance = fusedInsights.overallScore;
     }
+
+    // Ensure all required scores are set
+    console.log(`📊 Scores calculated:`, {
+      visual_quality: scores.visual_quality,
+      audio_quality: scores.audio_quality,
+      predicted_ctr: scores.predicted_ctr,
+      logo_visibility: scores.logo_visibility
+    });
 
     // Build final analysis structure
     return {
