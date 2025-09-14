@@ -784,46 +784,110 @@ CONTEXTO:
     const improvements: string[] = [];
     const recommendations: string[] = [];
 
-    // Analyze strengths
+    // Análise avançada de pontos fortes
     if (scores.technical >= 8) {
-      strengths.push('Excelente qualidade visual técnica consistente');
+      strengths.push('Qualidade visual técnica excepcional com composição profissional consistente');
+    } else if (scores.technical >= 7) {
+      strengths.push('Boa qualidade visual com elementos técnicos bem executados');
     }
+
     if (scores.sync >= 8) {
-      strengths.push('Sincronização áudio-visual de alta qualidade');
+      strengths.push('Sincronização áudio-visual perfeita - narração alinhada perfeitamente com elementos visuais');
+    } else if (scores.sync >= 7) {
+      strengths.push('Boa sincronização entre áudio e visual na maioria das cenas');
     }
+
     if (scores.brand >= 8) {
-      strengths.push('Identidade visual da marca bem estabelecida');
+      strengths.push('Identidade de marca forte e consistente ao longo do vídeo');
     }
 
-    const totalCtas = scenes.reduce((sum, scene) => sum + (scene.audio.ctas ? scene.audio.ctas.length : 0), 0);
-    if (totalCtas >= 3) {
-      strengths.push('Múltiplos call-to-actions bem distribuídos');
+    // Análise contextual dos CTAs
+    const totalCtas = scenes.reduce((sum, scene) => sum + (scene.audio?.ctas ? scene.audio.ctas.length : 0), 0);
+    const scenesWithCtas = scenes.filter(scene => scene.audio?.ctas && scene.audio.ctas.length > 0).length;
+    
+    if (totalCtas >= 3 && scenesWithCtas >= 2) {
+      strengths.push(`Estratégia de CTA bem distribuída: ${totalCtas} call-to-actions em ${scenesWithCtas} cenas`);
+    } else if (totalCtas >= 2) {
+      strengths.push('Presença adequada de call-to-actions no vídeo');
     }
 
-    // Analyze improvements
+    // Análise da narrativa e fluxo
+    const scenesWithVoice = scenes.filter(scene => scene.audio?.voicePresent).length;
+    const voicePercentage = (scenesWithVoice / scenes.length) * 100;
+    
+    if (voicePercentage >= 80) {
+      strengths.push('Narração presente na maioria das cenas, criando conexão com audiência');
+    }
+
+    // Análise de melhorias específicas e contextualizadas
     if (scores.technical < 6) {
-      improvements.push('Melhorar qualidade técnica visual (iluminação, composição, clareza)');
+      const lowQualityScenes = scenes.filter(scene => scene.visualScore < 6).length;
+      improvements.push(`Melhorar qualidade visual em ${lowQualityScenes} cenas: foco em iluminação, composição e clareza`);
+    } else if (scores.technical < 7.5) {
+      improvements.push('Ajustar pequenos detalhes visuais para elevar o padrão profissional');
     }
+
     if (scores.sync < 6) {
-      improvements.push('Alinhar melhor narração com elementos visuais');
+      const poorSyncScenes = scenes.filter(scene => scene.syncQuality < 6).length;
+      improvements.push(`Realinhar áudio e visual em ${poorSyncScenes} cenas para melhor sincronia`);
     }
+
     if (scores.narrative < 6) {
-      improvements.push('Criar fluxo narrativo mais consistente entre cenas');
+      improvements.push('Criar transições mais fluidas entre cenas para melhor fluxo narrativo');
     }
 
-    // Generate recommendations
+    // Análise de áudio específica
+    const quietScenes = scenes.filter(scene => scene.audio?.volume === 'quiet').length;
+    if (quietScenes > scenes.length * 0.4) {
+      improvements.push(`Aumentar volume/energia da narração em ${quietScenes} cenas para maior impacto`);
+    }
+
+    const scenesWithoutCta = scenes.filter(scene => !scene.audio?.ctas || scene.audio.ctas.length === 0).length;
+    if (scenesWithoutCta === scenes.length) {
+      improvements.push('Incluir call-to-actions claros e diretos na narração');
+    }
+
+    // Recomendações inteligentes baseadas em análise contextual
     const shortScenes = scenes.filter(scene => scene.durationSec < 2).length;
-    if (shortScenes > scenes.length * 0.3) {
-      recommendations.push('Considere cenas mais longas para melhor absorção da mensagem');
+    const longScenes = scenes.filter(scene => scene.durationSec > 8).length;
+    
+    if (shortScenes > scenes.length * 0.4) {
+      recommendations.push(`Estender duração de ${shortScenes} cenas muito curtas (>2s) para melhor absorção da mensagem`);
+    }
+    
+    if (longScenes > scenes.length * 0.3) {
+      recommendations.push(`Considerar dividir ${longScenes} cenas muito longas para manter atenção do usuário`);
     }
 
-    const textHeavyScenes = scenes.filter(scene => scene.text.length > 3).length;
+    const textHeavyScenes = scenes.filter(scene => scene.text && scene.text.length > 3).length;
     if (textHeavyScenes > scenes.length * 0.5) {
-      recommendations.push('Reduza quantidade de texto por cena para melhor legibilidade');
+      recommendations.push(`Simplificar texto em ${textHeavyScenes} cenas para melhor legibilidade e compreensão`);
     }
 
     if (scores.brand < 7) {
-      recommendations.push('Reforce elementos de marca (logo, cores) ao longo do vídeo');
+      const scenesWithoutBrand = scenes.filter(scene => !scene.brandElements || scene.brandElements.length === 0).length;
+      recommendations.push(`Reforçar elementos de marca em ${scenesWithoutBrand} cenas (logo, cores, tipografia)`);
+    }
+
+    // Recomendações sobre ritmo e engajamento
+    const averagePeopleCount = scenes.reduce((sum, scene) => sum + (scene.peopleCount || 0), 0) / scenes.length;
+    if (averagePeopleCount < 0.5) {
+      recommendations.push('Considerar incluir mais elementos humanos para aumentar conexão emocional');
+    }
+
+    const scenesWithMusic = scenes.filter(scene => scene.audio?.musicDetected).length;
+    if (scenesWithMusic < scenes.length * 0.3) {
+      recommendations.push('Adicionar música de fundo em mais cenas para melhorar envolvimento emocional');
+    }
+
+    // Recomendação de otimização final
+    const overallScore = (scores.technical + scores.sync + scores.narrative + scores.brand) / 4;
+    if (overallScore >= 8) {
+      recommendations.push('Vídeo de alta qualidade - considere usar como referência para futuros criativos');
+    } else if (overallScore >= 7) {
+      recommendations.push('Criativo sólido - pequenos ajustes podem elevar significativamente a performance');
+    } else {
+      recommendations.push('Foque nas melhorias prioritárias listadas para maximizar impacto publicitário');
     }
 
     return { strengths, improvements, recommendations };

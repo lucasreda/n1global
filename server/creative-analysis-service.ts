@@ -413,9 +413,29 @@ class CreativeAnalysisService {
             sceneSegments
           );
           
-          // Step 1e: Technical visual analysis for each scene
-          console.log(`👁️ Performing technical scene analysis...`);
-          const analyzedVisualScenes = await this.visualAnalysisService!.analyzeScenes(sceneSegments);
+          // Step 1e: Technical visual analysis for each scene with audio context
+          console.log(`👁️ Performing contextual scene analysis (visual + audio)...`);
+          
+          // Map aligned audio scenes to the expected format for visual analysis
+          const audioContextForScenes = alignedAudioScenes.map(scene => {
+            // Calculate speech rate safely
+            const sceneDurationMinutes = (scene.endSec - scene.startSec) / 60;
+            const wordsCount = scene.wordsInScene ? scene.wordsInScene.length : 0;
+            const speechRate = sceneDurationMinutes > 0 && wordsCount > 0 ? wordsCount / sceneDurationMinutes : 0;
+            
+            return {
+              id: scene.sceneId,
+              startSec: scene.startSec,
+              endSec: scene.endSec,
+              transcriptSnippet: scene.audio.transcriptSnippet || '',
+              voicePresent: scene.audio.voicePresent || false,
+              musicDetected: scene.audio.musicDetected || false,
+              speechRate: Math.round(speechRate),
+              ctas: scene.audio.ctas || []
+            };
+          });
+          
+          const analyzedVisualScenes = await this.visualAnalysisService!.analyzeScenes(sceneSegments, audioContextForScenes);
           const visualCost = this.visualAnalysisService!.calculateSceneAnalysisCost(
             sceneSegments.length,
             3 // average keyframes per scene

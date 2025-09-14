@@ -423,6 +423,15 @@ Retorne um JSON com:
       url: string;
       tempPath?: string;
     }>;
+  }>, audioScenes?: Array<{
+    id: number;
+    startSec: number;
+    endSec: number;
+    transcriptSnippet: string;
+    voicePresent: boolean;
+    musicDetected: boolean;
+    speechRate: number;
+    ctas: string[];
   }>): Promise<Array<{
     id: number;
     startSec: number;
@@ -477,7 +486,23 @@ Retorne um JSON com:
       console.log(`🔍 Analyzing scene ${scene.id} (${scene.startSec.toFixed(2)}s-${scene.endSec.toFixed(2)}s) with ${scene.keyframes.length} keyframes`);
       
       try {
-        const sceneAnalysis = await this.performTechnicalSceneAnalysis(scene);
+        // Find corresponding audio data for this scene (try ID match first, then time overlap)
+        let audioContext = audioScenes?.find(audioScene => audioScene.id === scene.id);
+        
+        // Fallback: match by time overlap if ID doesn't match
+        if (!audioContext && audioScenes) {
+          audioContext = audioScenes.find(audioScene => 
+            audioScene.startSec <= scene.endSec && audioScene.endSec >= scene.startSec
+          );
+        }
+        
+        if (audioContext) {
+          console.log(`🎵 Scene ${scene.id} matched with audio context: "${audioContext.transcriptSnippet?.substring(0, 50)}..."`);
+        } else {
+          console.log(`⚠️ Scene ${scene.id} has no audio context available`);
+        }
+        
+        const sceneAnalysis = await this.performTechnicalSceneAnalysis(scene, audioContext);
         analyzedScenes.push(sceneAnalysis);
         
         console.log(`✅ Scene ${scene.id} analysis complete - ${sceneAnalysis.objects.length} objects, ${sceneAnalysis.text.length} text elements detected`);
@@ -505,6 +530,12 @@ Retorne um JSON com:
       timestamp: number;
       url: string;
     }>;
+  }, audioContext?: {
+    transcriptSnippet: string;
+    voicePresent: boolean;
+    musicDetected: boolean;
+    speechRate: number;
+    ctas: string[];
   }): Promise<any> {
     try {
       // Prepare image content for GPT-4o Vision
@@ -524,11 +555,14 @@ Retorne um JSON com:
         messages: [
           {
             role: 'system',
-            content: `Você é um especialista em análise visual técnica, equivalente ao Google Vision API. Analise esta cena de vídeo publicitário com máxima precisão técnica.
+            content: `Você é um especialista em análise audiovisual técnica, equivalente ao Google Vision API + análise de contexto. Analise esta cena de vídeo publicitário com máxima precisão técnica integrando elementos visuais e auditivos.
 
 INSTRUÇÕES CRÍTICAS:
 - Analise TODAS as imagens em conjunto como uma única cena temporal
-- Forneça descrição técnica detalhada nível profissional
+- INTEGRE o contexto de áudio/narração para criar descrições mais precisas e específicas
+- Use a transcrição para entender o que está acontecendo e enriquecer a descrição técnica
+- Conecte elementos visuais com o que está sendo dito ou a música presente
+- Forneça descrição técnica detalhada nível profissional que considere AMBOS visual e áudio
 - Identifique TODOS os objetos, pessoas, textos, cores com precisão
 - Analise composição cinematográfica, iluminação, movimento de câmera
 - Detecte transições e mudanças visuais entre frames
@@ -536,7 +570,7 @@ INSTRUÇÕES CRÍTICAS:
 
 CAMPOS OBRIGATÓRIOS NO JSON:
 {
-  "technicalDescription": "string - Descrição técnica completa da cena, detalhando composição, elementos visuais, iluminação, movimento, ação, produtos, pessoas, textos visíveis, cores dominantes e qualidade técnica",
+  "technicalDescription": "string - Descrição técnica completa e contextualizada da cena, integrando elementos visuais (composição, iluminação, movimento, ação, produtos, pessoas, textos visíveis, cores) com contexto auditivo (narração, música, CTAs) para uma análise precisa e específica",
   "objects": [{"label": "string", "count": number, "confidence": number}],
   "text": [{"content": "string", "position": "string", "fontSize": "string", "color": "string"}],
   "peopleCount": number,
@@ -562,11 +596,31 @@ CAMPOS OBRIGATÓRIOS NO JSON:
             content: [
               {
                 type: 'text',
-                text: `Análise técnica da Cena ${scene.id}:
-Duração: ${scene.startSec.toFixed(2)}s a ${scene.endSec.toFixed(2)}s (${scene.durationSec.toFixed(2)}s total)
-Keyframes: ${scene.keyframes.length} imagens sequenciais
+                text: `Análise técnica contextualizada da Cena ${scene.id}:
 
-Forneça análise técnica completa como alternativa ao Google Vision API:`
+INFORMAÇÕES TEMPORAIS:
+- Duração: ${scene.startSec.toFixed(2)}s a ${scene.endSec.toFixed(2)}s (${scene.durationSec.toFixed(2)}s total)
+- Keyframes: ${scene.keyframes.length} imagens sequenciais
+
+CONTEXTO DE ÁUDIO${audioContext ? ':' : ' (não disponível):'}${audioContext ? `
+- Transcrição: "${audioContext.transcriptSnippet}"
+- Voz presente: ${audioContext.voicePresent ? 'Sim' : 'Não'}
+- Música: ${audioContext.musicDetected ? 'Detectada' : 'Não detectada'}
+- Velocidade da fala: ${audioContext.speechRate} palavras/min
+- CTAs identificados: ${audioContext.ctas.length > 0 ? audioContext.ctas.join(', ') : 'Nenhum'}
+
+IMPORTANTE: Use essas informações de áudio para enriquecer sua descrição técnica visual. Conecte o que está sendo dito com o que está sendo mostrado visualmente.` : `
+- Sem dados de áudio disponíveis para esta cena
+IMPORTANTE: Foque exclusivamente na análise visual técnica detalhada.`}
+
+INSTRUÇÕES ESPECIAIS:
+${audioContext?.transcriptSnippet ? 
+`- Use a transcrição "${audioContext.transcriptSnippet}" para contextualizar o que está acontecendo visualmente
+- Conecte elementos visuais com o que está sendo narrado
+- Identifique como a narrativa se alinha com os elementos visuais mostrados` :
+`- Foque apenas na análise visual, mas seja extremamente detalhado`}
+
+Forneça análise técnica completa e contextualizada:`
               },
               ...imageContent
             ]
