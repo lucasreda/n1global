@@ -17,6 +17,7 @@ import { eq, and, desc } from "drizzle-orm";
 import OpenAI from "openai";
 import { CustomerOrderService } from "./customer-order-service";
 import { SupportService } from "./support-service-fixed";
+import Telnyx from 'telnyx';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -39,10 +40,20 @@ interface TelnyxCallWebhookData {
 export class VoiceService {
   private customerOrderService: CustomerOrderService;
   private supportService: SupportService;
+  private telnyxClient: Telnyx | null;
 
   constructor() {
     this.customerOrderService = new CustomerOrderService();
     this.supportService = new SupportService();
+    
+    // Initialize Telnyx client for call control
+    const apiKey = process.env.TELNYX_API_KEY;
+    if (apiKey) {
+      this.telnyxClient = new Telnyx(apiKey);
+    } else {
+      console.warn('⚠️ TELNYX_API_KEY not configured - call control will not function');
+      this.telnyxClient = null;
+    }
   }
 
   /**
@@ -144,19 +155,32 @@ export class VoiceService {
   /**
    * Handle incoming call from Telnyx
    */
-  async handleIncomingCall(callData: TelnyxCallWebhookData): Promise<any> {
+  async handleIncomingCall(callData: TelnyxCallWebhookData): Promise<void> {
     try {
+      console.log(`📞 Handling incoming call: ${callData.call_control_id} from ${callData.from} to ${callData.to}`);
+      
+      // Check if Telnyx client is available
+      if (!this.telnyxClient) {
+        console.error('❌ Telnyx client not configured - cannot handle call');
+        // Return gracefully without throwing - webhook should get 200 OK
+        return;
+      }
+      
       // Extract operation from phone number (will need routing logic)
       const operationId = await this.getOperationFromPhoneNumber(callData.to);
       
       if (!operationId) {
-        return this.generateHangupCommand('Número não encontrado');
+        console.log(`❌ No operation found for phone number ${callData.to}`);
+        await this.hangupCall(callData.call_control_id, 'Número não encontrado');
+        return;
       }
 
       const availability = await this.isVoiceServiceAvailable(operationId);
       
       if (!availability.available) {
-        return this.handleOutOfHours(availability.reason!, availability.settings);
+        console.log(`🚫 Voice service not available: ${availability.reason}`);
+        await this.handleOutOfHoursCall(callData.call_control_id, availability.reason!, availability.settings);
+        return;
       }
 
       // Create call record
@@ -174,12 +198,18 @@ export class VoiceService {
 
       await db.insert(voiceCalls).values(callRecord);
 
-      // Generate Telnyx commands to answer and start media stream
-      return this.generateAnswerAndStreamCommands(callData.call_control_id);
+      // Answer the call using Telnyx REST API
+      await this.answerCall(callData.call_control_id);
+      
+      // Start media stream and AI conversation
+      await this.startAIConversation(callData.call_control_id, operationId);
       
     } catch (error) {
       console.error('Error handling incoming call:', error);
-      return this.generateHangupCommand('Erro interno do servidor');
+      // Only try to hangup if we have a client
+      if (this.telnyxClient) {
+        await this.hangupCall(callData.call_control_id, 'Erro interno do servidor');
+      }
     }
   }
 
@@ -749,32 +779,114 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Generate Telnyx commands to answer call and start media stream
+   * Answer call using Telnyx REST API
    */
-  private async generateAnswerAndStreamCommands(callControlId: string): Promise<any> {
+  private async answerCall(callControlId: string): Promise<void> {
+    if (!this.telnyxClient) {
+      console.error('❌ Telnyx client not initialized - cannot answer call');
+      throw new Error('Telnyx client not configured');
+    }
+    
     try {
-      // For Telnyx, we need to return commands to answer and potentially speak
-      return {
-        command: 'answer',
-        call_control_id: callControlId,
+      console.log(`📞 Answering call ${callControlId}`);
+      await this.telnyxClient.calls.answer(callControlId, {
         client_state: 'call_answered',
-        webhook_url: `https://${process.env.REPLIT_DOMAIN || 'localhost:5000'}/api/voice/telnyx-call-status`
-      };
+        webhook_url: `https://${process.env.REPLIT_DEV_DOMAIN}/api/telnyx-call-status`,
+        webhook_url_method: 'POST'
+      });
+      console.log(`✅ Call ${callControlId} answered successfully`);
     } catch (error) {
-      console.error('Error generating answer command:', error);
-      return this.generateHangupCommand('Desculpe, estamos com problemas técnicos no momento. Tente novamente mais tarde.');
+      console.error(`❌ Error answering call ${callControlId}:`, error);
+      throw error;
     }
   }
 
   /**
-   * Generate Telnyx command for hangup
+   * Hangup call using Telnyx REST API
    */
-  private generateHangupCommand(message: string): any {
-    return {
-      command: 'hangup',
-      client_state: 'call_ending',
-      cause: 'normal_clearing'
-    };
+  private async hangupCall(callControlId: string, reason?: string): Promise<void> {
+    if (!this.telnyxClient) {
+      console.error('❌ Telnyx client not initialized - cannot hangup call');
+      return;
+    }
+    
+    try {
+      console.log(`📞 Hanging up call ${callControlId}: ${reason || 'No reason provided'}`);
+      await this.telnyxClient.calls.hangup(callControlId, {
+        client_state: 'call_ending',
+        cause: 'normal_clearing'
+      });
+      console.log(`✅ Call ${callControlId} hung up successfully`);
+    } catch (error) {
+      console.error(`❌ Error hanging up call ${callControlId}:`, error);
+    }
+  }
+
+  /**
+   * Start AI conversation by speaking welcome message
+   */
+  private async startAIConversation(callControlId: string, operationId: string): Promise<void> {
+    if (!this.telnyxClient) {
+      console.error('❌ Telnyx client not initialized - cannot start AI conversation');
+      return;
+    }
+    
+    try {
+      console.log(`🤖 Starting AI conversation for call ${callControlId}`);
+      
+      // Generate welcome message
+      const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, 'test');
+      
+      // Speak the welcome message
+      await this.telnyxClient.calls.speak(callControlId, {
+        payload: welcomeMessage,
+        language: 'pt-BR',
+        voice: 'female',
+        client_state: 'speaking_welcome'
+      });
+      
+      console.log(`🎙️ Welcome message sent to call ${callControlId}: "${welcomeMessage}"`);
+    } catch (error) {
+      console.error(`❌ Error starting AI conversation for call ${callControlId}:`, error);
+      await this.hangupCall(callControlId, 'Erro ao iniciar conversa com IA');
+    }
+  }
+
+  /**
+   * Handle out of hours calls using Telnyx REST API
+   */
+  private async handleOutOfHoursCall(callControlId: string, reason: string, settings?: VoiceSettings): Promise<void> {
+    if (!this.telnyxClient) {
+      console.error('❌ Telnyx client not initialized - cannot handle out of hours');
+      return;
+    }
+    
+    try {
+      // Answer first
+      await this.answerCall(callControlId);
+      
+      // Get out of hours message
+      const message = settings?.outOfHoursMessage || 
+        'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.';
+      
+      // Speak the message
+      await this.telnyxClient.calls.speak(callControlId, {
+        payload: message,
+        language: 'pt-BR',
+        voice: 'female',
+        client_state: 'speaking_out_of_hours'
+      });
+      
+      // Wait a bit then hangup
+      setTimeout(() => {
+        this.hangupCall(callControlId, 'Out of hours');
+      }, 3000);
+      
+      console.log(`🕐 Out of hours message sent to call ${callControlId}`);
+    } catch (error) {
+      console.error(`❌ Error handling out of hours call ${callControlId}:`, error);
+      await this.hangupCall(callControlId, 'Erro no tratamento fora de horário');
+    }
   }
 
   /**

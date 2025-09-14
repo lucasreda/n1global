@@ -5,6 +5,28 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
 
 const app = express();
+
+// Raw body middleware for webhook signature verification (must come before JSON parsing)
+app.use('/api/voice/telnyx-incoming-call', express.raw({ type: 'application/json' }));
+app.use('/api/voice/telnyx-call-status', express.raw({ type: 'application/json' }));
+
+// Store raw body for webhook verification
+app.use('/api/voice/telnyx-incoming-call', (req: any, res: any, next: any) => {
+  if (req.body instanceof Buffer) {
+    req.rawBody = req.body.toString();
+    req.body = JSON.parse(req.rawBody);
+  }
+  next();
+});
+
+app.use('/api/voice/telnyx-call-status', (req: any, res: any, next: any) => {
+  if (req.body instanceof Buffer) {
+    req.rawBody = req.body.toString();
+    req.body = JSON.parse(req.rawBody);
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

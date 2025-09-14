@@ -5,14 +5,15 @@ import OpenAI from 'openai';
 import crypto from 'crypto';
 import { db } from "./db";
 import { voiceCalls, InsertVoiceCall } from "@shared/schema";
+import * as ed25519 from '@noble/ed25519';
 
 const router = Router();
 const voiceService = new VoiceService();
 
 /**
- * Telnyx Webhook Security Middleware - Validates Telnyx signature
+ * Telnyx Webhook Security Middleware - Validates Telnyx ed25519 signature
  */
-function validateTelnyxSignature(req: any, res: any, next: any) {
+async function validateTelnyxSignature(req: any, res: any, next: any) {
   try {
     const telnyxSignature = req.get('telnyx-signature-ed25519');
     const telnyxTimestamp = req.get('telnyx-timestamp');
@@ -38,9 +39,60 @@ function validateTelnyxSignature(req: any, res: any, next: any) {
         return next();
       }
     }
+
+    // Validate timestamp (prevent replay attacks)
+    const timestampThreshold = 5 * 60 * 1000; // 5 minutes
+    const requestTimestamp = parseInt(telnyxTimestamp, 10) * 1000;
+    const currentTimestamp = Date.now();
     
-    // For now, just log the signature - full validation would require telnyx SDK
-    console.log('✅ Telnyx webhook received with signature headers');
+    if (Math.abs(currentTimestamp - requestTimestamp) > timestampThreshold) {
+      console.error('❌ Telnyx webhook timestamp too old - potential replay attack');
+      return res.status(403).json({ error: 'Forbidden: Request timestamp invalid' });
+    }
+
+    // Verify ed25519 signature
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        // Get raw body (should be captured by raw body middleware)
+        const rawBody = req.rawBody || JSON.stringify(req.body);
+        
+        // Create signature payload following Telnyx spec: timestamp + | + complete JSON body
+        const signedPayload = `${telnyxTimestamp}|${rawBody}`;
+        
+        // Convert signature from base64 to Uint8Array (Telnyx uses base64, not hex)
+        const signatureBuffer = Buffer.from(telnyxSignature, 'base64');
+        if (signatureBuffer.length !== 64) {
+          console.error('❌ Invalid signature length - expected 64 bytes');
+          return res.status(403).json({ error: 'Forbidden: Invalid signature format' });
+        }
+        const signatureBytes = new Uint8Array(signatureBuffer);
+        
+        // Convert public key from base64 to Uint8Array (Telnyx uses base64, not hex)
+        const publicKeyBuffer = Buffer.from(publicKey, 'base64');
+        if (publicKeyBuffer.length !== 32) {
+          console.error('❌ Invalid public key length - expected 32 bytes');
+          return res.status(403).json({ error: 'Forbidden: Invalid public key format' });
+        }
+        const publicKeyBytes = new Uint8Array(publicKeyBuffer);
+        
+        // Verify signature
+        const payloadBytes = new TextEncoder().encode(signedPayload);
+        const isValid = await ed25519.verify(signatureBytes, payloadBytes, publicKeyBytes);
+        
+        if (!isValid) {
+          console.error('❌ Telnyx webhook signature verification failed');
+          return res.status(403).json({ error: 'Forbidden: Invalid signature' });
+        }
+        
+        console.log('✅ Telnyx webhook signature verified successfully');
+      } catch (sigError) {
+        console.error('❌ Error verifying Telnyx signature:', sigError);
+        return res.status(403).json({ error: 'Forbidden: Signature verification error' });
+      }
+    } else {
+      console.log('✅ Telnyx webhook received with signature headers (dev mode)');
+    }
+    
     next();
   } catch (error) {
     console.error('❌ Error validating Telnyx signature:', error);
@@ -178,9 +230,12 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
       return res.status(200).json({ message: "Event ignored" });
     }
 
-    const response = await voiceService.handleIncomingCall(eventData.payload);
+    // Handle the call asynchronously using Telnyx REST API
+    // The VoiceService will use REST API calls to control the call
+    await voiceService.handleIncomingCall(eventData.payload);
     
-    res.status(200).json(response);
+    // Always return 200 OK for webhooks - call control happens via REST API
+    res.status(200).json({ message: "Webhook received" });
   } catch (error) {
     console.error("❌ Error handling Telnyx incoming call:", error);
     res.status(500).json({ error: "Internal server error" });

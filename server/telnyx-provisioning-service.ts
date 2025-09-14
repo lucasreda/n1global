@@ -11,7 +11,7 @@ export class TelnyxProvisioningService {
 
     if (!apiKey) {
       console.warn('⚠️ TELNYX_API_KEY not configured - service will not function properly');
-      this.client = null as any; // Temporary for development
+      this.client = null as any; // Will be handled gracefully in methods
     } else {
       this.client = new Telnyx(apiKey);
     }
@@ -21,6 +21,11 @@ export class TelnyxProvisioningService {
    * Provision a phone number for an operation
    */
   async provisionPhoneNumber(operationId: string, countryCode: string = 'US'): Promise<string> {
+    // Check if client is properly configured
+    if (!this.client) {
+      throw new Error('Telnyx API not configured. Please set TELNYX_API_KEY environment variable.');
+    }
+    
     let purchasedNumber = null;
     
     try {
