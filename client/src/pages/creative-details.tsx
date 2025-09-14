@@ -230,13 +230,13 @@ export default function CreativeDetails() {
                     Pontos Fortes Identificados
                   </h3>
                   <div className="space-y-2">
-                    {insights.filter(insight => insight.includes('✅')).slice(0, 4).map((insight, index) => (
+                    {insights.filter(insight => insight.includes('✅')).slice(0, 8).map((insight, index) => (
                       <div key={index} className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
                         <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <p className="text-sm text-green-800 dark:text-green-200">{insight.replace('✅', '').trim()}</p>
                       </div>
                     ))}
-                    {insights.filter(insight => !insight.includes('✅') && !insight.includes('🎯')).slice(0, 2).map((insight, index) => (
+                    {insights.filter(insight => !insight.includes('✅') && !insight.includes('🎯')).slice(0, 6).map((insight, index) => (
                       <div key={index} className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                         <Star className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                         <p className="text-sm text-blue-800 dark:text-blue-200">{insight}</p>
