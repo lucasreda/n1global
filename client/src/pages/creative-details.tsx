@@ -251,10 +251,10 @@ export default function CreativeDetails() {
                     Recomendações de Edição
                   </h3>
                   <div className="space-y-2">
-                    {recommendations.slice(0, 5).map((rec, index) => (
+                    {recommendations.filter(rec => rec.includes('🔧')).slice(0, 5).map((rec, index) => (
                       <div key={index} className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
                         <PenTool className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-orange-800 dark:text-orange-200">{rec.replace(/^✅\s*/, '').replace(/^🎯\s*/, '')}</p>
+                        <p className="text-sm text-orange-800 dark:text-orange-200">{rec.replace(/^✅\s*/, '').replace(/^🔧\s*/, '')}</p>
                       </div>
                     ))}
                   </div>
