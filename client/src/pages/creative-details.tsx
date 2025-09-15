@@ -114,8 +114,39 @@ export default function CreativeDetails() {
   const totalDuration = analysis?.result?.fusionAnalysis?.totalDuration || 0;
   const overallScore = analysis?.result?.fusionAnalysis?.overallScore || 0;
   const scores = analysis?.scores || {};
-  const insights = analysis?.insights || [];
-  const recommendations = analysis?.recommendations || [];
+  let insights = analysis?.insights || [];
+  let recommendations = analysis?.recommendations || [];
+  
+  // Dados de exemplo para teste (quando não há análise)
+  if (!analysis) {
+    insights = [
+      '✅ Qualidade de áudio excelente (8.0/10) - sem necessidade de pós-produção',
+      '✅ Boa qualidade visual (7.8/10) - pequenos ajustes de cor e contraste podem aprimorar',
+      '✅ Marca muito visível (10.0/10) - identidade consistente ao longo do vídeo',
+      '✅ Pacing adequado (4.6s por cena) - bom ritmo para engajamento',
+      '✅ Qualidade visual consistente entre cenas - boa continuidade técnica',
+      '✅ 100% das cenas têm alto engajamento - conteúdo cativante',
+      '💡 Considere adicionar música de fundo sutil para aumentar o engajamento emocional',
+      '🔧 Adicionar call-to-action verbal clara no final do vídeo para melhorar conversão',
+      '⚠️ Produtos não identificados claramente - considere close-ups ou melhor posicionamento',
+      '💡 Considere adicionar texto descritivo ou preços na tela para maior clareza',
+      '📊 CTR estimado: 1.16% com base na qualidade técnica geral'
+    ];
+    
+    recommendations = [
+      '🔧 Realinhar áudio e visual em 1 cenas para melhor sincronia',
+      '🔧 Incluir call-to-actions claros e diretos na narração'
+    ];
+  }
+  
+  // Debug: Log para verificar dados
+  console.log('🔍 Debug - Dados recebidos:', { 
+    hasAnalysis: !!analysis, 
+    insightsCount: insights.length, 
+    recommendationsCount: recommendations.length,
+    insights: insights.slice(0, 3),
+    recommendations: recommendations.slice(0, 3)
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
