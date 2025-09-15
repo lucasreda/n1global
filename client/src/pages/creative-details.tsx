@@ -1003,6 +1003,115 @@ export default function CreativeDetails() {
                           </div>
                         </div>
                       )}
+
+                      {/* Sugestões de Copywriting Contextuais */}
+                      {analysis?.result?.copyAnalysis?.sceneInsights && (
+                        (() => {
+                          const sceneInsight = analysis.result.copyAnalysis.sceneInsights.find((insight: any) => 
+                            insight.sceneId === scene.id || 
+                            (insight.timestamp >= scene.startSec && insight.timestamp <= scene.endSec)
+                          );
+                          
+                          if (!sceneInsight || sceneInsight.suggestions.length === 0) return null;
+                          
+                          return (
+                            <div className="border-t pt-4 mt-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Lightbulb className="w-4 h-4 text-yellow-600" />
+                                <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                                  Sugestões de Copywriting
+                                </span>
+                                <Badge 
+                                  variant={
+                                    sceneInsight.improvementPriority === 'high' ? 'destructive' : 
+                                    sceneInsight.improvementPriority === 'medium' ? 'secondary' : 
+                                    'outline'
+                                  } 
+                                  className="text-xs"
+                                >
+                                  Prioridade {
+                                    sceneInsight.improvementPriority === 'high' ? 'Alta' :
+                                    sceneInsight.improvementPriority === 'medium' ? 'Média' :
+                                    'Baixa'
+                                  }
+                                </Badge>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                {/* Gatilhos detectados nesta cena */}
+                                {sceneInsight.triggers && sceneInsight.triggers.length > 0 && (
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs text-muted-foreground">Gatilhos:</span>
+                                    <div className="flex gap-1">
+                                      {sceneInsight.triggers.map((trigger: string) => (
+                                        <Badge key={trigger} variant="outline" className="text-xs">
+                                          {trigger === 'urgency' && '⏰'}
+                                          {trigger === 'scarcity' && '🔥'}
+                                          {trigger === 'social' && '👥'}
+                                          {trigger === 'authority' && '🏆'}
+                                          {trigger === 'reciprocity' && '🎁'}
+                                          {trigger === 'emotion' && '❤️'}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Lista de sugestões */}
+                                {sceneInsight.suggestions.map((suggestion: string, idx: number) => (
+                                  <div 
+                                    key={idx} 
+                                    className={`flex items-start gap-2 p-3 rounded-lg ${
+                                      sceneInsight.improvementPriority === 'high' ? 
+                                        'bg-red-50 dark:bg-red-950/20' :
+                                      sceneInsight.improvementPriority === 'medium' ? 
+                                        'bg-yellow-50 dark:bg-yellow-950/20' :
+                                        'bg-green-50 dark:bg-green-950/20'
+                                    }`}
+                                  >
+                                    <PenTool className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                                      sceneInsight.improvementPriority === 'high' ? 
+                                        'text-red-600' :
+                                      sceneInsight.improvementPriority === 'medium' ? 
+                                        'text-yellow-600' :
+                                        'text-green-600'
+                                    }`} />
+                                    <p className={`text-sm ${
+                                      sceneInsight.improvementPriority === 'high' ? 
+                                        'text-red-800 dark:text-red-200' :
+                                      sceneInsight.improvementPriority === 'medium' ? 
+                                        'text-yellow-800 dark:text-yellow-200' :
+                                        'text-green-800 dark:text-green-200'
+                                    }`}>
+                                      {suggestion}
+                                    </p>
+                                  </div>
+                                ))}
+                                
+                                {/* Score de persuasão da cena */}
+                                {sceneInsight.persuasionScore !== undefined && (
+                                  <div className="mt-3 p-2 bg-indigo-50 dark:bg-indigo-950/20 rounded">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-xs text-indigo-700 dark:text-indigo-300">
+                                        Score de Persuasão da Cena
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <Progress 
+                                          value={sceneInsight.persuasionScore * 10} 
+                                          className="w-20 h-2"
+                                        />
+                                        <span className="text-xs font-bold text-indigo-900 dark:text-indigo-100">
+                                          {sceneInsight.persuasionScore.toFixed(1)}/10
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()
+                      )}
                     </div>
                   ))}
                 </div>
