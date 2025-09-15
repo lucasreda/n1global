@@ -408,9 +408,10 @@ class CreativeAnalysisService {
           
           // Step 1d: Align audio with scene timeline
           console.log(`🎵 Aligning audio with scene timeline...`);
-          const alignedAudioScenes = this.audioAnalysisService!.alignTranscriptWithScenes(
+          const alignedAudioScenes = await this.audioAnalysisService!.alignTranscriptWithScenes(
             audioWithTimestamps,
-            sceneSegments
+            sceneSegments,
+            audioBuffer
           );
           
           // Step 1e: Technical visual analysis for each scene with audio context

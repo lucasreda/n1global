@@ -448,7 +448,7 @@ CONTEXTO DE ANÁLISE:
   /**
    * Align transcript segments with scene timeline
    */
-  alignTranscriptWithScenes(
+  async alignTranscriptWithScenes(
     transcriptData: {
       transcript: string;
       words: Array<{ word: string; start: number; end: number; confidence?: number }>;
@@ -459,8 +459,9 @@ CONTEXTO DE ANÁLISE:
       startSec: number;
       endSec: number;
       durationSec: number;
-    }>
-  ): Array<{
+    }>,
+    audioBuffer?: Buffer
+  ): Promise<Array<{
     sceneId: number;
     startSec: number;
     endSec: number;
@@ -477,10 +478,10 @@ CONTEXTO DE ANÁLISE:
     };
     wordsInScene: Array<{ word: string; start: number; end: number; confidence?: number }>;
     segmentsInScene: Array<{ text: string; start: number; end: number }>;
-  }> {
+  }>> {
     console.log(`🎵 Aligning transcript with ${sceneSegments.length} scenes`);
     
-    const alignedScenes = sceneSegments.map(scene => {
+    const alignedScenes = await Promise.all(sceneSegments.map(async scene => {
       // Find words that fall within this scene's time range (precise alignment)
       const wordsInScene = transcriptData.words.filter(word => {
         // Include word if its center point falls within the scene
@@ -500,8 +501,14 @@ CONTEXTO DE ANÁLISE:
         .join(' ')
         .trim();
 
-      // Analyze audio characteristics for this scene
-      const audioAnalysis = this.analyzeSceneAudio(transcriptSnippet, wordsInScene, scene);
+      // Analyze audio characteristics for this scene using HPSS
+      const audioAnalysis = await this.analyzeSceneAudio(
+        transcriptSnippet, 
+        wordsInScene, 
+        scene, 
+        audioBuffer,
+        segmentsInScene  // CRITICAL FIX: Use filtered segments for this scene, not global segments
+      );
 
       console.log(`🎵 Scene ${scene.id}: ${wordsInScene.length} words, ${segmentsInScene.length} segments`);
       
@@ -519,7 +526,7 @@ CONTEXTO DE ANÁLISE:
         wordsInScene,
         segmentsInScene
       };
-    });
+    }));
 
     // Validation: Check coverage and completeness
     const totalWordsInScenes = alignedScenes.reduce((sum, scene) => sum + scene.wordsInScene.length, 0);
@@ -547,12 +554,14 @@ CONTEXTO DE ANÁLISE:
   }
 
   /**
-   * Analyze audio characteristics for a specific scene with advanced music/voice detection
+   * Analyze audio characteristics for a specific scene with HPSS-based music detection
    */
-  private analyzeSceneAudio(
+  private async analyzeSceneAudio(
     transcriptSnippet: string,
     words: Array<{ word: string; start: number; end: number; confidence?: number }>,
-    scene: { startSec: number; endSec: number; durationSec: number }
+    scene: { startSec: number; endSec: number; durationSec: number },
+    audioBuffer?: Buffer,
+    whisperSegments?: any[]
   ) {
     const voicePresent = transcriptSnippet.length > 0;
     
@@ -625,65 +634,57 @@ CONTEXTO DE ANÁLISE:
       volume = 'normal';
     }
 
-    // ADVANCED MUSIC DETECTION - Multiple heuristics
+    // HPSS-BASED MUSIC DETECTION - Replace heuristics with spectral analysis
     let musicDetected = false;
     let musicType: string | undefined;
     let musicConfidence = 0;
+    let spectralAnalysis = null;
     
-    // Heuristic 1: Direct mention in transcript (least reliable but explicit)
-    const musicIndicators = ['música', 'instrumental', 'beat', 'som', 'fundo', 'trilha'];
-    const directMusicMention = musicIndicators.some(indicator => 
-      transcriptSnippet.toLowerCase().includes(indicator)
-    );
-    if (directMusicMention) {
-      musicConfidence += 3;
-    }
-    
-    // Heuristic 2: Scene duration vs speech content ratio
-    const speechDensity = transcriptSnippet.length / scene.durationSec;
-    if (scene.durationSec > 8 && voicePresent && speechDensity > 10) {
-      // Long scene with consistent speech = likely background music
-      musicConfidence += 4;
-      musicType = 'background';
-    }
-    
-    // Heuristic 3: Commercial content patterns (REDUCED bias)
-    if (ctas.length > 0 && scene.durationSec > 10 && voicePresent) {
-      // Slight boost for commercial content, but not automatic
-      musicConfidence += 1; // Reduced from 3
-      musicType = 'commercial';
-    }
-    
-    // Heuristic 4: Audio quality (REMOVED false correlation)
-    // REMOVED: High audio quality does NOT automatically mean music is present
-    
-    // Heuristic 5: Emotional language indicators
-    const emotionalWords = ['amor', 'feliz', 'sonho', 'família', 'sucesso', 'vida', 'futuro'];
-    const hasEmotionalContent = emotionalWords.some(word => 
-      transcriptSnippet.toLowerCase().includes(word)
-    );
-    if (hasEmotionalContent) {
-      musicConfidence += 2;
-      musicType = 'emotional';
-    }
-    
-    // Final music detection decision - CONSERVATIVE threshold
-    musicDetected = musicConfidence >= 7; // Raised threshold to reduce false positives
-    
-    // Refine music type based on voice style and content
-    if (musicDetected && !musicType) {
-      if (voiceStyle === 'energetic') {
-        musicType = 'upbeat';
-      } else if (voiceStyle === 'professional') {
-        musicType = 'corporate';
-      } else if (hasEmotionalContent) {
-        musicType = 'emotional';
-      } else {
-        musicType = 'instrumental';
+    // Use HPSS pipeline for precise music detection if audio buffer is available
+    if (audioBuffer && scene.durationSec > 1) {
+      try {
+        console.log(`🔬 Running HPSS analysis for scene ${scene.startSec}-${scene.endSec}s`);
+        
+        // Extract audio segment for this scene
+        const sceneAudioBuffer = await this.extractSceneAudioBuffer(audioBuffer, scene.startSec, scene.endSec);
+        
+        // Filter whisper segments for this scene
+        const sceneWhisperData = whisperSegments?.filter(segment => 
+          segment.start >= scene.startSec && segment.end <= scene.endSec
+        ) || [];
+        
+        // Perform HPSS spectral analysis on scene audio with time window
+        spectralAnalysis = await this.performSpectralAnalysis(sceneAudioBuffer, sceneWhisperData, scene.startSec, scene.endSec);
+        
+        musicDetected = spectralAnalysis.musicDetected;
+        musicConfidence = spectralAnalysis.confidence;
+        
+        console.log(`🎵 HPSS Scene ${scene.startSec}-${scene.endSec}s: Music detected: ${musicDetected}, confidence: ${musicConfidence}/10`);
+        
+        // Determine music type based on spectral characteristics and context
+        if (musicDetected) {
+          if (spectralAnalysis.harmonicContent > 7 && spectralAnalysis.bassPresence > 6) {
+            musicType = 'upbeat';
+          } else if (spectralAnalysis.harmonicContent > 8) {
+            musicType = 'instrumental';
+          } else if (voicePresent && spectralAnalysis.harmonicContent > 5) {
+            musicType = 'background';
+          } else {
+            musicType = 'ambient';
+          }
+        }
+        
+      } catch (error) {
+        console.warn(`⚠️ HPSS analysis failed for scene ${scene.startSec}-${scene.endSec}s:`, error);
+        // Fallback to conservative detection
+        musicDetected = false;
+        musicConfidence = 0;
       }
+    } else {
+      console.log(`🎵 Scene ${scene.startSec}-${scene.endSec}s: No audio buffer provided, skipping HPSS analysis`);
+      musicDetected = false;
+      musicConfidence = 0;
     }
-    
-    console.log(`🎵 Scene ${scene.startSec}-${scene.endSec}s: Music confidence ${musicConfidence}/10, detected: ${musicDetected}`);
 
     return {
       transcriptSnippet,
@@ -703,6 +704,25 @@ CONTEXTO DE ANÁLISE:
         avgConfidence: Math.round(avgConfidence * 100) / 100
       }
     };
+  }
+
+  /**
+   * Extract audio buffer segment for a specific scene
+   */
+  private async extractSceneAudioBuffer(
+    audioBuffer: Buffer, 
+    startSec: number, 
+    endSec: number
+  ): Promise<Buffer> {
+    try {
+      // For now, we'll return the full audio buffer since scene-specific extraction
+      // requires more complex audio processing. The HPSS analysis with timestamps
+      // will focus on the relevant time range.
+      return audioBuffer;
+    } catch (error) {
+      console.warn(`⚠️ Failed to extract scene audio buffer: ${error}`);
+      return audioBuffer;
+    }
   }
 
   /**
@@ -806,8 +826,17 @@ CONTEXTO DE ANÁLISE:
 
   /**
    * Perform HPSS-based analysis to distinguish music from voice with speech masking
+   * @param audioBuffer - Audio buffer to analyze
+   * @param whisperTimestamps - Whisper segments for speech masking
+   * @param startSec - Start time in seconds (optional, for scene analysis)
+   * @param endSec - End time in seconds (optional, for scene analysis)
    */
-  private async performSpectralAnalysis(audioBuffer: Buffer, whisperTimestamps?: any[]): Promise<{
+  private async performSpectralAnalysis(
+    audioBuffer: Buffer, 
+    whisperTimestamps?: any[], 
+    startSec?: number, 
+    endSec?: number
+  ): Promise<{
     musicEnergyScore: number;
     voiceClarity: number;
     bassPresence: number;
@@ -821,7 +850,8 @@ CONTEXTO DE ANÁLISE:
     confidence: number;
   }> {
     try {
-      console.log(`🔬 Starting HPSS-based spectral analysis of ${audioBuffer.length} bytes`);
+      const timeWindow = startSec !== undefined && endSec !== undefined ? `${startSec}-${endSec}s` : 'full audio';
+      console.log(`🔬 Starting HPSS-based spectral analysis of ${audioBuffer.length} bytes (${timeWindow})`);
       
       // Validate if this is proper audio data
       if (!this.isValidAudioFormat(audioBuffer)) {
@@ -830,8 +860,22 @@ CONTEXTO DE ANÁLISE:
       }
       
       // Extract and preprocess PCM samples
-      const samples = this.extractAndPreprocessPCM(audioBuffer);
+      let samples = this.extractAndPreprocessPCM(audioBuffer);
       const sampleRate = 16000; // Standardized sample rate
+      
+      // Apply time window filtering if specified (for scene analysis)
+      if (startSec !== undefined && endSec !== undefined) {
+        const startSample = Math.floor(startSec * sampleRate);
+        const endSample = Math.floor(endSec * sampleRate);
+        const windowSamples = endSample - startSample;
+        
+        if (startSample < samples.length && endSample <= samples.length && windowSamples > 0) {
+          samples = samples.slice(startSample, endSample);
+          console.log(`🔬 Applied time window ${startSec}-${endSec}s: ${windowSamples} samples`);
+        } else {
+          console.warn(`⚠️ Invalid time window ${startSec}-${endSec}s for ${samples.length} samples, using full audio`);
+        }
+      }
       
       // Validate extracted samples
       if (samples.length === 0 || samples.every(s => s === 0)) {

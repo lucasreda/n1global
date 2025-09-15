@@ -106,7 +106,7 @@ export class SceneSegmentationService {
       const chunks: Buffer[] = [];
       
       // Extract as WAV with optimal settings for Whisper
-      ffmpeg(videoPath)
+      const ffmpegCommand = ffmpeg(videoPath)
         .noVideo()
         .audioCodec('pcm_s16le')  // PCM 16-bit for WAV
         .audioChannels(1)          // Mono for better transcription
@@ -119,12 +119,28 @@ export class SceneSegmentationService {
         .on('end', () => {
           const audioBuffer = Buffer.concat(chunks);
           console.log(`✅ Audio extracted as WAV: ${(audioBuffer.length / 1024 / 1024).toFixed(2)}MB`);
+          // Validate that we have a proper WAV header
+          if (audioBuffer.length < 44) {
+            reject(new Error('Invalid WAV file: too small'));
+            return;
+          }
+          if (!audioBuffer.slice(0, 4).equals(Buffer.from('RIFF'))) {
+            console.warn('⚠️ Warning: Audio buffer may not be valid WAV format');
+          }
           resolve(audioBuffer);
-        })
-        .pipe()
-        .on('data', (chunk: Buffer) => {
-          chunks.push(chunk);
         });
+
+      // CRITICAL FIX: Pipe to stdout and collect data from the stream
+      const stream = ffmpegCommand.pipe();
+      
+      stream.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+      
+      stream.on('error', (err: Error) => {
+        console.error('❌ Stream error:', err);
+        reject(err);
+      });
     });
   }
 
