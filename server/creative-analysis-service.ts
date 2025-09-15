@@ -780,8 +780,24 @@ class CreativeAnalysisService {
         insights.push(`⚠️ Áudio precisa de melhorias (${audioQuality.toFixed(1)}/10) - considere noise reduction e equalização`);
       }
       
-      // Music and narration analysis
-      if (musicDetected) {
+      // Music and narration analysis with scene coverage intelligence
+      if (musicDetected && fusedInsights?.scenes?.length > 0) {
+        // Calculate music coverage across scenes
+        const scenesWithMusic = fusedInsights.scenes.filter((scene: any) => scene.audio?.musicDetected).length;
+        const musicCoveragePercentage = (scenesWithMusic / fusedInsights.scenes.length) * 100;
+        
+        if (musicCoveragePercentage >= 60) {
+          // Good music coverage
+          insights.push(`✅ Música de fundo ${musicType || 'detectada'} bem distribuída - verifique níveis de mix para não competir com narração`);
+        } else if (musicCoveragePercentage >= 30) {
+          // Partial music coverage
+          insights.push(`🎵 Música detectada em ${scenesWithMusic}/${fusedInsights.scenes.length} cenas - considere expandir para melhor continuidade emocional`);
+        } else {
+          // Limited music coverage
+          insights.push(`🎵 Música detectada apenas em ${scenesWithMusic}/${fusedInsights.scenes.length} cenas - adicionar música consistente melhoraria o engajamento`);
+        }
+      } else if (musicDetected) {
+        // Fallback for non-scene analysis
         insights.push(`✅ Música de fundo ${musicType || 'detectada'} - verifique níveis de mix para não competir com narração`);
       } else if (fusedInsights?.scenes?.length > 0) {
         insights.push(`💡 Considere adicionar música de fundo sutil para aumentar o engajamento emocional`);
