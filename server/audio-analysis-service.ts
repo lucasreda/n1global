@@ -486,6 +486,7 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
   async alignTranscriptWithScenes(
     transcriptData: {
       transcript: string;
+      duration: number;
       words: Array<{ word: string; start: number; end: number; confidence?: number }>;
       segments: Array<{ text: string; start: number; end: number }>;
     },
@@ -542,7 +543,8 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
         wordsInScene, 
         scene, 
         audioBuffer,
-        segmentsInScene  // CRITICAL FIX: Use filtered segments for this scene, not global segments
+        segmentsInScene,  // CRITICAL FIX: Use filtered segments for this scene, not global segments
+        transcriptData.duration  // CRITICAL FIX: Pass total duration for correct sample rate calculation
       );
 
       console.log(`🎵 Scene ${scene.id}: ${wordsInScene.length} words, ${segmentsInScene.length} segments`);
@@ -596,7 +598,8 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
     words: Array<{ word: string; start: number; end: number; confidence?: number }>,
     scene: { startSec: number; endSec: number; durationSec: number },
     audioBuffer?: Buffer,
-    whisperSegments?: any[]
+    whisperSegments?: any[],
+    totalDurationSec?: number
   ) {
     const voicePresent = transcriptSnippet.length > 0;
     
@@ -694,8 +697,8 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
         
         console.log(`🎵 Scene ${scene.startSec}-${scene.endSec}s: Found ${sceneWhisperData.length} overlapping Whisper segments`);
         
-        // Perform HPSS spectral analysis on scene audio with time window
-        spectralAnalysis = await this.performSpectralAnalysis(sceneAudioBuffer, sceneWhisperData, scene.startSec, scene.endSec);
+        // CRITICAL FIX: Pass total duration to calculate correct sample rate for full buffer
+        spectralAnalysis = await this.performSpectralAnalysis(sceneAudioBuffer, sceneWhisperData, scene.startSec, scene.endSec, totalDurationSec);
         
         musicDetected = spectralAnalysis.musicDetected;
         musicConfidence = spectralAnalysis.confidence;
@@ -757,8 +760,8 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
   ): Promise<Buffer> {
     try {
       // For now, we'll return the full audio buffer since scene-specific extraction
-      // requires more complex audio processing. The HPSS analysis with timestamps
-      // will focus on the relevant time range.
+      // requires more complex audio processing. performSpectralAnalysis will handle
+      // absolute time windows with the full buffer correctly.
       return audioBuffer;
     } catch (error) {
       console.warn(`⚠️ Failed to extract scene audio buffer: ${error}`);
@@ -876,7 +879,8 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
     audioBuffer: Buffer, 
     whisperTimestamps?: any[], 
     startSec?: number, 
-    endSec?: number
+    endSec?: number,
+    totalDurationSec?: number
   ): Promise<{
     musicEnergyScore: number;
     voiceClarity: number;
@@ -903,11 +907,9 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
       // Extract and preprocess PCM samples
       let samples = this.extractAndPreprocessPCM(audioBuffer);
       
-      // Calculate effective sample rate from actual PCM length and duration
-      // This fixes PCM duration mismatch (e.g., 230k samples for 29s video)
-      const estimatedDurationSec = (endSec !== undefined && startSec !== undefined) 
-        ? (endSec - startSec) 
-        : (samples.length / 16000); // Fallback estimate
+      // Calculate effective sample rate from actual PCM length and TOTAL duration
+      // CRITICAL FIX: Use total audio duration, not scene duration, for sample rate calculation
+      const estimatedDurationSec = totalDurationSec || (samples.length / 16000); // Use total duration if provided
       const effectiveSampleRate = samples.length / estimatedDurationSec;
       
       console.log(`🔬 PCM Analysis: ${samples.length} samples, estimated ${estimatedDurationSec.toFixed(2)}s, effective rate: ${effectiveSampleRate.toFixed(0)}Hz`);
