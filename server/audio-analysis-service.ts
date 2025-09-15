@@ -75,8 +75,9 @@ export class AudioAnalysisService {
       // Step 3: Analyze transcript content for insights
       const contentAnalysis = await this.analyzeTranscriptContent(transcript);
       
-      // Step 4: Detect music and audio quality (using enhanced analysis with spectral data)
-      const audioQualityAnalysis = await this.analyzeAudioQuality(transcript, duration, audioBuffer);
+      // Step 4: Detect music and audio quality (using enhanced HPSS analysis with speech masking)
+      const whisperData = { segments, words, language };
+      const audioQualityAnalysis = await this.analyzeAudioQuality(transcript, duration, audioBuffer, whisperData);
       
       // Step 5: Calculate metrics
       const processingTime = Date.now() - startTime;
@@ -159,7 +160,7 @@ Seja preciso e objetivo.`
   /**
    * Analyze audio quality and detect music with advanced heuristics and spectral analysis
    */
-  private async analyzeAudioQuality(transcript: string, duration: number, audioBuffer?: Buffer): Promise<{
+  private async analyzeAudioQuality(transcript: string, duration: number, audioBuffer?: Buffer, whisperData?: any): Promise<{
     audioQuality: number;
     musicDetected: boolean;
     musicType?: string;
@@ -168,26 +169,29 @@ Seja preciso e objetivo.`
     backgroundMusicPresence: number;
     spectralAnalysis?: any;
   }> {
-    // Step 1: Spectral analysis if buffer is available
+    // Step 1: Enhanced HPSS spectral analysis if buffer is available
     let spectralAnalysis = null;
     let spectralInsights = '';
     
     if (audioBuffer) {
-      spectralAnalysis = await this.performSpectralAnalysis(audioBuffer);
+      // Pass transcript segments to enable speech masking in HPSS analysis
+      const whisperTimestamps = whisperData?.segments || [];
+      spectralAnalysis = await this.performSpectralAnalysis(audioBuffer, whisperTimestamps);
       
-      // Only include insights if analysis is valid
+      // Include enhanced HPSS insights if analysis is valid
       if (spectralAnalysis.validAnalysis) {
         spectralInsights = `
-Análise Espectral (dados válidos):
-- Energia musical detectada: ${spectralAnalysis.musicEnergyScore}/10
+Análise HPSS (Harmonic-Percussive Source Separation):
+- Música de fundo detectada: ${spectralAnalysis.musicDetected ? 'SIM' : 'NÃO'} (confiança: ${spectralAnalysis.confidence}/10)
 - Clareza vocal: ${spectralAnalysis.voiceClarity}/10
-- Presença de graves: ${spectralAnalysis.bassPresence}/10
-- Harmônicos instrumentais: ${spectralAnalysis.harmonicContent}/10
-- Variação dinâmica: ${spectralAnalysis.dynamicRange}/10`;
+- Presença harmônica durante fala: ${(spectralAnalysis.musicEnergyScore/10).toFixed(2)}
+- Periodicidade rítmica: ${spectralAnalysis.bassPresence}/10
+- Análise baseada em separação de fontes sonoras com máscara de fala`;
       } else {
         spectralInsights = `
-Análise Espectral: DADOS INVÁLIDOS - scores conservativos aplicados
+Análise HPSS: DADOS INVÁLIDOS - assumindo conservadoramente SEM música de fundo
 - Qualidade do áudio: Não foi possível extrair dados PCM válidos
+- Música detectada: NÃO (fallback conservativo)
 - Recomendação: Basear detecção apenas na transcrição`;
       }
     }
@@ -198,25 +202,27 @@ Análise Espectral: DADOS INVÁLIDOS - scores conservativos aplicados
       messages: [
         {
           role: 'system',
-          content: `Você é um especialista em análise de áudio. Analise OBJETIVAMENTE baseado apenas nos dados fornecidos.
+          content: `Você é um especialista em análise de áudio. Sua função é APENAS EXPLICAR e interpretar os resultados, NÃO detectar música.
 
-INSTRUÇÕES CRÍTICAS:
-1. NÃO assuma música de fundo apenas por duração ou contexto comercial
-2. Baseie-se PRIMARIAMENTE na análise espectral quando disponível
-3. Se análise espectral é inválida, seja CONSERVADOR na detecção de música
-4. Música instrumental pode NÃO aparecer na transcrição
-5. Foque em evidências objetivas, não em suposições
+INSTRUÇÕES CRÍTICAS PARA GATING HARD:
+1. SEMPRE use o resultado "musicDetected" da análise HPSS como fonte ÚNICA de verdade
+2. Se análise HPSS detectou música (musicDetected=true), NUNCA contradiga isso
+3. Se análise HPSS NÃO detectou música (musicDetected=false), NUNCA sugira adicionar música
+4. Sua função é explicar os resultados técnicos, não fazer detecção
+5. Base musicType e musicGenre APENAS na transcrição se musicDetected=true
+
+GATING HARD: Você NÃO pode detectar música. Use apenas o resultado HPSS.
 
 Retorne JSON com:
 {
   "audioQuality": number (1-10, baseado na clareza da transcrição),
   "voiceClarity": number (1-10, clareza específica da voz),
-  "musicDetected": boolean (somente se evidência clara de música),
-  "backgroundMusicPresence": number (1-10, confiança baseada em evidências),
-  "musicType": string ("energetic", "calm", "dramatic", "upbeat", "corporate", "emotional"),
-  "musicGenre": string ("pop", "instrumental", "corporate", "cinematic", "electronic"),
+  "musicDetected": boolean (COPIE exatamente da análise HPSS - NÃO modifique),
+  "backgroundMusicPresence": number (1-10, COPIE da confiança HPSS se musicDetected=true, senão 0),
+  "musicType": string (apenas se musicDetected=true, baseado na transcrição),
+  "musicGenre": string (apenas se musicDetected=true, baseado na transcrição),
   "silencePercentage": number (0-100),
-  "reasoning": string (explique objetivamente seu raciocínio)
+  "reasoning": string (explique que usou análise HPSS como fonte única de verdade)
 }`
         },
         {
@@ -229,11 +235,17 @@ Densidade de fala: ${(transcript.split(' ').length / duration * 60).toFixed(1)} 
 Tipo de conteúdo: ${duration < 30 ? 'Anúncio curto' : duration < 60 ? 'Anúncio médio' : 'Conteúdo longo'}
 ${spectralInsights}
 
+RESULTADO OBRIGATÓRIO DA ANÁLISE HPSS (fonte única de verdade):
+- musicDetected: ${spectralAnalysis?.musicDetected || false}
+- confidence: ${spectralAnalysis?.confidence || 0}/10
+
+GATING HARD ATIVO: Use EXATAMENTE estes valores na sua resposta. NÃO modifique.
+
 CONTEXTO DE ANÁLISE:
-- Use a análise espectral como fonte primária de evidência
-- Se dados espectrais são inválidos, seja conservador
-- Áudio de boa qualidade NÃO automaticamente significa música presente
-- Evite suposições baseadas apenas no tipo de conteúdo`
+- A análise HPSS é baseada em separação de fontes harmônicas/percussivas
+- Usa máscara de fala para detectar música durante períodos de narração
+- É a fonte ÚNICA e DEFINITIVA para detecção de música
+- Sua função é apenas explicar e classificar, não detectar`
         }
       ],
       temperature: 0.2, // Mais determinístico para precisão
@@ -244,20 +256,25 @@ CONTEXTO DE ANÁLISE:
     try {
       const analysis = JSON.parse(completion.choices[0].message.content || '{}');
       
-      // FIXED: Enhanced confidence scoring based primarily on spectral evidence
-      let musicConfidence = analysis.backgroundMusicPresence || 3; // Start conservative
+      // GATING HARD: Use HPSS analysis as single source of truth
+      let musicDetected = false;
+      let musicConfidence = 0;
       
-      // Primary evidence: spectral analysis
+      // Primary evidence: HPSS analysis (single source of truth)
       if (spectralAnalysis && spectralAnalysis.validAnalysis) {
-        if (spectralAnalysis.musicEnergyScore > 7) {
-          musicConfidence = Math.min(10, musicConfidence + 3); // Strong spectral evidence
-        } else if (spectralAnalysis.musicEnergyScore > 5) {
-          musicConfidence = Math.min(10, musicConfidence + 1); // Moderate evidence
-        }
+        musicDetected = spectralAnalysis.musicDetected;
+        musicConfidence = spectralAnalysis.confidence;
+        console.log(`🎵 HPSS Detection Result: ${musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'} (confiança: ${musicConfidence}/10)`);
       } else {
-        // No valid spectral data - be very conservative
-        musicConfidence = Math.max(1, musicConfidence - 2);
+        // No valid spectral data - conservative fallback (no music)
+        musicDetected = false;
+        musicConfidence = 0;
+        console.log(`🎵 HPSS Fallback: Dados inválidos, assumindo MÚSICA NÃO DETECTADA`);
       }
+      
+      // Override GPT result with HPSS detection (gating hard)
+      analysis.musicDetected = musicDetected;
+      analysis.backgroundMusicPresence = musicConfidence;
       
       console.log(`🎵 Enhanced Audio Analysis Result:`);
       console.log(`   Music detected: ${analysis.musicDetected} (confidence: ${musicConfidence}/10)`);
@@ -265,12 +282,16 @@ CONTEXTO DE ANÁLISE:
       console.log(`   Audio quality: ${analysis.audioQuality}/10`);
       console.log(`   Reasoning: ${analysis.reasoning}`);
       
+      // STRICT GATING HARD: HPSS is single source of truth, no overrides allowed
+      const finalMusicDetected = spectralAnalysis?.validAnalysis ? spectralAnalysis.musicDetected : false;
+      const finalMusicPresence = finalMusicDetected && spectralAnalysis ? Math.round(spectralAnalysis.confidence) : 0;
+      
       return {
         audioQuality: Math.min(10, Math.max(1, analysis.audioQuality || 5)),
         voiceClarity: Math.min(10, Math.max(1, analysis.voiceClarity || 5)),
-        musicDetected: analysis.musicDetected || musicConfidence > 6,
-        backgroundMusicPresence: Math.round(musicConfidence),
-        musicType: analysis.musicType,
+        musicDetected: finalMusicDetected, // STRICT: Only HPSS result, no confidence override
+        backgroundMusicPresence: finalMusicPresence, // 0 if no music, confidence if music
+        musicType: finalMusicDetected ? analysis.musicType : undefined,
         silencePercentage: Math.min(100, Math.max(0, analysis.silencePercentage || 0)),
         spectralAnalysis
       };
@@ -279,8 +300,8 @@ CONTEXTO DE ANÁLISE:
       return {
         audioQuality: 5,
         voiceClarity: 5,
-        musicDetected: false,
-        backgroundMusicPresence: 3,
+        musicDetected: false, // Conservative: no music when uncertain
+        backgroundMusicPresence: 0, // Conservative: no music presence when uncertain
         silencePercentage: 20
       };
     }
@@ -784,10 +805,9 @@ CONTEXTO DE ANÁLISE:
   // ========================================
 
   /**
-   * Perform FFT-based spectral analysis to detect music vs voice characteristics
-   * FIXED: Now validates audio data before analysis and returns safe defaults for invalid data
+   * Perform HPSS-based analysis to distinguish music from voice with speech masking
    */
-  private async performSpectralAnalysis(audioBuffer: Buffer): Promise<{
+  private async performSpectralAnalysis(audioBuffer: Buffer, whisperTimestamps?: any[]): Promise<{
     musicEnergyScore: number;
     voiceClarity: number;
     bassPresence: number;
@@ -797,82 +817,98 @@ CONTEXTO DE ANÁLISE:
     musicLikelihood: number;
     frequencyDistribution: any;
     validAnalysis: boolean;
+    musicDetected: boolean;
+    confidence: number;
   }> {
     try {
-      console.log(`🔬 Starting spectral analysis of ${audioBuffer.length} bytes`);
+      console.log(`🔬 Starting HPSS-based spectral analysis of ${audioBuffer.length} bytes`);
       
       // Validate if this is proper audio data
       if (!this.isValidAudioFormat(audioBuffer)) {
         console.warn(`⚠️ Invalid audio format detected - returning conservative estimates`);
-        return this.getConservativeSpectralAnalysis();
+        return this.getConservativeSpectralAnalysisEnhanced();
       }
       
-      // Convert audio buffer to PCM samples
-      const samples = this.extractPCMSamples(audioBuffer);
-      const sampleRate = 44100; // Assuming standard sample rate
+      // Extract and preprocess PCM samples
+      const samples = this.extractAndPreprocessPCM(audioBuffer);
+      const sampleRate = 16000; // Standardized sample rate
       
       // Validate extracted samples
       if (samples.length === 0 || samples.every(s => s === 0)) {
         console.warn(`⚠️ No valid PCM samples extracted - returning conservative estimates`);
-        return this.getConservativeSpectralAnalysis();
+        return this.getConservativeSpectralAnalysisEnhanced();
       }
       
-      // Perform windowed FFT analysis
-      const windowSize = 2048;
-      const hopSize = windowSize / 2;
-      const spectralFrames = [];
+      // Convert to log-mel spectrogram
+      const melSpectrogram = this.computeLogMelSpectrogram(samples, sampleRate);
       
-      for (let i = 0; i < samples.length - windowSize; i += hopSize) {
-        const frame = samples.slice(i, i + windowSize);
-        const windowedFrame = this.applyHammingWindow(frame);
-        const fftResult = fft.fft(windowedFrame);
-        const magnitude = fft.util.fftMag(fftResult);
-        spectralFrames.push(magnitude);
-      }
+      // Apply HPSS (Harmonic-Percussive Source Separation)
+      const { harmonic, percussive } = this.applyHPSS(melSpectrogram);
       
-      console.log(`🔬 Analyzed ${spectralFrames.length} spectral frames`);
+      // Create speech mask from Whisper timestamps
+      const speechMask = this.createSpeechMask(whisperTimestamps || [], samples.length, sampleRate);
       
-      // Analyze frequency characteristics
-      const analysis = this.analyzeSpectralFeatures(spectralFrames, sampleRate);
+      // Analyze music features during speech periods
+      const musicAnalysis = this.analyzeMusicDuringSpeech(harmonic, percussive, speechMask, sampleRate);
       
-      console.log(`🎵 Spectral Analysis Results:`);
-      console.log(`   Music Energy Score: ${analysis.musicEnergyScore}/10`);
-      console.log(`   Voice Clarity: ${analysis.voiceClarity}/10`);
-      console.log(`   Bass Presence: ${analysis.bassPresence}/10`);
-      console.log(`   Harmonic Content: ${analysis.harmonicContent}/10`);
-      console.log(`   Music Likelihood: ${analysis.musicLikelihood}/10`);
+      console.log(`🎵 HPSS Analysis Results:`);
+      console.log(`   Music Detected: ${musicAnalysis.musicDetected}`);
+      console.log(`   Confidence: ${musicAnalysis.confidence}/10`);
+      console.log(`   Harmonic Ratio During Speech: ${musicAnalysis.harmonicRatioSpeech.toFixed(3)}`);
+      console.log(`   Beat Periodicity: ${musicAnalysis.beatPeriodicity.toFixed(3)}`);
+      console.log(`   Speech Coverage: ${musicAnalysis.speechCoverage.toFixed(1)}%`);
       
-      return analysis;
+      return {
+        musicEnergyScore: musicAnalysis.harmonicRatioSpeech * 10,
+        voiceClarity: musicAnalysis.voiceClarity,
+        bassPresence: musicAnalysis.bassPresence,
+        harmonicContent: musicAnalysis.harmonicRatio * 10,
+        dynamicRange: musicAnalysis.dynamicRange,
+        spectralCentroid: musicAnalysis.spectralCentroid,
+        musicLikelihood: musicAnalysis.confidence,
+        frequencyDistribution: musicAnalysis.freqDistribution,
+        validAnalysis: true,
+        musicDetected: musicAnalysis.musicDetected,
+        confidence: musicAnalysis.confidence
+      };
       
     } catch (error) {
-      console.error('🔬 Spectral analysis failed:', error);
-      return this.getConservativeSpectralAnalysis();
+      console.error('🔬 HPSS analysis failed:', error);
+      return this.getConservativeSpectralAnalysisEnhanced();
     }
   }
 
   /**
-   * Extract PCM samples from audio buffer (simplified)
+   * Extract and preprocess PCM samples with RMS normalization and filtering
    */
-  private extractPCMSamples(audioBuffer: Buffer): number[] {
+  private extractAndPreprocessPCM(audioBuffer: Buffer): number[] {
     const samples: number[] = [];
     
     // Simple 16-bit PCM extraction (assumes WAV format)
-    // In production, you'd use a proper audio decoding library
     for (let i = 44; i < audioBuffer.length - 1; i += 2) { // Skip WAV header
       const sample = audioBuffer.readInt16LE(i) / 32768.0; // Normalize to [-1, 1]
       samples.push(sample);
     }
     
-    // If no valid samples, generate noise for analysis (fallback)
     if (samples.length === 0) {
       console.warn('🔬 No PCM samples extracted, using fallback');
-      for (let i = 0; i < 44100; i++) { // 1 second of data
-        samples.push(Math.random() * 0.1 - 0.05); // Small noise
+      // Generate minimal noise for analysis
+      for (let i = 0; i < 16000; i++) { // 1 second at 16kHz
+        samples.push(Math.random() * 0.01 - 0.005); // Very small noise
       }
     }
     
-    console.log(`🔬 Extracted ${samples.length} PCM samples`);
-    return samples.slice(0, Math.min(samples.length, 44100 * 10)); // Max 10 seconds for performance
+    // Convert to mono if needed and downsample to 16kHz
+    const processed = this.downsampleTo16kHz(samples);
+    
+    // Apply RMS normalization
+    const normalized = this.applyRMSNormalization(processed);
+    
+    // Apply high-pass filter (50 Hz) to remove low-frequency noise
+    const filtered = this.applyHighPassFilter(normalized, 16000, 50);
+    
+    console.log(`🔬 Extracted and preprocessed ${filtered.length} PCM samples (16kHz)`);
+    return filtered.slice(0, Math.min(filtered.length, 16000 * 30)); // Max 30 seconds
   }
 
   /**
@@ -1066,6 +1102,365 @@ CONTEXTO DE ANÁLISE:
     const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
     
     return variance;
+  }
+
+  // ========================================
+  // HPSS (HARMONIC-PERCUSSIVE SOURCE SEPARATION) METHODS
+  // ========================================
+
+  /**
+   * Enhanced conservative spectral analysis with musicDetected flag
+   */
+  private getConservativeSpectralAnalysisEnhanced(): {
+    musicEnergyScore: number;
+    voiceClarity: number;
+    bassPresence: number;
+    harmonicContent: number;
+    dynamicRange: number;
+    spectralCentroid: number;
+    musicLikelihood: number;
+    frequencyDistribution: any;
+    validAnalysis: boolean;
+    musicDetected: boolean;
+    confidence: number;
+  } {
+    return {
+      musicEnergyScore: 2, // Conservative - assume minimal music
+      voiceClarity: 6,
+      bassPresence: 1,
+      harmonicContent: 2,
+      dynamicRange: 3,
+      spectralCentroid: 1500,
+      musicLikelihood: 2, // Low confidence
+      frequencyDistribution: {
+        bass: 10,
+        voice: 60,
+        presence: 25,
+        treble: 5
+      },
+      validAnalysis: false,
+      musicDetected: false, // Conservative: assume no music when unsure
+      confidence: 2
+    };
+  }
+
+  /**
+   * Downsample audio to 16kHz
+   */
+  private downsampleTo16kHz(samples: number[]): number[] {
+    // Simple decimation (in practice, you'd use proper anti-aliasing)
+    const targetRate = 16000;
+    const originalRate = 44100; // Assume original is 44.1kHz
+    const ratio = Math.floor(originalRate / targetRate);
+    
+    const downsampled: number[] = [];
+    for (let i = 0; i < samples.length; i += ratio) {
+      downsampled.push(samples[i]);
+    }
+    
+    return downsampled;
+  }
+
+  /**
+   * Apply RMS normalization
+   */
+  private applyRMSNormalization(samples: number[]): number[] {
+    const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
+    const targetRMS = 0.1; // Target RMS level
+    
+    if (rms === 0) return samples;
+    
+    const gain = targetRMS / rms;
+    return samples.map(sample => Math.max(-1, Math.min(1, sample * gain)));
+  }
+
+  /**
+   * Apply simple high-pass filter
+   */
+  private applyHighPassFilter(samples: number[], sampleRate: number, cutoffHz: number): number[] {
+    // Simple first-order high-pass filter
+    const RC = 1.0 / (2 * Math.PI * cutoffHz);
+    const dt = 1.0 / sampleRate;
+    const alpha = RC / (RC + dt);
+    
+    const filtered: number[] = [];
+    let prevInput = 0;
+    let prevOutput = 0;
+    
+    for (const sample of samples) {
+      const output = alpha * (prevOutput + sample - prevInput);
+      filtered.push(output);
+      prevInput = sample;
+      prevOutput = output;
+    }
+    
+    return filtered;
+  }
+
+  /**
+   * Compute log-mel spectrogram (simplified)
+   */
+  private computeLogMelSpectrogram(samples: number[], sampleRate: number): number[][] {
+    const windowSize = 1024;
+    const hopSize = windowSize / 2;
+    const melBins = 80;
+    
+    const spectrogram: number[][] = [];
+    
+    for (let i = 0; i < samples.length - windowSize; i += hopSize) {
+      const frame = samples.slice(i, i + windowSize);
+      const windowed = this.applyHammingWindow(frame);
+      const fftResult = fft.fft(windowed);
+      const magnitude = fft.util.fftMag(fftResult);
+      
+      // Convert to mel scale (simplified)
+      const melFrame = this.convertToMelScale(magnitude, sampleRate, melBins);
+      
+      // Apply log
+      const logMelFrame = melFrame.map(val => Math.log(Math.max(val, 1e-10)));
+      spectrogram.push(logMelFrame);
+    }
+    
+    return spectrogram;
+  }
+
+  /**
+   * Convert magnitude spectrum to mel scale (simplified)
+   */
+  private convertToMelScale(magnitude: number[], sampleRate: number, melBins: number): number[] {
+    // Simplified mel-scale conversion
+    const melScale = new Array(melBins).fill(0);
+    const binRatio = magnitude.length / melBins;
+    
+    for (let i = 0; i < melBins; i++) {
+      const startBin = Math.floor(i * binRatio);
+      const endBin = Math.floor((i + 1) * binRatio);
+      
+      let energy = 0;
+      for (let j = startBin; j < endBin && j < magnitude.length; j++) {
+        energy += magnitude[j];
+      }
+      melScale[i] = energy / (endBin - startBin);
+    }
+    
+    return melScale;
+  }
+
+  /**
+   * Apply HPSS (Harmonic-Percussive Source Separation)
+   */
+  private applyHPSS(spectrogram: number[][]): { harmonic: number[][], percussive: number[][] } {
+    const rows = spectrogram.length;
+    const cols = spectrogram[0].length;
+    
+    // Create harmonic and percussive components
+    const harmonic: number[][] = [];
+    const percussive: number[][] = [];
+    
+    // Apply median filtering for separation
+    for (let i = 0; i < rows; i++) {
+      harmonic[i] = [];
+      percussive[i] = [];
+      
+      for (let j = 0; j < cols; j++) {
+        // Harmonic component: median filter across time (horizontal)
+        const timeSlice = [];
+        for (let t = Math.max(0, i - 2); t <= Math.min(rows - 1, i + 2); t++) {
+          timeSlice.push(spectrogram[t][j]);
+        }
+        const harmonicVal = this.median(timeSlice);
+        
+        // Percussive component: median filter across frequency (vertical)
+        const freqSlice = [];
+        for (let f = Math.max(0, j - 2); f <= Math.min(cols - 1, j + 2); f++) {
+          freqSlice.push(spectrogram[i][f]);
+        }
+        const percussiveVal = this.median(freqSlice);
+        
+        // Soft masking
+        const total = harmonicVal + percussiveVal;
+        if (total > 0) {
+          harmonic[i][j] = (harmonicVal / total) * spectrogram[i][j];
+          percussive[i][j] = (percussiveVal / total) * spectrogram[i][j];
+        } else {
+          harmonic[i][j] = 0;
+          percussive[i][j] = 0;
+        }
+      }
+    }
+    
+    return { harmonic, percussive };
+  }
+
+  /**
+   * Calculate median of array
+   */
+  private median(arr: number[]): number {
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  /**
+   * Create speech mask from Whisper timestamps
+   */
+  private createSpeechMask(timestamps: any[], audioLength: number, sampleRate: number): boolean[] {
+    const mask = new Array(Math.floor(audioLength / (sampleRate * 0.025))).fill(false); // 25ms frames
+    
+    for (const segment of timestamps) {
+      if (segment.start !== undefined && segment.end !== undefined) {
+        const startFrame = Math.floor(segment.start / 0.025);
+        const endFrame = Math.floor(segment.end / 0.025);
+        
+        for (let i = startFrame; i < Math.min(endFrame, mask.length); i++) {
+          mask[i] = true;
+        }
+      }
+    }
+    
+    return mask;
+  }
+
+  /**
+   * Analyze music features during speech periods
+   */
+  private analyzeMusicDuringSpeech(harmonic: number[][], percussive: number[][], speechMask: boolean[], sampleRate: number): {
+    musicDetected: boolean;
+    confidence: number;
+    harmonicRatioSpeech: number;
+    beatPeriodicity: number;
+    speechCoverage: number;
+    voiceClarity: number;
+    bassPresence: number;
+    harmonicRatio: number;
+    dynamicRange: number;
+    spectralCentroid: number;
+    freqDistribution: any;
+  } {
+    // Calculate harmonic energy during speech
+    let harmonicEnergySpeech = 0;
+    let totalEnergySpeech = 0;
+    let speechFrames = 0;
+    
+    const minFrames = Math.min(harmonic.length, speechMask.length);
+    
+    for (let i = 0; i < minFrames; i++) {
+      if (speechMask[i]) {
+        speechFrames++;
+        
+        const harmonicFrame = harmonic[i].reduce((sum, val) => sum + val, 0);
+        const percussiveFrame = percussive[i].reduce((sum, val) => sum + val, 0);
+        const totalFrame = harmonicFrame + percussiveFrame;
+        
+        harmonicEnergySpeech += harmonicFrame;
+        totalEnergySpeech += totalFrame;
+      }
+    }
+    
+    const speechCoverage = (speechFrames / minFrames) * 100;
+    const harmonicRatioSpeech = totalEnergySpeech > 0 ? harmonicEnergySpeech / totalEnergySpeech : 0;
+    
+    // Calculate beat periodicity (simplified)
+    const beatPeriodicity = this.calculateBeatPeriodicity(percussive);
+    
+    // Calculate overall harmonic ratio
+    let totalHarmonic = 0;
+    let totalPercussive = 0;
+    
+    for (const frame of harmonic) {
+      totalHarmonic += frame.reduce((sum, val) => sum + val, 0);
+    }
+    for (const frame of percussive) {
+      totalPercussive += frame.reduce((sum, val) => sum + val, 0);
+    }
+    
+    const harmonicRatio = totalHarmonic / (totalHarmonic + totalPercussive);
+    
+    // Music detection logic based on architectural guidance
+    const musicDetected = (
+      (harmonicRatioSpeech > 0.20 && beatPeriodicity > 0.20 && speechCoverage >= 40) ||
+      (harmonicRatio > 0.35 && beatPeriodicity > 0.15)
+    );
+    
+    // Calculate confidence
+    let confidence = 0;
+    if (musicDetected) {
+      confidence = Math.min(10, (harmonicRatioSpeech * 15) + (beatPeriodicity * 10) + (harmonicRatio * 5));
+    } else {
+      confidence = Math.max(0, 10 - (harmonicRatioSpeech * 15) - (beatPeriodicity * 10));
+    }
+    
+    return {
+      musicDetected,
+      confidence: Math.round(confidence),
+      harmonicRatioSpeech,
+      beatPeriodicity,
+      speechCoverage,
+      voiceClarity: speechCoverage >= 60 ? 8 : 5,
+      bassPresence: beatPeriodicity * 10,
+      harmonicRatio,
+      dynamicRange: this.calculateDynamicRange(harmonic),
+      spectralCentroid: this.calculateSpectralCentroid(harmonic),
+      freqDistribution: {
+        bass: Math.round(beatPeriodicity * 40),
+        voice: Math.round(speechCoverage * 0.6),
+        presence: Math.round(harmonicRatioSpeech * 50),
+        treble: Math.round(harmonicRatio * 30)
+      }
+    };
+  }
+
+  /**
+   * Calculate beat periodicity (simplified)
+   */
+  private calculateBeatPeriodicity(percussive: number[][]): number {
+    if (percussive.length === 0) return 0;
+    
+    // Sum percussive energy across frequency bins for each frame
+    const onsetStrength = percussive.map(frame => 
+      frame.reduce((sum, val) => sum + val, 0)
+    );
+    
+    // Calculate onset variations (simplified beat detection)
+    let variations = 0;
+    for (let i = 1; i < onsetStrength.length; i++) {
+      const diff = Math.abs(onsetStrength[i] - onsetStrength[i - 1]);
+      if (diff > 0.1) variations++;
+    }
+    
+    return Math.min(1, variations / onsetStrength.length * 10);
+  }
+
+  /**
+   * Calculate dynamic range from harmonic component
+   */
+  private calculateDynamicRange(harmonic: number[][]): number {
+    const energies = harmonic.map(frame => frame.reduce((sum, val) => sum + val, 0));
+    const max = Math.max(...energies);
+    const min = Math.min(...energies.filter(e => e > 0));
+    
+    if (min === 0 || max === 0) return 0;
+    
+    return Math.min(10, Math.log10(max / min));
+  }
+
+  /**
+   * Calculate spectral centroid
+   */
+  private calculateSpectralCentroid(harmonic: number[][]): number {
+    if (harmonic.length === 0) return 0;
+    
+    let weightedSum = 0;
+    let totalEnergy = 0;
+    
+    for (const frame of harmonic) {
+      for (let i = 0; i < frame.length; i++) {
+        weightedSum += i * frame[i];
+        totalEnergy += frame[i];
+      }
+    }
+    
+    return totalEnergy > 0 ? (weightedSum / totalEnergy) * 100 : 0; // Normalize to reasonable range
   }
 
   /**
