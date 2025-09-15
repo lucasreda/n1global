@@ -1405,8 +1405,8 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
         // Convert to mel scale (simplified)
         const melFrame = this.convertToMelScale(magnitude, sampleRate, melBins);
         
-        // Apply log
-        const logMelFrame = melFrame.map(val => Math.log(Math.max(val, 1e-10)));
+        // Apply log with sensible clipping to avoid extreme negative values
+        const logMelFrame = melFrame.map(val => Math.max(-10, Math.log(Math.max(val, 1e-4))));
         spectrogram.push(logMelFrame);
       }
     } catch (error) {
@@ -1559,7 +1559,11 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
     }
     
     const speechCoverage = (speechFrames / minFrames) * 100;
-    const harmonicRatioSpeech = totalEnergySpeech > 0 ? harmonicEnergySpeech / totalEnergySpeech : 0;
+    
+    // CRITICAL FIX: Ensure positive values to prevent negative ratios
+    const safeHarmonicEnergy = Math.max(0, harmonicEnergySpeech);
+    const safeTotalEnergy = Math.max(1e-6, totalEnergySpeech);
+    const harmonicRatioSpeech = safeHarmonicEnergy / safeTotalEnergy;
     
     // Calculate beat periodicity (simplified)
     const beatPeriodicity = this.calculateBeatPeriodicity(percussive);
@@ -1589,12 +1593,12 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
       (harmonicRatio > 0.40)
     );
     
-    // Calculate confidence
+    // Calculate confidence with strict bounds validation
     let confidence = 0;
     if (musicDetected) {
-      confidence = Math.min(10, (harmonicRatioSpeech * 15) + (beatPeriodicity * 10) + (harmonicRatio * 5));
+      confidence = Math.min(10, Math.max(0, (harmonicRatioSpeech * 15) + (beatPeriodicity * 10) + (harmonicRatio * 5)));
     } else {
-      confidence = Math.max(0, 10 - (harmonicRatioSpeech * 15) - (beatPeriodicity * 10));
+      confidence = Math.max(0, Math.min(10, 10 - (harmonicRatioSpeech * 15) - (beatPeriodicity * 10)));
     }
     
     return {
