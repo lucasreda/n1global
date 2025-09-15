@@ -196,13 +196,17 @@ Análise HPSS: DADOS INVÁLIDOS - assumindo conservadoramente SEM música de fun
       }
     }
 
-    // Step 2: Enhanced GPT-4o analysis with rich context
+    // CRITICAL FIX: Use conditional prompts based on HPSS validity
+    const shouldApplyHPSSGating = spectralAnalysis?.validAnalysis && (spectralAnalysis as any)?.speechCoverage > 10;
+    
+    // Step 2: Enhanced GPT-4o analysis with conditional prompting
     const completion = await this.openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `Você é um especialista em análise de áudio. Sua função é APENAS EXPLICAR e interpretar os resultados, NÃO detectar música.
+          content: shouldApplyHPSSGating 
+            ? `Você é um especialista em análise de áudio. Sua função é APENAS EXPLICAR e interpretar os resultados, NÃO detectar música.
 
 INSTRUÇÕES CRÍTICAS PARA GATING HARD:
 1. SEMPRE use o resultado "musicDetected" da análise HPSS como fonte ÚNICA de verdade
@@ -224,10 +228,33 @@ Retorne JSON com:
   "silencePercentage": number (0-100),
   "reasoning": string (explique que usou análise HPSS como fonte única de verdade)
 }`
+            : `Você é um especialista em análise de áudio e detecção de música. HPSS analysis falhou, então você deve detectar música baseado na transcrição e contexto.
+
+INSTRUÇÕES PARA DETECÇÃO INDEPENDENTE:
+1. Analise a transcrição para identificar música de fundo sutil
+2. Considere contexto (anúncios frequentemente têm música)
+3. Seja sensível a trilhas sonoras baixas que podem não estar na transcrição
+4. Use seu conhecimento sobre padrões de conteúdo publicitário
+5. Determine musicType e musicGenre baseado no contexto
+
+FALLBACK MODE: Você PODE detectar música independentemente.
+
+Retorne JSON com:
+{
+  "audioQuality": number (1-10, baseado na clareza da transcrição),
+  "voiceClarity": number (1-10, clareza específica da voz),
+  "musicDetected": boolean (SUA DETECÇÃO baseada em transcrição/contexto),
+  "backgroundMusicPresence": number (1-10, SUA AVALIAÇÃO da presença musical),
+  "musicType": string (se musicDetected=true, baseado no contexto),
+  "musicGenre": string (se musicDetected=true, baseado no contexto),
+  "silencePercentage": number (0-100),
+  "reasoning": string (explique sua detecção independente já que HPSS falhou)
+}`
         },
         {
           role: 'user',
-          content: `DADOS PARA ANÁLISE:
+          content: shouldApplyHPSSGating 
+            ? `DADOS PARA ANÁLISE:
 Transcrição: "${transcript}"
 Duração: ${duration}s
 Palavras na transcrição: ${transcript.split(' ').length}
@@ -246,9 +273,25 @@ CONTEXTO DE ANÁLISE:
 - Usa máscara de fala para detectar música durante períodos de narração
 - É a fonte ÚNICA e DEFINITIVA para detecção de música
 - Sua função é apenas explicar e classificar, não detectar`
+            : `DADOS PARA ANÁLISE (HPSS FALHOU - DETECÇÃO INDEPENDENTE NECESSÁRIA):
+Transcrição: "${transcript}"
+Duração: ${duration}s
+Palavras na transcrição: ${transcript.split(' ').length}
+Densidade de fala: ${(transcript.split(' ').length / duration * 60).toFixed(1)} palavras/minuto
+Tipo de conteúdo: ${duration < 30 ? 'Anúncio curto' : duration < 60 ? 'Anúncio médio' : 'Conteúdo longo'}
+
+Razão da falha HPSS: ${!spectralAnalysis?.validAnalysis ? 'Dados PCM inválidos' : 'Cobertura de fala insuficiente'}
+
+CONTEXTO PARA DETECÇÃO:
+- Anúncios frequentemente contêm música de fundo sutil
+- Música pode ser muito baixa para aparecer na transcrição
+- Considere o tom e estilo do conteúdo
+- Use padrões típicos de publicidade para inferir presença musical
+
+FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
         }
       ],
-      temperature: 0.2, // Mais determinístico para precisão
+      temperature: 0.2,
       max_tokens: 500,
       response_format: { type: "json_object" }
     });
@@ -256,40 +299,27 @@ CONTEXTO DE ANÁLISE:
     try {
       const analysis = JSON.parse(completion.choices[0].message.content || '{}');
       
-      // GATING HARD: Use HPSS analysis as single source of truth
-      let musicDetected = false;
-      let musicConfidence = 0;
+      // SIMPLIFIED GATING: Conditional prompts handle the logic, just log the decision
+      const shouldApplyHPSSGatingCheck = spectralAnalysis?.validAnalysis && (spectralAnalysis as any)?.speechCoverage > 10;
       
-      // Primary evidence: HPSS analysis (with speech coverage validation)
-      // FIX: Only apply HPSS gating when validAnalysis=true AND speech coverage >10%
-      const hasSpeechCoverage = (spectralAnalysis as any)?.speechCoverage > 10; // Cast to access speechCoverage
-      
-      if (spectralAnalysis && spectralAnalysis.validAnalysis && hasSpeechCoverage) {
-        musicDetected = spectralAnalysis.musicDetected;
-        musicConfidence = spectralAnalysis.confidence;
-        console.log(`🎵 HPSS Detection Result: ${musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'} (confiança: ${musicConfidence}/10, speech coverage: ${(spectralAnalysis as any)?.speechCoverage?.toFixed(1)}%)`);
+      if (shouldApplyHPSSGatingCheck) {
+        console.log(`🎵 HPSS Gating Applied: ${analysis.musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'} (confiança: ${analysis.backgroundMusicPresence}/10, speech coverage: ${(spectralAnalysis as any)?.speechCoverage?.toFixed(1)}%)`);
       } else {
-        // Invalid analysis or insufficient speech coverage - allow GPT fallback
-        const reason = !spectralAnalysis?.validAnalysis ? 'análise inválida' : 'cobertura de fala insuficiente';
-        musicDetected = analysis.musicDetected || false; // Use GPT result as fallback
-        musicConfidence = analysis.backgroundMusicPresence || 0;
-        console.log(`🎵 HPSS Bypassed (${reason}): Usando resultado GPT - ${musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'}`);
+        const reason = !spectralAnalysis?.validAnalysis ? 'análise HPSS inválida' : 'cobertura de fala insuficiente';
+        console.log(`🎵 GPT Fallback Used (${reason}): ${analysis.musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'} (confiança: ${analysis.backgroundMusicPresence}/10)`);
       }
       
-      // Override GPT result with HPSS detection (gating hard)
-      analysis.musicDetected = musicDetected;
-      analysis.backgroundMusicPresence = musicConfidence;
+      // No overrides needed - conditional prompts handle the logic
       
       console.log(`🎵 Enhanced Audio Analysis Result:`);
-      console.log(`   Music detected: ${analysis.musicDetected} (confidence: ${musicConfidence}/10)`);
+      console.log(`   Music detected: ${analysis.musicDetected} (confidence: ${analysis.backgroundMusicPresence}/10)`);
       console.log(`   Voice clarity: ${analysis.voiceClarity}/10`);
       console.log(`   Audio quality: ${analysis.audioQuality}/10`);
       console.log(`   Reasoning: ${analysis.reasoning}`);
       
-      // UPDATED GATING: Apply HPSS gating only when analysis is valid AND has speech coverage
-      const shouldApplyHPSSGating = spectralAnalysis?.validAnalysis && (spectralAnalysis as any)?.speechCoverage > 10;
-      const finalMusicDetected = shouldApplyHPSSGating && spectralAnalysis ? spectralAnalysis.musicDetected : (analysis.musicDetected || false);
-      const finalMusicPresence = shouldApplyHPSSGating && spectralAnalysis ? Math.round(spectralAnalysis.confidence) : (analysis.backgroundMusicPresence || 0);
+      // FINAL RESULT: Use GPT analysis directly (conditional prompts handled the logic)
+      const finalMusicDetected = analysis.musicDetected || false;
+      const finalMusicPresence = analysis.backgroundMusicPresence || 0;
       
       return {
         audioQuality: Math.min(10, Math.max(1, analysis.audioQuality || 5)),
