@@ -624,6 +624,9 @@ CONTEXTO DE ANÁLISE:
       audioQuality = scene.durationSec > 5 ? 4 : 2; // Longer silence suggests intentional
     }
 
+    // Calculate speech density (words per second)
+    const speechDensity = voicePresent ? (words.length / scene.durationSec) : 0;
+
     // Enhanced volume estimation based on multiple factors
     let volume: 'quiet' | 'normal' | 'loud';
     if (speechRate < 80 || words.length < 3) {
@@ -889,6 +892,12 @@ CONTEXTO DE ANÁLISE:
       // Apply HPSS (Harmonic-Percussive Source Separation)
       const { harmonic, percussive } = this.applyHPSS(melSpectrogram);
       
+      // Validate HPSS results
+      if (harmonic.length === 0 || percussive.length === 0) {
+        console.warn(`⚠️ HPSS separation failed - returning conservative estimates`);
+        return this.getConservativeSpectralAnalysisEnhanced();
+      }
+      
       // Create speech mask from Whisper timestamps
       const speechMask = this.createSpeechMask(whisperTimestamps || [], samples.length, sampleRate);
       
@@ -925,34 +934,62 @@ CONTEXTO DE ANÁLISE:
   /**
    * Extract and preprocess PCM samples with RMS normalization and filtering
    */
+  /**
+   * Extract and preprocess PCM samples with robust error handling
+   * FIXED: Added validation and better error handling
+   */
   private extractAndPreprocessPCM(audioBuffer: Buffer): number[] {
     const samples: number[] = [];
     
-    // Simple 16-bit PCM extraction (assumes WAV format)
-    for (let i = 44; i < audioBuffer.length - 1; i += 2) { // Skip WAV header
-      const sample = audioBuffer.readInt16LE(i) / 32768.0; // Normalize to [-1, 1]
-      samples.push(sample);
-    }
-    
-    if (samples.length === 0) {
-      console.warn('🔬 No PCM samples extracted, using fallback');
-      // Generate minimal noise for analysis
-      for (let i = 0; i < 16000; i++) { // 1 second at 16kHz
-        samples.push(Math.random() * 0.01 - 0.005); // Very small noise
+    try {
+      // Validate buffer size
+      if (audioBuffer.length < 44) {
+        console.warn('🔬 Buffer too small for WAV header, using fallback');
+        return this.generateFallbackSamples();
       }
+      
+      // Simple 16-bit PCM extraction (assumes WAV format)
+      for (let i = 44; i < audioBuffer.length - 1; i += 2) { // Skip WAV header
+        try {
+          const sample = audioBuffer.readInt16LE(i) / 32768.0; // Normalize to [-1, 1]
+          if (!isNaN(sample) && isFinite(sample)) {
+            samples.push(Math.max(-1, Math.min(1, sample))); // Clamp to valid range
+          }
+        } catch (error) {
+          // Skip invalid samples
+          continue;
+        }
+      }
+      
+      if (samples.length === 0) {
+        console.warn('🔬 No valid PCM samples extracted, using fallback');
+        return this.generateFallbackSamples();
+      }
+      
+      // Convert to mono if needed and downsample to 16kHz
+      const processed = this.downsampleTo16kHz(samples);
+      
+      // Apply RMS normalization with validation
+      const normalized = this.applyRMSNormalization(processed);
+      
+      // Apply high-pass filter (50 Hz) to remove low-frequency noise
+      const filtered = this.applyHighPassFilter(normalized, 16000, 50);
+      
+      // Validate final samples
+      const validSamples = filtered.filter(sample => !isNaN(sample) && isFinite(sample));
+      
+      if (validSamples.length === 0) {
+        console.warn('🔬 All processed samples invalid, using fallback');
+        return this.generateFallbackSamples();
+      }
+      
+      console.log(`🔬 Extracted and preprocessed ${validSamples.length} PCM samples (16kHz)`);
+      return validSamples.slice(0, Math.min(validSamples.length, 16000 * 30)); // Max 30 seconds
+      
+    } catch (error) {
+      console.error('🔬 PCM extraction failed:', error);
+      return this.generateFallbackSamples();
     }
-    
-    // Convert to mono if needed and downsample to 16kHz
-    const processed = this.downsampleTo16kHz(samples);
-    
-    // Apply RMS normalization
-    const normalized = this.applyRMSNormalization(processed);
-    
-    // Apply high-pass filter (50 Hz) to remove low-frequency noise
-    const filtered = this.applyHighPassFilter(normalized, 16000, 50);
-    
-    console.log(`🔬 Extracted and preprocessed ${filtered.length} PCM samples (16kHz)`);
-    return filtered.slice(0, Math.min(filtered.length, 16000 * 30)); // Max 30 seconds
   }
 
   /**
@@ -1206,16 +1243,68 @@ CONTEXTO DE ANÁLISE:
   }
 
   /**
-   * Apply RMS normalization
+   * Generate fallback samples for analysis when extraction fails
+   * ADDED: Safe fallback for invalid audio data
+   */
+  private generateFallbackSamples(): number[] {
+    const samples: number[] = [];
+    // Generate minimal noise for analysis
+    for (let i = 0; i < 16000; i++) { // 1 second at 16kHz
+      samples.push(Math.random() * 0.01 - 0.005); // Very small noise
+    }
+    console.log('🔬 Generated fallback samples for analysis');
+    return samples;
+  }
+
+  /**
+   * Apply RMS normalization with validation
+   * FIXED: Added validation for edge cases
    */
   private applyRMSNormalization(samples: number[]): number[] {
-    const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
-    const targetRMS = 0.1; // Target RMS level
+    if (samples.length === 0) return samples;
     
-    if (rms === 0) return samples;
+    try {
+      const validSamples = samples.filter(sample => !isNaN(sample) && isFinite(sample));
+      if (validSamples.length === 0) return samples;
+      
+      const rms = Math.sqrt(validSamples.reduce((sum, sample) => sum + sample * sample, 0) / validSamples.length);
+      const targetRMS = 0.1; // Target RMS level
+      
+      if (rms === 0 || !isFinite(rms)) return samples;
+      
+      const gain = targetRMS / rms;
+      return samples.map(sample => {
+        if (!isNaN(sample) && isFinite(sample)) {
+          return Math.max(-1, Math.min(1, sample * gain));
+        }
+        return 0; // Replace invalid samples with silence
+      });
+    } catch (error) {
+      console.warn('⚠️ RMS normalization failed:', error);
+      return samples;
+    }
+  }
+
+  /**
+   * Calculate magnitude from FFT result manually
+   * ADDED: Helper method to replace fft.util.fftMag
+   */
+  private calculateMagnitude(fftResult: any[]): number[] {
+    const magnitude: number[] = [];
     
-    const gain = targetRMS / rms;
-    return samples.map(sample => Math.max(-1, Math.min(1, sample * gain)));
+    try {
+      for (let i = 0; i < fftResult.length; i++) {
+        const real = fftResult[i][0] || 0;
+        const imag = fftResult[i][1] || 0;
+        magnitude.push(Math.sqrt(real * real + imag * imag));
+      }
+    } catch (error) {
+      console.warn('⚠️ Magnitude calculation failed:', error);
+      // Return zeros if calculation fails
+      return new Array(fftResult.length).fill(0);
+    }
+    
+    return magnitude;
   }
 
   /**
@@ -1243,6 +1332,7 @@ CONTEXTO DE ANÁLISE:
 
   /**
    * Compute log-mel spectrogram (simplified)
+   * FIXED: Corrected fft-js API usage and added error handling
    */
   private computeLogMelSpectrogram(samples: number[], sampleRate: number): number[][] {
     const windowSize = 1024;
@@ -1251,18 +1341,28 @@ CONTEXTO DE ANÁLISE:
     
     const spectrogram: number[][] = [];
     
-    for (let i = 0; i < samples.length - windowSize; i += hopSize) {
-      const frame = samples.slice(i, i + windowSize);
-      const windowed = this.applyHammingWindow(frame);
-      const fftResult = fft.fft(windowed);
-      const magnitude = fft.util.fftMag(fftResult);
-      
-      // Convert to mel scale (simplified)
-      const melFrame = this.convertToMelScale(magnitude, sampleRate, melBins);
-      
-      // Apply log
-      const logMelFrame = melFrame.map(val => Math.log(Math.max(val, 1e-10)));
-      spectrogram.push(logMelFrame);
+    try {
+      for (let i = 0; i < samples.length - windowSize; i += hopSize) {
+        const frame = samples.slice(i, i + windowSize);
+        const windowed = this.applyHammingWindow(frame);
+        
+        // FIXED: Correct fft-js API usage
+        const fftResult = fft.fft(windowed);
+        
+        // Calculate magnitude manually if fft.util.fftMag is not available
+        const magnitude = this.calculateMagnitude(fftResult);
+        
+        // Convert to mel scale (simplified)
+        const melFrame = this.convertToMelScale(magnitude, sampleRate, melBins);
+        
+        // Apply log
+        const logMelFrame = melFrame.map(val => Math.log(Math.max(val, 1e-10)));
+        spectrogram.push(logMelFrame);
+      }
+    } catch (error) {
+      console.warn('⚠️ FFT computation failed:', error);
+      // Return empty spectrogram on error
+      return [];
     }
     
     return spectrogram;
@@ -1290,10 +1390,17 @@ CONTEXTO DE ANÁLISE:
     return melScale;
   }
 
+
   /**
    * Apply HPSS (Harmonic-Percussive Source Separation)
+   * FIXED: Added validation for empty spectrogram
    */
   private applyHPSS(spectrogram: number[][]): { harmonic: number[][], percussive: number[][] } {
+    if (spectrogram.length === 0 || spectrogram[0].length === 0) {
+      console.warn('⚠️ Empty spectrogram provided to HPSS');
+      return { harmonic: [], percussive: [] };
+    }
+    
     const rows = spectrogram.length;
     const cols = spectrogram[0].length;
     
