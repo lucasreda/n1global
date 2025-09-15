@@ -260,16 +260,20 @@ CONTEXTO DE ANÁLISE:
       let musicDetected = false;
       let musicConfidence = 0;
       
-      // Primary evidence: HPSS analysis (single source of truth)
-      if (spectralAnalysis && spectralAnalysis.validAnalysis) {
+      // Primary evidence: HPSS analysis (with speech coverage validation)
+      // FIX: Only apply HPSS gating when validAnalysis=true AND speech coverage >10%
+      const hasSpeechCoverage = (spectralAnalysis as any)?.speechCoverage > 10; // Cast to access speechCoverage
+      
+      if (spectralAnalysis && spectralAnalysis.validAnalysis && hasSpeechCoverage) {
         musicDetected = spectralAnalysis.musicDetected;
         musicConfidence = spectralAnalysis.confidence;
-        console.log(`🎵 HPSS Detection Result: ${musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'} (confiança: ${musicConfidence}/10)`);
+        console.log(`🎵 HPSS Detection Result: ${musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'} (confiança: ${musicConfidence}/10, speech coverage: ${(spectralAnalysis as any)?.speechCoverage?.toFixed(1)}%)`);
       } else {
-        // No valid spectral data - conservative fallback (no music)
-        musicDetected = false;
-        musicConfidence = 0;
-        console.log(`🎵 HPSS Fallback: Dados inválidos, assumindo MÚSICA NÃO DETECTADA`);
+        // Invalid analysis or insufficient speech coverage - allow GPT fallback
+        const reason = !spectralAnalysis?.validAnalysis ? 'análise inválida' : 'cobertura de fala insuficiente';
+        musicDetected = analysis.musicDetected || false; // Use GPT result as fallback
+        musicConfidence = analysis.backgroundMusicPresence || 0;
+        console.log(`🎵 HPSS Bypassed (${reason}): Usando resultado GPT - ${musicDetected ? 'MÚSICA DETECTADA' : 'MÚSICA NÃO DETECTADA'}`);
       }
       
       // Override GPT result with HPSS detection (gating hard)
@@ -282,9 +286,10 @@ CONTEXTO DE ANÁLISE:
       console.log(`   Audio quality: ${analysis.audioQuality}/10`);
       console.log(`   Reasoning: ${analysis.reasoning}`);
       
-      // STRICT GATING HARD: HPSS is single source of truth, no overrides allowed
-      const finalMusicDetected = spectralAnalysis?.validAnalysis ? spectralAnalysis.musicDetected : false;
-      const finalMusicPresence = finalMusicDetected && spectralAnalysis ? Math.round(spectralAnalysis.confidence) : 0;
+      // UPDATED GATING: Apply HPSS gating only when analysis is valid AND has speech coverage
+      const shouldApplyHPSSGating = spectralAnalysis?.validAnalysis && (spectralAnalysis as any)?.speechCoverage > 10;
+      const finalMusicDetected = shouldApplyHPSSGating && spectralAnalysis ? spectralAnalysis.musicDetected : (analysis.musicDetected || false);
+      const finalMusicPresence = shouldApplyHPSSGating && spectralAnalysis ? Math.round(spectralAnalysis.confidence) : (analysis.backgroundMusicPresence || 0);
       
       return {
         audioQuality: Math.min(10, Math.max(1, analysis.audioQuality || 5)),
@@ -651,10 +656,13 @@ CONTEXTO DE ANÁLISE:
         // Extract audio segment for this scene
         const sceneAudioBuffer = await this.extractSceneAudioBuffer(audioBuffer, scene.startSec, scene.endSec);
         
-        // Filter whisper segments for this scene
+        // Filter whisper segments for this scene using overlap logic
+        // FIX: Use overlap instead of strict containment to avoid empty speech coverage
         const sceneWhisperData = whisperSegments?.filter(segment => 
-          segment.start >= scene.startSec && segment.end <= scene.endSec
+          segment.start < scene.endSec && segment.end > scene.startSec
         ) || [];
+        
+        console.log(`🎵 Scene ${scene.startSec}-${scene.endSec}s: Found ${sceneWhisperData.length} overlapping Whisper segments`);
         
         // Perform HPSS spectral analysis on scene audio with time window
         spectralAnalysis = await this.performSpectralAnalysis(sceneAudioBuffer, sceneWhisperData, scene.startSec, scene.endSec);
@@ -864,20 +872,30 @@ CONTEXTO DE ANÁLISE:
       
       // Extract and preprocess PCM samples
       let samples = this.extractAndPreprocessPCM(audioBuffer);
-      const sampleRate = 16000; // Standardized sample rate
+      
+      // Calculate effective sample rate from actual PCM length and duration
+      // This fixes PCM duration mismatch (e.g., 230k samples for 29s video)
+      const estimatedDurationSec = (endSec !== undefined && startSec !== undefined) 
+        ? (endSec - startSec) 
+        : (samples.length / 16000); // Fallback estimate
+      const effectiveSampleRate = samples.length / estimatedDurationSec;
+      
+      console.log(`🔬 PCM Analysis: ${samples.length} samples, estimated ${estimatedDurationSec.toFixed(2)}s, effective rate: ${effectiveSampleRate.toFixed(0)}Hz`);
       
       // Apply time window filtering if specified (for scene analysis)
       if (startSec !== undefined && endSec !== undefined) {
-        const startSample = Math.floor(startSec * sampleRate);
-        const endSample = Math.floor(endSec * sampleRate);
+        // Use effective sample rate for accurate index calculation
+        const startSample = Math.floor(startSec * effectiveSampleRate);
+        const endSample = Math.floor(endSec * effectiveSampleRate);
         const windowSamples = endSample - startSample;
         
-        if (startSample < samples.length && endSample <= samples.length && windowSamples > 0) {
-          samples = samples.slice(startSample, endSample);
-          console.log(`🔬 Applied time window ${startSec}-${endSec}s: ${windowSamples} samples`);
-        } else {
-          console.warn(`⚠️ Invalid time window ${startSec}-${endSec}s for ${samples.length} samples, using full audio`);
-        }
+        // Clamp indices to valid bounds
+        const clampedStartSample = Math.max(0, Math.min(startSample, samples.length - 1));
+        const clampedEndSample = Math.max(clampedStartSample + 1, Math.min(endSample, samples.length));
+        const clampedWindowSamples = clampedEndSample - clampedStartSample;
+        
+        samples = samples.slice(clampedStartSample, clampedEndSample);
+        console.log(`🔬 Applied time window ${startSec}-${endSec}s: ${clampedWindowSamples} samples (clamped from ${startSample}-${endSample})`);
       }
       
       // Validate extracted samples
@@ -887,7 +905,7 @@ CONTEXTO DE ANÁLISE:
       }
       
       // Convert to log-mel spectrogram
-      const melSpectrogram = this.computeLogMelSpectrogram(samples, sampleRate);
+      const melSpectrogram = this.computeLogMelSpectrogram(samples, effectiveSampleRate);
       
       // Apply HPSS (Harmonic-Percussive Source Separation)
       const { harmonic, percussive } = this.applyHPSS(melSpectrogram);
@@ -899,10 +917,10 @@ CONTEXTO DE ANÁLISE:
       }
       
       // Create speech mask from Whisper timestamps
-      const speechMask = this.createSpeechMask(whisperTimestamps || [], samples.length, sampleRate);
+      const speechMask = this.createSpeechMask(whisperTimestamps || [], samples.length, effectiveSampleRate);
       
       // Analyze music features during speech periods
-      const musicAnalysis = this.analyzeMusicDuringSpeech(harmonic, percussive, speechMask, sampleRate);
+      const musicAnalysis = this.analyzeMusicDuringSpeech(harmonic, percussive, speechMask, effectiveSampleRate);
       
       console.log(`🎵 HPSS Analysis Results:`);
       console.log(`   Music Detected: ${musicAnalysis.musicDetected}`);
