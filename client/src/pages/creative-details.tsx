@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Eye, Brain, Target, Zap, TrendingUp, Star, AlertCircle, CheckCircle, Play, Image as ImageIcon, Clock, Users, Palette, Volume2, Layers, BarChart3, Film, PenTool, Lightbulb, Award, Scissors, Mic, MessageSquare, PlayCircle, StopCircle } from "lucide-react";
+import { ArrowLeft, Eye, Brain, Target, Zap, TrendingUp, Star, AlertCircle, CheckCircle, Play, Image as ImageIcon, Clock, Users, Palette, Volume2, Layers, BarChart3, Film, PenTool, Lightbulb, Award, Scissors, Mic, MessageSquare, PlayCircle, StopCircle, ChevronDown, ChevronUp, BookOpen, Activity, Sparkles, Heart } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
 interface CreativeDetails {
   creative: {
@@ -227,6 +229,461 @@ export default function CreativeDetails() {
                 </div>
               </Card>
             </div>
+
+            {/* Análise de Copywriting - Fase 2: Cards Expansíveis */}
+            {analysis?.result?.copyAnalysis && (
+              <Card className="p-6">
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-3">
+                  <PenTool className="w-6 h-6 text-indigo-500" />
+                  Análise de Copywriting
+                </h2>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Card 1: Gatilhos de Persuasão */}
+                  <Collapsible>
+                    <Card className="p-4 hover:shadow-lg transition-shadow">
+                      <CollapsibleTrigger className="w-full cursor-pointer" data-testid="trigger-gatilhos">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Brain className="w-5 h-5 text-purple-500" />
+                            <span className="font-medium">Gatilhos de Persuasão</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={analysis.result.copyAnalysis.persuasion.score >= 7 ? "default" : "secondary"}>
+                              {analysis.result.copyAnalysis.persuasion.score.toFixed(1)}/10
+                            </Badge>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                        
+                        {/* Mini preview - sempre visível */}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {Object.entries(analysis.result.copyAnalysis.persuasion.triggers)
+                            .sort(([,a], [,b]) => (b as number) - (a as number))
+                            .slice(0, 3)
+                            .map(([trigger, score]) => (
+                              <Badge key={trigger} variant="outline" className="text-xs">
+                                {trigger === 'scarcity' && '🔥 Escassez'}
+                                {trigger === 'urgency' && '⏰ Urgência'}
+                                {trigger === 'socialProof' && '👥 Prova Social'}
+                                {trigger === 'authority' && '🏆 Autoridade'}
+                                {trigger === 'reciprocity' && '🎁 Reciprocidade'}
+                                {trigger === 'emotion' && '❤️ Emoção'}
+                                : {(score as number).toFixed(0)}
+                              </Badge>
+                            ))}
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="pt-4 border-t mt-4">
+                        <div className="space-y-3">
+                          {/* Métricas detalhadas com exemplos */}
+                          {Object.entries(analysis.result.copyAnalysis.persuasion.triggers).map(([trigger, score]) => (
+                            <div key={trigger} className={`p-3 rounded-lg ${
+                              (score as number) >= 7 ? 'bg-green-50 dark:bg-green-950/20' :
+                              (score as number) >= 4 ? 'bg-yellow-50 dark:bg-yellow-950/20' :
+                              'bg-red-50 dark:bg-red-950/20'
+                            }`}>
+                              <div className="flex justify-between mb-2">
+                                <span className="text-sm font-medium capitalize">
+                                  {trigger === 'scarcity' && '🔥 Escassez'}
+                                  {trigger === 'urgency' && '⏰ Urgência'}
+                                  {trigger === 'socialProof' && '👥 Prova Social'}
+                                  {trigger === 'authority' && '🏆 Autoridade'}
+                                  {trigger === 'reciprocity' && '🎁 Reciprocidade'}
+                                  {trigger === 'emotion' && '❤️ Emoção'}
+                                </span>
+                                <span className="text-sm font-bold">{(score as number).toFixed(1)}/10</span>
+                              </div>
+                              <Progress value={(score as number) * 10} className="h-2 mb-2" />
+                              {/* Exemplos do gatilho */}
+                              {analysis.result.copyAnalysis.persuasion.examples
+                                .filter((ex: any) => ex.trigger.toLowerCase().includes(trigger.substring(0, 4)))
+                                .slice(0, 1)
+                                .map((example: any, idx: number) => (
+                                  <p key={idx} className="text-xs text-muted-foreground italic">
+                                    "{example.text.substring(0, 80)}..." ({example.timestamp.toFixed(1)}s)
+                                  </p>
+                                ))}
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+
+                  {/* Card 2: Estrutura Narrativa */}
+                  <Collapsible>
+                    <Card className="p-4 hover:shadow-lg transition-shadow">
+                      <CollapsibleTrigger className="w-full cursor-pointer" data-testid="trigger-narrativa">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <BookOpen className="w-5 h-5 text-blue-500" />
+                            <span className="font-medium">Estrutura Narrativa</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="default">
+                              {analysis.result.copyAnalysis.narrative.framework}
+                            </Badge>
+                            <Badge variant="outline">
+                              {analysis.result.copyAnalysis.narrative.confidence}%
+                            </Badge>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="pt-4 border-t mt-4">
+                        <div className="space-y-3">
+                          {/* Completude do framework */}
+                          <div className="mb-4">
+                            <div className="flex justify-between text-sm mb-2">
+                              <span>Completude da Estrutura</span>
+                              <span className="font-bold">{analysis.result.copyAnalysis.narrative.completeness}%</span>
+                            </div>
+                            <Progress value={analysis.result.copyAnalysis.narrative.completeness} className="h-2" />
+                          </div>
+                          
+                          {/* Estágios do framework */}
+                          {analysis.result.copyAnalysis.narrative.stages.map((stage: any, idx: number) => (
+                            <div key={idx} className={`p-3 rounded-lg ${
+                              stage.present ? 'bg-green-50 dark:bg-green-950/20' : 'bg-gray-50 dark:bg-gray-950/20'
+                            }`}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-sm font-medium">{stage.name}</span>
+                                <Badge variant={stage.present ? "default" : "outline"} className="text-xs">
+                                  {stage.present ? '✓ Presente' : 'Ausente'}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {stage.startSec.toFixed(1)}s - {stage.endSec.toFixed(1)}s
+                              </p>
+                              {stage.excerpt && (
+                                <p className="text-xs italic mt-2 text-gray-600 dark:text-gray-400">
+                                  "{stage.excerpt.substring(0, 100)}..."
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+
+                  {/* Card 3: Performance de Copy */}
+                  <Collapsible>
+                    <Card className="p-4 hover:shadow-lg transition-shadow">
+                      <CollapsibleTrigger className="w-full cursor-pointer" data-testid="trigger-performance">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Activity className="w-5 h-5 text-green-500" />
+                            <span className="font-medium">Performance de Copy</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {analysis.result.copyAnalysis.performance.wpm} WPM
+                            </Badge>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="pt-4 border-t mt-4">
+                        <div className="space-y-4">
+                          {/* Métricas de velocidade */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                              <div className="text-2xl font-bold text-blue-600">
+                                {analysis.result.copyAnalysis.performance.wpm}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Palavras/minuto</div>
+                            </div>
+                            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                              <div className="text-2xl font-bold text-green-600">
+                                {analysis.result.copyAnalysis.performance.speechDensity}%
+                              </div>
+                              <div className="text-xs text-muted-foreground">Densidade de fala</div>
+                            </div>
+                          </div>
+                          
+                          {/* Pausas estratégicas */}
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">Pausas Detectadas</h4>
+                            <div className="space-y-2">
+                              {analysis.result.copyAnalysis.performance.pauses.slice(0, 3).map((pause: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between text-xs p-2 bg-gray-50 dark:bg-gray-900 rounded">
+                                  <span>{pause.startSec.toFixed(1)}s - {pause.duration.toFixed(1)}s</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {pause.purpose === 'emphasis' && 'Ênfase'}
+                                    {pause.purpose === 'transition' && 'Transição'}
+                                    {pause.purpose === 'breathing' && 'Respiração'}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* Clareza */}
+                          <div>
+                            <div className="flex justify-between text-sm mb-2">
+                              <span>Clareza da Mensagem</span>
+                              <span className="font-bold">{analysis.result.copyAnalysis.performance.clarity}/10</span>
+                            </div>
+                            <Progress value={analysis.result.copyAnalysis.performance.clarity * 10} className="h-2" />
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+
+                  {/* Card 4: Persona & Tom */}
+                  <Collapsible>
+                    <Card className="p-4 hover:shadow-lg transition-shadow">
+                      <CollapsibleTrigger className="w-full cursor-pointer" data-testid="trigger-persona">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Users className="w-5 h-5 text-orange-500" />
+                            <span className="font-medium">Persona & Tom</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {analysis.result.copyAnalysis.personaTone.tone}
+                            </Badge>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="pt-4 border-t mt-4">
+                        <div className="space-y-4">
+                          {/* Scores principais */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="flex justify-between text-sm mb-2">
+                                <span>Adequação ao Público</span>
+                                <span className="font-bold">{analysis.result.copyAnalysis.personaTone.audienceFit}/10</span>
+                              </div>
+                              <Progress value={analysis.result.copyAnalysis.personaTone.audienceFit * 10} className="h-2" />
+                            </div>
+                            <div>
+                              <div className="flex justify-between text-sm mb-2">
+                                <span>Consistência de Voz</span>
+                                <span className="font-bold">{analysis.result.copyAnalysis.personaTone.voiceConsistency}/10</span>
+                              </div>
+                              <Progress value={analysis.result.copyAnalysis.personaTone.voiceConsistency * 10} className="h-2" />
+                            </div>
+                          </div>
+                          
+                          {/* Personas identificadas */}
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">Personas Identificadas</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {analysis.result.copyAnalysis.personaTone.personas.map((persona: string) => (
+                                <Badge key={persona} variant="outline">
+                                  {persona}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* Mudanças de tom */}
+                          {analysis.result.copyAnalysis.personaTone.toneShifts.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Mudanças de Tom Detectadas</h4>
+                              <div className="space-y-2">
+                                {analysis.result.copyAnalysis.personaTone.toneShifts.map((shift: any, idx: number) => (
+                                  <div key={idx} className="text-xs p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded">
+                                    {shift.timestamp.toFixed(1)}s: {shift.fromTone} → {shift.toTone}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Score de empatia */}
+                          <div>
+                            <div className="flex justify-between text-sm mb-2">
+                              <span>Score de Empatia</span>
+                              <span className="font-bold">{analysis.result.copyAnalysis.personaTone.empathyScore}/10</span>
+                            </div>
+                            <Progress value={analysis.result.copyAnalysis.personaTone.empathyScore * 10} className="h-2" />
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+
+                  {/* Card 5: Poder das Palavras */}
+                  <Collapsible>
+                    <Card className="p-4 hover:shadow-lg transition-shadow">
+                      <CollapsibleTrigger className="w-full cursor-pointer" data-testid="trigger-palavras">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Sparkles className="w-5 h-5 text-yellow-500" />
+                            <span className="font-medium">Poder das Palavras</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              CTA: {analysis.result.copyAnalysis.powerWords.ctaPower}/10
+                            </Badge>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="pt-4 border-t mt-4">
+                        <div className="space-y-4">
+                          {/* Palavras de ação */}
+                          {analysis.result.copyAnalysis.powerWords.action.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">🎯 Palavras de Ação</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {analysis.result.copyAnalysis.powerWords.action.map((word: string) => (
+                                  <Badge key={word} variant="default" className="bg-red-500">
+                                    {word}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Palavras emocionais */}
+                          {analysis.result.copyAnalysis.powerWords.emotional.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">❤️ Palavras Emocionais</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {analysis.result.copyAnalysis.powerWords.emotional.map((word: string) => (
+                                  <Badge key={word} variant="default" className="bg-pink-500">
+                                    {word}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Palavras sensoriais */}
+                          {analysis.result.copyAnalysis.powerWords.sensory.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">✨ Palavras Sensoriais</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {analysis.result.copyAnalysis.powerWords.sensory.map((word: string) => (
+                                  <Badge key={word} variant="default" className="bg-purple-500">
+                                    {word}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Densidade de benefícios */}
+                          <div>
+                            <div className="flex justify-between text-sm mb-2">
+                              <span>Densidade de Benefícios</span>
+                              <span className="font-bold">{analysis.result.copyAnalysis.powerWords.benefitDensity.toFixed(1)}/10</span>
+                            </div>
+                            <Progress value={analysis.result.copyAnalysis.powerWords.benefitDensity * 10} className="h-2" />
+                          </div>
+                          
+                          {/* Palavras-chave mais frequentes */}
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">📊 Palavras Mais Frequentes</h4>
+                            <div className="space-y-2">
+                              {analysis.result.copyAnalysis.powerWords.keywordDensity.slice(0, 5).map((kw: any) => (
+                                <div key={kw.word} className="flex items-center justify-between text-xs">
+                                  <span className="font-medium">{kw.word}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground">{kw.count}x</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {kw.density}%
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+
+                  {/* Card 6: Hooks & Ganchos */}
+                  <Collapsible>
+                    <Card className="p-4 hover:shadow-lg transition-shadow">
+                      <CollapsibleTrigger className="w-full cursor-pointer" data-testid="trigger-hooks">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Zap className="w-5 h-5 text-red-500" />
+                            <span className="font-medium">Hooks & Ganchos</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={analysis.result.copyAnalysis.hooks.openingHookStrength >= 7 ? "default" : "secondary"}>
+                              Abertura: {analysis.result.copyAnalysis.hooks.openingHookStrength}/10
+                            </Badge>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent className="pt-4 border-t mt-4">
+                        <div className="space-y-4">
+                          {/* Hook de abertura */}
+                          <div className="p-3 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 rounded-lg">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium">🎬 Hook de Abertura</span>
+                              <Badge variant="default">
+                                {analysis.result.copyAnalysis.hooks.openingHookType}
+                              </Badge>
+                            </div>
+                            <Progress value={analysis.result.copyAnalysis.hooks.openingHookStrength * 10} className="h-2 mb-2" />
+                            <p className="text-xs text-muted-foreground">
+                              Força: {analysis.result.copyAnalysis.hooks.openingHookStrength}/10
+                            </p>
+                          </div>
+                          
+                          {/* Hook de fechamento */}
+                          <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium">🎯 Hook de Fechamento</span>
+                              <Badge variant="default">
+                                CTA
+                              </Badge>
+                            </div>
+                            <Progress value={analysis.result.copyAnalysis.hooks.closingHookStrength * 10} className="h-2 mb-2" />
+                            <p className="text-xs text-muted-foreground">
+                              Força: {analysis.result.copyAnalysis.hooks.closingHookStrength}/10
+                            </p>
+                          </div>
+                          
+                          {/* Hooks secundários */}
+                          {analysis.result.copyAnalysis.hooks.secondaryHooks.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">🔗 Hooks Secundários</h4>
+                              <div className="space-y-2">
+                                {analysis.result.copyAnalysis.hooks.secondaryHooks.map((hook: any, idx: number) => (
+                                  <div key={idx} className="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <Badge variant="outline" className="text-xs">
+                                        {hook.type}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        {hook.timestamp.toFixed(1)}s
+                                      </span>
+                                    </div>
+                                    <p className="text-xs italic">
+                                      "{hook.text}..."
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+                </div>
+              </Card>
+            )}
 
             {/* Insights Profissionais para Editores */}
             <Card className="p-6">
