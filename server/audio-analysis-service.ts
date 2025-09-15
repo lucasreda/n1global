@@ -1577,10 +1577,16 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
     
     const harmonicRatio = totalHarmonic / (totalHarmonic + totalPercussive);
     
-    // Music detection logic based on architectural guidance
+    // Music detection logic - enhanced for background music during speech
     const musicDetected = (
-      (harmonicRatioSpeech > 0.20 && beatPeriodicity > 0.20 && speechCoverage >= 40) ||
-      (harmonicRatio > 0.35 && beatPeriodicity > 0.15)
+      // Strong music during speech segments
+      (harmonicRatioSpeech > 0.15 && beatPeriodicity > 0.15 && speechCoverage >= 20) ||
+      // Clear harmonic content with rhythm (original condition, relaxed)
+      (harmonicRatio > 0.25 && beatPeriodicity > 0.12) ||
+      // Background music: moderate harmonics even without strong rhythm
+      (harmonicRatio > 0.15 && beatPeriodicity > 0.08) ||
+      // Music-heavy sections: strong harmonics, minimal rhythm requirements
+      (harmonicRatio > 0.40)
     );
     
     // Calculate confidence
