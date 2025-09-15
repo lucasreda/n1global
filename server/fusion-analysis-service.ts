@@ -276,61 +276,97 @@ VISUAL:
     improvements: string[];
   }> {
     try {
+      // Extract enhanced audio data if available
+      const enhancedAudioData = audioAnalysis.spectralAnalysis ? `
+ANÁLISE ESPECTRAL AVANÇADA:
+- Energia musical detectada: ${audioAnalysis.spectralAnalysis.musicEnergyScore}/10
+- Clareza vocal: ${audioAnalysis.spectralAnalysis.voiceClarity}/10
+- Presença de graves: ${audioAnalysis.spectralAnalysis.bassPresence}/10
+- Conteúdo harmônico: ${audioAnalysis.spectralAnalysis.harmonicContent}/10
+- Probabilidade de música: ${audioAnalysis.spectralAnalysis.musicLikelihood}/10
+- Distribuição de frequências: Graves ${audioAnalysis.spectralAnalysis.frequencyDistribution.bass}%, Voz ${audioAnalysis.spectralAnalysis.frequencyDistribution.voice}%, Agudos ${audioAnalysis.spectralAnalysis.frequencyDistribution.treble}%` : '';
+
       const completion = await this.openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `Gere insights acionáveis para otimização de um criativo publicitário.
+            content: `Você é um especialista em otimização de criativos publicitários com conhecimento avançado em análise técnica de áudio e vídeo.
+
+INSTRUÇÕES CRÍTICAS:
+1. Use ANÁLISE ESPECTRAL se disponível para insights precisos sobre música e voz
+2. Evite recomendar "adicionar música" se já existe música detectada
+3. Foque em melhorias ESPECÍFICAS e ACIONÁVEIS para editores de vídeo
+4. Categorize insights: ✅ = pontos fortes, 💡⚠️🔧📊 = recomendações
 
 Retorne um JSON com:
-1. keyStrengths: string[] - 3-5 pontos fortes específicos
-2. improvements: string[] - 3-5 melhorias específicas e acionáveis
+{
+  "keyStrengths": string[] - 3-5 pontos fortes específicos (prefixe com ✅),
+  "improvements": string[] - 3-5 melhorias específicas e acionáveis (prefixe com 💡, ⚠️, 🔧 ou 📊),
+  "reasoning": string - explique seu raciocínio baseado nos dados técnicos
+}
 
-Foque em insights que podem aumentar CTR e CVR.`
+FOQUE EM INSIGHTS QUE AUMENTEM CTR e CVR.`
           },
           {
             role: 'user',
-            content: `Dados para análise:
+            content: `DADOS TÉCNICOS PARA ANÁLISE:
 
-SCORES:
+SCORES GERAIS:
 - Overall: ${scoringResults.overallScore}/10
-- Áudio: ${audioAnalysis.audioQuality}/10
-- Visual: ${visualAnalysis.visualQuality}/10
-- Sincronização: ${syncAnalysis.audioVisualSync}
+- Qualidade de áudio: ${audioAnalysis.audioQuality}/10
+- Qualidade visual: ${visualAnalysis.visualQuality}/10
+- Sincronização A/V: ${syncAnalysis.audioVisualSync}
 
-CONTEXTO:
-- CTAs áudio: ${audioAnalysis.ctaAudio.join(', ')}
-- CTAs visual: ${visualAnalysis.textOnScreen.join(', ')}
-- Produtos: ${visualAnalysis.products.join(', ')}
-- Logo visibility: ${visualAnalysis.logoVisibility}/10
+ANÁLISE DE ÁUDIO BÁSICA:
+- Música detectada: ${audioAnalysis.musicDetected}
+- Tipo de música: ${audioAnalysis.musicType || 'N/A'}
+- Estilo de voz: ${audioAnalysis.voiceStyle}
+- CTAs detectados: ${audioAnalysis.ctaAudio?.join(', ') || 'Nenhum'}
+- Duração: ${audioAnalysis.duration}s
+${enhancedAudioData}
+
+ANÁLISE VISUAL:
+- CTAs visuais: ${visualAnalysis.textOnScreen?.join(', ') || 'Nenhum'}
+- Produtos identificados: ${visualAnalysis.products?.join(', ') || 'Nenhum'}
+- Visibilidade da marca: ${visualAnalysis.logoVisibility}/10
+- Keyframes analisados: ${visualAnalysis.keyframes?.length || 0}
+
+CONTEXTO NARRATIVO:
 - Fluxo narrativo: ${syncAnalysis.narrativeFlow}
-- Duração: ${audioAnalysis.duration}s`
+- Alinhamento de CTAs: ${syncAnalysis.ctaAlignment}
+
+ANALISE COM PRECISÃO: Se música foi detectada pela análise espectral, NÃO recomende adicionar música.`
           }
         ],
-        temperature: 0.4,
-        max_tokens: 800,
+        temperature: 0.3, // Mais determinístico para precisão
+        max_tokens: 1000,
         response_format: { type: "json_object" }
       });
 
       const insights = JSON.parse(completion.choices[0].message.content || '{}');
       
+      console.log(`📊 Enhanced Insights Generated:`);
+      console.log(`   Strengths: ${insights.keyStrengths?.length || 0}`);
+      console.log(`   Improvements: ${insights.improvements?.length || 0}`);
+      console.log(`   Reasoning: ${insights.reasoning?.substring(0, 100)}...`);
+      
       return {
         keyStrengths: Array.isArray(insights.keyStrengths) ? insights.keyStrengths : [
-          'Qualidade técnica adequada',
-          'Estrutura narrativa clara'
+          '✅ Análise técnica completa realizada',
+          '✅ Estrutura narrativa adequada'
         ],
         improvements: Array.isArray(insights.improvements) ? insights.improvements : [
-          'Considere otimizar a sincronia áudio-visual',
-          'Fortaleça a visibilidade da marca'
+          '🔧 Otimizar sincronia áudio-visual baseado em análise espectral',
+          '💡 Fortalecer visibilidade da marca nos elementos visuais'
         ]
       };
 
     } catch (error) {
-      console.error('Insights generation error:', error);
+      console.error('Enhanced insights generation error:', error);
       return {
-        keyStrengths: ['Análise técnica completa realizada'],
-        improvements: ['Aguardando análise detalhada']
+        keyStrengths: ['✅ Análise técnica completa realizada'],
+        improvements: ['🔧 Aguardando análise detalhada com novos dados']
       };
     }
   }
