@@ -732,79 +732,175 @@ class CreativeAnalysisService {
     const recommendations = [];
     const scores: any = {};
 
-    // Add audio insights
-    if (audioAnalysis) {
-      const transcript = audioAnalysis.transcript || [];
-      insights.push(`🔊 Áudio: ${transcript.length > 0 ? 'Transcrição clara detectada' : 'Sem áudio detectado'}`);
-      if (audioAnalysis.musicDetected) {
-        insights.push(`🎵 Música: ${audioAnalysis.musicType || 'Música de fundo detectada'}`);
-      }
-      if (audioAnalysis.ctaAudio && Array.isArray(audioAnalysis.ctaAudio)) {
-        insights.push(...audioAnalysis.ctaAudio.map((cta: string) => `📢 CTA Áudio: ${cta}`));
-      }
-      scores.audio_quality = audioAnalysis.audioQuality || 0;
-    }
-
-    // For scene-by-scene analysis, calculate audio quality from scenes
+    // Generate professional audio insights for editors
+    // For videos, derive audio data from scenes; for images, skip audio analysis
+    let audioQuality = 0;
+    let musicDetected = false;
+    let musicType = '';
+    let ctaAudio: string[] = [];
+    
     if (fusedInsights?.scenes && fusedInsights.scenes.length > 0) {
-      const scenesWithAudio = fusedInsights.scenes.filter((scene: any) => scene.audio?.audioQuality && scene.audio.audioQuality > 0);
+      // Video: extract audio data from scene analysis
+      const scenes = fusedInsights.scenes;
+      const scenesWithAudio = scenes.filter((scene: any) => scene.audio?.audioQuality && scene.audio.audioQuality > 0);
+      
       if (scenesWithAudio.length > 0) {
-        const avgAudioQuality = scenesWithAudio.reduce((sum: number, scene: any) => sum + (scene.audio.audioQuality || 0), 0) / scenesWithAudio.length;
-        scores.audio_quality = Math.round(avgAudioQuality * 10) / 10;
-      } else {
-        // Fallback for scenes without audio
-        scores.audio_quality = 3; // Default value
+        audioQuality = scenesWithAudio.reduce((sum: number, scene: any) => sum + (scene.audio.audioQuality || 0), 0) / scenesWithAudio.length;
+        musicDetected = scenesWithAudio.some((scene: any) => scene.audio.musicDetected);
+        musicType = scenesWithAudio.find((scene: any) => scene.audio.musicType)?.audio?.musicType || '';
+        
+        // Extract CTAs from scene audio transcripts
+        ctaAudio = [...new Set(scenes.flatMap((scene: any) => {
+          const transcript = scene.audio?.transcriptSnippet || '';
+          const words = transcript.toLowerCase();
+          if (words.includes('compre') || words.includes('clique') || words.includes('visite') || words.includes('acesse')) {
+            return [transcript.trim()];
+          }
+          return [];
+        }))];
       }
+      
+    } else if (audioAnalysis) {
+      // Image or fallback: use audioAnalysis directly
+      audioQuality = audioAnalysis.audioQuality || 0;
+      musicDetected = audioAnalysis.musicDetected || false;
+      musicType = audioAnalysis.musicType || '';
+      ctaAudio = audioAnalysis.ctaAudio || [];
+    }
+    
+    if (audioQuality > 0 || fusedInsights?.scenes?.length > 0) {
+      // Audio quality analysis
+      if (audioQuality >= 8) {
+        insights.push(`✅ Qualidade de áudio excelente (${audioQuality.toFixed(1)}/10) - sem necessidade de pós-produção`);
+      } else if (audioQuality >= 6) {
+        insights.push(`✅ Áudio de boa qualidade (${audioQuality.toFixed(1)}/10) - pequenos ajustes podem melhorar`);
+      } else if (audioQuality > 0) {
+        insights.push(`⚠️ Áudio precisa de melhorias (${audioQuality.toFixed(1)}/10) - considere noise reduction e equalização`);
+      }
+      
+      // Music and narration analysis
+      if (musicDetected) {
+        insights.push(`✅ Música de fundo ${musicType || 'detectada'} - verifique níveis de mix para não competir com narração`);
+      } else if (fusedInsights?.scenes?.length > 0) {
+        insights.push(`💡 Considere adicionar música de fundo sutil para aumentar o engajamento emocional`);
+      }
+      
+      // CTA and speech analysis
+      if (ctaAudio.length > 0) {
+        insights.push(`✅ ${ctaAudio.length} CTA(s) no áudio identificados - posicionamento adequado`);
+      } else if (fusedInsights?.scenes?.length > 0) {
+        insights.push(`🔧 Adicionar call-to-action verbal clara no final do vídeo para melhorar conversão`);
+      }
+      
+      scores.audio_quality = Math.round(audioQuality * 10) / 10;
     }
 
-    // Add visual insights  
-    if (visualAnalysis) {
-      if (visualAnalysis.keyframes) {
-        insights.push(`👁️ Visual: ${visualAnalysis.keyframes.length} keyframes analisados`);
-        insights.push(`🏷️ Produtos: ${(visualAnalysis.products || []).join(', ')}`);
-        insights.push(`📝 Textos: ${(visualAnalysis.textOnScreen || []).join(', ')}`);
-      } else {
-        insights.push(`🖼️ Imagem: Qualidade visual ${visualAnalysis.visualQuality}/10`);
-        insights.push(`🏷️ Elementos: ${(visualAnalysis.objects || []).join(', ')}`);
-        insights.push(`📝 Textos: ${(visualAnalysis.text || []).join(', ')}`);
-      }
-      scores.visual_quality = visualAnalysis.visualQuality;
-      scores.logo_visibility = visualAnalysis.logoVisibility;
-    }
 
-    // For scene-by-scene analysis, calculate visual quality from scenes
+    // Generate professional visual insights for editors
+    // For videos, use fusedInsights.scenes data; for images, use visualAnalysis directly
+    let visualQuality = 0;
+    let products: string[] = [];
+    let textOnScreen: string[] = [];
+    let logoVisibility = 0;
+    
     if (fusedInsights?.scenes && fusedInsights.scenes.length > 0) {
-      const validScenes = fusedInsights.scenes.filter((scene: any) => (scene.visualScore || 0) > 0);
-      if (validScenes.length > 0) {
-        const avgVisualScore = validScenes.reduce((sum: number, scene: any) => sum + (scene.visualScore || 0), 0) / validScenes.length;
-        scores.visual_quality = Math.round(avgVisualScore * 10) / 10;
+      // Video: extract data from scene analysis
+      const scenes = fusedInsights.scenes;
+      visualQuality = scenes.reduce((sum: number, scene: any) => sum + (scene.visualScore || 0), 0) / scenes.length;
+      products = [...new Set(scenes.flatMap((scene: any) => scene.objects || []).filter((obj: string) => obj.includes('produto') || obj.includes('item') || obj.includes('caixa')))];
+      textOnScreen = [...new Set(scenes.flatMap((scene: any) => scene.text || []))];
+      
+      const scenesWithBrand = scenes.filter((scene: any) => scene.brandElements && scene.brandElements.length > 0);
+      logoVisibility = scenesWithBrand.length > 0 ? (scenesWithBrand.length / scenes.length) * 10 : 0;
+      
+    } else if (visualAnalysis) {
+      // Image: use visualAnalysis directly
+      visualQuality = visualAnalysis.visualQuality || 0;
+      products = visualAnalysis.products || [];
+      textOnScreen = visualAnalysis.textOnScreen || visualAnalysis.text || [];
+      logoVisibility = visualAnalysis.logoVisibility || 0;
+    }
+    
+    if (visualQuality > 0) {
+      // Visual quality analysis
+      if (visualQuality >= 8) {
+        insights.push(`✅ Qualidade visual excelente (${visualQuality.toFixed(1)}/10) - composição, iluminação e foco estão adequados`);
+      } else if (visualQuality >= 6) {
+        insights.push(`✅ Boa qualidade visual (${visualQuality.toFixed(1)}/10) - pequenos ajustes de cor e contraste podem aprimorar`);
       } else {
-        scores.visual_quality = 3; // Default value
+        insights.push(`🔧 Qualidade visual precisa de melhorias (${visualQuality.toFixed(1)}/10) - revisar iluminação, foco e composição`);
       }
-
-      // Calculate brand elements visibility from scenes
-      const scenesWithBrand = fusedInsights.scenes.filter((scene: any) => scene.brandElements && scene.brandElements.length > 0);
-      const brandVisibility = scenesWithBrand.length > 0 ? (scenesWithBrand.length / fusedInsights.scenes.length) * 10 : 3;
-      scores.logo_visibility = Math.round(brandVisibility * 10) / 10;
+      
+      // Product visibility analysis
+      if (products.length > 0) {
+        insights.push(`✅ Produtos claramente identificados: ${products.slice(0, 3).join(', ')}${products.length > 3 ? ` +${products.length - 3} outros` : ''}`);
+      } else {
+        insights.push(`⚠️ Produtos não identificados claramente - considere close-ups ou melhor posicionamento`);
+      }
+      
+      // Text and readability analysis
+      if (textOnScreen.length > 0) {
+        insights.push(`✅ Textos na tela legíveis: "${textOnScreen.slice(0, 2).join('", "')}"${textOnScreen.length > 2 ? ` +${textOnScreen.length - 2} outros` : ''}`);
+      } else {
+        insights.push(`💡 Considere adicionar texto descritivo ou preços na tela para maior clareza`);
+      }
+      
+      // Brand visibility analysis
+      if (logoVisibility >= 7) {
+        insights.push(`✅ Marca muito visível (${logoVisibility.toFixed(1)}/10) - identidade consistente ao longo do vídeo`);
+      } else if (logoVisibility >= 4) {
+        insights.push(`⚠️ Visibilidade da marca moderada (${logoVisibility.toFixed(1)}/10) - aumentar presença do logo`);
+      } else {
+        insights.push(`🔧 Marca pouco visível (${logoVisibility.toFixed(1)}/10) - adicionar logo ou elementos de brand identity`);
+      }
+      
+      scores.visual_quality = Math.round(visualQuality * 10) / 10;
+      scores.logo_visibility = Math.round(logoVisibility * 10) / 10;
     }
 
-    // Add fusion insights
+
+    // Generate professional editing insights from scene analysis
     if (fusedInsights) {
-      insights.push(`🧠 Score Geral: ${fusedInsights.overallScore}/10`);
+      const scenes = fusedInsights.scenes || [];
+      const totalDuration = fusedInsights.totalDuration || 0;
+      const overallScore = fusedInsights.overallScore || 0;
       
-      // Safe access to nested properties
-      if (fusedInsights.predictedPerformance) {
-        insights.push(`🎯 Performance Prevista: CTR ${fusedInsights.predictedPerformance.ctr}%, CVR ${fusedInsights.predictedPerformance.cvr}%`);
-        scores.predicted_ctr = fusedInsights.predictedPerformance.ctr;
-        scores.predicted_cvr = fusedInsights.predictedPerformance.cvr;
-      } else {
-        // Calculate predicted CTR from overall score for scene-by-scene analysis (consistent scale)
-        const overallScore = fusedInsights.overallScore || scores.visual_quality || 5;
-        const predictedCtr = Math.round((overallScore * 0.15) * 100) / 100; // Consistent with image analysis
-        scores.predicted_ctr = predictedCtr;
-        insights.push(`🎯 CTR Previsto: ${predictedCtr}%`);
+      // Scene-by-scene analysis insights
+      if (scenes.length > 0) {
+        // Timing and pacing analysis
+        const avgSceneDuration = totalDuration / scenes.length;
+        if (avgSceneDuration < 2) {
+          insights.push(`⚡ Pacing muito rápido (${avgSceneDuration.toFixed(1)}s por cena) - considere cenas mais longas para absorção`);
+        } else if (avgSceneDuration > 6) {
+          insights.push(`🐌 Pacing lento (${avgSceneDuration.toFixed(1)}s por cena) - considere cortes mais dinâmicos`);
+        } else {
+          insights.push(`✅ Pacing adequado (${avgSceneDuration.toFixed(1)}s por cena) - bom ritmo para engajamento`);
+        }
+        
+        // Scene quality consistency
+        const sceneScores = scenes.map((scene: any) => scene.visualScore || 0);
+        const minScore = Math.min(...sceneScores);
+        const maxScore = Math.max(...sceneScores);
+        const scoreVariation = maxScore - minScore;
+        
+        if (scoreVariation > 4) {
+          insights.push(`⚠️ Qualidade visual inconsistente entre cenas (variação ${scoreVariation.toFixed(1)}) - normalizar qualidade`);
+        } else {
+          insights.push(`✅ Qualidade visual consistente entre cenas - boa continuidade técnica`);
+        }
+        
+        // Engagement and transitions
+        const highEngagementScenes = scenes.filter((scene: any) => scene.engagementScore >= 7).length;
+        const engagementPercentage = (highEngagementScenes / scenes.length) * 100;
+        
+        if (engagementPercentage >= 70) {
+          insights.push(`✅ ${engagementPercentage.toFixed(0)}% das cenas têm alto engajamento - conteúdo cativante`);
+        } else {
+          insights.push(`🔧 Apenas ${engagementPercentage.toFixed(0)}% das cenas são envolventes - revisar conteúdo das cenas mais fracas`);
+        }
       }
       
+      // Professional recommendations based on analysis
       if (fusedInsights.keyStrengths && Array.isArray(fusedInsights.keyStrengths)) {
         recommendations.push(...fusedInsights.keyStrengths.map((strength: string) => `✅ ${strength}`));
       }
@@ -812,7 +908,33 @@ class CreativeAnalysisService {
         recommendations.push(...fusedInsights.improvements.map((improvement: string) => `🔧 ${improvement}`));
       }
       
-      scores.overall_performance = fusedInsights.overallScore;
+      // Additional technical recommendations
+      if (scenes.length > 0) {
+        const scenesWithLowAudio = scenes.filter((scene: any) => scene.audio?.audioQuality < 6).length;
+        if (scenesWithLowAudio > 0) {
+          recommendations.push(`🔧 ${scenesWithLowAudio} cena(s) com áudio baixo - aplicar noise reduction e normalização`);
+        }
+        
+        const scenesWithoutBrand = scenes.filter((scene: any) => !scene.brandElements || scene.brandElements.length === 0).length;
+        if (scenesWithoutBrand > scenes.length * 0.5) {
+          recommendations.push(`🔧 Adicionar elementos de marca em ${scenesWithoutBrand} cenas para consistência visual`);
+        }
+      }
+      
+      // Performance predictions with context
+      if (fusedInsights.predictedPerformance) {
+        const ctr = fusedInsights.predictedPerformance.ctr;
+        const cvr = fusedInsights.predictedPerformance.cvr;
+        insights.push(`📊 Performance estimada: CTR ${ctr}%, CVR ${cvr}% baseado na análise técnica`);
+        scores.predicted_ctr = ctr;
+        scores.predicted_cvr = cvr;
+      } else {
+        const predictedCtr = Math.round((overallScore * 0.15) * 100) / 100;
+        scores.predicted_ctr = predictedCtr;
+        insights.push(`📊 CTR estimado: ${predictedCtr}% com base na qualidade técnica geral`);
+      }
+      
+      scores.overall_performance = overallScore;
     }
 
     // Ensure all required scores are set
