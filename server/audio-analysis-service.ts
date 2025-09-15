@@ -1405,9 +1405,10 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
         // Convert to mel scale (simplified)
         const melFrame = this.convertToMelScale(magnitude, sampleRate, melBins);
         
-        // Apply log with sensible clipping to avoid extreme negative values
-        const logMelFrame = melFrame.map(val => Math.max(-10, Math.log(Math.max(val, 1e-4))));
-        spectrogram.push(logMelFrame);
+        // CRITICAL FIX: Use linear scale instead of log to preserve energy for HPSS
+        // The log scaling was causing all values to become very negative
+        // which prevented proper harmonic-percussive separation
+        spectrogram.push(melFrame);
       }
     } catch (error) {
       console.warn('⚠️ FFT computation failed:', error);
@@ -1435,6 +1436,16 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
         energy += magnitude[j];
       }
       melScale[i] = energy / (endBin - startBin);
+    }
+    
+    // CRITICAL FIX: Normalize mel scale values to prevent zeros
+    // Find max value for normalization
+    const maxVal = Math.max(...melScale);
+    if (maxVal > 0) {
+      // Normalize to 0-1 range
+      for (let i = 0; i < melScale.length; i++) {
+        melScale[i] = melScale[i] / maxVal;
+      }
     }
     
     return melScale;
@@ -1579,7 +1590,10 @@ FALLBACK MODE: Faça sua melhor detecção baseada no contexto disponível.`
       totalPercussive += frame.reduce((sum, val) => sum + val, 0);
     }
     
-    const harmonicRatio = totalHarmonic / (totalHarmonic + totalPercussive);
+    // CRITICAL FIX: Handle division by zero when no energy is detected
+    const harmonicRatio = (totalHarmonic + totalPercussive) > 0 
+      ? totalHarmonic / (totalHarmonic + totalPercussive)
+      : 0;
     
     // Music detection logic - enhanced for background music during speech
     const musicDetected = (
