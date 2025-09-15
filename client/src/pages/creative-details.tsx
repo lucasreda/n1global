@@ -117,8 +117,8 @@ export default function CreativeDetails() {
   let insights = analysis?.insights || [];
   let recommendations = analysis?.recommendations || [];
   
-  // Dados de exemplo para teste (quando não há análise)
-  if (!analysis) {
+  // Dados de exemplo para teste (forçando para testar categorização)
+  if (true) { // Temporariamente sempre usar dados de exemplo
     insights = [
       '✅ Qualidade de áudio excelente (8.0/10) - sem necessidade de pós-produção',
       '✅ Boa qualidade visual (7.8/10) - pequenos ajustes de cor e contraste podem aprimorar',
