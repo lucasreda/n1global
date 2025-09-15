@@ -13,6 +13,7 @@ import { KeyframeExtractionService } from './keyframe-extraction-service';
 import { VisualAnalysisService } from './visual-analysis-service';
 import { FusionAnalysisService } from './fusion-analysis-service';
 import { SceneSegmentationService } from './scene-segmentation-service';
+import { CopyAnalysisService } from './copy-analysis-service';
 import { facebookAdsService } from './facebook-ads-service';
 
 // In-memory job store for real-time progress tracking
@@ -44,6 +45,7 @@ class CreativeAnalysisService {
   private visualAnalysisService?: VisualAnalysisService;
   private fusionAnalysisService?: FusionAnalysisService;
   private sceneSegmentationService?: SceneSegmentationService;
+  private copyAnalysisService?: CopyAnalysisService;
   
   // Pricing per 1K tokens (in USD)
   private modelPricing: Record<string, { input: number; output: number }> = {
@@ -71,6 +73,7 @@ class CreativeAnalysisService {
       this.visualAnalysisService = new VisualAnalysisService();
       this.fusionAnalysisService = new FusionAnalysisService();
       this.sceneSegmentationService = new SceneSegmentationService();
+      this.copyAnalysisService = new CopyAnalysisService();
       console.log('✅ Hybrid analysis services initialized successfully');
     } catch (error) {
       console.error('⚠️ Failed to initialize hybrid analysis services:', error);
@@ -353,6 +356,7 @@ class CreativeAnalysisService {
       let visualAnalysis = null;
       let keyframes = null;
       let fusedInsights = null;
+      let copyAnalysis = null;
       
       console.log(`🎯 Starting hybrid analysis for creative: ${creative.name} (${creative.type})`);
       
@@ -461,6 +465,22 @@ class CreativeAnalysisService {
           
           console.log(`✅ Scene-by-scene analysis completed! Overall score: ${fusedInsights.overallScore.toFixed(1)}/10`);
           
+          // Step 1h: Perform copy analysis
+          let copyAnalysis = null;
+          if (this.copyAnalysisService) {
+            try {
+              console.log(`✍️ Analyzing copywriting elements...`);
+              copyAnalysis = await this.copyAnalysisService.analyze(
+                audioWithTimestamps,
+                fusedInsights.scenes,
+                audioWithTimestamps.duration
+              );
+              console.log(`✅ Copy analysis completed: ${copyAnalysis.persuasion.score}/10 persuasion score`);
+            } catch (error) {
+              console.warn(`⚠️ Copy analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+          }
+          
           // Update legacy variables for compatibility
           audioAnalysis = {
             transcript: audioWithTimestamps.transcript,
@@ -543,7 +563,8 @@ class CreativeAnalysisService {
         visualAnalysis,
         keyframes,
         fusedInsights,
-        analysisType
+        analysisType,
+        copyAnalysis
       );
       
       console.log(`✅ Hybrid analysis completed for ${creative.name}. Total cost: $${totalCost.toFixed(4)}`);
@@ -559,6 +580,7 @@ class CreativeAnalysisService {
         keyframes,
         visualAnalysis,
         fusedInsights,
+        copyAnalysis,
         
         inputTokens: Math.floor(totalCost * 200), // Estimate tokens from cost
         outputTokens: Math.floor(totalCost * 100),
@@ -726,7 +748,8 @@ class CreativeAnalysisService {
     visualAnalysis: any,
     keyframes: any,
     fusedInsights: any,
-    analysisType: string
+    analysisType: string,
+    copyAnalysis?: any
   ): any {
     // Combine insights from all analysis services
     const insights = [];
@@ -976,12 +999,67 @@ class CreativeAnalysisService {
       scores.overall_performance = overallScore;
     }
 
+    // Add copywriting analysis insights if available
+    if (copyAnalysis) {
+      // Add persuasion insights
+      if (copyAnalysis.persuasion.score >= 7) {
+        insights.push(`✅ Excelente uso de gatilhos mentais (${copyAnalysis.persuasion.score.toFixed(1)}/10) - copy altamente persuasivo`);
+      } else if (copyAnalysis.persuasion.score >= 5) {
+        insights.push(`⚠️ Gatilhos mentais moderados (${copyAnalysis.persuasion.score.toFixed(1)}/10) - pode ser mais persuasivo`);
+      } else {
+        insights.push(`🔧 Poucos gatilhos mentais detectados (${copyAnalysis.persuasion.score.toFixed(1)}/10) - adicione urgência e prova social`);
+      }
+      
+      // Add narrative framework insights
+      if (copyAnalysis.narrative.confidence >= 70) {
+        insights.push(`✅ Estrutura narrativa clara: ${copyAnalysis.narrative.framework} (${copyAnalysis.narrative.confidence}% de confiança)`);
+      } else {
+        insights.push(`🔧 Estrutura narrativa indefinida - considere usar ${copyAnalysis.narrative.framework} completo`);
+      }
+      
+      // Add performance insights
+      if (copyAnalysis.performance.wpm > 180) {
+        insights.push(`⚠️ Velocidade de fala alta (${copyAnalysis.performance.wpm} palavras/min) - pode ser difícil de acompanhar`);
+      } else if (copyAnalysis.performance.wpm < 120) {
+        insights.push(`⚠️ Velocidade de fala baixa (${copyAnalysis.performance.wpm} palavras/min) - pode perder atenção`);
+      } else {
+        insights.push(`✅ Velocidade de fala ideal (${copyAnalysis.performance.wpm} palavras/min)`);
+      }
+      
+      // Add hook insights
+      if (copyAnalysis.hooks.openingHookStrength >= 7) {
+        insights.push(`✅ Hook de abertura forte (${copyAnalysis.hooks.openingHookType}) - captura atenção efetivamente`);
+      } else {
+        recommendations.push(`🔧 Fortaleça o hook de abertura - use pergunta provocativa ou estatística impactante`);
+      }
+      
+      // Add power words insights
+      if (copyAnalysis.powerWords.action.length > 0) {
+        insights.push(`✅ Palavras de ação detectadas: ${copyAnalysis.powerWords.action.slice(0, 3).join(', ')}`);
+      }
+      
+      // Add scene-specific recommendations
+      copyAnalysis.sceneInsights.forEach((scene: any) => {
+        if (scene.improvementPriority === 'high' && scene.suggestions.length > 0) {
+          recommendations.push(`🎬 Cena ${scene.sceneId}: ${scene.suggestions[0]}`);
+        }
+      });
+      
+      // Add copy scores
+      scores.copy_persuasion = copyAnalysis.persuasion.score;
+      scores.copy_clarity = copyAnalysis.performance.clarity;
+      scores.narrative_completeness = copyAnalysis.narrative.completeness / 10;
+    }
+
     // Ensure all required scores are set
     console.log(`📊 Scores calculated:`, {
       visual_quality: scores.visual_quality,
       audio_quality: scores.audio_quality,
       predicted_ctr: scores.predicted_ctr,
-      logo_visibility: scores.logo_visibility
+      logo_visibility: scores.logo_visibility,
+      copy_persuasion: scores.copy_persuasion,
+      copy_clarity: scores.copy_clarity,
+      narrative_completeness: scores.narrative_completeness
     });
 
     // Build final analysis structure
@@ -1006,7 +1084,9 @@ class CreativeAnalysisService {
         scenes: fusedInsights?.scenes || [],
         totalDuration: fusedInsights?.totalDuration || 0,
         overallScore: fusedInsights?.overallScore || 0
-      }
+      },
+      // Add copywriting analysis data
+      copyAnalysis: copyAnalysis || null
     };
   }
 
