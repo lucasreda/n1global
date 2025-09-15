@@ -747,7 +747,16 @@ class CreativeAnalysisService {
       
       if (scenesWithAudio.length > 0) {
         audioQuality = scenesWithAudio.reduce((sum: number, scene: any) => sum + (scene.audio.audioQuality || 0), 0) / scenesWithAudio.length;
-        musicDetected = scenesWithAudio.some((scene: any) => scene.audio.musicDetected);
+        
+        // CRITICAL FIX: Robust music detection aggregation
+        const scenesWithMusic = scenes.filter((scene: any) => scene.audio?.musicDetected === true);
+        const musicCoveragePercentage = (scenesWithMusic.length / scenes.length) * 100;
+        
+        // Set overall musicDetected based on coverage threshold
+        musicDetected = musicCoveragePercentage >= 25; // 25% threshold for overall detection
+        
+        console.log(`🎵 Music aggregation: ${scenesWithMusic.length}/${scenes.length} scenes (${musicCoveragePercentage.toFixed(1)}%) → overall: ${musicDetected}`);
+        
         musicType = scenesWithAudio.find((scene: any) => scene.audio.musicType)?.audio?.musicType || '';
         
         // Extract CTAs from scene audio transcripts
