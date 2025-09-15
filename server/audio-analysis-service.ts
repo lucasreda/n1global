@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+// @ts-ignore
 import * as fft from 'fft-js';
 // @ts-ignore
 import { Matrix } from 'ml-matrix';
@@ -552,10 +553,11 @@ CONTEXTO DE ANÁLISE:
 
     // Advanced voice style analysis based on transcript content and tone
     let voiceStyle: string | undefined;
+    const content = transcriptSnippet.toLowerCase();
+    const exclamationCount = (transcriptSnippet.match(/!/g) || []).length;
+    const questionCount = (transcriptSnippet.match(/\?/g) || []).length;
+    
     if (voicePresent) {
-      const content = transcriptSnippet.toLowerCase();
-      const exclamationCount = (transcriptSnippet.match(/!/g) || []).length;
-      const questionCount = (transcriptSnippet.match(/\?/g) || []).length;
       
       if (exclamationCount > 1 || content.includes('incrível') || content.includes('fantástico') || content.includes('uau')) {
         voiceStyle = 'energetic';
@@ -896,6 +898,7 @@ CONTEXTO DE ANÁLISE:
     spectralCentroid: number;
     musicLikelihood: number;
     frequencyDistribution: any;
+    validAnalysis: boolean;
   } {
     const nyquist = sampleRate / 2;
     const frameCount = spectralFrames.length;
@@ -1010,13 +1013,13 @@ CONTEXTO DE ANÁLISE:
       dynamicRange: Math.round(dynamicRange),
       spectralCentroid: Math.round(avgSpectralCentroid),
       musicLikelihood: Math.round(musicLikelihood),
-      validAnalysis: true,
       frequencyDistribution: {
         bass: Math.round(normalizedBass),
         voice: Math.round(normalizedVoice),
         presence: Math.round(normalizedPresence),
         treble: Math.round(normalizedTreble)
-      }
+      },
+      validAnalysis: true
     };
   }
 
@@ -1032,8 +1035,8 @@ CONTEXTO DE ANÁLISE:
     dynamicRange: number;
     spectralCentroid: number;
     musicLikelihood: number;
-    validAnalysis: boolean;
     frequencyDistribution: any;
+    validAnalysis: boolean;
   } {
     return {
       musicEnergyScore: 3, // Conservative, avoid false positives
@@ -1043,13 +1046,13 @@ CONTEXTO DE ANÁLISE:
       dynamicRange: 4, // Moderate assumption
       spectralCentroid: 1000, // Typical speech range
       musicLikelihood: 3, // Conservative - lean toward no music
-      validAnalysis: false, // Mark as invalid
       frequencyDistribution: {
         bass: 10,
         voice: 60,
         presence: 25,
         treble: 5
-      }
+      },
+      validAnalysis: false // Mark as invalid data
     };
   }
 
