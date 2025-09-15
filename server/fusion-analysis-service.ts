@@ -911,10 +911,18 @@ ANALISE COM PRECISÃO: Se música foi detectada pela análise espectral, NÃO re
       recommendations.push('Considerar incluir mais elementos humanos para aumentar conexão emocional');
     }
 
+    // CRITICAL FIX: Check overall music detection, not just scene count
     const scenesWithMusic = scenes.filter(scene => scene.audio?.musicDetected).length;
-    if (scenesWithMusic < scenes.length * 0.3) {
+    const musicCoveragePercentage = (scenesWithMusic / scenes.length) * 100;
+    
+    // Only recommend music if truly absent (less than 25% coverage)
+    if (musicCoveragePercentage < 25) {
       recommendations.push('Adicionar música de fundo em mais cenas para melhorar envolvimento emocional');
+    } else if (musicCoveragePercentage >= 25 && musicCoveragePercentage < 60) {
+      // Music detected but limited coverage
+      recommendations.push(`Música detectada em ${scenesWithMusic}/${scenes.length} cenas - considere expandir para melhor continuidade`);
     }
+    // If >= 60% coverage, no recommendation needed as music is well distributed
 
     // Recomendação de otimização final
     const overallScore = (scores.technical + scores.sync + scores.narrative + scores.brand) / 4;

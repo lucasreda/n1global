@@ -743,33 +743,34 @@ class CreativeAnalysisService {
     if (fusedInsights?.scenes && fusedInsights.scenes.length > 0) {
       // Video: extract audio data from scene analysis
       const scenes = fusedInsights.scenes;
+      
+      // CRITICAL FIX: Music detection should ALWAYS run for scenes (not dependent on audioQuality)
+      const scenesWithMusic = scenes.filter((scene: any) => scene.audio?.musicDetected === true);
+      const musicCoveragePercentage = (scenesWithMusic.length / scenes.length) * 100;
+      
+      // Set overall musicDetected based on coverage threshold
+      musicDetected = musicCoveragePercentage >= 25; // 25% threshold for overall detection
+      
+      console.log(`🎵 Music aggregation: ${scenesWithMusic.length}/${scenes.length} scenes (${musicCoveragePercentage.toFixed(1)}%) → overall: ${musicDetected}`);
+      
+      // Process audio quality separately
       const scenesWithAudio = scenes.filter((scene: any) => scene.audio?.audioQuality && scene.audio.audioQuality > 0);
       
       if (scenesWithAudio.length > 0) {
         audioQuality = scenesWithAudio.reduce((sum: number, scene: any) => sum + (scene.audio.audioQuality || 0), 0) / scenesWithAudio.length;
-        
-        // CRITICAL FIX: Robust music detection aggregation
-        const scenesWithMusic = scenes.filter((scene: any) => scene.audio?.musicDetected === true);
-        const musicCoveragePercentage = (scenesWithMusic.length / scenes.length) * 100;
-        
-        // Set overall musicDetected based on coverage threshold
-        musicDetected = musicCoveragePercentage >= 25; // 25% threshold for overall detection
-        
-        console.log(`🎵 Music aggregation: ${scenesWithMusic.length}/${scenes.length} scenes (${musicCoveragePercentage.toFixed(1)}%) → overall: ${musicDetected}`);
-        
         musicType = scenesWithAudio.find((scene: any) => scene.audio.musicType)?.audio?.musicType || '';
-        
-        // Extract CTAs from scene audio transcripts
-        const ctaTranscripts = scenes.flatMap((scene: any) => {
-          const transcript = scene.audio?.transcriptSnippet || '';
-          const words = transcript.toLowerCase();
-          if (words.includes('compre') || words.includes('clique') || words.includes('visite') || words.includes('acesse')) {
-            return [transcript.trim()];
-          }
-          return [];
-        });
-        ctaAudio = Array.from(new Set(ctaTranscripts));
       }
+      
+      // Extract CTAs from scene audio transcripts
+      const ctaTranscripts = scenes.flatMap((scene: any) => {
+        const transcript = scene.audio?.transcriptSnippet || '';
+        const words = transcript.toLowerCase();
+        if (words.includes('compre') || words.includes('clique') || words.includes('visite') || words.includes('acesse')) {
+          return [transcript.trim()];
+        }
+        return [];
+      });
+      ctaAudio = Array.from(new Set(ctaTranscripts));
       
     } else if (audioAnalysis) {
       // Image or fallback: use audioAnalysis directly
