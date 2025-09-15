@@ -378,12 +378,12 @@ export class CopyAnalysisService {
         const num = parseFloat(match.replace(',', '.').replace(/[^0-9.]/g, ''));
         // Discounts and low prices are scarcity/urgency triggers
         if (match.includes('%') || match.includes('percento')) {
-          triggers.scarcity += 10;
-          triggers.urgency += 8;
-          triggers.reciprocity += 5;
+          triggers.scarcity += 2;
+          triggers.urgency += 1.5;
+          triggers.reciprocity += 1;
         } else if (num < 100) {
-          triggers.scarcity += 3;
-          triggers.reciprocity += 3;
+          triggers.scarcity += 0.5;
+          triggers.reciprocity += 0.5;
         }
       });
     }
@@ -395,7 +395,7 @@ export class CopyAnalysisService {
         const matches = transcript.match(regex);
         if (matches) {
           // Weighted scoring based on pattern importance
-          const weight = pattern.length > 6 ? 8 : 5;
+          const weight = pattern.length > 6 ? 1.5 : 1;
           triggers[triggerKey] += matches.length * weight;
           
           // Find timestamp for first occurrence
@@ -427,12 +427,20 @@ export class CopyAnalysisService {
     analyzePattern(reciprocityPatterns, 'Reciprocidade', 'reciprocity');
     analyzePattern(emotionPatterns, 'Emoção', 'emotion');
 
-    // Normalize scores (0-10) with generous scaling
+    // Normalize scores (0-10) with balanced scaling
     Object.keys(triggers).forEach(key => {
       const score = triggers[key as keyof typeof triggers];
-      // Very generous normalization - even 1-2 matches give meaningful score
-      const normalized = score > 0 ? Math.max(2, Math.min(10, Math.sqrt(score) * 3)) : 0;
-      triggers[key as keyof typeof triggers] = Math.round(normalized * 10) / 10;
+      // Balanced normalization for realistic scores
+      let normalized = 0;
+      if (score > 0) {
+        // Base score for any detection
+        normalized = 2;
+        // Add more based on frequency
+        if (score > 1) normalized += Math.min(3, score * 0.8);
+        if (score > 3) normalized += Math.min(2, (score - 3) * 0.5);
+        if (score > 6) normalized += Math.min(3, (score - 6) * 0.3);
+      }
+      triggers[key as keyof typeof triggers] = Math.min(10, Math.round(normalized * 10) / 10);
     });
 
     // Calculate overall persuasion score
