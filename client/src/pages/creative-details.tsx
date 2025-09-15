@@ -436,11 +436,21 @@ export default function CreativeDetails() {
                         <div className="border-t pt-4 mt-4">
                           <div className="flex items-center gap-2 mb-3">
                             <MessageSquare className="w-4 h-4 text-purple-600" />
-                            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Transcrição Original</span>
+                            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Transcrição (Resumo)</span>
                           </div>
                           <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg p-4">
                             <blockquote className="text-sm italic text-purple-800 dark:text-purple-200 border-l-4 border-purple-300 pl-4">
-                              "{scene.audio.transcriptSnippet}"
+                              {(() => {
+                                const text = scene.audio.transcriptSnippet;
+                                const maxLength = 80;
+                                if (text.length <= maxLength) return `"${text}"`;
+                                
+                                // Truncate at word boundary
+                                const truncated = text.substring(0, maxLength);
+                                const lastSpace = truncated.lastIndexOf(' ');
+                                const finalText = lastSpace > 50 ? truncated.substring(0, lastSpace) : truncated;
+                                return `"${finalText}..."`;
+                              })()}
                             </blockquote>
                           </div>
                         </div>
