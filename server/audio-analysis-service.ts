@@ -1,4 +1,7 @@
 import OpenAI from 'openai';
+import * as fft from 'fft-js';
+// @ts-ignore
+import { Matrix } from 'ml-matrix';
 
 /**
  * Audio Analysis Service - Uses OpenAI Whisper for comprehensive audio analysis
@@ -71,8 +74,8 @@ export class AudioAnalysisService {
       // Step 3: Analyze transcript content for insights
       const contentAnalysis = await this.analyzeTranscriptContent(transcript);
       
-      // Step 4: Detect music and audio quality (using GPT-4o audio analysis)
-      const audioQualityAnalysis = await this.analyzeAudioQuality(transcript, duration);
+      // Step 4: Detect music and audio quality (using enhanced analysis with spectral data)
+      const audioQualityAnalysis = await this.analyzeAudioQuality(transcript, duration, audioBuffer);
       
       // Step 5: Calculate metrics
       const processingTime = Date.now() - startTime;
@@ -153,52 +156,119 @@ Seja preciso e objetivo.`
   }
 
   /**
-   * Analyze audio quality and detect music
+   * Analyze audio quality and detect music with advanced heuristics and spectral analysis
    */
-  private async analyzeAudioQuality(transcript: string, duration: number): Promise<{
+  private async analyzeAudioQuality(transcript: string, duration: number, audioBuffer?: Buffer): Promise<{
     audioQuality: number;
     musicDetected: boolean;
     musicType?: string;
     silencePercentage: number;
+    voiceClarity: number;
+    backgroundMusicPresence: number;
+    spectralAnalysis?: any;
   }> {
+    // Step 1: Spectral analysis if buffer is available
+    let spectralAnalysis = null;
+    let spectralInsights = '';
+    
+    if (audioBuffer) {
+      spectralAnalysis = await this.performSpectralAnalysis(audioBuffer);
+      spectralInsights = `
+Análise Espectral:
+- Energia musical detectada: ${spectralAnalysis.musicEnergyScore}/10
+- Clareza vocal: ${spectralAnalysis.voiceClarity}/10
+- Presença de graves (música): ${spectralAnalysis.bassPresence}/10
+- Harmônicos instrumentais: ${spectralAnalysis.harmonicContent}/10
+- Variação dinâmica: ${spectralAnalysis.dynamicRange}/10`;
+    }
+
+    // Step 2: Enhanced GPT-4o analysis with rich context
     const completion = await this.openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         {
           role: 'system',
-          content: `Analise a qualidade de áudio baseado na transcrição e duração.
-          
-Retorne um JSON com:
-1. audioQuality: number - Score de 1-10 (10 = excelente qualidade)
-2. musicDetected: boolean - Se há música de fundo detectável
-3. musicType: string - Tipo de música se detectada (ex: "upbeat", "calm", "dramatic")
-4. silencePercentage: number - Estimativa de % de silêncio (0-100)
+          content: `Você é um especialista em análise de áudio para conteúdo publicitário. 
+          Analise com ALTA PRECISÃO baseado na transcrição, duração e análise espectral.
 
-Base sua análise na clareza da transcrição e completude do conteúdo.`
+INSTRUÇÕES CRÍTICAS:
+1. Vídeos comerciais de 15-60s COM fala fluida GERALMENTE têm música de fundo
+2. Se transcrição é clara E duração > 10s É PROVÁVEL música de fundo presente
+3. Música instrumental NÃO aparece na transcrição - use contexto e heurísticas
+4. Analise padrões típicos de áudio comercial profissional
+
+Retorne JSON com:
+{
+  "audioQuality": number (1-10, baseado na clareza da transcrição),
+  "voiceClarity": number (1-10, clareza específica da voz),
+  "musicDetected": boolean (MÚSICA DE FUNDO presente),
+  "backgroundMusicPresence": number (1-10, confiança da presença musical),
+  "musicType": string ("energetic", "calm", "dramatic", "upbeat", "corporate", "emotional"),
+  "musicGenre": string ("pop", "instrumental", "corporate", "cinematic", "electronic"),
+  "silencePercentage": number (0-100),
+  "commercialMusicLikely": boolean (baseado em padrões comerciais),
+  "reasoning": string (explique seu raciocínio)
+}`
         },
         {
           role: 'user',
-          content: `Transcrição: "${transcript}"\nDuração: ${duration}s`
+          content: `DADOS PARA ANÁLISE:
+Transcrição: "${transcript}"
+Duração: ${duration}s
+Palavras na transcrição: ${transcript.split(' ').length}
+Densidade de fala: ${(transcript.split(' ').length / duration * 60).toFixed(1)} palavras/minuto
+Tipo de conteúdo: ${duration < 30 ? 'Anúncio curto' : duration < 60 ? 'Anúncio médio' : 'Conteúdo longo'}
+${spectralInsights}
+
+CONTEXTO ADICIONAL:
+- Áudio comercial profissional típico: música + narração
+- Transcrição clara + duração significativa = provável música de fundo
+- Energia sonora consistente indica camadas musicais instrumentais`
         }
       ],
-      temperature: 0.3,
-      max_tokens: 300,
+      temperature: 0.2, // Mais determinístico para precisão
+      max_tokens: 500,
       response_format: { type: "json_object" }
     });
 
     try {
       const analysis = JSON.parse(completion.choices[0].message.content || '{}');
+      
+      // Enhanced confidence scoring based on multiple factors
+      let musicConfidence = analysis.backgroundMusicPresence || 5;
+      
+      // Boost confidence if spectral analysis detected music
+      if (spectralAnalysis && spectralAnalysis.musicEnergyScore > 6) {
+        musicConfidence = Math.min(10, musicConfidence + 2);
+      }
+      
+      // Commercial heuristics boost
+      if (analysis.commercialMusicLikely && duration > 15 && transcript.length > 50) {
+        musicConfidence = Math.min(10, musicConfidence + 1.5);
+      }
+      
+      console.log(`🎵 Enhanced Audio Analysis Result:`);
+      console.log(`   Music detected: ${analysis.musicDetected} (confidence: ${musicConfidence}/10)`);
+      console.log(`   Voice clarity: ${analysis.voiceClarity}/10`);
+      console.log(`   Audio quality: ${analysis.audioQuality}/10`);
+      console.log(`   Reasoning: ${analysis.reasoning}`);
+      
       return {
         audioQuality: Math.min(10, Math.max(1, analysis.audioQuality || 5)),
-        musicDetected: analysis.musicDetected || false,
+        voiceClarity: Math.min(10, Math.max(1, analysis.voiceClarity || 5)),
+        musicDetected: analysis.musicDetected || musicConfidence > 6,
+        backgroundMusicPresence: Math.round(musicConfidence),
         musicType: analysis.musicType,
-        silencePercentage: Math.min(100, Math.max(0, analysis.silencePercentage || 0))
+        silencePercentage: Math.min(100, Math.max(0, analysis.silencePercentage || 0)),
+        spectralAnalysis
       };
     } catch (error) {
-      console.error('Error parsing audio quality analysis:', error);
+      console.error('Error parsing enhanced audio quality analysis:', error);
       return {
         audioQuality: 5,
+        voiceClarity: 5,
         musicDetected: false,
+        backgroundMusicPresence: 3,
         silencePercentage: 20
       };
     }
