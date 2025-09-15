@@ -803,6 +803,107 @@ export default function CreativeDetails() {
                   </div>
                 </div>
 
+                {/* Timeline Persuasiva - Gatilhos ao Longo do Tempo */}
+                {analysis?.result?.copyAnalysis && (
+                  <div className="mt-8 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="w-5 h-5 text-indigo-600" />
+                      <h4 className="font-semibold text-indigo-700 dark:text-indigo-300">Timeline Persuasiva</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {analysis.result.copyAnalysis.persuasion.examples.length} Gatilhos Detectados
+                      </Badge>
+                    </div>
+                    
+                    {/* Timeline de Gatilhos */}
+                    <div className="relative bg-white/50 dark:bg-black/20 rounded-lg h-20 mb-4 overflow-hidden">
+                      {/* Linha base da timeline */}
+                      <div className="absolute inset-x-0 top-1/2 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
+                      
+                      {/* Markers de gatilhos */}
+                      {analysis.result.copyAnalysis.persuasion.examples.map((example: any, idx: number) => {
+                        const position = (example.timestamp / totalDuration) * 100;
+                        const triggerIcons: { [key: string]: string } = {
+                          'urgency': '⏰',
+                          'scarcity': '🔥', 
+                          'social': '👥',
+                          'authority': '🏆',
+                          'reciprocity': '🎁',
+                          'emotion': '❤️'
+                        };
+                        
+                        const triggerColor: { [key: string]: string } = {
+                          'urgency': 'bg-red-500',
+                          'scarcity': 'bg-orange-500',
+                          'social': 'bg-blue-500',
+                          'authority': 'bg-purple-500',
+                          'reciprocity': 'bg-green-500',
+                          'emotion': 'bg-pink-500'
+                        };
+                        
+                        const triggerKey = Object.keys(triggerIcons).find(key => 
+                          example.trigger.toLowerCase().includes(key)
+                        ) || 'emotion';
+                        
+                        return (
+                          <div
+                            key={idx}
+                            className="absolute group cursor-pointer"
+                            style={{
+                              left: `${position}%`,
+                              top: '50%',
+                              transform: 'translate(-50%, -50%)'
+                            }}
+                            data-testid={`persuasion-marker-${idx}`}
+                          >
+                            {/* Marker visual */}
+                            <div className={`w-8 h-8 ${triggerColor[triggerKey]} rounded-full flex items-center justify-center text-white shadow-lg transform hover:scale-125 transition-transform`}>
+                              <span className="text-sm">{triggerIcons[triggerKey]}</span>
+                            </div>
+                            
+                            {/* Linha vertical */}
+                            <div className={`absolute w-0.5 h-4 ${triggerColor[triggerKey]} opacity-50 left-1/2 transform -translate-x-1/2 -top-4`}></div>
+                            
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                              <div className="font-medium mb-1">{example.trigger}</div>
+                              <div className="text-gray-300">{example.timestamp.toFixed(1)}s</div>
+                              <div className="text-gray-300 max-w-xs truncate">"{example.text.substring(0, 50)}..."</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Legenda dos gatilhos */}
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span>⏰ Urgência</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                        <span>🔥 Escassez</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <span>👥 Prova Social</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <span>🏆 Autoridade</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span>🎁 Reciprocidade</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
+                        <span>❤️ Emoção</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Análise Detalhada por Cena */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
