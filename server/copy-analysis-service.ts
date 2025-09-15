@@ -276,12 +276,15 @@ export class CopyAnalysisService {
       // Portuguese
       'últim', 'limitad', 'poucas unidades', 'apenas', 'exclusiv', 
       'esgotando', 'acabando', 'restam', 'disponibilidade limitada',
+      'poucos', 'raros', 'únicos',
       // Italian
-      'ultim', 'limitat', 'poche unità', 'solo', 'esclusiv',
-      'esaurendo', 'finendo', 'rimangono', 'disponibilità limitata',
+      'ultim', 'limitat', 'poche', 'solo', 'esclusiv', 'soli',
+      'esaurendo', 'finendo', 'rimangono', 'disponibilità', 'pochi',
+      'rari', 'unici', 'quattro', 'tre', 'due', 'set',
       // English
-      'last', 'limited', 'few units', 'only', 'exclusive',
-      'running out', 'ending', 'remaining', 'limited availability'
+      'last', 'limited', 'few', 'only', 'exclusive',
+      'running out', 'ending', 'remaining', 'availability',
+      'rare', 'unique'
     ];
     
     // Urgency patterns (Portuguese, Italian, English)
@@ -292,8 +295,8 @@ export class CopyAnalysisService {
       'últimas horas', 'últimos dias',
       // Italian
       'ora', 'oggi', 'subito', 'immediatamente', 'non perdere', 'approfitta',
-      'termina', 'finisce', 'tempo limitato', 'offerta lampo',
-      'ultime ore', 'ultimi giorni', 'occasione',
+      'termina', 'finisce', 'tempo limitato', 'offerta lampo', 'adesso',
+      'ultime ore', 'ultimi giorni', 'occasione', 'ordina', 'ordine',
       // English
       'now', 'today', 'immediately', "don't miss", 'take advantage',
       'ends', 'limited time', 'flash offer', 'last hours', 'final days'
@@ -324,7 +327,8 @@ export class CopyAnalysisService {
       // Italian
       'esperto', 'professionale', 'certificato', 'qualità',
       'leader', 'riferimento', 'autorità', 'dottore', 'approvato da',
-      'garanzia', 'provato scientificamente', 'studi', 'vera',
+      'garanzia', 'provato scientificamente', 'studi', 'vera', 'nostro',
+      'completo', 'totale',
       // English
       'expert', 'professional', 'certified', 'quality',
       'leader', 'reference', 'authority', 'doctor', 'approved by',
@@ -339,10 +343,11 @@ export class CopyAnalysisService {
       // Italian
       'gratis', 'bonus', 'regalo', 'offerta', 'sconto',
       'promozione', 'beneficio', 'vantaggio', 'extra', 'omaggio',
-      'soli', 'prenota',
+      'soli', 'prenota', 'paghi', 'consegna', 'spedizione',
       // English
       'free', 'bonus', 'gift', 'offer', 'discount',
-      'promotion', 'benefit', 'advantage', 'extra', 'courtesy'
+      'promotion', 'benefit', 'advantage', 'extra', 'courtesy',
+      'delivery', 'shipping'
     ];
     
     // Emotion patterns (Portuguese, Italian, English)
@@ -355,12 +360,31 @@ export class CopyAnalysisService {
       'incredibile', 'fantastico', 'meraviglioso', 'sorprendente',
       'rivoluzionario', 'trasformare', 'cambiare', 'sogno', 'desiderio',
       'felicità', 'soddisfazione', 'piacere', 'amore', 'passione',
-      'lussuosa', 'morbida', 'stelle',
+      'lusso', 'lussuosa', 'morbida', 'stelle', 'eleganti', 'tocco',
+      'seta', 'comfort', 'bellezza', 'notte',
       // English
       'incredible', 'fantastic', 'wonderful', 'amazing',
       'revolutionary', 'transform', 'change', 'dream', 'desire',
-      'happiness', 'satisfaction', 'pleasure', 'love', 'passion'
+      'happiness', 'satisfaction', 'pleasure', 'love', 'passion',
+      'luxury', 'comfort', 'beauty'
     ];
+
+    // Also analyze numbers (prices, discounts)
+    const numberPattern = /\b\d+(?:[,.]\d+)?\s*(?:%|€|euro|percento)?\b/gi;
+    const numberMatches = transcript.match(numberPattern);
+    if (numberMatches) {
+      numberMatches.forEach(match => {
+        const num = parseFloat(match.replace(',', '.').replace(/[^0-9.]/g, ''));
+        // Discounts and low prices are scarcity/urgency triggers
+        if (match.includes('%') || match.includes('percento')) {
+          triggers.scarcity += 3;
+          triggers.urgency += 2;
+        } else if (num < 100) {
+          triggers.scarcity += 1;
+          triggers.reciprocity += 1;
+        }
+      });
+    }
 
     // Analyze each trigger
     const analyzePattern = (patterns: string[], triggerName: string, triggerKey: keyof typeof triggers) => {
@@ -368,7 +392,9 @@ export class CopyAnalysisService {
         const regex = new RegExp(`\\b${pattern}`, 'gi');
         const matches = transcript.match(regex);
         if (matches) {
-          triggers[triggerKey] += matches.length * 2;
+          // Weighted scoring based on pattern importance
+          const weight = pattern.length > 6 ? 3 : 2;
+          triggers[triggerKey] += matches.length * weight;
           
           // Find timestamp for first occurrence
           const firstMatch = transcriptData.segments.find(seg => 
@@ -399,10 +425,11 @@ export class CopyAnalysisService {
     analyzePattern(reciprocityPatterns, 'Reciprocidade', 'reciprocity');
     analyzePattern(emotionPatterns, 'Emoção', 'emotion');
 
-    // Normalize scores (0-10)
-    const maxScore = Math.max(...Object.values(triggers), 1);
+    // Normalize scores (0-10) with better scaling
     Object.keys(triggers).forEach(key => {
-      triggers[key as keyof typeof triggers] = Math.min(10, (triggers[key as keyof typeof triggers] / maxScore) * 10);
+      const score = triggers[key as keyof typeof triggers];
+      // Use a more balanced normalization
+      triggers[key as keyof typeof triggers] = Math.min(10, Math.round((score / 5) * 10) / 10);
     });
 
     // Calculate overall persuasion score
