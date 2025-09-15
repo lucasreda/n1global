@@ -361,7 +361,8 @@ export class CopyAnalysisService {
       'rivoluzionario', 'trasformare', 'cambiare', 'sogno', 'desiderio',
       'felicità', 'soddisfazione', 'piacere', 'amore', 'passione',
       'lusso', 'lussuosa', 'morbida', 'stelle', 'eleganti', 'tocco',
-      'seta', 'comfort', 'bellezza', 'notte',
+      'seta', 'comfort', 'bellezza', 'notte', 'sogni', 'merita',
+      'accarezza', 'ogni',
       // English
       'incredible', 'fantastic', 'wonderful', 'amazing',
       'revolutionary', 'transform', 'change', 'dream', 'desire',
@@ -377,11 +378,12 @@ export class CopyAnalysisService {
         const num = parseFloat(match.replace(',', '.').replace(/[^0-9.]/g, ''));
         // Discounts and low prices are scarcity/urgency triggers
         if (match.includes('%') || match.includes('percento')) {
-          triggers.scarcity += 3;
-          triggers.urgency += 2;
+          triggers.scarcity += 10;
+          triggers.urgency += 8;
+          triggers.reciprocity += 5;
         } else if (num < 100) {
-          triggers.scarcity += 1;
-          triggers.reciprocity += 1;
+          triggers.scarcity += 3;
+          triggers.reciprocity += 3;
         }
       });
     }
@@ -393,7 +395,7 @@ export class CopyAnalysisService {
         const matches = transcript.match(regex);
         if (matches) {
           // Weighted scoring based on pattern importance
-          const weight = pattern.length > 6 ? 3 : 2;
+          const weight = pattern.length > 6 ? 8 : 5;
           triggers[triggerKey] += matches.length * weight;
           
           // Find timestamp for first occurrence
@@ -425,11 +427,12 @@ export class CopyAnalysisService {
     analyzePattern(reciprocityPatterns, 'Reciprocidade', 'reciprocity');
     analyzePattern(emotionPatterns, 'Emoção', 'emotion');
 
-    // Normalize scores (0-10) with better scaling
+    // Normalize scores (0-10) with generous scaling
     Object.keys(triggers).forEach(key => {
       const score = triggers[key as keyof typeof triggers];
-      // Use a more balanced normalization
-      triggers[key as keyof typeof triggers] = Math.min(10, Math.round((score / 5) * 10) / 10);
+      // Very generous normalization - even 1-2 matches give meaningful score
+      const normalized = score > 0 ? Math.max(2, Math.min(10, Math.sqrt(score) * 3)) : 0;
+      triggers[key as keyof typeof triggers] = Math.round(normalized * 10) / 10;
     });
 
     // Calculate overall persuasion score
