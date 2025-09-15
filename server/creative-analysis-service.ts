@@ -465,7 +465,6 @@ class CreativeAnalysisService {
           console.log(`✅ Scene-by-scene analysis completed! Overall score: ${fusedInsights.overallScore.toFixed(1)}/10`);
           
           // Step 1h: Perform copy analysis
-          let copyAnalysis = null;
           if (this.copyAnalysisService) {
             try {
               console.log(`✍️ Analyzing copywriting elements...`);
