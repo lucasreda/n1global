@@ -750,14 +750,15 @@ class CreativeAnalysisService {
         musicType = scenesWithAudio.find((scene: any) => scene.audio.musicType)?.audio?.musicType || '';
         
         // Extract CTAs from scene audio transcripts
-        ctaAudio = [...new Set(scenes.flatMap((scene: any) => {
+        const ctaTranscripts = scenes.flatMap((scene: any) => {
           const transcript = scene.audio?.transcriptSnippet || '';
           const words = transcript.toLowerCase();
           if (words.includes('compre') || words.includes('clique') || words.includes('visite') || words.includes('acesse')) {
             return [transcript.trim()];
           }
           return [];
-        }))];
+        });
+        ctaAudio = Array.from(new Set(ctaTranscripts));
       }
       
     } else if (audioAnalysis) {
@@ -806,9 +807,20 @@ class CreativeAnalysisService {
     if (fusedInsights?.scenes && fusedInsights.scenes.length > 0) {
       // Video: extract data from scene analysis
       const scenes = fusedInsights.scenes;
-      visualQuality = scenes.reduce((sum: number, scene: any) => sum + (scene.visualScore || 0), 0) / scenes.length;
-      products = [...new Set(scenes.flatMap((scene: any) => scene.objects || []).filter((obj: string) => obj.includes('produto') || obj.includes('item') || obj.includes('caixa')))];
-      textOnScreen = [...new Set(scenes.flatMap((scene: any) => scene.text || []))];
+      // Guard against empty scenes to prevent NaN
+      visualQuality = scenes.length > 0 ? scenes.reduce((sum: number, scene: any) => sum + (scene.visualScore || 0), 0) / scenes.length : 0;
+      
+      // Safe extraction of products, ensuring all items are strings and arrays exist
+      const allObjects = scenes.flatMap((scene: any) => Array.isArray(scene.objects) ? scene.objects : []);
+      const filteredProducts = allObjects.filter((obj: any) => 
+        typeof obj === 'string' && (obj.includes('produto') || obj.includes('item') || obj.includes('caixa'))
+      );
+      products = Array.from(new Set(filteredProducts));
+      
+      // Safe extraction of text elements
+      const allTexts = scenes.flatMap((scene: any) => Array.isArray(scene.text) ? scene.text : []);
+      const filteredTexts = allTexts.filter((text: any) => typeof text === 'string');
+      textOnScreen = Array.from(new Set(filteredTexts));
       
       const scenesWithBrand = scenes.filter((scene: any) => scene.brandElements && scene.brandElements.length > 0);
       logoVisibility = scenesWithBrand.length > 0 ? (scenesWithBrand.length / scenes.length) * 10 : 0;
