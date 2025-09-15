@@ -143,12 +143,74 @@ export class CopyAnalysisService {
     });
   }
 
+  private getDefaultAnalysis(): CopyAnalysisResult {
+    return {
+      persuasion: {
+        score: 0,
+        triggers: {
+          scarcity: 0,
+          urgency: 0,
+          socialProof: 0,
+          authority: 0,
+          reciprocity: 0,
+          emotion: 0
+        },
+        examples: []
+      },
+      narrative: {
+        framework: 'Other',
+        confidence: 0,
+        completeness: 0,
+        stages: []
+      },
+      performance: {
+        wpm: 0,
+        wps: 0,
+        avgPauseDuration: 0,
+        pauses: [],
+        attentionCurve: [],
+        speechDensity: 0,
+        clarity: 0
+      },
+      personaTone: {
+        tone: 'neutral',
+        audienceFit: 0,
+        voiceConsistency: 0,
+        personas: [],
+        toneShifts: [],
+        empathyScore: 0
+      },
+      powerWords: {
+        action: [],
+        emotional: [],
+        sensory: [],
+        benefitDensity: 0,
+        ctaPower: 0,
+        keywordDensity: []
+      },
+      hooks: {
+        openingHookStrength: 0,
+        openingHookType: 'none',
+        closingHookStrength: 0,
+        secondaryHooks: []
+      },
+      sceneInsights: [],
+      persuasiveTimeline: []
+    };
+  }
+
   async analyze(
     transcriptData: TranscriptData,
     scenes: SceneData[],
     duration: number
   ): Promise<CopyAnalysisResult> {
     console.log('📝 Starting copy analysis...');
+
+    // Return default analysis if no transcript
+    if (!transcriptData || !transcriptData.segments || transcriptData.segments.length === 0) {
+      console.log('⚠️ No transcript data available - returning default copy analysis');
+      return this.getDefaultAnalysis();
+    }
 
     // Analyze triggers and persuasion elements
     const persuasionAnalysis = await this.analyzePersuasion(transcriptData, scenes);
@@ -209,44 +271,95 @@ export class CopyAnalysisService {
     const examples: CopyAnalysisResult['persuasion']['examples'] = [];
     const transcript = transcriptData.transcript.toLowerCase();
 
-    // Scarcity patterns
+    // Scarcity patterns (Portuguese, Italian, English)
     const scarcityPatterns = [
+      // Portuguese
       'últim', 'limitad', 'poucas unidades', 'apenas', 'exclusiv', 
-      'esgotando', 'acabando', 'restam', 'disponibilidade limitada'
+      'esgotando', 'acabando', 'restam', 'disponibilidade limitada',
+      // Italian
+      'ultim', 'limitat', 'poche unità', 'solo', 'esclusiv',
+      'esaurendo', 'finendo', 'rimangono', 'disponibilità limitata',
+      // English
+      'last', 'limited', 'few units', 'only', 'exclusive',
+      'running out', 'ending', 'remaining', 'limited availability'
     ];
     
-    // Urgency patterns
+    // Urgency patterns (Portuguese, Italian, English)
     const urgencyPatterns = [
+      // Portuguese
       'agora', 'hoje', 'já', 'imediatamente', 'não perca', 'aproveite',
       'termina', 'acaba', 'por tempo limitado', 'oferta relâmpago',
-      'últimas horas', 'últimos dias'
+      'últimas horas', 'últimos dias',
+      // Italian
+      'ora', 'oggi', 'subito', 'immediatamente', 'non perdere', 'approfitta',
+      'termina', 'finisce', 'tempo limitato', 'offerta lampo',
+      'ultime ore', 'ultimi giorni', 'occasione',
+      // English
+      'now', 'today', 'immediately', "don't miss", 'take advantage',
+      'ends', 'limited time', 'flash offer', 'last hours', 'final days'
     ];
     
-    // Social proof patterns
+    // Social proof patterns (Portuguese, Italian, English)
     const socialProofPatterns = [
+      // Portuguese
       'milhares', 'milhões', 'clientes', 'pessoas', 'avaliações',
       'depoimentos', 'aprovado', 'recomendado', 'mais vendido',
-      'sucesso', 'resultados comprovados', 'testado'
+      'sucesso', 'resultados comprovados', 'testado',
+      // Italian
+      'migliaia', 'milioni', 'clienti', 'persone', 'valutazioni',
+      'testimonianze', 'approvato', 'raccomandato', 'più venduto',
+      'successo', 'risultati comprovati', 'testato',
+      // English
+      'thousands', 'millions', 'customers', 'people', 'reviews',
+      'testimonials', 'approved', 'recommended', 'best seller',
+      'success', 'proven results', 'tested'
     ];
     
-    // Authority patterns
+    // Authority patterns (Portuguese, Italian, English)
     const authorityPatterns = [
+      // Portuguese
       'especialista', 'profissional', 'certificado', 'qualidade',
       'líder', 'referência', 'autoridade', 'doutor', 'aprovado por',
-      'garantia', 'comprovado cientificamente', 'estudos'
+      'garantia', 'comprovado cientificamente', 'estudos',
+      // Italian
+      'esperto', 'professionale', 'certificato', 'qualità',
+      'leader', 'riferimento', 'autorità', 'dottore', 'approvato da',
+      'garanzia', 'provato scientificamente', 'studi', 'vera',
+      // English
+      'expert', 'professional', 'certified', 'quality',
+      'leader', 'reference', 'authority', 'doctor', 'approved by',
+      'guarantee', 'scientifically proven', 'studies'
     ];
     
-    // Reciprocity patterns
+    // Reciprocity patterns (Portuguese, Italian, English)
     const reciprocityPatterns = [
+      // Portuguese
       'grátis', 'bônus', 'presente', 'oferta', 'desconto',
-      'promoção', 'benefício', 'vantagem', 'extra', 'cortesia'
+      'promoção', 'benefício', 'vantagem', 'extra', 'cortesia',
+      // Italian
+      'gratis', 'bonus', 'regalo', 'offerta', 'sconto',
+      'promozione', 'beneficio', 'vantaggio', 'extra', 'omaggio',
+      'soli', 'prenota',
+      // English
+      'free', 'bonus', 'gift', 'offer', 'discount',
+      'promotion', 'benefit', 'advantage', 'extra', 'courtesy'
     ];
     
-    // Emotion patterns
+    // Emotion patterns (Portuguese, Italian, English)
     const emotionPatterns = [
+      // Portuguese
       'incrível', 'fantástico', 'maravilhoso', 'surpreendente',
       'revolucionário', 'transformar', 'mudar', 'sonho', 'desejo',
-      'felicidade', 'satisfação', 'prazer', 'amor', 'paixão'
+      'felicidade', 'satisfação', 'prazer', 'amor', 'paixão',
+      // Italian
+      'incredibile', 'fantastico', 'meraviglioso', 'sorprendente',
+      'rivoluzionario', 'trasformare', 'cambiare', 'sogno', 'desiderio',
+      'felicità', 'soddisfazione', 'piacere', 'amore', 'passione',
+      'lussuosa', 'morbida', 'stelle',
+      // English
+      'incredible', 'fantastic', 'wonderful', 'amazing',
+      'revolutionary', 'transform', 'change', 'dream', 'desire',
+      'happiness', 'satisfaction', 'pleasure', 'love', 'passion'
     ];
 
     // Analyze each trigger
