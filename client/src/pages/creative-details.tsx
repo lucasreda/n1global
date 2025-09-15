@@ -128,7 +128,10 @@ export default function CreativeDetails() {
     insightsCount: insights.length, 
     recommendationsCount: recommendations.length,
     insights: insights.slice(0, 3),
-    recommendations: recommendations.slice(0, 3)
+    recommendations: recommendations.slice(0, 3),
+    hasCopyAnalysis: !!analysis?.result?.copyAnalysis,
+    copyAnalysisScore: analysis?.result?.copyAnalysis?.persuasion?.score,
+    fullResult: analysis?.result
   });
 
   return (

@@ -59,14 +59,13 @@ class CreativeAnalysisService {
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      console.warn('⚠️ OpenAI API key not configured - hybrid analysis disabled');
+      console.warn('⚠️ OpenAI API key not configured - some features may be limited');
       this.openai = new OpenAI({ apiKey: 'dummy' }); // Dummy instance to prevent crashes
-      return;
+    } else {
+      this.openai = new OpenAI({ apiKey });
     }
     
-    this.openai = new OpenAI({ apiKey });
-    
-    // Initialize hybrid analysis services only if API key is available
+    // Initialize hybrid analysis services (will work with or without API key)
     try {
       this.audioAnalysisService = new AudioAnalysisService();
       this.keyframeExtractionService = new KeyframeExtractionService();

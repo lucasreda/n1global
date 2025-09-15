@@ -3159,7 +3159,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Creative or analysis not found" });
       }
       
-      res.json(result[0]);
+      // Debug: Check if copyAnalysis is present
+      const response = result[0];
+      if (response.analysis?.result) {
+        console.log('📊 Creative details - copyAnalysis present:', !!response.analysis.result.copyAnalysis);
+        if (response.analysis.result.copyAnalysis) {
+          console.log('📊 Copy persuasion score:', response.analysis.result.copyAnalysis.persuasion?.score);
+        }
+      }
+      
+      res.json(response);
     } catch (error) {
       console.error("Error fetching creative details:", error);
       res.status(500).json({ message: "Error fetching creative details" });
