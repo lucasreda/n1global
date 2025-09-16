@@ -244,12 +244,13 @@ export default function Hub() {
 
       {/* Marketplace Section */}
       <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Produtos Disponíveis</CardTitle>
-              <CardDescription>Encontre produtos para adicionar à sua operação</CardDescription>
-            </CardHeader>
-          </Card>
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="w-5 h-5" />
+              <h2 className="text-2xl font-semibold">Produtos Disponíveis</h2>
+            </div>
+            <p className="text-muted-foreground">Encontre produtos para adicionar à sua operação</p>
+          </div>
 
           {/* Products Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
