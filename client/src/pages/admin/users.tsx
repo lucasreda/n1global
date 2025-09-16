@@ -383,7 +383,10 @@ export default function AdminUsers() {
                         {getRoleBadge(user.role)}
                       </td>
                       <td className="py-3 px-4">
-                        <Badge variant={user.isActive !== false ? "default" : "secondary"}>
+                        <Badge 
+                          variant={user.isActive !== false ? "default" : "secondary"}
+                          className={user.isActive !== false ? "text-white" : ""}
+                        >
                           {user.isActive !== false ? "Ativo" : "Inativo"}
                         </Badge>
                       </td>
