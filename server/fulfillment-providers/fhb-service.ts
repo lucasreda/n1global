@@ -369,28 +369,46 @@ export class FHBService extends BaseFulfillmentProvider {
         };
       }
 
-      // Primeiro, vamos tentar um endpoint simples: /order (que pode ter menos restrições)
+      // Vamos tentar diferentes formatos de header para encontrar o correto
+      console.log("🧪 FHB: Testando diferentes formatos de header...");
+      
+      // Teste 1: Token sem Bearer prefix
       try {
-        console.log("🧪 FHB: Tentando endpoint /order para teste...");
-        const orders = await this.makeAuthenticatedRequest("/order?limit=1");
-        console.log("✅ FHB: Teste com /order bem-sucedido!");
+        console.log("🔍 FHB: Tentando token sem 'Bearer' prefix...");
+        const response = await this.makeDirectRequest("/order?limit=1", token.token);
+        console.log("✅ FHB: Sucesso com token sem Bearer prefix!");
         
         return {
           connected: true,
-          message: "Conexão FHB estabelecida com sucesso (endpoint /order)"
+          message: "Conexão FHB estabelecida com sucesso (token direto)"
         };
-      } catch (orderError: any) {
-        console.log("⚠️ FHB: Endpoint /order falhou, tentando /product...");
-        
-        // Se /order falhou, tentar /product
-        const products = await this.makeAuthenticatedRequest("/product?limit=1");
-        console.log("✅ FHB: Teste com /product bem-sucedido!");
-        
-        return {
-          connected: true,
-          message: "Conexão FHB estabelecida com sucesso (endpoint /product)"
-        };
+      } catch (directError: any) {
+        console.log("⚠️ FHB: Token direto falhou, continuando...");
       }
+
+      // Teste 2: Token como query parameter
+      try {
+        console.log("🔍 FHB: Tentando token como query parameter...");
+        const url = `/order?limit=1&token=${token.token}`;
+        const response = await this.makeRequestWithoutAuth(url);
+        console.log("✅ FHB: Sucesso com token como query parameter!");
+        
+        return {
+          connected: true,
+          message: "Conexão FHB estabelecida com sucesso (token como query)"
+        };
+      } catch (queryError: any) {
+        console.log("⚠️ FHB: Token como query falhou, continuando...");
+      }
+
+      // Teste 3: Header Authorization com Bearer (original)
+      const orders = await this.makeAuthenticatedRequest("/order?limit=1");
+      console.log("✅ FHB: Sucesso com Bearer token!");
+      
+      return {
+        connected: true,
+        message: "Conexão FHB estabelecida com sucesso (Bearer token)"
+      };
     } catch (error: any) {
       console.error("❌ FHB: Teste de conexão falhou:", error);
       return {
@@ -398,6 +416,56 @@ export class FHBService extends BaseFulfillmentProvider {
         message: `Erro de conexão: ${error.message}`
       };
     }
+  }
+
+  // Método auxiliar para testar token direto no header
+  private async makeDirectRequest(endpoint: string, token: string): Promise<any> {
+    const headers: any = {
+      "Content-Type": "application/json",
+      "Authorization": token // Sem "Bearer " prefix
+    };
+
+    const url = `${this.fhbCredentials.apiUrl}${endpoint}`;
+    
+    console.log(`📡 FHB GET (direct) request to:`, url);
+    console.log(`🔑 FHB Authorization header (direct):`, token.substring(0, 20) + "...");
+    
+    const response = await fetch(url, {
+      method: "GET", 
+      headers
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`❌ FHB GET ${url} failed: ${response.status} ${errorText}`);
+      throw new Error(`FHB API Error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  // Método auxiliar para testar sem header Authorization
+  private async makeRequestWithoutAuth(endpoint: string): Promise<any> {
+    const headers: any = {
+      "Content-Type": "application/json"
+    };
+
+    const url = `${this.fhbCredentials.apiUrl}${endpoint}`;
+    
+    console.log(`📡 FHB GET (no auth header) request to:`, url);
+    
+    const response = await fetch(url, {
+      method: "GET", 
+      headers
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`❌ FHB GET ${url} failed: ${response.status} ${errorText}`);
+      throw new Error(`FHB API Error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
   }
 
   // Métodos opcionais específicos da FHB
