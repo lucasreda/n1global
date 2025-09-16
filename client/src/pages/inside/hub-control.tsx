@@ -370,7 +370,35 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
                   {/* Rich Text Editor */}
                   <div className="space-y-2">
                     <Label className="text-white">Conteúdo do Anúncio</Label>
-                    <div className="bg-white rounded-lg overflow-hidden">
+                    <div className="bg-white/5 border border-white/20 rounded-lg overflow-hidden">
+                      <style>
+                        {`
+                          .ql-toolbar {
+                            background: rgba(255, 255, 255, 0.1) !important;
+                            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+                          }
+                          .ql-toolbar .ql-stroke {
+                            stroke: #ffffff !important;
+                          }
+                          .ql-toolbar .ql-fill {
+                            fill: #ffffff !important;
+                          }
+                          .ql-toolbar .ql-picker-label {
+                            color: #ffffff !important;
+                          }
+                          .ql-container {
+                            background: transparent !important;
+                            color: #ffffff !important;
+                          }
+                          .ql-editor {
+                            background: transparent !important;
+                            color: #ffffff !important;
+                          }
+                          .ql-editor::before {
+                            color: #9ca3af !important;
+                          }
+                        `}
+                      </style>
                       <ReactQuill
                         theme="snow"
                         value={content}
@@ -378,7 +406,10 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
                         modules={modules}
                         formats={formats}
                         placeholder="Digite o conteúdo do anúncio..."
-                        style={{ minHeight: '400px' }}
+                        style={{ 
+                          minHeight: '400px',
+                          backgroundColor: 'transparent'
+                        }}
                       />
                     </div>
                   </div>
