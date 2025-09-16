@@ -883,16 +883,26 @@ export default function HubControl() {
                     onClick={() => handleViewAnnouncement(announcement)}
                   >
                     <CardContent className="p-0 h-full flex flex-col">
-                      {/* Image placeholder based on announcement type */}
-                      <div className={`w-full bg-gradient-to-r ${
-                        announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
-                        announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
-                        announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
-                        'from-green-400 to-green-600'
-                      } ${isHero ? 'h-32' : 'h-24'} flex items-center justify-center relative`}>
-                        <div className="text-white text-2xl">
-                          {getAnnouncementIcon(announcement.type)}
-                        </div>
+                      {/* Image or placeholder */}
+                      <div className={`w-full ${isHero ? 'h-32' : 'h-24'} relative overflow-hidden`}>
+                        {announcement.imageUrl ? (
+                          <img 
+                            src={announcement.imageUrl} 
+                            alt={announcement.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className={`w-full h-full bg-gradient-to-r ${
+                            announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
+                            announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
+                            announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
+                            'from-green-400 to-green-600'
+                          } flex items-center justify-center`}>
+                            <div className="text-white text-2xl">
+                              {getAnnouncementIcon(announcement.type)}
+                            </div>
+                          </div>
+                        )}
                         {/* Edit button overlay */}
                         <Button
                           size="sm"

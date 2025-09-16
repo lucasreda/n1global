@@ -2683,6 +2683,7 @@ export const announcements = pgTable("announcements", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   type: text("type").notNull().default("update"), // 'update' | 'tip' | 'maintenance' | 'promo'
+  imageUrl: text("image_url"), // Image for the announcement
   publishedAt: timestamp("published_at").defaultNow(),
   isPinned: boolean("is_pinned").default(false),
   audience: text("audience").notNull().default("all"), // 'all' | 'role' | 'operation'
