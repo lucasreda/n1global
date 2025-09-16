@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -5823,6 +5823,182 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     } catch (error) {
       console.error("Error updating investment pool:", error);
       res.status(500).json({ message: "Erro ao atualizar pool de investimento" });
+    }
+  });
+
+  // ========================================
+  // N1 Hub - Marketplace Routes
+  // ========================================
+
+  // Get marketplace products with filters
+  app.get("/api/marketplace/products", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { search, category, limit, offset } = req.query;
+      const products = await storage.getMarketplaceProducts({
+        search: search as string,
+        category: category as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
+      res.json({ data: products });
+    } catch (error) {
+      console.error("Error fetching marketplace products:", error);
+      res.status(500).json({ message: "Erro ao buscar produtos do marketplace" });
+    }
+  });
+
+  // Get single marketplace product
+  app.get("/api/marketplace/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const product = await storage.getMarketplaceProduct(req.params.id);
+      if (!product) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      res.json(product);
+    } catch (error) {
+      console.error("Error fetching marketplace product:", error);
+      res.status(500).json({ message: "Erro ao buscar produto" });
+    }
+  });
+
+  // Link product to operation
+  app.post("/api/marketplace/link", authenticateToken, storeContext, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const linkData = insertProductOperationLinkSchema.parse(req.body);
+      
+      // Ensure the operation and store belong to the user
+      if (!req.operationId || !req.storeId) {
+        return res.status(400).json({ message: "Operation ID e Store ID são obrigatórios" });
+      }
+
+      const link = await storage.linkProductToOperation({
+        ...linkData,
+        operationId: req.operationId,
+        storeId: req.storeId,
+      });
+
+      res.status(201).json(link);
+    } catch (error) {
+      console.error("Error linking product to operation:", error);
+      res.status(500).json({ message: "Erro ao vincular produto à operação" });
+    }
+  });
+
+  // Get operation product links
+  app.get("/api/marketplace/links", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.operationId) {
+        return res.status(400).json({ message: "Operation ID é obrigatório" });
+      }
+
+      const links = await storage.getOperationProductLinks(req.operationId);
+      res.json({ data: links });
+    } catch (error) {
+      console.error("Error fetching operation product links:", error);
+      res.status(500).json({ message: "Erro ao buscar produtos vinculados" });
+    }
+  });
+
+  // Delete product operation link
+  app.delete("/api/marketplace/links/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const success = await storage.deleteProductOperationLink(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Vinculação não encontrada" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting product operation link:", error);
+      res.status(500).json({ message: "Erro ao desvincular produto" });
+    }
+  });
+
+  // ========================================
+  // N1 Hub - Announcements Routes
+  // ========================================
+
+  // Get announcements (filtered by user context)
+  app.get("/api/announcements", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { limit, offset } = req.query;
+      const userRole = req.user?.role;
+      const operationId = req.operationId;
+
+      // Get announcements for "all", current user role, and specific operation
+      const announcements = await storage.getAnnouncements({
+        audience: "all",
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
+
+      // TODO: Add role-specific and operation-specific announcements
+      res.json({ data: announcements });
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+      res.status(500).json({ message: "Erro ao buscar novidades" });
+    }
+  });
+
+  // Get single announcement
+  app.get("/api/announcements/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const announcement = await storage.getAnnouncement(req.params.id);
+      if (!announcement) {
+        return res.status(404).json({ message: "Novidade não encontrada" });
+      }
+      res.json(announcement);
+    } catch (error) {
+      console.error("Error fetching announcement:", error);
+      res.status(500).json({ message: "Erro ao buscar novidade" });
+    }
+  });
+
+  // Admin-only routes for managing marketplace and announcements
+  app.post("/api/admin/marketplace/products", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const productData = insertMarketplaceProductSchema.parse(req.body);
+      const product = await storage.createMarketplaceProduct(productData);
+      res.status(201).json(product);
+    } catch (error) {
+      console.error("Error creating marketplace product:", error);
+      res.status(500).json({ message: "Erro ao criar produto do marketplace" });
+    }
+  });
+
+  app.post("/api/admin/announcements", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const announcementData = insertAnnouncementSchema.parse(req.body);
+      const announcement = await storage.createAnnouncement(announcementData);
+      res.status(201).json(announcement);
+    } catch (error) {
+      console.error("Error creating announcement:", error);
+      res.status(500).json({ message: "Erro ao criar novidade" });
+    }
+  });
+
+  app.put("/api/admin/announcements/:id", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const announcement = await storage.updateAnnouncement(req.params.id, req.body);
+      if (!announcement) {
+        return res.status(404).json({ message: "Novidade não encontrada" });
+      }
+      res.json(announcement);
+    } catch (error) {
+      console.error("Error updating announcement:", error);
+      res.status(500).json({ message: "Erro ao atualizar novidade" });
+    }
+  });
+
+  app.delete("/api/admin/announcements/:id", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const success = await storage.deleteAnnouncement(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Novidade não encontrada" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting announcement:", error);
+      res.status(500).json({ message: "Erro ao deletar novidade" });
     }
   });
 
