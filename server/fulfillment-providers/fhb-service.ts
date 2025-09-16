@@ -374,7 +374,7 @@ export class FHBService extends BaseFulfillmentProvider {
 
       // Usar o formato correto da documentação FHB: X-Authentication-Simple
       console.log("🧪 FHB: Testando com header X-Authentication-Simple...");
-      const orders = await this.makeAuthenticatedRequest("/order?limit=1");
+      const products = await this.makeAuthenticatedRequest("/product?limit=1");
       console.log("✅ FHB: Conexão testada com sucesso!");
       
       return {
