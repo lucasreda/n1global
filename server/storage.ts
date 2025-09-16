@@ -1089,6 +1089,11 @@ export class DatabaseStorage implements IStorage {
     return product || undefined;
   }
 
+  async deleteMarketplaceProduct(id: string): Promise<boolean> {
+    const result = await db.delete(marketplaceProducts).where(eq(marketplaceProducts.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   // ========================================
   // N1 Hub - Product Operation Links
   // ========================================

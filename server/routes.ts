@@ -5988,6 +5988,20 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Delete marketplace product
+  app.delete("/api/marketplace/products/:id", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const success = await storage.deleteMarketplaceProduct(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting marketplace product:", error);
+      res.status(500).json({ message: "Erro ao remover produto do marketplace" });
+    }
+  });
+
   // Delete product operation link
   app.delete("/api/marketplace/links/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
