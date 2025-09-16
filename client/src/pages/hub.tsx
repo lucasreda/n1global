@@ -161,93 +161,92 @@ export default function Hub() {
       </div>
 
       {/* Novidades Section - News Layout */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
+      <div>
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-5 h-5" />
-            <CardTitle>Últimas Novidades</CardTitle>
+            <h2 className="text-2xl font-semibold">Últimas Novidades</h2>
           </div>
-          <CardDescription>Fique por dentro das atualizações e dicas mais recentes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {announcementsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Card key={i} className="h-48">
-                  <CardContent className="p-4">
-                    <Skeleton className="h-4 w-20 mb-2" />
-                    <Skeleton className="h-6 w-full mb-3" />
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-3/4" />
+          <p className="text-muted-foreground">Fique por dentro das atualizações e dicas mais recentes</p>
+        </div>
+        
+        {announcementsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="h-48">
+                <CardContent className="p-4">
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-6 w-full mb-3" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-3/4" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : announcementsData?.data?.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {announcementsData.data.map((announcement: Announcement, index: number) => {
+              // Make first announcement larger (hero style)
+              const isHero = index === 0;
+              const cardClass = isHero 
+                ? "md:col-span-2 lg:col-span-2 h-64" 
+                : "h-48";
+
+              return (
+                <Card key={announcement.id} className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer`} data-testid={`card-announcement-${announcement.id}`}>
+                  <CardContent className="p-4 h-full flex flex-col">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">
+                        {getAnnouncementIcon(announcement.type)}
+                      </div>
+                      <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
+                        {getAnnouncementBadge(announcement.type).label}
+                      </Badge>
+                      {announcement.isPinned && (
+                        <Badge variant="secondary" size="sm" data-testid={`badge-announcement-pinned-${announcement.id}`}>
+                          <Pin className="w-3 h-3 mr-1" />
+                          Fixado
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <h3 className={`font-semibold mb-2 line-clamp-2 ${isHero ? 'text-lg' : 'text-base'}`} data-testid={`text-announcement-title-${announcement.id}`}>
+                      {announcement.title}
+                    </h3>
+                    
+                    <p className={`text-muted-foreground flex-1 ${isHero ? 'line-clamp-4' : 'line-clamp-3'} text-sm`} data-testid={`text-announcement-content-${announcement.id}`}>
+                      {announcement.content}
+                    </p>
+                    
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-muted-foreground flex items-center" data-testid={`text-announcement-date-${announcement.id}`}>
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {new Date(announcement.publishedAt).toLocaleDateString('pt-BR', { 
+                          day: 'numeric', 
+                          month: 'short' 
+                        })}
+                      </span>
+                      {announcement.ctaLabel && announcement.ctaUrl && (
+                        <Button variant="ghost" size="sm" className="h-6 text-xs" data-testid={`button-announcement-cta-${announcement.id}`}>
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          {announcement.ctaLabel}
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          ) : announcementsData?.data?.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {announcementsData.data.map((announcement: Announcement, index: number) => {
-                // Make first announcement larger (hero style)
-                const isHero = index === 0;
-                const cardClass = isHero 
-                  ? "md:col-span-2 lg:col-span-2 h-64" 
-                  : "h-48";
-
-                return (
-                  <Card key={announcement.id} className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer`} data-testid={`card-announcement-${announcement.id}`}>
-                    <CardContent className="p-4 h-full flex flex-col">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">
-                          {getAnnouncementIcon(announcement.type)}
-                        </div>
-                        <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
-                          {getAnnouncementBadge(announcement.type).label}
-                        </Badge>
-                        {announcement.isPinned && (
-                          <Badge variant="secondary" size="sm" data-testid={`badge-announcement-pinned-${announcement.id}`}>
-                            <Pin className="w-3 h-3 mr-1" />
-                            Fixado
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <h3 className={`font-semibold mb-2 line-clamp-2 ${isHero ? 'text-lg' : 'text-base'}`} data-testid={`text-announcement-title-${announcement.id}`}>
-                        {announcement.title}
-                      </h3>
-                      
-                      <p className={`text-muted-foreground flex-1 ${isHero ? 'line-clamp-4' : 'line-clamp-3'} text-sm`} data-testid={`text-announcement-content-${announcement.id}`}>
-                        {announcement.content}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-xs text-muted-foreground flex items-center" data-testid={`text-announcement-date-${announcement.id}`}>
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {new Date(announcement.publishedAt).toLocaleDateString('pt-BR', { 
-                            day: 'numeric', 
-                            month: 'short' 
-                          })}
-                        </span>
-                        {announcement.ctaLabel && announcement.ctaUrl && (
-                          <Button variant="ghost" size="sm" className="h-6 text-xs" data-testid={`button-announcement-cta-${announcement.id}`}>
-                            <ExternalLink className="w-3 h-3 mr-1" />
-                            {announcement.ctaLabel}
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground" data-testid="text-no-announcements">
-                Nenhuma novidade disponível
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground" data-testid="text-no-announcements">
+              Nenhuma novidade disponível
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Marketplace Section */}
       <div className="space-y-6">
