@@ -17,7 +17,12 @@ import {
   Trash2,
   Shield,
   User,
-  Briefcase
+  Briefcase,
+  Crown,
+  Settings,
+  DollarSign,
+  Store,
+  Truck
 } from "lucide-react";
 
 // Define available pages for different user types
@@ -202,28 +207,54 @@ export default function AdminUsers() {
   });
 
   const getRoleBadge = (role: string) => {
-    const roleColors = {
-      'super_admin': 'bg-red-100 text-red-800',
-      'admin': 'bg-purple-100 text-purple-800',
-      'admin_financeiro': 'bg-yellow-100 text-yellow-800',
-      'store': 'bg-blue-100 text-blue-800',
-      'supplier': 'bg-green-100 text-green-800',
-      'user': 'bg-gray-100 text-gray-800',
+    const roleConfig = {
+      'super_admin': { 
+        label: 'Super Admin', 
+        icon: Crown, 
+        color: 'text-red-500' 
+      },
+      'admin': { 
+        label: 'Administrador', 
+        icon: Settings, 
+        color: 'text-purple-500' 
+      },
+      'admin_financeiro': { 
+        label: 'Admin Financeiro', 
+        icon: DollarSign, 
+        color: 'text-yellow-500' 
+      },
+      'store': { 
+        label: 'Loja', 
+        icon: Store, 
+        color: 'text-blue-500' 
+      },
+      'supplier': { 
+        label: 'Fornecedor', 
+        icon: Truck, 
+        color: 'text-green-500' 
+      },
+      'user': { 
+        label: 'Cliente', 
+        icon: User, 
+        color: 'text-gray-500' 
+      },
     };
     
-    const roleLabels = {
-      'super_admin': 'Super Admin',
-      'admin': 'Administrador',
-      'admin_financeiro': 'Administrador Financeiro',
-      'store': 'Loja',
-      'supplier': 'Fornecedor',
-      'user': 'Cliente',
+    const config = roleConfig[role as keyof typeof roleConfig] || {
+      label: role,
+      icon: User,
+      color: 'text-gray-500'
     };
+    
+    const IconComponent = config.icon;
     
     return (
-      <Badge className={roleColors[role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800'}>
-        {roleLabels[role as keyof typeof roleLabels] || role}
-      </Badge>
+      <div className="flex items-center gap-2 py-1">
+        <IconComponent className={`h-4 w-4 ${config.color}`} />
+        <span className={`text-sm font-medium ${config.color}`}>
+          {config.label}
+        </span>
+      </div>
     );
   };
 
