@@ -15,7 +15,8 @@ import {
   Wrench,
   MessageSquare,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Store
 } from "lucide-react";
 import logoImage from "@assets/Dashboard_1756440445659.png";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import { useCurrentOperation } from "@/hooks/use-current-operation";
 const getNavigationForRole = (userRole: string) => {
   const baseNavigation = [
     { name: "Dashboard", href: "/", icon: Home },
+    { name: "N1 Hub", href: "/hub", icon: Store },
     { name: "Pedidos", href: "/orders", icon: Package },
     { name: "Produtos", href: "/products", icon: ShoppingCart },
     { 

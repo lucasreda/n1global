@@ -1,12 +1,12 @@
 import { Link, useLocation } from "wouter";
-import { Home, Package, Target, BarChart3, Sparkles } from "lucide-react";
+import { Home, Package, Target, BarChart3, Sparkles, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: Home },
+  { name: "Hub", href: "/hub", icon: Store },
   { name: "Pedidos", href: "/orders", icon: Package },
   { name: "Anúncios", href: "/ads", icon: Target },
-  { name: "Criativos", href: "/creatives", icon: Sparkles },
   { name: "Análises", href: "/analytics", icon: BarChart3 },
 ];
 

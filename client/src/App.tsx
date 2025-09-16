@@ -52,6 +52,7 @@ import PaymentsPage from "@/pages/investment/payments";
 import AdminInvestmentDashboard from "@/pages/admin-investment/dashboard";
 import AdminInvestmentPools from "@/pages/admin-investment/pools";
 import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
+import Hub from "@/pages/hub";
 import NotFound from "@/pages/not-found";
 
 interface OnboardingStatus {
@@ -245,6 +246,7 @@ function Router() {
         
         {/* Default Routes */}
         <Route path="/" component={isSupplier ? SupplierDashboard : isProductSeller ? SellerDashboard : Dashboard} />
+        <Route path="/hub" component={Hub} />
         <Route path="/orders" component={Orders} />
         {!isProductSeller && <Route path="/analytics" component={Analytics} />}
         <Route path="/integrations" component={Integrations} />
