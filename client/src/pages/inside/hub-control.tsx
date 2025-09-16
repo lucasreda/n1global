@@ -921,7 +921,7 @@ export default function HubControl() {
                         </h3>
                         
                         <p className={`text-slate-300 flex-1 ${isHero ? 'line-clamp-4' : 'line-clamp-3'} text-sm`} data-testid={`text-announcement-content-${announcement.id}`}>
-                          {announcement.content}
+                          {announcement.content.replace(/<[^>]*>/g, '')}
                         </p>
                         
                         <div className="flex items-center justify-between mt-3">
