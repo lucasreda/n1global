@@ -493,16 +493,24 @@ export default function Hub() {
               productsData.data.map((product: MarketplaceProduct) => (
                 <Card key={product.id} className="overflow-hidden" data-testid={`card-product-${product.id}`}>
                   <CardContent className="p-0">
-                    {/* Product image placeholder based on category */}
-                    <div className={`w-full h-48 bg-gradient-to-br ${
-                      product.category === 'electronics' ? 'from-blue-400 to-blue-600' :
-                      product.category === 'fashion' ? 'from-purple-400 to-purple-600' :
-                      product.category === 'home' ? 'from-yellow-400 to-yellow-600' :
-                      product.category === 'health' ? 'from-green-400 to-green-600' :
-                      'from-gray-400 to-gray-600'
-                    } flex items-center justify-center`}>
-                      <Package className="w-16 h-16 text-white opacity-80" />
-                    </div>
+                    {/* Product image or placeholder based on category */}
+                    {product.images && product.images.length > 0 ? (
+                      <img 
+                        src={product.images[0]} 
+                        alt={product.name}
+                        className="w-full h-48 object-cover"
+                      />
+                    ) : (
+                      <div className={`w-full h-48 bg-gradient-to-br ${
+                        product.category === 'electronics' ? 'from-blue-400 to-blue-600' :
+                        product.category === 'fashion' ? 'from-purple-400 to-purple-600' :
+                        product.category === 'home' ? 'from-yellow-400 to-yellow-600' :
+                        product.category === 'health' ? 'from-green-400 to-green-600' :
+                        'from-gray-400 to-gray-600'
+                      } flex items-center justify-center`}>
+                        <Package className="w-16 h-16 text-white opacity-80" />
+                      </div>
+                    )}
                     <div className="p-4">
                       <div className="space-y-2">
                       <h3 className="font-semibold" data-testid={`text-product-name-${product.id}`}>
