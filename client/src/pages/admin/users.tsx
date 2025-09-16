@@ -581,8 +581,12 @@ export default function AdminUsers() {
                           >
                             <Checkbox 
                               checked={hasPermission}
-                              onCheckedChange={() => togglePermission(page.id)}
+                              onCheckedChange={(checked) => {
+                                // Prevent double click by stopping propagation
+                                togglePermission(page.id);
+                              }}
                               className="mt-1"
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
