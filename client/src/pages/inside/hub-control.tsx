@@ -22,9 +22,11 @@ import {
   Star,
   AlertTriangle,
   Info,
-  Wrench
+  Wrench,
+  Search,
+  Check
 } from 'lucide-react';
-import type { Announcement, MarketplaceProduct } from '@shared/schema';
+import type { Announcement, MarketplaceProduct, Product } from '@shared/schema';
 
 interface ConfirmDeleteModalProps {
   open: boolean;
@@ -32,6 +34,12 @@ interface ConfirmDeleteModalProps {
   onConfirm: () => void;
   productName: string;
   isLoading: boolean;
+}
+
+interface AddProductModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 function ConfirmDeleteModal({ open, onClose, onConfirm, productName, isLoading }: ConfirmDeleteModalProps) {
@@ -70,10 +78,156 @@ function ConfirmDeleteModal({ open, onClose, onConfirm, productName, isLoading }
   );
 }
 
+function AddProductModal({ open, onClose, onSuccess }: AddProductModalProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch available products
+  const { data: availableProductsData, isLoading: productsLoading } = useQuery<{ data: Product[]; total: number }>({
+    queryKey: ['/api/marketplace/available-products', { search: searchTerm }],
+    enabled: open
+  });
+
+  // Add product to marketplace mutation
+  const addProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch('/api/marketplace/products/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify({ productId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao adicionar produto');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/marketplace/products'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/marketplace/available-products'] });
+      toast({
+        title: "Produto adicionado",
+        description: "O produto foi adicionado ao marketplace com sucesso.",
+      });
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: error.message,
+      });
+    }
+  });
+
+  const handleAddProduct = (productId: string) => {
+    addProductMutation.mutate(productId);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-green-400">
+            <Plus className="h-5 w-5" />
+            Adicionar Produto ao Marketplace
+          </DialogTitle>
+          <DialogDescription className="text-gray-300">
+            Selecione produtos do catálogo global para disponibilizar aos clientes
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar por nome, descrição ou SKU..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-white/10 border-white/20 text-white"
+            />
+          </div>
+
+          {/* Products List */}
+          <div className="max-h-96 overflow-y-auto space-y-2">
+            {productsLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="border border-white/20 rounded-lg p-4 bg-white/5">
+                  <Skeleton className="h-4 w-3/4 mb-2 bg-white/20" />
+                  <Skeleton className="h-3 w-1/2 mb-2 bg-white/20" />
+                  <Skeleton className="h-8 w-24 bg-white/20" />
+                </div>
+              ))
+            ) : availableProductsData?.data && availableProductsData.data.length > 0 ? (
+              availableProductsData.data.map((product: Product) => (
+                <div key={product.id} className="border border-white/20 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-white">{product.name}</h4>
+                        <Badge variant={product.type === 'nutraceutico' ? 'default' : 'secondary'}>
+                          {product.type === 'nutraceutico' ? 'Nutracêutico' : 'Físico'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-1">{product.description || 'Sem descrição'}</p>
+                      <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                      <p className="text-sm font-medium text-green-400">€{product.price}</p>
+                    </div>
+                    <Button
+                      onClick={() => handleAddProduct(product.id)}
+                      disabled={addProductMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      size="sm"
+                    >
+                      {addProductMutation.isPending ? (
+                        'Adicionando...'
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 mr-1" />
+                          Adicionar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>{searchTerm ? 'Nenhum produto encontrado' : 'Todos os produtos já estão no marketplace'}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+          >
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function HubControl() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [addProductModalOpen, setAddProductModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedProductName, setSelectedProductName] = useState<string>('');
 
@@ -300,7 +454,10 @@ export default function HubControl() {
                 <Package className="w-5 h-5 text-green-400" />
                 <h2 className="text-xl font-semibold text-white">Produtos Disponíveis</h2>
               </div>
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => setAddProductModalOpen(true)}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar
               </Button>
@@ -387,6 +544,13 @@ export default function HubControl() {
             )}
           </div>
         </div>
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        open={addProductModalOpen}
+        onClose={() => setAddProductModalOpen(false)}
+        onSuccess={() => setAddProductModalOpen(false)}
+      />
 
       {/* Confirm Delete Modal */}
       <ConfirmDeleteModal

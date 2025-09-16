@@ -5899,6 +5899,94 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Add product from global catalog to marketplace
+  app.post("/api/marketplace/products/add", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { productId } = req.body;
+      
+      if (!productId) {
+        return res.status(400).json({ message: "productId é obrigatório" });
+      }
+      
+      // Get the original product
+      const originalProduct = await storage.getProduct(productId);
+      if (!originalProduct) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      
+      // Check if product is already in marketplace
+      const existingMarketplaceProducts = await storage.getMarketplaceProducts({ 
+        search: originalProduct.name 
+      });
+      const alreadyExists = existingMarketplaceProducts.some(p => p.name === originalProduct.name);
+      
+      if (alreadyExists) {
+        return res.status(400).json({ message: "Produto já está disponível no marketplace" });
+      }
+      
+      // Create marketplace product from original product
+      const marketplaceProduct = await storage.createMarketplaceProduct({
+        name: originalProduct.name,
+        description: originalProduct.description,
+        supplier: "Admin", // Or get from user context
+        baseCost: originalProduct.price.toString(),
+        currency: "EUR",
+        category: originalProduct.type === 'nutraceutico' ? 'health' : 'general',
+        images: originalProduct.imageUrl ? [originalProduct.imageUrl] : null,
+        tags: null,
+        specs: null,
+        status: 'active'
+      });
+      
+      res.status(201).json(marketplaceProduct);
+    } catch (error) {
+      console.error("Error adding product to marketplace:", error);
+      res.status(500).json({ message: "Erro ao adicionar produto ao marketplace" });
+    }
+  });
+
+  // Get products available to add to marketplace (global products not yet in marketplace)
+  app.get("/api/marketplace/available-products", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { search, limit = 20, offset = 0 } = req.query;
+      
+      // Get all global products
+      const allProducts = await storage.getProducts();
+      
+      // Get all marketplace products to exclude
+      const marketplaceProducts = await storage.getMarketplaceProducts();
+      const marketplaceProductNames = new Set(marketplaceProducts.map(p => p.name));
+      
+      // Filter out products already in marketplace
+      let availableProducts = allProducts.filter(product => 
+        !marketplaceProductNames.has(product.name) && product.isActive
+      );
+      
+      // Apply search filter
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        availableProducts = availableProducts.filter(product =>
+          product.name.toLowerCase().includes(searchLower) ||
+          (product.description && product.description.toLowerCase().includes(searchLower)) ||
+          product.sku.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Apply pagination
+      const startIndex = parseInt(offset as string) || 0;
+      const pageLimit = parseInt(limit as string) || 20;
+      const paginatedProducts = availableProducts.slice(startIndex, startIndex + pageLimit);
+      
+      res.json({ 
+        data: paginatedProducts, 
+        total: availableProducts.length 
+      });
+    } catch (error) {
+      console.error("Error fetching available products:", error);
+      res.status(500).json({ message: "Erro ao buscar produtos disponíveis" });
+    }
+  });
+
   // Delete product operation link
   app.delete("/api/marketplace/links/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
