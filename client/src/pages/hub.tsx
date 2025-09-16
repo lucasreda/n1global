@@ -564,7 +564,7 @@ export default function Hub() {
 
             {/* Products Grid */}
             <div className="flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             {productsLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i}>
@@ -582,8 +582,8 @@ export default function Hub() {
                   selectedCategory === null || product.category === selectedCategory
                 )
                 .map((product: MarketplaceProduct) => (
-                <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-200" data-testid={`card-product-${product.id}`}>
-                  <CardContent className="p-0">
+                <Card key={product.id} className="h-full overflow-hidden hover:shadow-lg transition-shadow duration-200" data-testid={`card-product-${product.id}`}>
+                  <CardContent className="p-0 h-full flex flex-col">
                     {/* Product image or placeholder based on category */}
                     <div className="relative">
                       {product.images && product.images.length > 0 && !imageErrors.has(product.id) ? (
@@ -613,7 +613,7 @@ export default function Hub() {
                     </div>
                     
                     {/* Product content */}
-                    <div className="p-4 flex flex-col h-full">
+                    <div className="flex-1 flex flex-col p-4">
                       {/* Header section */}
                       <div className="space-y-1 mb-3">
                         <h3 className="font-medium text-base leading-tight" data-testid={`text-product-name-${product.id}`}>
@@ -627,7 +627,7 @@ export default function Hub() {
                       </div>
 
                       {/* Description if available */}
-                      <div className="flex-1 mb-3">
+                      <div className="flex-1">
                         {product.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed" data-testid={`text-product-description-${product.id}`}>
                             {product.description}
@@ -636,7 +636,7 @@ export default function Hub() {
                       </div>
 
                       {/* Action buttons - always at bottom */}
-                      <div className="flex flex-col gap-2 mt-auto">
+                      <div className="flex flex-col gap-2 mt-auto pt-4">
                         <Button
                           variant="outline"
                           size="sm"
