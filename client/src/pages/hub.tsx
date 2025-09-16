@@ -613,9 +613,9 @@ export default function Hub() {
                     </div>
                     
                     {/* Product content */}
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 flex flex-col h-full">
                       {/* Header section */}
-                      <div className="space-y-1">
+                      <div className="space-y-1 mb-3">
                         <h3 className="font-medium text-base leading-tight" data-testid={`text-product-name-${product.id}`}>
                           {product.name}
                         </h3>
@@ -627,14 +627,16 @@ export default function Hub() {
                       </div>
 
                       {/* Description if available */}
-                      {product.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed" data-testid={`text-product-description-${product.id}`}>
-                          {product.description}
-                        </p>
-                      )}
+                      <div className="flex-1 mb-3">
+                        {product.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed" data-testid={`text-product-description-${product.id}`}>
+                            {product.description}
+                          </p>
+                        )}
+                      </div>
 
-                      {/* Action buttons */}
-                      <div className="flex flex-col gap-2 pt-1">
+                      {/* Action buttons - always at bottom */}
+                      <div className="flex flex-col gap-2 mt-auto">
                         <Button
                           variant="outline"
                           size="sm"
