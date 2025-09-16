@@ -725,4 +725,47 @@ Gere recomendações específicas focadas nos gaps mais críticos e com maior po
       }
     }];
   }
+
+  /**
+   * Transform internal EditPlan[] to frontend-compatible format
+   */
+  transformToFrontendFormat(editPlans: EditPlan[], analysisData?: any, performanceData?: any): any {
+    // Group edit plans by category and transform to frontend format
+    const transformedPlans = editPlans.map(plan => ({
+      category: plan.category,
+      priority: plan.priority === 'critical' ? 'high' : plan.priority, // Convert 'critical' to 'high' for frontend
+      changes: plan.editSteps.map(step => ({
+        type: step.category,
+        description: step.action,
+        rationale: step.details,
+        difficulty: plan.implementation.difficulty,
+        estimated_impact: Math.round(plan.estimatedImpact.expectedChange)
+      }))
+    }));
+
+    // Group by category to avoid duplicates
+    const groupedPlans = transformedPlans.reduce((acc, plan) => {
+      const existing = acc.find(p => p.category === plan.category);
+      if (existing) {
+        existing.changes.push(...plan.changes);
+      } else {
+        acc.push(plan);
+      }
+      return acc;
+    }, [] as any[]);
+
+    return {
+      editPlans: groupedPlans,
+      benchmarksUsed: editPlans.some(plan => plan.evidence.benchmarkComparison !== 'Performance requer otimização'),
+      analysisData: analysisData || {
+        confidence: editPlans.length > 0 ? Math.round(editPlans.reduce((sum, plan) => sum + plan.estimatedImpact.confidence, 0) / editPlans.length) : 50,
+        plansGenerated: editPlans.length,
+        sources: Array.from(new Set(editPlans.map(plan => plan.metadata.source)))
+      },
+      performanceData: performanceData || {
+        baseline: 'industry_average',
+        potential_improvement: editPlans.length > 0 ? Math.max(...editPlans.map(plan => plan.estimatedImpact.expectedChange)) : 0
+      }
+    };
+  }
 }

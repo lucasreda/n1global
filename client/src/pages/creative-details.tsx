@@ -1,12 +1,17 @@
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Eye, Brain, Target, Zap, TrendingUp, Star, AlertCircle, CheckCircle, Play, Image as ImageIcon, Clock, Users, Palette, Volume2, Layers, BarChart3, Film, PenTool, Lightbulb, Award, Scissors, Mic, MessageSquare, PlayCircle, StopCircle, ChevronDown, ChevronUp, BookOpen, Activity, Sparkles, Heart } from "lucide-react";
+import { ArrowLeft, Eye, Brain, Target, Zap, TrendingUp, Star, AlertCircle, CheckCircle, Play, Image as ImageIcon, Clock, Users, Palette, Volume2, Layers, BarChart3, Film, PenTool, Lightbulb, Award, Scissors, Mic, MessageSquare, PlayCircle, StopCircle, ChevronDown, ChevronUp, BookOpen, Activity, Sparkles, Heart, Database, Gauge, Edit3, Comparison, LineChart, Rocket, Shield } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface CreativeDetails {
   creative: {
@@ -40,13 +45,91 @@ interface CreativeDetails {
   };
 }
 
+interface ProprietaryBenchmarks {
+  competitive_position: string;
+  improvement_potential: number;
+  industry_percentile: number;
+  benchmarks: {
+    ctr: { value: number; percentile: number };
+    cpc: { value: number; percentile: number };
+    cpm: { value: number; percentile: number };
+    conversion_rate: { value: number; percentile: number };
+  };
+  recommendations: string[];
+  data_freshness: string;
+  sample_size: number;
+}
+
+interface PerformancePrediction {
+  predicted_ctr: number;
+  predicted_cpc: number;
+  predicted_conversions: number;
+  confidence_score: number;
+  risk_factors: string[];
+  optimization_opportunities: string[];
+}
+
+interface EditPlan {
+  editPlans: Array<{
+    category: string;
+    priority: 'high' | 'medium' | 'low';
+    changes: Array<{
+      type: string;
+      description: string;
+      rationale: string;
+      difficulty: 'easy' | 'medium' | 'hard';
+      estimated_impact: number;
+    }>;
+  }>;
+  benchmarksUsed: boolean;
+  analysisData: any;
+  performanceData: any;
+}
+
 export default function CreativeDetails() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
+  
+  // States for Creative Intelligence features
+  const [industry, setIndustry] = useState<string>('');
+  const [objective, setObjective] = useState<string>('conversions');
+  const [activeTab, setActiveTab] = useState('overview');
 
   const { data: creativeDetails, isLoading, error } = useQuery<CreativeDetails>({
     queryKey: ['/api/creatives/details', id],
     enabled: !!id
+  });
+
+  // Query for proprietary benchmarks
+  const { data: benchmarks, isLoading: benchmarksLoading } = useQuery<ProprietaryBenchmarks>({
+    queryKey: ['/api/benchmarks/proprietary', industry, creativeDetails?.creative?.type, objective],
+    enabled: !!industry && !!creativeDetails?.creative?.type
+  });
+
+  // Query for creative insights (includes benchmarks if available)
+  const { data: creativeInsights } = useQuery({
+    queryKey: ['/api/creatives', id, 'insights', industry, objective],
+    enabled: !!id && !!industry
+  });
+
+  // Mutation for generating edit plans
+  const generateEditPlanMutation = useMutation({
+    mutationFn: async (context: { industry: string; objective: string; budget?: number }) => {
+      return apiRequest(`/api/creatives/${id}/edit-plans`, 'POST', { context });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/creatives', id, 'edit-plans'] });
+    }
+  });
+
+  // Mutation for performance predictions
+  const performancePredictionMutation = useMutation({
+    mutationFn: async (campaignFeatures: any) => {
+      return apiRequest('/api/predictions/campaign-performance', 'POST', { 
+        campaignFeatures,
+        operationId: creativeDetails?.creative?.operationId 
+      });
+    }
   });
 
   if (isLoading) {
@@ -170,9 +253,78 @@ export default function CreativeDetails() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content - Left Column (3/4) */}
-          <div className="lg:col-span-3 space-y-8">
+        {/* Creative Intelligence Configuration */}
+        <Card className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="industry">Indústria</Label>
+              <Select value={industry} onValueChange={setIndustry}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a indústria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ecommerce">E-commerce</SelectItem>
+                  <SelectItem value="fashion">Moda</SelectItem>
+                  <SelectItem value="beauty">Beleza</SelectItem>
+                  <SelectItem value="tech">Tecnologia</SelectItem>
+                  <SelectItem value="health">Saúde</SelectItem>
+                  <SelectItem value="food">Alimentação</SelectItem>
+                  <SelectItem value="finance">Financeiro</SelectItem>
+                  <SelectItem value="education">Educação</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="objective">Objetivo</Label>
+              <Select value={objective} onValueChange={setObjective}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o objetivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="conversions">Conversões</SelectItem>
+                  <SelectItem value="traffic">Tráfego</SelectItem>
+                  <SelectItem value="engagement">Engajamento</SelectItem>
+                  <SelectItem value="awareness">Conhecimento</SelectItem>
+                  <SelectItem value="reach">Alcance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button 
+                onClick={() => generateEditPlanMutation.mutate({ industry, objective })}
+                disabled={!industry || generateEditPlanMutation.isPending}
+                className="w-full"
+              >
+                <Edit3 className="w-4 h-4 mr-2" />
+                {generateEditPlanMutation.isPending ? 'Gerando...' : 'Gerar Plano de Edição'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Tabs Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Análise Tradicional</TabsTrigger>
+            <TabsTrigger value="benchmarks" disabled={!industry}>
+              <Database className="w-4 h-4 mr-2" />
+              Benchmarks
+            </TabsTrigger>
+            <TabsTrigger value="predictions" disabled={!industry}>
+              <Gauge className="w-4 h-4 mr-2" />
+              Predições
+            </TabsTrigger>
+            <TabsTrigger value="editplan" disabled={!generateEditPlanMutation.data}>
+              <Edit3 className="w-4 h-4 mr-2" />
+              Plano de Edição
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab - Traditional Analysis */}
+          <TabsContent value="overview">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              {/* Main Content - Left Column (3/4) */}
+              <div className="lg:col-span-3 space-y-8">
             
             {/* Performance Overview Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1233,6 +1385,221 @@ export default function CreativeDetails() {
             </Card>
           </div>
         </div>
+      </TabsContent>
+
+      {/* Benchmarks Tab */}
+      <TabsContent value="benchmarks">
+        <div className="space-y-6">
+          {benchmarksLoading ? (
+            <Card className="p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-4 bg-muted rounded w-1/4"></div>
+                <div className="h-32 bg-muted rounded"></div>
+              </div>
+            </Card>
+          ) : benchmarks ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Competitive Position */}
+              <Card className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-blue-500" />
+                  Posição Competitiva
+                </h3>
+                <div className="space-y-4">
+                  <div className="text-center p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg">
+                    <div className="text-3xl font-bold text-green-700 dark:text-green-300">
+                      #{benchmarks.industry_percentile}
+                    </div>
+                    <div className="text-sm text-green-600 dark:text-green-400">Percentil da Indústria</div>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant={benchmarks.competitive_position === 'leader' ? 'default' : 'secondary'}>
+                      {benchmarks.competitive_position}
+                    </Badge>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Potencial de Melhoria: {benchmarks.improvement_potential}%
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Performance Benchmarks */}
+              <Card className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                  Benchmarks de Performance
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">CTR</span>
+                    <div className="text-right">
+                      <div className="font-medium">{(benchmarks.benchmarks.ctr.value * 100).toFixed(2)}%</div>
+                      <div className="text-xs text-muted-foreground">P{benchmarks.benchmarks.ctr.percentile}</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">CPC</span>
+                    <div className="text-right">
+                      <div className="font-medium">R${benchmarks.benchmarks.cpc.value.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">P{benchmarks.benchmarks.cpc.percentile}</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">CPM</span>
+                    <div className="text-right">
+                      <div className="font-medium">R${benchmarks.benchmarks.cpm.value.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">P{benchmarks.benchmarks.cpm.percentile}</div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Recommendations */}
+              <Card className="p-6 md:col-span-2">
+                <h3 className="font-semibold mb-4 flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-yellow-500" />
+                  Recomendações Baseadas em Benchmarks
+                </h3>
+                <div className="space-y-2">
+                  {benchmarks.recommendations.map((rec, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">{rec}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">
+                  Dados atualizados em: {benchmarks.data_freshness} • 
+                  Amostra: {benchmarks.sample_size.toLocaleString()} criativos
+                </div>
+              </Card>
+            </div>
+          ) : (
+            <Card className="p-6 text-center">
+              <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">Benchmarks Não Disponíveis</h3>
+              <p className="text-muted-foreground">
+                Dados insuficientes para esta combinação de indústria e tipo de criativo.
+              </p>
+            </Card>
+          )}
+        </div>
+      </TabsContent>
+
+      {/* Predictions Tab */}
+      <TabsContent value="predictions">
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Rocket className="w-5 h-5 text-blue-500" />
+              Predição de Performance
+            </h3>
+            
+            <Button 
+              onClick={() => {
+                if (creativeDetails?.creative) {
+                  const campaignFeatures = {
+                    industry,
+                    creativeType: creativeDetails.creative.type,
+                    objective,
+                    placement: creativeDetails.creative.name || 'unknown',
+                    format: creativeDetails.creative.type
+                  };
+                  performancePredictionMutation.mutate(campaignFeatures);
+                }
+              }}
+              disabled={!industry || performancePredictionMutation.isPending}
+              className="w-full mb-4"
+            >
+              <Gauge className="w-4 h-4 mr-2" />
+              {performancePredictionMutation.isPending ? 'Gerando Predição...' : 'Gerar Predição de Performance'}
+            </Button>
+
+            {performancePredictionMutation.data && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {(performancePredictionMutation.data.predicted_ctr * 100).toFixed(2)}%
+                  </div>
+                  <div className="text-sm text-blue-600 dark:text-blue-400">CTR Previsto</div>
+                </div>
+                
+                <div className="text-center p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg">
+                  <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    R${performancePredictionMutation.data.predicted_cpc.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400">CPC Previsto</div>
+                </div>
+                
+                <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                    {performancePredictionMutation.data.predicted_conversions}
+                  </div>
+                  <div className="text-sm text-purple-600 dark:text-purple-400">Conversões Previstas</div>
+                </div>
+              </div>
+            )}
+
+            {performancePredictionMutation.isError && (
+              <div className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg">
+                <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  Erro ao gerar predição. Tente novamente.
+                </p>
+              </div>
+            )}
+          </Card>
+        </div>
+      </TabsContent>
+
+      {/* Edit Plan Tab */}
+      <TabsContent value="editplan">
+        <div className="space-y-6">
+          {generateEditPlanMutation.data ? (
+            <div className="space-y-6">
+              {generateEditPlanMutation.data.editPlans.map((plan: any, index: number) => (
+                <Card key={index} className="p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <Edit3 className="w-5 h-5 text-blue-500" />
+                    {plan.category}
+                    <Badge variant={plan.priority === 'high' ? 'destructive' : plan.priority === 'medium' ? 'default' : 'secondary'}>
+                      {plan.priority}
+                    </Badge>
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {plan.changes.map((change: any, changeIndex: number) => (
+                      <div key={changeIndex} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-medium">{change.type}</h4>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{change.difficulty}</Badge>
+                            <span className="text-sm text-muted-foreground">
+                              Impacto: {change.estimated_impact}%
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{change.description}</p>
+                        <p className="text-xs text-muted-foreground italic">{change.rationale}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-6 text-center">
+              <Edit3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">Plano de Edição</h3>
+              <p className="text-muted-foreground mb-4">
+                Configure a indústria e objetivo acima, depois clique em "Gerar Plano de Edição".
+              </p>
+            </Card>
+          )}
+        </div>
+      </TabsContent>
+
+    </Tabs>
       </div>
     </div>
   );

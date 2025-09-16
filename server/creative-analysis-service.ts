@@ -16,6 +16,10 @@ import { SceneSegmentationService } from './scene-segmentation-service';
 import { CopyAnalysisService } from './copy-analysis-service';
 import { CopyAnalysisAdapter } from './copy-analysis-adapter';
 import { facebookAdsService } from './facebook-ads-service';
+import { ProprietaryBenchmarkingService } from './proprietary-benchmarking-service';
+import { PerformancePredictionService } from './performance-prediction-service';
+import { ActionableInsightsEngine } from './actionable-insights-engine';
+import { CampaignDataService } from './campaign-data-service';
 
 // In-memory job store for real-time progress tracking
 interface AnalysisJob {
@@ -49,6 +53,12 @@ class CreativeAnalysisService {
   private copyAnalysisService?: CopyAnalysisService;
   private copyAnalysisAdapter?: CopyAnalysisAdapter;
   
+  // Creative Intelligence Enhancement Services
+  private proprietaryBenchmarkingService: ProprietaryBenchmarkingService;
+  private performancePredictionService: PerformancePredictionService;
+  private actionableInsightsEngine: ActionableInsightsEngine;
+  private campaignDataService: CampaignDataService;
+  
   // Pricing per 1K tokens (in USD)
   private modelPricing: Record<string, { input: number; output: number }> = {
     'gpt-4o': { input: 0.005, output: 0.015 }, // Updated GPT-4o pricing
@@ -81,6 +91,13 @@ class CreativeAnalysisService {
       console.error('⚠️ Failed to initialize hybrid analysis services:', error);
       // Services will remain undefined, fallback to legacy analysis
     }
+    
+    // Initialize Creative Intelligence Enhancement Services
+    this.proprietaryBenchmarkingService = new ProprietaryBenchmarkingService();
+    this.performancePredictionService = new PerformancePredictionService();
+    this.actionableInsightsEngine = new ActionableInsightsEngine();
+    this.campaignDataService = new CampaignDataService();
+    console.log('🎯 Creative Intelligence Enhancement services initialized');
   }
 
   // Map step names to numbers for database compatibility
@@ -1563,6 +1580,280 @@ Provide specific KPI targets and optimization strategies.`
     }
     
     return uniqueResults;
+  }
+
+  // ========================================
+  // CREATIVE INTELLIGENCE ENHANCEMENT METHODS
+  // ========================================
+
+  /**
+   * Get proprietary benchmarks for a creative
+   */
+  async getProprietaryBenchmarks(
+    industry: string, 
+    creativeType: 'video' | 'image' | 'carousel' | 'collection',
+    objective: string = 'conversions'
+  ) {
+    try {
+      const benchmarks = await this.proprietaryBenchmarkingService.getProprietaryBenchmarks(
+        industry, 
+        creativeType, 
+        objective
+      );
+      
+      return benchmarks;
+    } catch (error) {
+      console.error('Error fetching proprietary benchmarks:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Compare creative performance against proprietary benchmarks
+   */
+  async compareAgainstBenchmarks(
+    performanceData: any,
+    industry: string,
+    creativeType: 'video' | 'image' | 'carousel' | 'collection',
+    objective: string = 'conversions'
+  ) {
+    try {
+      const comparison = await this.proprietaryBenchmarkingService.compareAgainstProprietaryBenchmarks(
+        performanceData,
+        industry,
+        creativeType,
+        objective
+      );
+      
+      return comparison;
+    } catch (error) {
+      console.error('Error comparing against benchmarks:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Predict campaign performance for a creative
+   */
+  async predictPerformance(campaignFeatures: any, operationId: string) {
+    try {
+      // Get historical data for this operation
+      const historicalCampaigns = await this.campaignDataService.fetchCampaignInsights(
+        operationId,
+        'last_90d'
+      );
+
+      const prediction = await this.performancePredictionService.predictCampaignPerformance(
+        campaignFeatures,
+        historicalCampaigns
+      );
+
+      return prediction;
+    } catch (error) {
+      console.error('Error predicting performance:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate actionable edit plans for a creative
+   */
+  async generateEditPlan(
+    creativeId: string,
+    context: { industry: string; objective: string; budget?: number }
+  ) {
+    try {
+      // Get creative and analysis data
+      const creative = await db.query.adCreatives.findFirst({
+        where: eq(adCreatives.id, creativeId)
+      });
+
+      if (!creative) {
+        throw new Error('Creative not found');
+      }
+
+      // Get latest analysis
+      const latestAnalysis = await db.query.creativeAnalyses.findFirst({
+        where: eq(creativeAnalyses.creativeId, creativeId),
+        orderBy: eq(creativeAnalyses.completedAt, 'desc' as any)
+      });
+
+      if (!latestAnalysis) {
+        throw new Error('Creative must be analyzed before generating edit plans');
+      }
+
+      // Get performance data
+      const performanceData = await this.campaignDataService.fetchCampaignInsights(
+        creative.operationId!,
+        'last_30d'
+      );
+
+      // Find performance for this creative's campaign
+      const campaignPerformance = performanceData.find(
+        campaign => campaign.campaignId === creative.campaignId
+      );
+
+      if (!campaignPerformance) {
+        throw new Error('Performance data not found for this creative');
+      }
+
+      // Get proprietary benchmarks
+      const benchmarks = await this.getProprietaryBenchmarks(
+        context.industry,
+        creative.type as any,
+        context.objective
+      );
+
+      // Prepare input for edit plan generation
+      const creativeInput = {
+        creativeId: creative.id,
+        performanceData: campaignPerformance.performance,
+        analysisData: latestAnalysis.analysis,
+        benchmarkData: benchmarks
+      };
+
+      const editPlans = await this.actionableInsightsEngine.generateEditPlan(
+        creativeInput,
+        context
+      );
+
+      return {
+        editPlans,
+        benchmarksUsed: !!benchmarks,
+        analysisData: latestAnalysis.analysis,
+        performanceData: campaignPerformance.performance
+      };
+    } catch (error) {
+      console.error('Error generating edit plan:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enhanced analysis that combines traditional analysis with proprietary benchmarks and predictions
+   */
+  async analyzeCreativeEnhanced(
+    creativeId: string,
+    options: {
+      industry: string;
+      objective?: string;
+      model?: string;
+      includeBenchmarks?: boolean;
+      includePredictions?: boolean;
+      generateEditPlan?: boolean;
+    }
+  ) {
+    try {
+      const {
+        industry,
+        objective = 'conversions',
+        model = 'gpt-4o',
+        includeBenchmarks = true,
+        includePredictions = true,
+        generateEditPlan = true
+      } = options;
+
+      // Get creative data
+      const creative = await db.query.adCreatives.findFirst({
+        where: eq(adCreatives.id, creativeId)
+      });
+
+      if (!creative) {
+        throw new Error('Creative not found');
+      }
+
+      // Perform traditional analysis first
+      const jobId = await this.analyzeCreative(creativeId, model);
+      
+      // Wait for analysis to complete (simplified for now)
+      // In production, this should use the job system properly
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const analysisJob = this.getJobStatus(jobId);
+      if (!analysisJob || analysisJob.status !== 'completed') {
+        throw new Error('Analysis failed or is still in progress');
+      }
+
+      let enhancedResults: any = {
+        traditionalAnalysis: analysisJob.results
+      };
+
+      // Add proprietary benchmarks
+      if (includeBenchmarks) {
+        const benchmarks = await this.getProprietaryBenchmarks(
+          industry,
+          creative.type as any,
+          objective
+        );
+        enhancedResults.proprietaryBenchmarks = benchmarks;
+      }
+
+      // Add performance predictions
+      if (includePredictions && creative.operationId) {
+        const campaignFeatures = {
+          industry,
+          creativeType: creative.type,
+          objective,
+          // Add more features from creative data
+          placement: creative.adName || 'unknown',
+          format: creative.type
+        };
+        
+        const prediction = await this.predictPerformance(campaignFeatures, creative.operationId);
+        enhancedResults.performancePrediction = prediction;
+      }
+
+      // Generate edit plan
+      if (generateEditPlan) {
+        try {
+          const editPlan = await this.generateEditPlan(creativeId, { industry, objective });
+          enhancedResults.editPlan = editPlan;
+        } catch (error) {
+          console.warn('Could not generate edit plan:', error);
+          enhancedResults.editPlan = null;
+        }
+      }
+
+      return enhancedResults;
+    } catch (error) {
+      console.error('Error in enhanced analysis:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Batch analyze multiple creatives with enhancement features
+   */
+  async batchAnalyzeEnhanced(
+    creativeIds: string[],
+    options: {
+      industry: string;
+      objective?: string;
+      model?: string;
+      includeBenchmarks?: boolean;
+      includePredictions?: boolean;
+    }
+  ) {
+    const results = [];
+    
+    for (const creativeId of creativeIds) {
+      try {
+        const result = await this.analyzeCreativeEnhanced(creativeId, {
+          ...options,
+          generateEditPlan: false // Skip edit plans in batch to save time
+        });
+        results.push({ creativeId, success: true, data: result });
+      } catch (error) {
+        console.error(`Error analyzing creative ${creativeId}:`, error);
+        results.push({ 
+          creativeId, 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+    }
+
+    return results;
   }
 }
 

@@ -82,11 +82,11 @@ export class PerformancePredictionService {
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
+      console.warn('⚠️ OPENAI_API_KEY not provided - performance predictions will be limited');
     }
 
     this.openai = new OpenAI({
-      apiKey: apiKey,
+      apiKey: apiKey || 'sk-dummy', // Allow service to run without API key
     });
 
     this.campaignDataService = new CampaignDataService();
@@ -552,6 +552,26 @@ Analise especialmente se as predições estão acima ou abaixo dos benchmarks e 
         accuracy: 0.5,
         features: []
       }
+    };
+  }
+
+  /**
+   * Transform internal PerformancePrediction to frontend-compatible format
+   */
+  transformToFrontendFormat(prediction: PerformancePrediction): any {
+    // Calculate predicted conversions based on CTR and some baseline impressions
+    // Using an estimated 10,000 impressions as baseline for conversion calculation
+    const estimatedImpressions = 10000;
+    const predictedClicks = (prediction.predictedMetrics.ctr / 100) * estimatedImpressions;
+    const predictedConversions = Math.round(predictedClicks * (prediction.predictedMetrics.conversionRate / 100));
+
+    return {
+      predicted_ctr: prediction.predictedMetrics.ctr,
+      predicted_cpc: prediction.predictedMetrics.cpc,
+      predicted_conversions: predictedConversions,
+      confidence_score: prediction.predictedMetrics.confidence,
+      risk_factors: prediction.insights.risks,
+      optimization_opportunities: prediction.insights.recommendations
     };
   }
 }

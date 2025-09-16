@@ -4,10 +4,10 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
-import { eq, and, sql, isNull } from "drizzle-orm";
+import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { ElogyService } from "./fulfillment-providers/elogy-service";
 import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-factory";
@@ -20,6 +20,9 @@ import { FacebookAdsService } from "./facebook-ads-service";
 import { registerSupportRoutes } from "./support-routes";
 import { registerCustomerSupportRoutes } from "./customer-support-routes";
 import voiceRoutes, { setupVoiceWebSocket } from "./voice-routes";
+import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
+import { PerformancePredictionService } from "./performance-prediction-service";
+import { ActionableInsightsEngine } from "./actionable-insights-engine";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -38,6 +41,11 @@ const requireSuperAdmin = (req: AuthRequest, res: Response, next: NextFunction) 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize Creative Intelligence services
+  const proprietaryBenchmarkingService = new ProprietaryBenchmarkingService();
+  const performancePredictionService = new PerformancePredictionService();
+  const actionableInsightsEngine = new ActionableInsightsEngine();
+
   // DEBUG: Rota para diagnóstico e sincronização manual
   app.get("/api/debug/sync-fresh", async (req, res) => {
     try {
@@ -3238,6 +3246,262 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error estimating cost:", error);
       res.status(500).json({ message: "Error estimating cost" });
+    }
+  });
+
+  // ========================================
+  // CREATIVE INTELLIGENCE ENHANCEMENT ENDPOINTS
+  // ========================================
+
+  // Get proprietary benchmarks based on aggregated client data
+  app.get("/api/benchmarks/proprietary", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { industry, creativeType, objective = 'conversions' } = req.query;
+      
+      if (!industry || !creativeType) {
+        return res.status(400).json({ 
+          message: "Parâmetros 'industry' e 'creativeType' são obrigatórios" 
+        });
+      }
+
+      const benchmark = await proprietaryBenchmarkingService.getProprietaryBenchmarks(
+        industry as string,
+        creativeType as 'video' | 'image' | 'carousel' | 'collection',
+        objective as string
+      );
+
+      if (!benchmark) {
+        return res.status(404).json({ 
+          message: "Dados insuficientes para benchmark proprietário nesta categoria",
+          industry,
+          creativeType,
+          objective
+        });
+      }
+
+      // Transform to frontend-compatible format
+      const frontendBenchmark = proprietaryBenchmarkingService.transformToFrontendFormat(benchmark);
+      res.json(frontendBenchmark);
+    } catch (error) {
+      console.error("Error fetching proprietary benchmarks:", error);
+      res.status(500).json({ message: "Erro ao buscar benchmarks proprietários" });
+    }
+  });
+
+  // Compare performance against proprietary benchmarks
+  app.post("/api/benchmarks/compare", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { performanceData, industry, creativeType, objective = 'conversions' } = req.body;
+      
+      if (!performanceData || !industry || !creativeType) {
+        return res.status(400).json({ 
+          message: "Dados de performance, industry e creativeType são obrigatórios" 
+        });
+      }
+
+      const comparison = await proprietaryBenchmarkingService.compareAgainstProprietaryBenchmarks(
+        performanceData,
+        industry,
+        creativeType,
+        objective
+      );
+
+      if (!comparison) {
+        return res.status(404).json({ 
+          message: "Benchmark proprietário não disponível para comparação" 
+        });
+      }
+
+      res.json(comparison);
+    } catch (error) {
+      console.error("Error comparing against proprietary benchmarks:", error);
+      res.status(500).json({ message: "Erro ao comparar com benchmarks proprietários" });
+    }
+  });
+
+  // Predict campaign performance using ML algorithms
+  app.post("/api/predictions/campaign-performance", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const { campaignFeatures, operationId } = req.body;
+      
+      if (!campaignFeatures || !operationId) {
+        return res.status(400).json({ 
+          message: "Dados da campanha (campaignFeatures) e operationId são obrigatórios" 
+        });
+      }
+
+      // Get historical campaigns for this operation to train the model
+      const { campaignDataService } = await import("./campaign-data-service");
+      const historicalCampaigns = await campaignDataService.fetchCampaignInsights(
+        operationId,
+        'last_90d' // Use 90 days of historical data
+      );
+
+      const prediction = await performancePredictionService.predictCampaignPerformance(
+        campaignFeatures,
+        historicalCampaigns
+      );
+
+      // Transform to frontend-compatible format
+      const frontendPrediction = performancePredictionService.transformToFrontendFormat(prediction);
+      res.json(frontendPrediction);
+    } catch (error) {
+      console.error("Error predicting campaign performance:", error);
+      res.status(500).json({ message: "Erro ao prever performance da campanha" });
+    }
+  });
+
+  // Generate edit plans for a creative
+  app.post("/api/creatives/:id/edit-plans", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const creativeId = req.params.id;
+      const { context } = req.body;
+      
+      if (!context) {
+        return res.status(400).json({ 
+          message: "Context é obrigatório (industry, objective, budget)" 
+        });
+      }
+
+      // Get creative data
+      const { adCreatives, creativeAnalyses } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      
+      const creative = await db.query.adCreatives.findFirst({
+        where: eq(adCreatives.id, creativeId)
+      });
+
+      if (!creative) {
+        return res.status(404).json({ message: "Creative não encontrado" });
+      }
+
+      // Get latest analysis for this creative
+      const latestAnalysis = await db.query.creativeAnalyses.findFirst({
+        where: eq(creativeAnalyses.creativeId, creativeId),
+        orderBy: desc(creativeAnalyses.createdAt)
+      });
+
+      if (!latestAnalysis) {
+        return res.status(400).json({ 
+          message: "Creative deve ser analisado antes de gerar planos de edição" 
+        });
+      }
+
+      // Get performance data from Meta API
+      const { campaignDataService } = await import("./campaign-data-service");
+      const performanceData = await campaignDataService.fetchCampaignInsights(
+        creative.operationId!,
+        'last_30d'
+      );
+
+      // Find performance for this specific creative's campaign
+      const campaignPerformance = performanceData.find(
+        campaign => campaign.campaignId === creative.campaignId
+      );
+
+      if (!campaignPerformance) {
+        return res.status(400).json({ 
+          message: "Dados de performance não encontrados para este creative" 
+        });
+      }
+
+      // Get proprietary benchmarks for comparison
+      const benchmarks = await proprietaryBenchmarkingService.getProprietaryBenchmarks(
+        context.industry,
+        creative.type as any,
+        context.objective
+      );
+
+      // Prepare input for edit plan generation
+      const creativeInput = {
+        creativeId: creative.id,
+        performanceData: campaignPerformance.performance,
+        analysisData: latestAnalysis.analysis,
+        benchmarkData: benchmarks
+      };
+
+      const editPlans = await actionableInsightsEngine.generateEditPlan(
+        creativeInput,
+        context
+      );
+
+      // Transform to frontend-compatible format
+      const frontendEditPlans = actionableInsightsEngine.transformToFrontendFormat(
+        editPlans,
+        latestAnalysis.analysis,
+        campaignPerformance.performance
+      );
+
+      res.json(frontendEditPlans);
+    } catch (error) {
+      console.error("Error generating edit plans:", error);
+      res.status(500).json({ message: "Erro ao gerar planos de edição" });
+    }
+  });
+
+  // Get actionable insights for a creative (simplified version)
+  app.get("/api/creatives/:id/insights", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
+    try {
+      const creativeId = req.params.id;
+      const { industry, objective = 'conversions' } = req.query;
+      
+      if (!industry) {
+        return res.status(400).json({ 
+          message: "Parâmetro 'industry' é obrigatório" 
+        });
+      }
+
+      // Get creative data
+      const { adCreatives, creativeAnalyses } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+      
+      const creative = await db.query.adCreatives.findFirst({
+        where: eq(adCreatives.id, creativeId)
+      });
+
+      if (!creative) {
+        return res.status(404).json({ message: "Creative não encontrado" });
+      }
+
+      // Get latest analysis
+      const latestAnalysis = await db.query.creativeAnalyses.findFirst({
+        where: eq(creativeAnalyses.creativeId, creativeId),
+        orderBy: desc(creativeAnalyses.createdAt)
+      });
+
+      // Get proprietary benchmarks
+      const benchmarks = await proprietaryBenchmarkingService.getProprietaryBenchmarks(
+        industry as string,
+        creative.type as any,
+        objective as string
+      );
+
+      res.json({
+        creativeId,
+        creative,
+        analysis: latestAnalysis?.analysis || null,
+        benchmarks,
+        hasAnalysis: !!latestAnalysis,
+        hasBenchmarks: !!benchmarks
+      });
+    } catch (error) {
+      console.error("Error fetching creative insights:", error);
+      res.status(500).json({ message: "Erro ao buscar insights do creative" });
+    }
+  });
+
+  // Refresh proprietary benchmarks for all available combinations
+  app.post("/api/benchmarks/refresh", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const result = await proprietaryBenchmarkingService.refreshAllBenchmarks();
+      
+      res.json({
+        message: "Benchmarks proprietários atualizados com sucesso",
+        result
+      });
+    } catch (error) {
+      console.error("Error refreshing proprietary benchmarks:", error);
+      res.status(500).json({ message: "Erro ao atualizar benchmarks proprietários" });
     }
   });
 

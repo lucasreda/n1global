@@ -827,4 +827,92 @@ export class ProprietaryBenchmarkingService {
       return [];
     }
   }
+
+  /**
+   * Transform internal ProprietaryBenchmark to frontend-compatible format
+   */
+  transformToFrontendFormat(benchmark: ProprietaryBenchmark): any {
+    // Calculate improvement potential based on data quality and competitive position
+    const improvementPotential = this.calculateImprovementPotential(benchmark);
+    
+    // Calculate industry percentile (75th percentile is typically "good" performance)
+    const industryPercentile = this.calculateIndustryPercentile(benchmark);
+    
+    return {
+      competitive_position: benchmark.competitive_position,
+      improvement_potential: improvementPotential,
+      industry_percentile: industryPercentile,
+      benchmarks: {
+        ctr: {
+          value: benchmark.metrics.ctr.median,
+          percentile: 50 // Using median as 50th percentile
+        },
+        cpc: {
+          value: benchmark.metrics.cpc.median,
+          percentile: 50
+        },
+        cpm: {
+          value: benchmark.metrics.cpm.median,
+          percentile: 50
+        },
+        conversion_rate: {
+          value: benchmark.metrics.conversion_rate.median,
+          percentile: 50
+        }
+      },
+      recommendations: benchmark.insights.optimization_opportunities,
+      data_freshness: this.formatDataFreshness(benchmark.last_updated),
+      sample_size: benchmark.sample_size
+    };
+  }
+
+  /**
+   * Calculate improvement potential percentage based on competitive position
+   */
+  private calculateImprovementPotential(benchmark: ProprietaryBenchmark): number {
+    switch (benchmark.competitive_position) {
+      case 'leading':
+        return Math.round((benchmark.metrics.roas.p90 - benchmark.metrics.roas.median) / benchmark.metrics.roas.median * 100);
+      case 'average':
+        return Math.round((benchmark.metrics.roas.p75 - benchmark.metrics.roas.median) / benchmark.metrics.roas.median * 100);
+      case 'lagging':
+        return Math.round((benchmark.metrics.roas.median - benchmark.metrics.roas.p25) / benchmark.metrics.roas.p25 * 100);
+      default:
+        return 25; // Default 25% improvement potential
+    }
+  }
+
+  /**
+   * Calculate industry percentile based on competitive position
+   */
+  private calculateIndustryPercentile(benchmark: ProprietaryBenchmark): number {
+    switch (benchmark.competitive_position) {
+      case 'leading':
+        return 85; // Top 15%
+      case 'average':
+        return 50; // Average
+      case 'lagging':
+        return 25; // Bottom 25%
+      default:
+        return 50;
+    }
+  }
+
+  /**
+   * Format data freshness for display
+   */
+  private formatDataFreshness(lastUpdated: Date): string {
+    const now = new Date();
+    const diffHours = Math.floor((now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60));
+    
+    if (diffHours < 24) {
+      return `${diffHours}h atrás`;
+    } else if (diffHours < 168) { // 7 days
+      const days = Math.floor(diffHours / 24);
+      return `${days}d atrás`;
+    } else {
+      const weeks = Math.floor(diffHours / 168);
+      return `${weeks}w atrás`;
+    }
+  }
 }
