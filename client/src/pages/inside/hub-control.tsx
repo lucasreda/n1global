@@ -136,8 +136,8 @@ function AddProductModal({ open, onClose, onSuccess }: AddProductModalProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-green-400">
-            <Plus className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <Plus className="h-5 w-5 text-white" />
             Adicionar Produto ao Marketplace
           </DialogTitle>
           <DialogDescription className="text-gray-300">
