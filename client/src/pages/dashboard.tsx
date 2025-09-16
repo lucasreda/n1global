@@ -21,7 +21,9 @@ export default function Dashboard() {
   // Sync mutation (same as orders page)
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", `/api/sync/shopify-carrier?operationId=${selectedOperation}`);
+      const response = await authenticatedApiRequest("POST", `/api/integrations/sync-all`, { 
+        operationId: selectedOperation 
+      });
       return response.json();
     },
     onSuccess: (data) => {
