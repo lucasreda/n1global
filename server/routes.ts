@@ -6095,13 +6095,41 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
-  app.put("/api/admin/announcements/:id", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  app.put("/api/admin/announcements/:id", authenticateToken, requireSuperAdmin, multer().single('image'), async (req: AuthRequest, res: Response) => {
     try {
-      const announcement = await storage.updateAnnouncement(req.params.id, req.body);
+      const { title, content, type = 'general', isPinned = 'false' } = req.body;
+      
+      if (!title || !content) {
+        return res.status(400).json({ message: "Título e conteúdo são obrigatórios" });
+      }
+
+      let imageUrl = null;
+      
+      // Handle image upload if provided
+      if (req.file) {
+        // For now, we'll save the image as base64 in the database
+        // In production, you'd want to upload to object storage
+        const imageBuffer = req.file.buffer;
+        const imageBase64 = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
+        imageUrl = imageBase64;
+      }
+
+      const updateData = {
+        title: title.trim(),
+        content: content.trim(),
+        type: type || 'general',
+        isPinned: isPinned === 'true',
+        ...(imageUrl && { imageUrl }), // Only include imageUrl if a new image was uploaded
+      };
+
+      const announcement = await storage.updateAnnouncement(req.params.id, updateData);
       if (!announcement) {
         return res.status(404).json({ message: "Novidade não encontrada" });
       }
-      res.json(announcement);
+      res.json({ 
+        message: "Anúncio atualizado com sucesso", 
+        data: announcement 
+      });
     } catch (error) {
       console.error("Error updating announcement:", error);
       res.status(500).json({ message: "Erro ao atualizar novidade" });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ interface CreateAnnouncementModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editingAnnouncement?: Announcement | null;
 }
 
 interface ViewAnnouncementModalProps {
@@ -60,7 +61,7 @@ interface AddProductModalProps {
   onSuccess: () => void;
 }
 
-function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncementModalProps) {
+function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement }: CreateAnnouncementModalProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -69,6 +70,29 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
   const [isPinned, setIsPinned] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const { toast } = useToast();
+
+  const isEditing = !!editingAnnouncement;
+
+  // Populate fields when editing
+  React.useEffect(() => {
+    if (editingAnnouncement && open) {
+      setTitle(editingAnnouncement.title);
+      setContent(editingAnnouncement.content);
+      setType(editingAnnouncement.type);
+      setIsPinned(editingAnnouncement.isPinned || false);
+      if (editingAnnouncement.imageUrl) {
+        setImagePreview(editingAnnouncement.imageUrl);
+      }
+    } else if (!editingAnnouncement && open) {
+      // Reset for new announcement
+      setTitle('');
+      setContent('');
+      setType('general');
+      setIsPinned(false);
+      setImageFile(null);
+      setImagePreview('');
+    }
+  }, [editingAnnouncement, open]);
 
   const createMutation = useMutation({
     mutationFn: async (data: {
@@ -90,8 +114,14 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
         formData.append('image', data.imageFile);
       }
 
-      const response = await fetch('/api/admin/announcements', {
-        method: 'POST',
+      const url = isEditing 
+        ? `/api/admin/announcements/${editingAnnouncement!.id}`
+        : '/api/admin/announcements';
+      
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
@@ -101,15 +131,17 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao criar anúncio');
+        throw new Error(errorData.message || `Erro ao ${isEditing ? 'atualizar' : 'criar'} anúncio`);
       }
       
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Anúncio criado!",
-        description: "O novo anúncio foi publicado com sucesso.",
+        title: isEditing ? "Anúncio atualizado!" : "Anúncio criado!",
+        description: isEditing 
+          ? "O anúncio foi atualizado com sucesso." 
+          : "O novo anúncio foi publicado com sucesso.",
       });
       onSuccess();
       handleClose();
@@ -215,10 +247,10 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
               <TrendingUp className="w-6 h-6 text-blue-400" />
               <div>
                 <h1 className="text-xl font-semibold text-white">
-                  {previewMode ? 'Visualizar Anúncio' : 'Criar Novo Anúncio'}
+                  {previewMode ? 'Visualizar Anúncio' : (isEditing ? 'Editar Anúncio' : 'Criar Novo Anúncio')}
                 </h1>
                 <p className="text-sm text-gray-400">
-                  {previewMode ? 'Veja como ficará para os clientes' : 'Publique uma novidade para os clientes'}
+                  {previewMode ? 'Veja como ficará para os clientes' : (isEditing ? 'Edite as informações do anúncio' : 'Publique uma novidade para os clientes')}
                 </p>
               </div>
             </div>
@@ -239,7 +271,7 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
                 size="sm"
               >
                 <Save className="w-4 h-4 mr-2" />
-                {createMutation.isPending ? 'Salvando...' : 'Publicar'}
+                {createMutation.isPending ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Publicar')}
               </Button>
               <Button
                 variant="ghost"
@@ -724,8 +756,10 @@ export default function HubControl() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [addProductModalOpen, setAddProductModalOpen] = useState(false);
   const [createAnnouncementModalOpen, setCreateAnnouncementModalOpen] = useState(false);
+  const [editAnnouncementModalOpen, setEditAnnouncementModalOpen] = useState(false);
   const [viewAnnouncementModalOpen, setViewAnnouncementModalOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedProductName, setSelectedProductName] = useState<string>('');
   
@@ -830,6 +864,12 @@ export default function HubControl() {
   const handleViewAnnouncement = (announcement: Announcement) => {
     setSelectedAnnouncement(announcement);
     setViewAnnouncementModalOpen(true);
+  };
+
+  const handleEditAnnouncement = (announcement: Announcement, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent triggering the card click
+    setEditingAnnouncement(announcement);
+    setEditAnnouncementModalOpen(true);
   };
 
   // Calculate pagination for announcements
@@ -943,6 +983,7 @@ export default function HubControl() {
                                 size="sm"
                                 className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white border-0"
                                 data-testid={`button-edit-announcement-${announcement.id}`}
+                                onClick={(e) => handleEditAnnouncement(announcement, e)}
                               >
                                 <Edit3 className="w-3 h-3" />
                               </Button>
@@ -1044,6 +1085,7 @@ export default function HubControl() {
                                 size="sm"
                                 className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white border-0"
                                 data-testid={`button-edit-announcement-${announcement.id}`}
+                                onClick={(e) => handleEditAnnouncement(announcement, e)}
                               >
                                 <Edit3 className="w-3 h-3" />
                               </Button>
@@ -1271,6 +1313,21 @@ export default function HubControl() {
           queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
           setCreateAnnouncementModalOpen(false);
         }}
+      />
+
+      {/* Edit Announcement Modal */}
+      <CreateAnnouncementModal
+        open={editAnnouncementModalOpen}
+        onClose={() => {
+          setEditAnnouncementModalOpen(false);
+          setEditingAnnouncement(null);
+        }}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
+          setEditAnnouncementModalOpen(false);
+          setEditingAnnouncement(null);
+        }}
+        editingAnnouncement={editingAnnouncement}
       />
 
       {/* View Announcement Modal */}
