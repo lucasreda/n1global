@@ -157,11 +157,15 @@ export default function Hub() {
       {/* Novidades Section - News Layout */}
       <div>
         <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5" />
-            <h2 className="text-xl font-semibold">Últimas Novidades</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Últimas Novidades</h2>
+              <p className="text-muted-foreground">Fique por dentro das atualizações e dicas mais recentes</p>
+            </div>
           </div>
-          <p className="text-muted-foreground">Fique por dentro das atualizações e dicas mais recentes</p>
         </div>
         
         {announcementsLoading ? (
@@ -245,11 +249,15 @@ export default function Hub() {
       {/* Marketplace Section */}
       <div className="space-y-6">
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="w-5 h-5" />
-              <h2 className="text-xl font-semibold">Produtos Disponíveis</h2>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Package className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Produtos Disponíveis</h2>
+                <p className="text-muted-foreground">Encontre produtos para adicionar à sua operação</p>
+              </div>
             </div>
-            <p className="text-muted-foreground">Encontre produtos para adicionar à sua operação</p>
           </div>
 
           {/* Products Grid */}
