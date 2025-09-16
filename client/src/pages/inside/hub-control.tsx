@@ -505,12 +505,14 @@ function ViewAnnouncementModal({ open, onClose, announcement }: ViewAnnouncement
 
         <div className="mt-6">
           {announcement.imageUrl && (
-            <div className="w-full h-64 mb-6 rounded-lg overflow-hidden">
-              <img 
-                src={announcement.imageUrl} 
-                alt={announcement.title}
-                className="w-full h-full object-cover"
-              />
+            <div className="flex justify-center mb-6">
+              <div className="w-64 h-64 rounded-lg overflow-hidden">
+                <img 
+                  src={announcement.imageUrl} 
+                  alt={announcement.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
           )}
 
