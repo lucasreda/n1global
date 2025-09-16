@@ -2160,8 +2160,6 @@ function EditUserModal({
 // Products Management Component
 function ProductsManager() {
   const [showAddProduct, setShowAddProduct] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -2291,7 +2289,7 @@ function ProductsManager() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setEditingProduct(product)}
+                          onClick={() => handleEditProduct(product)}
                           className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400"
                         >
                           <Pencil className="h-4 w-4" />
@@ -2299,7 +2297,7 @@ function ProductsManager() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setDeletingProduct(product)}
+                          onClick={() => handleDeleteProduct(product)}
                           className="h-8 w-8 p-0 text-slate-400 hover:text-red-400"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -2317,211 +2315,10 @@ function ProductsManager() {
         </CardContent>
       </Card>
 
-      {/* Add Product Modal */}
-      {showAddProduct && (
-        <AddProductModal 
-          onClose={() => setShowAddProduct(false)}
-          onSuccess={() => {
-            setShowAddProduct(false);
-            refetch();
-          }}
-        />
-      )}
-
-      {/* Edit Product Modal */}
-      {editingProduct && (
-        <EditProductModal 
-          product={editingProduct}
-          onClose={() => setEditingProduct(null)}
-          onSuccess={() => {
-            setEditingProduct(null);
-            refetch();
-          }}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deletingProduct && (
-        <DeleteProductModal 
-          product={deletingProduct}
-          onClose={() => setDeletingProduct(null)}
-          onSuccess={() => {
-            setDeletingProduct(null);
-            refetch();
-          }}
-        />
-      )}
     </div>
   );
 }
 
-// Add Product Modal Component
-function AddProductModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    sku: '',
-    name: '',
-    type: 'fisico',
-    price: '',
-    costPrice: '',
-    shippingCost: '',
-    description: ''
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const token = localStorage.getItem("auth_token");
-      const response = await fetch('/api/admin/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { "Authorization": `Bearer ${token}` }),
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-          costPrice: parseFloat(formData.costPrice || '0'),
-          shippingCost: parseFloat(formData.shippingCost || '0')
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao criar produto');
-      }
-
-      onSuccess();
-    } catch (error) {
-      console.error('Erro ao criar produto:', error);
-      alert('Erro ao criar produto. Tente novamente.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="bg-white/15 border-white/25 backdrop-blur-lg w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-white">Novo Produto</CardTitle>
-          <CardDescription className="text-slate-400">
-            Adicione um novo produto ao catálogo global
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">SKU *</label>
-              <Input
-                value={formData.sku}
-                onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-                placeholder="Ex: PROD001"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">Nome *</label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-                placeholder="Nome do produto"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">Tipo *</label>
-              <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-black/80 border-white/20 backdrop-blur-md">
-                  <SelectItem value="fisico">Físico</SelectItem>
-                  <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-slate-400 block mb-1">Preço de Venda (€) *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: e.target.value})}
-                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm text-slate-400 block mb-1">Custo Produto (€) *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.costPrice}
-                  onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
-                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">Custo do Envio (€) *</label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.shippingCost}
-                onChange={(e) => setFormData({...formData, shippingCost: e.target.value})}
-                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-                placeholder="0.00"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">Descrição</label>
-              <Input
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-                placeholder="Descrição opcional"
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-                className="border-slate-600 text-slate-300"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isSubmitting ? 'Criando...' : 'Criar Produto'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 
 // Create Product Modal Component
