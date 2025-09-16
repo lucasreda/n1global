@@ -125,15 +125,18 @@ export class FHBService extends BaseFulfillmentProvider {
   protected async makeAuthenticatedRequest(endpoint: string, method: string = "GET", body?: any): Promise<any> {
     const token = await this.authenticate();
     
+    // FHB usa header X-Authentication-Simple com token em base64
+    const encodedToken = Buffer.from(token.token).toString('base64');
+    
     const headers: any = {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token.token}`
+      "X-Authentication-Simple": encodedToken
     };
 
     const url = endpoint.startsWith('http') ? endpoint : `${this.fhbCredentials.apiUrl}${endpoint}`;
     
     console.log(`📡 FHB ${method} request to:`, url);
-    console.log(`🔑 FHB Authorization header:`, `Bearer ${token.token.substring(0, 20)}...`);
+    console.log(`🔑 FHB X-Authentication-Simple header:`, `${encodedToken.substring(0, 20)}...`);
     
     const response = await fetch(url, {
       method,
@@ -369,45 +372,14 @@ export class FHBService extends BaseFulfillmentProvider {
         };
       }
 
-      // Vamos tentar diferentes formatos de header para encontrar o correto
-      console.log("🧪 FHB: Testando diferentes formatos de header...");
-      
-      // Teste 1: Token sem Bearer prefix
-      try {
-        console.log("🔍 FHB: Tentando token sem 'Bearer' prefix...");
-        const response = await this.makeDirectRequest("/order?limit=1", token.token);
-        console.log("✅ FHB: Sucesso com token sem Bearer prefix!");
-        
-        return {
-          connected: true,
-          message: "Conexão FHB estabelecida com sucesso (token direto)"
-        };
-      } catch (directError: any) {
-        console.log("⚠️ FHB: Token direto falhou, continuando...");
-      }
-
-      // Teste 2: Token como query parameter
-      try {
-        console.log("🔍 FHB: Tentando token como query parameter...");
-        const url = `/order?limit=1&token=${token.token}`;
-        const response = await this.makeRequestWithoutAuth(url);
-        console.log("✅ FHB: Sucesso com token como query parameter!");
-        
-        return {
-          connected: true,
-          message: "Conexão FHB estabelecida com sucesso (token como query)"
-        };
-      } catch (queryError: any) {
-        console.log("⚠️ FHB: Token como query falhou, continuando...");
-      }
-
-      // Teste 3: Header Authorization com Bearer (original)
+      // Usar o formato correto da documentação FHB: X-Authentication-Simple
+      console.log("🧪 FHB: Testando com header X-Authentication-Simple...");
       const orders = await this.makeAuthenticatedRequest("/order?limit=1");
-      console.log("✅ FHB: Sucesso com Bearer token!");
+      console.log("✅ FHB: Conexão testada com sucesso!");
       
       return {
         connected: true,
-        message: "Conexão FHB estabelecida com sucesso (Bearer token)"
+        message: "Conexão FHB estabelecida com sucesso"
       };
     } catch (error: any) {
       console.error("❌ FHB: Teste de conexão falhou:", error);
