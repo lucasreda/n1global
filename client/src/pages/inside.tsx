@@ -1678,7 +1678,7 @@ export default function InsidePage() {
       {/* Create Product Modal */}
       <CreateProductModal 
         open={showAddProduct}
-        onClose={() => setShowAddProduct(false)}
+        onOpenChange={setShowAddProduct}
         onSubmit={createProductMutation.mutate}
         isLoading={createProductMutation.isPending}
       />
@@ -2324,12 +2324,12 @@ function ProductsManager() {
 // Create Product Modal Component
 function CreateProductModal({ 
   open, 
-  onClose, 
+  onOpenChange, 
   onSubmit, 
   isLoading 
 }: { 
   open: boolean;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   onSubmit: (data: Omit<Product, 'id' | 'createdAt'>) => void;
   isLoading: boolean;
 }) {
@@ -2364,11 +2364,11 @@ function CreateProductModal({
       imageUrl: '',
       isActive: true
     });
-    onClose();
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
