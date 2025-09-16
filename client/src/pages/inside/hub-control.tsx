@@ -1225,7 +1225,7 @@ export default function HubControl() {
                 <h2 className="text-xl font-semibold text-white">Marketplace</h2>
               </div>
               <Button 
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => setAddProductModalOpen(true)}
               >
                 <Plus className="w-4 h-4 mr-2" />
