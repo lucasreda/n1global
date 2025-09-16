@@ -200,8 +200,10 @@ function Router() {
       setLocation('/investment');
     } else if (isAdminInvestimento && location === '/') {
       setLocation('/admin-investment');
+    } else if (isAuthenticated && user?.role === 'user' && location === '/') {
+      setLocation('/customer-support');
     }
-  }, [isSuperAdmin, isSupplier, isAdminFinanceiro, isInvestor, isAdminInvestimento, location, setLocation]);
+  }, [isSuperAdmin, isSupplier, isAdminFinanceiro, isInvestor, isAdminInvestimento, isAuthenticated, user, location, setLocation]);
 
   return (
     <OnboardingGuard>

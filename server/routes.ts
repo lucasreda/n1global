@@ -1683,20 +1683,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔗 Iniciando match com transportadora`);
       const matchResult = await shopifySyncService.matchWithCarrier(currentOperation.id);
       
-      // Fase 3: Sincronização de Facebook Ads
-      console.log(`📢 Iniciando sincronização Facebook Ads`);
+      // Fase 3: Sincronização de Facebook Ads (só se houver contas configuradas)
       let adsResult = { campaigns: 0, accounts: 0 };
-      try {
-        const { FacebookAdsService } = await import("./facebook-ads-service");
-        const facebookAdsService = new FacebookAdsService();
-        const syncResult = await facebookAdsService.syncCampaigns("maximum", req.user.storeId);
-        adsResult = {
-          campaigns: syncResult.synced || 0,
-          accounts: 4 // Fixed for now since we know there are 4 accounts
-        };
-        console.log(`✅ Facebook Ads sync: ${adsResult.campaigns} campanhas, ${adsResult.accounts} contas`);
-      } catch (adsError) {
-        console.warn('⚠️ Facebook Ads sync falhou, continuando sem ads:', adsError);
+      
+      // Verificar se há contas de Facebook Ads configuradas para esta operação
+      const { db } = await import("./db");
+      const { adAccounts } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const adAccountsForOperation = await db
+        .select()
+        .from(adAccounts)
+        .where(eq(adAccounts.operationId, currentOperation.id));
+      
+      if (adAccountsForOperation.length > 0) {
+        console.log(`📢 Iniciando sincronização Facebook Ads para ${adAccountsForOperation.length} contas`);
+        try {
+          const { FacebookAdsService } = await import("./facebook-ads-service");
+          const facebookAdsService = new FacebookAdsService();
+          const syncResult = await facebookAdsService.syncCampaigns("maximum", req.user.storeId);
+          adsResult = {
+            campaigns: syncResult.synced || 0,
+            accounts: adAccountsForOperation.length
+          };
+          console.log(`✅ Facebook Ads sync: ${adsResult.campaigns} campanhas, ${adsResult.accounts} contas`);
+        } catch (adsError) {
+          console.warn('⚠️ Facebook Ads sync falhou, continuando sem ads:', adsError);
+        }
+      } else {
+        console.log(`ℹ️ Pulando sincronização Facebook Ads - nenhuma conta configurada para operação ${currentOperation.name}`);
       }
       
       const result = {
