@@ -417,7 +417,8 @@ export class AdvancedCopyAnalysisService {
         max_tokens: 2000
       });
 
-      const aiAnalysis = JSON.parse(response.choices[0].message.content || '{}');
+      const cleanedContent = this.cleanJsonResponse(response.choices[0].message.content || '{}');
+      const aiAnalysis = JSON.parse(cleanedContent);
       
       return this.structurePersuasionAnalysis(aiAnalysis, transcriptData, scenes);
     } catch (error) {
@@ -454,7 +455,8 @@ export class AdvancedCopyAnalysisService {
         max_tokens: 1500
       });
 
-      const aiAnalysis = JSON.parse(response.choices[0].message.content || '{}');
+      const cleanedContent = this.cleanJsonResponse(response.choices[0].message.content || '{}');
+      const aiAnalysis = JSON.parse(cleanedContent);
       
       return this.structureNarrativeAnalysis(aiAnalysis, transcriptData, scenes);
     } catch (error) {
@@ -491,7 +493,8 @@ export class AdvancedCopyAnalysisService {
         max_tokens: 1200
       });
 
-      return JSON.parse(response.choices[0].message.content || '{}');
+      const cleanedContent = this.cleanJsonResponse(response.choices[0].message.content || '{}');
+      return JSON.parse(cleanedContent);
     } catch (error) {
       console.error('Error in emotional profile analysis:', error);
       return this.getDefaultEmotionalProfile();
@@ -524,7 +527,8 @@ export class AdvancedCopyAnalysisService {
         max_tokens: 1000
       });
 
-      return JSON.parse(response.choices[0].message.content || '{}');
+      const cleanedContent = this.cleanJsonResponse(response.choices[0].message.content || '{}');
+      return JSON.parse(cleanedContent);
     } catch (error) {
       console.error('Error in copy structure analysis:', error);
       return this.getDefaultCopyStructure();
@@ -561,7 +565,8 @@ export class AdvancedCopyAnalysisService {
         max_tokens: 800
       });
 
-      return JSON.parse(response.choices[0].message.content || '{}');
+      const cleanedContent = this.cleanJsonResponse(response.choices[0].message.content || '{}');
+      return JSON.parse(cleanedContent);
     } catch (error) {
       console.error('Error in predictive scoring:', error);
       return this.getDefaultPredictiveScoring();
@@ -1003,6 +1008,16 @@ export class AdvancedCopyAnalysisService {
         topPerformers: []
       }
     };
+  }
+
+  private cleanJsonResponse(content: string): string {
+    // Remove markdown code blocks and clean response
+    return content
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
+      .replace(/^[\s\n]*/, '')
+      .replace(/[\s\n]*$/, '')
+      .trim();
   }
 
   private generateCacheKey(transcriptData: TranscriptData, scenes: SceneData[]): string {
