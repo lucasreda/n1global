@@ -452,7 +452,7 @@ export default function HubControl() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-green-400" />
-                <h2 className="text-xl font-semibold text-white">Produtos Disponíveis</h2>
+                <h2 className="text-xl font-semibold text-white">Marketplace</h2>
               </div>
               <Button 
                 className="bg-green-600 hover:bg-green-700 text-white"
