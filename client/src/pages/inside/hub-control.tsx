@@ -882,27 +882,43 @@ export default function HubControl() {
                     data-testid={`card-announcement-${announcement.id}`}
                     onClick={() => handleViewAnnouncement(announcement)}
                   >
-                    <CardContent className="p-0 h-full flex flex-col">
-                      {/* Image or placeholder */}
-                      <div className={`w-full ${isHero ? 'h-32' : 'h-24'} relative overflow-hidden`}>
+                    <CardContent className="p-0 h-full flex">
+                      {/* Image or placeholder - Left side */}
+                      <div className={`${isHero ? 'w-32' : 'w-24'} h-full relative overflow-hidden flex-shrink-0`}>
                         {announcement.imageUrl ? (
                           <img 
                             src={announcement.imageUrl} 
                             alt={announcement.title}
                             className="w-full h-full object-cover"
+                            style={{
+                              borderTopLeftRadius: '8px',
+                              borderBottomLeftRadius: '8px',
+                              clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
+                            }}
                           />
                         ) : (
-                          <div className={`w-full h-full bg-gradient-to-r ${
-                            announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
-                            announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
-                            announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
-                            'from-green-400 to-green-600'
-                          } flex items-center justify-center`}>
-                            <div className="text-white text-2xl">
+                          <div 
+                            className={`w-full h-full bg-gradient-to-r ${
+                              announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
+                              announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
+                              announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
+                              'from-green-400 to-green-600'
+                            } flex items-center justify-center`}
+                            style={{
+                              borderTopLeftRadius: '8px',
+                              borderBottomLeftRadius: '8px',
+                              clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
+                            }}
+                          >
+                            <div className="text-white text-xl">
                               {getAnnouncementIcon(announcement.type)}
                             </div>
                           </div>
                         )}
+                      </div>
+                      
+                      {/* Content - Right side */}
+                      <div className="flex-1 p-4 flex flex-col relative">
                         {/* Edit button overlay */}
                         <Button
                           size="sm"
@@ -911,9 +927,6 @@ export default function HubControl() {
                         >
                           <Edit3 className="w-3 h-3" />
                         </Button>
-                      </div>
-                      
-                      <div className="p-4 flex-1 flex flex-col">
                         <div className="flex items-center gap-2 mb-3">
                           <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
                             {getAnnouncementBadge(announcement.type).label}
