@@ -289,7 +289,7 @@ export class FHBService extends BaseFulfillmentProvider {
               // MATCH POR REF: Buscar pedido Shopify correspondente pela referência
               const matchingShopifyOrder = shopifyOrders.find(order => {
                 // Tentar diferentes formatos de match
-                const shopifyRef = order.orderNumber || order.name || '';
+                const shopifyRef = order.shopifyOrderNumber || order.name || '';
                 const fhbRef = fhbOrder.variable_symbol || '';
                 
                 return (
@@ -302,7 +302,7 @@ export class FHBService extends BaseFulfillmentProvider {
               
               if (matchingShopifyOrder) {
                 // ✅ MATCH ENCONTRADO: Atualizar status do pedido Shopify
-                console.log(`✅ Match encontrado! Shopify ${matchingShopifyOrder.orderNumber} ↔ FHB ${fhbOrder.variable_symbol}`);
+                console.log(`✅ Match encontrado! Shopify ${matchingShopifyOrder.shopifyOrderNumber} ↔ FHB ${fhbOrder.variable_symbol}`);
                 
                 await storage.updateOrder(matchingShopifyOrder.id, {
                   status: this.mapFHBStatusToInternal(fhbOrder.status),
