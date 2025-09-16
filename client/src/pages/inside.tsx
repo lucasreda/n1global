@@ -2336,7 +2336,7 @@ function CreateProductModal({
   const [formData, setFormData] = useState({
     sku: '',
     name: '',
-    type: 'physical',
+    type: 'fisico',
     price: 0,
     costPrice: 0,
     shippingCost: 0,
@@ -2356,7 +2356,7 @@ function CreateProductModal({
     setFormData({
       sku: '',
       name: '',
-      type: 'physical',
+      type: 'fisico',
       price: 0,
       costPrice: 0,
       shippingCost: 0,
@@ -2416,7 +2416,7 @@ function CreateProductModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-600">
-                <SelectItem value="physical">Físico</SelectItem>
+                <SelectItem value="fisico">Físico</SelectItem>
                 <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
               </SelectContent>
             </Select>
@@ -2601,7 +2601,7 @@ function EditProductModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-gray-800 border-gray-600">
-                <SelectItem value="physical">Físico</SelectItem>
+                <SelectItem value="fisico">Físico</SelectItem>
                 <SelectItem value="nutraceutico">Nutracêutico</SelectItem>
               </SelectContent>
             </Select>
