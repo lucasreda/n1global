@@ -109,6 +109,7 @@ interface SystemUser {
   role: string;
   onboardingCompleted: boolean;
   createdAt: string;
+  permissions?: string[];
 }
 
 interface SupportCategory {

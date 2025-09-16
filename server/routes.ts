@@ -4161,6 +4161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: users.role,
           onboardingCompleted: users.onboardingCompleted,
           createdAt: users.createdAt,
+          permissions: users.permissions,
         })
         .from(users)
         .orderBy(users.createdAt);
@@ -4175,7 +4176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/admin/users - Create new user (Super Admin only)
   app.post("/api/admin/users", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
-      const { name, email, password, role } = req.body;
+      const { name, email, password, role, permissions } = req.body;
 
       // Validação dos campos obrigatórios
       if (!name || !email || !password) {
@@ -4209,6 +4210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         password: hashedPassword,
         role: role || 'user',
+        permissions: permissions || [],
         onboardingCompleted: role === 'super_admin' || role === 'supplier' || role === 'admin_financeiro' // Skip onboarding for privileged users
       }).returning({
         id: users.id,
@@ -4216,7 +4218,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: users.email,
         role: users.role,
         onboardingCompleted: users.onboardingCompleted,
-        createdAt: users.createdAt
+        createdAt: users.createdAt,
+        permissions: users.permissions
       });
 
       res.status(201).json(newUser);
@@ -4230,7 +4233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/users/:userId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { userId } = req.params;
-      const { name, email, password, role } = req.body;
+      const { name, email, password, role, permissions } = req.body;
 
       // Verificar se o usuário existe
       const existingUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -4280,6 +4283,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (permissions !== undefined) {
+        updateData.permissions = permissions;
+      }
+
       // Atualizar o usuário
       const [updatedUser] = await db.update(users)
         .set(updateData)
@@ -4290,7 +4297,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: users.email,
           role: users.role,
           onboardingCompleted: users.onboardingCompleted,
-          createdAt: users.createdAt
+          createdAt: users.createdAt,
+          permissions: users.permissions
         });
 
       res.json(updatedUser);
