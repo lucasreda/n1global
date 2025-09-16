@@ -125,12 +125,9 @@ export class FHBService extends BaseFulfillmentProvider {
   protected async makeAuthenticatedRequest(endpoint: string, method: string = "GET", body?: any): Promise<any> {
     const token = await this.authenticate();
     
-    // Token deve ser codificado em base64 segundo a documentação
-    const encodedToken = Buffer.from(token.token).toString('base64');
-    
     const headers: any = {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${encodedToken}`
+      "Authorization": `Bearer ${token.token}`
     };
 
     const url = endpoint.startsWith('http') ? endpoint : `${this.fhbCredentials.apiUrl}${endpoint}`;
