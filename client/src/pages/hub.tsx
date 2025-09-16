@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Package, ExternalLink, Calendar, Pin, Plus, TrendingUp } from "lucide-react";
+import { Package, ExternalLink, Calendar, Pin, Plus, TrendingUp, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -59,6 +59,7 @@ interface Announcement {
 
 export default function Hub() {
   const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<MarketplaceProduct | null>(null);
   
   // Pagination states for announcements
@@ -124,6 +125,11 @@ export default function Hub() {
     form.setValue("marketplaceProductId", product.id);
     form.setValue("sellingPrice", product.baseCost);
     setLinkModalOpen(true);
+  };
+
+  const handleViewDetails = (product: MarketplaceProduct) => {
+    setSelectedProduct(product);
+    setDetailsModalOpen(true);
   };
 
   const onSubmitLink = (data: LinkProductForm) => {
@@ -532,14 +538,25 @@ export default function Hub() {
                           {product.description}
                         </p>
                       )}
-                      <Button
-                        onClick={() => handleLinkProduct(product)}
-                        className="w-full"
-                        data-testid={`button-link-product-${product.id}`}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Vincular à Operação
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => handleViewDetails(product)}
+                          className="flex-1"
+                          data-testid={`button-view-details-${product.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Ver Detalhes
+                        </Button>
+                        <Button
+                          onClick={() => handleLinkProduct(product)}
+                          className="flex-1"
+                          data-testid={`button-link-product-${product.id}`}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Vincular
+                        </Button>
+                      </div>
                       </div>
                     </div>
                   </CardContent>
@@ -657,6 +674,116 @@ export default function Hub() {
                 </div>
               </form>
             </Form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Details Modal */}
+      <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
+        <DialogContent className="max-w-2xl" data-testid="modal-product-details">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Produto</DialogTitle>
+            <DialogDescription>
+              Informações completas sobre o produto
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProduct && (
+            <div className="space-y-6">
+              {/* Product Image */}
+              <div className="flex justify-center">
+                {selectedProduct.images && selectedProduct.images.length > 0 ? (
+                  <img 
+                    src={selectedProduct.images[0]} 
+                    alt={selectedProduct.name}
+                    className="w-48 h-48 object-cover rounded-lg"
+                  />
+                ) : (
+                  <div className={`w-48 h-48 bg-gradient-to-br ${
+                    selectedProduct.category === 'electronics' ? 'from-blue-400 to-blue-600' :
+                    selectedProduct.category === 'fashion' ? 'from-purple-400 to-purple-600' :
+                    selectedProduct.category === 'home' ? 'from-yellow-400 to-yellow-600' :
+                    selectedProduct.category === 'health' ? 'from-green-400 to-green-600' :
+                    'from-gray-400 to-gray-600'
+                  } flex items-center justify-center rounded-lg`}>
+                    <Package className="w-16 h-16 text-white opacity-80" />
+                  </div>
+                )}
+              </div>
+
+              {/* Product Info */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2" data-testid="details-product-name">
+                    {selectedProduct.name}
+                  </h3>
+                  <p className="text-muted-foreground" data-testid="details-product-supplier">
+                    Fornecedor: {selectedProduct.supplier}
+                  </p>
+                </div>
+
+                {selectedProduct.description && (
+                  <div>
+                    <h4 className="font-medium mb-2">Descrição</h4>
+                    <p className="text-muted-foreground" data-testid="details-product-description">
+                      {selectedProduct.description}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium mb-1">Preço Base</h4>
+                    <p className="text-lg font-bold text-green-600" data-testid="details-product-price">
+                      €{selectedProduct.baseCost}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Categoria</h4>
+                    <Badge variant="outline" data-testid="details-product-category">
+                      {selectedProduct.category}
+                    </Badge>
+                  </div>
+                </div>
+
+                {selectedProduct.tags && selectedProduct.tags.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">Tags</h4>
+                    <div className="flex flex-wrap gap-2" data-testid="details-product-tags">
+                      {selectedProduct.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProduct.specs && Object.keys(selectedProduct.specs).length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">Especificações</h4>
+                    <div className="space-y-2" data-testid="details-product-specs">
+                      {Object.entries(selectedProduct.specs).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="text-muted-foreground">{key}:</span>
+                          <span>{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setDetailsModalOpen(false)}
+                  data-testid="button-close-details"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
