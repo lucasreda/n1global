@@ -102,7 +102,13 @@ export default function CreativeDetails() {
 
   // Auto-execute creative insights with global intelligence
   const { data: creativeInsights } = useQuery({
-    queryKey: ['/api/creatives', id, 'insights'],
+    queryKey: ['/api/creatives', id, 'insights', 'general'],
+    queryFn: async () => {
+      if (!id) return null;
+      const response = await fetch(`/api/creatives/${id}/insights?industry=general&objective=conversions`);
+      if (!response.ok) throw new Error('Failed to fetch insights');
+      return response.json();
+    },
     enabled: !!id
   });
 
@@ -119,8 +125,8 @@ export default function CreativeDetails() {
     queryFn: async () => {
       if (!creativeDetails?.creative) return null;
       
-      // Auto-detect characteristics from creative data
-      const autoDetectedFeatures = {
+      // Auto-detect characteristics from creative data and include operationId
+      const campaignFeatures = {
         creativeType: creativeDetails.creative.type,
         objective: 'performance_optimization',
         placement: 'auto_detect',
@@ -129,7 +135,13 @@ export default function CreativeDetails() {
         campaignContext: creativeDetails.creative.campaignName
       };
       
-      const response = await apiRequest('/api/predictions/campaign-performance', 'POST', autoDetectedFeatures) as any;
+      // Get current operation ID from storage or context
+      const operationId = localStorage.getItem('selectedOperationId') || 'fb1d724d-6b9e-49c1-ad74-9a359527bbf4';
+      
+      const response = await apiRequest('/api/predictions/campaign-performance', 'POST', {
+        campaignFeatures,
+        operationId
+      }) as any;
       return response as PerformancePrediction;
     },
     enabled: !!creativeDetails?.creative,
