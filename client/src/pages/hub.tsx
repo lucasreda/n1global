@@ -634,12 +634,12 @@ export default function Hub() {
                       )}
 
                       {/* Action buttons */}
-                      <div className="flex gap-2 pt-1">
+                      <div className="flex flex-col gap-2 pt-1">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewDetails(product)}
-                          className="flex-1 h-9"
+                          className="w-full h-9"
                           data-testid={`button-view-details-${product.id}`}
                         >
                           <Eye className="w-4 h-4 mr-1" />
@@ -648,7 +648,7 @@ export default function Hub() {
                         <Button
                           size="sm"
                           onClick={() => handleLinkProduct(product)}
-                          className="flex-1 h-9"
+                          className="w-full h-9"
                           data-testid={`button-link-product-${product.id}`}
                         >
                           <Plus className="w-4 h-4 mr-1" />
