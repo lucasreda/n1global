@@ -2643,3 +2643,80 @@ export interface SceneTimeline {
   processingTime: number; // milliseconds
   totalCost: number;
 }
+
+// ========================================
+// N1 Hub - Marketplace & Announcements
+// ========================================
+
+// Marketplace products offered by N1
+export const marketplaceProducts = pgTable("marketplace_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  baseCost: decimal("base_cost", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  images: jsonb("images").$type<string[]>().default([]),
+  category: text("category").notNull(),
+  tags: text("tags").array(),
+  supplier: text("supplier").notNull(),
+  status: text("status").notNull().default("active"), // 'active' | 'hidden'
+  specs: jsonb("specs").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Links products from marketplace to client operations
+export const productOperationLinks = pgTable("product_operation_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  marketplaceProductId: varchar("marketplace_product_id").notNull().references(() => marketplaceProducts.id),
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  sku: text("sku"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Global announcements from N1 to clients
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  type: text("type").notNull().default("update"), // 'update' | 'tip' | 'maintenance' | 'promo'
+  publishedAt: timestamp("published_at").defaultNow(),
+  isPinned: boolean("is_pinned").default(false),
+  audience: text("audience").notNull().default("all"), // 'all' | 'role' | 'operation'
+  roleTarget: text("role_target"), // Target role if audience is 'role'
+  operationId: varchar("operation_id").references(() => operations.id), // Target operation if audience is 'operation'
+  ctaLabel: text("cta_label"), // Call-to-action button text
+  ctaUrl: text("cta_url"), // Call-to-action URL
+  status: text("status").notNull().default("published"), // 'published' | 'draft'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for N1 Hub entities
+export const insertMarketplaceProductSchema = createInsertSchema(marketplaceProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductOperationLinkSchema = createInsertSchema(productOperationLinks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
+  id: true,
+  createdAt: true,
+  publishedAt: true,
+});
+
+// Types for N1 Hub entities
+export type MarketplaceProduct = typeof marketplaceProducts.$inferSelect;
+export type InsertMarketplaceProduct = z.infer<typeof insertMarketplaceProductSchema>;
+
+export type ProductOperationLink = typeof productOperationLinks.$inferSelect;
+export type InsertProductOperationLink = z.infer<typeof insertProductOperationLinkSchema>;
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
