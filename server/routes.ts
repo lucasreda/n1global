@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import multer from "multer";
 import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
@@ -6053,11 +6054,41 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
-  app.post("/api/admin/announcements", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  app.post("/api/admin/announcements", authenticateToken, requireSuperAdmin, multer().single('image'), async (req: AuthRequest, res: Response) => {
     try {
-      const announcementData = insertAnnouncementSchema.parse(req.body);
+      const { title, content, type = 'general', isPinned = 'false' } = req.body;
+      
+      if (!title || !content) {
+        return res.status(400).json({ message: "Título e conteúdo são obrigatórios" });
+      }
+
+      let imageUrl = null;
+      
+      // Handle image upload if provided
+      if (req.file) {
+        // For now, we'll save the image as base64 in the database
+        // In production, you'd want to upload to object storage
+        const imageBuffer = req.file.buffer;
+        const imageBase64 = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
+        imageUrl = imageBase64;
+      }
+
+      const announcementData = {
+        title: title.trim(),
+        content: content.trim(),
+        type: type || 'general',
+        isPinned: isPinned === 'true',
+        status: 'published' as const,
+        audience: 'all' as const,
+        imageUrl,
+        publishedAt: new Date(),
+      };
+
       const announcement = await storage.createAnnouncement(announcementData);
-      res.status(201).json(announcement);
+      res.status(201).json({ 
+        message: "Anúncio criado com sucesso", 
+        data: announcement 
+      });
     } catch (error) {
       console.error("Error creating announcement:", error);
       res.status(500).json({ message: "Erro ao criar novidade" });
