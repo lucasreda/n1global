@@ -2681,6 +2681,7 @@ export const productOperationLinks = pgTable("product_operation_links", {
 export const announcements = pgTable("announcements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
+  description: text("description").notNull(), // Brief description for cards
   content: text("content").notNull(),
   type: text("type").notNull().default("update"), // 'update' | 'tip' | 'maintenance' | 'promo'
   imageUrl: text("image_url"), // Image for the announcement

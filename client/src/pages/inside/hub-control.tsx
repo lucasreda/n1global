@@ -63,6 +63,7 @@ interface AddProductModalProps {
 
 function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement }: CreateAnnouncementModalProps) {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [content, setContent] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -77,6 +78,7 @@ function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement
   React.useEffect(() => {
     if (editingAnnouncement && open) {
       setTitle(editingAnnouncement.title);
+      setDescription(editingAnnouncement.description || '');
       setContent(editingAnnouncement.content);
       setType(editingAnnouncement.type);
       setIsPinned(editingAnnouncement.isPinned || false);
@@ -86,6 +88,7 @@ function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement
     } else if (!editingAnnouncement && open) {
       // Reset for new announcement
       setTitle('');
+      setDescription('');
       setContent('');
       setType('general');
       setIsPinned(false);
@@ -97,6 +100,7 @@ function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement
   const createMutation = useMutation({
     mutationFn: async (data: {
       title: string;
+      description: string;
       content: string;
       type: string;
       isPinned: boolean;
@@ -106,6 +110,7 @@ function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement
       const formData = new FormData();
       
       formData.append('title', data.title);
+      formData.append('description', data.description);
       formData.append('content', data.content);
       formData.append('type', data.type);
       formData.append('isPinned', data.isPinned.toString());
@@ -177,6 +182,15 @@ function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement
       return;
     }
 
+    if (!description.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Erro", 
+        description: "Por favor, digite uma descrição para o anúncio.",
+      });
+      return;
+    }
+
     if (!content.trim()) {
       toast({
         variant: "destructive",
@@ -188,6 +202,7 @@ function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement
 
     createMutation.mutate({
       title,
+      description,
       content,
       type,
       isPinned,
@@ -357,6 +372,18 @@ function CreateAnnouncementModal({ open, onClose, onSuccess, editingAnnouncement
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="text-white">Descrição do Anúncio</Label>
+                      <Textarea
+                        id="description"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Digite uma breve descrição que aparecerá no card..."
+                        className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 min-h-[100px]"
+                      />
                     </div>
 
                     {/* Image Upload */}
@@ -1003,8 +1030,8 @@ export default function HubControl() {
                                 {announcement.title}
                               </h3>
                               
-                              <p className="text-slate-300 flex-1 line-clamp-4 text-sm" data-testid={`text-announcement-content-${announcement.id}`}>
-                                {announcement.content.replace(/<[^>]*>/g, '')}
+                              <p className="text-slate-300 flex-1 line-clamp-4 text-sm" data-testid={`text-announcement-description-${announcement.id}`}>
+                                {announcement.description || ''}
                               </p>
                               
                               <div className="flex items-center justify-between mt-3">
@@ -1105,8 +1132,8 @@ export default function HubControl() {
                                 {announcement.title}
                               </h3>
                               
-                              <p className="text-slate-300 flex-1 line-clamp-3 text-sm" data-testid={`text-announcement-content-${announcement.id}`}>
-                                {announcement.content.replace(/<[^>]*>/g, '')}
+                              <p className="text-slate-300 flex-1 line-clamp-3 text-sm" data-testid={`text-announcement-description-${announcement.id}`}>
+                                {announcement.description || ''}
                               </p>
                               
                               <div className="flex items-center justify-between mt-3">

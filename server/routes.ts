@@ -6056,10 +6056,10 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   app.post("/api/admin/announcements", authenticateToken, requireSuperAdmin, multer().single('image'), async (req: AuthRequest, res: Response) => {
     try {
-      const { title, content, type = 'general', isPinned = 'false' } = req.body;
+      const { title, description, content, type = 'general', isPinned = 'false' } = req.body;
       
-      if (!title || !content) {
-        return res.status(400).json({ message: "Título e conteúdo são obrigatórios" });
+      if (!title || !description || !content) {
+        return res.status(400).json({ message: "Título, descrição e conteúdo são obrigatórios" });
       }
 
       let imageUrl = null;
@@ -6075,6 +6075,7 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
       const announcementData = {
         title: title.trim(),
+        description: description.trim(),
         content: content.trim(),
         type: type || 'general',
         isPinned: isPinned === 'true',
@@ -6097,10 +6098,10 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   app.put("/api/admin/announcements/:id", authenticateToken, requireSuperAdmin, multer().single('image'), async (req: AuthRequest, res: Response) => {
     try {
-      const { title, content, type = 'general', isPinned = 'false' } = req.body;
+      const { title, description, content, type = 'general', isPinned = 'false' } = req.body;
       
-      if (!title || !content) {
-        return res.status(400).json({ message: "Título e conteúdo são obrigatórios" });
+      if (!title || !description || !content) {
+        return res.status(400).json({ message: "Título, descrição e conteúdo são obrigatórios" });
       }
 
       let imageUrl = null;
@@ -6116,6 +6117,7 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
       const updateData = {
         title: title.trim(),
+        description: description.trim(),
         content: content.trim(),
         type: type || 'general',
         isPinned: isPinned === 'true',
