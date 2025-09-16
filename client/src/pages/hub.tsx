@@ -157,15 +157,11 @@ export default function Hub() {
       {/* Novidades Section - News Layout */}
       <div>
         <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Últimas Novidades</h2>
-              <p className="text-muted-foreground">Fique por dentro das atualizações e dicas mais recentes</p>
-            </div>
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-5 h-5" />
+            <h2 className="text-xl font-semibold">Últimas Novidades</h2>
           </div>
+          <p className="text-muted-foreground">Fique por dentro das atualizações e dicas mais recentes</p>
         </div>
         
         {announcementsLoading ? (
@@ -192,21 +188,31 @@ export default function Hub() {
 
               return (
                 <Card key={announcement.id} className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer`} data-testid={`card-announcement-${announcement.id}`}>
-                  <CardContent className="p-4 h-full flex flex-col">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">
+                  <CardContent className="p-0 h-full flex flex-col">
+                    {/* Image placeholder based on announcement type */}
+                    <div className={`w-full bg-gradient-to-r ${
+                      announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
+                      announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
+                      announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
+                      'from-green-400 to-green-600'
+                    } ${isHero ? 'h-32' : 'h-24'} flex items-center justify-center`}>
+                      <div className="text-white text-2xl">
                         {getAnnouncementIcon(announcement.type)}
                       </div>
-                      <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
-                        {getAnnouncementBadge(announcement.type).label}
-                      </Badge>
-                      {announcement.isPinned && (
-                        <Badge variant="secondary" size="sm" data-testid={`badge-announcement-pinned-${announcement.id}`}>
-                          <Pin className="w-3 h-3 mr-1" />
-                          Fixado
-                        </Badge>
-                      )}
                     </div>
+                    
+                    <div className="p-4 flex-1 flex flex-col">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
+                          {getAnnouncementBadge(announcement.type).label}
+                        </Badge>
+                        {announcement.isPinned && (
+                          <Badge variant="secondary" size="sm" data-testid={`badge-announcement-pinned-${announcement.id}`}>
+                            <Pin className="w-3 h-3 mr-1" />
+                            Fixado
+                          </Badge>
+                        )}
+                      </div>
                     
                     <h3 className={`font-semibold mb-2 line-clamp-2 ${isHero ? 'text-lg' : 'text-base'}`} data-testid={`text-announcement-title-${announcement.id}`}>
                       {announcement.title}
@@ -231,6 +237,7 @@ export default function Hub() {
                         </Button>
                       )}
                     </div>
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -249,15 +256,11 @@ export default function Hub() {
       {/* Marketplace Section */}
       <div className="space-y-6">
           <div className="mb-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Package className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">Produtos Disponíveis</h2>
-                <p className="text-muted-foreground">Encontre produtos para adicionar à sua operação</p>
-              </div>
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="w-5 h-5" />
+              <h2 className="text-xl font-semibold">Produtos Disponíveis</h2>
             </div>
+            <p className="text-muted-foreground">Encontre produtos para adicionar à sua operação</p>
           </div>
 
           {/* Products Grid */}
@@ -276,13 +279,19 @@ export default function Hub() {
             ) : productsData?.data?.length > 0 ? (
               productsData.data.map((product: MarketplaceProduct) => (
                 <Card key={product.id} className="overflow-hidden" data-testid={`card-product-${product.id}`}>
-                  <CardContent className="p-4">
-                    {product.images && product.images[0] && (
-                      <div className="w-full h-48 bg-muted rounded-lg mb-4 flex items-center justify-center">
-                        <Package className="w-12 h-12 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="space-y-2">
+                  <CardContent className="p-0">
+                    {/* Product image placeholder based on category */}
+                    <div className={`w-full h-48 bg-gradient-to-br ${
+                      product.category === 'electronics' ? 'from-blue-400 to-blue-600' :
+                      product.category === 'fashion' ? 'from-purple-400 to-purple-600' :
+                      product.category === 'home' ? 'from-yellow-400 to-yellow-600' :
+                      product.category === 'health' ? 'from-green-400 to-green-600' :
+                      'from-gray-400 to-gray-600'
+                    } flex items-center justify-center`}>
+                      <Package className="w-16 h-16 text-white opacity-80" />
+                    </div>
+                    <div className="p-4">
+                      <div className="space-y-2">
                       <h3 className="font-semibold" data-testid={`text-product-name-${product.id}`}>
                         {product.name}
                       </h3>
@@ -310,6 +319,7 @@ export default function Hub() {
                         <Plus className="w-4 h-4 mr-2" />
                         Vincular à Operação
                       </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
