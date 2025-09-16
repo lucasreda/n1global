@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Package, ExternalLink, Calendar, Pin, Plus, TrendingUp, Eye } from "lucide-react";
+import { Package, ExternalLink, Calendar, Pin, Plus, TrendingUp, Eye, Smartphone, Shirt, Home, Heart, Grid3X3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -62,6 +62,7 @@ export default function Hub() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<MarketplaceProduct | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
   // Pagination states for announcements
   const [announcementsCurrentPage, setAnnouncementsCurrentPage] = useState(1);
@@ -483,8 +484,133 @@ export default function Hub() {
             <p className="text-muted-foreground">Encontre produtos para adicionar à sua operação</p>
           </div>
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Marketplace Layout */}
+          <div className="flex gap-6">
+            {/* Category Sidebar */}
+            <div className="w-64 flex-shrink-0">
+              <div className="space-y-3">
+                <h3 className="font-medium text-sm text-muted-foreground mb-4">Filtrar por Categoria</h3>
+                
+                {/* All Products Filter */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedCategory === null ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                  }`}
+                  onClick={() => setSelectedCategory(null)}
+                  data-testid="filter-all-products"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg">
+                        <Grid3X3 className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Todos os Produtos</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {productsData?.data?.length || 0} produtos
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Electronics Filter */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedCategory === 'electronics' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                  }`}
+                  onClick={() => setSelectedCategory('electronics')}
+                  data-testid="filter-electronics"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg">
+                        <Smartphone className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Eletrônicos</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'electronics').length || 0} produtos
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Fashion Filter */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedCategory === 'fashion' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                  }`}
+                  onClick={() => setSelectedCategory('fashion')}
+                  data-testid="filter-fashion"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg">
+                        <Shirt className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Moda</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'fashion').length || 0} produtos
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Home Filter */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedCategory === 'home' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                  }`}
+                  onClick={() => setSelectedCategory('home')}
+                  data-testid="filter-home"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg">
+                        <Home className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Casa</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'home').length || 0} produtos
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Health Filter */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedCategory === 'health' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                  }`}
+                  onClick={() => setSelectedCategory('health')}
+                  data-testid="filter-health"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-green-400 to-green-600 rounded-lg">
+                        <Heart className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Saúde</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'health').length || 0} produtos
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Products Grid */}
+            <div className="flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {productsLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Card key={i}>
@@ -497,7 +623,11 @@ export default function Hub() {
                 </Card>
               ))
             ) : productsData?.data?.length > 0 ? (
-              productsData.data.map((product: MarketplaceProduct) => (
+              productsData.data
+                .filter((product: MarketplaceProduct) => 
+                  selectedCategory === null || product.category === selectedCategory
+                )
+                .map((product: MarketplaceProduct) => (
                 <Card key={product.id} className="overflow-hidden" data-testid={`card-product-${product.id}`}>
                   <CardContent className="p-0">
                     {/* Product image or placeholder based on category */}
@@ -570,10 +700,12 @@ export default function Hub() {
               <div className="col-span-full text-center py-12">
                 <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground" data-testid="text-no-products">
-                  Nenhum produto encontrado
+                  {selectedCategory ? `Nenhum produto encontrado na categoria ${selectedCategory}` : 'Nenhum produto encontrado'}
                 </p>
               </div>
             )}
+              </div>
+            </div>
           </div>
       </div>
 
