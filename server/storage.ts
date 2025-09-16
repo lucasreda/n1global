@@ -577,6 +577,31 @@ export class DatabaseStorage implements IStorage {
     return userProduct;
   }
 
+  // New function: Link product by operation instead of storeId
+  async linkProductToUserByOperation(userId: string, operationId: string, linkData: LinkProductBySku): Promise<UserProduct> {
+    const { userOperationAccess, operations } = await import("@shared/schema");
+    
+    // Get storeId from operation via user access
+    const [operationInfo] = await db
+      .select({
+        storeId: operations.storeId
+      })
+      .from(userOperationAccess)
+      .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
+      .where(and(
+        eq(userOperationAccess.userId, userId),
+        eq(userOperationAccess.operationId, operationId)
+      ))
+      .limit(1);
+
+    if (!operationInfo) {
+      throw new Error('Usuário não tem acesso a esta operação');
+    }
+
+    // Use the existing linkProductToUser with the resolved storeId
+    return this.linkProductToUser(userId, operationInfo.storeId, linkData);
+  }
+
   async getUserLinkedProducts(userId: string, storeId: string): Promise<(UserProduct & { product: Product })[]> {
     const result = await db
       .select({
@@ -598,6 +623,55 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(userProducts.userId, userId),
         eq(userProducts.storeId, storeId),
+        eq(userProducts.isActive, true)
+      ))
+      .orderBy(desc(userProducts.linkedAt));
+
+    return result;
+  }
+
+  // New function: Get user products filtered by operation
+  async getUserLinkedProductsByOperation(userId: string, operationId: string): Promise<(UserProduct & { product: Product })[]> {
+    const { userOperationAccess, operations } = await import("@shared/schema");
+    
+    // Get storeId from operation via user access
+    const [operationInfo] = await db
+      .select({
+        storeId: operations.storeId
+      })
+      .from(userOperationAccess)
+      .innerJoin(operations, eq(userOperationAccess.operationId, operations.id))
+      .where(and(
+        eq(userOperationAccess.userId, userId),
+        eq(userOperationAccess.operationId, operationId)
+      ))
+      .limit(1);
+
+    if (!operationInfo) {
+      throw new Error('Usuário não tem acesso a esta operação');
+    }
+
+    // Get products for this operation's store
+    const result = await db
+      .select({
+        id: userProducts.id,
+        userId: userProducts.userId,
+        storeId: userProducts.storeId,
+        productId: userProducts.productId,
+        sku: userProducts.sku,
+        customCostPrice: userProducts.customCostPrice,
+        customShippingCost: userProducts.customShippingCost,
+        customHandlingFee: userProducts.customHandlingFee,
+        linkedAt: userProducts.linkedAt,
+        lastUpdated: userProducts.lastUpdated,
+        isActive: userProducts.isActive,
+        product: products,
+      })
+      .from(userProducts)
+      .innerJoin(products, eq(userProducts.productId, products.id))
+      .where(and(
+        eq(userProducts.userId, userId),
+        eq(userProducts.storeId, operationInfo.storeId),
         eq(userProducts.isActive, true)
       ))
       .orderBy(desc(userProducts.linkedAt));

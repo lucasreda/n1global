@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Package, DollarSign, TrendingUp, Calculator, Edit, Save, X, Search, Link2, Unlink } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -83,14 +84,16 @@ export default function ProductsPage() {
   const [searchSku, setSearchSku] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedOperation } = useCurrentOperation();
 
-  // Fetch linked products
+  // Fetch linked products for current operation
   const { data: userProducts = [], isLoading } = useQuery({
-    queryKey: ["/api/user-products"],
+    queryKey: ["/api/user-products", selectedOperation],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/user-products");
+      const response = await authenticatedApiRequest("GET", `/api/user-products?operationId=${selectedOperation}`);
       return response.json();
     },
+    enabled: !!selectedOperation,
   });
 
   // Fetch available stock for each product
@@ -143,11 +146,14 @@ export default function ProductsPage() {
   // Link product mutation
   const linkProductMutation = useMutation({
     mutationFn: async (linkData: { sku: string; customCostPrice?: number; customShippingCost?: number; customHandlingFee?: number }) => {
-      const response = await authenticatedApiRequest("POST", "/api/user-products/link", linkData);
+      const response = await authenticatedApiRequest("POST", "/api/user-products/link", {
+        ...linkData,
+        operationId: selectedOperation
+      });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user-products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-products", selectedOperation] });
       setIsLinking(false);
       setSearchedProduct(null);
       setSearchSku("");
@@ -172,7 +178,7 @@ export default function ProductsPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user-products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-products", selectedOperation] });
       toast({
         title: "Produto desvinculado",
         description: "Produto desvinculado com sucesso",

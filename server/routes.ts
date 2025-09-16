@@ -2733,14 +2733,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const linkData = linkProductBySkuSchema.parse(req.body);
       const userId = req.user.id;
-      const storeId = req.storeId || req.user.storeId;
+      const operationId = req.body.operationId as string;
       
-      if (!storeId) {
-        return res.status(400).json({ message: "Store ID é obrigatório" });
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório para vincular produto à operação" });
       }
       
-      console.log(`Linking product ${linkData.sku} for user ${userId} to store ${storeId}`);
-      const userProduct = await storage.linkProductToUser(userId, storeId, linkData);
+      console.log(`Linking product ${linkData.sku} for user ${userId} to operation ${operationId}`);
+      const userProduct = await storage.linkProductToUserByOperation(userId, operationId, linkData);
       res.status(201).json(userProduct);
     } catch (error) {
       if (error instanceof Error) {
@@ -2754,15 +2754,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user-products", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user.id;
-      const storeId = req.storeId || req.user.storeId;
+      const operationId = req.query.operationId as string;
       
-      if (!storeId) {
-        return res.status(400).json({ message: "Store ID é obrigatório" });
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório para filtrar produtos por operação" });
       }
       
-      const userProducts = await storage.getUserLinkedProducts(userId, storeId);
+      console.log(`🎯 Fetching user products for operation: ${operationId}`);
+      const userProducts = await storage.getUserLinkedProductsByOperation(userId, operationId);
       res.json(userProducts);
     } catch (error) {
+      console.error("Error fetching user products:", error);
       res.status(500).json({ message: "Erro ao buscar produtos vinculados" });
     }
   });
