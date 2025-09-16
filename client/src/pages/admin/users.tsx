@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,12 +20,34 @@ import {
   Briefcase
 } from "lucide-react";
 
+// Define available pages for different user types
+const USER_PAGES = [
+  { id: 'dashboard', name: 'Dashboard', description: 'Visão geral e métricas', icon: '📊' },
+  { id: 'hub', name: 'Hub', description: 'Marketplace e produtos', icon: '🛍️' },
+  { id: 'orders', name: 'Pedidos', description: 'Gestão de pedidos', icon: '📦' },
+  { id: 'ads', name: 'Anúncios', description: 'Campanhas publicitárias', icon: '📢' },
+  { id: 'analytics', name: 'Analytics', description: 'Análises e relatórios', icon: '📈' }
+];
+
+const ADMIN_PAGES = [
+  { id: 'dashboard', name: 'Dashboard', description: 'Painel administrativo', icon: '📊' },
+  { id: 'orders', name: 'Pedidos', description: 'Gestão global de pedidos', icon: '📦' },
+  { id: 'stores', name: 'Lojas', description: 'Gestão de lojas', icon: '🏪' },
+  { id: 'users', name: 'Usuários', description: 'Gestão de usuários', icon: '👥' },
+  { id: 'products', name: 'Produtos', description: 'Gestão de produtos', icon: '📋' },
+  { id: 'global', name: 'Global', description: 'Configurações globais', icon: '🌍' },
+  { id: 'support', name: 'Suporte', description: 'Central de suporte', icon: '🎧' },
+  { id: 'hub-control', name: 'Hub Control', description: 'Controle do marketplace', icon: '⚙️' },
+  { id: 'settings', name: 'Configurações', description: 'Configurações gerais', icon: '⚙️' }
+];
+
 interface SystemUser {
   id: string;
   name: string;
   email: string;
   role: string;
   createdAt: string;
+  permissions?: string[];
   isSupplier?: boolean;
   supplierType?: string;
   lastLoginAt?: string;
@@ -46,10 +70,25 @@ export default function AdminUsers() {
     name: '',
     email: '',
     password: '',
-    role: ''
+    role: '',
+    permissions: [] as string[]
   });
+  const [activeTab, setActiveTab] = useState("general");
 
   const { toast } = useToast();
+
+  // Update permissions when user data changes
+  useEffect(() => {
+    if (userToEdit) {
+      setEditUserData({
+        name: userToEdit.name,
+        email: userToEdit.email,
+        password: '',
+        role: userToEdit.role,
+        permissions: userToEdit.permissions || []
+      });
+    }
+  }, [userToEdit]);
   const queryClient = useQueryClient();
 
   const { data: systemUsers, isLoading: usersLoading } = useQuery<SystemUser[]>({
@@ -133,7 +172,7 @@ export default function AdminUsers() {
   });
 
   const editUserMutation = useMutation({
-    mutationFn: async (userData: { id: string; name?: string; email?: string; password?: string; role?: string }) => {
+    mutationFn: async (userData: { id: string; name?: string; email?: string; password?: string; role?: string; permissions?: string[] }) => {
       const token = localStorage.getItem("auth_token");
       const response = await fetch(`/api/admin/users/${userData.id}`, {
         method: 'PUT',
@@ -210,14 +249,40 @@ export default function AdminUsers() {
     }
   };
 
+  // Get available pages based on user role
+  const getAvailablePages = (role: string) => {
+    if (role === 'super_admin') return ADMIN_PAGES;
+    return USER_PAGES;
+  };
+
+  // Toggle permission for a specific page
+  const togglePermission = (pageId: string) => {
+    const currentPermissions = editUserData.permissions;
+    const hasPermission = currentPermissions.includes(pageId);
+    
+    if (hasPermission) {
+      setEditUserData({
+        ...editUserData,
+        permissions: currentPermissions.filter(p => p !== pageId)
+      });
+    } else {
+      setEditUserData({
+        ...editUserData,
+        permissions: [...currentPermissions, pageId]
+      });
+    }
+  };
+
   const handleEditUser = (user: SystemUser) => {
     setUserToEdit(user);
     setEditUserData({
       name: user.name,
       email: user.email,
       password: '',
-      role: user.role
+      role: user.role,
+      permissions: user.permissions || []
     });
+    setActiveTab("general");
     setShowEditModal(true);
   };
 
@@ -229,6 +294,9 @@ export default function AdminUsers() {
     if (editUserData.email !== userToEdit.email) updateData.email = editUserData.email;
     if (editUserData.password) updateData.password = editUserData.password;
     if (editUserData.role !== userToEdit.role) updateData.role = editUserData.role;
+    if (JSON.stringify(editUserData.permissions) !== JSON.stringify(userToEdit.permissions || [])) {
+      updateData.permissions = editUserData.permissions;
+    }
     
     editUserMutation.mutate(updateData);
   };
@@ -413,71 +481,208 @@ export default function AdminUsers() {
       </Dialog>
 
       {/* Edit User Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent>
+      <Dialog open={showEditModal} onOpenChange={(open) => {
+        if (!open) {
+          setActiveTab("general");
+          setShowEditModal(false);
+        }
+      }}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Editar Usuário</DialogTitle>
-            <DialogDescription>
-              Altere as informações do usuário
+            <DialogTitle className="flex items-center gap-2 text-blue-400">
+              <Edit className="h-5 w-5" />
+              Editar Usuário
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Edite as informações do usuário <strong className="text-white">{userToEdit?.name}</strong>. 
+              Deixe a senha em branco para não alterá-la.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-name">Nome</Label>
-              <Input
-                id="edit-name"
-                value={editUserData.name}
-                onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
-                placeholder="Nome completo"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-email">Email</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editUserData.email}
-                onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-password">Nova Senha (opcional)</Label>
-              <Input
-                id="edit-password"
-                type="password"
-                value={editUserData.password}
-                onChange={(e) => setEditUserData({ ...editUserData, password: e.target.value })}
-                placeholder="Deixe em branco para manter a atual"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-role">Função</Label>
-              <Select value={editUserData.role} onValueChange={(value) => setEditUserData({ ...editUserData, role: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a função" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="store">Loja</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
-                  <SelectItem value="supplier">Fornecedor</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditModal(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSubmitEdit}
-              disabled={editUserMutation.isPending}
-            >
-              {editUserMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </DialogFooter>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20">
+              <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
+                Informações Gerais
+              </TabsTrigger>
+              <TabsTrigger value="permissions" className="data-[state=active]:bg-blue-600">
+                Permissões
+              </TabsTrigger>
+            </TabsList>
+            
+            <form onSubmit={(e) => { e.preventDefault(); handleSubmitEdit(); }} className="space-y-4">
+              <TabsContent value="general" className="mt-4 space-y-4">
+                <div>
+                  <Label htmlFor="edit-name" className="text-sm text-slate-400">Nome</Label>
+                  <Input
+                    id="edit-name"
+                    value={editUserData.name}
+                    onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                    placeholder="Nome completo do usuário"
+                    required
+                    data-testid="input-edit-user-name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-email" className="text-sm text-slate-400">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editUserData.email}
+                    onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                    placeholder="usuario@exemplo.com"
+                    required
+                    data-testid="input-edit-user-email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-password" className="text-sm text-slate-400">
+                    Nova Senha (deixe em branco para não alterar)
+                  </Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    value={editUserData.password}
+                    onChange={(e) => setEditUserData({ ...editUserData, password: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                    placeholder="Nova senha (opcional)"
+                    data-testid="input-edit-user-password"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-role" className="text-sm text-slate-400">Tipo de Usuário</Label>
+                  <Select value={editUserData.role} onValueChange={(value) => setEditUserData({ ...editUserData, role: value })}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-edit-user-role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      <SelectItem value="user" className="text-white hover:bg-gray-700">Usuário</SelectItem>
+                      <SelectItem value="admin" className="text-white hover:bg-gray-700">Admin</SelectItem>
+                      <SelectItem value="supplier" className="text-white hover:bg-gray-700">Supplier</SelectItem>
+                      <SelectItem value="super_admin" className="text-white hover:bg-gray-700">Super Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="permissions" className="mt-4">
+                <div className="space-y-4">
+                  <div className="text-sm text-slate-400">
+                    Controle as páginas que este usuário pode acessar baseado no seu tipo de conta.
+                  </div>
+                  
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-3">
+                      {editUserData.role === 'super_admin' ? '🔧 Páginas Administrativas' : '👤 Páginas do Cliente'}
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {getAvailablePages(editUserData.role).map((page) => {
+                        const hasPermission = editUserData.permissions.includes(page.id);
+                        
+                        return (
+                          <div 
+                            key={page.id}
+                            className={`flex items-start space-x-3 p-3 rounded-md border transition-colors cursor-pointer ${
+                              hasPermission 
+                                ? 'bg-blue-50/10 border-blue-500/30' 
+                                : 'bg-white/5 border-white/20 hover:bg-white/10'
+                            }`}
+                            onClick={() => togglePermission(page.id)}
+                            data-testid={`permission-${page.id}`}
+                          >
+                            <Checkbox 
+                              checked={hasPermission}
+                              onCheckedChange={() => togglePermission(page.id)}
+                              className="mt-1"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">{page.icon}</span>
+                                <span className="text-sm font-medium text-white">
+                                  {page.name}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 mt-1">
+                                {page.description}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md">
+                      <div className="flex items-center gap-2 text-blue-400 text-sm">
+                        <span>💡</span>
+                        <span className="font-medium">Dica:</span>
+                      </div>
+                      <p className="text-xs text-blue-300 mt-1">
+                        {editUserData.role === 'super_admin' 
+                          ? 'Usuários super admin podem acessar páginas administrativas do painel /inside'
+                          : 'Usuários normais podem acessar páginas do dashboard principal do cliente'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Permissions summary */}
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-2">
+                      📋 Resumo das Permissões
+                    </h4>
+                    <div className="text-xs text-slate-400">
+                      {editUserData.permissions.length > 0 ? (
+                        <>
+                          <span className="text-green-400 font-medium">
+                            {editUserData.permissions.length} páginas permitidas:
+                          </span>{' '}
+                          {editUserData.permissions.map(permissionId => {
+                            const page = getAvailablePages(editUserData.role).find(p => p.id === permissionId);
+                            return page?.name;
+                          }).filter(Boolean).join(', ')}
+                        </>
+                      ) : (
+                        <span className="text-orange-400">
+                          ⚠️ Nenhuma página selecionada - usuário não terá acesso a nenhuma funcionalidade
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <DialogFooter className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setActiveTab("general");
+                    setShowEditModal(false);
+                  }}
+                  className="border-white/20 text-white hover:bg-white/10"
+                  data-testid="button-cancel-edit-user"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={editUserMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  data-testid="button-save-edit-user"
+                >
+                  {editUserMutation.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar Alterações'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
