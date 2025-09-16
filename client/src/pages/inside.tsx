@@ -146,12 +146,13 @@ export default function InsidePage() {
   const [dateRange, setDateRange] = useState<string>("all");
   const [selectedTab, setSelectedTab] = useState("overview");
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  
   // Debug log
   console.log("Inside page rendering, selectedTab:", selectedTab);
   console.log("🔥 ESTADO showAddProduct:", showAddProduct);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
-  const [showAddProduct, setShowAddProduct] = useState(true); // TESTE: Inicializar como true
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);

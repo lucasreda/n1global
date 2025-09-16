@@ -290,8 +290,8 @@ export default function AdminSupport() {
       console.log('📧 New Message success:', result);
 
       setShowSuccessPopup(true);
-      refetchTickets();
-      refetchOverview();
+      // refetchTickets();
+      // refetchOverview();
     } catch (error) {
       console.error('📧 New Message error:', error);
       alert(`Erro ao enviar mensagem: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -300,6 +300,9 @@ export default function AdminSupport() {
     }
   };
 
+  // TODO: Fix selectedOperationId
+  const selectedOperationId = "default"; // Temporário
+  
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
     queryKey: [`/api/customer-support/${selectedOperationId}/categories`],
