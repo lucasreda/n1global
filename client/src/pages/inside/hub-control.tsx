@@ -887,106 +887,208 @@ export default function HubControl() {
             </div>
           ) : paginatedAnnouncements && paginatedAnnouncements.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                {paginatedAnnouncements.map((announcement: Announcement, index: number) => {
-                  // First two cards on first row split 50/50, rest are normal
-                  const isFirstRow = index < 2;
-                  const cardClass = isFirstRow 
-                    ? "h-64" 
-                    : "h-48";
+              <div className="space-y-6">
+                {/* First row: 2 cards, 50/50 */}
+                {paginatedAnnouncements.slice(0, 2).length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {paginatedAnnouncements.slice(0, 2).map((announcement: Announcement, index: number) => {
+                      const cardClass = "h-64";
 
-                  return (
-                    <Card 
-                      key={announcement.id} 
-                      className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer bg-white/10 border-white/20 backdrop-blur-md`} 
-                      data-testid={`card-announcement-${announcement.id}`}
-                      onClick={() => handleViewAnnouncement(announcement)}
-                    >
-                      <CardContent className="p-0 h-full flex">
-                        {/* Image or placeholder - Left side */}
-                        <div className={`${isFirstRow ? 'w-32' : 'w-24'} h-full relative overflow-hidden flex-shrink-0`}>
-                          {announcement.imageUrl ? (
-                            <img 
-                              src={announcement.imageUrl} 
-                              alt={announcement.title}
-                              className="w-full h-full object-cover"
-                              style={{
-                                borderTopLeftRadius: '8px',
-                                borderBottomLeftRadius: '8px',
-                                clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
-                              }}
-                            />
-                          ) : (
-                            <div 
-                              className={`w-full h-full bg-gradient-to-r ${
-                                announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
-                                announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
-                                announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
-                                'from-green-400 to-green-600'
-                              } flex items-center justify-center`}
-                              style={{
-                                borderTopLeftRadius: '8px',
-                                borderBottomLeftRadius: '8px',
-                                clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
-                              }}
-                            >
-                              <div className="text-white text-xl">
-                                {getAnnouncementIcon(announcement.type)}
+                      return (
+                        <Card 
+                          key={announcement.id} 
+                          className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer bg-white/10 border-white/20 backdrop-blur-md`} 
+                          data-testid={`card-announcement-${announcement.id}`}
+                          onClick={() => handleViewAnnouncement(announcement)}
+                        >
+                          <CardContent className="p-0 h-full flex">
+                            {/* Image or placeholder - Left side */}
+                            <div className="w-32 h-full relative overflow-hidden flex-shrink-0">
+                              {announcement.imageUrl ? (
+                                <img 
+                                  src={announcement.imageUrl} 
+                                  alt={announcement.title}
+                                  className="w-full h-full object-cover"
+                                  style={{
+                                    borderTopLeftRadius: '8px',
+                                    borderBottomLeftRadius: '8px',
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
+                                  }}
+                                />
+                              ) : (
+                                <div 
+                                  className={`w-full h-full bg-gradient-to-r ${
+                                    announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
+                                    announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
+                                    announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
+                                    'from-green-400 to-green-600'
+                                  } flex items-center justify-center`}
+                                  style={{
+                                    borderTopLeftRadius: '8px',
+                                    borderBottomLeftRadius: '8px',
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
+                                  }}
+                                >
+                                  <div className="text-white text-xl">
+                                    {getAnnouncementIcon(announcement.type)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Content - Right side */}
+                            <div className="flex-1 p-4 flex flex-col relative">
+                              {/* Edit button overlay */}
+                              <Button
+                                size="sm"
+                                className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white border-0"
+                                data-testid={`button-edit-announcement-${announcement.id}`}
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </Button>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
+                                  {getAnnouncementBadge(announcement.type).label}
+                                </Badge>
+                                {announcement.isPinned && (
+                                  <Badge variant="secondary" data-testid={`badge-announcement-pinned-${announcement.id}`}>
+                                    <Pin className="w-3 h-3 mr-1" />
+                                    Fixado
+                                  </Badge>
+                                )}
+                              </div>
+                            
+                              <h3 className="font-semibold mb-2 line-clamp-2 text-white text-lg" data-testid={`text-announcement-title-${announcement.id}`}>
+                                {announcement.title}
+                              </h3>
+                              
+                              <p className="text-slate-300 flex-1 line-clamp-4 text-sm" data-testid={`text-announcement-content-${announcement.id}`}>
+                                {announcement.content.replace(/<[^>]*>/g, '')}
+                              </p>
+                              
+                              <div className="flex items-center justify-between mt-3">
+                                <span className="text-xs text-slate-400 flex items-center" data-testid={`text-announcement-date-${announcement.id}`}>
+                                  <Calendar className="w-3 h-3 mr-1" />
+                                  {announcement.publishedAt ? new Date(announcement.publishedAt).toLocaleDateString('pt-BR', { 
+                                    day: 'numeric', 
+                                    month: 'short' 
+                                  }) : 'N/A'}
+                                </span>
+                                {announcement.ctaLabel && announcement.ctaUrl && (
+                                  <Button variant="ghost" size="sm" className="h-6 text-xs text-slate-400 hover:text-white" data-testid={`button-announcement-cta-${announcement.id}`}>
+                                    <ExternalLink className="w-3 h-3 mr-1" />
+                                    {announcement.ctaLabel}
+                                  </Button>
+                                )}
                               </div>
                             </div>
-                          )}
-                        </div>
-                        
-                        {/* Content - Right side */}
-                        <div className="flex-1 p-4 flex flex-col relative">
-                          {/* Edit button overlay */}
-                          <Button
-                            size="sm"
-                            className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white border-0"
-                            data-testid={`button-edit-announcement-${announcement.id}`}
-                          >
-                            <Edit3 className="w-3 h-3" />
-                          </Button>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
-                              {getAnnouncementBadge(announcement.type).label}
-                            </Badge>
-                            {announcement.isPinned && (
-                              <Badge variant="secondary" data-testid={`badge-announcement-pinned-${announcement.id}`}>
-                                <Pin className="w-3 h-3 mr-1" />
-                                Fixado
-                              </Badge>
-                            )}
-                          </div>
-                        
-                          <h3 className={`font-semibold mb-2 line-clamp-2 text-white ${isFirstRow ? 'text-lg' : 'text-base'}`} data-testid={`text-announcement-title-${announcement.id}`}>
-                            {announcement.title}
-                          </h3>
-                          
-                          <p className={`text-slate-300 flex-1 ${isFirstRow ? 'line-clamp-4' : 'line-clamp-3'} text-sm`} data-testid={`text-announcement-content-${announcement.id}`}>
-                            {announcement.content.replace(/<[^>]*>/g, '')}
-                          </p>
-                          
-                          <div className="flex items-center justify-between mt-3">
-                            <span className="text-xs text-slate-400 flex items-center" data-testid={`text-announcement-date-${announcement.id}`}>
-                              <Calendar className="w-3 h-3 mr-1" />
-                              {announcement.publishedAt ? new Date(announcement.publishedAt).toLocaleDateString('pt-BR', { 
-                                day: 'numeric', 
-                                month: 'short' 
-                              }) : 'N/A'}
-                            </span>
-                            {announcement.ctaLabel && announcement.ctaUrl && (
-                              <Button variant="ghost" size="sm" className="h-6 text-xs text-slate-400 hover:text-white" data-testid={`button-announcement-cta-${announcement.id}`}>
-                                <ExternalLink className="w-3 h-3 mr-1" />
-                                {announcement.ctaLabel}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Second row: 3 cards */}
+                {paginatedAnnouncements.slice(2, 5).length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {paginatedAnnouncements.slice(2, 5).map((announcement: Announcement, index: number) => {
+                      const cardClass = "h-48";
+
+                      return (
+                        <Card 
+                          key={announcement.id} 
+                          className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer bg-white/10 border-white/20 backdrop-blur-md`} 
+                          data-testid={`card-announcement-${announcement.id}`}
+                          onClick={() => handleViewAnnouncement(announcement)}
+                        >
+                          <CardContent className="p-0 h-full flex">
+                            {/* Image or placeholder - Left side */}
+                            <div className="w-24 h-full relative overflow-hidden flex-shrink-0">
+                              {announcement.imageUrl ? (
+                                <img 
+                                  src={announcement.imageUrl} 
+                                  alt={announcement.title}
+                                  className="w-full h-full object-cover"
+                                  style={{
+                                    borderTopLeftRadius: '8px',
+                                    borderBottomLeftRadius: '8px',
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
+                                  }}
+                                />
+                              ) : (
+                                <div 
+                                  className={`w-full h-full bg-gradient-to-r ${
+                                    announcement.type === 'update' ? 'from-blue-400 to-blue-600' :
+                                    announcement.type === 'tip' ? 'from-yellow-400 to-yellow-600' :
+                                    announcement.type === 'maintenance' ? 'from-red-400 to-red-600' :
+                                    'from-green-400 to-green-600'
+                                  } flex items-center justify-center`}
+                                  style={{
+                                    borderTopLeftRadius: '8px',
+                                    borderBottomLeftRadius: '8px',
+                                    clipPath: 'polygon(0 0, 85% 0, 100% 100%, 0 100%)'
+                                  }}
+                                >
+                                  <div className="text-white text-xl">
+                                    {getAnnouncementIcon(announcement.type)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Content - Right side */}
+                            <div className="flex-1 p-4 flex flex-col relative">
+                              {/* Edit button overlay */}
+                              <Button
+                                size="sm"
+                                className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white border-0"
+                                data-testid={`button-edit-announcement-${announcement.id}`}
+                              >
+                                <Edit3 className="w-3 h-3" />
                               </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
+                                  {getAnnouncementBadge(announcement.type).label}
+                                </Badge>
+                                {announcement.isPinned && (
+                                  <Badge variant="secondary" data-testid={`badge-announcement-pinned-${announcement.id}`}>
+                                    <Pin className="w-3 h-3 mr-1" />
+                                    Fixado
+                                  </Badge>
+                                )}
+                              </div>
+                            
+                              <h3 className="font-semibold mb-2 line-clamp-2 text-white text-base" data-testid={`text-announcement-title-${announcement.id}`}>
+                                {announcement.title}
+                              </h3>
+                              
+                              <p className="text-slate-300 flex-1 line-clamp-3 text-sm" data-testid={`text-announcement-content-${announcement.id}`}>
+                                {announcement.content.replace(/<[^>]*>/g, '')}
+                              </p>
+                              
+                              <div className="flex items-center justify-between mt-3">
+                                <span className="text-xs text-slate-400 flex items-center" data-testid={`text-announcement-date-${announcement.id}`}>
+                                  <Calendar className="w-3 h-3 mr-1" />
+                                  {announcement.publishedAt ? new Date(announcement.publishedAt).toLocaleDateString('pt-BR', { 
+                                    day: 'numeric', 
+                                    month: 'short' 
+                                  }) : 'N/A'}
+                                </span>
+                                {announcement.ctaLabel && announcement.ctaUrl && (
+                                  <Button variant="ghost" size="sm" className="h-6 text-xs text-slate-400 hover:text-white" data-testid={`button-announcement-cta-${announcement.id}`}>
+                                    <ExternalLink className="w-3 h-3 mr-1" />
+                                    {announcement.ctaLabel}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               
               {/* Announcements Pagination */}
