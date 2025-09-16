@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, aiDirectives, User, Order, Product, ShippingProvider, Operation, UserProduct, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, LinkProductBySku } from "@shared/schema";
+import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, aiDirectives, marketplaceProducts, productOperationLinks, announcements, User, Order, Product, ShippingProvider, Operation, UserProduct, MarketplaceProduct, ProductOperationLink, Announcement, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, InsertMarketplaceProduct, InsertProductOperationLink, InsertAnnouncement, LinkProductBySku } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -62,6 +62,24 @@ export interface IStorage {
   
   // Stock calculation methods
   getAvailableStock(sku: string): Promise<{ initialStock: number; soldQuantity: number; availableStock: number }>;
+
+  // N1 Hub - Marketplace methods
+  getMarketplaceProducts(params?: { search?: string; category?: string; limit?: number; offset?: number }): Promise<MarketplaceProduct[]>;
+  getMarketplaceProduct(id: string): Promise<MarketplaceProduct | undefined>;
+  createMarketplaceProduct(product: InsertMarketplaceProduct): Promise<MarketplaceProduct>;
+  updateMarketplaceProduct(id: string, updates: Partial<MarketplaceProduct>): Promise<MarketplaceProduct | undefined>;
+
+  // N1 Hub - Product Operation Links methods
+  linkProductToOperation(link: InsertProductOperationLink): Promise<ProductOperationLink>;
+  getOperationProductLinks(operationId: string): Promise<ProductOperationLink[]>;
+  deleteProductOperationLink(id: string): Promise<boolean>;
+
+  // N1 Hub - Announcements methods
+  getAnnouncements(params?: { audience?: string; roleTarget?: string; operationId?: string; limit?: number; offset?: number }): Promise<Announcement[]>;
+  getAnnouncement(id: string): Promise<Announcement | undefined>;
+  createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
+  updateAnnouncement(id: string, updates: Partial<Announcement>): Promise<Announcement | undefined>;
+  deleteAnnouncement(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1022,6 +1040,135 @@ export class DatabaseStorage implements IStorage {
       soldQuantity,
       availableStock
     };
+  }
+
+  // ========================================
+  // N1 Hub - Marketplace Products
+  // ========================================
+
+  async getMarketplaceProducts(params?: { search?: string; category?: string; limit?: number; offset?: number }): Promise<MarketplaceProduct[]> {
+    const { search, category, limit = 50, offset = 0 } = params || {};
+    
+    let query = db.select().from(marketplaceProducts).where(eq(marketplaceProducts.status, 'active'));
+    
+    if (search) {
+      query = query.where(sql`${marketplaceProducts.name} ILIKE ${`%${search}%`} OR ${marketplaceProducts.description} ILIKE ${`%${search}%`}`);
+    }
+    
+    if (category) {
+      query = query.where(eq(marketplaceProducts.category, category));
+    }
+    
+    return await query
+      .orderBy(desc(marketplaceProducts.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getMarketplaceProduct(id: string): Promise<MarketplaceProduct | undefined> {
+    const [product] = await db.select().from(marketplaceProducts).where(eq(marketplaceProducts.id, id));
+    return product || undefined;
+  }
+
+  async createMarketplaceProduct(product: InsertMarketplaceProduct): Promise<MarketplaceProduct> {
+    const [newProduct] = await db
+      .insert(marketplaceProducts)
+      .values(product)
+      .returning();
+    
+    return newProduct;
+  }
+
+  async updateMarketplaceProduct(id: string, updates: Partial<MarketplaceProduct>): Promise<MarketplaceProduct | undefined> {
+    const [product] = await db
+      .update(marketplaceProducts)
+      .set(updates)
+      .where(eq(marketplaceProducts.id, id))
+      .returning();
+    
+    return product || undefined;
+  }
+
+  // ========================================
+  // N1 Hub - Product Operation Links
+  // ========================================
+
+  async linkProductToOperation(link: InsertProductOperationLink): Promise<ProductOperationLink> {
+    const [newLink] = await db
+      .insert(productOperationLinks)
+      .values(link)
+      .returning();
+    
+    return newLink;
+  }
+
+  async getOperationProductLinks(operationId: string): Promise<ProductOperationLink[]> {
+    return await db
+      .select()
+      .from(productOperationLinks)
+      .where(eq(productOperationLinks.operationId, operationId))
+      .orderBy(desc(productOperationLinks.createdAt));
+  }
+
+  async deleteProductOperationLink(id: string): Promise<boolean> {
+    const result = await db.delete(productOperationLinks).where(eq(productOperationLinks.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // ========================================
+  // N1 Hub - Announcements
+  // ========================================
+
+  async getAnnouncements(params?: { audience?: string; roleTarget?: string; operationId?: string; limit?: number; offset?: number }): Promise<Announcement[]> {
+    const { audience, roleTarget, operationId, limit = 50, offset = 0 } = params || {};
+    
+    let query = db.select().from(announcements).where(eq(announcements.status, 'published'));
+    
+    if (audience) {
+      query = query.where(eq(announcements.audience, audience));
+    }
+    
+    if (roleTarget) {
+      query = query.where(eq(announcements.roleTarget, roleTarget));
+    }
+    
+    if (operationId) {
+      query = query.where(eq(announcements.operationId, operationId));
+    }
+    
+    return await query
+      .orderBy(desc(announcements.isPinned), desc(announcements.publishedAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getAnnouncement(id: string): Promise<Announcement | undefined> {
+    const [announcement] = await db.select().from(announcements).where(eq(announcements.id, id));
+    return announcement || undefined;
+  }
+
+  async createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement> {
+    const [newAnnouncement] = await db
+      .insert(announcements)
+      .values(announcement)
+      .returning();
+    
+    return newAnnouncement;
+  }
+
+  async updateAnnouncement(id: string, updates: Partial<Announcement>): Promise<Announcement | undefined> {
+    const [announcement] = await db
+      .update(announcements)
+      .set(updates)
+      .where(eq(announcements.id, id))
+      .returning();
+    
+    return announcement || undefined;
+  }
+
+  async deleteAnnouncement(id: string): Promise<boolean> {
+    const result = await db.delete(announcements).where(eq(announcements.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
