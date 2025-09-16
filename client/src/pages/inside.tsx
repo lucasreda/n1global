@@ -2176,6 +2176,8 @@ function ProductsManager() {
     console.log("Delete product:", product);
   };
 
+  console.log("🔥 ProductsManager renderizado! showAddProduct:", showAddProduct);
+
   const { data: productsData, isLoading: productsLoading, refetch } = useQuery<Product[]>({
     queryKey: ['/api/admin/products'],
     enabled: true
