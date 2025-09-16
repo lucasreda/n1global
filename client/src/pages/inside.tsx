@@ -1140,7 +1140,11 @@ export default function InsidePage() {
                     </CardDescription>
                   </div>
                   <Button 
-                    onClick={() => setShowAddProduct(true)}
+                    onClick={() => {
+                      console.log("🔥 NOVO PRODUTO CLICADO! Estado atual:", showAddProduct);
+                      setShowAddProduct(true);
+                      console.log("🔥 APÓS SETSHOWADDPRODUCT(true)");
+                    }}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     data-testid="button-create-product"
                   >
@@ -2333,6 +2337,7 @@ function CreateProductModal({
   onSubmit: (data: Omit<Product, 'id' | 'createdAt'>) => void;
   isLoading: boolean;
 }) {
+  console.log("🔥 CreateProductModal renderizado! open:", open, "isLoading:", isLoading);
   const [formData, setFormData] = useState({
     sku: '',
     name: '',
