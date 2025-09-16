@@ -72,6 +72,9 @@ interface CampaignFeatures {
   estimatedQuality: number; // 0-10
 }
 
+// Export interfaces for use in other services
+export type { PerformancePrediction, CampaignFeatures };
+
 export class PerformancePredictionService {
   private openai: OpenAI;
   private campaignDataService: CampaignDataService;
