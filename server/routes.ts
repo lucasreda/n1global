@@ -10,6 +10,7 @@ import { userOperationAccess } from "@shared/schema";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
 import { EuropeanFulfillmentService } from "./fulfillment-service";
 import { ElogyService } from "./fulfillment-providers/elogy-service";
+import { FHBService } from "./fulfillment-providers/fhb-service";
 import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-factory";
 import { shopifyService } from "./shopify-service";
 import { storeContext } from "./middleware/store-context";
@@ -2451,6 +2452,217 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error syncing eLogy orders:", error);
       res.status(500).json({ 
         message: "Erro ao sincronizar orders eLogy",
+        success: false,
+        ordersProcessed: 0,
+        ordersCreated: 0,
+        ordersUpdated: 0,
+        errors: [error instanceof Error ? error.message : "Unknown error"]
+      });
+    }
+  });
+
+  // FHB (Kika API) Integration Routes
+  
+  // Test connection
+  app.get("/api/integrations/fhb/test", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.query;
+      
+      // Verificar credenciais armazenadas no banco para esta operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId as string),
+          eq(fulfillmentIntegrations.provider, "fhb")
+        ))
+        .limit(1);
+      
+      if (integration && integration.credentials) {
+        // Testar conexão com as credenciais salvas
+        const credentials = integration.credentials as any;
+        const service = new FHBService(credentials);
+        const testResult = await service.testConnection();
+        
+        res.json({
+          connected: testResult.connected,
+          message: testResult.message,
+          provider: "fhb"
+        });
+      } else {
+        res.json({
+          connected: false,
+          message: "Credenciais FHB não configuradas para esta operação",
+          provider: "fhb"
+        });
+      }
+    } catch (error) {
+      console.error("Error testing FHB connection:", error);
+      res.status(500).json({ 
+        connected: false, 
+        message: "Erro ao testar conexão FHB",
+        provider: "fhb"
+      });
+    }
+  });
+
+  // Update credentials
+  app.post("/api/integrations/fhb/credentials", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { appId, secret, apiUrl, operationId } = req.body;
+      console.log("🔧 FHB: Iniciando salvamento de credenciais...", { 
+        appId: appId ? "[MASKED]" : "missing", 
+        operationId 
+      });
+      
+      if (!appId || !secret || !operationId) {
+        console.log("❌ FHB: Dados faltando:", { 
+          hasAppId: !!appId, 
+          hasSecret: !!secret, 
+          hasOperationId: !!operationId 
+        });
+        return res.status(400).json({ 
+          message: "appId, secret e operationId são obrigatórios" 
+        });
+      }
+      
+      console.log("🧪 FHB: Testando credenciais para operação:", operationId);
+      // Test the new credentials first
+      const credentials = { 
+        appId, 
+        secret, 
+        apiUrl: apiUrl || "https://api.fhb.sk/v3",
+        email: appId, // Para compatibilidade com BaseFulfillmentProvider
+        password: secret
+      };
+      
+      const service = new FHBService(credentials);
+      const testResult = await service.testConnection();
+      console.log("📊 FHB: Resultado do teste:", {
+        connected: testResult.connected,
+        message: testResult.message
+      });
+      
+      if (testResult.connected) {
+        console.log("🔄 FHB: Salvando credenciais no banco para operação:", operationId);
+        
+        // Check if integration already exists for this operation
+        const [existingIntegration] = await db
+          .select()
+          .from(fulfillmentIntegrations)
+          .where(and(
+            eq(fulfillmentIntegrations.operationId, operationId),
+            eq(fulfillmentIntegrations.provider, "fhb")
+          ));
+
+        if (existingIntegration) {
+          // Update existing integration
+          await db
+            .update(fulfillmentIntegrations)
+            .set({
+              credentials: credentials,
+              status: "active",
+              updatedAt: new Date()
+            })
+            .where(eq(fulfillmentIntegrations.id, existingIntegration.id));
+          console.log("✅ FHB: Integração atualizada com sucesso!");
+        } else {
+          // Create new integration
+          await db
+            .insert(fulfillmentIntegrations)
+            .values({
+              operationId,
+              provider: "fhb",
+              credentials: credentials,
+              status: "active"
+            });
+          console.log("✅ FHB: Nova integração criada com sucesso!");
+        }
+        
+        res.json({
+          success: true,
+          message: `N1 Warehouse 3 configurado com sucesso: ${testResult.message}`,
+          connected: true,
+          provider: "fhb"
+        });
+      } else {
+        console.log("❌ FHB: Teste de conexão falhou, não salvando credenciais");
+        res.status(400).json({
+          success: false,
+          message: `Falha na conexão FHB: ${testResult.message}`,
+          connected: false,
+          provider: "fhb"
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar credenciais FHB:", error);
+      res.status(500).json({ message: "Erro interno ao salvar credenciais FHB" });
+    }
+  });
+
+  // Get products
+  app.get("/api/integrations/fhb/products", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, limit = 250 } = req.query;
+      
+      // Buscar credenciais da operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId as string),
+          eq(fulfillmentIntegrations.provider, "fhb")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(400).json({ message: "Credenciais FHB não encontradas para esta operação" });
+      }
+      
+      const service = new FHBService(integration.credentials as any);
+      const products = await service.getProducts(Number(limit));
+      
+      res.json({ products, count: products.length });
+    } catch (error) {
+      console.error("Error fetching FHB products:", error);
+      res.status(500).json({ message: "Erro ao buscar produtos FHB" });
+    }
+  });
+
+  // Sync orders
+  app.post("/api/integrations/fhb/sync", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.body;
+      
+      if (!operationId) {
+        return res.status(400).json({ message: "operationId é obrigatório" });
+      }
+      
+      // Buscar credenciais da operação
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "fhb")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(400).json({ 
+          message: "Credenciais FHB não encontradas para esta operação",
+          success: false 
+        });
+      }
+      
+      const service = new FHBService(integration.credentials as any);
+      const syncResult = await service.syncOrders(operationId);
+      
+      res.json(syncResult);
+    } catch (error) {
+      console.error("Error syncing FHB orders:", error);
+      res.status(500).json({ 
+        message: "Erro ao sincronizar orders FHB",
         success: false,
         ordersProcessed: 0,
         ordersCreated: 0,

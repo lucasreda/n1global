@@ -3,8 +3,9 @@
 
 import { BaseFulfillmentProvider, FulfillmentCredentials } from './base-fulfillment-provider';
 import { ElogyService } from './elogy-service';
+import { FHBService } from './fhb-service';
 
-export type ProviderType = 'european_fulfillment' | 'elogy';
+export type ProviderType = 'european_fulfillment' | 'elogy' | 'fhb';
 
 export class FulfillmentProviderFactory {
   
@@ -25,6 +26,13 @@ export class FulfillmentProviderFactory {
           throw new Error("eLogy requer authHeader e warehouseId nas credenciais");
         }
         return new ElogyService(credentials as any);
+        
+      case 'fhb':
+        // Validar credenciais específicas da FHB
+        if (!credentials.appId || !credentials.secret) {
+          throw new Error("FHB requer appId e secret nas credenciais");
+        }
+        return new FHBService(credentials as any);
         
       default:
         throw new Error(`Provider type '${providerType}' não suportado`);
@@ -61,6 +69,11 @@ export class FulfillmentProviderFactory {
         if (!credentials.warehouseId) missing.push('warehouseId');
         break;
         
+      case 'fhb':
+        if (!credentials.appId) missing.push('appId');
+        if (!credentials.secret) missing.push('secret');
+        break;
+        
     }
     
     return {
@@ -75,7 +88,8 @@ export class FulfillmentProviderFactory {
   static getAvailableProviders(): Array<{ type: ProviderType; name: string; status: string }> {
     return [
       { type: 'european_fulfillment', name: 'N1 Warehouse 1', status: 'active' },
-      { type: 'elogy', name: 'N1 Warehouse 2', status: 'active' }
+      { type: 'elogy', name: 'N1 Warehouse 2', status: 'active' },
+      { type: 'fhb', name: 'N1 Warehouse 3', status: 'active' }
     ];
   }
 
