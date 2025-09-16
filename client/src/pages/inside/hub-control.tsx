@@ -887,12 +887,12 @@ export default function HubControl() {
             </div>
           ) : paginatedAnnouncements && paginatedAnnouncements.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                 {paginatedAnnouncements.map((announcement: Announcement, index: number) => {
-                  // Make first announcement larger (hero style)
-                  const isHero = index === 0;
-                  const cardClass = isHero 
-                    ? "md:col-span-2 lg:col-span-2 h-64" 
+                  // First two cards on first row split 50/50, rest are normal
+                  const isFirstRow = index < 2;
+                  const cardClass = isFirstRow 
+                    ? "h-64" 
                     : "h-48";
 
                   return (
@@ -904,7 +904,7 @@ export default function HubControl() {
                     >
                       <CardContent className="p-0 h-full flex">
                         {/* Image or placeholder - Left side */}
-                        <div className={`${isHero ? 'w-32' : 'w-24'} h-full relative overflow-hidden flex-shrink-0`}>
+                        <div className={`${isFirstRow ? 'w-32' : 'w-24'} h-full relative overflow-hidden flex-shrink-0`}>
                           {announcement.imageUrl ? (
                             <img 
                               src={announcement.imageUrl} 
@@ -959,11 +959,11 @@ export default function HubControl() {
                             )}
                           </div>
                         
-                          <h3 className={`font-semibold mb-2 line-clamp-2 text-white ${isHero ? 'text-lg' : 'text-base'}`} data-testid={`text-announcement-title-${announcement.id}`}>
+                          <h3 className={`font-semibold mb-2 line-clamp-2 text-white ${isFirstRow ? 'text-lg' : 'text-base'}`} data-testid={`text-announcement-title-${announcement.id}`}>
                             {announcement.title}
                           </h3>
                           
-                          <p className={`text-slate-300 flex-1 ${isHero ? 'line-clamp-4' : 'line-clamp-3'} text-sm`} data-testid={`text-announcement-content-${announcement.id}`}>
+                          <p className={`text-slate-300 flex-1 ${isFirstRow ? 'line-clamp-4' : 'line-clamp-3'} text-sm`} data-testid={`text-announcement-content-${announcement.id}`}>
                             {announcement.content.replace(/<[^>]*>/g, '')}
                           </p>
                           
