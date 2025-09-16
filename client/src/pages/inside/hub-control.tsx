@@ -739,7 +739,7 @@ function AddProductModal({ open, onClose, onSuccess }: AddProductModalProps) {
                     <Button
                       onClick={() => handleAddProduct(product.id)}
                       disabled={addProductMutation.isPending}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                       size="sm"
                     >
                       {addProductMutation.isPending ? (
