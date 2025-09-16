@@ -630,7 +630,7 @@ export default function HubControl() {
     data: announcementsData, 
     isLoading: announcementsLoading 
   } = useQuery<{ data: Announcement[] }>({
-    queryKey: ['/api/announcements', { limit: 6 }]
+    queryKey: ['/api/announcements']
   });
 
   // Fetch marketplace products
