@@ -2721,6 +2721,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🔄 Iniciando sync unificado para operação ${operationId} com ${integrations.length} providers`);
       
+      // 🚪 ETAPA 1: Sincronizar Shopify PRIMEIRO para garantir que pedidos recentes existam
+      console.log("🚪 Etapa 1: Sincronizando Shopify para buscar pedidos mais recentes...");
+      
+      let shopifyResult = null;
+      try {
+        const { ShopifySyncService } = await import('./shopify-sync-service');
+        const shopifyService = new ShopifySyncService();
+        shopifyResult = await shopifyService.importShopifyOrders(operationId);
+        console.log(`✅ Shopify sync concluído: ${shopifyResult.imported} novos, ${shopifyResult.updated} atualizados`);
+      } catch (shopifyError) {
+        console.error("❌ Erro no sync Shopify:", shopifyError);
+        // Continuar mesmo com erro do Shopify
+      }
+      
+      // 🚚 ETAPA 2: Sincronizar providers de fulfillment
+      console.log("🚚 Etapa 2: Sincronizando providers de fulfillment...");
+      
       const syncResults = [];
       let totalOrdersProcessed = 0;
       let totalOrdersCreated = 0;
@@ -2731,6 +2748,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const integration of integrations) {
         try {
           console.log(`🚚 Sync ${integration.provider} iniciado...`);
+          
+          // Validar credenciais antes de criar o provider
+          const credentialsValidation = FulfillmentProviderFactory.validateCredentials(
+            integration.provider as any,
+            integration.credentials as any
+          );
+          
+          if (!credentialsValidation.valid) {
+            console.log(`⚠️ Pulando ${integration.provider} - credenciais inválidas:`, credentialsValidation.missing);
+            
+            syncResults.push({
+              provider: integration.provider,
+              success: false,
+              ordersProcessed: 0,
+              ordersCreated: 0,
+              ordersUpdated: 0,
+              errors: [`${integration.provider} requer ${credentialsValidation.missing.join(', ')} nas credenciais`]
+            });
+            
+            allErrors.push(`${integration.provider}: ${integration.provider} requer ${credentialsValidation.missing.join(', ')} nas credenciais`);
+            continue;
+          }
           
           const provider = FulfillmentProviderFactory.createProvider(
             integration.provider as any, 
@@ -2770,16 +2809,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const overallSuccess = syncResults.some(r => r.success);
       
-      console.log(`🎯 Sync unificado concluído: ${totalOrdersProcessed} processed, ${totalOrdersCreated} created, ${totalOrdersUpdated} updated`);
+      console.log(`🎯 Sync unificado concluído:`);
+      console.log(`   🚪 Shopify: ${shopifyResult ? `${shopifyResult.imported} novos, ${shopifyResult.updated} atualizados` : 'erro'}`);
+      console.log(`   🚚 Providers: ${totalOrdersProcessed} processed, ${totalOrdersCreated} created, ${totalOrdersUpdated} updated`);
+      console.log(`   🔍 Providers válidos: ${syncResults.filter(r => r.success).length}/${syncResults.length}`);
       
       res.json({
         success: overallSuccess,
         totalOrdersProcessed,
         totalOrdersCreated,
         totalOrdersUpdated,
+        shopifyResult: shopifyResult ? {
+          imported: shopifyResult.imported,
+          updated: shopifyResult.updated
+        } : null,
         providersResults: syncResults,
         errors: allErrors,
-        message: `Sync unificado: ${syncResults.length} providers processados`
+        message: `Sync unificado: Shopify + ${syncResults.length} providers processados`
       });
       
     } catch (error) {
