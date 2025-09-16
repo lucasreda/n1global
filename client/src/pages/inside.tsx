@@ -148,9 +148,10 @@ export default function InsidePage() {
   
   // Debug log
   console.log("Inside page rendering, selectedTab:", selectedTab);
+  console.log("🔥 ESTADO showAddProduct:", showAddProduct);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(true); // TESTE: Inicializar como true
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
@@ -1143,7 +1144,7 @@ export default function InsidePage() {
                     onClick={() => {
                       console.log("🔥 NOVO PRODUTO CLICADO! Estado atual:", showAddProduct);
                       setShowAddProduct(true);
-                      console.log("🔥 APÓS SETSHOWADDPRODUCT(true)");
+                      console.log("🔥 APÓS SETSHOWADDPRODUCT(true), novo estado:", true);
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     data-testid="button-create-product"
