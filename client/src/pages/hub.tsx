@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, Package, Bell, ExternalLink, Calendar, Pin, Plus } from "lucide-react";
+import { Search, Package, ExternalLink, Calendar, Pin, Plus, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -87,11 +86,11 @@ export default function Hub() {
     },
   });
 
-  // Fetch announcements
+  // Fetch announcements (limited to 6 for news layout)
   const { data: announcementsData, isLoading: announcementsLoading } = useQuery({
     queryKey: ["/api/announcements"],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", "/api/announcements");
+      const response = await authenticatedApiRequest("GET", "/api/announcements?limit=6");
       return response.json();
     },
   });
@@ -151,7 +150,7 @@ export default function Hub() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight" data-testid="text-hub-title">N1 Hub</h1>
@@ -161,19 +160,97 @@ export default function Hub() {
         </div>
       </div>
 
-      <Tabs defaultValue="marketplace" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="marketplace" data-testid="tab-marketplace">
-            <Package className="w-4 h-4 mr-2" />
-            Marketplace
-          </TabsTrigger>
-          <TabsTrigger value="announcements" data-testid="tab-announcements">
-            <Bell className="w-4 h-4 mr-2" />
-            Novidades
-          </TabsTrigger>
-        </TabsList>
+      {/* Novidades Section - News Layout */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5" />
+            <CardTitle>Últimas Novidades</CardTitle>
+          </div>
+          <CardDescription>Fique por dentro das atualizações e dicas mais recentes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {announcementsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="h-48">
+                  <CardContent className="p-4">
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-6 w-full mb-3" />
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : announcementsData?.data?.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {announcementsData.data.map((announcement: Announcement, index: number) => {
+                // Make first announcement larger (hero style)
+                const isHero = index === 0;
+                const cardClass = isHero 
+                  ? "md:col-span-2 lg:col-span-2 h-64" 
+                  : "h-48";
 
-        <TabsContent value="marketplace" className="space-y-6">
+                return (
+                  <Card key={announcement.id} className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer`} data-testid={`card-announcement-${announcement.id}`}>
+                    <CardContent className="p-4 h-full flex flex-col">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-sm">
+                          {getAnnouncementIcon(announcement.type)}
+                        </div>
+                        <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
+                          {getAnnouncementBadge(announcement.type).label}
+                        </Badge>
+                        {announcement.isPinned && (
+                          <Badge variant="secondary" size="sm" data-testid={`badge-announcement-pinned-${announcement.id}`}>
+                            <Pin className="w-3 h-3 mr-1" />
+                            Fixado
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <h3 className={`font-semibold mb-2 line-clamp-2 ${isHero ? 'text-lg' : 'text-base'}`} data-testid={`text-announcement-title-${announcement.id}`}>
+                        {announcement.title}
+                      </h3>
+                      
+                      <p className={`text-muted-foreground flex-1 ${isHero ? 'line-clamp-4' : 'line-clamp-3'} text-sm`} data-testid={`text-announcement-content-${announcement.id}`}>
+                        {announcement.content}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-xs text-muted-foreground flex items-center" data-testid={`text-announcement-date-${announcement.id}`}>
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {new Date(announcement.publishedAt).toLocaleDateString('pt-BR', { 
+                            day: 'numeric', 
+                            month: 'short' 
+                          })}
+                        </span>
+                        {announcement.ctaLabel && announcement.ctaUrl && (
+                          <Button variant="ghost" size="sm" className="h-6 text-xs" data-testid={`button-announcement-cta-${announcement.id}`}>
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            {announcement.ctaLabel}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground" data-testid="text-no-announcements">
+                Nenhuma novidade disponível
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Marketplace Section */}
+      <div className="space-y-6">
           {/* Search and Filters */}
           <Card>
             <CardHeader>
@@ -270,87 +347,7 @@ export default function Hub() {
               </div>
             )}
           </div>
-        </TabsContent>
-
-        <TabsContent value="announcements" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Novidades N1</CardTitle>
-              <CardDescription>Fique por dentro das últimas atualizações e dicas</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <div className="space-y-4">
-            {announcementsLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <Skeleton className="w-12 h-12 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-6 w-3/4" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : announcementsData?.data?.length > 0 ? (
-              announcementsData.data.map((announcement: Announcement) => (
-                <Card key={announcement.id} data-testid={`card-announcement-${announcement.id}`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-xl">
-                          {getAnnouncementIcon(announcement.type)}
-                        </div>
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <Badge {...getAnnouncementBadge(announcement.type)} data-testid={`badge-announcement-type-${announcement.id}`}>
-                            {getAnnouncementBadge(announcement.type).label}
-                          </Badge>
-                          {announcement.isPinned && (
-                            <Badge variant="secondary" data-testid={`badge-announcement-pinned-${announcement.id}`}>
-                              <Pin className="w-3 h-3 mr-1" />
-                              Fixado
-                            </Badge>
-                          )}
-                          <span className="text-sm text-muted-foreground flex items-center" data-testid={`text-announcement-date-${announcement.id}`}>
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {new Date(announcement.publishedAt).toLocaleDateString('pt-BR')}
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-semibold" data-testid={`text-announcement-title-${announcement.id}`}>
-                          {announcement.title}
-                        </h3>
-                        <p className="text-muted-foreground" data-testid={`text-announcement-content-${announcement.id}`}>
-                          {announcement.content}
-                        </p>
-                        {announcement.ctaLabel && announcement.ctaUrl && (
-                          <Button variant="outline" size="sm" data-testid={`button-announcement-cta-${announcement.id}`}>
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            {announcement.ctaLabel}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground" data-testid="text-no-announcements">
-                  Nenhuma novidade disponível
-                </p>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+      </div>
 
       {/* Link Product Modal */}
       <Dialog open={linkModalOpen} onOpenChange={setLinkModalOpen}>
