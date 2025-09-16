@@ -1655,10 +1655,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para sincronização combinada Shopify + Transportadora
   app.post('/api/sync/shopify-carrier', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      // Get user's operation for data isolation - prioritize Dss operation
+      // Get user's current operation for proper data isolation
       const userOperations = await storage.getUserOperations(req.user.id);
-      let currentOperation = userOperations.find(op => op.name === 'Dss');
-      if (!currentOperation) {
+      const requestedOperationId = req.query.operationId as string || req.body.operationId;
+      
+      let currentOperation;
+      if (requestedOperationId) {
+        currentOperation = userOperations.find(op => op.id === requestedOperationId);
+      } else {
         currentOperation = userOperations[0];
       }
       

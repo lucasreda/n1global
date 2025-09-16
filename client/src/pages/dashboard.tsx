@@ -6,6 +6,7 @@ import { SyncStatus } from "@/components/dashboard/sync-status";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,11 +16,12 @@ export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState("30");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { selectedOperation } = useCurrentOperation();
 
   // Sync mutation (same as orders page)
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", "/api/sync/shopify-carrier");
+      const response = await authenticatedApiRequest("POST", `/api/sync/shopify-carrier?operationId=${selectedOperation}`);
       return response.json();
     },
     onSuccess: (data) => {
