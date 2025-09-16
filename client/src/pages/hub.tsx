@@ -80,7 +80,7 @@ export default function Hub() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append("search", searchTerm);
-      if (selectedCategory) params.append("category", selectedCategory);
+      if (selectedCategory && selectedCategory !== "all") params.append("category", selectedCategory);
       
       const response = await authenticatedApiRequest("GET", `/api/marketplace/products?${params}`);
       return response.json();
@@ -196,7 +196,7 @@ export default function Hub() {
                     <SelectValue placeholder="Categoria" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas</SelectItem>
+                    <SelectItem value="all">Todas</SelectItem>
                     <SelectItem value="electronics">Eletrônicos</SelectItem>
                     <SelectItem value="fashion">Moda</SelectItem>
                     <SelectItem value="home">Casa</SelectItem>
