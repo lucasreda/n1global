@@ -40,6 +40,12 @@ interface CreateAnnouncementModalProps {
   onSuccess: () => void;
 }
 
+interface ViewAnnouncementModalProps {
+  open: boolean;
+  onClose: () => void;
+  announcement: Announcement | null;
+}
+
 interface ConfirmDeleteModalProps {
   open: boolean;
   onClose: () => void;
@@ -435,6 +441,100 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
   );
 }
 
+function ViewAnnouncementModal({ open, onClose, announcement }: ViewAnnouncementModalProps) {
+  if (!announcement) return null;
+
+  const getAnnouncementIcon = (type: string) => {
+    switch (type) {
+      case 'update':
+        return <Star className="w-5 h-5" />;
+      case 'tip':
+        return <Info className="w-5 h-5" />;
+      case 'maintenance':
+        return <Wrench className="w-5 h-5" />;
+      case 'general':
+      default:
+        return <TrendingUp className="w-5 h-5" />;
+    }
+  };
+
+  const getAnnouncementBadge = (type: string) => {
+    switch (type) {
+      case 'update':
+        return { variant: "default" as const, label: "Atualização" };
+      case 'tip':
+        return { variant: "secondary" as const, label: "Dica" };
+      case 'maintenance':
+        return { variant: "destructive" as const, label: "Manutenção" };
+      case 'general':
+      default:
+        return { variant: "outline" as const, label: "Geral" };
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-xl">
+            <div className="flex items-center gap-2">
+              {getAnnouncementIcon(announcement.type)}
+              <span>{announcement.title}</span>
+            </div>
+          </DialogTitle>
+          <div className="flex items-center gap-2 mt-2">
+            <Badge {...getAnnouncementBadge(announcement.type)}>
+              {getAnnouncementBadge(announcement.type).label}
+            </Badge>
+            {announcement.isPinned && (
+              <Badge variant="secondary">
+                <Pin className="w-3 h-3 mr-1" />
+                Fixado
+              </Badge>
+            )}
+            <span className="text-xs text-slate-400 flex items-center ml-2">
+              <Calendar className="w-3 h-3 mr-1" />
+              {announcement.publishedAt ? new Date(announcement.publishedAt).toLocaleDateString('pt-BR', { 
+                day: 'numeric', 
+                month: 'long',
+                year: 'numeric'
+              }) : 'N/A'}
+            </span>
+          </div>
+        </DialogHeader>
+
+        <div className="mt-6">
+          {announcement.imageUrl && (
+            <div className="w-full h-64 mb-6 rounded-lg overflow-hidden">
+              <img 
+                src={announcement.imageUrl} 
+                alt={announcement.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
+          <div 
+            className="text-gray-300 prose prose-invert max-w-none leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: announcement.content }}
+          />
+        </div>
+
+        <DialogFooter className="mt-8">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ConfirmDeleteModal({ open, onClose, onConfirm, productName, isLoading }: ConfirmDeleteModalProps) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -622,6 +722,8 @@ export default function HubControl() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [addProductModalOpen, setAddProductModalOpen] = useState(false);
   const [createAnnouncementModalOpen, setCreateAnnouncementModalOpen] = useState(false);
+  const [viewAnnouncementModalOpen, setViewAnnouncementModalOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedProductName, setSelectedProductName] = useState<string>('');
 
@@ -719,6 +821,11 @@ export default function HubControl() {
     }
   };
 
+  const handleViewAnnouncement = (announcement: Announcement) => {
+    setSelectedAnnouncement(announcement);
+    setViewAnnouncementModalOpen(true);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -769,7 +876,12 @@ export default function HubControl() {
                   : "h-48";
 
                 return (
-                  <Card key={announcement.id} className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer bg-white/10 border-white/20 backdrop-blur-md`} data-testid={`card-announcement-${announcement.id}`}>
+                  <Card 
+                    key={announcement.id} 
+                    className={`${cardClass} overflow-hidden hover:shadow-lg transition-shadow cursor-pointer bg-white/10 border-white/20 backdrop-blur-md`} 
+                    data-testid={`card-announcement-${announcement.id}`}
+                    onClick={() => handleViewAnnouncement(announcement)}
+                  >
                     <CardContent className="p-0 h-full flex flex-col">
                       {/* Image placeholder based on announcement type */}
                       <div className={`w-full bg-gradient-to-r ${
@@ -967,6 +1079,16 @@ export default function HubControl() {
           queryClient.invalidateQueries({ queryKey: ['/api/announcements'] });
           setCreateAnnouncementModalOpen(false);
         }}
+      />
+
+      {/* View Announcement Modal */}
+      <ViewAnnouncementModal
+        open={viewAnnouncementModalOpen}
+        onClose={() => {
+          setViewAnnouncementModalOpen(false);
+          setSelectedAnnouncement(null);
+        }}
+        announcement={selectedAnnouncement}
       />
 
       {/* Confirm Delete Modal */}
