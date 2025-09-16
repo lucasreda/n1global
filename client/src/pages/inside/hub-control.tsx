@@ -85,7 +85,7 @@ function AddProductModal({ open, onClose, onSuccess }: AddProductModalProps) {
 
   // Fetch available products
   const { data: availableProductsData, isLoading: productsLoading } = useQuery<{ data: Product[]; total: number }>({
-    queryKey: ['/api/marketplace/available-products', { search: searchTerm }],
+    queryKey: ['/api/marketplace/available-products', searchTerm],
     enabled: open
   });
 
