@@ -1,17 +1,38 @@
 import { Link, useLocation } from "wouter";
 import { Home, Package, Target, BarChart3, Sparkles, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
-const navigationItems = [
-  { name: "Dashboard", href: "/", icon: Home },
-  { name: "Hub", href: "/hub", icon: Store },
-  { name: "Pedidos", href: "/orders", icon: Package },
-  { name: "Anúncios", href: "/ads", icon: Target },
-  { name: "Análises", href: "/analytics", icon: BarChart3 },
+const getAllNavigationItems = () => [
+  { id: 'dashboard', name: "Dashboard", href: "/", icon: Home },
+  { id: 'hub', name: "Hub", href: "/hub", icon: Store },
+  { id: 'orders', name: "Pedidos", href: "/orders", icon: Package },
+  { id: 'ads', name: "Anúncios", href: "/ads", icon: Target },
+  { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3 },
 ];
+
+const getFilteredNavigationItems = (userRole: string, userPermissions: string[] = []) => {
+  const allItems = getAllNavigationItems();
+  
+  // For super_admin and admin roles, show all items
+  if (userRole === 'super_admin' || userRole === 'admin') {
+    return allItems;
+  }
+
+  // For product_seller, show only basic navigation
+  if (userRole === 'product_seller') {
+    return allItems.filter(item => ['dashboard', 'hub', 'orders'].includes(item.id));
+  }
+
+  // For regular users, filter by permissions
+  return allItems.filter(item => userPermissions.includes(item.id));
+};
 
 export function MobileBottomNav() {
   const [location] = useLocation();
+  const { user } = useAuth();
+  
+  const navigationItems = getFilteredNavigationItems(user?.role || 'user', user?.permissions || []);
 
   const isActive = (href: string) => {
     if (href === "/" && location === "/") return true;

@@ -40,13 +40,18 @@ import {
 import { NewOperationDialog } from "./new-operation-dialog";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 
-const getNavigationForRole = (userRole: string) => {
-  const baseNavigation = [
-    { name: "Dashboard", href: "/", icon: Home },
-    { name: "N1 Hub", href: "/hub", icon: Store },
-    { name: "Pedidos", href: "/orders", icon: Package },
-    { name: "Produtos", href: "/products", icon: ShoppingCart },
+const getNavigationForRole = (userRole: string, userPermissions: string[] = []) => {
+  // All possible navigation items with their permission IDs
+  const allNavigationItems = [
+    { id: 'dashboard', name: "Dashboard", href: "/", icon: Home },
+    { id: 'hub', name: "N1 Hub", href: "/hub", icon: Store },
+    { id: 'orders', name: "Pedidos", href: "/orders", icon: Package },
+    { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3 },
+    { id: 'ads', name: "Anúncios", href: "/ads", icon: Target },
+    { id: 'creatives', name: "Criativos", href: "/creatives", icon: Sparkles },
+    { name: "Produtos", href: "/products", icon: ShoppingCart }, // Always visible
     { 
+      id: 'support',
       name: "Suporte", 
       icon: MessageSquare,
       isDropdown: true,
@@ -55,19 +60,27 @@ const getNavigationForRole = (userRole: string) => {
         { name: "Configurações", href: "/customer-support/settings" }
       ]
     },
-    { name: "Integrações", href: "/integrations", icon: Plug },
-    { name: "Ferramentas", href: "/tools", icon: Wrench },
-    { name: "Configurações", href: "/settings", icon: Settings },
+    { name: "Integrações", href: "/integrations", icon: Plug }, // Always visible
+    { name: "Ferramentas", href: "/tools", icon: Wrench }, // Always visible
+    { name: "Configurações", href: "/settings", icon: Settings }, // Always visible
   ];
 
-  // Add restricted pages only for admin/user roles
-  if (userRole !== 'product_seller') {
-    baseNavigation.splice(3, 0, { name: "Análises", href: "/analytics", icon: BarChart3 });
-    baseNavigation.splice(4, 0, { name: "Anúncios", href: "/ads", icon: Target });
-    baseNavigation.splice(5, 0, { name: "Criativos", href: "/creatives", icon: Sparkles });
+  // For super_admin and admin roles, show all items
+  if (userRole === 'super_admin' || userRole === 'admin') {
+    return allNavigationItems;
   }
 
-  return baseNavigation;
+  // For product_seller, show only basic navigation
+  if (userRole === 'product_seller') {
+    return allNavigationItems.filter(item => 
+      !item.id || ['dashboard', 'hub', 'orders'].includes(item.id)
+    );
+  }
+
+  // For regular users, filter by permissions
+  return allNavigationItems.filter(item => 
+    !item.id || userPermissions.includes(item.id)
+  );
 };
 
 export function Sidebar() {
@@ -80,7 +93,7 @@ export function Sidebar() {
   // Disabled debug logs
   // console.log("🔍 Sidebar Debug:", ...);
   
-  const navigation = getNavigationForRole(user?.role || 'user');
+  const navigation = getNavigationForRole(user?.role || 'user', user?.permissions || []);
 
   // Handle operation change
   const handleOperationChange = (operationId: string) => {
