@@ -242,22 +242,19 @@ export default function AdminUsers() {
     return USER_PAGES;
   };
 
-  // Toggle permission for a specific page
-  const togglePermission = (pageId: string) => {
-    const currentPermissions = editUserData.permissions;
-    const hasPermission = currentPermissions.includes(pageId);
-    
-    if (hasPermission) {
-      setEditUserData({
-        ...editUserData,
-        permissions: currentPermissions.filter(p => p !== pageId)
-      });
-    } else {
-      setEditUserData({
-        ...editUserData,
-        permissions: [...currentPermissions, pageId]
-      });
-    }
+  // Toggle permission for a specific page - functional and idempotent
+  const togglePermission = (pageId: string, nextChecked?: boolean) => {
+    setEditUserData(prev => {
+      const has = prev.permissions.includes(pageId);
+      const shouldAdd = nextChecked !== undefined ? Boolean(nextChecked) : !has;
+      if (shouldAdd === has) return prev; // no-op prevents extra renders
+      
+      const permissions = shouldAdd 
+        ? [...prev.permissions, pageId] 
+        : prev.permissions.filter(p => p !== pageId);
+      
+      return { ...prev, permissions };
+    });
   };
 
   const handleEditUser = (user: SystemUser) => {
@@ -571,22 +568,17 @@ export default function AdminUsers() {
                         return (
                           <div 
                             key={page.id}
-                            className={`flex items-start space-x-3 p-3 rounded-md border transition-colors cursor-pointer ${
+                            className={`flex items-start space-x-3 p-3 rounded-md border transition-colors ${
                               hasPermission 
                                 ? 'bg-blue-50/10 border-blue-500/30' 
-                                : 'bg-white/5 border-white/20 hover:bg-white/10'
+                                : 'bg-white/5 border-white/20'
                             }`}
-                            onClick={() => togglePermission(page.id)}
                             data-testid={`permission-${page.id}`}
                           >
                             <Checkbox 
                               checked={hasPermission}
-                              onCheckedChange={(checked) => {
-                                // Prevent double click by stopping propagation
-                                togglePermission(page.id);
-                              }}
+                              onCheckedChange={(checked) => togglePermission(page.id, checked === true)}
                               className="mt-1"
-                              onClick={(e) => e.stopPropagation()}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
