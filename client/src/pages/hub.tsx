@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Search, Package, ExternalLink, Calendar, Pin, Plus, TrendingUp } from "lucide-react";
+import { Package, ExternalLink, Calendar, Pin, Plus, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -56,8 +56,6 @@ interface Announcement {
 }
 
 export default function Hub() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<MarketplaceProduct | null>(null);
   
@@ -75,13 +73,9 @@ export default function Hub() {
 
   // Fetch marketplace products
   const { data: productsData, isLoading: productsLoading } = useQuery({
-    queryKey: ["/api/marketplace/products", searchTerm, selectedCategory],
+    queryKey: ["/api/marketplace/products"],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append("search", searchTerm);
-      if (selectedCategory && selectedCategory !== "all") params.append("category", selectedCategory);
-      
-      const response = await authenticatedApiRequest("GET", `/api/marketplace/products?${params}`);
+      const response = await authenticatedApiRequest("GET", "/api/marketplace/products");
       return response.json();
     },
   });
@@ -250,37 +244,11 @@ export default function Hub() {
 
       {/* Marketplace Section */}
       <div className="space-y-6">
-          {/* Search and Filters */}
           <Card>
             <CardHeader>
               <CardTitle>Produtos Disponíveis</CardTitle>
               <CardDescription>Encontre produtos para adicionar à sua operação</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Buscar produtos..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full"
-                    data-testid="input-search-products"
-                  />
-                </div>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-48" data-testid="select-category">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    <SelectItem value="electronics">Eletrônicos</SelectItem>
-                    <SelectItem value="fashion">Moda</SelectItem>
-                    <SelectItem value="home">Casa</SelectItem>
-                    <SelectItem value="health">Saúde</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
           </Card>
 
           {/* Products Grid */}
