@@ -69,7 +69,17 @@ export function MultiProviderPanel() {
   const configureProviderMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!selectedProvider) throw new Error("Nenhum provider selecionado");
-      const response = await authenticatedApiRequest("POST", `/api/integrations/${selectedProvider}/credentials`, { ...data, operationId });
+      
+      // Para FHB, usar rota com operationId como parâmetro
+      const url = selectedProvider === 'fhb' 
+        ? `/api/integrations/${selectedProvider}/${operationId}/credentials`
+        : `/api/integrations/${selectedProvider}/credentials`;
+      
+      const payload = selectedProvider === 'fhb'
+        ? data // Para FHB, operationId vai na URL, não no body
+        : { ...data, operationId }; // Para outros providers, operationId vai no body
+      
+      const response = await authenticatedApiRequest("POST", url, payload);
       return response.json();
     },
     onSuccess: (data) => {

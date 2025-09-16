@@ -2464,9 +2464,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FHB (Kika API) Integration Routes
   
   // Test connection
-  app.get("/api/integrations/fhb/test", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/fhb/:operationId/test", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
-      const { operationId } = req.query;
+      const { operationId } = req.params;
       
       // Verificar credenciais armazenadas no banco para esta operação
       const [integration] = await db
@@ -2507,9 +2507,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update credentials
-  app.post("/api/integrations/fhb/credentials", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/fhb/:operationId/credentials", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
-      const { appId, secret, apiUrl, operationId } = req.body;
+      const { appId, secret, apiUrl } = req.body;
+      const { operationId } = req.params;
       console.log("🔧 FHB: Iniciando salvamento de credenciais...", { 
         appId: appId ? "[MASKED]" : "missing", 
         operationId 
@@ -2601,9 +2602,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get products
-  app.get("/api/integrations/fhb/products", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/fhb/:operationId/products", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
-      const { operationId, limit = 250 } = req.query;
+      const { operationId } = req.params;
+      const { limit = 250 } = req.query;
       
       // Buscar credenciais da operação
       const [integration] = await db
@@ -2630,13 +2632,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Sync orders
-  app.post("/api/integrations/fhb/sync", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/fhb/:operationId/sync", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
-      const { operationId } = req.body;
-      
-      if (!operationId) {
-        return res.status(400).json({ message: "operationId é obrigatório" });
-      }
+      const { operationId } = req.params;
       
       // Buscar credenciais da operação
       const [integration] = await db
