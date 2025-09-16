@@ -60,8 +60,8 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = []) 
         { name: "Configurações", href: "/customer-support/settings" }
       ]
     },
-    { name: "Integrações", href: "/integrations", icon: Plug }, // Always visible
-    { name: "Ferramentas", href: "/tools", icon: Wrench }, // Always visible
+    { id: 'integrations', name: "Integrações", href: "/integrations", icon: Plug },
+    { id: 'tools', name: "Ferramentas", href: "/tools", icon: Wrench },
     { name: "Configurações", href: "/settings", icon: Settings }, // Always visible
   ];
 
