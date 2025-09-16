@@ -148,6 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: user.name,
           email: user.email,
           role: user.role,
+          permissions: user.permissions || [],
         },
       });
     } catch (error) {
@@ -198,6 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: user.name,
           email: user.email,
           role: user.role,
+          permissions: user.permissions || [],
         },
       });
     } catch (error) {
@@ -234,6 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: user.name,
         email: user.email,
         role: user.role,
+        permissions: user.permissions || [],
       });
     } catch (error) {
       res.status(500).json({ message: "Erro interno do servidor" });

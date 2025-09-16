@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
 import logoImage from "@assets/INSIDE_1756100933599.png";
 
 interface AdminLayoutProps {
@@ -79,6 +80,7 @@ const menuItems = [
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
   
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -90,6 +92,20 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       return location === '/inside';
     }
     return location.startsWith(path);
+  };
+
+  // Filter menu items based on user permissions
+  const getFilteredMenuItems = () => {
+    if (!user) return [];
+    
+    // Super admin sees all items
+    if (user.role === 'super_admin') {
+      return menuItems;
+    }
+    
+    // For other users, filter based on permissions
+    const userPermissions = user.permissions || [];
+    return menuItems.filter(item => userPermissions.includes(item.id));
   };
 
   return (
@@ -110,7 +126,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Navigation */}
           <nav className="flex-1 px-3">
             <div className="space-y-1">
-              {menuItems.map((item) => (
+              {getFilteredMenuItems().map((item) => (
                 <Link key={item.id} href={item.path}>
                   <div 
                     className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2 ${
