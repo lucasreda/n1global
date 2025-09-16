@@ -243,7 +243,7 @@ export class FHBService extends BaseFulfillmentProvider {
   }
 
   async syncOrders(operationId: string): Promise<SyncResult> {
-    console.log("🔄 FHB: Iniciando sincronização de pedidos para operação:", operationId);
+    console.log("🔄 FHB: Iniciando sincronização COMPLETA de pedidos para operação:", operationId);
     
     let ordersProcessed = 0;
     let ordersCreated = 0;
@@ -251,14 +251,28 @@ export class FHBService extends BaseFulfillmentProvider {
     const errors: string[] = [];
 
     try {
-      // Buscar histórico de pedidos (últimas páginas)
+      // Para sync completa: buscar TODOS os pedidos históricos
+      // Período de 2 anos para garantir que pegamos tudo
+      const today = new Date();
+      const twoYearsAgo = new Date(today.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
+      const from = twoYearsAgo.toISOString().split('T')[0]; // formato: 2023-09-16
+      const to = today.toISOString().split('T')[0]; // formato: 2025-09-16
+      
+      console.log(`📅 FHB: Buscando pedidos de ${from} até ${to}`);
+      
       let page = 1;
-      const limit = 100; // Limite da API
       let hasMoreOrders = true;
+      
+      // Buscar pedidos Shopify existentes para fazer match por REF
+      const { storage } = await import('../storage');
+      const shopifyOrders = await storage.getOrdersByOperation(operationId);
+      console.log(`📋 Carregados ${shopifyOrders.length} pedidos Shopify para match`);
 
-      while (hasMoreOrders && page <= 5) { // Limitar a 5 páginas por sync
+      while (hasMoreOrders) { // Sem limite de páginas para sync completa
         try {
-          const response = await this.makeAuthenticatedRequest(`/order/history?page=${page}&limit=${limit}`);
+          const response = await this.makeAuthenticatedRequest(
+            `/order/history?from=${from}&to=${to}&page=${page}`
+          );
           const orders: FHBOrder[] = response.orders || response.data || [];
 
           if (!orders || orders.length === 0) {
@@ -270,58 +284,72 @@ export class FHBService extends BaseFulfillmentProvider {
             ordersProcessed++;
             
             try {
-              // Aqui integramos com o sistema de pedidos existente
-              // Por enquanto, vamos apenas contar as operações
-              console.log(`📦 Processando pedido FHB: ${fhbOrder.id} - Status: ${fhbOrder.status}`);
+              console.log(`📦 FHB: Processando pedido ${fhbOrder.id} - Ref: ${fhbOrder.variable_symbol} - Status: ${fhbOrder.status}`);
               
-              // Integrar com a storage para salvar/atualizar pedidos
-              const { storage } = await import('../storage');
-              const existingOrder = await storage.getOrderByExternalId(fhbOrder.id);
+              // MATCH POR REF: Buscar pedido Shopify correspondente pela referência
+              const matchingShopifyOrder = shopifyOrders.find(order => {
+                // Tentar diferentes formatos de match
+                const shopifyRef = order.orderNumber || order.name || '';
+                const fhbRef = fhbOrder.variable_symbol || '';
+                
+                return (
+                  shopifyRef === fhbRef ||
+                  shopifyRef === `#${fhbRef}` ||
+                  shopifyRef.replace('#', '') === fhbRef ||
+                  shopifyRef.split('-')[0] === fhbRef
+                );
+              });
               
-              if (existingOrder) {
-                // Atualizar pedido existente
-                await storage.updateOrder(existingOrder.id, {
+              if (matchingShopifyOrder) {
+                // ✅ MATCH ENCONTRADO: Atualizar status do pedido Shopify
+                console.log(`✅ Match encontrado! Shopify ${matchingShopifyOrder.orderNumber} ↔ FHB ${fhbOrder.variable_symbol}`);
+                
+                await storage.updateOrder(matchingShopifyOrder.id, {
                   status: this.mapFHBStatusToInternal(fhbOrder.status),
                   trackingNumber: fhbOrder.tracking,
+                  deliveryStatus: this.mapFHBStatusToInternal(fhbOrder.status),
                   externalData: {
-                    fhbStatus: fhbOrder.status,
-                    variableSymbol: fhbOrder.variable_symbol,
-                    value: fhbOrder.value,
-                    recipient: fhbOrder.recipient
+                    ...matchingShopifyOrder.externalData,
+                    fhb: {
+                      orderId: fhbOrder.id,
+                      status: fhbOrder.status,
+                      variableSymbol: fhbOrder.variable_symbol,
+                      tracking: fhbOrder.tracking,
+                      value: fhbOrder.value,
+                      updatedAt: new Date().toISOString()
+                    }
                   }
                 });
                 ordersUpdated++;
               } else {
-                // Criar novo pedido
+                // ❓ SEM MATCH: Pedido só existe na FHB (pode ser antigo ou de outro sistema)
+                console.log(`ℹ️ Sem match para FHB ${fhbOrder.variable_symbol} - pedido só existe na transportadora`);
+                
+                // Opcionalmente criar como pedido órfão para rastreamento
+                // (comentado para evitar duplicatas)
+                /*
                 await storage.createOrder({
-                  externalId: fhbOrder.id,
+                  externalId: `fhb_${fhbOrder.id}`,
                   operationId: operationId,
                   orderNumber: fhbOrder.variable_symbol,
-                  customerName: fhbOrder.recipient.address.name,
-                  customerEmail: fhbOrder.recipient.contact,
+                  customerName: fhbOrder.recipient?.address?.name || 'Nome não disponível',
                   total: parseFloat(fhbOrder.value) || 0,
                   status: this.mapFHBStatusToInternal(fhbOrder.status),
                   trackingNumber: fhbOrder.tracking,
-                  shippingAddress: {
-                    street: fhbOrder.recipient.address.street,
-                    city: fhbOrder.recipient.address.city,
-                    zip: fhbOrder.recipient.address.zip,
-                    country: fhbOrder.recipient.address.country
-                  },
-                  items: fhbOrder.items.map(item => ({
-                    sku: item.id,
-                    quantity: item.quantity,
-                    price: parseFloat(item.price || '0')
-                  })),
+                  source: 'fhb_only',
                   externalData: {
-                    fhbStatus: fhbOrder.status,
-                    variableSymbol: fhbOrder.variable_symbol,
-                    value: fhbOrder.value,
-                    recipient: fhbOrder.recipient
+                    fhb: {
+                      orderId: fhbOrder.id,
+                      status: fhbOrder.status,
+                      variableSymbol: fhbOrder.variable_symbol,
+                      value: fhbOrder.value,
+                      recipient: fhbOrder.recipient
+                    }
                   },
                   createdAt: new Date(fhbOrder.created_at)
                 });
                 ordersCreated++;
+                */
               }
             } catch (orderError: any) {
               console.error(`❌ Erro processando pedido ${fhbOrder.id}:`, orderError);
@@ -337,14 +365,19 @@ export class FHBService extends BaseFulfillmentProvider {
         }
       }
 
-      console.log(`✅ FHB Sync concluído: ${ordersProcessed} processados, ${ordersCreated} criados, ${ordersUpdated} atualizados`);
+      console.log(`✅ FHB Sync COMPLETO concluído:`);
+      console.log(`   📊 ${ordersProcessed} pedidos FHB processados`);
+      console.log(`   🔄 ${ordersUpdated} pedidos Shopify atualizados com status FHB`);
+      console.log(`   📦 ${ordersCreated} pedidos órfãos encontrados (só na FHB)`);
+      console.log(`   📅 Período: ${from} até ${to}`);
       
       return {
         success: true,
         ordersProcessed,
         ordersCreated,
         ordersUpdated,
-        errors
+        errors,
+        message: `FHB: ${ordersUpdated} pedidos Shopify atualizados, ${ordersProcessed} processados`
       };
     } catch (error: any) {
       console.error("💥 FHB: Erro na sincronização:", error);
