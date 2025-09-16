@@ -1151,25 +1151,6 @@ export default function InsidePage() {
                     <Plus className="h-4 w-4 mr-2" />
                     Novo Produto
                   </Button>
-                  
-                  {/* Botão de teste simples */}
-                  <button 
-                    onClick={() => {
-                      console.log("🔥 BOTÃO NATIVO CLICADO!");
-                      alert("Botão nativo funcionou!");
-                    }}
-                    style={{
-                      backgroundColor: '#ff0000',
-                      color: 'white',
-                      padding: '8px 16px',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      marginLeft: '8px'
-                    }}
-                  >
-                    TESTE CLIQUE
-                  </button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -2185,6 +2166,15 @@ function ProductsManager() {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Funções temporárias para corrigir erros LSP
+  const handleEditProduct = (product: Product) => {
+    console.log("Edit product:", product);
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    console.log("Delete product:", product);
+  };
 
   const { data: productsData, isLoading: productsLoading, refetch } = useQuery<Product[]>({
     queryKey: ['/api/admin/products'],
