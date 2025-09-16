@@ -42,7 +42,7 @@ export function ShopifyIntegration() {
     queryFn: async () => {
       if (!operationId) return null;
       try {
-        const response = await apiRequest("GET", `/api/integrations/shopify?operationId=${operationId}`);
+        const response = await apiRequest(`/api/integrations/shopify?operationId=${operationId}`, "GET");
         if (response.status === 404) return null;
         return response.json();
       } catch (error) {
@@ -55,7 +55,7 @@ export function ShopifyIntegration() {
   // Configurar/atualizar integração
   const configureMutation = useMutation({
     mutationFn: async ({ shopName, accessToken }: { shopName: string; accessToken: string }) => {
-      const response = await apiRequest("POST", "/api/integrations/shopify", {
+      const response = await apiRequest("/api/integrations/shopify", "POST", {
         operationId,
         shopName: shopName.replace(/^https?:\/\//, '').replace(/\/$/, ''),
         accessToken,
@@ -82,7 +82,7 @@ export function ShopifyIntegration() {
   // Testar conexão
   const testMutation = useMutation({
     mutationFn: async ({ shopName, accessToken }: { shopName: string; accessToken: string }) => {
-      const response = await apiRequest("POST", "/api/integrations/shopify/test", {
+      const response = await apiRequest("/api/integrations/shopify/test", "POST", {
         shopName: shopName.replace(/^https?:\/\//, '').replace(/\/$/, ''),
         accessToken,
       });
@@ -106,7 +106,7 @@ export function ShopifyIntegration() {
   // Sincronizar dados
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/integrations/shopify/sync?operationId=${operationId}`);
+      const response = await apiRequest(`/api/integrations/shopify/sync?operationId=${operationId}`, "POST");
       return response.json();
     },
     onSuccess: (data) => {
@@ -128,7 +128,7 @@ export function ShopifyIntegration() {
   // Remover integração
   const removeMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("DELETE", `/api/integrations/shopify?operationId=${operationId}`);
+      const response = await apiRequest(`/api/integrations/shopify?operationId=${operationId}`, "DELETE");
       return response.json();
     },
     onSuccess: () => {
