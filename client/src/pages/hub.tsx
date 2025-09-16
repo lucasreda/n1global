@@ -514,13 +514,13 @@ export default function Hub() {
                   </CardContent>
                 </Card>
 
-                {/* Nutraceutico Filter */}
+                {/* Nutraceutico Filter (Health category) */}
                 <Card 
                   className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedCategory === 'nutraceutico' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                    selectedCategory === 'health' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
                   }`}
-                  onClick={() => setSelectedCategory('nutraceutico')}
-                  data-testid="filter-nutraceutico"
+                  onClick={() => setSelectedCategory('health')}
+                  data-testid="filter-health"
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
@@ -530,20 +530,20 @@ export default function Hub() {
                       <div>
                         <h4 className="font-medium">Nutraceutico</h4>
                         <p className="text-sm text-muted-foreground">
-                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'nutraceutico').length || 0} produtos
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'health').length || 0} produtos
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Outro Filter */}
+                {/* Diversos Filter (General category) */}
                 <Card 
                   className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedCategory === 'outro' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                    selectedCategory === 'general' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
                   }`}
-                  onClick={() => setSelectedCategory('outro')}
-                  data-testid="filter-outro"
+                  onClick={() => setSelectedCategory('general')}
+                  data-testid="filter-general"
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
@@ -551,9 +551,9 @@ export default function Hub() {
                         <Package className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-medium">Outro</h4>
+                        <h4 className="font-medium">Diversos</h4>
                         <p className="text-sm text-muted-foreground">
-                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'outro').length || 0} produtos
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'general').length || 0} produtos
                         </p>
                       </div>
                     </div>
@@ -596,8 +596,8 @@ export default function Hub() {
                       />
                     ) : (
                       <div className={`w-full h-48 bg-gradient-to-br ${
-                        product.category === 'nutraceutico' ? 'from-green-400 to-green-600' :
-                        product.category === 'outro' ? 'from-blue-400 to-blue-600' :
+                        product.category === 'health' ? 'from-green-400 to-green-600' :
+                        product.category === 'general' ? 'from-blue-400 to-blue-600' :
                         'from-gray-400 to-gray-600'
                       } flex items-center justify-center`}>
                         <Package className="w-16 h-16 text-white opacity-80" />
@@ -791,8 +791,8 @@ export default function Hub() {
                   />
                 ) : (
                   <div className={`w-48 h-48 bg-gradient-to-br ${
-                    selectedProduct.category === 'nutraceutico' ? 'from-green-400 to-green-600' :
-                    selectedProduct.category === 'outro' ? 'from-blue-400 to-blue-600' :
+                    selectedProduct.category === 'health' ? 'from-green-400 to-green-600' :
+                    selectedProduct.category === 'general' ? 'from-blue-400 to-blue-600' :
                     'from-gray-400 to-gray-600'
                   } flex items-center justify-center rounded-lg`}>
                     <Package className="w-16 h-16 text-white opacity-80" />
