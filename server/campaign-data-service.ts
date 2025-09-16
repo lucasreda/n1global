@@ -788,5 +788,13 @@ export class CampaignDataService {
   }
 }
 
+// Export interfaces for use in other services
+export type { 
+  EnhancedCampaignData, 
+  NormalizedPerformanceData,
+  MetaCampaignInsights,
+  MetaCampaignData 
+};
+
 // Singleton instance
 export const campaignDataService = new CampaignDataService();
