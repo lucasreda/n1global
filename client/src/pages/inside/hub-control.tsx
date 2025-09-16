@@ -482,15 +482,25 @@ export default function HubControl() {
               productsData.data.map((product: MarketplaceProduct) => (
                 <Card key={product.id} className="overflow-hidden bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-colors" data-testid={`card-product-${product.id}`}>
                   <CardContent className="p-0">
-                    {/* Product image placeholder based on category */}
-                    <div className={`w-full h-48 bg-gradient-to-br ${
-                      product.category === 'electronics' ? 'from-blue-400 to-blue-600' :
-                      product.category === 'fashion' ? 'from-purple-400 to-purple-600' :
-                      product.category === 'home' ? 'from-yellow-400 to-yellow-600' :
-                      product.category === 'health' ? 'from-green-400 to-green-600' :
-                      'from-gray-400 to-gray-600'
-                    } flex items-center justify-center relative`}>
-                      <Package className="w-16 h-16 text-white opacity-80" />
+                    {/* Product image */}
+                    <div className="w-full h-48 relative">
+                      {product.images && product.images.length > 0 ? (
+                        <img 
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className={`w-full h-full bg-gradient-to-br ${
+                          product.category === 'electronics' ? 'from-blue-400 to-blue-600' :
+                          product.category === 'fashion' ? 'from-purple-400 to-purple-600' :
+                          product.category === 'home' ? 'from-yellow-400 to-yellow-600' :
+                          product.category === 'health' ? 'from-green-400 to-green-600' :
+                          'from-gray-400 to-gray-600'
+                        } flex items-center justify-center`}>
+                          <Package className="w-16 h-16 text-white opacity-80" />
+                        </div>
+                      )}
                       {/* Remove button overlay */}
                       <Button
                         size="sm"
