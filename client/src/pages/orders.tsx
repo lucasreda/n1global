@@ -88,7 +88,9 @@ export default function Orders() {
   // Mutation for combined Shopify + Carrier sync
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", `/api/sync/shopify-carrier?operationId=${selectedOperation}`);
+      const response = await authenticatedApiRequest("POST", `/api/integrations/sync-all`, { 
+        operationId: selectedOperation 
+      });
       return response.json();
     },
     onSuccess: (data) => {
