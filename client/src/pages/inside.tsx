@@ -1236,6 +1236,14 @@ export default function InsidePage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Create Product Modal */}
+            <CreateProductModal 
+              open={showAddProduct}
+              onOpenChange={setShowAddProduct}
+              onSubmit={createProductMutation.mutate}
+              isLoading={createProductMutation.isPending}
+            />
           </TabsContent>
 
           {/* Users Tab */}
@@ -1679,13 +1687,6 @@ export default function InsidePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Product Modal */}
-      <CreateProductModal 
-        open={showAddProduct}
-        onOpenChange={setShowAddProduct}
-        onSubmit={createProductMutation.mutate}
-        isLoading={createProductMutation.isPending}
-      />
 
       {/* Edit Product Modal */}
       {productToEdit && (
