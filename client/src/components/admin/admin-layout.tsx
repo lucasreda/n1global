@@ -9,7 +9,8 @@ import {
   LogOut,
   Globe,
   Settings,
-  MessageSquare
+  MessageSquare,
+  Monitor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -61,6 +62,12 @@ const menuItems = [
     label: 'Suporte', 
     icon: MessageSquare, 
     path: '/inside/support' 
+  },
+  { 
+    id: 'hub-control', 
+    label: 'Hub Control', 
+    icon: Monitor, 
+    path: '/inside/hub-control' 
   },
   { 
     id: 'settings', 

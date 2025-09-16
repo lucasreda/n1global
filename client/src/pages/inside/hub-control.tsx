@@ -172,18 +172,12 @@ export default function HubControl() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-950 to-gray-900">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="bg-black border-b border-gray-700/60 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-6">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-2">Hub Control</h1>
-            <p className="text-slate-300">Central de controle do que é exibido para os clientes no N1 Hub</p>
-          </div>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-white mb-2">Hub Control</h1>
+        <p className="text-slate-300">Central de controle do que é exibido para os clientes no N1 Hub</p>
       </div>
-
-      <div className="container mx-auto p-6 space-y-12">
 
         {/* Novidades Section - News Layout */}
         <div>
@@ -393,7 +387,6 @@ export default function HubControl() {
             )}
           </div>
         </div>
-      </div>
 
       {/* Confirm Delete Modal */}
       <ConfirmDeleteModal
