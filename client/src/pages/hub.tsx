@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Package, ExternalLink, Calendar, Pin, Plus, TrendingUp, Eye, Smartphone, Shirt, Home, Heart, Grid3X3 } from "lucide-react";
+import { Package, ExternalLink, Calendar, Pin, Plus, TrendingUp, Eye, Heart, Grid3X3, Pill } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -514,92 +514,46 @@ export default function Hub() {
                   </CardContent>
                 </Card>
 
-                {/* Electronics Filter */}
+                {/* Nutraceutico Filter */}
                 <Card 
                   className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedCategory === 'electronics' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                    selectedCategory === 'nutraceutico' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
                   }`}
-                  onClick={() => setSelectedCategory('electronics')}
-                  data-testid="filter-electronics"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg">
-                        <Smartphone className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Eletrônicos</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'electronics').length || 0} produtos
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Fashion Filter */}
-                <Card 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedCategory === 'fashion' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
-                  }`}
-                  onClick={() => setSelectedCategory('fashion')}
-                  data-testid="filter-fashion"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg">
-                        <Shirt className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Moda</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'fashion').length || 0} produtos
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Home Filter */}
-                <Card 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedCategory === 'home' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
-                  }`}
-                  onClick={() => setSelectedCategory('home')}
-                  data-testid="filter-home"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg">
-                        <Home className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">Casa</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'home').length || 0} produtos
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Health Filter */}
-                <Card 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedCategory === 'health' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
-                  }`}
-                  onClick={() => setSelectedCategory('health')}
-                  data-testid="filter-health"
+                  onClick={() => setSelectedCategory('nutraceutico')}
+                  data-testid="filter-nutraceutico"
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gradient-to-br from-green-400 to-green-600 rounded-lg">
-                        <Heart className="w-5 h-5 text-white" />
+                        <Pill className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-medium">Saúde</h4>
+                        <h4 className="font-medium">Nutraceutico</h4>
                         <p className="text-sm text-muted-foreground">
-                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'health').length || 0} produtos
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'nutraceutico').length || 0} produtos
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Outro Filter */}
+                <Card 
+                  className={`cursor-pointer transition-all hover:shadow-md ${
+                    selectedCategory === 'outro' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950' : ''
+                  }`}
+                  onClick={() => setSelectedCategory('outro')}
+                  data-testid="filter-outro"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg">
+                        <Package className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Outro</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {productsData?.data?.filter((p: MarketplaceProduct) => p.category === 'outro').length || 0} produtos
                         </p>
                       </div>
                     </div>
@@ -642,10 +596,8 @@ export default function Hub() {
                       />
                     ) : (
                       <div className={`w-full h-48 bg-gradient-to-br ${
-                        product.category === 'electronics' ? 'from-blue-400 to-blue-600' :
-                        product.category === 'fashion' ? 'from-purple-400 to-purple-600' :
-                        product.category === 'home' ? 'from-yellow-400 to-yellow-600' :
-                        product.category === 'health' ? 'from-green-400 to-green-600' :
+                        product.category === 'nutraceutico' ? 'from-green-400 to-green-600' :
+                        product.category === 'outro' ? 'from-blue-400 to-blue-600' :
                         'from-gray-400 to-gray-600'
                       } flex items-center justify-center`}>
                         <Package className="w-16 h-16 text-white opacity-80" />
@@ -839,10 +791,8 @@ export default function Hub() {
                   />
                 ) : (
                   <div className={`w-48 h-48 bg-gradient-to-br ${
-                    selectedProduct.category === 'electronics' ? 'from-blue-400 to-blue-600' :
-                    selectedProduct.category === 'fashion' ? 'from-purple-400 to-purple-600' :
-                    selectedProduct.category === 'home' ? 'from-yellow-400 to-yellow-600' :
-                    selectedProduct.category === 'health' ? 'from-green-400 to-green-600' :
+                    selectedProduct.category === 'nutraceutico' ? 'from-green-400 to-green-600' :
+                    selectedProduct.category === 'outro' ? 'from-blue-400 to-blue-600' :
                     'from-gray-400 to-gray-600'
                   } flex items-center justify-center rounded-lg`}>
                     <Package className="w-16 h-16 text-white opacity-80" />
