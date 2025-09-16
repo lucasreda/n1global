@@ -729,6 +729,51 @@ export const adCreatives = pgTable("ad_creatives", {
   // Raw data from provider
   providerData: jsonb("provider_data"),
   
+  // Enhanced Creative Intelligence fields
+  // Real performance data from Meta Marketing API
+  metaInsightsData: jsonb("meta_insights_data").$type<{
+    reachBreakdown?: {
+      age?: { [key: string]: number };
+      gender?: { [key: string]: number };
+      placement?: { [key: string]: number };
+    };
+    frequencyDistribution?: { [key: string]: number };
+    actionBreakdowns?: {
+      actionType?: string;
+      value?: number;
+      costPerAction?: number;
+    }[];
+    timeBasedMetrics?: {
+      hourly?: { [key: string]: number };
+      daily?: { [key: string]: number };
+    };
+  }>(),
+  
+  // Performance predictions
+  performancePredictions: jsonb("performance_predictions").$type<{
+    predictedCTR?: number;
+    predictedCVR?: number;
+    predictedROAS?: number;
+    confidenceScore?: number; // 0-100
+    basedOnFeatures?: string[];
+    lastUpdated?: string; // ISO timestamp
+  }>(),
+  
+  // Benchmark comparison
+  benchmarkData: jsonb("benchmark_data").$type<{
+    industryPercentile?: number; // 0-100
+    categoryAverage?: {
+      ctr?: number;
+      cpc?: number;
+      cpm?: number;
+      roas?: number;
+    };
+    competitorComparison?: {
+      betterThan?: number; // percentage
+      similarTo?: string[];
+    };
+  }>(),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -818,6 +863,112 @@ export const creativeAnalyses = pgTable("creative_analyses", {
   // Progress tracking
   progress: jsonb("progress"), // Store progress data as JSON
   currentStep: integer("current_step").default(0), // Step number as integer
+  
+  // Enhanced Creative Intelligence analysis results
+  // Copywriting analysis with enhanced structure
+  copyAnalysis: jsonb("copy_analysis").$type<{
+    persuasion?: {
+      score: number;
+      triggers: {
+        scarcity?: number;
+        urgency?: number;
+        socialProof?: number;
+        authority?: number;
+        reciprocity?: number;
+        emotion?: number;
+      };
+      examples: Array<{
+        trigger: string;
+        text: string;
+        timestamp: number;
+        strength: number;
+      }>;
+    };
+    narrative?: {
+      framework: string;
+      confidence: number;
+      completeness: number;
+      stages: Array<{
+        name: string;
+        present: boolean;
+        startSec: number;
+        endSec: number;
+        excerpt?: string;
+      }>;
+    };
+    performance?: {
+      wpm: number;
+      speechDensity: number;
+      clarity: number;
+      pauses: Array<{
+        startSec: number;
+        duration: number;
+        purpose: string;
+      }>;
+    };
+    personaTone?: {
+      tone: string;
+      audienceFit: number;
+      ageGroup: string;
+      characteristics: string[];
+      toneChanges: Array<{
+        timestamp: number;
+        fromTone: string;
+        toTone: string;
+        reason: string;
+      }>;
+    };
+    powerWords?: {
+      count: number;
+      categories: { [key: string]: string[] };
+      effectiveness: number;
+    };
+  }>(),
+  
+  // Scene-by-scene analysis for Creative Intelligence
+  sceneAnalysis: jsonb("scene_analysis").$type<{
+    scenes?: Array<{
+      id: number;
+      startSec: number;
+      endSec: number;
+      durationSec: number;
+      technicalDescription: string;
+      objects: Array<{
+        label: string;
+        count: number;
+        confidence?: number;
+      }>;
+      text: Array<{
+        content: string;
+        position?: string;
+        fontSize?: string;
+      }>;
+      peopleCount: number;
+      dominantColors: string[];
+      brandElements: string[];
+      composition: {
+        shotType: string;
+        cameraMovement: string;
+        cameraAngle: string;
+        lighting: string;
+      };
+      audio: {
+        transcriptSnippet: string;
+        voiceStyle?: string;
+        musicDetected: boolean;
+        musicType?: string;
+        volume: string;
+        ctas?: string[];
+      };
+      visualScore: number;
+      engagementScore: number;
+      syncQuality: number;
+    }>;
+    overallSummary?: string;
+    keyStrengths?: string[];
+    improvements?: string[];
+    recommendations?: string[];
+  }>(),
   
   // Timing
   startedAt: timestamp("started_at"),
@@ -1430,6 +1581,152 @@ export const supportMetrics = pgTable("support_metrics", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ========================================
+// CREATIVE INTELLIGENCE ENHANCEMENT TABLES
+// ========================================
+
+// Creative Benchmarks - Proprietary benchmarking based on aggregated client data
+export const creativeBenchmarks = pgTable("creative_benchmarks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Categorization
+  industry: varchar("industry", { length: 100 }).notNull(), // 'ecommerce', 'saas', 'health', etc.
+  creativeType: varchar("creative_type", { length: 50 }).notNull(), // 'video', 'image', 'carousel'
+  countryCodes: text("country_codes").array().notNull().default(sql`'{}'`),
+  
+  // Performance benchmarks (aggregated from our client data)
+  avgCTR: decimal("avg_ctr", { precision: 8, scale: 4 }).notNull().default("0"),
+  avgCPC: decimal("avg_cpc", { precision: 10, scale: 2 }).notNull().default("0"),
+  avgCPM: decimal("avg_cpm", { precision: 10, scale: 2 }).notNull().default("0"),
+  avgROAS: decimal("avg_roas", { precision: 10, scale: 2 }).notNull().default("0"),
+  
+  // Percentile distribution
+  percentile25: jsonb("percentile_25"),
+  percentile50: jsonb("percentile_50"),
+  percentile75: jsonb("percentile_75"),
+  percentile90: jsonb("percentile_90"),
+  
+  // Sample size and confidence
+  sampleSize: integer("sample_size").notNull(),
+  lastUpdated: timestamp("last_updated").notNull(),
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }).notNull().default("0"), // 0-100
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    industryTypeIdx: index().on(table.industry, table.creativeType),
+    lastUpdatedIdx: index().on(table.lastUpdated),
+  };
+});
+
+// Creative Edit Plans - Actionable insights with specific edit recommendations
+export const creativeEditPlans = pgTable("creative_edit_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creativeId: varchar("creative_id").notNull().references(() => adCreatives.id),
+  analysisId: varchar("analysis_id").notNull().references(() => creativeAnalyses.id),
+  
+  // Plan metadata
+  planName: varchar("plan_name", { length: 255 }).notNull(),
+  planDescription: text("plan_description"),
+  priorityLevel: varchar("priority_level", { length: 20 }).notNull().default("medium"),
+  
+  // Performance predictions
+  estimatedImpact: jsonb("estimated_impact"),
+  
+  // Action plans
+  visualActions: jsonb("visual_actions"),
+  audioActions: jsonb("audio_actions"),
+  copyActions: jsonb("copy_actions"),
+  targetingActions: jsonb("targeting_actions"),
+  
+  // Implementation guidance
+  implementationSteps: jsonb("implementation_steps").$type<Array<{
+    stepNumber: number;
+    description: string;
+    category: string; // 'design', 'copy', 'audio', 'targeting'
+    estimatedTime: string;
+    toolsNeeded?: string[];
+    skillLevel: string; // 'beginner', 'intermediate', 'advanced'
+  }>>(),
+  
+  // Success metrics and testing
+  successMetrics: jsonb("success_metrics").$type<{
+    primaryKPI: string;
+    targetImprovement: number;
+    testDuration: string;
+    significanceThreshold: number;
+    sampleSizeRequired?: number;
+  }>(),
+  
+  // Plan status
+  status: text("status").notNull().default("pending"), // 'pending', 'in_progress', 'implemented', 'tested', 'successful', 'failed'
+  implementedAt: timestamp("implemented_at"),
+  resultsValidatedAt: timestamp("results_validated_at"),
+  
+  // Actual results tracking
+  actualResults: jsonb("actual_results").$type<{
+    performance?: { [key: string]: number };
+    implementationNotes?: string;
+    successAchieved?: boolean;
+    learnings?: string[];
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    creativeIdx: index().on(table.creativeId),
+    analysisIdx: index().on(table.analysisId),
+    statusIdx: index().on(table.status),
+    createdAtIdx: index().on(table.createdAt),
+  };
+});
+
+// Creative Variations - Track relationships and performance of creative variations
+export const creativeVariations = pgTable("creative_variations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Relationship tracking
+  originalCreativeId: varchar("original_creative_id").notNull().references(() => adCreatives.id),
+  variationCreativeId: varchar("variation_creative_id").notNull().references(() => adCreatives.id),
+  parentVariationId: varchar("parent_variation_id").references(() => creativeVariations.id),
+  editPlanId: varchar("edit_plan_id").references(() => creativeEditPlans.id),
+  
+  // Variation metadata
+  variationType: varchar("variation_type", { length: 50 }).notNull(),
+  changeDescription: text("change_description"),
+  generationMethod: varchar("generation_method", { length: 50 }).notNull().default("manual"),
+  generationCost: decimal("generation_cost", { precision: 10, scale: 2 }).default("0"),
+  
+  // Generation tracking
+  generationProvider: varchar("generation_provider", { length: 100 }),
+  generationPrompts: jsonb("generation_prompts"),
+  generationParameters: jsonb("generation_parameters"),
+  
+  // Asset information  
+  assetUrls: jsonb("asset_urls"),
+  assetMetadata: jsonb("asset_metadata"),
+  
+  // A/B Testing
+  testStatus: varchar("test_status", { length: 20 }).notNull().default("pending"),
+  testStartDate: timestamp("test_start_date"),
+  testEndDate: timestamp("test_end_date"),
+  
+  // Results and learnings
+  testResults: jsonb("test_results"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    originalCreativeIdx: index().on(table.originalCreativeId),
+    variationCreativeIdx: index().on(table.variationCreativeId),
+    editPlanIdx: index().on(table.editPlanId),
+    testStatusIdx: index().on(table.testStatus),
+    createdAtIdx: index().on(table.createdAt),
+  };
+});
+
 // Schema validations
 export const insertFacebookBusinessManagerSchema = createInsertSchema(facebookBusinessManagers).omit({
   id: true,
@@ -1519,6 +1816,28 @@ export const insertInvestmentSchema = createInsertSchema(investments).omit({
 export const insertInvestmentTransactionSchema = createInsertSchema(investmentTransactions).omit({
   id: true,
   processedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Creative Intelligence schemas
+export const insertCreativeBenchmarkSchema = createInsertSchema(creativeBenchmarks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCreativeEditPlanSchema = createInsertSchema(creativeEditPlans).omit({
+  id: true,
+  implementedAt: true,
+  resultsValidatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCreativeVariationSchema = createInsertSchema(creativeVariations).omit({
+  id: true,
+  testStartDate: true,
+  testEndDate: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -2114,6 +2433,87 @@ export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
 
 export type VoiceConversation = typeof voiceConversations.$inferSelect;
 export type InsertVoiceConversation = z.infer<typeof insertVoiceConversationSchema>;
+
+// Creative Intelligence Types
+export type CreativeBenchmark = typeof creativeBenchmarks.$inferSelect;
+export type InsertCreativeBenchmark = z.infer<typeof insertCreativeBenchmarkSchema>;
+
+export type CreativeEditPlan = typeof creativeEditPlans.$inferSelect;
+export type InsertCreativeEditPlan = z.infer<typeof insertCreativeEditPlanSchema>;
+
+export type CreativeVariation = typeof creativeVariations.$inferSelect;
+export type InsertCreativeVariation = z.infer<typeof insertCreativeVariationSchema>;
+
+// ========================================
+// Creative Intelligence Relations
+// ========================================
+
+// Creative Intelligence Relations
+export const creativeBenchmarksRelations = relations(creativeBenchmarks, ({ one }) => ({
+  // Note: creativeBenchmarks don't reference specific operations as they are industry-wide
+}));
+
+export const creativeEditPlansRelations = relations(creativeEditPlans, ({ one, many }) => ({
+  creative: one(adCreatives, {
+    fields: [creativeEditPlans.creativeId],
+    references: [adCreatives.id],
+  }),
+  analysis: one(creativeAnalyses, {
+    fields: [creativeEditPlans.analysisId],
+    references: [creativeAnalyses.id],
+  }),
+  variations: many(creativeVariations),
+}));
+
+export const creativeVariationsRelations = relations(creativeVariations, ({ one }) => ({
+  originalCreative: one(adCreatives, {
+    fields: [creativeVariations.originalCreativeId],
+    references: [adCreatives.id],
+    relationName: "original_creative",
+  }),
+  variationCreative: one(adCreatives, {
+    fields: [creativeVariations.variationCreativeId],
+    references: [adCreatives.id],
+    relationName: "variation_creative",
+  }),
+  editPlan: one(creativeEditPlans, {
+    fields: [creativeVariations.editPlanId],
+    references: [creativeEditPlans.id],
+  }),
+  parentVariation: one(creativeVariations, {
+    fields: [creativeVariations.parentVariationId],
+    references: [creativeVariations.id],
+    relationName: "parent_variation",
+  }),
+}));
+
+// Update existing adCreatives relations to include edit plans and variations
+export const adCreativesRelations = relations(adCreatives, ({ one, many }) => ({
+  operation: one(operations, {
+    fields: [adCreatives.operationId],
+    references: [operations.id],
+  }),
+  analyses: many(creativeAnalyses),
+  editPlans: many(creativeEditPlans),
+  originalVariations: many(creativeVariations, {
+    relationName: "original_creative",
+  }),
+  variations: many(creativeVariations, {
+    relationName: "variation_creative",
+  }),
+}));
+
+export const creativeAnalysesRelations = relations(creativeAnalyses, ({ one, many }) => ({
+  operation: one(operations, {
+    fields: [creativeAnalyses.operationId],
+    references: [operations.id],
+  }),
+  creative: one(adCreatives, {
+    fields: [creativeAnalyses.creativeId],
+    references: [adCreatives.id],
+  }),
+  editPlans: many(creativeEditPlans),
+}));
 
 // ========================================
 // Scene-by-Scene Technical Analysis Types
