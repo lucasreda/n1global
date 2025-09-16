@@ -133,6 +133,7 @@ export class FHBService extends BaseFulfillmentProvider {
     const url = endpoint.startsWith('http') ? endpoint : `${this.fhbCredentials.apiUrl}${endpoint}`;
     
     console.log(`📡 FHB ${method} request to:`, url);
+    console.log(`🔑 FHB Authorization header:`, `Bearer ${token.token.substring(0, 20)}...`);
     
     const response = await fetch(url, {
       method,
@@ -368,15 +369,28 @@ export class FHBService extends BaseFulfillmentProvider {
         };
       }
 
-      // Testar chamada simples à API (listar produtos)
-      const products = await this.makeAuthenticatedRequest("/product?limit=1");
-      
-      console.log("✅ FHB: Conexão testada com sucesso!");
-      
-      return {
-        connected: true,
-        message: "Conexão FHB estabelecida com sucesso"
-      };
+      // Primeiro, vamos tentar um endpoint simples: /order (que pode ter menos restrições)
+      try {
+        console.log("🧪 FHB: Tentando endpoint /order para teste...");
+        const orders = await this.makeAuthenticatedRequest("/order?limit=1");
+        console.log("✅ FHB: Teste com /order bem-sucedido!");
+        
+        return {
+          connected: true,
+          message: "Conexão FHB estabelecida com sucesso (endpoint /order)"
+        };
+      } catch (orderError: any) {
+        console.log("⚠️ FHB: Endpoint /order falhou, tentando /product...");
+        
+        // Se /order falhou, tentar /product
+        const products = await this.makeAuthenticatedRequest("/product?limit=1");
+        console.log("✅ FHB: Teste com /product bem-sucedido!");
+        
+        return {
+          connected: true,
+          message: "Conexão FHB estabelecida com sucesso (endpoint /product)"
+        };
+      }
     } catch (error: any) {
       console.error("❌ FHB: Teste de conexão falhou:", error);
       return {
