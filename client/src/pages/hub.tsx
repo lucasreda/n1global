@@ -717,9 +717,6 @@ export default function Hub() {
                   <h3 className="text-xl font-semibold mb-2" data-testid="details-product-name">
                     {selectedProduct.name}
                   </h3>
-                  <p className="text-muted-foreground" data-testid="details-product-supplier">
-                    Fornecedor: {selectedProduct.supplier}
-                  </p>
                 </div>
 
                 {selectedProduct.description && (
