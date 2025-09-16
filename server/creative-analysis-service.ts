@@ -14,6 +14,7 @@ import { VisualAnalysisService } from './visual-analysis-service';
 import { FusionAnalysisService } from './fusion-analysis-service';
 import { SceneSegmentationService } from './scene-segmentation-service';
 import { CopyAnalysisService } from './copy-analysis-service';
+import { CopyAnalysisAdapter } from './copy-analysis-adapter';
 import { facebookAdsService } from './facebook-ads-service';
 
 // In-memory job store for real-time progress tracking
@@ -46,6 +47,7 @@ class CreativeAnalysisService {
   private fusionAnalysisService?: FusionAnalysisService;
   private sceneSegmentationService?: SceneSegmentationService;
   private copyAnalysisService?: CopyAnalysisService;
+  private copyAnalysisAdapter?: CopyAnalysisAdapter;
   
   // Pricing per 1K tokens (in USD)
   private modelPricing: Record<string, { input: number; output: number }> = {
@@ -73,6 +75,7 @@ class CreativeAnalysisService {
       this.fusionAnalysisService = new FusionAnalysisService();
       this.sceneSegmentationService = new SceneSegmentationService();
       this.copyAnalysisService = new CopyAnalysisService();
+      this.copyAnalysisAdapter = new CopyAnalysisAdapter(true); // Use advanced mode
       console.log('✅ Hybrid analysis services initialized successfully');
     } catch (error) {
       console.error('⚠️ Failed to initialize hybrid analysis services:', error);
@@ -464,18 +467,49 @@ class CreativeAnalysisService {
           
           console.log(`✅ Scene-by-scene analysis completed! Overall score: ${fusedInsights.overallScore.toFixed(1)}/10`);
           
-          // Step 1h: Perform copy analysis
-          if (this.copyAnalysisService) {
+          // Step 1h: Perform ADVANCED copy analysis with AI
+          if (this.copyAnalysisAdapter) {
             try {
-              console.log(`✍️ Analyzing copywriting elements...`);
-              copyAnalysis = await this.copyAnalysisService.analyze(
+              console.log(`🧠 Analyzing copywriting elements with advanced AI...`);
+              
+              // Prepare metadata for enhanced analysis
+              const creativeMetadata = {
+                type: creative.type,
+                network: creative.network,
+                name: creative.name,
+                description: creative.description,
+                thumbnailUrl: creative.thumbnailUrl,
+                duration: audioWithTimestamps.duration,
+                sceneCount: fusedInsights.scenes.length,
+                status: creative.status,
+                language: 'pt' // Default language
+              };
+              
+              copyAnalysis = await this.copyAnalysisAdapter.analyze(
                 audioWithTimestamps,
                 fusedInsights.scenes,
-                audioWithTimestamps.duration
+                audioWithTimestamps.duration,
+                creativeMetadata
               );
-              console.log(`✅ Copy analysis completed: ${copyAnalysis.persuasion.score}/10 persuasion score`);
+              
+              console.log(`✅ Advanced copy analysis completed: ${copyAnalysis.persuasion.score}/10 persuasion score`);
+              if (copyAnalysis.advanced) {
+                console.log(`📊 Advanced features: ${copyAnalysis.advanced.aiInsights.keyStrengths.length} key strengths, ${copyAnalysis.advanced.aiInsights.criticalWeaknesses.length} critical weaknesses`);
+              }
             } catch (error) {
-              console.warn(`⚠️ Copy analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              console.warn(`⚠️ Advanced copy analysis failed, falling back to basic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              // Fallback to basic copy analysis
+              if (this.copyAnalysisService) {
+                try {
+                  copyAnalysis = await this.copyAnalysisService.analyze(
+                    audioWithTimestamps,
+                    fusedInsights.scenes,
+                    audioWithTimestamps.duration
+                  );
+                } catch (fallbackError) {
+                  console.warn(`⚠️ Fallback copy analysis also failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+                }
+              }
             }
           }
           
@@ -524,9 +558,71 @@ class CreativeAnalysisService {
           totalCost += visualAnalysis.cost;
           console.log(`👁️ Image analysis completed (cost: $${visualAnalysis.cost.toFixed(4)})`);
           
-          // Step 2b: Generate insights for static image
+          // Step 2c: ADVANCED copy analysis for images with text content
+          if (this.copyAnalysisAdapter && visualAnalysis.text && visualAnalysis.text.length > 0) {
+            try {
+              console.log(`\ud83d\uddd6\ufe0f Analyzing image copy content with advanced AI...`);
+              
+              // Create synthetic transcript from image text for copy analysis
+              const syntheticTranscript = {
+                transcript: visualAnalysis.text.join(' '),
+                words: visualAnalysis.text.flatMap((text: string, index: number) => (
+                  text.split(' ').map((word, wordIndex) => ({
+                    word,
+                    start: index * 2 + wordIndex * 0.1, // Synthetic timing
+                    end: index * 2 + wordIndex * 0.1 + 0.1,
+                    confidence: 0.95
+                  }))
+                )),
+                segments: visualAnalysis.text.map((text, index) => ({
+                  text,
+                  start: index * 2,
+                  end: (index + 1) * 2
+                })),
+                duration: visualAnalysis.text.length * 2 // Synthetic duration
+              };
+              
+              // Create synthetic scene data from image elements
+              const syntheticScenes = visualAnalysis.text.map((text, index) => ({
+                id: index + 1,
+                startSec: index * 2,
+                endSec: (index + 1) * 2,
+                durationSec: 2,
+                text: [{ content: text, position: 'center' }]
+              }));
+              
+              // Prepare metadata for enhanced image analysis
+              const imageMetadata = {
+                type: creative.type,
+                network: creative.network,
+                name: creative.name,
+                description: creative.description,
+                thumbnailUrl: creative.thumbnailUrl,
+                textElements: visualAnalysis.text.length,
+                visualQuality: visualAnalysis.visualQuality,
+                dominantColors: visualAnalysis.colors || [],
+                language: 'pt', // Default language
+                isStatic: true
+              };
+              
+              copyAnalysis = await this.copyAnalysisAdapter.analyze(
+                syntheticTranscript,
+                syntheticScenes,
+                syntheticTranscript.duration,
+                imageMetadata
+              );
+              
+              console.log(`\u2705 Advanced image copy analysis completed: ${copyAnalysis.persuasion.score}/10 persuasion score`);
+              if (copyAnalysis.advanced) {
+                console.log(`\ud83d\udcca Advanced features for image: ${copyAnalysis.advanced.aiInsights.keyStrengths.length} key strengths`);
+              }
+              
+            } catch (error) {
+              console.warn(`\u26a0\ufe0f Advanced image copy analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+          }
           
-          // For images, we don't have audio, so no fusion needed
+          // Step 2d: Generate insights for static image
           fusedInsights = {
             overallScore: visualAnalysis.visualQuality,
             timeline: [],
@@ -548,10 +644,101 @@ class CreativeAnalysisService {
           return this.legacyAnalyzeCreative(creative, analysisType, model);
         }
         
-      // Step 3: Fallback for other types or missing URLs
+      // Step 3: Handle text-only creatives and other types with ADVANCED analysis
       } else {
-        console.log(`📝 Text-only creative or missing media, using legacy analysis...`);
-        return this.legacyAnalyzeCreative(creative, analysisType, model);
+        console.log(`📝 Text-only creative or missing media, performing advanced text analysis...`);
+        
+        // Step 3a: Extract text from creative description, name, and any available content
+        const textContent = [
+          creative.name,
+          creative.description,
+          // Additional text fields would go here if available in schema
+        ].filter(Boolean).join(' ');
+        
+        if (textContent.trim().length > 0 && this.copyAnalysisAdapter) {
+          try {
+            console.log(`🧠 Analyzing text-only creative with advanced AI...`);
+            
+            // Create synthetic transcript from available text
+            const syntheticTranscript = {
+              transcript: textContent,
+              words: textContent.split(' ').map((word: string, index: number) => ({
+                word,
+                start: index * 0.5,
+                end: (index + 1) * 0.5,
+                confidence: 0.9
+              })),
+              segments: [{
+                text: textContent,
+                start: 0,
+                end: textContent.split(' ').length * 0.5
+              }],
+              duration: textContent.split(' ').length * 0.5
+            };
+            
+            // Create single scene for text content
+            const textScene = [{
+              id: 1,
+              startSec: 0,
+              endSec: syntheticTranscript.duration,
+              durationSec: syntheticTranscript.duration,
+              text: [{ content: textContent, position: 'center' }]
+            }];
+            
+            // Prepare metadata for text-only analysis
+            const textMetadata = {
+              type: creative.type || 'text',
+              network: creative.network,
+              name: creative.name,
+              description: creative.description,
+              isTextOnly: true,
+              wordCount: textContent.split(' ').length,
+              language: 'pt', // Default language
+              platform: creative.network || 'unknown'
+            };
+            
+            copyAnalysis = await this.copyAnalysisAdapter.analyze(
+              syntheticTranscript,
+              textScene,
+              syntheticTranscript.duration,
+              textMetadata
+            );
+            
+            console.log(`✅ Advanced text-only analysis completed: ${copyAnalysis.persuasion.score}/10 persuasion score`);
+            if (copyAnalysis.advanced) {
+              console.log(`📊 Advanced text features: ${copyAnalysis.advanced.copyStructure.copywritingTechniques.length} techniques detected`);
+            }
+            
+            // Create fusedInsights for text-only
+            fusedInsights = {
+              overallScore: copyAnalysis.persuasion.score,
+              timeline: copyAnalysis.persuasiveTimeline || [],
+              audioVisualSync: 'text_only',
+              narrativeFlow: 'Conteúdo textual apenas',
+              ctaAlignment: 'Baseado na análise de copy',
+              predictedPerformance: {
+                ctr: copyAnalysis.persuasion.score * 0.12,
+                cvr: copyAnalysis.persuasion.score * 0.06,
+                engagement: copyAnalysis.persuasion.score > 7 ? 'alto' : copyAnalysis.persuasion.score > 5 ? 'médio' : 'baixo'
+              },
+              keyStrengths: copyAnalysis.advanced?.aiInsights?.keyStrengths || [],
+              improvements: copyAnalysis.advanced?.aiInsights?.optimizationOpportunities?.map((op: any) => op.opportunity) || [],
+              processingTime: 0.5,
+              totalCost: 0.01 // Minimal cost for text analysis
+            };
+            
+            // Set minimal costs for text-only analysis
+            totalCost += 0.01;
+            
+          } catch (error) {
+            console.warn(`⚠️ Advanced text analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            // Fallback to legacy for text-only
+            return this.legacyAnalyzeCreative(creative, analysisType, model);
+          }
+        } else {
+          console.log(`⚠️ No meaningful text content found, using legacy analysis...`);
+          return this.legacyAnalyzeCreative(creative, analysisType, model);
+        }
       }
       
       // Build comprehensive analysis result
