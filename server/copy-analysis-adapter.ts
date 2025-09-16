@@ -167,6 +167,19 @@ export class CopyAnalysisAdapter {
           creativeMetadata
         );
         
+        // Check if advanced analysis produced meaningful results
+        const hasValidResults = this.validateAdvancedResults(advancedResult);
+        
+        if (!hasValidResults) {
+          console.warn('⚠️ Advanced analysis returned empty/zero results - likely API quota exceeded');
+          console.log('🔄 Falling back to legacy analysis for meaningful results');
+          const legacyResult = await this.legacyService.analyze(transcriptData, scenes, duration);
+          return {
+            ...legacyResult as unknown as LegacyCopyAnalysisResult,
+            advanced: advancedResult // Keep advanced result for debugging
+          };
+        }
+        
         // Convert to legacy format for backward compatibility
         const legacyResult = this.convertAdvancedToLegacy(advancedResult);
         
@@ -186,11 +199,62 @@ export class CopyAnalysisAdapter {
       console.error('❌ Error in copy analysis adapter:', error);
       
       // Fallback to legacy service
-      console.log('🔄 Falling back to legacy analysis');
+      console.log('🔄 Falling back to legacy analysis due to error');
       this.useAdvanced = false;
       const legacyResult = await this.legacyService.analyze(transcriptData, scenes, duration);
       return legacyResult as unknown as LegacyCopyAnalysisResult;
     }
+  }
+
+  // Validate if advanced analysis produced meaningful results
+  private validateAdvancedResults(advanced: any): boolean {
+    if (!advanced) return false;
+
+    // Check if persuasion analysis has meaningful scores
+    const persuasionScore = advanced.persuasion?.score || 0;
+    const hasPersuasionTriggers = advanced.persuasion?.triggers && 
+      Object.values(advanced.persuasion.triggers).some((trigger: any) => 
+        trigger?.score > 0 || trigger?.examples?.length > 0
+      );
+
+    // Check if narrative analysis has meaningful results
+    const hasNarrativeFrameworks = advanced.narrative?.detectedFrameworks?.length > 0;
+    const narrativeCompleteness = advanced.narrative?.completeness || 0;
+
+    // Check if there are any meaningful scores or content
+    const hasEmotionalProfile = advanced.emotionalProfile && 
+      Object.keys(advanced.emotionalProfile).length > 0;
+    
+    const hasCopyStructure = advanced.copyStructure && 
+      Object.keys(advanced.copyStructure).length > 0;
+    
+    const hasPowerWords = advanced.powerWords && (
+      advanced.powerWords.action?.length > 0 ||
+      advanced.powerWords.emotional?.length > 0 ||
+      advanced.powerWords.sensory?.length > 0
+    );
+
+    // Analysis is considered valid if we have:
+    // 1. Persuasion score > 0 OR triggers with examples
+    // 2. OR narrative frameworks detected
+    // 3. OR meaningful emotional/structural analysis
+    const hasValidPersuasion = persuasionScore > 0 || hasPersuasionTriggers;
+    const hasValidNarrative = hasNarrativeFrameworks || narrativeCompleteness > 0;
+    const hasValidAnalysis = hasEmotionalProfile || hasCopyStructure || hasPowerWords;
+
+    const isValid = hasValidPersuasion || hasValidNarrative || hasValidAnalysis;
+    
+    console.log(`🔍 Advanced analysis validation: ${isValid ? 'VALID' : 'INVALID'}`, {
+      persuasionScore,
+      hasPersuasionTriggers,
+      hasNarrativeFrameworks,
+      narrativeCompleteness,
+      hasEmotionalProfile,
+      hasCopyStructure,
+      hasPowerWords
+    });
+
+    return isValid;
   }
 
   // Convert advanced analysis result to legacy format for backward compatibility
