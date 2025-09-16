@@ -309,12 +309,6 @@ export default function AdminUsers() {
 
       {/* Users Table */}
       <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Usuários ({systemUsers?.length || 0})
-          </CardTitle>
-        </CardHeader>
         <CardContent>
           {usersLoading ? (
             <div className="flex items-center justify-center py-12">
