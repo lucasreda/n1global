@@ -208,6 +208,7 @@ export default function AdminUsers() {
       'admin_financeiro': 'bg-yellow-100 text-yellow-800',
       'store': 'bg-blue-100 text-blue-800',
       'supplier': 'bg-green-100 text-green-800',
+      'user': 'bg-gray-100 text-gray-800',
     };
     
     const roleLabels = {
@@ -216,6 +217,7 @@ export default function AdminUsers() {
       'admin_financeiro': 'Administrador Financeiro',
       'store': 'Loja',
       'supplier': 'Fornecedor',
+      'user': 'Cliente',
     };
     
     return (
