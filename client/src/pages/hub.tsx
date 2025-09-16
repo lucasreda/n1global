@@ -582,67 +582,78 @@ export default function Hub() {
                   selectedCategory === null || product.category === selectedCategory
                 )
                 .map((product: MarketplaceProduct) => (
-                <Card key={product.id} className="overflow-hidden" data-testid={`card-product-${product.id}`}>
+                <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-200" data-testid={`card-product-${product.id}`}>
                   <CardContent className="p-0">
                     {/* Product image or placeholder based on category */}
-                    {product.images && product.images.length > 0 && !imageErrors.has(product.id) ? (
-                      <img 
-                        src={product.images[0]} 
-                        alt={product.name}
-                        className="w-full h-48 object-cover"
-                        onError={() => {
-                          setImageErrors(prev => new Set(prev).add(product.id));
-                        }}
-                      />
-                    ) : (
-                      <div className={`w-full h-48 bg-gradient-to-br ${
-                        product.category === 'health' ? 'from-green-400 to-green-600' :
-                        product.category === 'general' ? 'from-blue-400 to-blue-600' :
-                        'from-gray-400 to-gray-600'
-                      } flex items-center justify-center`}>
-                        <Package className="w-16 h-16 text-white opacity-80" />
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <div className="space-y-2">
-                      <h3 className="font-semibold" data-testid={`text-product-name-${product.id}`}>
-                        {product.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground" data-testid={`text-product-supplier-${product.id}`}>
-                        {product.supplier}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-green-600" data-testid={`text-product-price-${product.id}`}>
-                          €{product.baseCost}
-                        </span>
-                        <Badge variant="outline" data-testid={`badge-product-category-${product.id}`}>
-                          {product.category}
+                    <div className="relative">
+                      {product.images && product.images.length > 0 && !imageErrors.has(product.id) ? (
+                        <img 
+                          src={product.images[0]} 
+                          alt={product.name}
+                          className="w-full h-40 object-cover"
+                          onError={() => {
+                            setImageErrors(prev => new Set(prev).add(product.id));
+                          }}
+                        />
+                      ) : (
+                        <div className={`w-full h-40 bg-gradient-to-br ${
+                          product.category === 'health' ? 'from-green-400 to-green-600' :
+                          product.category === 'general' ? 'from-blue-400 to-blue-600' :
+                          'from-gray-400 to-gray-600'
+                        } flex items-center justify-center`}>
+                          <Package className="w-12 h-12 text-white opacity-90" />
+                        </div>
+                      )}
+                      {/* Category badge positioned on image */}
+                      <div className="absolute top-3 right-3">
+                        <Badge variant="secondary" className="bg-white/90 text-xs" data-testid={`badge-product-category-${product.id}`}>
+                          {product.category === 'health' ? 'Nutraceutico' : product.category === 'general' ? 'Diversos' : product.category}
                         </Badge>
                       </div>
+                    </div>
+                    
+                    {/* Product content */}
+                    <div className="p-4 space-y-3">
+                      {/* Header section */}
+                      <div className="space-y-1">
+                        <h3 className="font-medium text-base leading-tight" data-testid={`text-product-name-${product.id}`}>
+                          {product.name}
+                        </h3>
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xl font-bold text-emerald-600" data-testid={`text-product-price-${product.id}`}>
+                            €{product.baseCost}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Description if available */}
                       {product.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2" data-testid={`text-product-description-${product.id}`}>
+                        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed" data-testid={`text-product-description-${product.id}`}>
                           {product.description}
                         </p>
                       )}
-                      <div className="flex gap-2">
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 pt-1">
                         <Button
                           variant="outline"
+                          size="sm"
                           onClick={() => handleViewDetails(product)}
-                          className="flex-1"
+                          className="flex-1 h-9"
                           data-testid={`button-view-details-${product.id}`}
                         >
                           <Eye className="w-4 h-4 mr-1" />
-                          Ver Detalhes
+                          Detalhes
                         </Button>
                         <Button
+                          size="sm"
                           onClick={() => handleLinkProduct(product)}
-                          className="flex-1"
+                          className="flex-1 h-9"
                           data-testid={`button-link-product-${product.id}`}
                         >
                           <Plus className="w-4 h-4 mr-1" />
                           Vincular
                         </Button>
-                      </div>
                       </div>
                     </div>
                   </CardContent>
