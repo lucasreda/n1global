@@ -33,36 +33,131 @@ interface SceneData {
   }>;
 }
 
+// Advanced analysis interfaces
+interface AdvancedPersuasionTrigger {
+  score: number;
+  intensity: 'subtle' | 'moderate' | 'aggressive';
+  psychologyReasoning: string;
+  effectiveness: number;
+  examples: Array<{
+    text: string;
+    timestamp: number;
+    sceneId: number;
+    strength: 'high' | 'medium' | 'low';
+    context: string;
+  }>;
+}
+
+interface EmotionalProfile {
+  emotionalJourney: Array<{
+    timestamp: number;
+    dominantEmotion: string;
+    intensity: number;
+    triggers: string[];
+  }>;
+  tonalConsistency: {
+    score: number;
+    shifts: Array<{
+      timestamp: number;
+      from: string;
+      to: string;
+      appropriateness: number;
+    }>;
+  };
+  audienceResonance: {
+    demographicFit: number;
+    culturalRelevance: number;
+    languageAppeal: number;
+    predictedResponse: string;
+  };
+}
+
+interface CopyStructureAnalysis {
+  openingHook: {
+    type: 'question' | 'statement' | 'statistic' | 'story' | 'problem';
+    strength: number;
+    attentionRetention: number;
+    text: string;
+  };
+  bodyStructure: {
+    organization: 'logical' | 'emotional' | 'chronological' | 'problem-solution';
+    flowQuality: number;
+    informationDensity: number;
+  };
+  closingCTA: {
+    clarity: number;
+    urgency: number;
+    specificity: number;
+    actionability: number;
+    text: string;
+  };
+  copywritingTechniques: Array<{
+    technique: string;
+    usageCount: number;
+    effectiveness: number;
+    examples: string[];
+  }>;
+}
+
+interface PredictiveScoring {
+  conversionProbability: number;
+  engagementScore: number;
+  virality: number;
+  competitiveAdvantage: number;
+  marketFit: number;
+  benchmarkComparison: {
+    industry: string;
+    percentile: number;
+    topPerformers: string[];
+  };
+}
+
 interface CopyAnalysisResult {
   persuasion: {
     score: number;
     triggers: {
-      scarcity: number;
-      urgency: number;
-      socialProof: number;
-      authority: number;
-      reciprocity: number;
-      emotion: number;
+      scarcity: AdvancedPersuasionTrigger;
+      urgency: AdvancedPersuasionTrigger;
+      socialProof: AdvancedPersuasionTrigger;
+      authority: AdvancedPersuasionTrigger;
+      reciprocity: AdvancedPersuasionTrigger;
+      emotion: AdvancedPersuasionTrigger;
     };
-    examples: Array<{
-      trigger: string;
-      text: string;
+    persuasionJourney: Array<{
       timestamp: number;
-      sceneId: number;
-      strength: 'high' | 'medium' | 'low';
+      technique: string;
+      impact: number;
+      reasoning: string;
     }>;
   };
   narrative: {
-    framework: 'AIDA' | 'PAS' | 'BAB' | '4Ps' | 'FAB' | 'Other';
-    confidence: number;
-    completeness: number;
-    stages: Array<{
-      name: string;
-      startSec: number;
-      endSec: number;
-      excerpt: string;
-      present: boolean;
+    detectedFrameworks: Array<{
+      framework: 'AIDA' | 'PAS' | 'BAB' | 'Problem-Solution' | 'Story-Brand' | 'Before-After-Bridge' | 'Custom';
+      confidence: number;
+      stages: Array<{
+        stage: string;
+        startTime: number;
+        endTime: number;
+        content: string;
+        effectiveness: number;
+        missingElements?: string[];
+      }>;
     }>;
+    narrativeFlow: {
+      coherence: number;
+      pacing: 'too_fast' | 'optimal' | 'too_slow';
+      transitions: Array<{
+        from: string;
+        to: string;
+        quality: number;
+      }>;
+    };
+    storyElements: {
+      hasHero: boolean;
+      hasConflict: boolean;
+      hasResolution: boolean;
+      emotionalArc: number;
+    };
   };
   performance: {
     wpm: number;
@@ -95,16 +190,36 @@ interface CopyAnalysisResult {
     empathyScore: number;
   };
   powerWords: {
-    action: string[];
-    emotional: string[];
-    sensory: string[];
+    action: Array<{
+      word: string;
+      count: number;
+      impact: number;
+      context: string[];
+    }>;
+    emotional: Array<{
+      word: string;
+      count: number;
+      emotionType: string;
+      intensity: number;
+    }>;
+    sensory: Array<{
+      word: string;
+      count: number;
+      sense: 'visual' | 'auditory' | 'tactile' | 'olfactory' | 'gustatory';
+    }>;
     benefitDensity: number;
     keywordDensity: Array<{
       word: string;
       count: number;
       density: number;
+      relevance: number;
     }>;
     ctaPower: number;
+    languageComplexity: {
+      readabilityScore: number;
+      avgSentenceLength: number;
+      jargonLevel: number;
+    };
   };
   hooks: {
     openingHookStrength: number;
@@ -119,10 +234,21 @@ interface CopyAnalysisResult {
   sceneInsights: Array<{
     sceneId: number;
     copyStrength: number;
-    suggestions: string[];
-    detectedElements: string[];
+    suggestions: Array<{
+      type: 'critical' | 'important' | 'nice-to-have';
+      suggestion: string;
+      impact: number;
+      effort: number;
+    }>;
+    detectedElements: Array<{
+      element: string;
+      confidence: number;
+      effectiveness: number;
+    }>;
     improvementPriority: 'high' | 'medium' | 'low';
     gatilhosPresentes: string[];
+    emotionalTone: string;
+    targetAudience: string[];
   }>;
   persuasiveTimeline: Array<{
     startSec: number;
@@ -131,7 +257,34 @@ interface CopyAnalysisResult {
     cta?: string;
     strength: number;
     type: 'hook' | 'problem' | 'agitation' | 'solution' | 'cta' | 'proof' | 'benefit';
+    psychologicalPrinciple: string;
+    conversionImpact: number;
   }>;
+  // New advanced sections
+  emotionalProfile: EmotionalProfile;
+  copyStructure: CopyStructureAnalysis;
+  predictiveScoring: PredictiveScoring;
+  competitiveAnalysis: {
+    uniqueness: number;
+    marketDifferentiation: string[];
+    commonElements: string[];
+    innovativeAspects: string[];
+  };
+  aiInsights: {
+    keyStrengths: string[];
+    criticalWeaknesses: string[];
+    optimizationOpportunities: Array<{
+      opportunity: string;
+      impact: 'high' | 'medium' | 'low';
+      difficulty: 'easy' | 'medium' | 'hard';
+      expectedLift: number;
+    }>;
+    industryBenchmark: {
+      score: number;
+      percentile: number;
+      category: string;
+    };
+  };
 }
 
 export class CopyAnalysisService {
