@@ -374,7 +374,14 @@ export class FHBService extends BaseFulfillmentProvider {
 
       // Usar o formato correto da documentação FHB: X-Authentication-Simple
       console.log("🧪 FHB: Testando com header X-Authentication-Simple...");
-      const products = await this.makeAuthenticatedRequest("/product?limit=1");
+      
+      // Usar endpoint correto da documentação: /order/history com parâmetros obrigatórios
+      const today = new Date();
+      const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const from = lastMonth.toISOString().split('T')[0]; // formato: 2019-01-01
+      const to = today.toISOString().split('T')[0]; // formato: 2019-12-31
+      
+      const orders = await this.makeAuthenticatedRequest(`/order/history?from=${from}&to=${to}&page=1`);
       console.log("✅ FHB: Conexão testada com sucesso!");
       
       return {
