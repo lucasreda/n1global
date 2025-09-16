@@ -1543,14 +1543,16 @@ function EditUserModal({
   open: boolean;
   onClose: () => void;
   user: SystemUser;
-  onSubmit: (data: { id: string; name?: string; email?: string; password?: string; role?: string }) => void;
+  onSubmit: (data: { id: string; name?: string; email?: string; password?: string; role?: string; permissions?: string[] }) => void;
   isLoading: boolean;
 }) {
+  const [activeTab, setActiveTab] = useState("general");
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
     password: '',
-    role: user.role
+    role: user.role,
+    permissions: user.permissions || []
   });
 
   useEffect(() => {
@@ -1559,7 +1561,8 @@ function EditUserModal({
         name: user.name,
         email: user.email,
         password: '',
-        role: user.role
+        role: user.role,
+        permissions: user.permissions || []
       });
     }
   }, [user]);
@@ -1572,6 +1575,9 @@ function EditUserModal({
     if (formData.email !== user.email) updateData.email = formData.email;
     if (formData.password) updateData.password = formData.password;
     if (formData.role !== user.role) updateData.role = formData.role;
+    if (JSON.stringify(formData.permissions) !== JSON.stringify(user.permissions || [])) {
+      updateData.permissions = formData.permissions;
+    }
     
     // Só envia se há alguma mudança
     if (Object.keys(updateData).length > 1) {
@@ -1584,14 +1590,16 @@ function EditUserModal({
       name: user.name,
       email: user.email,
       password: '',
-      role: user.role
+      role: user.role,
+      permissions: user.permissions || []
     });
+    setActiveTab("general");
     onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-blue-400">
             <Edit className="h-5 w-5" />
@@ -1602,79 +1610,106 @@ function EditUserModal({
             Deixe a senha em branco para não alterá-la.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="edit-name" className="text-sm text-slate-400">Nome</Label>
-            <Input
-              id="edit-name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-              placeholder="Nome completo do usuário"
-              required
-              data-testid="input-edit-user-name"
-            />
-          </div>
-          <div>
-            <Label htmlFor="edit-email" className="text-sm text-slate-400">Email</Label>
-            <Input
-              id="edit-email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-              placeholder="usuario@exemplo.com"
-              required
-              data-testid="input-edit-user-email"
-            />
-          </div>
-          <div>
-            <Label htmlFor="edit-password" className="text-sm text-slate-400">
-              Nova Senha (deixe em branco para não alterar)
-            </Label>
-            <Input
-              id="edit-password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
-              placeholder="Nova senha (opcional)"
-              data-testid="input-edit-user-password"
-            />
-          </div>
-          <div>
-            <Label htmlFor="edit-role" className="text-sm text-slate-400">Tipo de Usuário</Label>
-            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
-              <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-edit-user-role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-600">
-                <SelectItem value="user" className="text-white hover:bg-gray-700">Usuário</SelectItem>
-                <SelectItem value="admin" className="text-white hover:bg-gray-700">Admin</SelectItem>
-                <SelectItem value="supplier" className="text-white hover:bg-gray-700">Supplier</SelectItem>
-                <SelectItem value="super_admin" className="text-white hover:bg-gray-700">Super Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button 
-              type="button"
-              variant="outline" 
-              onClick={handleClose}
-              className="border-gray-600 text-gray-300 hover:bg-gray-800"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit"
-              disabled={isLoading || !formData.name || !formData.email}
-              className="bg-blue-600 hover:bg-blue-700"
-              data-testid="button-submit-edit-user"
-            >
-              {isLoading ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </DialogFooter>
-        </form>
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20">
+            <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
+              Informações Gerais
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="data-[state=active]:bg-blue-600">
+              Permissões
+            </TabsTrigger>
+          </TabsList>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <TabsContent value="general" className="mt-4 space-y-4">
+              <div>
+                <Label htmlFor="edit-name" className="text-sm text-slate-400">Nome</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                  placeholder="Nome completo do usuário"
+                  required
+                  data-testid="input-edit-user-name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email" className="text-sm text-slate-400">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                  placeholder="usuario@exemplo.com"
+                  required
+                  data-testid="input-edit-user-email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-password" className="text-sm text-slate-400">
+                  Nova Senha (deixe em branco para não alterar)
+                </Label>
+                <Input
+                  id="edit-password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="bg-white/10 border-white/20 text-white backdrop-blur-sm"
+                  placeholder="Nova senha (opcional)"
+                  data-testid="input-edit-user-password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-role" className="text-sm text-slate-400">Tipo de Usuário</Label>
+                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-edit-user-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="user" className="text-white hover:bg-gray-700">Usuário</SelectItem>
+                    <SelectItem value="admin" className="text-white hover:bg-gray-700">Admin</SelectItem>
+                    <SelectItem value="supplier" className="text-white hover:bg-gray-700">Supplier</SelectItem>
+                    <SelectItem value="super_admin" className="text-white hover:bg-gray-700">Super Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="permissions" className="mt-4">
+              <div className="space-y-4">
+                <div className="text-sm text-slate-400">
+                  Controle as páginas que este usuário pode acessar baseado no seu tipo de conta.
+                </div>
+                {/* Permissions content will be added here */}
+                <div className="text-center py-8 text-gray-400">
+                  Sistema de permissões será implementado aqui
+                </div>
+              </div>
+            </TabsContent>
+            
+            <DialogFooter className="gap-2 mt-6">
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={handleClose}
+                className="border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                disabled={isLoading || !formData.name || !formData.email}
+                className="bg-blue-600 hover:bg-blue-700"
+                data-testid="button-submit-edit-user"
+              >
+                {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
