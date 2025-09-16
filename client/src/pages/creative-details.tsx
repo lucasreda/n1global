@@ -102,12 +102,10 @@ export default function CreativeDetails() {
 
   // Auto-execute creative insights with global intelligence
   const { data: creativeInsights } = useQuery({
-    queryKey: ['/api/creatives', id, 'insights', 'general'],
+    queryKey: [`/api/creatives/${id}/insights`, 'general', 'conversions'],
     queryFn: async () => {
       if (!id) return null;
-      const response = await fetch(`/api/creatives/${id}/insights?industry=general&objective=conversions`);
-      if (!response.ok) throw new Error('Failed to fetch insights');
-      return response.json();
+      return apiRequest(`/api/creatives/${id}/insights?industry=general&objective=conversions`, 'GET');
     },
     enabled: !!id
   });

@@ -132,27 +132,57 @@ export class PerformancePredictionService {
   }
 
   /**
-   * Prepare features for ML algorithms
+   * Normalize campaign features with safe defaults for missing data
+   */
+  private normalizeCampaignFeatures(campaignFeatures: any): CampaignFeatures {
+    // Create a proper CampaignFeatures object with defaults for missing data
+    return {
+      objective: campaignFeatures.objective || 'performance_optimization',
+      dailyBudget: campaignFeatures.dailyBudget || 100, // Default $100/day
+      lifetimeBudget: campaignFeatures.lifetimeBudget || 3000, // Default $3000 lifetime
+      duration: campaignFeatures.duration || 30, // Default 30 days
+      accountPerformanceHistory: campaignFeatures.accountPerformanceHistory || {
+        avgCtr: 1.2, // Industry average CTR
+        avgCpc: 0.75, // Industry average CPC
+        avgRoas: 4.0, // Industry average ROAS
+        campaignCount: 5 // Default campaign count
+      },
+      industry: campaignFeatures.industry || 'general',
+      seasonality: campaignFeatures.seasonality || 5, // Neutral seasonality
+      competitiveIndex: campaignFeatures.competitiveIndex || 5, // Medium competition
+      hasVideo: campaignFeatures.hasVideo !== undefined ? campaignFeatures.hasVideo : 
+                (campaignFeatures.creativeType === 'video' || campaignFeatures.format === 'video'),
+      hasCarousel: campaignFeatures.hasCarousel || false,
+      creativeCount: campaignFeatures.creativeCount || 3, // Default creative count
+      estimatedQuality: campaignFeatures.estimatedQuality || 7 // Good quality default
+    };
+  }
+
+  /**
+   * Prepare features for ML algorithms with defensive programming for missing data
    */
   private prepareMLFeatures(
     campaignFeatures: CampaignFeatures,
     historicalCampaigns: EnhancedCampaignData[]
   ): { features: number[]; trainingData: Array<{ features: number[]; target: NormalizedPerformanceData }> } {
+    // Normalize campaign features with defaults for missing data
+    const normalizedFeatures = this.normalizeCampaignFeatures(campaignFeatures);
+    
     // Feature engineering: convert campaign characteristics to numeric features
     const features = [
-      this.encodeObjective(campaignFeatures.objective),
-      Math.log(campaignFeatures.dailyBudget + 1), // Log transform budget
-      campaignFeatures.duration / 30, // Normalize duration to months
-      campaignFeatures.accountPerformanceHistory.avgCtr,
-      campaignFeatures.accountPerformanceHistory.avgCpc,
-      campaignFeatures.accountPerformanceHistory.avgRoas,
-      Math.log(campaignFeatures.accountPerformanceHistory.campaignCount + 1),
-      campaignFeatures.seasonality / 10,
-      campaignFeatures.competitiveIndex / 10,
-      campaignFeatures.hasVideo ? 1 : 0,
-      campaignFeatures.hasCarousel ? 1 : 0,
-      campaignFeatures.creativeCount / 10, // Normalize creative count
-      campaignFeatures.estimatedQuality / 10
+      this.encodeObjective(normalizedFeatures.objective),
+      Math.log(normalizedFeatures.dailyBudget + 1), // Log transform budget
+      normalizedFeatures.duration / 30, // Normalize duration to months
+      normalizedFeatures.accountPerformanceHistory.avgCtr,
+      normalizedFeatures.accountPerformanceHistory.avgCpc,
+      normalizedFeatures.accountPerformanceHistory.avgRoas,
+      Math.log(normalizedFeatures.accountPerformanceHistory.campaignCount + 1),
+      normalizedFeatures.seasonality / 10,
+      normalizedFeatures.competitiveIndex / 10,
+      normalizedFeatures.hasVideo ? 1 : 0,
+      normalizedFeatures.hasCarousel ? 1 : 0,
+      normalizedFeatures.creativeCount / 10, // Normalize creative count
+      normalizedFeatures.estimatedQuality / 10
     ];
 
     // Prepare training data from historical campaigns
