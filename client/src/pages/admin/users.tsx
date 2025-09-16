@@ -76,19 +76,6 @@ export default function AdminUsers() {
   const [activeTab, setActiveTab] = useState("general");
 
   const { toast } = useToast();
-
-  // Update permissions when user data changes
-  useEffect(() => {
-    if (userToEdit) {
-      setEditUserData({
-        name: userToEdit.name,
-        email: userToEdit.email,
-        password: '',
-        role: userToEdit.role,
-        permissions: userToEdit.permissions || []
-      });
-    }
-  }, [userToEdit]);
   const queryClient = useQueryClient();
 
   const { data: systemUsers, isLoading: usersLoading } = useQuery<SystemUser[]>({
