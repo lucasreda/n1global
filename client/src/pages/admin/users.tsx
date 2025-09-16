@@ -310,7 +310,7 @@ export default function AdminUsers() {
       {/* Users Table */}
       <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardContent>
-          <div className="mb-4">
+          <div className="mt-[15px] mb-4">
             <p className="text-sm text-gray-400">
               {systemUsers?.length || 0} usuários
             </p>
