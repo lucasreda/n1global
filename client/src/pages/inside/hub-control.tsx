@@ -368,14 +368,15 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
                   </div>
 
                   {/* Rich Text Editor */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1 flex flex-col">
                     <Label className="text-white">Conteúdo do Anúncio</Label>
-                    <div className="bg-white/5 border border-white/20 rounded-lg overflow-hidden">
+                    <div className="flex-1 overflow-hidden">
                       <style>
                         {`
                           .ql-toolbar {
-                            background: rgba(255, 255, 255, 0.1) !important;
-                            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+                            background: transparent !important;
+                            border: none !important;
+                            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
                           }
                           .ql-toolbar .ql-stroke {
                             stroke: #ffffff !important;
@@ -389,13 +390,23 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
                           .ql-container {
                             background: transparent !important;
                             color: #ffffff !important;
+                            border: none !important;
+                            height: 100% !important;
                           }
                           .ql-editor {
                             background: transparent !important;
                             color: #ffffff !important;
+                            border: none !important;
+                            height: 100% !important;
+                            min-height: 500px !important;
                           }
                           .ql-editor::before {
                             color: #9ca3af !important;
+                          }
+                          .quill {
+                            height: 100% !important;
+                            display: flex !important;
+                            flex-direction: column !important;
                           }
                         `}
                       </style>
@@ -407,8 +418,9 @@ function CreateAnnouncementModal({ open, onClose, onSuccess }: CreateAnnouncemen
                         formats={formats}
                         placeholder="Digite o conteúdo do anúncio..."
                         style={{ 
-                          minHeight: '400px',
-                          backgroundColor: 'transparent'
+                          height: '100%',
+                          backgroundColor: 'transparent',
+                          border: 'none'
                         }}
                       />
                     </div>
