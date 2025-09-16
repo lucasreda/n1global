@@ -613,31 +613,41 @@ export class CopyAnalysisService {
     const transcript = transcriptData.transcript.toLowerCase();
     const segments = transcriptData.segments;
     
-    // Framework detection patterns
+    // Framework detection patterns - multilingual support
     const frameworks = {
       AIDA: {
         stages: ['Attention', 'Interest', 'Desire', 'Action'],
         patterns: [
-          ['você sabia', 'atenção', 'olhe', 'veja', 'descubra', 'novo'],
-          ['interessante', 'curioso', 'benefício', 'vantagem', 'como'],
-          ['imagine', 'deseja', 'quer', 'sonha', 'transforma', 'muda'],
-          ['clique', 'compre', 'acesse', 'garanta', 'aproveite', 'agora']
+          // Attention - PT/IT/EN
+          ['você sabia', 'atenção', 'olhe', 'veja', 'descubra', 'novo', 'attenzione', 'guarda', 'scopri', 'nuovo', 'eleganza', 'rifugio', 'inizia', 'tuo', 'attention', 'look', 'see', 'discover', 'new'],
+          // Interest - PT/IT/EN  
+          ['interessante', 'curioso', 'benefício', 'vantagem', 'como', 'interessante', 'curioso', 'beneficio', 'vantaggio', 'come', 'morbido', 'fresco', 'luminoso', 'seta', 'interesting', 'curious', 'benefit', 'advantage', 'how'],
+          // Desire - PT/IT/EN
+          ['imagine', 'deseja', 'quer', 'sonha', 'transforma', 'muda', 'immagina', 'desidera', 'vuole', 'sogna', 'trasforma', 'cambia', 'elegante', 'delicata', 'completo', 'imagine', 'desire', 'want', 'dream', 'transform', 'change'],
+          // Action - PT/IT/EN
+          ['clique', 'compre', 'acesse', 'garanta', 'aproveite', 'agora', 'clicca', 'compra', 'accedi', 'garantisci', 'approfitta', 'ora', 'ordina', 'veloce', 'spedizione', 'click', 'buy', 'access', 'guarantee', 'enjoy', 'now']
         ]
       },
       PAS: {
         stages: ['Problem', 'Agitation', 'Solution'],
         patterns: [
-          ['problema', 'dificuldade', 'cansado', 'frustrado', 'sofre'],
-          ['pior', 'consequência', 'continuar', 'perder', 'custo'],
-          ['solução', 'resolver', 'acabar', 'eliminar', 'finalmente']
+          // Problem - PT/IT/EN
+          ['problema', 'dificuldade', 'cansado', 'frustrado', 'sofre', 'problema', 'difficoltà', 'stanco', 'frustrato', 'soffre', 'problem', 'difficulty', 'tired', 'frustrated', 'suffer'],
+          // Agitation - PT/IT/EN
+          ['pior', 'consequência', 'continuar', 'perder', 'custo', 'peggio', 'conseguenza', 'continuare', 'perdere', 'costo', 'worse', 'consequence', 'continue', 'lose', 'cost'],
+          // Solution - PT/IT/EN
+          ['solução', 'resolver', 'acabar', 'eliminar', 'finalmente', 'soluzione', 'risolvere', 'finire', 'eliminare', 'finalmente', 'regola', 'temperatura', 'solution', 'solve', 'end', 'eliminate', 'finally']
         ]
       },
       BAB: {
         stages: ['Before', 'After', 'Bridge'],
         patterns: [
-          ['antes', 'atualmente', 'hoje', 'agora', 'situação'],
-          ['depois', 'futuro', 'resultado', 'transformação', 'novo'],
-          ['como', 'método', 'sistema', 'processo', 'caminho']
+          // Before - PT/IT/EN
+          ['antes', 'atualmente', 'hoje', 'agora', 'situação', 'prima', 'attualmente', 'oggi', 'ora', 'situazione', 'before', 'currently', 'today', 'now', 'situation'],
+          // After - PT/IT/EN
+          ['depois', 'futuro', 'resultado', 'transformação', 'novo', 'dopo', 'futuro', 'risultato', 'trasformazione', 'nuovo', 'bellezza', 'italia', 'after', 'future', 'result', 'transformation', 'new'],
+          // Bridge - PT/IT/EN
+          ['como', 'método', 'sistema', 'processo', 'caminho', 'come', 'metodo', 'sistema', 'processo', 'cammino', 'set', 'unica', 'how', 'method', 'system', 'process', 'path']
         ]
       }
     };
@@ -702,8 +712,50 @@ export class CopyAnalysisService {
       }
     }
 
-    // Calculate completeness
-    const completeness = (bestStages.filter(s => s.present).length / bestStages.length) * 100;
+    // Calculate completeness - avoid division by zero
+    const completeness = bestStages.length > 0 
+      ? (bestStages.filter(s => s.present).length / bestStages.length) * 100
+      : 0;
+
+    // If no framework detected, create a basic structure
+    if (bestStages.length === 0) {
+      console.log('⚠️ No narrative framework detected, using generic structure analysis');
+      
+      // Create basic narrative structure based on video flow
+      const totalDuration = transcriptData.duration;
+      const basicStages = [
+        {
+          name: 'Abertura',
+          startSec: 0,
+          endSec: totalDuration * 0.25,
+          excerpt: segments.slice(0, 1).map(s => s.text).join(' ').substring(0, 50) + '...',
+          present: segments.length > 0
+        },
+        {
+          name: 'Desenvolvimento',
+          startSec: totalDuration * 0.25,
+          endSec: totalDuration * 0.75,
+          excerpt: segments.slice(1, -1).map(s => s.text).join(' ').substring(0, 50) + '...',
+          present: segments.length > 1
+        },
+        {
+          name: 'Fechamento',
+          startSec: totalDuration * 0.75,
+          endSec: totalDuration,
+          excerpt: segments.slice(-1).map(s => s.text).join(' ').substring(0, 50) + '...',
+          present: segments.length > 0
+        }
+      ];
+
+      const basicCompleteness = (basicStages.filter(s => s.present).length / basicStages.length) * 100;
+      
+      return {
+        framework: 'Other',
+        confidence: 25, // Low confidence for generic structure
+        completeness: Math.round(basicCompleteness),
+        stages: basicStages
+      };
+    }
 
     return {
       framework: detectedFramework,
