@@ -26,7 +26,9 @@ const USER_PAGES = [
   { id: 'hub', name: 'Hub', description: 'Marketplace e produtos', icon: '🛍️' },
   { id: 'orders', name: 'Pedidos', description: 'Gestão de pedidos', icon: '📦' },
   { id: 'ads', name: 'Anúncios', description: 'Campanhas publicitárias', icon: '📢' },
-  { id: 'analytics', name: 'Analytics', description: 'Análises e relatórios', icon: '📈' }
+  { id: 'analytics', name: 'Analytics', description: 'Análises e relatórios', icon: '📈' },
+  { id: 'creatives', name: 'Criativos', description: 'Gestão de criativos publicitários', icon: '🎨' },
+  { id: 'support', name: 'Suporte', description: 'Central de suporte ao cliente', icon: '🎧' }
 ];
 
 const ADMIN_PAGES = [
