@@ -234,15 +234,17 @@ export class CopyAnalysisAdapter {
       advanced.powerWords.sensory?.length > 0
     );
 
-    // Analysis is considered valid if we have:
-    // 1. Persuasion score > 0 OR triggers with examples
-    // 2. OR narrative frameworks detected
-    // 3. OR meaningful emotional/structural analysis
+    // STRICTER VALIDATION: Analysis is only valid if we have MEANINGFUL scores
+    // Must have at least one of these core elements with actual values:
     const hasValidPersuasion = persuasionScore > 0 || hasPersuasionTriggers;
-    const hasValidNarrative = hasNarrativeFrameworks || narrativeCompleteness > 0;
-    const hasValidAnalysis = hasEmotionalProfile || hasCopyStructure || hasPowerWords;
-
-    const isValid = hasValidPersuasion || hasValidNarrative || hasValidAnalysis;
+    const hasValidNarrative = narrativeCompleteness > 0; // Must have actual completeness score
+    const hasValidPowerWords = hasPowerWords; // Must have actual power words detected
+    
+    // For the analysis to be considered valid, we need:
+    // 1. EITHER meaningful persuasion analysis (score > 0 OR triggers with examples)
+    // 2. OR meaningful narrative analysis (completeness > 0)  
+    // 3. OR meaningful power words analysis (actual words detected)
+    const isValid = hasValidPersuasion || hasValidNarrative || hasValidPowerWords;
     
     console.log(`🔍 Advanced analysis validation: ${isValid ? 'VALID' : 'INVALID'}`, {
       persuasionScore,
@@ -251,7 +253,13 @@ export class CopyAnalysisAdapter {
       narrativeCompleteness,
       hasEmotionalProfile,
       hasCopyStructure,
-      hasPowerWords
+      hasPowerWords,
+      validationResult: {
+        hasValidPersuasion,
+        hasValidNarrative,
+        hasValidPowerWords,
+        finalResult: isValid
+      }
     });
 
     return isValid;
