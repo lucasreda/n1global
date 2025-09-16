@@ -159,7 +159,7 @@ export default function Hub() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-5 h-5" />
-            <h2 className="text-2xl font-semibold">Últimas Novidades</h2>
+            <h2 className="text-xl font-semibold">Últimas Novidades</h2>
           </div>
           <p className="text-muted-foreground">Fique por dentro das atualizações e dicas mais recentes</p>
         </div>
@@ -247,7 +247,7 @@ export default function Hub() {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-2">
               <Package className="w-5 h-5" />
-              <h2 className="text-2xl font-semibold">Produtos Disponíveis</h2>
+              <h2 className="text-xl font-semibold">Produtos Disponíveis</h2>
             </div>
             <p className="text-muted-foreground">Encontre produtos para adicionar à sua operação</p>
           </div>
