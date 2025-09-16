@@ -61,6 +61,7 @@ export default function Hub() {
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<MarketplaceProduct | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   
   // Pagination states for announcements
   const [announcementsCurrentPage, setAnnouncementsCurrentPage] = useState(1);
@@ -500,11 +501,14 @@ export default function Hub() {
                 <Card key={product.id} className="overflow-hidden" data-testid={`card-product-${product.id}`}>
                   <CardContent className="p-0">
                     {/* Product image or placeholder based on category */}
-                    {product.images && product.images.length > 0 ? (
+                    {product.images && product.images.length > 0 && !imageErrors.has(product.id) ? (
                       <img 
                         src={product.images[0]} 
                         alt={product.name}
                         className="w-full h-48 object-cover"
+                        onError={() => {
+                          setImageErrors(prev => new Set(prev).add(product.id));
+                        }}
                       />
                     ) : (
                       <div className={`w-full h-48 bg-gradient-to-br ${
@@ -692,11 +696,14 @@ export default function Hub() {
             <div className="space-y-6">
               {/* Product Image */}
               <div className="flex justify-center">
-                {selectedProduct.images && selectedProduct.images.length > 0 ? (
+                {selectedProduct.images && selectedProduct.images.length > 0 && !imageErrors.has(selectedProduct.id) ? (
                   <img 
                     src={selectedProduct.images[0]} 
                     alt={selectedProduct.name}
                     className="w-48 h-48 object-cover rounded-lg"
+                    onError={() => {
+                      setImageErrors(prev => new Set(prev).add(selectedProduct.id));
+                    }}
                   />
                 ) : (
                   <div className={`w-48 h-48 bg-gradient-to-br ${
