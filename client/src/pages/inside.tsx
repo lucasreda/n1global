@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -1532,6 +1533,27 @@ function CreateUserModal({
   );
 }
 
+// Define available pages for each user type
+const USER_PAGES = [
+  { id: 'dashboard', name: 'Dashboard', description: 'Painel principal do cliente', icon: '📊' },
+  { id: 'hub', name: 'Hub', description: 'Marketplace de produtos', icon: '🏪' },
+  { id: 'orders', name: 'Pedidos', description: 'Gestão de pedidos do cliente', icon: '📦' },
+  { id: 'ads', name: 'Anúncios', description: 'Campanhas publicitárias', icon: '🎯' },
+  { id: 'analytics', name: 'Análises', description: 'Relatórios e métricas', icon: '📈' }
+];
+
+const ADMIN_PAGES = [
+  { id: 'dashboard', name: 'Dashboard', description: 'Painel administrativo principal', icon: '📊' },
+  { id: 'orders', name: 'Pedidos', description: 'Gerenciar pedidos globais', icon: '📦' },
+  { id: 'stores', name: 'Lojas', description: 'Gerenciar lojas e operações', icon: '🏪' },
+  { id: 'users', name: 'Usuários', description: 'Controle de usuários', icon: '👥' },
+  { id: 'products', name: 'Produtos', description: 'Gerenciar produtos', icon: '📋' },
+  { id: 'global', name: 'Global', description: 'Estatísticas globais', icon: '🌍' },
+  { id: 'support', name: 'Suporte', description: 'Central de suporte', icon: '💬' },
+  { id: 'hub-control', name: 'Hub Control', description: 'Controle do marketplace', icon: '⚙️' },
+  { id: 'settings', name: 'Configurações', description: 'Configurações gerais', icon: '⚙️' }
+];
+
 // Edit User Modal Component
 function EditUserModal({ 
   open, 
@@ -1554,6 +1576,30 @@ function EditUserModal({
     role: user.role,
     permissions: user.permissions || []
   });
+
+  // Get available pages based on user role
+  const getAvailablePages = (role: string) => {
+    if (role === 'super_admin') return ADMIN_PAGES;
+    return USER_PAGES;
+  };
+
+  // Toggle permission for a specific page
+  const togglePermission = (pageId: string) => {
+    const currentPermissions = formData.permissions;
+    const hasPermission = currentPermissions.includes(pageId);
+    
+    if (hasPermission) {
+      setFormData({
+        ...formData,
+        permissions: currentPermissions.filter(p => p !== pageId)
+      });
+    } else {
+      setFormData({
+        ...formData,
+        permissions: [...currentPermissions, pageId]
+      });
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -1683,9 +1729,84 @@ function EditUserModal({
                 <div className="text-sm text-slate-400">
                   Controle as páginas que este usuário pode acessar baseado no seu tipo de conta.
                 </div>
-                {/* Permissions content will be added here */}
-                <div className="text-center py-8 text-gray-400">
-                  Sistema de permissões será implementado aqui
+                
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-white mb-3">
+                    {formData.role === 'super_admin' ? '🔧 Páginas Administrativas' : '👤 Páginas do Cliente'}
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {getAvailablePages(formData.role).map((page) => {
+                      const hasPermission = formData.permissions.includes(page.id);
+                      
+                      return (
+                        <div 
+                          key={page.id}
+                          className={`flex items-start space-x-3 p-3 rounded-md border transition-colors cursor-pointer ${
+                            hasPermission 
+                              ? 'bg-blue-50/10 border-blue-500/30' 
+                              : 'bg-white/5 border-white/20 hover:bg-white/10'
+                          }`}
+                          onClick={() => togglePermission(page.id)}
+                          data-testid={`permission-${page.id}`}
+                        >
+                          <Checkbox 
+                            checked={hasPermission}
+                            onCheckedChange={() => togglePermission(page.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">{page.icon}</span>
+                              <span className="text-sm font-medium text-white">
+                                {page.name}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {page.description}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md">
+                    <div className="flex items-center gap-2 text-blue-400 text-sm">
+                      <span>💡</span>
+                      <span className="font-medium">Dica:</span>
+                    </div>
+                    <p className="text-xs text-blue-300 mt-1">
+                      {formData.role === 'super_admin' 
+                        ? 'Usuários super admin podem acessar páginas administrativas do painel /inside'
+                        : 'Usuários normais podem acessar páginas do dashboard principal do cliente'
+                      }
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Permissions summary */}
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-white mb-2">
+                    📋 Resumo das Permissões
+                  </h4>
+                  <div className="text-xs text-slate-400">
+                    {formData.permissions.length > 0 ? (
+                      <>
+                        <span className="text-green-400 font-medium">
+                          {formData.permissions.length} páginas permitidas:
+                        </span>{' '}
+                        {formData.permissions.map(permissionId => {
+                          const page = getAvailablePages(formData.role).find(p => p.id === permissionId);
+                          return page?.name;
+                        }).filter(Boolean).join(', ')}
+                      </>
+                    ) : (
+                      <span className="text-orange-400">
+                        ⚠️ Nenhuma página selecionada - usuário não terá acesso a nenhuma funcionalidade
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </TabsContent>
