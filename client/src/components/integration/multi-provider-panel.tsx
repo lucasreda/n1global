@@ -48,6 +48,8 @@ export function MultiProviderPanel() {
     authHeader: z.string().optional(),
     warehouseId: z.string().optional(),
     apiUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+    appId: z.string().optional(),
+    secret: z.string().optional(),
   });
 
   const credentialsForm = useForm<z.infer<typeof credentialsSchema>>({
@@ -58,6 +60,8 @@ export function MultiProviderPanel() {
       authHeader: "",
       warehouseId: "",
       apiUrl: "",
+      appId: "",
+      secret: "",
     },
   });
 
@@ -136,6 +140,16 @@ export function MultiProviderPanel() {
         warehouseId: "",
         apiUrl: "https://api.elogy.io",
       });
+    } else if (providerType === "fhb") {
+      credentialsForm.reset({
+        email: "",
+        password: "",
+        authHeader: "",
+        warehouseId: "",
+        apiUrl: "https://api.fhb.sk/v3",
+        appId: "",
+        secret: "",
+      });
     } else {
       credentialsForm.reset();
     }
@@ -147,6 +161,8 @@ export function MultiProviderPanel() {
         return ["email", "password"];
       case "elogy":
         return ["email", "password"];
+      case "fhb":
+        return ["appId", "secret"];
       default:
         return ["email", "password"];
     }
@@ -159,6 +175,8 @@ export function MultiProviderPanel() {
       case "authHeader": return "Authorization Header";
       case "warehouseId": return "Warehouse ID";
       case "apiUrl": return "URL da API";
+      case "appId": return "App ID";
+      case "secret": return "Secret";
       default: return field;
     }
   };
