@@ -1,5 +1,6 @@
 import { CopyAnalysisService } from './copy-analysis-service.js';
 import { AdvancedCopyAnalysisService } from './advanced-copy-analysis-service.js';
+import { DynamicCopyAnalysis } from './dynamic-copy-analysis.js';
 
 // Legacy interface from original copy-analysis-service.ts
 interface LegacyCopyAnalysisResult {
@@ -139,14 +140,16 @@ interface SceneData {
 export class CopyAnalysisAdapter {
   private legacyService: CopyAnalysisService;
   private advancedService: AdvancedCopyAnalysisService;
+  private dynamicAnalysis: DynamicCopyAnalysis;
   private useAdvanced: boolean;
 
   constructor(useAdvanced: boolean = true) {
     this.legacyService = new CopyAnalysisService();
     this.advancedService = new AdvancedCopyAnalysisService();
+    this.dynamicAnalysis = new DynamicCopyAnalysis();
     this.useAdvanced = useAdvanced;
     
-    console.log(`🔄 CopyAnalysisAdapter initialized - Mode: ${useAdvanced ? 'Advanced AI' : 'Legacy'}`);
+    console.log(`🔄 CopyAnalysisAdapter initialized - Mode: ${useAdvanced ? 'Advanced AI' : 'Legacy'} + Dynamic Framework Detection`);
   }
 
   async analyze(
@@ -172,28 +175,107 @@ export class CopyAnalysisAdapter {
         
         if (!hasValidResults) {
           console.warn('⚠️ Advanced analysis returned empty/zero results - likely API quota exceeded');
-          console.log('🔄 Falling back to legacy analysis for meaningful results');
+          console.log('🔄 Falling back to legacy analysis + dynamic framework detection');
+          
+          // Use legacy analysis for basic metrics
           const legacyResult = await this.legacyService.analyze(transcriptData, scenes, duration);
+          
+          // Enhance with dynamic framework detection
+          const detectedFrameworks = this.dynamicAnalysis.analyzeNarrativeStructure(transcriptData, scenes);
+          const primaryFramework = detectedFrameworks[0]; // Get best match
+          
+          // Override narrative section with dynamic analysis
+          if (primaryFramework) {
+            (legacyResult as any).narrative = {
+              framework: this.mapFrameworkToLegacy(primaryFramework.framework),
+              confidence: primaryFramework.confidence,
+              completeness: primaryFramework.completeness,
+              stages: primaryFramework.stages.map(stage => ({
+                name: stage.name,
+                startSec: stage.startSec,
+                endSec: stage.endSec,
+                excerpt: stage.excerpt,
+                present: stage.present
+              }))
+            };
+            
+            console.log(`🎯 Dynamic framework detected: ${primaryFramework.framework} (${primaryFramework.confidence}% confidence, ${primaryFramework.completeness}% complete)`);
+          }
+          
           return {
             ...legacyResult as unknown as LegacyCopyAnalysisResult,
-            advanced: advancedResult // Keep advanced result for debugging
+            advanced: {
+              ...advancedResult,
+              dynamicFrameworks: detectedFrameworks // Add dynamic analysis to advanced section
+            }
           };
         }
+        
+        // Always enhance with dynamic framework detection for better results
+        const detectedFrameworks = this.dynamicAnalysis.analyzeNarrativeStructure(transcriptData, scenes);
         
         // Convert to legacy format for backward compatibility
         const legacyResult = this.convertAdvancedToLegacy(advancedResult);
         
+        // Enhance with dynamic analysis if it provides better results
+        const primaryFramework = detectedFrameworks[0];
+        if (primaryFramework && primaryFramework.confidence > (legacyResult.narrative.confidence || 0)) {
+          console.log(`🎯 Using dynamic framework (${primaryFramework.confidence}%) over advanced analysis`);
+          legacyResult.narrative = {
+            framework: this.mapFrameworkToLegacy(primaryFramework.framework),
+            confidence: primaryFramework.confidence,
+            completeness: primaryFramework.completeness,
+            stages: primaryFramework.stages.map(stage => ({
+              name: stage.name,
+              startSec: stage.startSec,
+              endSec: stage.endSec,
+              excerpt: stage.excerpt,
+              present: stage.present
+            }))
+          };
+        }
+        
         // Return both formats
         return {
           ...legacyResult,
-          advanced: advancedResult
+          advanced: {
+            ...advancedResult,
+            dynamicFrameworks: detectedFrameworks // Always include dynamic analysis
+          }
         };
       } else {
         console.log('📊 Using Legacy copy analysis');
         
-        // Use legacy service
+        // Use legacy service enhanced with dynamic framework detection
+        console.log('📊 Enhancing legacy analysis with dynamic framework detection');
+        
         const legacyResult = await this.legacyService.analyze(transcriptData, scenes, duration);
-        return legacyResult as unknown as LegacyCopyAnalysisResult;
+        
+        // Enhance with dynamic framework detection
+        const detectedFrameworks = this.dynamicAnalysis.analyzeNarrativeStructure(transcriptData, scenes);
+        const primaryFramework = detectedFrameworks[0];
+        
+        if (primaryFramework) {
+          (legacyResult as any).narrative = {
+            framework: this.mapFrameworkToLegacy(primaryFramework.framework),
+            confidence: primaryFramework.confidence,
+            completeness: primaryFramework.completeness,
+            stages: primaryFramework.stages.map(stage => ({
+              name: stage.name,
+              startSec: stage.startSec,
+              endSec: stage.endSec,
+              excerpt: stage.excerpt,
+              present: stage.present
+            }))
+          };
+          
+          console.log(`🎯 Enhanced legacy with dynamic framework: ${primaryFramework.framework} (${primaryFramework.confidence}% confidence)`);
+        }
+        
+        return {
+          ...legacyResult as unknown as LegacyCopyAnalysisResult,
+          dynamicFrameworks: detectedFrameworks
+        };
       }
     } catch (error) {
       console.error('❌ Error in copy analysis adapter:', error);
@@ -390,15 +472,31 @@ export class CopyAnalysisAdapter {
 
   private mapFrameworkToLegacy(framework: string): 'AIDA' | 'PAS' | 'BAB' | '4Ps' | 'FAB' | 'Other' {
     switch (framework) {
+      // Direct matches
       case 'AIDA':
+        return 'AIDA';
       case 'PAS':
-      case 'BAB':
-        return framework as 'AIDA' | 'PAS' | 'BAB';
-      case 'Problem-Solution':
         return 'PAS';
+      case 'BAB':
+        return 'BAB';
+      case '4Ps':
+        return '4Ps';
+      case 'FAB':
+        return 'FAB';
+        
+      // Mapped frameworks
       case 'Story-Brand':
+      case 'PASTOR':
+        return 'BAB'; // Story-based frameworks map to BAB structure
+      case 'QUEST':
+        return 'AIDA'; // Educational frameworks map to AIDA structure
+      case 'Problem-Solution':
+        return 'PAS'; // Problem-focused frameworks map to PAS
       case 'Before-After-Bridge':
         return 'BAB';
+        
+      // Generic or unknown frameworks
+      case 'Estrutura Genérica':
       default:
         return 'Other';
     }
