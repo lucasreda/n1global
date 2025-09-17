@@ -365,6 +365,7 @@ export class TelnyxProvisioningService {
   async makeOutboundCall(fromNumber: string, toNumber: string, webhookUrl: string): Promise<any> {
     try {
       console.log(`📞 Making outbound call from ${fromNumber} to ${toNumber}`);
+      console.log(`🔗 Using CONNECTION_ID: ${process.env.TELNYX_CONNECTION_ID}`);
 
       const response = await this.client.calls.create({
         connection_id: process.env.TELNYX_CONNECTION_ID!,

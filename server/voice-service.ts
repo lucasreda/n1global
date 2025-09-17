@@ -228,6 +228,13 @@ export class VoiceService {
       
     } catch (error) {
       console.error('Error handling incoming call:', error);
+      console.log(`🔍 Call Debug Info:`, {
+        direction: callData.direction,
+        from: callData.from,
+        to: callData.to,
+        state: callData.state,
+        connection_id: callData.connection_id || 'not provided'
+      });
       // Only try to hangup if we have a client
       if (this.telnyxClient) {
         await this.hangupCall(callData.call_control_id, 'Erro interno do servidor');
