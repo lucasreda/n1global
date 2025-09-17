@@ -2351,6 +2351,10 @@ export const voiceCalls = pgTable("voice_calls", {
   toNumber: text("to_number").notNull(),
   status: text("status").notNull(), // 'queued', 'ringing', 'in-progress', 'completed', 'failed', 'busy', 'no-answer'
   
+  // Legacy Twilio compatibility - required for database constraint
+  twilioCallSid: text("twilio_call_sid").notNull(),
+  twilioAccountSid: text("twilio_account_sid"),
+  
   // Customer information
   customerName: text("customer_name"),
   customerEmail: text("customer_email"),
