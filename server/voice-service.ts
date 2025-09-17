@@ -1130,26 +1130,31 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          greeting: messageHistory.length > 0 ? "Continue falando, estou ouvindo..." : "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
+          greeting: messageHistory.length > 0 ? "Continue falando em português, estou ouvindo..." : "Olá! Estou ouvindo. Por favor, fale em português brasileiro.",
           parameters: {
             type: "object",
             properties: {
               message: {
                 type: "string",
-                description: "O que o cliente está falando ou perguntando em português brasileiro"
+                description: "The customer's message transcribed in Brazilian Portuguese"
               },
               intent: {
                 type: "string", 
-                description: "A intenção do cliente em português: produto, preço, dúvida, reclamação, etc."
+                description: "Customer intent: produto, preço, dúvida, reclamação, etc."
               }
             },
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Speech recognition language
-          stt_language: "pt-BR",  // STT specific language setting  
-          transcription_language: "pt-BR",  // Force transcription to Portuguese
-          prompt: "Esta é uma conversa em português brasileiro. O cliente está falando em português.",
+          // System prompts to force Portuguese recognition
+          prompt: "Você está ouvindo um cliente brasileiro falando em português. Transcreva EXATAMENTE o que ele disse em português brasileiro. NUNCA transcreva em inglês. O cliente está falando português do Brasil.",
+          messages: [
+            {
+              role: "system",
+              content: "You are transcribing a Brazilian Portuguese phone call. The customer is speaking in Brazilian Portuguese. Always transcribe in Portuguese, never in English. Common phrases: 'olá', 'boa tarde', 'eu quero', 'preciso de', 'quanto custa', 'obrigado'."
+            }
+          ],
+          model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
