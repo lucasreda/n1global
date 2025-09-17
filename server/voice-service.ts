@@ -1133,6 +1133,12 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         callType
       })).toString('base64');
       
+      // Guard: Check if call is still active before speaking
+      if (!this.activeCallIds.has(callControlId)) {
+        console.log(`⚠️ Call ${callControlId} ended, skipping speak command`);
+        return;
+      }
+      
       try {
         await this.telnyxClient.calls.speak(callControlId, {
           payload: welcomeMessage,
@@ -1188,11 +1194,13 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt-BR',  // Use 'pt-BR' for Brazilian Portuguese
-          audio_track: 'inbound',  // Only transcribe customer speech, not Sofia's
-          interim_results: true,  // Get partial results for faster response
-          transcription_engine: 'A',  // Force Google Speech-to-Text engine (Engine A)
-          enhanced_model: true  // Use enhanced model for better accuracy
+          language: 'pt-BR',
+          audio_track: 'inbound', 
+          interim_results: true,
+          transcription_engine: 'A',  // Google Speech-to-Text
+          enhanced_model: true,
+          speech_hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "aqui é", "obrigado"],
+          model: "phone_call"  // Phone-optimized model
         })
       });
 
@@ -1354,9 +1362,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Language for Text-to-Speech (keep pt-BR for TTS)
-          stt_language: "pt-BR",  // Use pt-BR for better Brazilian Portuguese recognition
-          stt_engine: "google",  // Explicitly force Google Speech-to-Text engine
+          language: "pt-BR",
+          transcription: {
+            provider: "google",
+            language: "pt-BR", 
+            model: "latest_long"
+          },
+          speech: {
+            provider: "google",
+            language: "pt-BR",
+            voice: "pt-BR-Neural2-B"
+          },
+          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "aqui é", "obrigado", "tchau"],
+          interruption: { enabled: true },
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
           llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
@@ -1395,9 +1413,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Language for Text-to-Speech (keep pt-BR for TTS)
-          stt_language: "pt-BR",  // Use pt-BR for better Brazilian Portuguese recognition
-          stt_engine: "google",  // Explicitly force Google Speech-to-Text engine
+          language: "pt-BR",
+          transcription: {
+            provider: "google",
+            language: "pt-BR", 
+            model: "latest_long"
+          },
+          speech: {
+            provider: "google",
+            language: "pt-BR",
+            voice: "pt-BR-Neural2-B"
+          },
+          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "aqui é", "obrigado", "tchau"],
+          interruption: { enabled: true },
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
           llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
@@ -2224,6 +2252,12 @@ Responda apenas com o texto que você falará para o cliente:`;
       this.conversationContext.set(callControlId, updatedHistory);
       console.log(`📚 Updated conversation history: ${updatedHistory.length} messages`);
 
+      // Guard: Check if call is still active before speaking
+      if (!this.activeCallIds.has(callControlId)) {
+        console.log(`⚠️ Call ${callControlId} ended, skipping speak command`);
+        return;
+      }
+      
       // Speak the AI response - using premium for Portuguese
       await this.telnyxClient.calls.speak(callControlId, {
         payload: aiResult.response,
