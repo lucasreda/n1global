@@ -243,10 +243,18 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
       await voiceService.handleIncomingCall(eventData.payload, callType);
     } else if (eventType === 'call.answered') {
       await voiceService.handleCallAnswered(eventData.payload, callType);
+    } else if (eventType === 'call.speak.started') {
+      // Sofia started speaking - enable barge-in (user can interrupt)
+      console.log(`🎙️ Sofia started speaking - enabling barge-in detection`);
+      await voiceService.handleSpeakStarted(eventData.payload, callType, operationId);
     } else if (eventType === 'call.speak.ended') {
       // After Sofia finishes speaking, activate WebSocket conversation system
       console.log(`🎙️ Welcome message finished - activating conversation system`);
       await voiceService.handleSpeakEnded(eventData.payload, callType, operationId);
+    } else if (eventType === 'call.gather.ended') {
+      // Process speech recognition results
+      console.log(`🎤 Speech gathering completed - processing user speech`);
+      await voiceService.handleSpeechGatherEnded(eventData.payload, callType, operationId);
     } else if (eventType === 'call.hangup') {
       await voiceService.handleCallStatusUpdate(eventData.payload);
     } else {

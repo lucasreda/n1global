@@ -317,6 +317,76 @@ export class VoiceService {
   }
 
   /**
+   * Handle speak started - enable barge-in detection
+   */
+  async handleSpeakStarted(callData: any, callType: string, operationId: string): Promise<void> {
+    try {
+      console.log(`🎙️ Sofia started speaking - enabling barge-in for call ${callData.call_control_id}`);
+      
+      // Check client_state to see if this is an AI response (not welcome message)
+      const clientState = callData.client_state;
+      let decodedState = null;
+      
+      if (clientState) {
+        try {
+          decodedState = JSON.parse(Buffer.from(clientState, 'base64').toString());
+        } catch (e) {
+          console.warn('⚠️ Could not decode client_state:', e);
+        }
+      }
+      
+      // Only enable barge-in for AI responses, not welcome messages
+      if (decodedState?.action === 'speaking_ai_response') {
+        console.log(`🎤 Enabling barge-in detection during AI response`);
+        
+        // Start parallel speech detection while Sofia is speaking
+        // This will allow user to interrupt Sofia at any time
+        await this.startBargeInDetection(callData.call_control_id, operationId, callType);
+      } else {
+        console.log(`ℹ️ Skipping barge-in for welcome message`);
+      }
+      
+    } catch (error) {
+      console.error('Error handling speak started:', error);
+    }
+  }
+
+  /**
+   * Start barge-in detection while Sofia is speaking
+   */
+  private async startBargeInDetection(callControlId: string, operationId: string, callType: string): Promise<void> {
+    if (!this.telnyxClient) return;
+    
+    try {
+      console.log(`🚨 Starting barge-in detection for call ${callControlId}`);
+      
+      // Start very sensitive speech detection to catch user interruptions
+      await this.telnyxClient.calls.gatherUsingSpeech(callControlId, {
+        speech_timeout_millis: 1000, // Very short timeout to catch interruptions quickly
+        speech_end_silence_millis: 500, // Detect speech start quickly
+        minimum_speech_length_millis: 200, // Catch very short interruptions
+        maximum_speech_length_millis: 30000, // Long max to handle full user response
+        profanity_filter: false,
+        speech_model: 'default', 
+        speech_language: 'pt-BR',
+        save_audio: true,
+        interrupt_on_first_speech: true, // KEY: This will stop Sofia's speaking when user starts
+        client_state: Buffer.from(JSON.stringify({ 
+          action: 'barge_in_detection',
+          operationId,
+          callType,
+          timestamp: Date.now()
+        })).toString('base64')
+      });
+      
+      console.log(`🎤 Barge-in detection active for call ${callControlId}`);
+      
+    } catch (error) {
+      console.error(`❌ Error starting barge-in detection:`, error);
+    }
+  }
+
+  /**
    * Handle call status updates from Telnyx
    */
   async handleCallStatusUpdate(callData: TelnyxCallWebhookData): Promise<void> {
@@ -1041,21 +1111,23 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`💬 Starting prompt-based conversation for call ${callControlId}`);
       
-      // Wait for user to speak, then use gather to capture response
-      const gatherMessage = "Fale agora, estou escutando...";
+      // Start continuous speech recognition
+      console.log(`🎤 Starting continuous speech recognition for real-time conversation`);
       
-      await this.telnyxClient.calls.gather(callControlId, {
-        min_digits: 0,
-        max_digits: 0,
-        timeout_millis: 30000, // 30 seconds timeout
-        finish_on_key: '',
-        valid_digits: '',
-        speech_timeout_millis: 3000,
-        speech_end_silence_millis: 1000,
+      await this.telnyxClient.calls.gatherUsingSpeech(callControlId, {
+        speech_timeout_millis: 3000, // Stop recording after 3s of silence
+        speech_end_silence_millis: 1500, // Detect end of speech
+        minimum_speech_length_millis: 300, // Minimum 300ms speech
+        maximum_speech_length_millis: 15000, // Max 15 seconds
+        profanity_filter: false,
+        speech_model: 'default',
+        speech_language: 'pt-BR', // Portuguese Brazil
+        save_audio: true, // Save audio for better processing
         client_state: Buffer.from(JSON.stringify({ 
-          action: 'gathering_speech',
+          action: 'continuous_speech',
           operationId,
-          callType 
+          callType,
+          timestamp: Date.now()
         })).toString('base64')
       });
       
@@ -1063,6 +1135,101 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       
     } catch (error) {
       console.error(`❌ Error starting prompt-based conversation:`, error);
+    }
+  }
+
+  /**
+   * Handle speech gather ended - process user speech and respond
+   */
+  async handleSpeechGatherEnded(callData: any, callType: string, operationId: string): Promise<void> {
+    if (!this.telnyxClient) return;
+    
+    try {
+      console.log(`🎤 Processing speech gather for call ${callData.call_control_id}`);
+      console.log(`📝 Gather status: ${callData.status}`);
+      
+      // Check if this was a barge-in interruption
+      const clientState = callData.client_state;
+      let decodedState = null;
+      
+      if (clientState) {
+        try {
+          decodedState = JSON.parse(Buffer.from(clientState, 'base64').toString());
+        } catch (e) {
+          console.warn('⚠️ Could not decode client_state:', e);
+        }
+      }
+      
+      const isBargeIn = decodedState?.action === 'barge_in_detection';
+      if (isBargeIn) {
+        console.log(`🚨 BARGE-IN DETECTED! User interrupted Sofia`);
+        
+        // Stop Sofia's current speech
+        try {
+          await this.telnyxClient.calls.speakStop(callData.call_control_id);
+          console.log(`⛔ Sofia's speech stopped due to user interruption`);
+        } catch (e) {
+          console.log(`ℹ️ Could not stop speech (may have already ended)`, e);
+        }
+      }
+      
+      if (callData.status === 'valid' && callData.speech) {
+        // User spoke - process the speech
+        const speechType = isBargeIn ? 'INTERRUPTION' : 'RESPONSE';
+        console.log(`✅ User ${speechType} detected: "${callData.speech}"`);
+        
+        // Generate AI response
+        const aiResponse = await this.generateTestCallResponse(operationId, callData.speech, callType);
+        console.log(`🤖 AI Response generated: "${aiResponse}"`);
+        
+        // Speak AI response with barge-in enabled
+        const clientState = Buffer.from(JSON.stringify({ 
+          action: 'speaking_ai_response',
+          operationId,
+          callType,
+          timestamp: Date.now()
+        })).toString('base64');
+        
+        await this.telnyxClient.calls.speak(callData.call_control_id, {
+          payload: aiResponse,
+          language: 'pt-BR',
+          voice: 'female',
+          client_state: clientState
+        });
+        
+        console.log(`🎙️ AI response sent (with barge-in enabled): "${aiResponse}"`);
+        
+        // Don't start new listening here - it will be handled by speak.started event
+        
+      } else if (callData.status === 'timeout' && !isBargeIn) {
+        // No speech detected in normal listening (not barge-in)
+        console.log(`⏰ No speech detected - prompting user again`);
+        
+        const promptMessage = "Ainda estou aqui! Pode falar, estou escutando.";
+        await this.telnyxClient.calls.speak(callData.call_control_id, {
+          payload: promptMessage,
+          language: 'pt-BR',
+          voice: 'female'
+        });
+        
+        // Restart listening after prompt
+        setTimeout(async () => {
+          await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
+        }, 3000);
+        
+      } else if (isBargeIn && !callData.speech) {
+        // Barge-in activated but no speech captured - continue normal listening
+        console.log(`🎤 Barge-in timeout - resuming normal conversation listening`);
+        await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
+        
+      } else {
+        console.log(`❌ Speech gather failed with status: ${callData.status}`);
+        // End call gracefully
+        await this.hangupCall(callData.call_control_id, 'Erro na conversa');
+      }
+      
+    } catch (error) {
+      console.error('Error handling speech gather ended:', error);
     }
   }
 
