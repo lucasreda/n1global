@@ -372,8 +372,15 @@ export class TelnyxProvisioningService {
         to: toNumber,
         from: fromNumber,
         webhook_url: webhookUrl,
-        timeout_secs: 30,
-        time_limit_secs: 300
+        timeout_secs: 60, // Increased for international calls
+        time_limit_secs: 300,
+        // Enhanced settings for international routing
+        webhook_timeout_secs: 25,
+        client_state: Buffer.from(JSON.stringify({
+          callType: 'outbound-sales',
+          destination: toNumber,
+          timestamp: Date.now()
+        })).toString('base64')
       });
 
       console.log(`✅ Call initiated with ID: ${response.data?.call_control_id || 'unknown'}`);

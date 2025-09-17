@@ -187,6 +187,9 @@ export class VoiceService {
       // For outbound calls, skip availability check and proceed
       if (callData.direction === 'outgoing') {
         console.log(`📞 Outbound call initiated - waiting for call.answered event`);
+        console.log(`🌍 International call routing: US ${callData.from} -> Brazil ${callData.to}`);
+        console.log(`🔗 Webhook connection_id: ${callData.connection_id}`);
+        
         // Just create the call record, don't answer or start AI yet
         const callRecord: InsertVoiceCall = {
           operationId,
