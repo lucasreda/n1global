@@ -1188,10 +1188,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt-BR',  // Use full Brazilian Portuguese code
+          language: 'pt',  // Use 'pt' for Portuguese transcription (not pt-BR)
           audio_track: 'inbound',  // Only transcribe customer speech, not Sofia's
           interim_results: true,  // Get partial results for faster response
-          model: 'whisper.large'  // Use large Whisper model for better Portuguese support
+          transcription_engine: 'A'  // Use Google Speech-to-Text engine (better Portuguese support)
         })
       });
 
@@ -1313,6 +1313,13 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         return;
       }
       
+      // Get existing conversation history if available, otherwise use the passed messageHistory
+      const existingHistory = this.conversationContext.get(callControlId) || [];
+      if (existingHistory.length > 0) {
+        messageHistory = existingHistory;
+        console.log(`📚 Using existing conversation history with ${messageHistory.length} messages`);
+      }
+      
       // Get the proper greeting message if this is the first interaction
       let greeting: string;
       if (messageHistory.length > 0) {
@@ -1346,8 +1353,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Language for Text-to-Speech
-          stt_language: "pt-BR",  // Force Brazilian Portuguese for Speech-to-Text
+          language: "pt-BR",  // Language for Text-to-Speech (keep pt-BR for TTS)
+          stt_language: "pt",  // Use just 'pt' for Speech-to-Text (not pt-BR)
           // Remove stt_model parameter to use default Portuguese model
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
@@ -1387,8 +1394,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Language for Text-to-Speech
-          stt_language: "pt-BR",  // Force Brazilian Portuguese for Speech-to-Text
+          language: "pt-BR",  // Language for Text-to-Speech (keep pt-BR for TTS)
+          stt_language: "pt",  // Use just 'pt' for Speech-to-Text (not pt-BR)
           // Remove stt_model parameter to use default Portuguese model
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
@@ -2206,6 +2213,15 @@ Responda apenas com o texto que você falará para o cliente:`;
       }
 
       console.log(`🤖 Sofia will respond: "${aiResult.response}"`);
+      
+      // Update conversation context with the new exchange
+      const updatedHistory = [
+        ...messageHistory,
+        { role: 'user', content: userResponse },
+        { role: 'assistant', content: aiResult.response }
+      ];
+      this.conversationContext.set(callControlId, updatedHistory);
+      console.log(`📚 Updated conversation history: ${updatedHistory.length} messages`);
 
       // Speak the AI response - using premium for Portuguese
       await this.telnyxClient.calls.speak(callControlId, {
