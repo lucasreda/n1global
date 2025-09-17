@@ -360,17 +360,15 @@ export class VoiceService {
     try {
       console.log(`🚨 Starting barge-in detection for call ${callControlId}`);
       
-      // Start very sensitive speech detection to catch user interruptions
-      await this.telnyxClient.calls.gatherUsingSpeech(callControlId, {
-        speech_timeout_millis: 1000, // Very short timeout to catch interruptions quickly
-        speech_end_silence_millis: 500, // Detect speech start quickly
-        minimum_speech_length_millis: 200, // Catch very short interruptions
-        maximum_speech_length_millis: 30000, // Long max to handle full user response
-        profanity_filter: false,
-        speech_model: 'default', 
-        speech_language: 'pt-BR',
-        save_audio: true,
-        interrupt_on_first_speech: true, // KEY: This will stop Sofia's speaking when user starts
+      // Start sensitive speech detection to catch user interruptions
+      await this.telnyxClient.calls.gather(callControlId, {
+        minimum_digits: 0,
+        maximum_digits: 0,
+        timeout_millis: 5000, // Shorter timeout to catch interruptions
+        inter_digit_timeout_millis: 1000,
+        initial_timeout_millis: 1000,
+        terminating_digit: '',
+        valid_digits: '',
         client_state: Buffer.from(JSON.stringify({ 
           action: 'barge_in_detection',
           operationId,
@@ -1085,11 +1083,29 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`🎵 Starting media streaming for call ${callControlId}`);
       
-      // Start WebSocket media streaming with Telnyx
-      await this.telnyxClient.calls.streamStart(callControlId, {
-        stream_url: `wss://${process.env.REPL_SLUG || 'localhost'}-${process.env.REPL_OWNER || ''}.${process.env.REPLIT_DOMAIN || 'replit.dev'}/api/voice/media-stream/${callControlId}`,
-        stream_track: 'both' // Stream both inbound and outbound audio
-      });
+      // Try to start media streaming (if available)
+      try {
+        // Use Telnyx streaming API if available
+        const streamResponse = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/streaming_start`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            stream_url: `wss://${process.env.REPL_SLUG || 'localhost'}-${process.env.REPL_OWNER || ''}.${process.env.REPLIT_DOMAIN || 'replit.dev'}/api/voice/media-stream/${callControlId}`,
+            stream_track: 'both'
+          })
+        });
+        
+        if (!streamResponse.ok) {
+          throw new Error(`Streaming API returned ${streamResponse.status}`);
+        }
+        
+      } catch (streamError) {
+        // If streaming fails, throw error to trigger fallback
+        throw new Error(`Streaming not available: ${streamError.message}`);
+      }
       
       console.log(`✅ Media streaming activated for call ${callControlId}`);
       
@@ -1114,15 +1130,14 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       // Start continuous speech recognition
       console.log(`🎤 Starting continuous speech recognition for real-time conversation`);
       
-      await this.telnyxClient.calls.gatherUsingSpeech(callControlId, {
-        speech_timeout_millis: 3000, // Stop recording after 3s of silence
-        speech_end_silence_millis: 1500, // Detect end of speech
-        minimum_speech_length_millis: 300, // Minimum 300ms speech
-        maximum_speech_length_millis: 15000, // Max 15 seconds
-        profanity_filter: false,
-        speech_model: 'default',
-        speech_language: 'pt-BR', // Portuguese Brazil
-        save_audio: true, // Save audio for better processing
+      await this.telnyxClient.calls.gather(callControlId, {
+        minimum_digits: 0,
+        maximum_digits: 0,
+        timeout_millis: 30000, // 30 second timeout
+        inter_digit_timeout_millis: 3000,
+        initial_timeout_millis: 5000,
+        terminating_digit: '',
+        valid_digits: '',
         client_state: Buffer.from(JSON.stringify({ 
           action: 'continuous_speech',
           operationId,
@@ -1166,10 +1181,17 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         
         // Stop Sofia's current speech
         try {
-          await this.telnyxClient.calls.speakStop(callData.call_control_id);
+          // Use proper Telnyx API to stop speaking
+          await fetch(`https://api.telnyx.com/v2/calls/${callData.call_control_id}/actions/speak_stop`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
           console.log(`⛔ Sofia's speech stopped due to user interruption`);
         } catch (e) {
-          console.log(`ℹ️ Could not stop speech (may have already ended)`, e);
+          console.log(`ℹ️ Could not stop speech (may have already ended)`);
         }
       }
       
@@ -1192,6 +1214,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: aiResponse,
+          payload_type: 'text',
+          service_level: 'premium',
           language: 'pt-BR',
           voice: 'female',
           client_state: clientState
@@ -1208,6 +1232,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         const promptMessage = "Ainda estou aqui! Pode falar, estou escutando.";
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: promptMessage,
+          payload_type: 'text',
+          service_level: 'premium',
           language: 'pt-BR',
           voice: 'female'
         });
