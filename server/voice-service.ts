@@ -49,6 +49,9 @@ export class VoiceService {
   private processingQueue = new Map<string, Promise<void>>();
   private conversationContext = new Map<string, any[]>();
   private isProcessingResponse = new Map<string, boolean>();
+  private processingTimeouts = new Map<string, NodeJS.Timeout>();
+  private conversationStarted = new Map<string, boolean>();
+  private isProcessingResponse = new Map<string, boolean>();
 
   constructor() {
     this.customerOrderService = new CustomerOrderService();
@@ -411,7 +414,8 @@ export class VoiceService {
   async processConversationWithAI(
     callSid: string, 
     customerMessage: string, 
-    conversationHistory: any[] = []
+    conversationHistory: any[] = [],
+    hasStarted: boolean = false
   ): Promise<{
     response: string;
     shouldCreateTicket: boolean;
@@ -436,13 +440,14 @@ export class VoiceService {
       // Get AI directives for this operation (reusing Sofia's architecture)
       const directives = await this.getActiveDirectives(call.operationId);
       
-      // Build AI prompt for voice conversation
+      // Build AI prompt for voice conversation with context awareness
       const prompt = await this.buildVoiceConversationPrompt(
         call,
         customerMessage,
         conversationHistory,
         directives,
-        customerContext
+        customerContext,
+        hasStarted
       );
 
       // Call OpenAI for response
@@ -660,7 +665,8 @@ export class VoiceService {
     customerMessage: string,
     conversationHistory: any[],
     directives: any[],
-    customerContext: any
+    customerContext: any,
+    hasStarted: boolean = false
   ): Promise<string> {
     // Group directives by type (same as email support)
     const directivesByType = directives.reduce((acc, directive: any) => {
@@ -747,11 +753,31 @@ ${conversationHistory.slice(-5).map((msg, index) => {
 ${conversationHistory.length > 5 ? '\n(Mostrando apenas as 5 mensagens mais recentes)' : ''}
 ` : '';
 
+    // Instructions based on conversation state
+    const conversationInstructions = hasStarted ? `
+🔴 IMPORTANTE - CONVERSA JÁ EM ANDAMENTO:
+- NÃO se reapresente (você já foi apresentada no início)
+- NÃO repita "Olá, sou a Sofia" ou frases similares
+- NÃO repita informações ou frases que já disse anteriormente
+- CONTINUE naturalmente a conversa em andamento
+- MANTENHA o contexto e fluxo natural da conversa
+- EVITE voltar ao início ou repetir informações já fornecidas
+- Responda diretamente à última mensagem do cliente
+
+` : `
+🟢 INÍCIO DA CONVERSA:
+- Esta é sua primeira resposta após a apresentação inicial
+- Responda diretamente à pergunta do cliente
+- Seja acolhedora mas vá direto ao ponto
+- Não repita a apresentação já feita
+
+`;
+
     // Build the complete intelligent prompt
     const prompt = `
 Você é Sofia, uma assistente virtual experiente e altamente empática que atende clientes por telefone. Sua personalidade é acolhedora, profissional e adaptável ao estado emocional do cliente.
 
-${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}${customerContextSection}${conversationHistorySection}
+${conversationInstructions}${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}${customerContextSection}${conversationHistorySection}
 
 MENSAGEM ATUAL DO CLIENTE: "${customerMessage}"
 
@@ -1061,6 +1087,12 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
    */
   private async startRealTimeTranscription(callControlId: string): Promise<void> {
     try {
+      // Check if transcription is already active
+      if (this.transcriptionActive.get(callControlId)) {
+        console.log(`⚠️ Transcription already active for ${callControlId}`);
+        return;
+      }
+      
       console.log(`🎤 Starting real-time Portuguese transcription for call ${callControlId}`);
       
       const apiKey = process.env.TELNYX_API_KEY;
@@ -1085,6 +1117,14 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
 
       if (!response.ok) {
         const errorText = await response.text();
+        // Check if transcription is already running
+        if (errorText.includes('already in progress')) {
+          console.log(`ℹ️ Transcription already in progress, marking as active`);
+          this.transcriptionActive.set(callControlId, true);
+          this.transcriptionBuffer.set(callControlId, '');
+          this.lastTranscriptionTime.set(callControlId, Date.now());
+          return;
+        }
         console.error(`❌ Failed to start transcription (${response.status}):`, errorText);
         throw new Error(`Transcription start failed: ${errorText}`);
       }
@@ -1796,7 +1836,7 @@ Responda apenas com o texto que você falará para o cliente:`;
   }
 
   /**
-   * Process real-time transcription data with high-performance pipeline
+   * Process real-time transcription data with intelligent debouncing
    * This method is called by webhook when transcription data arrives
    */
   async processTranscription(callControlId: string, transcript: string, isFinal: boolean): Promise<void> {
@@ -1814,25 +1854,38 @@ Responda apenas com o texto que você falará para o cliente:`;
       
       console.log(`📝 Transcription buffer: "${newBuffer}" (Final: ${isFinal})`);
       
-      // Process if we have a complete sentence or it's final
-      const shouldProcess = isFinal || 
-                            newBuffer.includes('?') || 
-                            newBuffer.includes('.') || 
-                            newBuffer.includes('!') ||
-                            newBuffer.split(' ').length > 10;
+      // Update last transcription time for silence detection
+      this.lastTranscriptionTime.set(callControlId, Date.now());
       
-      if (shouldProcess && !this.isProcessingResponse.get(callControlId)) {
-        // Mark as processing to avoid duplicates
-        this.isProcessingResponse.set(callControlId, true);
+      // Clear any existing timeout
+      const existingTimeout = this.processingTimeouts.get(callControlId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+      }
+      
+      // Set a new timeout to process after user stops speaking (1.5 seconds of silence)
+      const timeout = setTimeout(() => {
+        const messageToProcess = this.transcriptionBuffer.get(callControlId)?.trim();
+        if (messageToProcess && messageToProcess.length > 0 && !this.isProcessingResponse.get(callControlId)) {
+          console.log(`⏱️ Silence detected, processing: "${messageToProcess}"`);
+          this.transcriptionBuffer.set(callControlId, '');
+          this.processUserMessage(callControlId, messageToProcess);
+        }
+      }, 1500); // Wait 1.5 seconds of silence before processing
+      
+      this.processingTimeouts.set(callControlId, timeout);
+      
+      // Process immediately if it's final or we have a clear complete sentence
+      if (isFinal || (newBuffer.endsWith('?') || newBuffer.endsWith('.') || newBuffer.endsWith('!'))) {
+        clearTimeout(timeout);
+        this.processingTimeouts.delete(callControlId);
         
-        // Clear buffer and process
-        const messageToProcess = newBuffer.trim();
-        this.transcriptionBuffer.set(callControlId, '');
-        
-        console.log(`🚀 Processing transcription: "${messageToProcess}"`);
-        
-        // Process in parallel for speed
-        this.processUserMessage(callControlId, messageToProcess);
+        if (!this.isProcessingResponse.get(callControlId) && newBuffer.trim().length > 0) {
+          const messageToProcess = newBuffer.trim();
+          this.transcriptionBuffer.set(callControlId, '');
+          console.log(`🚀 Processing complete sentence: "${messageToProcess}"`);
+          this.processUserMessage(callControlId, messageToProcess);
+        }
       }
     } catch (error) {
       console.error(`❌ Error processing transcription:`, error);
@@ -1844,6 +1897,16 @@ Responda apenas com o texto que você falará para o cliente:`;
    */
   private async processUserMessage(callControlId: string, userMessage: string): Promise<void> {
     try {
+      // Skip processing very short or empty messages
+      if (!userMessage || userMessage.trim().length < 2) {
+        console.log(`⚠️ Skipping very short message: "${userMessage}"`);
+        this.isProcessingResponse.set(callControlId, false);
+        return;
+      }
+      
+      // Mark as processing
+      this.isProcessingResponse.set(callControlId, true);
+      
       // Get call info from database
       const [call] = await db
         .select()
@@ -1859,10 +1922,16 @@ Responda apenas com o texto que você falará para o cliente:`;
       
       // Get conversation history
       const history = this.conversationContext.get(callControlId) || [];
+      const hasStarted = this.conversationStarted.get(callControlId) || false;
       
-      // Generate AI response quickly
+      // Mark conversation as started
+      if (!hasStarted) {
+        this.conversationStarted.set(callControlId, true);
+      }
+      
+      // Generate AI response quickly with context
       const startTime = Date.now();
-      const aiResult = await this.processConversationWithAI(callControlId, userMessage, history);
+      const aiResult = await this.processConversationWithAI(callControlId, userMessage, history, hasStarted);
       const responseTime = Date.now() - startTime;
       
       console.log(`⚡ AI response generated in ${responseTime}ms: "${aiResult?.response}"`);
