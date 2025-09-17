@@ -51,7 +51,7 @@ export class VoiceService {
   private isProcessingResponse = new Map<string, boolean>();
   private processingTimeouts = new Map<string, NodeJS.Timeout>();
   private conversationStarted = new Map<string, boolean>();
-  private isProcessingResponse = new Map<string, boolean>();
+  private isSofiaSpeaking = new Map<string, boolean>();
 
   constructor() {
     this.customerOrderService = new CustomerOrderService();
@@ -300,6 +300,9 @@ export class VoiceService {
     try {
       console.log(`🎙️ Speak ended for call ${callData.call_control_id} - reactivating transcription`);
       
+      // Mark Sofia as no longer speaking
+      this.isSofiaSpeaking.set(callData.call_control_id, false);
+      
       // Check if this was a welcome message (based on client_state)
       const clientState = callData.client_state;
       let decodedState = null;
@@ -362,6 +365,9 @@ export class VoiceService {
     try {
       console.log(`🎙️ Sofia started speaking - enabling barge-in for call ${callData.call_control_id}`);
       
+      // Mark Sofia as speaking
+      this.isSofiaSpeaking.set(callData.call_control_id, true);
+      
       // Check client_state to see if this is an AI response (not welcome message)
       const clientState = callData.client_state;
       let decodedState = null;
@@ -374,15 +380,20 @@ export class VoiceService {
         }
       }
       
-      // Only enable barge-in for AI responses, not welcome messages
-      if (decodedState?.action === 'speaking_ai_response') {
-        console.log(`🎤 Enabling barge-in detection during AI response`);
+      // Enable barge-in for ALL Sofia responses (including welcome)
+      // This allows the user to interrupt at any time
+      const isSofiaSpeaking = decodedState?.action === 'speaking_ai_response' || 
+                             decodedState?.action === 'speaking_response' ||
+                             decodedState?.action === 'speaking_welcome';
+      
+      if (isSofiaSpeaking) {
+        console.log(`🎤 Enabling barge-in - user can interrupt Sofia anytime`);
         
         // Start parallel speech detection while Sofia is speaking
         // This will allow user to interrupt Sofia at any time
         await this.startBargeInDetection(callData.call_control_id, operationId, callType);
       } else {
-        console.log(`ℹ️ Skipping barge-in for welcome message`);
+        console.log(`ℹ️ Not a Sofia speech event, skipping barge-in`);
       }
       
     } catch (error) {
@@ -394,9 +405,29 @@ export class VoiceService {
    * Simplified barge-in detection (disabled for now to avoid complexity)
    */
   private async startBargeInDetection(callControlId: string, operationId: string, callType: string): Promise<void> {
-    // SIMPLIFIED: Skip barge-in for now to get basic conversation working first
-    console.log(`ℹ️ Barge-in detection skipped - focusing on basic conversation first`);
-    return;
+    try {
+      console.log(`🎤 Enabling barge-in detection for call ${callControlId}`);
+      
+      // When user speaks while Sofia is talking, we should:
+      // 1. Stop Sofia's current speech
+      // 2. Listen to what the user is saying
+      // 3. Respond appropriately
+      
+      // Check if transcription is active
+      if (this.transcriptionActive.get(callControlId)) {
+        console.log(`✔️ Transcription is active - user can now interrupt Sofia`);
+        // The real-time transcription will detect if user speaks
+        // When detected, it will call processTranscription which will stop Sofia
+      } else {
+        console.log(`🔄 Starting transcription to enable barge-in`);
+        // Start transcription so we can detect user speech
+        await this.startRealTimeTranscription(callControlId);
+        this.transcriptionActive.set(callControlId, true);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error enabling barge-in detection:', error);
+    }
   }
 
   /**
@@ -1490,20 +1521,24 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`🤖 Generating conversational response for: "${userSpeech}"`);
       
-      // Get customer support service for AI response
-      const customerSupportService = container.resolve('customerSupportService') as CustomerSupportService;
+      // Get active AI directives for this operation
+      const directives = await this.getActiveDirectives(operationId);
+      console.log(`📄 Found ${directives.length} AI directives for voice response`);
       
-      // Generate context-aware AI response
-      const aiResponse = await customerSupportService.generateAIResponse({
-        message: userSpeech,
-        operationId,
-        context: {
-          callType,
-          conversationType: 'voice'
-        }
+      // Build voice-specific prompt using directives
+      const prompt = await this.buildVoiceCallPrompt(operationId, userSpeech, directives, callType as 'test' | 'sales');
+      
+      // Get OpenAI from container and generate response
+      const openai = container.resolve('openai') as any;
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 300
       });
       
-      console.log(`🎯 AI generated response: "${aiResponse}"`);
+      const aiResponse = response.choices[0].message.content || 'Desculpe, não entendi. Pode repetir?';
+      console.log(`🎯 AI generated response with directives: "${aiResponse}"`);
       return aiResponse;
       
     } catch (error) {
@@ -1678,34 +1713,29 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         return acc;
       }, {} as Record<string, any[]>);
       
-      let welcomeMessage = "Olá! Aqui é a Sofia, assistente virtual";
+      // For sales calls, use a more natural greeting asking for the person's name
+      let welcomeMessage = "";
       
-      // Add store name if available
-      const storeNameDirective = storeInfoDirectives.find(d => 
-        d.title?.toLowerCase().includes('nome') || 
-        d.title?.toLowerCase().includes('empresa') ||
-        d.content?.toLowerCase().includes('empresa')
-      );
-      
-      if (storeNameDirective) {
-        welcomeMessage += ` da ${storeNameDirective.content}`;
-        console.log(`🏪 Added store name: ${storeNameDirective.content}`);
-      }
-      
-      // Add context based on call type
       if (callType === 'sales') {
-        welcomeMessage += ". Estou entrando em contato porque acredito que nossos produtos podem ser muito úteis para você. ";
+        // Natural sales greeting - ask for the person's name first
+        welcomeMessage = "Oi, aqui é a Sofia. ";
         
-        // Add product highlight if available
-        const productDirective = directivesByType.product_info?.find(d => 
-          d.content && d.content.length > 10
+        // Add store name if available
+        const storeNameDirective = storeInfoDirectives.find(d => 
+          d.title?.toLowerCase().includes('nome') || 
+          d.title?.toLowerCase().includes('empresa') ||
+          d.content?.toLowerCase().includes('empresa')
         );
         
-        if (productDirective) {
-          welcomeMessage += "Gostaria de conhecer um pouco sobre o que oferecemos?";
-        } else {
-          welcomeMessage += "Posso apresentar brevemente nossos serviços?";
+        if (storeNameDirective) {
+          welcomeMessage += `Eu trabalho com a ${storeNameDirective.content}. `;
+          console.log(`🏪 Added store name: ${storeNameDirective.content}`);
         }
+        
+        // Ask for the person's name naturally
+        welcomeMessage += "Eu posso falar com quem, por favor?";
+        
+        // Note: After getting the name, Sofia will continue the conversation naturally
         console.log(`💼 Sales welcome message generated for ${operationId}`);
       } else {
         welcomeMessage += ". Esta é uma ligação de teste para demonstrar nosso sistema de atendimento automatizado.";
@@ -1764,6 +1794,15 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   /**
    * Build AI prompt specifically for test call responses
    */
+  private async buildVoiceCallPrompt(
+    operationId: string, 
+    customerMessage: string, 
+    directives: any[],
+    callType: 'test' | 'sales' = 'test'
+  ): Promise<string> {
+    return this.buildTestCallPrompt(operationId, customerMessage, directives, callType);
+  }
+
   private async buildTestCallPrompt(
     operationId: string, 
     customerMessage: string, 
@@ -1812,12 +1851,13 @@ O cliente disse: "${customerMessage}"`;
 
     const instructionsSection = callType === 'sales'
       ? `INSTRUÇÕES PARA RESPOSTA DE VENDAS:
+- Se o cliente falar o nome, cumprimente de forma personalizada: "Prazer em falar com você, [Nome]!"
 - Seja calorosa, confiante e profissional desde o primeiro contato
-- Use linguagem persuasiva mas respeitosa, adequada para fala
-- Identifique dores/necessidades do cliente e apresente soluções
-- Destaque benefícios únicos e diferenciais competitivos
-- Crie senso de urgência quando apropriado (ofertas limitadas, etc.)
-- Conduza a conversa para próximos passos (agendamento, proposta, etc.)
+- Use linguagem natural e pessoal, adequada para conversa telefônica
+- Use as DIRETRIZES DE ATENDIMENTO PERSONALIZADAS se disponíveis
+- Identifique dores/necessidades do cliente e apresente soluções baseadas nas INFORMAÇÕES DOS PRODUTOS
+- Destaque benefícios únicos usando as INFORMAÇÕES DA EMPRESA
+- Crie senso de urgência quando apropriado baseado nas INSTRUÇÕES ESPECÍFICAS
 - Mantenha a resposta focada mas completa (máximo 3-4 frases)
 - Se o cliente demonstrar interesse, seja mais específica sobre produtos/preços
 - Se houver objeções, responda com empatia e apresente contrapontos`
@@ -1857,6 +1897,21 @@ Responda apenas com o texto que você falará para o cliente:`;
       if (!this.transcriptionActive.get(callControlId)) {
         console.log(`⚠️ Transcription not active for call ${callControlId}`);
         return;
+      }
+
+      // BARGE-IN: Check if Sofia is currently speaking
+      const isSofiaSpeaking = this.isSofiaSpeaking?.get?.(callControlId) || false;
+      if (isSofiaSpeaking && transcript.trim().length > 0) {
+        console.log(`🎤 User interrupted Sofia! Stopping her speech...`);
+        
+        // Stop Sofia's current speech immediately
+        try {
+          await this.telnyxClient?.calls.stopSpeaking(callControlId);
+          this.isSofiaSpeaking?.set?.(callControlId, false);
+          console.log(`✔️ Sofia stopped speaking, now listening to user`);
+        } catch (error) {
+          console.log(`⚠️ Could not stop Sofia's speech:`, error);
+        }
       }
 
       // Add to buffer
@@ -1956,6 +2011,9 @@ Responda apenas com o texto que você falará para o cliente:`;
       
       // Stop transcription temporarily while speaking
       await this.pauseTranscription(callControlId);
+      
+      // Mark Sofia as speaking
+      this.isSofiaSpeaking.set(callControlId, true);
       
       // Speak response immediately
       await this.telnyxClient?.calls.speak(callControlId, {
