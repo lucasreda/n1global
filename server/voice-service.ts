@@ -1010,13 +1010,15 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       
       // Speak the welcome message - using premium for Portuguese
       console.log(`🗣️ Attempting to speak welcome message: "${welcomeMessage}"`);
+      const clientState = Buffer.from(JSON.stringify({ action: 'speaking_welcome' })).toString('base64');
       try {
         await this.telnyxClient.calls.speak(callControlId, {
           payload: welcomeMessage,
           payload_type: 'text',
           service_level: 'premium',  // Premium required for pt-BR
           language: 'pt-BR',
-          voice: 'Polly.Camila'
+          voice: 'Polly.Camila',
+          client_state: clientState  // Important: tells system this is welcome message
         });
       } catch (speakErr: any) {
         console.error(`❌ Error in speak call:`, speakErr);
