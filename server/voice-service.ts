@@ -789,14 +789,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     
     try {
       console.log(`📞 Answering call ${callControlId}`);
+      // Use minimal payload - only client_state as base64 if needed
+      const clientState = Buffer.from(JSON.stringify({ action: 'call_answered' })).toString('base64');
       await this.telnyxClient.calls.answer(callControlId, {
-        client_state: 'call_answered',
-        webhook_url: `https://${process.env.REPLIT_DEV_DOMAIN}/api/telnyx-call-status`,
-        webhook_url_method: 'POST'
+        client_state: clientState
       });
       console.log(`✅ Call ${callControlId} answered successfully`);
     } catch (error) {
       console.error(`❌ Error answering call ${callControlId}:`, error);
+      // Enhanced error logging for debugging
+      if (error && typeof error === 'object') {
+        const telnyxError = error as any;
+        console.error('🐛 Telnyx 422 details:', telnyxError.raw?.errors, telnyxError.responseBody, telnyxError.requestId);
+      }
       throw error;
     }
   }
@@ -812,13 +817,16 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     
     try {
       console.log(`📞 Hanging up call ${callControlId}: ${reason || 'No reason provided'}`);
-      await this.telnyxClient.calls.hangup(callControlId, {
-        client_state: 'call_ending',
-        cause: 'normal_clearing'
-      });
+      // Use empty payload for hangup - no parameters needed
+      await this.telnyxClient.calls.hangup(callControlId, {});
       console.log(`✅ Call ${callControlId} hung up successfully`);
     } catch (error) {
       console.error(`❌ Error hanging up call ${callControlId}:`, error);
+      // Enhanced error logging for debugging
+      if (error && typeof error === 'object') {
+        const telnyxError = error as any;
+        console.error('🐛 Telnyx 422 details:', telnyxError.raw?.errors, telnyxError.responseBody, telnyxError.requestId);
+      }
     }
   }
 
@@ -838,11 +846,12 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, 'test');
       
       // Speak the welcome message
+      const clientState = Buffer.from(JSON.stringify({ action: 'speaking_welcome' })).toString('base64');
       await this.telnyxClient.calls.speak(callControlId, {
         payload: welcomeMessage,
         language: 'pt-BR',
         voice: 'female',
-        client_state: 'speaking_welcome'
+        client_state: clientState
       });
       
       console.log(`🎙️ Welcome message sent to call ${callControlId}: "${welcomeMessage}"`);
@@ -870,11 +879,12 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.';
       
       // Speak the message
+      const clientState = Buffer.from(JSON.stringify({ action: 'speaking_out_of_hours' })).toString('base64');
       await this.telnyxClient.calls.speak(callControlId, {
         payload: message,
         language: 'pt-BR',
         voice: 'female',
-        client_state: 'speaking_out_of_hours'
+        client_state: clientState
       });
       
       // Wait a bit then hangup
