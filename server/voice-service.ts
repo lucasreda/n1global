@@ -178,14 +178,14 @@ export class VoiceService {
       const availability = await this.isVoiceServiceAvailable(operationId);
       
       // For outbound calls, we don't handle availability differently - we control the call
-      if (!availability.available && callData.direction === 'inbound') {
+      if (!availability.available && callData.direction === 'incoming') {
         console.log(`🚫 Voice service not available: ${availability.reason}`);
         await this.handleOutOfHoursCall(callData.call_control_id, availability.reason!, availability.settings);
         return;
       }
       
       // For outbound calls, skip availability check and proceed
-      if (callData.direction === 'outbound') {
+      if (callData.direction === 'outgoing') {
         console.log(`📞 Outbound call initiated - waiting for call.answered event`);
         // Just create the call record, don't answer or start AI yet
         const callRecord: InsertVoiceCall = {
