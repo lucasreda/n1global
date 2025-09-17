@@ -23,9 +23,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// ElevenLabs API configuration
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const ELEVENLABS_VOICE_ID = "pNInz6obpgDQGcFmaJgB"; // Portuguese female voice (Adam)
+// Voice processing with Telnyx Neural HD TTS
 
 interface TelnyxCallWebhookData {
   call_control_id: string;
@@ -1144,7 +1142,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       }
       
       try {
-        await this.speakWithElevenLabs(callControlId, welcomeMessage, clientState);
+        await this.speakWithAdvancedTTS(callControlId, welcomeMessage, clientState);
       } catch (speakErr: any) {
         console.error(`❌ Error in speak call:`, speakErr);
         if (speakErr.raw?.errors) {
@@ -1220,50 +1218,6 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     }
   }
 
-  /**
-   * Generate humanized speech using ElevenLabs
-   */
-  private async generateElevenLabsSpeech(text: string, voiceId: string = ELEVENLABS_VOICE_ID): Promise<Buffer> {
-    try {
-      if (!ELEVENLABS_API_KEY) {
-        throw new Error('ElevenLabs API key not configured');
-      }
-
-      console.log(`🎤 Generating ElevenLabs speech for: "${text.substring(0, 50)}..."`);
-
-      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'audio/mpeg',
-          'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY
-        },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.75,
-            similarity_boost: 0.85,
-            style: 0.65,
-            use_speaker_boost: true
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
-      }
-
-      const audioBuffer = Buffer.from(await response.arrayBuffer());
-      console.log(`✅ ElevenLabs speech generated: ${audioBuffer.length} bytes`);
-      
-      return audioBuffer;
-    } catch (error) {
-      console.error(`❌ Error generating ElevenLabs speech:`, error);
-      throw error;
-    }
-  }
 
   /**
    * Transcribe audio using OpenAI Whisper with automatic language detection
@@ -1300,117 +1254,139 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Intelligent TTS provider selection with cost control
+   * Sofia's Neural HD TTS with robust fallbacks and SSML optimization
    */
-  private async speakWithIntelligentTTS(
+  private async speakWithAdvancedTTS(
     callControlId: string, 
     text: string, 
-    clientState?: string,
-    isGreeting: boolean = false
+    clientState?: string
   ): Promise<void> {
     try {
       // Guard: Check if call is still active before speaking
       if (!this.activeCallIds.has(callControlId)) {
-        console.log(`⚠️ Call ${callControlId} ended, skipping speak command`);
+        console.log(`⚠️ Call ${callControlId} ended, skipping Sofia's speech`);
         return;
       }
 
-      // Intelligent provider selection
-      const shouldUseElevenLabs = this.shouldUseElevenLabs(text, isGreeting);
+      const charCount = text.length;
+      console.log(`🎤 Sofia speaking (Neural HD): "${text.substring(0, 50)}..." (${charCount} chars)`);
       
-      if (shouldUseElevenLabs) {
-        console.log(`🎤 Using ElevenLabs for: "${text.substring(0, 50)}..."`);
-        
-        try {
-          const audioBuffer = await this.generateElevenLabsSpeech(text);
-          
-          // Check if base64 would be too large for Telnyx (limit ~50KB base64 = ~37KB binary)
-          if (audioBuffer.length <= 37000) {
-            const audioBase64 = audioBuffer.toString('base64');
-            const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
-
-            await this.telnyxClient?.calls.playbackStart(callControlId, {
-              audio_url: audioUrl,
-              loop: 1,
-              client_state: clientState || Buffer.from(JSON.stringify({
-                action: 'elevenlabs_speech',
-                timestamp: Date.now()
-              })).toString('base64')
-            });
-
-            console.log(`✅ ElevenLabs audio played (${audioBuffer.length} bytes)`);
-            return;
-          } else {
-            console.log(`⚠️ ElevenLabs audio too large (${audioBuffer.length} bytes), using Telnyx TTS`);
-            // Fall through to Telnyx TTS
-          }
-        } catch (elevenLabsError) {
-          console.log(`⚠️ ElevenLabs failed: ${elevenLabsError}, using Telnyx TTS`);
-          // Fall through to Telnyx TTS
-        }
-      } else {
-        console.log(`💰 Using economical Telnyx TTS for: "${text.substring(0, 50)}..."`);
-      }
+      // Enhanced SSML for more natural speech patterns
+      const enhancedText = this.enhanceTextWithSSML(text);
       
-      // Use reliable Telnyx TTS (economical and always works)
-      await this.telnyxClient?.calls.speak(callControlId, {
-        payload: text,
-        payload_type: 'text',
-        service_level: 'premium',
-        language: 'pt-BR',
-        voice: 'Polly.Camila',
-        client_state: clientState || Buffer.from(JSON.stringify({
-          action: 'telnyx_speech',
-          timestamp: Date.now()
-        })).toString('base64')
-      });
-      
-      console.log(`✅ Telnyx TTS completed for call ${callControlId}`);
-    } catch (error) {
-      console.error(`❌ Critical TTS error for call ${callControlId}:`, error);
-      
-      // Final emergency fallback
+      // Try Neural HD voice first (best quality)
       try {
         await this.telnyxClient?.calls.speak(callControlId, {
-          payload: "Desculpe, tivemos um problema técnico.",
+          payload: enhancedText,
+          payload_type: 'ssml',
+          service_level: 'premium',
+          language: 'pt-BR',
+          voice: 'Azure.pt-BR-FranciscaNeural', // Azure Neural HD for Sofia
+          client_state: clientState || Buffer.from(JSON.stringify({
+            action: 'sofia_neural_speaking',
+            provider: 'azure_neural',
+            chars: charCount,
+            timestamp: Date.now()
+          })).toString('base64')
+        });
+        
+        console.log(`✅ Sofia spoke with Azure Neural HD (${charCount} chars)`);
+        return;
+      } catch (neuralError) {
+        console.log(`⚠️ Azure Neural HD failed, falling back to AWS Polly Neural: ${neuralError}`);
+        
+        // Fallback to AWS Polly Neural
+        try {
+          await this.telnyxClient?.calls.speak(callControlId, {
+            payload: text, // Use plain text for Polly
+            payload_type: 'text',
+            service_level: 'premium',
+            language: 'pt-BR',
+            voice: 'Polly.Camila-Neural',
+            client_state: clientState || Buffer.from(JSON.stringify({
+              action: 'sofia_neural_fallback',
+              provider: 'polly_neural',
+              chars: charCount,
+              timestamp: Date.now()
+            })).toString('base64')
+          });
+          
+          console.log(`✅ Sofia spoke with AWS Polly Neural fallback (${charCount} chars)`);
+          return;
+        } catch (pollyNeuralError) {
+          console.log(`⚠️ Polly Neural failed, using standard voice: ${pollyNeuralError}`);
+          
+          // Final fallback to standard Polly voice
+          await this.telnyxClient?.calls.speak(callControlId, {
+            payload: text,
+            payload_type: 'text',
+            service_level: 'premium',
+            language: 'pt-BR',
+            voice: 'Polly.Camila', // Consistent Sofia voice
+            client_state: clientState || Buffer.from(JSON.stringify({
+              action: 'sofia_standard_fallback',
+              provider: 'polly_standard',
+              chars: charCount,
+              timestamp: Date.now()
+            })).toString('base64')
+          });
+          
+          console.log(`✅ Sofia spoke with standard voice final fallback (${charCount} chars)`);
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Critical TTS error for Sofia on call ${callControlId}:`, error);
+      
+      // Emergency minimal message
+      try {
+        await this.telnyxClient?.calls.speak(callControlId, {
+          payload: "Oi, tivemos uma dificuldade técnica.",
           payload_type: 'text',
           service_level: 'basic',
           language: 'pt-BR',
           voice: 'Polly.Camila',
-          client_state: clientState
+          client_state: clientState || Buffer.from(JSON.stringify({
+            action: 'sofia_emergency',
+            provider: 'emergency',
+            timestamp: Date.now()
+          })).toString('base64')
         });
-      } catch (finalError) {
-        console.error(`❌ Even emergency fallback failed:`, finalError);
+        
+        console.log(`🚨 Sofia used emergency voice recovery`);
+      } catch (emergencyError) {
+        console.error(`❌ Even Sofia's emergency voice failed:`, emergencyError);
       }
     }
   }
 
   /**
-   * Intelligent decision on whether to use ElevenLabs based on cost and context
+   * Enhance text with SSML for more natural speech patterns
    */
-  private shouldUseElevenLabs(text: string, isGreeting: boolean): boolean {
-    // Use ElevenLabs only for:
-    // 1. Short greetings/critical messages (< 50 chars)
-    // 2. Important first impressions
-    // 3. VIP interactions (future enhancement)
+  private enhanceTextWithSSML(text: string): string {
+    // Add natural pauses and emphasis for Sofia's personality
+    let enhanced = text;
     
-    const textLength = text.length;
+    // Add pauses after greetings
+    enhanced = enhanced.replace(/^(Oi|Olá|Alô),?\s*/i, '<speak>$1<break time="300ms"/> ');
     
-    // For greetings under 50 characters, use ElevenLabs for best first impression
-    if (isGreeting && textLength <= 50) {
-      console.log(`🌟 Using ElevenLabs for short greeting (${textLength} chars)`);
-      return true;
+    // Add gentle emphasis on Sofia's name
+    enhanced = enhanced.replace(/Sofia/gi, '<emphasis level="moderate">Sofia</emphasis>');
+    
+    // Add natural breathing pauses after questions
+    enhanced = enhanced.replace(/\?\s+/g, '?<break time="500ms"/> ');
+    
+    // Add slight pauses after commas for natural flow
+    enhanced = enhanced.replace(/,\s+/g, ',<break time="200ms"/> ');
+    
+    // Ensure proper SSML wrapper
+    if (!enhanced.startsWith('<speak>')) {
+      enhanced = `<speak>${enhanced}`;
+    }
+    if (!enhanced.endsWith('</speak>')) {
+      enhanced = `${enhanced}</speak>`;
     }
     
-    // For very short responses (< 30 chars), occasionally use ElevenLabs
-    if (textLength <= 30 && Math.random() < 0.3) {
-      console.log(`🎯 Using ElevenLabs for short response (${textLength} chars)`);
-      return true;
-    }
-    
-    // Otherwise use economical Telnyx TTS
-    console.log(`💰 Using Telnyx TTS for efficiency (${textLength} chars)`);
-    return false;
+    return enhanced;
   }
 
   /**
@@ -1430,9 +1406,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const message = settings?.outOfHoursMessage || 
         'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.';
       
-      // Speak the message with ElevenLabs
+      // Speak the message with Neural HD TTS
       const clientState = Buffer.from(JSON.stringify({ action: 'speaking_out_of_hours' })).toString('base64');
-      await this.speakWithElevenLabs(callControlId, message, clientState);
+      await this.speakWithAdvancedTTS(callControlId, message, clientState);
       
       // Wait a bit then hangup
       setTimeout(() => {
@@ -2293,14 +2269,14 @@ Responda apenas com o texto que você falará para o cliente:`;
       // Mark Sofia as speaking
       this.isSofiaSpeaking.set(callControlId, true);
       
-      // Speak response immediately with ElevenLabs
+      // Speak response immediately with Neural HD TTS
       const responseClientState = Buffer.from(JSON.stringify({
         action: 'speaking_response',
         operationId: call.operationId,
         timestamp: Date.now()
       })).toString('base64');
       
-      await this.speakWithElevenLabs(callControlId, aiResult.response, responseClientState);
+      await this.speakWithAdvancedTTS(callControlId, aiResult.response, responseClientState);
       
       // Update conversation history
       history.push(
