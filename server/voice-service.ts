@@ -1188,10 +1188,11 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt',  // Use 'pt' for Portuguese transcription (not pt-BR)
+          language: 'pt-BR',  // Use 'pt-BR' for Brazilian Portuguese
           audio_track: 'inbound',  // Only transcribe customer speech, not Sofia's
           interim_results: true,  // Get partial results for faster response
-          transcription_engine: 'A'  // Use Google Speech-to-Text engine (better Portuguese support)
+          transcription_engine: 'A',  // Force Google Speech-to-Text engine (Engine A)
+          enhanced_model: true  // Use enhanced model for better accuracy
         })
       });
 
@@ -1354,8 +1355,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           },
           voice: "Polly.Camila",
           language: "pt-BR",  // Language for Text-to-Speech (keep pt-BR for TTS)
-          stt_language: "pt",  // Use just 'pt' for Speech-to-Text (not pt-BR)
-          // Remove stt_model parameter to use default Portuguese model
+          stt_language: "pt-BR",  // Use pt-BR for better Brazilian Portuguese recognition
+          stt_engine: "google",  // Explicitly force Google Speech-to-Text engine
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
           llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
@@ -1395,8 +1396,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           },
           voice: "Polly.Camila",
           language: "pt-BR",  // Language for Text-to-Speech (keep pt-BR for TTS)
-          stt_language: "pt",  // Use just 'pt' for Speech-to-Text (not pt-BR)
-          // Remove stt_model parameter to use default Portuguese model
+          stt_language: "pt-BR",  // Use pt-BR for better Brazilian Portuguese recognition
+          stt_engine: "google",  // Explicitly force Google Speech-to-Text engine
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
           llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
