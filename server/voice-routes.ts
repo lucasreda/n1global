@@ -267,6 +267,14 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
         await voiceService.handleTranscription(eventData.payload, callType, operationId);
       }
       
+    } else if (eventType === 'call.ai_gather.ended') {
+      console.log(`🤖 AI gather completed - processing user response`);
+      console.log(`📄 Full AI gather payload:`, JSON.stringify(eventData.payload, null, 2));
+      console.log(`📄 AI gather result structure:`, eventData.payload.result);
+      console.log(`📋 Message history:`, eventData.payload.message_history);
+      
+      await voiceService.handleAiGatherEnded(eventData.payload, callType, operationId);
+      
     } else if (eventType === 'call.hangup') {
       await voiceService.handleCallStatusUpdate(eventData.payload);
     } else {

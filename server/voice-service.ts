@@ -1000,7 +1000,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         payload_type: 'text',
         service_level: 'basic',
         language: 'pt-BR',
-        voice: 'Telnyx.KokoroTTS.af',
+        voice: 'AWS.Polly.Camila',
         client_state: clientState
       });
       
@@ -1035,7 +1035,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         payload_type: 'text',
         service_level: 'basic',
         language: 'pt-BR',
-        voice: 'Telnyx.KokoroTTS.af',
+        voice: 'AWS.Polly.Camila',
         client_state: clientState
       });
       
@@ -1082,7 +1082,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   /**
    * Start AI-powered speech collection using Telnyx HTTP API (gather_using_ai)
    */
-  private async startSpeechGather(callControlId: string, operationId: string, callType: string): Promise<void> {
+  private async startSpeechGather(callControlId: string, operationId: string, callType: string, messageHistory: any[] = []): Promise<void> {
     try {
       console.log(`🎤 Starting AI speech collection via HTTP API for call ${callControlId}`);
       
@@ -1101,7 +1101,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          greeting: "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
+          greeting: messageHistory.length > 0 ? "Continue falando, estou ouvindo..." : "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
           parameters: {
             type: "object",
             properties: {
@@ -1116,9 +1116,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             },
             required: ["message"]
           },
-          voice: "Telnyx.KokoroTTS.af",
+          voice: "AWS.Polly.Camila",
           send_partial_results: false,
-          user_response_timeout_ms: 10000,
+          user_response_timeout_ms: 15000,
+          message_history: messageHistory,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
             operationId,
@@ -1229,7 +1230,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             payload: aiResponse,
             payload_type: 'text',
             service_level: 'basic',
-            voice: 'Telnyx.KokoroTTS.af',
+            voice: 'AWS.Polly.Camila',
             client_state: Buffer.from(JSON.stringify({
               action: 'speaking_ai_response'
             })).toString('base64')
@@ -1663,4 +1664,80 @@ Responda apenas com o texto que você falará para o cliente:`;
     // Remove all non-digits
     return phone.replace(/\D/g, '');
   }
+
+  /**
+   * Handle AI gather ended - process user response and continue conversation
+   */
+  async handleAiGatherEnded(callData: any, callType: string, operationId: string): Promise<void> {
+    if (!this.telnyxClient) return;
+    
+    try {
+      const callControlId = callData.call_control_id;
+      // Try different possible structures for the user response
+      const userResponse = callData.result?.message || 
+                          callData.result?.parameters?.message ||
+                          callData.transcript || 
+                          callData.speech_result || 
+                          '';
+      const messageHistory = callData.message_history || [];
+      
+      console.log(`🤖 Processing AI gather for call ${callControlId}`);
+      console.log(`👤 User said: "${userResponse}"`);
+      
+      if (!userResponse || userResponse.trim().length === 0) {
+        console.log(`⚠️ No user response - ending conversation`);
+        await this.telnyxClient.calls.hangup(callControlId);
+        return;
+      }
+
+      // Generate AI response using existing method
+      console.log(`🎯 Generating AI response for operationId: ${operationId}`);
+      const aiResult = await this.processConversationWithAI(callControlId, userResponse, messageHistory);
+      
+      if (!aiResult?.response) {
+        console.log(`❌ Failed to generate AI response - ending conversation`);
+        await this.telnyxClient.calls.hangup(callControlId);
+        return;
+      }
+
+      console.log(`🤖 Sofia will respond: "${aiResult.response}"`);
+
+      // Speak the AI response
+      await this.telnyxClient.calls.speak(callControlId, {
+        payload: aiResult.response,
+        payload_type: 'text',
+        service_level: 'basic',
+        language: 'pt-BR',
+        voice: 'AWS.Polly.Camila',
+        client_state: Buffer.from(JSON.stringify({
+          action: 'speaking_response',
+          operationId,
+          callType,
+          timestamp: Date.now()
+        })).toString('base64')
+      });
+
+      console.log(`🎙️ Response sent successfully`);
+
+      // Wait a bit for the response to finish, then start listening again
+      setTimeout(async () => {
+        try {
+          await this.startSpeechGather(callControlId, operationId, callType, messageHistory);
+        } catch (error) {
+          console.error('❌ Error restarting conversation:', error);
+        }
+      }, 2000);
+
+    } catch (error) {
+      console.error(`❌ Error in handleAiGatherEnded:`, error);
+      
+      // Fallback - hang up the call
+      try {
+        await this.telnyxClient.calls.hangup(callData.call_control_id);
+      } catch (hangupError) {
+        console.error('❌ Error hanging up call:', hangupError);
+      }
+    }
+  }
+
 }
