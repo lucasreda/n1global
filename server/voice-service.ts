@@ -1076,33 +1076,48 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Start speech recognition using Telnyx gather_using_speech
+   * Start AI-powered speech collection using Telnyx gather_using_ai
    */
   private async startSpeechGather(callControlId: string, operationId: string, callType: string): Promise<void> {
     if (!this.telnyxClient) return;
     
     try {
-      console.log(`🎤 Starting speech recognition for call ${callControlId}`);
+      console.log(`🎤 Starting AI speech collection for call ${callControlId}`);
       
-      // Use gather_using_speech for Portuguese voice recognition
-      await this.telnyxClient.calls.gather_using_speech(callControlId, {
-        language: 'pt-BR',
-        timeout_millis: 30000,
-        interim_results: false,
+      // Use gather_using_ai for intelligent Portuguese conversation
+      await this.telnyxClient.calls.gather_using_ai(callControlId, {
+        greeting: "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
+        parameters: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description: "O que o cliente está falando ou perguntando"
+            },
+            intent: {
+              type: "string", 
+              description: "A intenção do cliente: produto, preço, dúvida, reclamação, etc."
+            }
+          },
+          required: ["message"]
+        },
+        voice: "female",
+        language: "pt-BR",
+        partial_results_enabled: false,
         client_state: Buffer.from(JSON.stringify({
-          action: 'voice_input',
+          action: 'ai_voice_input',
           operationId,
           callType,
           timestamp: Date.now()
         })).toString('base64')
       });
 
-      console.log(`🎤 Voice recognition active for ${callControlId} (Portuguese)`);
+      console.log(`🤖 AI voice collection active for ${callControlId} (Portuguese)`);
       
     } catch (error) {
-      console.error(`❌ Error starting speech recognition:`, error);
+      console.error(`❌ Error starting AI speech collection:`, error);
       
-      // Fallback to DTMF if speech fails
+      // Fallback to DTMF if AI speech fails
       await this.startPromptBasedConversation(callControlId, operationId, callType);
     }
   }
@@ -1172,15 +1187,17 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         }
       }
       
-      const isVoiceInput = decodedState?.action === 'voice_input';
+      const isVoiceInput = decodedState?.action === 'ai_voice_input';
       
-      // Process voice input
-      if (callData.status === 'valid' && callData.speech && isVoiceInput) {
-        const userSpeech = callData.speech;
-        console.log(`✅ User said: "${userSpeech}"`);
+      // Process AI voice input (gather_using_ai results)
+      if (callData.status === 'valid' && callData.parameters && isVoiceInput) {
+        const aiResults = callData.parameters;
+        const userMessage = aiResults.message;
+        console.log(`✅ AI understood: "${userMessage}"`);
+        console.log(`🎯 AI detected intent: "${aiResults.intent || 'general'}"`);
         
         // Generate AI response based on what the user said
-        const aiResponse = await this.generateConversationalResponse(userSpeech, operationId, callType);
+        const aiResponse = await this.generateConversationalResponse(userMessage, operationId, callType);
         console.log(`🤖 AI Response: "${aiResponse}"`);
         
         // Speak the response
@@ -1201,7 +1218,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         
         // Continue voice recognition after response
         setTimeout(async () => {
-          console.log(`🔄 Continuing voice conversation...`);
+          console.log(`🔄 Continuing AI voice conversation...`);
           await this.startSpeechGather(callData.call_control_id, operationId, callType);
         }, 3000);
         
@@ -1237,25 +1254,13 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       } 
       // Handle timeouts
       else if (callData.status === 'timeout') {
-        console.log(`⏰ No input received - prompting user to speak`);
+        console.log(`⏰ No AI input received - restarting voice collection`);
         
-        // Encourage speech interaction
-        try {
-          await this.telnyxClient.calls.speak(callData.call_control_id, {
-            payload: "Estou aqui para conversar! Pode falar comigo sobre o que precisar.",
-            payload_type: 'text',
-            service_level: 'basic',
-            voice: 'female'
-          });
-          console.log(`🎙️ Speech encouragement sent successfully`);
-        } catch (speakError) {
-          console.error('❌ Speech encouragement error:', speakError);
-        }
-        
-        // Continue voice recognition
+        // Restart AI voice collection with new greeting
         setTimeout(async () => {
+          console.log(`🔄 Restarting AI voice collection...`);
           await this.startSpeechGather(callData.call_control_id, operationId, callType);
-        }, 4000);
+        }, 2000);
         
       } else {
         console.log(`❌ Invalid input or call hangup - ending conversation`);
