@@ -301,14 +301,19 @@ export class VoiceService {
         }
       }
       
-      // Only activate conversation system if this was the welcome message
+      // Activate conversation system based on the action type
       if (decodedState?.action === 'speaking_welcome') {
         console.log(`✅ Welcome message completed - starting speech recognition for conversation`);
         
         // Start speech recognition for Portuguese conversation
         await this.startSpeechGather(callData.call_control_id, operationId, callType);
+      } else if (decodedState?.action === 'speaking_response') {
+        console.log(`✅ Sofia finished responding - activating speech recognition to continue conversation`);
+        
+        // Continue conversation after Sofia's response
+        await this.startSpeechGather(callData.call_control_id, decodedState.operationId || operationId, decodedState.callType || callType);
       } else {
-        console.log(`ℹ️ Speak ended but not welcome message - skipping conversation activation`);
+        console.log(`ℹ️ Speak ended but not a conversation action - skipping activation`);
       }
       
     } catch (error) {
@@ -1141,6 +1146,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
+          language: "pt-BR",  // Important: Set speech recognition language to Portuguese
+          stt_model: "whisper-1",  // Use Whisper for better Portuguese recognition
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
@@ -1778,15 +1785,10 @@ Responda apenas com o texto que você falará para o cliente:`;
       });
 
       console.log(`🎙️ Response sent successfully`);
-
-      // Wait a bit for the response to finish, then start listening again
-      setTimeout(async () => {
-        try {
-          await this.startSpeechGather(callControlId, operationId, callType, messageHistory);
-        } catch (error) {
-          console.error('❌ Error restarting conversation:', error);
-        }
-      }, 2000);
+      
+      // After speaking, immediately start listening for next user input
+      // Note: This happens automatically via the speak.ended webhook
+      // No need to manually start another gather here to avoid duplicates
 
     } catch (error) {
       console.error(`❌ Error in handleAiGatherEnded:`, error);
