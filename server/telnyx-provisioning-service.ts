@@ -366,27 +366,55 @@ export class TelnyxProvisioningService {
     try {
       console.log(`📞 Making outbound call from ${fromNumber} to ${toNumber}`);
       console.log(`🔗 Using CONNECTION_ID: ${process.env.TELNYX_CONNECTION_ID}`);
+      
+      // Brazil caller ID compliance check
+      const isBrazilDestination = toNumber.startsWith('+55');
+      if (isBrazilDestination) {
+        console.log(`🇧🇷 BRAZIL DESTINATION DETECTED - US DID may be rejected by Brazilian operators`);
+        console.log(`⚠️  Consider using a Brazilian DID as caller_id for better call completion`);
+      }
 
       const response = await this.client.calls.create({
         connection_id: process.env.TELNYX_CONNECTION_ID!,
         to: toNumber,
         from: fromNumber,
         webhook_url: webhookUrl,
-        timeout_secs: 60, // Increased for international calls
+        timeout_secs: 60, // Increased for international calls  
         time_limit_secs: 300,
         // Enhanced settings for international routing
         webhook_timeout_secs: 25,
         client_state: Buffer.from(JSON.stringify({
           callType: 'outbound-sales',
           destination: toNumber,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          callerIdCompliance: isBrazilDestination ? 'brazil-restriction' : 'standard'
         })).toString('base64')
       });
 
       console.log(`✅ Call initiated with ID: ${response.data?.call_control_id || 'unknown'}`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Error making outbound call:`, error);
+      
+      // Log specific error details for troubleshooting
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        console.error(`🔍 Telnyx Error Details:`, {
+          status: error.response.status,
+          errors: errorData.errors,
+          meta: errorData.meta
+        });
+        
+        // Check for common Brazil calling issues
+        if (errorData.errors?.[0]?.code === 'D13') {
+          console.error(`🚫 D13 Error: Dialed Number is not included in whitelisted countries`);
+        } else if (errorData.errors?.[0]?.code === 'D35') {
+          console.error(`🚫 D35 Error: Caller Origination Number is Invalid (CLI issue)`);
+        } else if (error.response.status === 403) {
+          console.error(`🚫 403 Forbidden: Rate limits, spend limits, or compliance restrictions`);
+        }
+      }
+      
       throw error;
     }
   }
