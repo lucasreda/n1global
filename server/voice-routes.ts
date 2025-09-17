@@ -252,9 +252,21 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
       console.log(`🎙️ Welcome message finished - activating conversation system`);
       await voiceService.handleSpeakEnded(eventData.payload, callType, operationId);
     } else if (eventType === 'call.gather.ended') {
-      // Process speech recognition results
-      console.log(`🎤 Speech gathering completed - processing user speech`);
+      console.log(`🎤 VOICE gathering completed - processing user speech`);
+      console.log(`🗣️ Speech result: "${eventData.payload.speech || 'none'}"`);
+      console.log(`🔢 Digits result: "${eventData.payload.digits || 'none'}"`);
+      
       await voiceService.handleSpeechGatherEnded(eventData.payload, callType, operationId);
+      
+    } else if (eventType === 'call.transcription') {
+      console.log(`📝 TRANSCRIPTION received`);
+      console.log(`📄 Transcription text: "${eventData.payload.transcription_text || 'none'}"`);
+      
+      if (eventData.payload.transcription_text && callType && operationId) {
+        // Handle transcription as additional speech input
+        await voiceService.handleTranscription(eventData.payload, callType, operationId);
+      }
+      
     } else if (eventType === 'call.hangup') {
       await voiceService.handleCallStatusUpdate(eventData.payload);
     } else {
