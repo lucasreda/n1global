@@ -1111,7 +1111,6 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           payload: "Pressione 1 para continuar ou aguarde.",
           payload_type: 'text',
           service_level: 'basic',
-          language: 'pt-BR',
           voice: 'female'
         });
         
@@ -1140,12 +1139,11 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         const aiResponse = `Obrigada! Você pressionou ${callData.digits}. Como posso ajudá-lo hoje?`;
         console.log(`🤖 Response: "${aiResponse}"`);
         
-        // Speak response
+        // Speak response (using minimal working parameters)
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: aiResponse,
           payload_type: 'text',
           service_level: 'basic',
-          language: 'pt-BR',
           voice: 'female'
         });
         
@@ -1164,7 +1162,6 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           payload: "Obrigada por entrar em contato. Até logo!",
           payload_type: 'text',
           service_level: 'basic',
-          language: 'pt-BR',
           voice: 'female'
         });
         
