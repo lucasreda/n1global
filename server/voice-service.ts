@@ -337,7 +337,7 @@ export class VoiceService {
         console.log(`✅ Welcome message completed - starting speech recognition`);
         // Try transcription first, fallback to gather if it fails
         try {
-          await this.startRealTimeTranscription(callData.call_control_id);
+          await this.startRealTimeTranscription(callData.call_control_id, operationId, callType);
           this.transcriptionActive.set(callData.call_control_id, true);
         } catch (error) {
           console.log(`🔄 Transcription failed, falling back to gather_using_ai`);
@@ -1084,7 +1084,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       console.log(`🎯 Using callType: ${callType} with real-time transcription`);
       
       // Start real-time transcription immediately for faster response
-      await this.startRealTimeTranscription(callControlId);
+      await this.startRealTimeTranscription(callControlId, operationId, callType);
       
       // Generate and speak welcome message while transcription runs in background
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
@@ -1128,7 +1128,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
    * Start real-time transcription using Telnyx Transcription API
    * This provides much better Portuguese support than gather_using_ai
    */
-  private async startRealTimeTranscription(callControlId: string): Promise<void> {
+  private async startRealTimeTranscription(callControlId: string, operationId?: string, callType?: string): Promise<void> {
     try {
       // Check if transcription is already active
       if (this.transcriptionActive.get(callControlId)) {
@@ -1151,7 +1151,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt-BR',  // Brazilian Portuguese language code
+          language: 'pt',  // Use just 'pt' for Portuguese (Telnyx API format)
           audio_track: 'inbound',  // Only transcribe customer speech, not Sofia's
           interim_results: true  // Get partial results for faster response
           // Removed transcription_engine as 'B' is non-standard
@@ -1184,7 +1184,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       console.error(`❌ Error starting real-time transcription:`, error);
       // Fallback to gather_using_ai if transcription fails
       console.log(`🔄 Falling back to gather_using_ai`);
-      await this.startSpeechGather(callControlId, '', 'test');
+      await this.startSpeechGather(callControlId, operationId || '', callType || 'test');
     }
   }
 
@@ -1269,6 +1269,15 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         await this.startPromptBasedConversation(callControlId, operationId, callType);
         return;
       }
+      
+      // Get the proper greeting message if this is the first interaction
+      let greeting: string;
+      if (messageHistory.length > 0) {
+        greeting = "Continue falando, estou ouvindo...";
+      } else {
+        greeting = await this.generateWelcomeMessage(operationId, callType);
+        console.log(`🎯 Using personalized greeting: "${greeting}"`);
+      }
 
       // Direct HTTP call to Telnyx gather_using_ai API
       const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_ai`, {
@@ -1278,7 +1287,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          greeting: messageHistory.length > 0 ? "Continue falando, estou ouvindo..." : "Olá! Sou a Sofia, assistente virtual do N1 Hub. Como posso ajudar você hoje?",
+          greeting,
           parameters: {
             type: "object",
             properties: {
@@ -1294,6 +1303,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
+          language: "pt-BR",  // Add language parameter for proper Brazilian Portuguese recognition
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
@@ -1313,7 +1323,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         const errorText = await response.text();
         console.error(`❌ HTTP API Error (${response.status}):`, errorText);
         console.error(`❌ Request payload was:`, JSON.stringify({
-          greeting: messageHistory.length > 0 ? "Continue falando, estou ouvindo..." : "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
+          greeting,
           parameters: {
             type: "object",
             properties: {
@@ -1329,6 +1339,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
+          language: "pt-BR",  // Add language parameter for proper Brazilian Portuguese recognition
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
