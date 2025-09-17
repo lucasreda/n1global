@@ -226,13 +226,23 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
     
     // Extract data from Telnyx webhook
     const eventData = req.body.data;
-    if (!eventData || eventData.event_type !== 'call.initiated') {
+    const eventType = eventData?.event_type;
+    
+    if (!eventData || !eventType) {
       return res.status(200).json({ message: "Event ignored" });
     }
 
-    // Handle the call asynchronously using Telnyx REST API
-    // The VoiceService will use REST API calls to control the call
-    await voiceService.handleIncomingCall(eventData.payload);
+    // Handle different event types
+    if (eventType === 'call.initiated') {
+      await voiceService.handleIncomingCall(eventData.payload);
+    } else if (eventType === 'call.answered') {
+      await voiceService.handleCallAnswered(eventData.payload);
+    } else if (eventType === 'call.hangup') {
+      await voiceService.handleCallStatusUpdate(eventData.payload);
+    } else {
+      console.log(`ℹ️ Ignoring event type: ${eventType}`);
+      return res.status(200).json({ message: "Event ignored" });
+    }
     
     // Always return 200 OK for webhooks - call control happens via REST API
     res.status(200).json({ message: "Webhook received" });

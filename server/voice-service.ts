@@ -177,9 +177,29 @@ export class VoiceService {
 
       const availability = await this.isVoiceServiceAvailable(operationId);
       
-      if (!availability.available) {
+      // For outbound calls, we don't handle availability differently - we control the call
+      if (!availability.available && callData.direction === 'inbound') {
         console.log(`🚫 Voice service not available: ${availability.reason}`);
         await this.handleOutOfHoursCall(callData.call_control_id, availability.reason!, availability.settings);
+        return;
+      }
+      
+      // For outbound calls, skip availability check and proceed
+      if (callData.direction === 'outbound') {
+        console.log(`📞 Outbound call initiated - waiting for call.answered event`);
+        // Just create the call record, don't answer or start AI yet
+        const callRecord: InsertVoiceCall = {
+          operationId,
+          telnyxCallControlId: callData.call_control_id,
+          telnyxCallLegId: callData.call_leg_id,
+          direction: callData.direction.toLowerCase() as 'inbound' | 'outbound',
+          fromNumber: callData.from,
+          toNumber: callData.to,
+          status: callData.state.toLowerCase(),
+          customerPhone: this.normalizePhoneNumber(callData.to), // For outbound, customer is the 'to'
+          startTime: callData.start_time ? new Date(callData.start_time) : new Date(),
+        };
+        await db.insert(voiceCalls).values(callRecord);
         return;
       }
 
@@ -210,6 +230,43 @@ export class VoiceService {
       if (this.telnyxClient) {
         await this.hangupCall(callData.call_control_id, 'Erro interno do servidor');
       }
+    }
+  }
+
+  /**
+   * Handle call answered event (when someone picks up an outbound call)
+   */
+  async handleCallAnswered(callData: TelnyxCallWebhookData): Promise<void> {
+    try {
+      console.log(`📞 Call answered: ${callData.call_control_id}`);
+      
+      // Get the call from database
+      const [call] = await db
+        .select()
+        .from(voiceCalls)
+        .where(eq(voiceCalls.telnyxCallControlId, callData.call_control_id))
+        .limit(1);
+      
+      if (!call) {
+        console.error(`❌ Call not found in database: ${callData.call_control_id}`);
+        return;
+      }
+      
+      // Update call status
+      await db
+        .update(voiceCalls)
+        .set({
+          status: 'answered',
+          updatedAt: new Date(),
+        })
+        .where(eq(voiceCalls.telnyxCallControlId, callData.call_control_id));
+      
+      // Start AI conversation now that call is answered
+      await this.startAIConversation(callData.call_control_id, call.operationId);
+      
+      console.log(`✅ AI conversation started for answered call ${callData.call_control_id}`);
+    } catch (error) {
+      console.error('Error handling call answered:', error);
     }
   }
 
