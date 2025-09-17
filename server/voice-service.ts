@@ -316,6 +316,18 @@ export class VoiceService {
       if (this.transcriptionActive.get(callData.call_control_id)) {
         console.log(`🎤 Resuming real-time transcription after Sofia finished speaking`);
         await this.resumeTranscription(callData.call_control_id);
+        
+        // Set a timeout to fallback to gather if no transcription received
+        setTimeout(async () => {
+          const lastTime = this.lastTranscriptionTime.get(callData.call_control_id) || 0;
+          const timeSinceLastTranscription = Date.now() - lastTime;
+          
+          if (timeSinceLastTranscription > 8000) { // 8 seconds without transcription
+            console.log(`⏱️ No transcription received for 8s, falling back to gather_using_ai`);
+            this.transcriptionActive.set(callData.call_control_id, false);
+            await this.startSpeechGather(callData.call_control_id, decodedState?.operationId || operationId, decodedState?.callType || callType);
+          }
+        }, 8000);
       } 
       // Fallback to gather_using_ai if transcription is not active
       else if (decodedState?.action === 'speaking_welcome') {
@@ -1100,7 +1112,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         throw new Error('No Telnyx API key found');
       }
 
-      // Use the transcription_start endpoint for better language support
+      // Use the transcription_start endpoint with correct parameters
       const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transcription_start`, {
         method: 'POST',
         headers: {
@@ -1108,10 +1120,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt',  // Portuguese language code
-          transcription_engine: 'B',  // Engine B is better for Portuguese
-          transcription_tracks: 'inbound',  // Transcribe customer speech only
+          language: 'pt-BR',  // Brazilian Portuguese language code
+          audio_track: 'inbound',  // Only transcribe customer speech, not Sofia's
           interim_results: true  // Get partial results for faster response
+          // Removed transcription_engine as 'B' is non-standard
         })
       });
 

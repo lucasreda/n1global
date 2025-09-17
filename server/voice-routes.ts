@@ -260,15 +260,22 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
       
     } else if (eventType === 'call.transcription') {
       console.log(`📝 Real-time TRANSCRIPTION received`);
-      const transcript = eventData.payload.transcription_text || eventData.payload.transcript || '';
-      const isFinal = eventData.payload.is_final || false;
+      
+      // Extract transcription data correctly from Telnyx webhook
+      const transcriptionData = eventData.payload.transcription_data || eventData.payload.transcription || {};
+      const transcript = transcriptionData.text || transcriptionData.transcript || '';
+      const isFinal = transcriptionData.is_final || transcriptionData.final || (transcriptionData.type === 'final');
       const callControlId = eventData.payload.call_control_id;
       
-      console.log(`📄 Transcription: "${transcript}" (Final: ${isFinal})`);
+      // Debug logging to understand data structure
+      console.log(`📊 Transcription data structure:`, JSON.stringify(transcriptionData));
+      console.log(`📄 Transcription text: "${transcript}" (Final: ${isFinal})`);
       
-      if (transcript && callControlId) {
+      if (transcript && transcript.trim().length > 0 && callControlId) {
         // Process transcription with high-performance pipeline
         await voiceService.processTranscription(callControlId, transcript, isFinal);
+      } else if (callControlId) {
+        console.log(`⚠️ Received empty transcription for call ${callControlId}`);
       }
       
     } else if (eventType === 'call.ai_gather.ended') {
