@@ -1074,87 +1074,39 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * REAL SPEECH RECOGNITION - True voice conversation system
+   * SIMPLIFIED WORKING voice conversation system
    */
   private async startPromptBasedConversation(callControlId: string, operationId: string, callType: string): Promise<void> {
     if (!this.telnyxClient) return;
     
     try {
-      console.log(`🎙️ Starting REAL voice conversation for call ${callControlId}`);
+      console.log(`🎙️ Starting conversation for call ${callControlId}`);
       
-      // Start continuous voice recording with transcription
-      await this.telnyxClient.calls.recordingStart(callControlId, {
-        format: 'wav',
-        channels: 'single',
-        transcription: {
-          transcription_engine: 'A',
-          language: 'pt',
-          transcription_tracks: 'inbound'
-        },
-        client_state: Buffer.from(JSON.stringify({ 
-          action: 'voice_recording',
-          operationId,
-          callType,
-          timestamp: Date.now()
-        })).toString('base64')
-      });
-      
-      console.log(`🎤 Voice recording with transcription started for ${callControlId}`);
-      
-      // Also try speech gather for real-time processing
-      await this.startSpeechGather(callControlId, operationId, callType);
-      
-    } catch (error) {
-      console.error(`❌ Error starting voice conversation:`, error);
-      
-      // Fallback to speech gather only
-      try {
-        console.log(`🔄 Fallback: Using speech gather only`);
-        await this.startSpeechGather(callControlId, operationId, callType);
-      } catch (fallbackError) {
-        console.error(`❌ Speech gather fallback failed:`, fallbackError);
-        
-        // Final fallback - prompt for voice
-        await this.telnyxClient.calls.speak(callControlId, {
-          payload: "Por favor, fale agora. Estou escutando você.",
-          payload_type: 'text',
-          service_level: 'basic',
-          voice: 'female'
-        });
-      }
-    }
-  }
-
-  /**
-   * Start speech recognition gather for real-time voice processing
-   */
-  private async startSpeechGather(callControlId: string, operationId: string, callType: string): Promise<void> {
-    try {
-      // Use Telnyx speech recognition
+      // Use SIMPLE gather with working parameters only
       await this.telnyxClient.calls.gather(callControlId, {
-        minimum_digits: 0,
-        maximum_digits: 0,
-        timeout_millis: 10000,
-        inter_digit_timeout_millis: 2000,
-        initial_timeout_millis: 3000,
-        terminating_digit: '#',
-        valid_digits: '0123456789*#',
-        speech_timeout_millis: 8000,
-        speech_end_timeout_millis: 2000,
-        speech_language: 'pt-BR',
+        minimum_digits: 1,
+        maximum_digits: 1,
+        timeout_millis: 15000,
         client_state: Buffer.from(JSON.stringify({
-          action: 'speech_recognition',
+          action: 'user_input',
           operationId,
           callType,
           timestamp: Date.now()
         })).toString('base64')
       });
 
-      console.log(`🗣️ Speech recognition gather active for ${callControlId}`);
+      console.log(`🎤 Input gathering active for ${callControlId}`);
       
     } catch (error) {
-      console.error(`❌ Speech gather failed:`, error);
-      throw error;
+      console.error(`❌ Error starting conversation:`, error);
+      
+      // Even simpler fallback - just speak and wait
+      await this.telnyxClient.calls.speak(callControlId, {
+        payload: "Por favor, pressione qualquer tecla para continuar.",
+        payload_type: 'text',
+        service_level: 'basic',
+        voice: 'female'
+      });
     }
   }
 
@@ -1165,75 +1117,56 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     if (!this.telnyxClient) return;
     
     try {
-      console.log(`🎤 Processing VOICE gather for call ${callData.call_control_id}`);
+      console.log(`🎤 Processing input for call ${callData.call_control_id}`);
       console.log(`📝 Gather status: ${callData.status}`);
-      console.log(`🗣️ Speech detected: ${callData.speech || 'none'}`);
       console.log(`🔢 Digits: ${callData.digits || 'none'}`);
       
-      if (callData.status === 'valid') {
-        let userInput = '';
-        let inputType = '';
+      if (callData.status === 'valid' && callData.digits) {
+        const userInput = callData.digits;
+        console.log(`✅ User pressed: "${userInput}"`);
         
-        // Prioritize speech over digits
-        if (callData.speech && callData.speech.trim()) {
-          userInput = callData.speech.trim();
-          inputType = 'speech';
-          console.log(`✅ User SPOKE: "${userInput}"`);
-        } else if (callData.digits) {
-          userInput = callData.digits;
-          inputType = 'digits';
-          console.log(`✅ User pressed: "${userInput}"`);
-        }
+        // Generate AI response based on the digit pressed
+        const aiResponse = await this.generateSimpleResponse(userInput, operationId, callType);
+        console.log(`🤖 AI Response: "${aiResponse}"`);
         
-        if (userInput) {
-          // Generate intelligent AI response using the actual speech/input
-          const aiResponse = await this.generateIntelligentResponse(userInput, inputType, operationId, callType);
-          console.log(`🤖 AI Response: "${aiResponse}"`);
-          
-          // Speak the intelligent response
-          await this.telnyxClient.calls.speak(callData.call_control_id, {
-            payload: aiResponse,
-            payload_type: 'text',
-            service_level: 'basic',
-            voice: 'female'
-          });
-          
-          console.log(`🎙️ AI response sent successfully`);
-          
-          // Continue listening for more speech
-          setTimeout(async () => {
-            console.log(`🔄 Continuing conversation...`);
-            await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
-          }, 2000);
-          
-        } else {
-          console.log(`❌ No valid input detected`);
-          await this.promptForSpeech(callData.call_control_id, operationId, callType);
-        }
-        
-      } else if (callData.status === 'timeout') {
-        // No speech detected - encourage user to speak
-        console.log(`⏰ No speech detected - encouraging user to speak`);
-        
+        // Speak the response
         await this.telnyxClient.calls.speak(callData.call_control_id, {
-          payload: "Estou aqui! Pode falar à vontade. Como posso ajudá-lo?",
+          payload: aiResponse,
           payload_type: 'text',
           service_level: 'basic',
           voice: 'female'
         });
         
-        // Try again after encouragement
+        console.log(`🎙️ Response sent successfully`);
+        
+        // Continue the conversation
+        setTimeout(async () => {
+          console.log(`🔄 Continuing conversation...`);
+          await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
+        }, 3000);
+        
+      } else if (callData.status === 'timeout') {
+        console.log(`⏰ No input - prompting again`);
+        
+        await this.telnyxClient.calls.speak(callData.call_control_id, {
+          payload: "Ainda estou aqui! Pressione qualquer tecla para continuar ou aguarde.",
+          payload_type: 'text',
+          service_level: 'basic',
+          voice: 'female'
+        });
+        
+        // Try again
         setTimeout(async () => {
           await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
         }, 3000);
         
       } else {
-        console.log(`❌ Speech gather failed with status: ${callData.status}`);
+        console.log(`❌ Invalid input - ending call politely`);
         await this.endCallGracefully(callData.call_control_id);
       }
       
     } catch (error) {
-      console.error('Error handling speech gather ended:', error);
+      console.error('Error handling gather ended:', error);
       try {
         await this.endCallGracefully(callData.call_control_id);
       } catch (e) {
@@ -1243,28 +1176,30 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Generate intelligent AI response based on user speech/input
+   * Generate simple response based on digit input
    */
-  private async generateIntelligentResponse(userInput: string, inputType: string, operationId: string, callType: string): Promise<string> {
+  private async generateSimpleResponse(userInput: string, operationId: string, callType: string): Promise<string> {
     try {
-      // For now, use the existing AI response method but enhance it for speech
-      if (inputType === 'speech') {
-        return await this.generateTestCallResponse(operationId, userInput, callType);
-      } else {
-        // Handle digit input with context
-        const digitResponses = {
-          '1': 'Perfeito! Você escolheu a opção 1. Pode me falar mais sobre o que precisa?',
-          '2': 'Ótimo! Opção 2 selecionada. Como posso ajudá-lo especificamente?',
-          '0': 'Entendi, você quer falar com um atendente. Vou conectar você agora.',
-          '*': 'Estou aqui para ajudar! Pode me contar o que está procurando?',
-          '#': 'Obrigada! Fique à vontade para falar sobre suas necessidades.'
-        };
-        
-        return digitResponses[userInput] || `Entendi que você pressionou ${userInput}. Como posso ajudá-lo?`;
-      }
+      // Handle digit input with contextual responses
+      const digitResponses = {
+        '1': 'Perfeito! Você pressionou 1. Como posso ajudá-lo hoje?',
+        '2': 'Ótimo! Você escolheu a opção 2. Em que posso ser útil?',
+        '3': 'Entendi! Opção 3 selecionada. Pode me contar mais?',
+        '0': 'Você pressionou 0. Gostaria de falar com um atendente?',
+        '*': 'Obrigada! Estou aqui para ajudar. O que precisa?',
+        '#': 'Perfeito! Como posso ajudá-lo especificamente?',
+        '4': 'Opção 4 selecionada. Vamos continuar nossa conversa!',
+        '5': 'Você pressionou 5. Estou ouvindo!',
+        '6': 'Opção 6! Como posso ser útil?',
+        '7': 'Você escolheu 7. Pode me falar o que precisa?',
+        '8': 'Opção 8! Estou aqui para ajudar.',
+        '9': 'Você pressionou 9. O que gostaria de saber?'
+      };
+      
+      return digitResponses[userInput] || `Você pressionou ${userInput}. Como posso ajudá-lo?`;
     } catch (error) {
-      console.error('Error generating intelligent response:', error);
-      return 'Desculpe, não consegui processar sua resposta. Pode repetir, por favor?';
+      console.error('Error generating simple response:', error);
+      return 'Desculpe, tive um problema. Pode tentar novamente?';
     }
   }
 
