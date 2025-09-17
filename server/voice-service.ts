@@ -52,6 +52,7 @@ export class VoiceService {
   private processingTimeouts = new Map<string, NodeJS.Timeout>();
   private conversationStarted = new Map<string, boolean>();
   private isSofiaSpeaking = new Map<string, boolean>();
+  private activeCallIds = new Set<string>();  // Track active calls to prevent commands on ended calls
 
   constructor() {
     this.customerOrderService = new CustomerOrderService();
@@ -263,6 +264,9 @@ export class VoiceService {
     try {
       console.log(`📞 Call answered: ${callData.call_control_id}`);
       
+      // Mark call as active
+      this.activeCallIds.add(callData.call_control_id);
+      
       // Get the call from database
       const [call] = await db
         .select()
@@ -272,6 +276,7 @@ export class VoiceService {
       
       if (!call) {
         console.error(`❌ Call not found in database: ${callData.call_control_id}`);
+        this.activeCallIds.delete(callData.call_control_id);  // Clean up if call not found
         return;
       }
       
@@ -321,7 +326,13 @@ export class VoiceService {
         await this.resumeTranscription(callData.call_control_id);
         
         // Set a timeout to fallback to gather if no transcription received
-        setTimeout(async () => {
+        const timeout = setTimeout(async () => {
+          // Check if call is still active before attempting fallback
+          if (!this.activeCallIds.has(callData.call_control_id)) {
+            console.log(`⚠️ Call ${callData.call_control_id} already ended, skipping fallback`);
+            return;
+          }
+          
           const lastTime = this.lastTranscriptionTime.get(callData.call_control_id) || 0;
           const timeSinceLastTranscription = Date.now() - lastTime;
           
@@ -331,6 +342,9 @@ export class VoiceService {
             await this.startSpeechGather(callData.call_control_id, decodedState?.operationId || operationId, decodedState?.callType || callType);
           }
         }, 8000);
+        
+        // Store timeout reference for cleanup
+        this.processingTimeouts.set(callData.call_control_id, timeout);
       } 
       // Fallback to gather_using_ai if transcription is not active
       else if (decodedState?.action === 'speaking_welcome') {
@@ -435,6 +449,29 @@ export class VoiceService {
    */
   async handleCallStatusUpdate(callData: TelnyxCallWebhookData): Promise<void> {
     try {
+      // If this is a hangup or end event, mark call as inactive
+      if (callData.event_type === 'call.hangup' || callData.state === 'hangup' || callData.state === 'completed') {
+        this.activeCallIds.delete(callData.call_control_id);
+        
+        // Clear any pending timeouts
+        const timeout = this.processingTimeouts.get(callData.call_control_id);
+        if (timeout) {
+          clearTimeout(timeout);
+          this.processingTimeouts.delete(callData.call_control_id);
+        }
+        
+        // Clean up all state for this call
+        this.transcriptionActive.delete(callData.call_control_id);
+        this.transcriptionBuffer.delete(callData.call_control_id);
+        this.lastTranscriptionTime.delete(callData.call_control_id);
+        this.conversationContext.delete(callData.call_control_id);
+        this.isProcessingResponse.delete(callData.call_control_id);
+        this.conversationStarted.delete(callData.call_control_id);
+        this.isSofiaSpeaking.delete(callData.call_control_id);
+        
+        console.log(`📞 Call ${callData.call_control_id} ended - cleaned up all state`);
+      }
+      
       await db
         .update(voiceCalls)
         .set({
@@ -1260,6 +1297,12 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
    * Start AI-powered speech collection using Telnyx HTTP API (gather_using_ai)
    */
   private async startSpeechGather(callControlId: string, operationId: string, callType: string, messageHistory: any[] = []): Promise<void> {
+    // Check if call is still active
+    if (!this.activeCallIds.has(callControlId)) {
+      console.log(`⚠️ Call ${callControlId} is no longer active, skipping speech gather`);
+      return;
+    }
+    
     try {
       console.log(`🎤 Starting AI speech collection via HTTP API for call ${callControlId}`);
       
@@ -1379,6 +1422,12 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
    */
   private async startPromptBasedConversation(callControlId: string, operationId: string, callType: string): Promise<void> {
     if (!this.telnyxClient) return;
+    
+    // Check if call is still active
+    if (!this.activeCallIds.has(callControlId)) {
+      console.log(`⚠️ Call ${callControlId} is no longer active, skipping DTMF conversation`);
+      return;
+    }
     
     try {
       console.log(`🎙️ Starting conversation for call ${callControlId}`);
