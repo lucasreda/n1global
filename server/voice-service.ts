@@ -1300,7 +1300,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Play ElevenLabs-generated audio on call using Telnyx
+   * Play ElevenLabs-generated audio on call using Telnyx with fallback
    */
   private async speakWithElevenLabs(
     callControlId: string, 
@@ -1316,28 +1316,39 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
 
       console.log(`🎤 Speaking with ElevenLabs: "${text.substring(0, 50)}..."`);
 
-      // Generate speech with ElevenLabs
-      const audioBuffer = await this.generateElevenLabsSpeech(text);
+      // Try ElevenLabs first for superior quality, but with immediate fallback
+      try {
+        const audioBuffer = await this.generateElevenLabsSpeech(text);
+        
+        // Check if audio is reasonably sized (under 500KB)
+        if (audioBuffer.length < 500000) {
+          // For smaller audio files, use playback API
+          const audioBase64 = audioBuffer.toString('base64');
+          const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
 
-      // Convert to base64 for inline playback
-      const audioBase64 = audioBuffer.toString('base64');
-      const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
+          await this.telnyxClient?.calls.playbackStart(callControlId, {
+            audio_url: audioUrl,
+            loop: 1,
+            client_state: clientState || Buffer.from(JSON.stringify({
+              action: 'elevenlabs_speech',
+              timestamp: Date.now()
+            })).toString('base64')
+          });
 
-      // Play the audio using Telnyx playback
-      await this.telnyxClient?.calls.playbackStart(callControlId, {
-        audio_url: audioUrl,
-        loop: 1,
-        client_state: clientState || Buffer.from(JSON.stringify({
-          action: 'elevenlabs_speech',
-          timestamp: Date.now()
-        })).toString('base64')
-      });
-
-      console.log(`✅ ElevenLabs audio playback started for call ${callControlId}`);
+          console.log(`✅ ElevenLabs audio playback started for call ${callControlId}`);
+          return;
+        } else {
+          console.log(`⚠️ ElevenLabs audio too large (${audioBuffer.length} bytes), using fallback`);
+          throw new Error('Audio too large');
+        }
+      } catch (elevenLabsError) {
+        console.log(`⚠️ ElevenLabs failed: ${elevenLabsError}, using Telnyx TTS fallback`);
+        throw elevenLabsError;
+      }
     } catch (error) {
-      console.error(`❌ Error speaking with ElevenLabs:`, error);
-      // Fallback to regular Telnyx TTS
-      console.log(`🔄 Falling back to Telnyx TTS`);
+      console.error(`❌ Error with ElevenLabs, falling back to Telnyx TTS:`, error);
+      
+      // Fallback to regular Telnyx TTS (very reliable)
       await this.telnyxClient?.calls.speak(callControlId, {
         payload: text,
         payload_type: 'text',
@@ -1346,6 +1357,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         voice: 'Polly.Camila',
         client_state: clientState
       });
+      
+      console.log(`✅ Fallback TTS completed for call ${callControlId}`);
     }
   }
 

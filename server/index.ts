@@ -27,8 +27,8 @@ app.use('/api/voice/telnyx-call-status', (req: any, res: any, next: any) => {
   next();
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '10mb' })); // Increased limit for ElevenLabs audio
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
