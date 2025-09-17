@@ -1199,7 +1199,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           interim_results: true,
           transcription_engine: 'A',  // Google Speech-to-Text
           enhanced_model: true,
-          speech_hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "aqui é", "obrigado"],
+          speech_hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas", "obrigado", "tchau", "oi", "olá", "bom dia", "boa tarde", "sim", "não"],
           model: "phone_call"  // Phone-optimized model
         })
       });
@@ -1373,7 +1373,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             language: "pt-BR",
             voice: "pt-BR-Neural2-B"
           },
-          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "aqui é", "obrigado", "tchau"],
+          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas", "obrigado", "tchau", "oi", "olá", "bom dia", "boa tarde", "sim", "não", "quero falar com"],
           interruption: { enabled: true },
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
@@ -1424,7 +1424,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             language: "pt-BR",
             voice: "pt-BR-Neural2-B"
           },
-          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "aqui é", "obrigado", "tchau"],
+          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas", "obrigado", "tchau", "oi", "olá", "bom dia", "boa tarde", "sim", "não", "quero falar com"],
           interruption: { enabled: true },
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
