@@ -329,19 +329,29 @@ export class VoiceService {
         
         // Set a timeout to fallback to gather if no transcription received
         const timeout = setTimeout(async () => {
-          // Check if call is still active before attempting fallback
-          if (!this.activeCallIds.has(callData.call_control_id)) {
-            console.log(`⚠️ Call ${callData.call_control_id} already ended, skipping fallback`);
-            return;
-          }
-          
-          const lastTime = this.lastTranscriptionTime.get(callData.call_control_id) || 0;
-          const timeSinceLastTranscription = Date.now() - lastTime;
-          
-          if (timeSinceLastTranscription > 8000) { // 8 seconds without transcription
-            console.log(`⏱️ No transcription received for 8s, falling back to gather_using_ai`);
-            this.transcriptionActive.set(callData.call_control_id, false);
-            await this.startSpeechGather(callData.call_control_id, decodedState?.operationId || operationId, decodedState?.callType || callType);
+          try {
+            // Check if call is still active before attempting fallback
+            if (!this.activeCallIds.has(callData.call_control_id)) {
+              console.log(`⚠️ Call ${callData.call_control_id} already ended, skipping fallback`);
+              return;
+            }
+            
+            const lastTime = this.lastTranscriptionTime.get(callData.call_control_id) || 0;
+            const timeSinceLastTranscription = Date.now() - lastTime;
+            
+            if (timeSinceLastTranscription > 8000) { // 8 seconds without transcription
+              console.log(`⏱️ No transcription received for 8s, falling back to gather_using_ai`);
+              this.transcriptionActive.set(callData.call_control_id, false);
+              
+              // Double-check call is still active before starting gather
+              if (this.activeCallIds.has(callData.call_control_id)) {
+                await this.startSpeechGather(callData.call_control_id, decodedState?.operationId || operationId, decodedState?.callType || callType);
+              } else {
+                console.log(`⚠️ Call ${callData.call_control_id} ended during timeout, aborting gather`);
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Error in transcription timeout for ${callData.call_control_id}:`, error);
           }
         }, 8000);
         
@@ -1602,7 +1612,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     } catch (error) {
       console.error(`❌ Error starting AI speech collection:`, error);
       
-      // Fallback to DTMF if AI speech fails
+      // Check if error is due to call already ended
+      if (error.message && error.message.includes('Call has already ended')) {
+        console.log(`⚠️ Call ${callControlId} has already ended, skipping fallback`);
+        return;
+      }
+      
+      // Check if call is still active before attempting fallback
+      if (!this.activeCallIds.has(callControlId)) {
+        console.log(`⚠️ Call ${callControlId} is no longer active, skipping fallback`);
+        return;
+      }
+      
+      // Fallback to DTMF if AI speech fails and call is still active
       await this.startPromptBasedConversation(callControlId, operationId, callType);
     }
   }
@@ -1644,13 +1666,29 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     } catch (error) {
       console.error(`❌ Error starting conversation:`, error);
       
-      // Even simpler fallback - just speak and wait
-      await this.telnyxClient.calls.speak(callControlId, {
-        payload: "Por favor, pressione qualquer tecla para continuar.",
-        payload_type: 'text',
-        service_level: 'basic',
-        voice: 'Telnyx.KokoroTTS.af'
-      });
+      // Check if error is due to call already ended
+      if (error.message && error.message.includes('Call has already ended')) {
+        console.log(`⚠️ Call ${callControlId} has already ended, aborting conversation`);
+        return;
+      }
+      
+      // Check if call is still active before attempting to speak
+      if (!this.activeCallIds.has(callControlId)) {
+        console.log(`⚠️ Call ${callControlId} is no longer active, skipping speak fallback`);
+        return;
+      }
+      
+      try {
+        // Even simpler fallback - just speak and wait
+        await this.telnyxClient.calls.speak(callControlId, {
+          payload: "Por favor, pressione qualquer tecla para continuar.",
+          payload_type: 'text',
+          service_level: 'basic',
+          voice: 'Telnyx.KokoroTTS.af'
+        });
+      } catch (speakError) {
+        console.error(`❌ Final speak fallback also failed:`, speakError);
+      }
     }
   }
 
