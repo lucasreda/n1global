@@ -373,16 +373,22 @@ export class VoiceService {
         // Store timeout reference for cleanup
         this.processingTimeouts.set(callData.call_control_id, timeout);
       } 
-      // Fallback to gather_using_ai if transcription is not active
+      // Immediately start gather_using_ai after welcome message
       else if (decodedState?.action === 'speaking_welcome') {
-        console.log(`✅ Welcome message completed - starting speech recognition`);
-        // Try Whisper transcription first, fallback to gather if it fails
+        console.log(`✅ Welcome message completed - starting AI conversation immediately`);
+        // Start gather_using_ai immediately - more reliable than Whisper for conversations
         try {
-          await this.startWhisperTranscription(callData.call_control_id, operationId, callType);
-          this.transcriptionActive.set(callData.call_control_id, true);
-        } catch (error) {
-          console.log(`🔄 Whisper transcription failed, falling back to gather_using_ai`);
           await this.startSpeechGather(callData.call_control_id, operationId, callType as 'test' | 'sales');
+          console.log(`🤖 AI conversation activated for call ${callData.call_control_id}`);
+        } catch (error) {
+          console.error(`❌ Failed to start AI conversation:`, error);
+          // Fallback to Whisper transcription if gather fails
+          try {
+            await this.startWhisperTranscription(callData.call_control_id, operationId, callType);
+            this.transcriptionActive.set(callData.call_control_id, true);
+          } catch (whisperError) {
+            console.error(`❌ Both AI and Whisper failed:`, whisperError);
+          }
         }
       } else if (decodedState?.action === 'speaking_response') {
         console.log(`✅ Sofia finished responding - continuing conversation`);
