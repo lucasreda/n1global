@@ -1300,66 +1300,117 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Play ElevenLabs-generated audio on call using Telnyx with fallback
+   * Intelligent TTS provider selection with cost control
    */
-  private async speakWithElevenLabs(
+  private async speakWithIntelligentTTS(
     callControlId: string, 
     text: string, 
-    clientState?: string
+    clientState?: string,
+    isGreeting: boolean = false
   ): Promise<void> {
     try {
       // Guard: Check if call is still active before speaking
       if (!this.activeCallIds.has(callControlId)) {
-        console.log(`⚠️ Call ${callControlId} ended, skipping ElevenLabs speak command`);
+        console.log(`⚠️ Call ${callControlId} ended, skipping speak command`);
         return;
       }
 
-      console.log(`🎤 Speaking with ElevenLabs: "${text.substring(0, 50)}..."`);
-
-      // Try ElevenLabs first for superior quality, but with immediate fallback
-      try {
-        const audioBuffer = await this.generateElevenLabsSpeech(text);
-        
-        // Check if audio is reasonably sized (under 500KB)
-        if (audioBuffer.length < 500000) {
-          // For smaller audio files, use playback API
-          const audioBase64 = audioBuffer.toString('base64');
-          const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
-
-          await this.telnyxClient?.calls.playbackStart(callControlId, {
-            audio_url: audioUrl,
-            loop: 1,
-            client_state: clientState || Buffer.from(JSON.stringify({
-              action: 'elevenlabs_speech',
-              timestamp: Date.now()
-            })).toString('base64')
-          });
-
-          console.log(`✅ ElevenLabs audio playback started for call ${callControlId}`);
-          return;
-        } else {
-          console.log(`⚠️ ElevenLabs audio too large (${audioBuffer.length} bytes), using fallback`);
-          throw new Error('Audio too large');
-        }
-      } catch (elevenLabsError) {
-        console.log(`⚠️ ElevenLabs failed: ${elevenLabsError}, using Telnyx TTS fallback`);
-        throw elevenLabsError;
-      }
-    } catch (error) {
-      console.error(`❌ Error with ElevenLabs, falling back to Telnyx TTS:`, error);
+      // Intelligent provider selection
+      const shouldUseElevenLabs = this.shouldUseElevenLabs(text, isGreeting);
       
-      // Fallback to regular Telnyx TTS (very reliable)
+      if (shouldUseElevenLabs) {
+        console.log(`🎤 Using ElevenLabs for: "${text.substring(0, 50)}..."`);
+        
+        try {
+          const audioBuffer = await this.generateElevenLabsSpeech(text);
+          
+          // Check if base64 would be too large for Telnyx (limit ~50KB base64 = ~37KB binary)
+          if (audioBuffer.length <= 37000) {
+            const audioBase64 = audioBuffer.toString('base64');
+            const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
+
+            await this.telnyxClient?.calls.playbackStart(callControlId, {
+              audio_url: audioUrl,
+              loop: 1,
+              client_state: clientState || Buffer.from(JSON.stringify({
+                action: 'elevenlabs_speech',
+                timestamp: Date.now()
+              })).toString('base64')
+            });
+
+            console.log(`✅ ElevenLabs audio played (${audioBuffer.length} bytes)`);
+            return;
+          } else {
+            console.log(`⚠️ ElevenLabs audio too large (${audioBuffer.length} bytes), using Telnyx TTS`);
+            // Fall through to Telnyx TTS
+          }
+        } catch (elevenLabsError) {
+          console.log(`⚠️ ElevenLabs failed: ${elevenLabsError}, using Telnyx TTS`);
+          // Fall through to Telnyx TTS
+        }
+      } else {
+        console.log(`💰 Using economical Telnyx TTS for: "${text.substring(0, 50)}..."`);
+      }
+      
+      // Use reliable Telnyx TTS (economical and always works)
       await this.telnyxClient?.calls.speak(callControlId, {
         payload: text,
         payload_type: 'text',
         service_level: 'premium',
         language: 'pt-BR',
         voice: 'Polly.Camila',
-        client_state: clientState
+        client_state: clientState || Buffer.from(JSON.stringify({
+          action: 'telnyx_speech',
+          timestamp: Date.now()
+        })).toString('base64')
       });
       
-      console.log(`✅ Fallback TTS completed for call ${callControlId}`);
+      console.log(`✅ Telnyx TTS completed for call ${callControlId}`);
+    } catch (error) {
+      console.error(`❌ Critical TTS error for call ${callControlId}:`, error);
+      
+      // Final emergency fallback
+      try {
+        await this.telnyxClient?.calls.speak(callControlId, {
+          payload: "Desculpe, tivemos um problema técnico.",
+          payload_type: 'text',
+          service_level: 'basic',
+          language: 'pt-BR',
+          voice: 'Polly.Camila',
+          client_state: clientState
+        });
+      } catch (finalError) {
+        console.error(`❌ Even emergency fallback failed:`, finalError);
+      }
     }
+  }
+
+  /**
+   * Intelligent decision on whether to use ElevenLabs based on cost and context
+   */
+  private shouldUseElevenLabs(text: string, isGreeting: boolean): boolean {
+    // Use ElevenLabs only for:
+    // 1. Short greetings/critical messages (< 50 chars)
+    // 2. Important first impressions
+    // 3. VIP interactions (future enhancement)
+    
+    const textLength = text.length;
+    
+    // For greetings under 50 characters, use ElevenLabs for best first impression
+    if (isGreeting && textLength <= 50) {
+      console.log(`🌟 Using ElevenLabs for short greeting (${textLength} chars)`);
+      return true;
+    }
+    
+    // For very short responses (< 30 chars), occasionally use ElevenLabs
+    if (textLength <= 30 && Math.random() < 0.3) {
+      console.log(`🎯 Using ElevenLabs for short response (${textLength} chars)`);
+      return true;
+    }
+    
+    // Otherwise use economical Telnyx TTS
+    console.log(`💰 Using Telnyx TTS for efficiency (${textLength} chars)`);
+    return false;
   }
 
   /**
