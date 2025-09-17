@@ -997,8 +997,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const clientState = Buffer.from(JSON.stringify({ action: 'speaking_welcome' })).toString('base64');
       await this.telnyxClient.calls.speak(callControlId, {
         payload: welcomeMessage,
+        payload_type: 'text',
+        service_level: 'basic',
         language: 'pt-BR',
-        voice: 'female',
+        voice: 'Polly.Camila',
         client_state: clientState
       });
       
@@ -1030,8 +1032,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const clientState = Buffer.from(JSON.stringify({ action: 'speaking_out_of_hours' })).toString('base64');
       await this.telnyxClient.calls.speak(callControlId, {
         payload: message,
+        payload_type: 'text',
+        service_level: 'basic',
         language: 'pt-BR',
-        voice: 'female',
+        voice: 'Polly.Camila',
         client_state: clientState
       });
       
@@ -1112,8 +1116,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             },
             required: ["message"]
           },
-          voice: "female",
-          language: "pt-BR",
+          voice: "Polly.Camila",
           partial_results_enabled: false,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
@@ -1225,7 +1228,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             payload: aiResponse,
             payload_type: 'text',
             service_level: 'basic',
-            voice: 'female',
+            voice: 'Polly.Camila',
             client_state: Buffer.from(JSON.stringify({
               action: 'speaking_ai_response'
             })).toString('base64')
@@ -1257,7 +1260,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             payload: aiResponse,
             payload_type: 'text',
             service_level: 'basic',
-            voice: 'female'
+            voice: 'Polly.Camila'
           });
           console.log(`🎙️ Response sent successfully`);
         } catch (speakError) {
@@ -1440,7 +1443,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         // Speak the response
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: aiResponse,
-          payload_type: 'text'
+          payload_type: 'text',
+          service_level: 'basic',
+          voice: 'Polly.Camila'
         });
         
         console.log(`🎙️ Transcription response sent successfully`);
