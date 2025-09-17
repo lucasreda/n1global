@@ -198,6 +198,7 @@ export class VoiceService {
           status: callData.state.toLowerCase(),
           customerPhone: this.normalizePhoneNumber(callData.to), // For outbound, customer is the 'to'
           startTime: callData.start_time ? new Date(callData.start_time) : new Date(),
+          twilioCallSid: 'telnyx-' + callData.call_control_id.substring(3, 20), // Generate compatible ID for legacy field
         };
         await db.insert(voiceCalls).values(callRecord);
         return;
@@ -214,6 +215,7 @@ export class VoiceService {
         status: callData.state.toLowerCase(),
         customerPhone: this.normalizePhoneNumber(callData.from),
         startTime: callData.start_time ? new Date(callData.start_time) : new Date(),
+        twilioCallSid: 'telnyx-' + callData.call_control_id.substring(3, 20), // Generate compatible ID for legacy field
       };
 
       await db.insert(voiceCalls).values(callRecord);
@@ -278,7 +280,7 @@ export class VoiceService {
       await db
         .update(voiceCalls)
         .set({
-          status: callData.state.toLowerCase(),
+          status: callData.state ? callData.state.toLowerCase() : 'completed',
           duration: callData.duration ? parseInt(callData.duration) : null,
           endTime: callData.end_time ? new Date(callData.end_time) : null,
           updatedAt: new Date(),
