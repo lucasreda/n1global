@@ -51,6 +51,24 @@ Preferred communication style: Simple, everyday language.
 - **Features**: Lead creation, status tracking, product management, country selection.
 - **Authentication**: JWT-based API authentication with token caching.
 
+### Voice System Architecture
+- **Provider**: Telnyx Voice API with real-time transcription
+- **Virtual Agent**: Sofia - AI-powered sales and support assistant
+- **Features**: Outbound calling, real-time PT-BR transcription, adaptive responses
+- **Transcription Config**: language='pt-BR', audio_track='inbound', interim_results=true
+- **Bug Fixes**: Corrected webhook parsing for transcription_data.text field
+- **Safety**: 8-second timeout fallback to prevent permanent silence
+
+## Recent Changes (September 17, 2025)
+
+### Voice System Critical Fixes
+- Fixed transcription webhook parsing to correctly read transcription_data.text field
+- Updated API configuration to use proper 'pt-BR' language code (was using 'pt')
+- Added audio_track='inbound' to only capture customer speech
+- Removed non-standard transcription_engine='B' parameter
+- Added 8-second timeout fallback to gather_using_ai if transcription fails
+- Enhanced debug logging for transcription data structure analysis
+
 ## External Dependencies
 
 ### Core Framework Dependencies
