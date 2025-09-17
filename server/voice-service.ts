@@ -337,6 +337,20 @@ export class VoiceService {
         }
       }
       
+      // If this was a welcome message, immediately start gather_using_ai
+      if (decodedState?.action === 'speaking_welcome') {
+        console.log(`✅ Welcome message completed - starting AI conversation immediately`);
+        // Start gather_using_ai immediately - more reliable than Whisper for conversations
+        try {
+          await this.startSpeechGather(callData.call_control_id, operationId, callType as 'test' | 'sales');
+          console.log(`🤖 AI conversation activated for call ${callData.call_control_id}`);
+          return; // Exit early to avoid transcription resume
+        } catch (error) {
+          console.error(`❌ Failed to start AI conversation:`, error);
+          // Fallback to transcription if gather fails
+        }
+      }
+      
       // If transcription is active, resume it after speaking
       if (this.transcriptionActive.get(callData.call_control_id)) {
         console.log(`🎤 Resuming real-time transcription after Sofia finished speaking`);
