@@ -1103,9 +1103,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       // Even simpler fallback - just speak and wait
       await this.telnyxClient.calls.speak(callControlId, {
         payload: "Por favor, pressione qualquer tecla para continuar.",
-        payload_type: 'text',
-        service_level: 'basic',
-        voice: 'female'
+        payload_type: 'text'
       });
     }
   }
@@ -1132,9 +1130,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         // Speak the response
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: aiResponse,
-          payload_type: 'text',
-          service_level: 'basic',
-          voice: 'female'
+          payload_type: 'text'
         });
         
         console.log(`🎙️ Response sent successfully`);
@@ -1149,10 +1145,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         console.log(`⏰ No input - prompting again`);
         
         await this.telnyxClient.calls.speak(callData.call_control_id, {
-          payload: "Ainda estou aqui! Pressione qualquer tecla para continuar ou aguarde.",
-          payload_type: 'text',
-          service_level: 'basic',
-          voice: 'female'
+          payload: "Ainda estou aqui! Pressione qualquer tecla para continuar.",
+          payload_type: 'text'
         });
         
         // Try again
@@ -1231,9 +1225,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       await this.telnyxClient.calls.speak(callControlId, {
         payload: "Obrigada por entrar em contato! Tenha um ótimo dia!",
-        payload_type: 'text',
-        service_level: 'basic',
-        voice: 'female'
+        payload_type: 'text'
       });
 
       setTimeout(async () => {
@@ -1269,9 +1261,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         // Speak the response
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: aiResponse,
-          payload_type: 'text',
-          service_level: 'basic',
-          voice: 'female'
+          payload_type: 'text'
         });
         
         console.log(`🎙️ Transcription response sent successfully`);
