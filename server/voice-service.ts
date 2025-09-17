@@ -1607,7 +1607,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           // Optimized transcription for PT-BR with Google
           transcription: {
             model: "google",
-            language: "pt"  // Google uses 'pt' for Portuguese
+            language: "pt",  // Google uses 'pt' for Portuguese
+            hints: ["olá", "oi", "sim", "não", "bom dia", "boa tarde", "boa noite", "quero", "preciso", "gostaria"],
+            profanity_filter: false,  // Don't filter in case customer uses colloquialisms
+            automatic_punctuation: true  // Better formatting
           },
           
           // Use AWS Polly with Brazilian voice
@@ -1618,13 +1621,24 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           send_partial_results: true,
           send_message_history_updates: true,
           
-          // Natural interruption handling
+          // Natural interruption handling with sensitivity adjustment
           interruption_settings: {
-            enable: true
+            enable: true,
+            threshold: 50  // Less sensitive to avoid false interruptions
           },
           
-          // Optimized timeout for natural conversation
-          user_response_timeout_ms: 20000,  // 20 seconds
+          // Voice activity detection settings  
+          voice_activity_detection: {
+            enable: true,
+            threshold: 0.5,  // Medium sensitivity 
+            speech_start_timeout_ms: 10000,  // Wait up to 10s for first speech
+            speech_end_timeout_ms: 2000  // Wait 2s of silence before ending speech
+          },
+          
+          // Extended timeouts for natural conversation flow
+          user_response_timeout_ms: 30000,  // 30 seconds - more time for user to respond
+          initial_silence_timeout_ms: 10000,  // 10 seconds - wait longer for initial response
+          speech_timeout_ms: 3000,  // 3 seconds - detect end of speech after pause
           
           // Conversation history for context
           message_history: messageHistory,
