@@ -1194,7 +1194,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt-BR',
+          language: 'pt',  // Use simple ISO code for real-time transcription
           audio_track: 'inbound', 
           interim_results: true,
           transcription_engine: 'A',  // Google Speech-to-Text
