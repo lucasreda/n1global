@@ -1,0 +1,153 @@
+Aqui está o conteúdo organizado extraído do HTML:
+
+# API Gather Request Body
+
+## Body (required)
+**Descrição:** Gather using AI request
+
+### Parâmetros Principais
+
+#### `parameters` (object, required)
+- **Tipo:** object
+- **Descrição:** Os parâmetros descritos como um objeto JSON Schema que precisam ser coletados pelo assistente de voz
+- **Referência:** [JSON Schema documentation](https://json-schema.org/understanding-json-schema)
+
+#### `assistant` (object)
+**Descrição:** Configuração do assistente incluindo escolha de LLM, instruções customizadas e ferramentas
+
+##### Propriedades do Assistant:
+- **`model`** (string)
+  - **Valor padrão:** `meta-llama/Meta-Llama-3.1-70B-Instruct`
+  - **Descrição:** O modelo a ser usado pelo assistente de voz
+
+- **`instructions`** (string)
+  - **Descrição:** As instruções do sistema que o assistente de voz usa durante o comando gather
+
+- **`openai_api_key_ref`** (string)
+  - **Descrição:** Necessário apenas se o modelo selecionado for da OpenAI. Passe o `identifier` para um integration secret que se refere à sua chave da API OpenAI
+  - **Aviso:** Planos gratuitos provavelmente não funcionarão com esta integração
+
+- **`tools`** (object[])
+  - **Descrição:** As ferramentas que o assistente de voz pode usar
+
+##### Tipos de Tools Disponíveis:
+
+1. **BookAppointmentTool**
+   - `type`: `book_appointment` (required)
+   - `book_appointment` (object, required):
+     - `event_type_id` (integer, required): Event Type ID para Cal.com
+     - `api_key_ref` (string, required): Referência para secret da API Cal.com
+     - `attendee_name` (string): Nome do participante
+     - `attendee_timezone` (string): Timezone do participante
+
+2. **CheckAvailabilityTool**
+   - `type`: `check_availability` (required)
+   - `check_availability` (object, required):
+     - `event_type_id` (integer, required): Event Type ID para Cal.com
+     - `api_key_ref` (string, required): Referência para secret da API Cal.com
+
+3. **WebhookTool**
+   - `type`: `webhook` (required)
+   - `webhook` (object, required):
+     - `name` (string, required): Nome da ferramenta
+     - `description` (string, required): Descrição da ferramenta
+     - `url` (string, required): URL da ferramenta externa
+     - `method` (string): Método HTTP (GET, POST, PUT, DELETE, PATCH)
+       - **Valor padrão:** `POST`
+     - `headers` (object[]): Headers para enviar
+     - `body_parameters` (object): Parâmetros do body como JSON Schema
+     - `path_parameters` (object): Parâmetros de path como JSON Schema
+     - `query_parameters` (object): Parâmetros de query como JSON Schema
+
+4. **HangupTool**
+   - `type`: `hangup` (required)
+   - `hangup` (object, required):
+     - `description` (string): Descrição da função
+       - **Valor padrão:** `This tool is used to hang up the call.`
+
+5. **TransferTool**
+   - `type`: `transfer` (required)
+   - `transfer` (object, required):
+     - `targets` (object[], required): Possíveis destinos da transferência
+       - `name` (string): Nome do destino
+       - `to` (string): Número de destino ou SIP URI
+     - `from` (string, required): Número ou SIP URI fazendo a chamada
+
+6. **RetrievalTool**
+   - `type`: `retrieval` (required)
+   - `retrieval` (object, required):
+     - `bucket_ids` (string[], required): IDs dos buckets
+     - `max_num_results` (integer): Número máximo de resultados
+
+#### `transcription` (object)
+**Descrição:** Configurações associadas com speech-to-text para o assistente de voz
+
+- **`model`** (string)
+  - **Valor padrão:** `distil-whisper/distil-large-v2`
+  - **Opções:**
+    - `distil-whisper/distil-large-v2`: Baixa latência, apenas inglês
+    - `openai/whisper-large-v3-turbo`: Multi-idioma com detecção automática
+    - `google`: Opção multi-idioma
+
+#### `language` (object)
+**Quando transcription.model = "google":**
+- Códigos de idioma suportados: `af`, `sq`, `am`, `ar`, `hy`, `az`, `eu`, `bn`, `bs`, `bg`, `my`, `ca`, `yue`, `zh`, `hr`, `cs`, `da`, `nl`, `en`, `et`, `fil`, `fi`, `fr`, `gl`, `ka`, `de`, `el`, `gu`, `iw`, `hi`, `hu`, `is`, `id`, `it`, `ja`, `jv`, `kn`, `kk`, `km`, `ko`, `lo`, `lv`, `lt`, `mk`, `ms`, `ml`, `mr`, `mn`, `ne`, `no`, `fa`, `pl`, `pt`, `pa`, `ro`, `ru`, `rw`, `sr`, `si`, `sk`, `sl`, `ss`, `st`, `es`, `su`, `sw`, `sv`, `ta`, `te`, `th`, `tn`, `tr`, `ts`, `uk`, `ur`, `uz`, `ve`, `vi`, `xh`, `zu`
+- **Valor padrão:** `en`
+
+#### `voice` (VoiceConfig string)
+**Valor padrão:** `Telnyx.KokoroTTS.af`
+
+**Provedores Suportados:**
+- **AWS:** `AWS.Polly.<VoiceId>` (ex: `AWS.Polly.Joanna`)
+- **Azure:** `Azure.<voiceid>` (ex: `Azure.en-CA-ClaraNeural`)
+- **ElevenLabs:** `ElevenLabs.<ModelId>.<VoiceId>` (ex: `ElevenLabs.BaseModel.John`)
+- **Telnyx:** `Telnyx.<model_id>.<voice_id>`
+
+#### `voice_settings` (object)
+**Configurações específicas por provedor:**
+
+1. **ElevenLabs:**
+   - `api_key_ref` (string): Referência para secret da API ElevenLabs
+
+2. **Telnyx:**
+   - `voice_speed` (number): Velocidade da voz (0.1 - 2.0, padrão: 1.0)
+
+3. **AWS:**
+   - Objeto vazio
+
+### Configurações Adicionais
+
+#### `greeting` (string)
+- **Descrição:** Texto reproduzido quando o gathering inicia
+- **Limite:** 3.000 caracteres
+- **Suporte:** Texto simples ou SSML para vozes AWS.Polly
+
+#### `send_partial_results` (boolean)
+- **Valor padrão:** `false`
+- **Descrição:** Se true, envia resultados parciais via callback `call.ai_gather.partial_results`
+
+#### `send_message_history_updates` (boolean)
+- **Valor padrão:** `false`
+- **Descrição:** Se true, envia atualizações do histórico via callback `call.ai_gather.message_history_updated`
+
+#### `message_history` (object[])
+- **Descrição:** Histórico de mensagens para contexto
+- **Estrutura:**
+  - `content` (string): Conteúdo da mensagem
+  - `role` (string): Papel do remetente (`assistant` ou `user`)
+
+#### `client_state` (string)
+- **Descrição:** Campo para adicionar estado aos webhooks subsequentes
+- **Formato:** String Base-64 válida
+
+#### `command_id` (string)
+- **Descrição:** Campo para evitar comandos duplicados
+
+#### `interruption_settings` (object)
+- **Descrição:** Configurações para lidar com interrupções do usuário
+- **Propriedades:**
+  - `enable` (boolean): Permite interrupções (padrão: `true`)
+
+#### `user_response_timeout_ms` (integer)
+- **Valor padrão:** `10000`
+- **Descrição:** Tempo em milissegundos para aguardar resposta do usuário antes do timeout

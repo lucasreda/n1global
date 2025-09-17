@@ -1370,6 +1370,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
+   * Enhance greeting with SSML for more natural initial speech
+   */
+  private enhanceGreetingWithSSML(text: string): string {
+    // Simple SSML for AWS Polly greetings
+    return `<speak>
+      <prosody rate="95%" pitch="+5%">
+        ${text}
+      </prosody>
+      <break time="500ms"/>
+    </speak>`;
+  }
+
+  /**
    * Enhance text with SSML for more natural speech patterns (Fixed Version)
    */
   private enhanceTextWithSSMLFixed(text: string): string {
@@ -1532,7 +1545,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         console.log(`🎯 Using personalized greeting: "${greeting}"`);
       }
 
-      // Direct HTTP call to Telnyx gather_using_ai API
+      // Direct HTTP call to Telnyx gather_using_ai API with optimized settings
       const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_ai`, {
         method: 'POST',
         headers: {
@@ -1540,52 +1553,63 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          greeting,
+          // Enhanced greeting with SSML for natural speech
+          greeting: this.enhanceGreetingWithSSML(greeting),
+          
+          // Simplified parameters for better AI understanding
           parameters: {
             type: "object",
             properties: {
               message: {
                 type: "string",
-                description: "A mensagem do cliente em português brasileiro"
+                description: "The complete message from the customer in Brazilian Portuguese"
+              },
+              sentiment: {
+                type: "string",
+                description: "Customer sentiment: positive, neutral, negative, urgent",
+                enum: ["positive", "neutral", "negative", "urgent"]
               },
               intent: {
                 type: "string", 
-                description: "A intenção do cliente: produto, preço, dúvida, reclamação"
+                description: "Main intent: greeting, question, complaint, purchase, support",
+                enum: ["greeting", "question", "complaint", "purchase", "support", "other"]
               }
             },
-            required: ["message"]
+            required: ["message", "intent"]
           },
-          voice: "Polly.Camila",
-          language: "pt-BR",
+          
+          // Assistant configuration for better contextual understanding
+          assistant: {
+            model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
+            instructions: "You are Sofia, a helpful Brazilian sales assistant. Extract the customer's message accurately in Portuguese. Focus on understanding their intent and sentiment. Always preserve the original language and meaning."
+          },
+          
+          // Optimized transcription for PT-BR with Google
           transcription: {
-            provider: "telnyx",
-            language: "pt-BR",
-            model: "latest_long"
+            model: "google",
+            language: "pt"  // Google uses 'pt' for Portuguese
           },
-          speech: {
-            provider: "aws",
-            language: "pt-BR",
-            voice: "Polly.Camila"
+          
+          // Use AWS Polly with Brazilian voice
+          voice: "AWS.Polly.Camila",
+          voice_settings: {},  // AWS doesn't need extra settings
+          
+          // Real-time partial results for faster response
+          send_partial_results: true,
+          send_message_history_updates: true,
+          
+          // Natural interruption handling
+          interruption_settings: {
+            enable: true
           },
-          hints: [
-            // Português brasileiro - cumprimentos
-            "oi", "olá", "alô", "bom dia", "boa tarde", "boa noite",
-            // Português brasileiro - palavras comuns
-            "sim", "não", "obrigado", "obrigada", "tchau", "até logo",
-            // Português brasileiro - nomes
-            "Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", 
-            "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas",
-            // Português brasileiro - frases comerciais
-            "quero falar com", "gostaria de", "preciso de", "produto", 
-            "preço", "valor", "entrega", "comprar", "dúvida", "problema"
-          ],
-          interruption: { enabled: true },
-          send_partial_results: false,
-          user_response_timeout: 30000,  // Increase timeout to 30 seconds
-          llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
-          llm_temperature: 0.7,
-          llm_max_tokens: 256,
+          
+          // Optimized timeout for natural conversation
+          user_response_timeout_ms: 20000,  // 20 seconds
+          
+          // Conversation history for context
           message_history: messageHistory,
+          
+          // Client state for tracking
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
             operationId,
@@ -1601,6 +1625,11 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       } else {
         const errorText = await response.text();
         console.error(`❌ HTTP API Error (${response.status}):`, errorText);
+        
+        // Log simplified error info instead of duplicating the entire config
+        console.error(`❌ Failed gather_using_ai for call ${callControlId} with greeting: "${greeting.substring(0, 50)}..."`);
+        
+        /* Old duplicate logging removed - config is already visible above
         console.error(`❌ Request payload was:`, JSON.stringify({
           greeting,
           parameters: {
@@ -1655,6 +1684,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             timestamp: Date.now()
           })).toString('base64')
         }, null, 2));
+        */
         
         // Parse error to understand what's wrong
         try {
