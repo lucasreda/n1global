@@ -1133,16 +1133,28 @@ Sofia:`;
       console.error('❌ Error making test call:', error);
       
       // Handle specific Telnyx errors with detailed messages
-      if (error && typeof error === 'object' && 'message' in error) {
+      if (error && typeof error === 'object') {
         const telnyxError = error as any;
-        if (telnyxError.message.includes('Invalid phone number')) {
-          throw new Error(`Número de telefone inválido: ${customerPhone}. Verifique o formato (+5511999999999).`);
+        
+        // Log the full error for debugging
+        console.error('🐛 Full Telnyx error details:', JSON.stringify(telnyxError, null, 2));
+        
+        // Handle TelnyxInvalidParametersError specifically
+        if (telnyxError.type === 'TelnyxInvalidParametersError') {
+          throw new Error(`Erro nos parâmetros da chamada Telnyx. Verifique se o número ${telnyxPhoneNumber} está configurado corretamente e se ${customerPhone} é um número válido.`);
         }
-        if (telnyxError.message.includes('insufficient funds')) {
-          throw new Error('Saldo insuficiente na conta Telnyx. Adicione créditos para fazer chamadas.');
-        }
-        if (telnyxError.message.includes('not found')) {
-          throw new Error(`Número Telnyx ${telnyxPhoneNumber} não encontrado. Verifique se está corretamente provisionado.`);
+        
+        const errorMessage = telnyxError.message || telnyxError.detail || 'Erro desconhecido';
+        if (typeof errorMessage === 'string') {
+          if (errorMessage.includes('Invalid phone number')) {
+            throw new Error(`Número de telefone inválido: ${customerPhone}. Verifique o formato (+5511999999999).`);
+          }
+          if (errorMessage.includes('insufficient funds')) {
+            throw new Error('Saldo insuficiente na conta Telnyx. Adicione créditos para fazer chamadas.');
+          }
+          if (errorMessage.includes('not found')) {
+            throw new Error(`Número Telnyx ${telnyxPhoneNumber} não encontrado. Verifique se está corretamente provisionado.`);
+          }
         }
       }
       
