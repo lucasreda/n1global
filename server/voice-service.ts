@@ -990,6 +990,18 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       console.log(`🤖 Starting AI conversation for call ${callControlId}`);
       console.log(`🎯 Using callType: ${callType} for welcome message generation`);
       
+      // Enable noise suppression for better speech recognition
+      console.log(`🔇 Enabling noise suppression for better speech recognition`);
+      try {
+        await this.telnyxClient.calls.suppressionStart(callControlId, {
+          direction: 'inbound'
+        });
+        console.log(`✅ Noise suppression enabled`);
+      } catch (suppErr) {
+        console.warn(`⚠️ Could not enable noise suppression:`, suppErr);
+        // Continue anyway - not critical for the call
+      }
+      
       // Generate welcome message with correct callType
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
       
@@ -1000,7 +1012,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         payload_type: 'text',
         service_level: 'basic',
         language: 'pt-BR',
-        voice: 'AWS.Polly.Camila',
+        voice: 'Polly.Camila',
         client_state: clientState
       });
       
@@ -1035,7 +1047,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         payload_type: 'text',
         service_level: 'basic',
         language: 'pt-BR',
-        voice: 'AWS.Polly.Camila',
+        voice: 'Polly.Camila',
         client_state: clientState
       });
       
@@ -1116,13 +1128,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             },
             required: ["message"]
           },
-          voice: "AWS.Polly.Camila",
-          transcription: {
-            model: "openai/whisper-large-v3-turbo",
-            language: "pt"
-          },
+          voice: "Polly.Camila",
           send_partial_results: false,
-          user_response_timeout_ms: 15000,
+          user_response_timeout: 15000,
           message_history: messageHistory,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
@@ -1155,13 +1163,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             },
             required: ["message"]
           },
-          voice: "AWS.Polly.Camila",
-          transcription: {
-            model: "openai/whisper-large-v3-turbo",
-            language: "pt"
-          },
+          voice: "Polly.Camila",
           send_partial_results: false,
-          user_response_timeout_ms: 15000,
+          user_response_timeout: 15000,
           message_history: messageHistory,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
@@ -1170,6 +1174,15 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             timestamp: Date.now()
           })).toString('base64')
         }, null, 2));
+        
+        // Parse error to understand what's wrong
+        try {
+          const errorObj = JSON.parse(errorText);
+          console.error(`❌ Telnyx API Error Details:`, errorObj);
+        } catch (e) {
+          console.error(`❌ Raw error text:`, errorText);
+        }
+        
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
@@ -1265,7 +1278,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             payload: aiResponse,
             payload_type: 'text',
             service_level: 'basic',
-            voice: 'AWS.Polly.Camila',
+            voice: 'Polly.Camila',
             client_state: Buffer.from(JSON.stringify({
               action: 'speaking_ai_response'
             })).toString('base64')
@@ -1743,7 +1756,7 @@ Responda apenas com o texto que você falará para o cliente:`;
         payload_type: 'text',
         service_level: 'basic',
         language: 'pt-BR',
-        voice: 'AWS.Polly.Camila',
+        voice: 'Polly.Camila',
         client_state: Buffer.from(JSON.stringify({
           action: 'speaking_response',
           operationId,
