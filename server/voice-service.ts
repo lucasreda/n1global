@@ -352,36 +352,12 @@ export class VoiceService {
   }
 
   /**
-   * Start barge-in detection while Sofia is speaking
+   * Simplified barge-in detection (disabled for now to avoid complexity)
    */
   private async startBargeInDetection(callControlId: string, operationId: string, callType: string): Promise<void> {
-    if (!this.telnyxClient) return;
-    
-    try {
-      console.log(`🚨 Starting barge-in detection for call ${callControlId}`);
-      
-      // Start sensitive speech detection to catch user interruptions
-      await this.telnyxClient.calls.gather(callControlId, {
-        minimum_digits: 0,
-        maximum_digits: 0,
-        timeout_millis: 5000, // Shorter timeout to catch interruptions
-        inter_digit_timeout_millis: 1000,
-        initial_timeout_millis: 1000,
-        terminating_digit: '',
-        valid_digits: '',
-        client_state: Buffer.from(JSON.stringify({ 
-          action: 'barge_in_detection',
-          operationId,
-          callType,
-          timestamp: Date.now()
-        })).toString('base64')
-      });
-      
-      console.log(`🎤 Barge-in detection active for call ${callControlId}`);
-      
-    } catch (error) {
-      console.error(`❌ Error starting barge-in detection:`, error);
-    }
+    // SIMPLIFIED: Skip barge-in for now to get basic conversation working first
+    console.log(`ℹ️ Barge-in detection skipped - focusing on basic conversation first`);
+    return;
   }
 
   /**
@@ -1119,25 +1095,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Fallback conversation system using prompts
+   * Simplified conversation system using basic Telnyx gather
    */
   private async startPromptBasedConversation(callControlId: string, operationId: string, callType: string): Promise<void> {
     if (!this.telnyxClient) return;
     
     try {
-      console.log(`💬 Starting prompt-based conversation for call ${callControlId}`);
+      console.log(`💬 Starting speech recognition for call ${callControlId}`);
       
-      // Start continuous speech recognition
-      console.log(`🎤 Starting continuous speech recognition for real-time conversation`);
-      
+      // Use basic gather with speech input - this is the simplest working approach
       await this.telnyxClient.calls.gather(callControlId, {
         minimum_digits: 0,
-        maximum_digits: 0,
-        timeout_millis: 30000, // 30 second timeout
-        inter_digit_timeout_millis: 3000,
-        initial_timeout_millis: 5000,
-        terminating_digit: '',
-        valid_digits: '',
+        maximum_digits: 0, 
+        timeout_millis: 30000,
         client_state: Buffer.from(JSON.stringify({ 
           action: 'continuous_speech',
           operationId,
@@ -1146,10 +1116,43 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         })).toString('base64')
       });
       
-      console.log(`🎤 Started speech gathering for call ${callControlId}`);
+      console.log(`🎤 Speech gathering active for call ${callControlId}`);
       
     } catch (error) {
-      console.error(`❌ Error starting prompt-based conversation:`, error);
+      console.error(`❌ Error starting conversation:`, error);
+      
+      // If gather fails, try a simple prompt
+      try {
+        console.log(`🔄 Fallback: Using simple prompt approach`);
+        await this.telnyxClient.calls.speak(callControlId, {
+          payload: "Fique à vontade para falar. Estou escutando!",
+          payload_type: 'text',
+          service_level: 'basic',
+          language: 'pt-BR',
+          voice: 'female'
+        });
+        
+        // Wait a bit then try gather again
+        setTimeout(async () => {
+          try {
+            await this.telnyxClient.calls.gather(callControlId, {
+              minimum_digits: 0,
+              maximum_digits: 0,
+              timeout_millis: 20000,
+              client_state: Buffer.from(JSON.stringify({ 
+                action: 'simple_speech',
+                operationId,
+                callType
+              })).toString('base64')
+            });
+          } catch (e) {
+            console.log(`❌ Final gather attempt failed:`, e);
+          }
+        }, 3000);
+        
+      } catch (speakError) {
+        console.error(`❌ Even fallback speak failed:`, speakError);
+      }
     }
   }
 
@@ -1197,43 +1200,37 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       
       if (callData.status === 'valid' && callData.speech) {
         // User spoke - process the speech
-        const speechType = isBargeIn ? 'INTERRUPTION' : 'RESPONSE';
-        console.log(`✅ User ${speechType} detected: "${callData.speech}"`);
+        console.log(`✅ User speech detected: "${callData.speech}"`);
         
         // Generate AI response
         const aiResponse = await this.generateTestCallResponse(operationId, callData.speech, callType);
         console.log(`🤖 AI Response generated: "${aiResponse}"`);
         
-        // Speak AI response with barge-in enabled
-        const clientState = Buffer.from(JSON.stringify({ 
-          action: 'speaking_ai_response',
-          operationId,
-          callType,
-          timestamp: Date.now()
-        })).toString('base64');
-        
+        // Speak AI response
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: aiResponse,
           payload_type: 'text',
-          service_level: 'premium',
+          service_level: 'basic', // Use basic instead of premium
           language: 'pt-BR',
-          voice: 'female',
-          client_state: clientState
+          voice: 'female'
         });
         
-        console.log(`🎙️ AI response sent (with barge-in enabled): "${aiResponse}"`);
+        console.log(`🎙️ AI response sent: "${aiResponse}"`);
         
-        // Don't start new listening here - it will be handled by speak.started event
+        // After Sofia responds, start listening again
+        setTimeout(async () => {
+          await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
+        }, 2000); // Wait 2 seconds for speech to complete
         
-      } else if (callData.status === 'timeout' && !isBargeIn) {
-        // No speech detected in normal listening (not barge-in)
+      } else if (callData.status === 'timeout') {
+        // No speech detected - try to keep conversation alive
         console.log(`⏰ No speech detected - prompting user again`);
         
         const promptMessage = "Ainda estou aqui! Pode falar, estou escutando.";
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: promptMessage,
           payload_type: 'text',
-          service_level: 'premium',
+          service_level: 'basic',
           language: 'pt-BR',
           voice: 'female'
         });
@@ -1242,11 +1239,6 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         setTimeout(async () => {
           await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
         }, 3000);
-        
-      } else if (isBargeIn && !callData.speech) {
-        // Barge-in activated but no speech captured - continue normal listening
-        console.log(`🎤 Barge-in timeout - resuming normal conversation listening`);
-        await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
         
       } else {
         console.log(`❌ Speech gather failed with status: ${callData.status}`);
