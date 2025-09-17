@@ -1304,9 +1304,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           },
           voice: "Polly.Camila",
           language: "pt-BR",  // Language for Text-to-Speech
-          stt_language: "pt",  // Language for Speech-to-Text recognition
+          stt_language: "pt-BR",  // Language for Speech-to-Text recognition - use full code
+          stt_model: "enhanced",  // Use enhanced model for better accuracy
           send_partial_results: false,
-          user_response_timeout: 15000,
+          user_response_timeout: 30000,  // Increase timeout to 30 seconds
           message_history: messageHistory,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
@@ -1341,9 +1342,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           },
           voice: "Polly.Camila",
           language: "pt-BR",  // Language for Text-to-Speech
-          stt_language: "pt",  // Language for Speech-to-Text recognition
+          stt_language: "pt-BR",  // Language for Speech-to-Text recognition - use full code
+          stt_model: "enhanced",  // Use enhanced model for better accuracy
           send_partial_results: false,
-          user_response_timeout: 15000,
+          user_response_timeout: 30000,  // Increase timeout to 30 seconds
           message_history: messageHistory,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
@@ -2103,24 +2105,30 @@ Responda apenas com o texto que você falará para o cliente:`;
       const callControlId = callData.call_control_id;
       const messageHistory = callData.message_history || [];
       
-      // Get the LAST user message from the message history (not from result.message)
+      // Debug: Log the complete result structure
+      console.log(`📄 AI gather result structure:`, JSON.stringify(callData.result, null, 2));
+      console.log(`📄 Message history:`, JSON.stringify(messageHistory, null, 2));
+      
+      // Get user response from the result.parameters.message field (this is what the AI extracted)
       let userResponse = '';
-      if (messageHistory.length > 0) {
-        // Find the last user message
+      if (callData.result?.parameters?.message) {
+        userResponse = callData.result.parameters.message;
+        console.log(`✅ Got user response from result.parameters.message: "${userResponse}"`);
+      } else if (messageHistory.length > 0) {
+        // Fallback: Find the last user message in history
         for (let i = messageHistory.length - 1; i >= 0; i--) {
           if (messageHistory[i].role === 'user') {
             userResponse = messageHistory[i].content;
+            console.log(`✅ Got user response from message history: "${userResponse}"`);
             break;
           }
         }
       }
       
-      // Fallback to other fields if no user message in history
+      // Last resort fallbacks
       if (!userResponse) {
-        userResponse = callData.result?.parameters?.message ||
-                      callData.transcript || 
-                      callData.speech_result || 
-                      '';
+        userResponse = callData.transcript || callData.speech_result || '';
+        console.log(`⚠️ Using fallback response: "${userResponse}"`);
       }
       
       console.log(`🤖 Processing AI gather for call ${callControlId}`);
