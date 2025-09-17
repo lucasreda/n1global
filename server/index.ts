@@ -7,8 +7,8 @@ import { seedDatabase } from "./seed";
 const app = express();
 
 // Raw body middleware for webhook signature verification (must come before JSON parsing)
-app.use('/api/voice/telnyx-incoming-call', express.raw({ type: 'application/json' }));
-app.use('/api/voice/telnyx-call-status', express.raw({ type: 'application/json' }));
+app.use('/api/voice/telnyx-incoming-call', express.raw({ type: 'application/json', limit: '10mb' }));
+app.use('/api/voice/telnyx-call-status', express.raw({ type: 'application/json', limit: '10mb' }));
 
 // Store raw body for webhook verification
 app.use('/api/voice/telnyx-incoming-call', (req: any, res: any, next: any) => {
