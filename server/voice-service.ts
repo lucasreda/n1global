@@ -1593,75 +1593,38 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          // Enhanced greeting with SSML for natural speech
-          greeting: this.enhanceGreetingWithSSML(greeting),
+          // Simple greeting without SSML
+          greeting: greeting,
           
-          // Simplified parameters for better AI understanding
+          // Basic parameters for AI understanding
           parameters: {
             type: "object",
             properties: {
               message: {
                 type: "string",
-                description: "The complete message from the customer in Brazilian Portuguese"
-              },
-              sentiment: {
-                type: "string",
-                description: "Customer sentiment: positive, neutral, negative, urgent",
-                enum: ["positive", "neutral", "negative", "urgent"]
-              },
-              intent: {
-                type: "string", 
-                description: "Main intent: greeting, question, complaint, purchase, support",
-                enum: ["greeting", "question", "complaint", "purchase", "support", "other"]
+                description: "What the customer said in Portuguese"
               }
             },
-            required: ["message", "intent"]
+            required: ["message"]
           },
           
-          // Assistant configuration for better contextual understanding
+          // Basic assistant configuration
           assistant: {
             model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
-            instructions: "You are Sofia, a helpful Brazilian sales assistant. Extract the customer's message accurately in Portuguese. Focus on understanding their intent and sentiment. Always preserve the original language and meaning."
+            instructions: "Extract the customer's message in Portuguese."
           },
           
-          // Optimized transcription for PT-BR with Google
+          // Simple transcription for PT-BR
           transcription: {
             model: "google",
-            language: "pt",  // Google uses 'pt' for Portuguese
-            hints: ["olá", "oi", "sim", "não", "bom dia", "boa tarde", "boa noite", "quero", "preciso", "gostaria"],
-            profanity_filter: false,  // Don't filter in case customer uses colloquialisms
-            automatic_punctuation: true  // Better formatting
+            language: "pt-BR"
           },
           
-          // Use AWS Polly with Brazilian voice
-          voice: "AWS.Polly.Camila",
-          voice_settings: {},  // AWS doesn't need extra settings
+          // Use correct Polly voice format
+          voice: "Polly.Camila",
           
-          // Real-time partial results for faster response
-          send_partial_results: true,
-          send_message_history_updates: true,
-          
-          // Natural interruption handling with sensitivity adjustment
-          interruption_settings: {
-            enable: true,
-            threshold: 50  // Less sensitive to avoid false interruptions
-          },
-          
-          // Voice activity detection settings  
-          voice_activity_detection: {
-            enable: true,
-            threshold: 0.5,  // Medium sensitivity 
-            speech_start_timeout_ms: 10000,  // Wait up to 10s for first speech
-            speech_end_timeout_ms: 2000  // Wait 2s of silence before ending speech
-          },
-          
-          // Extended timeouts for natural conversation flow
-          user_response_timeout_ms: 30000,  // 30 seconds - more time for user to respond
-          initial_silence_timeout_ms: 10000,  // 10 seconds - wait longer for initial response
-          speech_timeout_ms: 3000,  // 3 seconds - detect end of speech after pause
-          
-          // Conversation history for context
-          message_history: messageHistory,
+          // Basic timeout settings
+          user_response_timeout_ms: 15000,
           
           // Client state for tracking
           client_state: Buffer.from(JSON.stringify({
