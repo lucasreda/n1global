@@ -1130,31 +1130,22 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          greeting: messageHistory.length > 0 ? "Continue falando em português, estou ouvindo..." : "Olá! Estou ouvindo. Por favor, fale em português brasileiro.",
+          greeting: messageHistory.length > 0 ? "Continue falando, estou ouvindo..." : "Olá! Sou a Sofia, assistente virtual do N1 Hub. Como posso ajudar você hoje?",
           parameters: {
             type: "object",
             properties: {
               message: {
                 type: "string",
-                description: "The customer's message transcribed in Brazilian Portuguese"
+                description: "A mensagem do cliente em português brasileiro"
               },
               intent: {
                 type: "string", 
-                description: "Customer intent: produto, preço, dúvida, reclamação, etc."
+                description: "A intenção do cliente: produto, preço, dúvida, reclamação"
               }
             },
             required: ["message"]
           },
           voice: "Polly.Camila",
-          // System prompts to force Portuguese recognition
-          prompt: "Você está ouvindo um cliente brasileiro falando em português. Transcreva EXATAMENTE o que ele disse em português brasileiro. NUNCA transcreva em inglês. O cliente está falando português do Brasil.",
-          messages: [
-            {
-              role: "system",
-              content: "You are transcribing a Brazilian Portuguese phone call. The customer is speaking in Brazilian Portuguese. Always transcribe in Portuguese, never in English. Common phrases: 'olá', 'boa tarde', 'eu quero', 'preciso de', 'quanto custa', 'obrigado'."
-            }
-          ],
-          model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
