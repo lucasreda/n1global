@@ -1154,12 +1154,25 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         }, 3000);
         
       } else if (callData.status === 'timeout') {
-        console.log(`⏰ No input - continuing conversation anyway`);
+        console.log(`⏰ No input - prompting user to interact`);
         
-        // Skip speaking on timeout to avoid errors, just continue
+        // Speak to encourage interaction
+        try {
+          await this.telnyxClient.calls.speak(callData.call_control_id, {
+            payload: "Estou aqui para ajudar! Pressione qualquer tecla no seu telefone, como 1, 2 ou 3.",
+            payload_type: 'text',
+            service_level: 'basic',
+            voice: 'female'
+          });
+          console.log(`🎙️ Encouragement message sent successfully`);
+        } catch (speakError) {
+          console.error('❌ Encouragement speak error:', speakError);
+        }
+        
+        // Continue after encouragement
         setTimeout(async () => {
           await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
-        }, 2000);
+        }, 5000);
         
       } else {
         console.log(`❌ Invalid input - hanging up directly`);
