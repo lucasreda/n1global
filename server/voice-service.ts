@@ -1762,11 +1762,11 @@ Responda apenas com o texto que você falará para o cliente:`;
 
       console.log(`🤖 Sofia will respond: "${aiResult.response}"`);
 
-      // Speak the AI response
+      // Speak the AI response - using premium for Portuguese
       await this.telnyxClient.calls.speak(callControlId, {
         payload: aiResult.response,
         payload_type: 'text',
-        service_level: 'basic',
+        service_level: 'premium',  // Must use premium for pt-BR
         language: 'pt-BR',
         voice: 'Polly.Camila',
         client_state: Buffer.from(JSON.stringify({
