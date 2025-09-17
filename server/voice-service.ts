@@ -1008,13 +1008,13 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       // Generate welcome message with correct callType
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
       
-      // Speak the welcome message - simplified parameters
+      // Speak the welcome message - using premium for Portuguese
       console.log(`🗣️ Attempting to speak welcome message: "${welcomeMessage}"`);
       try {
         await this.telnyxClient.calls.speak(callControlId, {
           payload: welcomeMessage,
           payload_type: 'text',
-          service_level: 'basic',
+          service_level: 'premium',  // Premium required for pt-BR
           language: 'pt-BR',
           voice: 'Polly.Camila'
         });
