@@ -243,6 +243,10 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
       await voiceService.handleIncomingCall(eventData.payload, callType);
     } else if (eventType === 'call.answered') {
       await voiceService.handleCallAnswered(eventData.payload, callType);
+    } else if (eventType === 'call.speak.ended') {
+      // After Sofia finishes speaking, activate WebSocket conversation system
+      console.log(`🎙️ Welcome message finished - activating conversation system`);
+      await voiceService.handleSpeakEnded(eventData.payload, callType, operationId);
     } else if (eventType === 'call.hangup') {
       await voiceService.handleCallStatusUpdate(eventData.payload);
     } else {

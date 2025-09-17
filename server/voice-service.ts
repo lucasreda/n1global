@@ -283,6 +283,40 @@ export class VoiceService {
   }
 
   /**
+   * Handle speak ended event - activate conversation system
+   */
+  async handleSpeakEnded(callData: any, callType: string = 'test', operationId: string): Promise<void> {
+    try {
+      console.log(`🎙️ Speak ended for call ${callData.call_control_id} - activating bidirectional conversation`);
+      
+      // Check if this was a welcome message (based on client_state)
+      const clientState = callData.client_state;
+      let decodedState = null;
+      
+      if (clientState) {
+        try {
+          decodedState = JSON.parse(Buffer.from(clientState, 'base64').toString());
+        } catch (e) {
+          console.warn('⚠️ Could not decode client_state:', e);
+        }
+      }
+      
+      // Only activate conversation system if this was the welcome message
+      if (decodedState?.action === 'speaking_welcome') {
+        console.log(`✅ Welcome message completed - starting media streaming for conversation`);
+        
+        // Start media streaming for bidirectional conversation
+        await this.startMediaStreaming(callData.call_control_id, operationId, callType);
+      } else {
+        console.log(`ℹ️ Speak ended but not welcome message - skipping conversation activation`);
+      }
+      
+    } catch (error) {
+      console.error('Error handling speak ended:', error);
+    }
+  }
+
+  /**
    * Handle call status updates from Telnyx
    */
   async handleCallStatusUpdate(callData: TelnyxCallWebhookData): Promise<void> {
@@ -966,6 +1000,69 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     } catch (error) {
       console.error(`❌ Error handling out of hours call ${callControlId}:`, error);
       await this.hangupCall(callControlId, 'Erro no tratamento fora de horário');
+    }
+  }
+
+  /**
+   * Start media streaming for bidirectional conversation
+   */
+  private async startMediaStreaming(callControlId: string, operationId: string, callType: string): Promise<void> {
+    if (!this.telnyxClient) {
+      console.error('❌ Telnyx client not initialized - cannot start media streaming');
+      return;
+    }
+    
+    try {
+      console.log(`🎵 Starting media streaming for call ${callControlId}`);
+      
+      // Start WebSocket media streaming with Telnyx
+      await this.telnyxClient.calls.streamStart(callControlId, {
+        stream_url: `wss://${process.env.REPL_SLUG || 'localhost'}-${process.env.REPL_OWNER || ''}.${process.env.REPLIT_DOMAIN || 'replit.dev'}/api/voice/media-stream/${callControlId}`,
+        stream_track: 'both' // Stream both inbound and outbound audio
+      });
+      
+      console.log(`✅ Media streaming activated for call ${callControlId}`);
+      
+    } catch (error) {
+      console.error(`❌ Error starting media streaming for call ${callControlId}:`, error);
+      
+      // Fallback: Continue with voice prompts
+      console.log(`🔄 Falling back to prompt-based conversation`);
+      await this.startPromptBasedConversation(callControlId, operationId, callType);
+    }
+  }
+
+  /**
+   * Fallback conversation system using prompts
+   */
+  private async startPromptBasedConversation(callControlId: string, operationId: string, callType: string): Promise<void> {
+    if (!this.telnyxClient) return;
+    
+    try {
+      console.log(`💬 Starting prompt-based conversation for call ${callControlId}`);
+      
+      // Wait for user to speak, then use gather to capture response
+      const gatherMessage = "Fale agora, estou escutando...";
+      
+      await this.telnyxClient.calls.gather(callControlId, {
+        min_digits: 0,
+        max_digits: 0,
+        timeout_millis: 30000, // 30 seconds timeout
+        finish_on_key: '',
+        valid_digits: '',
+        speech_timeout_millis: 3000,
+        speech_end_silence_millis: 1000,
+        client_state: Buffer.from(JSON.stringify({ 
+          action: 'gathering_speech',
+          operationId,
+          callType 
+        })).toString('base64')
+      });
+      
+      console.log(`🎤 Started speech gathering for call ${callControlId}`);
+      
+    } catch (error) {
+      console.error(`❌ Error starting prompt-based conversation:`, error);
     }
   }
 
