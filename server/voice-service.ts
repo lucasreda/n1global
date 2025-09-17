@@ -23,6 +23,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
+// ElevenLabs API configuration
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const ELEVENLABS_VOICE_ID = "pNInz6obpgDQGcFmaJgB"; // Portuguese female voice (Adam)
+
 interface TelnyxCallWebhookData {
   call_control_id: string;
   call_leg_id: string;
@@ -1121,7 +1125,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       console.log(`🎯 Using callType: ${callType} with real-time transcription`);
       
       // Start real-time transcription immediately for faster response
-      await this.startRealTimeTranscription(callControlId, operationId, callType);
+      await this.startWhisperTranscription(callControlId, operationId, callType);
       
       // Generate and speak welcome message while transcription runs in background
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
@@ -1140,14 +1144,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       }
       
       try {
-        await this.telnyxClient.calls.speak(callControlId, {
-          payload: welcomeMessage,
-          payload_type: 'text',
-          service_level: 'premium',  // Premium for best Portuguese quality
-          language: 'pt-BR',
-          voice: 'Polly.Camila',
-          client_state: clientState
-        });
+        await this.speakWithElevenLabs(callControlId, welcomeMessage, clientState);
       } catch (speakErr: any) {
         console.error(`❌ Error in speak call:`, speakErr);
         if (speakErr.raw?.errors) {
@@ -1168,10 +1165,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Start real-time transcription using Telnyx Transcription API
-   * This provides much better Portuguese support than gather_using_ai
+   * Start audio recording for OpenAI Whisper transcription
+   * This provides automatic language detection and superior accuracy
    */
-  private async startRealTimeTranscription(callControlId: string, operationId?: string, callType?: string): Promise<void> {
+  private async startWhisperTranscription(callControlId: string, operationId?: string, callType?: string): Promise<void> {
     try {
       // Check if transcription is already active
       if (this.transcriptionActive.get(callControlId)) {
@@ -1179,47 +1176,36 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         return;
       }
       
-      console.log(`🎤 Starting real-time Portuguese transcription for call ${callControlId}`);
+      console.log(`🎤 Starting Whisper-based transcription with auto-language detection for call ${callControlId}`);
       
       const apiKey = process.env.TELNYX_API_KEY;
       if (!apiKey) {
         throw new Error('No Telnyx API key found');
       }
 
-      // Use the transcription_start endpoint with correct parameters
-      const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transcription_start`, {
+      // Start recording to capture audio for Whisper
+      const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/record_start`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt',  // Use simple ISO code for real-time transcription
-          audio_track: 'inbound', 
-          interim_results: true,
-          transcription_engine: 'A',  // Google Speech-to-Text
-          enhanced_model: true,
-          speech_hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas", "obrigado", "tchau", "oi", "olá", "bom dia", "boa tarde", "sim", "não"],
-          model: "phone_call"  // Phone-optimized model
+          format: 'wav',
+          channels: 'single',
+          play_beep: false,
+          include_silence: false
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        // Check if transcription is already running
-        if (errorText.includes('already in progress')) {
-          console.log(`ℹ️ Transcription already in progress, marking as active`);
-          this.transcriptionActive.set(callControlId, true);
-          this.transcriptionBuffer.set(callControlId, '');
-          this.lastTranscriptionTime.set(callControlId, Date.now());
-          return;
-        }
-        console.error(`❌ Failed to start transcription (${response.status}):`, errorText);
-        throw new Error(`Transcription start failed: ${errorText}`);
+        console.error(`❌ Failed to start recording for Whisper (${response.status}):`, errorText);
+        throw new Error(`Recording start failed: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log(`✅ Real-time transcription started successfully:`, result);
+      console.log(`✅ Recording started for Whisper transcription:`, result);
       
       // Mark transcription as active
       this.transcriptionActive.set(callControlId, true);
@@ -1227,10 +1213,139 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       this.lastTranscriptionTime.set(callControlId, Date.now());
       
     } catch (error) {
-      console.error(`❌ Error starting real-time transcription:`, error);
+      console.error(`❌ Error starting Whisper transcription:`, error);
       // Fallback to gather_using_ai if transcription fails
       console.log(`🔄 Falling back to gather_using_ai`);
       await this.startSpeechGather(callControlId, operationId || '', callType || 'test');
+    }
+  }
+
+  /**
+   * Generate humanized speech using ElevenLabs
+   */
+  private async generateElevenLabsSpeech(text: string, voiceId: string = ELEVENLABS_VOICE_ID): Promise<Buffer> {
+    try {
+      if (!ELEVENLABS_API_KEY) {
+        throw new Error('ElevenLabs API key not configured');
+      }
+
+      console.log(`🎤 Generating ElevenLabs speech for: "${text.substring(0, 50)}..."`);
+
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': ELEVENLABS_API_KEY
+        },
+        body: JSON.stringify({
+          text,
+          model_id: "eleven_multilingual_v2",
+          voice_settings: {
+            stability: 0.75,
+            similarity_boost: 0.85,
+            style: 0.65,
+            use_speaker_boost: true
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+      }
+
+      const audioBuffer = Buffer.from(await response.arrayBuffer());
+      console.log(`✅ ElevenLabs speech generated: ${audioBuffer.length} bytes`);
+      
+      return audioBuffer;
+    } catch (error) {
+      console.error(`❌ Error generating ElevenLabs speech:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transcribe audio using OpenAI Whisper with automatic language detection
+   */
+  private async transcribeWithWhisper(audioBuffer: Buffer): Promise<{ text: string; language: string }> {
+    try {
+      console.log(`🎤 Transcribing audio with Whisper (${audioBuffer.length} bytes)`);
+
+      // Create a proper File object for OpenAI SDK
+      const audioFile = new File([audioBuffer], 'audio.wav', { 
+        type: 'audio/wav',
+        lastModified: Date.now()
+      });
+
+      const transcriptionResponse = await openai.audio.transcriptions.create({
+        file: audioFile,
+        model: 'whisper-1',
+        response_format: 'verbose_json',
+        // Remove language parameter to enable automatic detection
+      });
+
+      const transcript = transcriptionResponse.text;
+      const language = (transcriptionResponse as any).language || 'unknown';
+
+      console.log(`✅ Whisper transcription complete:`);
+      console.log(`   Text: "${transcript}"`);
+      console.log(`   Language detected: ${language}`);
+
+      return { text: transcript, language };
+    } catch (error) {
+      console.error(`❌ Error transcribing with Whisper:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Play ElevenLabs-generated audio on call using Telnyx
+   */
+  private async speakWithElevenLabs(
+    callControlId: string, 
+    text: string, 
+    clientState?: string
+  ): Promise<void> {
+    try {
+      // Guard: Check if call is still active before speaking
+      if (!this.activeCallIds.has(callControlId)) {
+        console.log(`⚠️ Call ${callControlId} ended, skipping ElevenLabs speak command`);
+        return;
+      }
+
+      console.log(`🎤 Speaking with ElevenLabs: "${text.substring(0, 50)}..."`);
+
+      // Generate speech with ElevenLabs
+      const audioBuffer = await this.generateElevenLabsSpeech(text);
+
+      // Convert to base64 for inline playback
+      const audioBase64 = audioBuffer.toString('base64');
+      const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
+
+      // Play the audio using Telnyx playback
+      await this.telnyxClient?.calls.playbackStart(callControlId, {
+        audio_url: audioUrl,
+        loop: 1,
+        client_state: clientState || Buffer.from(JSON.stringify({
+          action: 'elevenlabs_speech',
+          timestamp: Date.now()
+        })).toString('base64')
+      });
+
+      console.log(`✅ ElevenLabs audio playback started for call ${callControlId}`);
+    } catch (error) {
+      console.error(`❌ Error speaking with ElevenLabs:`, error);
+      // Fallback to regular Telnyx TTS
+      console.log(`🔄 Falling back to Telnyx TTS`);
+      await this.telnyxClient?.calls.speak(callControlId, {
+        payload: text,
+        payload_type: 'text',
+        service_level: 'premium',
+        language: 'pt-BR',
+        voice: 'Polly.Camila',
+        client_state: clientState
+      });
     }
   }
 
@@ -1251,16 +1366,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const message = settings?.outOfHoursMessage || 
         'Desculpe, nosso atendimento está fechado no momento. Nosso horário de funcionamento é de segunda a sexta, das 9h às 18h.';
       
-      // Speak the message
+      // Speak the message with ElevenLabs
       const clientState = Buffer.from(JSON.stringify({ action: 'speaking_out_of_hours' })).toString('base64');
-      await this.telnyxClient.calls.speak(callControlId, {
-        payload: message,
-        payload_type: 'text',
-        service_level: 'basic',
-        language: 'pt-BR',
-        voice: 'Polly.Camila',
-        client_state: clientState
-      });
+      await this.speakWithElevenLabs(callControlId, message, clientState);
       
       // Wait a bit then hangup
       setTimeout(() => {
@@ -2121,19 +2229,14 @@ Responda apenas com o texto que você falará para o cliente:`;
       // Mark Sofia as speaking
       this.isSofiaSpeaking.set(callControlId, true);
       
-      // Speak response immediately
-      await this.telnyxClient?.calls.speak(callControlId, {
-        payload: aiResult.response,
-        payload_type: 'text',
-        service_level: 'premium',
-        language: 'pt-BR',
-        voice: 'Polly.Camila',
-        client_state: Buffer.from(JSON.stringify({
-          action: 'speaking_response',
-          operationId: call.operationId,
-          timestamp: Date.now()
-        })).toString('base64')
-      });
+      // Speak response immediately with ElevenLabs
+      const responseClientState = Buffer.from(JSON.stringify({
+        action: 'speaking_response',
+        operationId: call.operationId,
+        timestamp: Date.now()
+      })).toString('base64');
+      
+      await this.speakWithElevenLabs(callControlId, aiResult.response, responseClientState);
       
       // Update conversation history
       history.push(
