@@ -1136,18 +1136,20 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             properties: {
               message: {
                 type: "string",
-                description: "O que o cliente está falando ou perguntando"
+                description: "O que o cliente está falando ou perguntando em português brasileiro"
               },
               intent: {
                 type: "string", 
-                description: "A intenção do cliente: produto, preço, dúvida, reclamação, etc."
+                description: "A intenção do cliente em português: produto, preço, dúvida, reclamação, etc."
               }
             },
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Important: Set speech recognition language to Portuguese
-          stt_model: "whisper-1",  // Use Whisper for better Portuguese recognition
+          language: "pt-BR",  // Speech recognition language
+          stt_language: "pt-BR",  // STT specific language setting  
+          transcription_language: "pt-BR",  // Force transcription to Portuguese
+          prompt: "Esta é uma conversa em português brasileiro. O cliente está falando em português.",
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
