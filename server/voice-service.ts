@@ -1188,10 +1188,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: 'pt',  // Use just 'pt' for Portuguese (Telnyx API format)
+          language: 'pt-BR',  // Use full Brazilian Portuguese code
           audio_track: 'inbound',  // Only transcribe customer speech, not Sofia's
-          interim_results: true  // Get partial results for faster response
-          // Removed transcription_engine as 'B' is non-standard
+          interim_results: true,  // Get partial results for faster response
+          model: 'whisper.large'  // Use large Whisper model for better Portuguese support
         })
       });
 
@@ -1347,10 +1347,13 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           },
           voice: "Polly.Camila",
           language: "pt-BR",  // Language for Text-to-Speech
-          stt_language: "pt-BR",  // Language for Speech-to-Text recognition - use full code
-          stt_model: "enhanced",  // Use enhanced model for better accuracy
+          stt_language: "pt-BR",  // Force Brazilian Portuguese for Speech-to-Text
+          // Remove stt_model parameter to use default Portuguese model
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
+          llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
+          llm_temperature: 0.7,
+          llm_max_tokens: 256,
           message_history: messageHistory,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
@@ -1385,10 +1388,13 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           },
           voice: "Polly.Camila",
           language: "pt-BR",  // Language for Text-to-Speech
-          stt_language: "pt-BR",  // Language for Speech-to-Text recognition - use full code
-          stt_model: "enhanced",  // Use enhanced model for better accuracy
+          stt_language: "pt-BR",  // Force Brazilian Portuguese for Speech-to-Text
+          // Remove stt_model parameter to use default Portuguese model
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
+          llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
+          llm_temperature: 0.7,
+          llm_max_tokens: 256,
           message_history: messageHistory,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
