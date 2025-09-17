@@ -1076,43 +1076,62 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Start AI-powered speech collection using Telnyx gather_using_ai
+   * Start AI-powered speech collection using Telnyx HTTP API (gather_using_ai)
    */
   private async startSpeechGather(callControlId: string, operationId: string, callType: string): Promise<void> {
-    if (!this.telnyxClient) return;
-    
     try {
-      console.log(`🎤 Starting AI speech collection for call ${callControlId}`);
+      console.log(`🎤 Starting AI speech collection via HTTP API for call ${callControlId}`);
       
-      // Use gather_using_ai for intelligent Portuguese conversation
-      await this.telnyxClient.calls.gather_using_ai(callControlId, {
-        greeting: "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
-        parameters: {
-          type: "object",
-          properties: {
-            message: {
-              type: "string",
-              description: "O que o cliente está falando ou perguntando"
-            },
-            intent: {
-              type: "string", 
-              description: "A intenção do cliente: produto, preço, dúvida, reclamação, etc."
-            }
-          },
-          required: ["message"]
+      const apiKey = process.env.TELNYX_API_KEY;
+      if (!apiKey) {
+        console.error(`❌ No Telnyx API key found`);
+        await this.startPromptBasedConversation(callControlId, operationId, callType);
+        return;
+      }
+
+      // Direct HTTP call to Telnyx gather_using_ai API
+      const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/gather_using_ai`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
         },
-        voice: "female",
-        language: "pt-BR",
-        partial_results_enabled: false,
-        client_state: Buffer.from(JSON.stringify({
-          action: 'ai_voice_input',
-          operationId,
-          callType,
-          timestamp: Date.now()
-        })).toString('base64')
+        body: JSON.stringify({
+          greeting: "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
+          parameters: {
+            type: "object",
+            properties: {
+              message: {
+                type: "string",
+                description: "O que o cliente está falando ou perguntando"
+              },
+              intent: {
+                type: "string", 
+                description: "A intenção do cliente: produto, preço, dúvida, reclamação, etc."
+              }
+            },
+            required: ["message"]
+          },
+          voice: "female",
+          language: "pt-BR",
+          partial_results_enabled: false,
+          client_state: Buffer.from(JSON.stringify({
+            action: 'ai_voice_input',
+            operationId,
+            callType,
+            timestamp: Date.now()
+          })).toString('base64')
+        })
       });
 
-      console.log(`🤖 AI voice collection active for ${callControlId} (Portuguese)`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`🤖 AI voice collection initiated successfully:`, result);
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ HTTP API Error (${response.status}):`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
       
     } catch (error) {
       console.error(`❌ Error starting AI speech collection:`, error);
