@@ -1275,7 +1275,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       if (messageHistory.length > 0) {
         greeting = "Continue falando, estou ouvindo...";
       } else {
-        greeting = await this.generateWelcomeMessage(operationId, callType);
+        greeting = await this.generateTestCallWelcomeMessage(operationId, callType);
         console.log(`🎯 Using personalized greeting: "${greeting}"`);
       }
 
