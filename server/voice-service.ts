@@ -1281,11 +1281,14 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const charCount = text.length;
       console.log(`🎤 Sofia speaking (Neural HD): "${text.substring(0, 50)}..." (${charCount} chars)`);
       
-      // Try Neural HD voice first (best quality) - TEMPORARILY DISABLE SSML
+      // Enhanced SSML for more natural speech patterns
+      const enhancedText = this.enhanceTextWithSSMLFixed(text);
+      
+      // Try Neural HD voice first (best quality)
       try {
         await this.telnyxClient?.calls.speak(callControlId, {
-          payload: text, // Use plain text temporarily to debug
-          payload_type: 'text',
+          payload: enhancedText,
+          payload_type: 'ssml',
           service_level: 'premium',
           language: 'pt-BR',
           voice: 'Azure.pt-BR-FranciscaNeural', // Azure Neural HD for Sofia
@@ -1367,7 +1370,43 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Enhance text with SSML for more natural speech patterns
+   * Enhance text with SSML for more natural speech patterns (Fixed Version)
+   */
+  private enhanceTextWithSSMLFixed(text: string): string {
+    // Properly escape and format SSML for Azure Neural HD TTS
+    let enhanced = text;
+    
+    // Escape any existing XML characters first
+    enhanced = enhanced.replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&apos;');
+    
+    // Add natural pauses and emphasis for Sofia's personality
+    // Add pauses after greetings
+    enhanced = enhanced.replace(/^(Oi|Olá|Alô),?\s*/i, '$1<break time="300ms"/> ');
+    
+    // Add gentle emphasis on Sofia's name
+    enhanced = enhanced.replace(/Sofia/gi, '<emphasis level="moderate">Sofia</emphasis>');
+    
+    // Add natural breathing pauses after questions
+    enhanced = enhanced.replace(/\?\s*/g, '?<break time="400ms"/> ');
+    
+    // Add slight pauses after commas for natural flow
+    enhanced = enhanced.replace(/,\s*/g, ',<break time="200ms"/> ');
+    
+    // Add pause before "por favor" for politeness
+    enhanced = enhanced.replace(/,?\s*por favor/gi, '<break time="200ms"/>por favor');
+    
+    // Wrap in proper SSML speak tags
+    enhanced = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="pt-BR">${enhanced}</speak>`;
+    
+    return enhanced;
+  }
+
+  /**
+   * Enhance text with SSML for more natural speech patterns (Original)
    */
   private enhanceTextWithSSML(text: string): string {
     // Add natural pauses and emphasis for Sofia's personality
