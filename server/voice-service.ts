@@ -1059,29 +1059,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`🎵 Starting media streaming for call ${callControlId}`);
       
-      // Try to start media streaming (if available)
-      try {
-        // Use Telnyx streaming API if available
-        const streamResponse = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/streaming_start`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            stream_url: `wss://${process.env.REPL_SLUG || 'localhost'}-${process.env.REPL_OWNER || ''}.${process.env.REPLIT_DOMAIN || 'replit.dev'}/api/voice/media-stream/${callControlId}`,
-            stream_track: 'both'
-          })
-        });
-        
-        if (!streamResponse.ok) {
-          throw new Error(`Streaming API returned ${streamResponse.status}`);
-        }
-        
-      } catch (streamError) {
-        // If streaming fails, throw error to trigger fallback
-        throw new Error(`Streaming not available: ${streamError.message}`);
-      }
+      // Skip streaming completely for now - go directly to fallback
+      throw new Error(`Streaming disabled - using simple conversation mode`);
       
       console.log(`✅ Media streaming activated for call ${callControlId}`);
       
@@ -1095,63 +1074,51 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Simplified conversation system using basic Telnyx gather
+   * MINIMAL working conversation system - no speech, just basic prompts
    */
   private async startPromptBasedConversation(callControlId: string, operationId: string, callType: string): Promise<void> {
     if (!this.telnyxClient) return;
     
     try {
-      console.log(`💬 Starting speech recognition for call ${callControlId}`);
+      console.log(`💬 Starting simple conversation for call ${callControlId}`);
       
-      // Use basic gather with speech input - this is the simplest working approach
+      // Use simplest possible gather for digits/DTMF only (no speech for now)
       await this.telnyxClient.calls.gather(callControlId, {
-        minimum_digits: 0,
-        maximum_digits: 0, 
+        minimum_digits: 1,
+        maximum_digits: 1, 
         timeout_millis: 30000,
+        inter_digit_timeout_millis: 5000,
+        initial_timeout_millis: 10000,
+        terminating_digit: '#',
+        valid_digits: '0123456789*#',
         client_state: Buffer.from(JSON.stringify({ 
-          action: 'continuous_speech',
+          action: 'simple_input',
           operationId,
           callType,
           timestamp: Date.now()
         })).toString('base64')
       });
       
-      console.log(`🎤 Speech gathering active for call ${callControlId}`);
+      console.log(`🎤 Basic input gathering active for call ${callControlId}`);
       
     } catch (error) {
       console.error(`❌ Error starting conversation:`, error);
       
-      // If gather fails, try a simple prompt
+      // Absolute minimal fallback - just say something
       try {
-        console.log(`🔄 Fallback: Using simple prompt approach`);
+        console.log(`🔄 Fallback: Just speaking a message`);
         await this.telnyxClient.calls.speak(callControlId, {
-          payload: "Fique à vontade para falar. Estou escutando!",
+          payload: "Pressione 1 para continuar ou aguarde.",
           payload_type: 'text',
           service_level: 'basic',
           language: 'pt-BR',
           voice: 'female'
         });
         
-        // Wait a bit then try gather again
-        setTimeout(async () => {
-          try {
-            await this.telnyxClient.calls.gather(callControlId, {
-              minimum_digits: 0,
-              maximum_digits: 0,
-              timeout_millis: 20000,
-              client_state: Buffer.from(JSON.stringify({ 
-                action: 'simple_speech',
-                operationId,
-                callType
-              })).toString('base64')
-            });
-          } catch (e) {
-            console.log(`❌ Final gather attempt failed:`, e);
-          }
-        }, 3000);
+        console.log(`✅ Fallback message sent successfully`);
         
       } catch (speakError) {
-        console.error(`❌ Even fallback speak failed:`, speakError);
+        console.error(`❌ Even basic speak failed:`, speakError);
       }
     }
   }
@@ -1163,91 +1130,56 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     if (!this.telnyxClient) return;
     
     try {
-      console.log(`🎤 Processing speech gather for call ${callData.call_control_id}`);
-      console.log(`📝 Gather status: ${callData.status}`);
+      console.log(`🎤 Processing gather for call ${callData.call_control_id}`);
+      console.log(`📝 Gather status: ${callData.status}, digits: ${callData.digits || 'none'}`);
       
-      // Check if this was a barge-in interruption
-      const clientState = callData.client_state;
-      let decodedState = null;
-      
-      if (clientState) {
-        try {
-          decodedState = JSON.parse(Buffer.from(clientState, 'base64').toString());
-        } catch (e) {
-          console.warn('⚠️ Could not decode client_state:', e);
-        }
-      }
-      
-      const isBargeIn = decodedState?.action === 'barge_in_detection';
-      if (isBargeIn) {
-        console.log(`🚨 BARGE-IN DETECTED! User interrupted Sofia`);
+      if (callData.status === 'valid' && callData.digits) {
+        // User pressed a digit
+        console.log(`✅ User pressed: "${callData.digits}"`);
         
-        // Stop Sofia's current speech
-        try {
-          // Use proper Telnyx API to stop speaking
-          await fetch(`https://api.telnyx.com/v2/calls/${callData.call_control_id}/actions/speak_stop`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          console.log(`⛔ Sofia's speech stopped due to user interruption`);
-        } catch (e) {
-          console.log(`ℹ️ Could not stop speech (may have already ended)`);
-        }
-      }
-      
-      if (callData.status === 'valid' && callData.speech) {
-        // User spoke - process the speech
-        console.log(`✅ User speech detected: "${callData.speech}"`);
+        const aiResponse = `Obrigada! Você pressionou ${callData.digits}. Como posso ajudá-lo hoje?`;
+        console.log(`🤖 Response: "${aiResponse}"`);
         
-        // Generate AI response
-        const aiResponse = await this.generateTestCallResponse(operationId, callData.speech, callType);
-        console.log(`🤖 AI Response generated: "${aiResponse}"`);
-        
-        // Speak AI response
+        // Speak response
         await this.telnyxClient.calls.speak(callData.call_control_id, {
           payload: aiResponse,
-          payload_type: 'text',
-          service_level: 'basic', // Use basic instead of premium
-          language: 'pt-BR',
-          voice: 'female'
-        });
-        
-        console.log(`🎙️ AI response sent: "${aiResponse}"`);
-        
-        // After Sofia responds, start listening again
-        setTimeout(async () => {
-          await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
-        }, 2000); // Wait 2 seconds for speech to complete
-        
-      } else if (callData.status === 'timeout') {
-        // No speech detected - try to keep conversation alive
-        console.log(`⏰ No speech detected - prompting user again`);
-        
-        const promptMessage = "Ainda estou aqui! Pode falar, estou escutando.";
-        await this.telnyxClient.calls.speak(callData.call_control_id, {
-          payload: promptMessage,
           payload_type: 'text',
           service_level: 'basic',
           language: 'pt-BR',
           voice: 'female'
         });
         
-        // Restart listening after prompt
+        console.log(`🎙️ Response sent successfully`);
+        
+        // Continue conversation
         setTimeout(async () => {
           await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
         }, 3000);
         
+      } else if (callData.status === 'timeout') {
+        // No input detected
+        console.log(`⏰ No input - ending call politely`);
+        
+        await this.telnyxClient.calls.speak(callData.call_control_id, {
+          payload: "Obrigada por entrar em contato. Até logo!",
+          payload_type: 'text',
+          service_level: 'basic',
+          language: 'pt-BR',
+          voice: 'female'
+        });
+        
+        // End call after message
+        setTimeout(async () => {
+          await this.hangupCall(callData.call_control_id, 'Timeout');
+        }, 4000);
+        
       } else {
-        console.log(`❌ Speech gather failed with status: ${callData.status}`);
-        // End call gracefully
+        console.log(`❌ Gather failed with status: ${callData.status}`);
         await this.hangupCall(callData.call_control_id, 'Erro na conversa');
       }
       
     } catch (error) {
-      console.error('Error handling speech gather ended:', error);
+      console.error('Error handling gather ended:', error);
     }
   }
 
