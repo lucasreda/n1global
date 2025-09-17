@@ -1303,7 +1303,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Add language parameter for proper Brazilian Portuguese recognition
+          language: "pt-BR",  // Language for Text-to-Speech
+          stt_language: "pt",  // Language for Speech-to-Text recognition
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
@@ -1339,7 +1340,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "Polly.Camila",
-          language: "pt-BR",  // Add language parameter for proper Brazilian Portuguese recognition
+          language: "pt-BR",  // Language for Text-to-Speech
+          stt_language: "pt",  // Language for Speech-to-Text recognition
           send_partial_results: false,
           user_response_timeout: 15000,
           message_history: messageHistory,
@@ -2099,13 +2101,27 @@ Responda apenas com o texto que você falará para o cliente:`;
     
     try {
       const callControlId = callData.call_control_id;
-      // Try different possible structures for the user response
-      const userResponse = callData.result?.message || 
-                          callData.result?.parameters?.message ||
-                          callData.transcript || 
-                          callData.speech_result || 
-                          '';
       const messageHistory = callData.message_history || [];
+      
+      // Get the LAST user message from the message history (not from result.message)
+      let userResponse = '';
+      if (messageHistory.length > 0) {
+        // Find the last user message
+        for (let i = messageHistory.length - 1; i >= 0; i--) {
+          if (messageHistory[i].role === 'user') {
+            userResponse = messageHistory[i].content;
+            break;
+          }
+        }
+      }
+      
+      // Fallback to other fields if no user message in history
+      if (!userResponse) {
+        userResponse = callData.result?.parameters?.message ||
+                      callData.transcript || 
+                      callData.speech_result || 
+                      '';
+      }
       
       console.log(`🤖 Processing AI gather for call ${callControlId}`);
       console.log(`👤 User said: "${userResponse}"`);
