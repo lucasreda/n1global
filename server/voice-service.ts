@@ -18,6 +18,7 @@ import OpenAI from "openai";
 import { CustomerOrderService } from "./customer-order-service";
 import { SupportService } from "./support-service-fixed";
 import Telnyx from 'telnyx';
+import { container } from "./container";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -37,6 +38,14 @@ interface TelnyxCallWebhookData {
   end_time?: string;
   event_type: string;
   occurred_at: string;
+  connection_id?: string;
+  client_state?: string;
+  payload?: {
+    language?: string;
+    voice?: string;
+    text?: string;
+    digits?: string;
+  };
 }
 
 export class VoiceService {
@@ -367,7 +376,7 @@ export class VoiceService {
           this.transcriptionActive.set(callData.call_control_id, true);
         } catch (error) {
           console.log(`🔄 Whisper transcription failed, falling back to gather_using_ai`);
-          await this.startSpeechGather(callData.call_control_id, operationId, callType);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType as 'test' | 'sales');
         }
       } else if (decodedState?.action === 'speaking_response') {
         console.log(`✅ Sofia finished responding - continuing conversation`);
@@ -1030,6 +1039,14 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
+   * Generate hangup command with client state
+   */
+  private generateHangupCommand(message: string): string {
+    // Telnyx doesn't support voicemail in the same way, so we return a simple message
+    return message || "Call ended";
+  }
+
+  /**
    * Handle out of hours calls
    */
   private handleOutOfHours(reason: string, settings?: VoiceSettings): string {
@@ -1107,7 +1124,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`📞 Hanging up call ${callControlId}: ${reason || 'No reason provided'}`);
       // Use empty payload for hangup - no parameters needed
-      await this.telnyxClient.calls.hangup(callControlId, {});
+      await this.telnyxClient.calls.hangup(callControlId);
       console.log(`✅ Call ${callControlId} hung up successfully`);
     } catch (error) {
       console.error(`❌ Error hanging up call ${callControlId}:`, error);
@@ -1836,7 +1853,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         // Continue voice recognition after response
         setTimeout(async () => {
           console.log(`🔄 Continuing AI voice conversation...`);
-          await this.startSpeechGather(callData.call_control_id, operationId, callType);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType as 'test' | 'sales');
         }, 3000);
         
       } 
@@ -1865,7 +1882,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         // Continue with voice recognition (upgrade from DTMF)
         setTimeout(async () => {
           console.log(`🔄 Upgrading to voice conversation...`);
-          await this.startSpeechGather(callData.call_control_id, operationId, callType);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType as 'test' | 'sales');
         }, 3000);
         
       } 
@@ -1876,7 +1893,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         // Restart AI voice collection with new greeting
         setTimeout(async () => {
           console.log(`🔄 Restarting AI voice collection...`);
-          await this.startSpeechGather(callData.call_control_id, operationId, callType);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType as 'test' | 'sales');
         }, 2000);
         
       } else {
@@ -2284,14 +2301,13 @@ Responda apenas com o texto que você falará para o cliente:`;
       if (isSofiaSpeaking && transcript.trim().length > 0) {
         console.log(`🎤 User interrupted Sofia! Stopping her speech...`);
         
-        // Stop Sofia's current speech immediately
-        try {
-          await this.telnyxClient?.calls.stopSpeaking(callControlId);
-          this.isSofiaSpeaking?.set?.(callControlId, false);
-          console.log(`✔️ Sofia stopped speaking, now listening to user`);
-        } catch (error) {
-          console.log(`⚠️ Could not stop Sofia's speech:`, error);
-        }
+        // Note: Telnyx doesn't have a stopSpeaking method
+        // Speech will be interrupted naturally when user speaks (barge-in)
+        this.isSofiaSpeaking?.set?.(callControlId, false);
+        console.log(`✔️ Barge-in detected - Sofia will stop speaking`);
+        
+        // The speak command will automatically stop when user speaks
+        // This is handled by Telnyx's barge-in feature
       }
 
       // Add to buffer
