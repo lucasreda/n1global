@@ -224,6 +224,12 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
     console.log("📞 Telnyx incoming call webhook received");
     console.log("Body:", req.body);
     
+    // Extract callType and operationId from query parameters
+    const callType = (req.query.callType as string) || 'test';
+    const operationId = req.query.operationId as string;
+    
+    console.log(`🎯 Webhook callType: ${callType}, operationId: ${operationId}`);
+    
     // Extract data from Telnyx webhook
     const eventData = req.body.data;
     const eventType = eventData?.event_type;
@@ -234,9 +240,9 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
 
     // Handle different event types
     if (eventType === 'call.initiated') {
-      await voiceService.handleIncomingCall(eventData.payload);
+      await voiceService.handleIncomingCall(eventData.payload, callType);
     } else if (eventType === 'call.answered') {
-      await voiceService.handleCallAnswered(eventData.payload);
+      await voiceService.handleCallAnswered(eventData.payload, callType);
     } else if (eventType === 'call.hangup') {
       await voiceService.handleCallStatusUpdate(eventData.payload);
     } else {

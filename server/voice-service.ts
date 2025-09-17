@@ -155,7 +155,7 @@ export class VoiceService {
   /**
    * Handle incoming call from Telnyx
    */
-  async handleIncomingCall(callData: TelnyxCallWebhookData): Promise<void> {
+  async handleIncomingCall(callData: TelnyxCallWebhookData, callType: string = 'test'): Promise<void> {
     try {
       console.log(`📞 Handling incoming call: ${callData.call_control_id} from ${callData.from} to ${callData.to}`);
       
@@ -227,7 +227,7 @@ export class VoiceService {
       await this.answerCall(callData.call_control_id);
       
       // Start media stream and AI conversation
-      await this.startAIConversation(callData.call_control_id, operationId);
+      await this.startAIConversation(callData.call_control_id, operationId, callType);
       
     } catch (error) {
       console.error('Error handling incoming call:', error);
@@ -248,7 +248,7 @@ export class VoiceService {
   /**
    * Handle call answered event (when someone picks up an outbound call)
    */
-  async handleCallAnswered(callData: TelnyxCallWebhookData): Promise<void> {
+  async handleCallAnswered(callData: TelnyxCallWebhookData, callType: string = 'test'): Promise<void> {
     try {
       console.log(`📞 Call answered: ${callData.call_control_id}`);
       
@@ -274,7 +274,7 @@ export class VoiceService {
         .where(eq(voiceCalls.telnyxCallControlId, callData.call_control_id));
       
       // Start AI conversation now that call is answered
-      await this.startAIConversation(callData.call_control_id, call.operationId);
+      await this.startAIConversation(callData.call_control_id, call.operationId, callType);
       
       console.log(`✅ AI conversation started for answered call ${callData.call_control_id}`);
     } catch (error) {
@@ -902,7 +902,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   /**
    * Start AI conversation by speaking welcome message
    */
-  private async startAIConversation(callControlId: string, operationId: string): Promise<void> {
+  private async startAIConversation(callControlId: string, operationId: string, callType: string = 'test'): Promise<void> {
     if (!this.telnyxClient) {
       console.error('❌ Telnyx client not initialized - cannot start AI conversation');
       return;
@@ -910,9 +910,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     
     try {
       console.log(`🤖 Starting AI conversation for call ${callControlId}`);
+      console.log(`🎯 Using callType: ${callType} for welcome message generation`);
       
-      // Generate welcome message
-      const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, 'test');
+      // Generate welcome message with correct callType
+      const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
       
       // Speak the welcome message
       const clientState = Buffer.from(JSON.stringify({ action: 'speaking_welcome' })).toString('base64');
