@@ -1082,11 +1082,15 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`🎙️ Starting conversation for call ${callControlId}`);
       
-      // Use SIMPLE gather with working parameters only
+      // Use gather with ALL required parameters
       await this.telnyxClient.calls.gather(callControlId, {
         minimum_digits: 1,
         maximum_digits: 1,
         timeout_millis: 15000,
+        inter_digit_timeout_millis: 2000,
+        initial_timeout_millis: 5000,
+        terminating_digit: '#',
+        valid_digits: '0123456789*#',
         client_state: Buffer.from(JSON.stringify({
           action: 'user_input',
           operationId,
@@ -1103,7 +1107,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       // Even simpler fallback - just speak and wait
       await this.telnyxClient.calls.speak(callControlId, {
         payload: "Por favor, pressione qualquer tecla para continuar.",
-        payload_type: 'text'
+        payload_type: 'text',
+        service_level: 'basic',
+        voice: 'female'
       });
     }
   }
@@ -1127,13 +1133,19 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         const aiResponse = await this.generateSimpleResponse(userInput, operationId, callType);
         console.log(`🤖 AI Response: "${aiResponse}"`);
         
-        // Speak the response
-        await this.telnyxClient.calls.speak(callData.call_control_id, {
-          payload: aiResponse,
-          payload_type: 'text'
-        });
-        
-        console.log(`🎙️ Response sent successfully`);
+        // Speak the response with ALL required parameters
+        try {
+          await this.telnyxClient.calls.speak(callData.call_control_id, {
+            payload: aiResponse,
+            payload_type: 'text',
+            service_level: 'basic',
+            voice: 'female'
+          });
+          console.log(`🎙️ Response sent successfully`);
+        } catch (speakError) {
+          console.error('❌ Speak error:', speakError);
+          // Continue without speaking
+        }
         
         // Continue the conversation
         setTimeout(async () => {
@@ -1142,29 +1154,25 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         }, 3000);
         
       } else if (callData.status === 'timeout') {
-        console.log(`⏰ No input - prompting again`);
+        console.log(`⏰ No input - continuing conversation anyway`);
         
-        await this.telnyxClient.calls.speak(callData.call_control_id, {
-          payload: "Ainda estou aqui! Pressione qualquer tecla para continuar.",
-          payload_type: 'text'
-        });
-        
-        // Try again
+        // Skip speaking on timeout to avoid errors, just continue
         setTimeout(async () => {
           await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
-        }, 3000);
+        }, 2000);
         
       } else {
-        console.log(`❌ Invalid input - ending call politely`);
-        await this.endCallGracefully(callData.call_control_id);
+        console.log(`❌ Invalid input - hanging up directly`);
+        await this.hangupCall(callData.call_control_id, 'Invalid input');
       }
       
     } catch (error) {
       console.error('Error handling gather ended:', error);
+      // Just hang up directly without trying to speak
       try {
-        await this.endCallGracefully(callData.call_control_id);
+        await this.hangupCall(callData.call_control_id, 'Error in conversation');
       } catch (e) {
-        console.error('Error ending call gracefully:', e);
+        console.error('Error hanging up:', e);
       }
     }
   }
@@ -1225,7 +1233,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       await this.telnyxClient.calls.speak(callControlId, {
         payload: "Obrigada por entrar em contato! Tenha um ótimo dia!",
-        payload_type: 'text'
+        payload_type: 'text',
+        service_level: 'basic',
+        voice: 'female'
       });
 
       setTimeout(async () => {
