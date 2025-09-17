@@ -990,8 +990,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       console.log(`🤖 Starting AI conversation for call ${callControlId}`);
       console.log(`🎯 Using callType: ${callType} for welcome message generation`);
       
-      // Enable noise suppression for better speech recognition
-      console.log(`🔇 Enabling noise suppression for better speech recognition`);
+      // Skip noise suppression for now - may be causing issues
+      // TODO: Re-enable after fixing main flow
+      console.log(`🔇 Skipping noise suppression for now`);
+      /* 
       try {
         await this.telnyxClient.calls.suppressionStart(callControlId, {
           direction: 'inbound'
@@ -1001,20 +1003,28 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         console.warn(`⚠️ Could not enable noise suppression:`, suppErr);
         // Continue anyway - not critical for the call
       }
+      */
       
       // Generate welcome message with correct callType
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
       
-      // Speak the welcome message
-      const clientState = Buffer.from(JSON.stringify({ action: 'speaking_welcome' })).toString('base64');
-      await this.telnyxClient.calls.speak(callControlId, {
-        payload: welcomeMessage,
-        payload_type: 'text',
-        service_level: 'basic',
-        language: 'pt-BR',
-        voice: 'Polly.Camila',
-        client_state: clientState
-      });
+      // Speak the welcome message - simplified parameters
+      console.log(`🗣️ Attempting to speak welcome message: "${welcomeMessage}"`);
+      try {
+        await this.telnyxClient.calls.speak(callControlId, {
+          payload: welcomeMessage,
+          payload_type: 'text',
+          service_level: 'basic',
+          language: 'pt-BR',
+          voice: 'Polly.Camila'
+        });
+      } catch (speakErr: any) {
+        console.error(`❌ Error in speak call:`, speakErr);
+        if (speakErr.raw?.errors) {
+          console.error(`🔍 Telnyx speak error details:`, JSON.stringify(speakErr.raw.errors, null, 2));
+        }
+        throw speakErr;
+      }
       
       console.log(`🎙️ Welcome message sent to call ${callControlId}: "${welcomeMessage}"`);
     } catch (error) {
