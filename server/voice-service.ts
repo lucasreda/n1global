@@ -1000,7 +1000,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         payload_type: 'text',
         service_level: 'basic',
         language: 'pt-BR',
-        voice: 'Polly.Camila',
+        voice: 'Telnyx.KokoroTTS.af',
         client_state: clientState
       });
       
@@ -1035,7 +1035,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         payload_type: 'text',
         service_level: 'basic',
         language: 'pt-BR',
-        voice: 'Polly.Camila',
+        voice: 'Telnyx.KokoroTTS.af',
         client_state: clientState
       });
       
@@ -1116,8 +1116,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             },
             required: ["message"]
           },
-          voice: "Polly.Camila",
-          partial_results_enabled: false,
+          voice: "Telnyx.KokoroTTS.af",
+          send_partial_results: false,
+          user_response_timeout_ms: 10000,
           client_state: Buffer.from(JSON.stringify({
             action: 'ai_voice_input',
             operationId,
@@ -1180,7 +1181,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         payload: "Por favor, pressione qualquer tecla para continuar.",
         payload_type: 'text',
         service_level: 'basic',
-        voice: 'female'
+        voice: 'Telnyx.KokoroTTS.af'
       });
     }
   }
@@ -1228,7 +1229,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             payload: aiResponse,
             payload_type: 'text',
             service_level: 'basic',
-            voice: 'Polly.Camila',
+            voice: 'Telnyx.KokoroTTS.af',
             client_state: Buffer.from(JSON.stringify({
               action: 'speaking_ai_response'
             })).toString('base64')
