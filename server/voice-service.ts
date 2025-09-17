@@ -41,6 +41,14 @@ export class VoiceService {
   private customerOrderService: CustomerOrderService;
   private supportService: SupportService;
   private telnyxClient: Telnyx | null;
+  
+  // High-performance transcription state management
+  private transcriptionActive = new Map<string, boolean>();
+  private transcriptionBuffer = new Map<string, string>();
+  private lastTranscriptionTime = new Map<string, number>();
+  private processingQueue = new Map<string, Promise<void>>();
+  private conversationContext = new Map<string, any[]>();
+  private isProcessingResponse = new Map<string, boolean>();
 
   constructor() {
     this.customerOrderService = new CustomerOrderService();
@@ -287,7 +295,7 @@ export class VoiceService {
    */
   async handleSpeakEnded(callData: any, callType: string = 'test', operationId: string): Promise<void> {
     try {
-      console.log(`🎙️ Speak ended for call ${callData.call_control_id} - activating bidirectional conversation`);
+      console.log(`🎙️ Speak ended for call ${callData.call_control_id} - reactivating transcription`);
       
       // Check if this was a welcome message (based on client_state)
       const clientState = callData.client_state;
@@ -301,19 +309,30 @@ export class VoiceService {
         }
       }
       
-      // Activate conversation system based on the action type
-      if (decodedState?.action === 'speaking_welcome') {
-        console.log(`✅ Welcome message completed - starting speech recognition for conversation`);
-        
-        // Start speech recognition for Portuguese conversation
-        await this.startSpeechGather(callData.call_control_id, operationId, callType);
+      // If transcription is active, resume it after speaking
+      if (this.transcriptionActive.get(callData.call_control_id)) {
+        console.log(`🎤 Resuming real-time transcription after Sofia finished speaking`);
+        await this.resumeTranscription(callData.call_control_id);
+      } 
+      // Fallback to gather_using_ai if transcription is not active
+      else if (decodedState?.action === 'speaking_welcome') {
+        console.log(`✅ Welcome message completed - starting speech recognition`);
+        // Try transcription first, fallback to gather if it fails
+        try {
+          await this.startRealTimeTranscription(callData.call_control_id);
+          this.transcriptionActive.set(callData.call_control_id, true);
+        } catch (error) {
+          console.log(`🔄 Transcription failed, falling back to gather_using_ai`);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType);
+        }
       } else if (decodedState?.action === 'speaking_response') {
-        console.log(`✅ Sofia finished responding - activating speech recognition to continue conversation`);
-        
-        // Continue conversation after Sofia's response
-        await this.startSpeechGather(callData.call_control_id, decodedState.operationId || operationId, decodedState.callType || callType);
+        console.log(`✅ Sofia finished responding - continuing conversation`);
+        // Try to resume transcription, fallback to gather if needed
+        if (!this.transcriptionActive.get(callData.call_control_id)) {
+          await this.startSpeechGather(callData.call_control_id, decodedState.operationId || operationId, decodedState.callType || callType);
+        }
       } else {
-        console.log(`ℹ️ Speak ended but not a conversation action - skipping activation`);
+        console.log(`ℹ️ Speak ended but not a conversation action - skipping`);
       }
       
     } catch (error) {
@@ -983,7 +1002,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Start AI conversation by speaking welcome message
+   * Start AI conversation with high-performance real-time transcription
    */
   private async startAIConversation(callControlId: string, operationId: string, callType: string = 'test'): Promise<void> {
     if (!this.telnyxClient) {
@@ -992,38 +1011,30 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     }
     
     try {
-      console.log(`🤖 Starting AI conversation for call ${callControlId}`);
-      console.log(`🎯 Using callType: ${callType} for welcome message generation`);
+      console.log(`🚀 Starting high-performance AI conversation for call ${callControlId}`);
+      console.log(`🎯 Using callType: ${callType} with real-time transcription`);
       
-      // Skip noise suppression for now - may be causing issues
-      // TODO: Re-enable after fixing main flow
-      console.log(`🔇 Skipping noise suppression for now`);
-      /* 
-      try {
-        await this.telnyxClient.calls.suppressionStart(callControlId, {
-          direction: 'inbound'
-        });
-        console.log(`✅ Noise suppression enabled`);
-      } catch (suppErr) {
-        console.warn(`⚠️ Could not enable noise suppression:`, suppErr);
-        // Continue anyway - not critical for the call
-      }
-      */
+      // Start real-time transcription immediately for faster response
+      await this.startRealTimeTranscription(callControlId);
       
-      // Generate welcome message with correct callType
+      // Generate and speak welcome message while transcription runs in background
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
       
-      // Speak the welcome message - using premium for Portuguese
-      console.log(`🗣️ Attempting to speak welcome message: "${welcomeMessage}"`);
-      const clientState = Buffer.from(JSON.stringify({ action: 'speaking_welcome' })).toString('base64');
+      console.log(`🗣️ Speaking welcome message: "${welcomeMessage}"`);
+      const clientState = Buffer.from(JSON.stringify({ 
+        action: 'speaking_welcome',
+        operationId,
+        callType
+      })).toString('base64');
+      
       try {
         await this.telnyxClient.calls.speak(callControlId, {
           payload: welcomeMessage,
           payload_type: 'text',
-          service_level: 'premium',  // Premium required for pt-BR
+          service_level: 'premium',  // Premium for best Portuguese quality
           language: 'pt-BR',
           voice: 'Polly.Camila',
-          client_state: clientState  // Important: tells system this is welcome message
+          client_state: clientState
         });
       } catch (speakErr: any) {
         console.error(`❌ Error in speak call:`, speakErr);
@@ -1033,10 +1044,64 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         throw speakErr;
       }
       
-      console.log(`🎙️ Welcome message sent to call ${callControlId}: "${welcomeMessage}"`);
+      // Initialize conversation context for this call
+      this.conversationContext.set(callControlId, []);
+      this.transcriptionActive.set(callControlId, true);
+      
+      console.log(`✅ High-performance conversation activated for call ${callControlId}`);
     } catch (error) {
       console.error(`❌ Error starting AI conversation for call ${callControlId}:`, error);
       await this.hangupCall(callControlId, 'Erro ao iniciar conversa com IA');
+    }
+  }
+
+  /**
+   * Start real-time transcription using Telnyx Transcription API
+   * This provides much better Portuguese support than gather_using_ai
+   */
+  private async startRealTimeTranscription(callControlId: string): Promise<void> {
+    try {
+      console.log(`🎤 Starting real-time Portuguese transcription for call ${callControlId}`);
+      
+      const apiKey = process.env.TELNYX_API_KEY;
+      if (!apiKey) {
+        throw new Error('No Telnyx API key found');
+      }
+
+      // Use the transcription_start endpoint for better language support
+      const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transcription_start`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          language: 'pt',  // Portuguese language code
+          transcription_engine: 'B',  // Engine B is better for Portuguese
+          transcription_tracks: 'inbound',  // Transcribe customer speech only
+          interim_results: true  // Get partial results for faster response
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Failed to start transcription (${response.status}):`, errorText);
+        throw new Error(`Transcription start failed: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ Real-time transcription started successfully:`, result);
+      
+      // Mark transcription as active
+      this.transcriptionActive.set(callControlId, true);
+      this.transcriptionBuffer.set(callControlId, '');
+      this.lastTranscriptionTime.set(callControlId, Date.now());
+      
+    } catch (error) {
+      console.error(`❌ Error starting real-time transcription:`, error);
+      // Fallback to gather_using_ai if transcription fails
+      console.log(`🔄 Falling back to gather_using_ai`);
+      await this.startSpeechGather(callControlId, '', 'test');
     }
   }
 
@@ -1728,6 +1793,152 @@ Responda apenas com o texto que você falará para o cliente:`;
   public normalizePhoneNumber(phone: string): string {
     // Remove all non-digits
     return phone.replace(/\D/g, '');
+  }
+
+  /**
+   * Process real-time transcription data with high-performance pipeline
+   * This method is called by webhook when transcription data arrives
+   */
+  async processTranscription(callControlId: string, transcript: string, isFinal: boolean): Promise<void> {
+    try {
+      // Check if transcription is active for this call
+      if (!this.transcriptionActive.get(callControlId)) {
+        console.log(`⚠️ Transcription not active for call ${callControlId}`);
+        return;
+      }
+
+      // Add to buffer
+      const currentBuffer = this.transcriptionBuffer.get(callControlId) || '';
+      const newBuffer = currentBuffer + ' ' + transcript;
+      this.transcriptionBuffer.set(callControlId, newBuffer.trim());
+      
+      console.log(`📝 Transcription buffer: "${newBuffer}" (Final: ${isFinal})`);
+      
+      // Process if we have a complete sentence or it's final
+      const shouldProcess = isFinal || 
+                            newBuffer.includes('?') || 
+                            newBuffer.includes('.') || 
+                            newBuffer.includes('!') ||
+                            newBuffer.split(' ').length > 10;
+      
+      if (shouldProcess && !this.isProcessingResponse.get(callControlId)) {
+        // Mark as processing to avoid duplicates
+        this.isProcessingResponse.set(callControlId, true);
+        
+        // Clear buffer and process
+        const messageToProcess = newBuffer.trim();
+        this.transcriptionBuffer.set(callControlId, '');
+        
+        console.log(`🚀 Processing transcription: "${messageToProcess}"`);
+        
+        // Process in parallel for speed
+        this.processUserMessage(callControlId, messageToProcess);
+      }
+    } catch (error) {
+      console.error(`❌ Error processing transcription:`, error);
+    }
+  }
+
+  /**
+   * High-speed message processing with AI and immediate response
+   */
+  private async processUserMessage(callControlId: string, userMessage: string): Promise<void> {
+    try {
+      // Get call info from database
+      const [call] = await db
+        .select()
+        .from(voiceCalls)
+        .where(eq(voiceCalls.telnyxCallControlId, callControlId))
+        .limit(1);
+      
+      if (!call) {
+        console.error(`❌ Call not found for ${callControlId}`);
+        this.isProcessingResponse.set(callControlId, false);
+        return;
+      }
+      
+      // Get conversation history
+      const history = this.conversationContext.get(callControlId) || [];
+      
+      // Generate AI response quickly
+      const startTime = Date.now();
+      const aiResult = await this.processConversationWithAI(callControlId, userMessage, history);
+      const responseTime = Date.now() - startTime;
+      
+      console.log(`⚡ AI response generated in ${responseTime}ms: "${aiResult?.response}"`);
+      
+      if (!aiResult?.response) {
+        console.error(`❌ No AI response generated`);
+        this.isProcessingResponse.set(callControlId, false);
+        return;
+      }
+      
+      // Stop transcription temporarily while speaking
+      await this.pauseTranscription(callControlId);
+      
+      // Speak response immediately
+      await this.telnyxClient?.calls.speak(callControlId, {
+        payload: aiResult.response,
+        payload_type: 'text',
+        service_level: 'premium',
+        language: 'pt-BR',
+        voice: 'Polly.Camila',
+        client_state: Buffer.from(JSON.stringify({
+          action: 'speaking_response',
+          operationId: call.operationId,
+          timestamp: Date.now()
+        })).toString('base64')
+      });
+      
+      // Update conversation history
+      history.push(
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: aiResult.response }
+      );
+      this.conversationContext.set(callControlId, history);
+      
+      // Mark processing complete
+      this.isProcessingResponse.set(callControlId, false);
+      
+    } catch (error) {
+      console.error(`❌ Error processing user message:`, error);
+      this.isProcessingResponse.set(callControlId, false);
+    }
+  }
+
+  /**
+   * Pause transcription while Sofia is speaking
+   */
+  private async pauseTranscription(callControlId: string): Promise<void> {
+    try {
+      const apiKey = process.env.TELNYX_API_KEY;
+      if (!apiKey) return;
+      
+      await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transcription_stop`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`⏸️ Transcription paused for ${callControlId}`);
+    } catch (error) {
+      console.error(`❌ Error pausing transcription:`, error);
+    }
+  }
+
+  /**
+   * Resume transcription after Sofia finishes speaking
+   */
+  async resumeTranscription(callControlId: string): Promise<void> {
+    try {
+      // Re-start transcription
+      await this.startRealTimeTranscription(callControlId);
+      console.log(`▶️ Transcription resumed for ${callControlId}`);
+    } catch (error) {
+      console.error(`❌ Error resuming transcription:`, error);
+    }
   }
 
   /**

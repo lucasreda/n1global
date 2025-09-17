@@ -259,12 +259,16 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
       await voiceService.handleSpeechGatherEnded(eventData.payload, callType, operationId);
       
     } else if (eventType === 'call.transcription') {
-      console.log(`📝 TRANSCRIPTION received`);
-      console.log(`📄 Transcription text: "${eventData.payload.transcription_text || 'none'}"`);
+      console.log(`📝 Real-time TRANSCRIPTION received`);
+      const transcript = eventData.payload.transcription_text || eventData.payload.transcript || '';
+      const isFinal = eventData.payload.is_final || false;
+      const callControlId = eventData.payload.call_control_id;
       
-      if (eventData.payload.transcription_text && callType && operationId) {
-        // Handle transcription as additional speech input
-        await voiceService.handleTranscription(eventData.payload, callType, operationId);
+      console.log(`📄 Transcription: "${transcript}" (Final: ${isFinal})`);
+      
+      if (transcript && callControlId) {
+        // Process transcription with high-performance pipeline
+        await voiceService.processTranscription(callControlId, transcript, isFinal);
       }
       
     } else if (eventType === 'call.ai_gather.ended') {
