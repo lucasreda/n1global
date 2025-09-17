@@ -1281,14 +1281,11 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       const charCount = text.length;
       console.log(`🎤 Sofia speaking (Neural HD): "${text.substring(0, 50)}..." (${charCount} chars)`);
       
-      // Enhanced SSML for more natural speech patterns
-      const enhancedText = this.enhanceTextWithSSML(text);
-      
-      // Try Neural HD voice first (best quality)
+      // Try Neural HD voice first (best quality) - TEMPORARILY DISABLE SSML
       try {
         await this.telnyxClient?.calls.speak(callControlId, {
-          payload: enhancedText,
-          payload_type: 'ssml',
+          payload: text, // Use plain text temporarily to debug
+          payload_type: 'text',
           service_level: 'premium',
           language: 'pt-BR',
           voice: 'Azure.pt-BR-FranciscaNeural', // Azure Neural HD for Sofia
