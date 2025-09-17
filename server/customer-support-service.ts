@@ -1083,6 +1083,8 @@ Sofia:`;
     callSid: string;
     status: string;
   }> {
+    let telnyxPhoneNumber: string | undefined; // Declare outside try block for error handling
+    
     try {
       console.log(`📞 Making real ${callType} call to ${customerPhone} for operation ${operationId}`);
 
@@ -1099,7 +1101,7 @@ Sofia:`;
         .where(eq(this.schema.voiceSettings.operationId, operationId))
         .limit(1);
 
-      const telnyxPhoneNumber = voiceSettings[0]?.telnyxPhoneNumber;
+      telnyxPhoneNumber = voiceSettings[0]?.telnyxPhoneNumber;
       
       if (!telnyxPhoneNumber) {
         throw new Error('No Telnyx phone number configured for this operation. Please provision a number first.');
