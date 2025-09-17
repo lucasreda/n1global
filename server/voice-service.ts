@@ -1558,16 +1558,27 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           voice: "Polly.Camila",
           language: "pt-BR",
           transcription: {
-            provider: "google",
-            language: "pt-BR", 
+            provider: "telnyx",
+            language: "pt-BR",
             model: "latest_long"
           },
           speech: {
-            provider: "google",
+            provider: "aws",
             language: "pt-BR",
-            voice: "pt-BR-Neural2-B"
+            voice: "Polly.Camila"
           },
-          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas", "obrigado", "tchau", "oi", "olá", "bom dia", "boa tarde", "sim", "não", "quero falar com"],
+          hints: [
+            // Português brasileiro - cumprimentos
+            "oi", "olá", "alô", "bom dia", "boa tarde", "boa noite",
+            // Português brasileiro - palavras comuns
+            "sim", "não", "obrigado", "obrigada", "tchau", "até logo",
+            // Português brasileiro - nomes
+            "Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", 
+            "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas",
+            // Português brasileiro - frases comerciais
+            "quero falar com", "gostaria de", "preciso de", "produto", 
+            "preço", "valor", "entrega", "comprar", "dúvida", "problema"
+          ],
           interruption: { enabled: true },
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
@@ -1609,16 +1620,27 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           voice: "Polly.Camila",
           language: "pt-BR",
           transcription: {
-            provider: "google",
-            language: "pt-BR", 
+            provider: "telnyx",
+            language: "pt-BR",
             model: "latest_long"
           },
           speech: {
-            provider: "google",
+            provider: "aws",
             language: "pt-BR",
-            voice: "pt-BR-Neural2-B"
+            voice: "Polly.Camila"
           },
-          hints: ["Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas", "obrigado", "tchau", "oi", "olá", "bom dia", "boa tarde", "sim", "não", "quero falar com"],
+          hints: [
+            // Português brasileiro - cumprimentos
+            "oi", "olá", "alô", "bom dia", "boa tarde", "boa noite",
+            // Português brasileiro - palavras comuns
+            "sim", "não", "obrigado", "obrigada", "tchau", "até logo",
+            // Português brasileiro - nomes
+            "Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", 
+            "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas",
+            // Português brasileiro - frases comerciais
+            "quero falar com", "gostaria de", "preciso de", "produto", 
+            "preço", "valor", "entrega", "comprar", "dúvida", "problema"
+          ],
           interruption: { enabled: true },
           send_partial_results: false,
           user_response_timeout: 30000,  // Increase timeout to 30 seconds
