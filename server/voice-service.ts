@@ -1117,6 +1117,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
             required: ["message"]
           },
           voice: "AWS.Polly.Camila",
+          transcription: {
+            model: "openai/whisper-large-v3-turbo",
+            language: "pt"
+          },
           send_partial_results: false,
           user_response_timeout_ms: 15000,
           message_history: messageHistory,
@@ -1135,6 +1139,37 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       } else {
         const errorText = await response.text();
         console.error(`❌ HTTP API Error (${response.status}):`, errorText);
+        console.error(`❌ Request payload was:`, JSON.stringify({
+          greeting: messageHistory.length > 0 ? "Continue falando, estou ouvindo..." : "Estou ouvindo! Pode me falar sobre o que precisa ou tem alguma dúvida?",
+          parameters: {
+            type: "object",
+            properties: {
+              message: {
+                type: "string",
+                description: "O que o cliente está falando ou perguntando"
+              },
+              intent: {
+                type: "string", 
+                description: "A intenção do cliente: produto, preço, dúvida, reclamação, etc."
+              }
+            },
+            required: ["message"]
+          },
+          voice: "AWS.Polly.Camila",
+          transcription: {
+            model: "openai/whisper-large-v3-turbo",
+            language: "pt"
+          },
+          send_partial_results: false,
+          user_response_timeout_ms: 15000,
+          message_history: messageHistory,
+          client_state: Buffer.from(JSON.stringify({
+            action: 'ai_voice_input',
+            operationId,
+            callType,
+            timestamp: Date.now()
+          })).toString('base64')
+        }, null, 2));
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
