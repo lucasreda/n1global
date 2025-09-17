@@ -18,6 +18,7 @@ import OpenAI from "openai";
 import { CustomerOrderService } from "./customer-order-service";
 import { SupportService } from "./support-service-fixed";
 import Telnyx from 'telnyx';
+// @ts-ignore
 import { container } from "./container";
 
 const openai = new OpenAI({
@@ -182,9 +183,14 @@ export class VoiceService {
     try {
       console.log(`📞 Handling incoming call: ${callData.call_control_id} from ${callData.from} to ${callData.to}`);
       
+      // Mark call as active immediately to prevent race conditions
+      this.activeCallIds.add(callData.call_control_id);
+      console.log(`✅ Marked call ${callData.call_control_id} as active immediately`);
+      
       // Check if Telnyx client is available
       if (!this.telnyxClient) {
         console.error('❌ Telnyx client not configured - cannot handle call');
+        this.activeCallIds.delete(callData.call_control_id); // Cleanup
         // Return gracefully without throwing - webhook should get 200 OK
         return;
       }
@@ -1095,11 +1101,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     
     try {
       console.log(`📞 Answering call ${callControlId}`);
-      // Use minimal payload - only client_state as base64 if needed
-      const clientState = Buffer.from(JSON.stringify({ action: 'call_answered' })).toString('base64');
-      await this.telnyxClient.calls.answer(callControlId, {
-        client_state: clientState
-      });
+      // Answer with no parameters - client_state not supported on answer
+      await this.telnyxClient.calls.answer(callControlId);
       console.log(`✅ Call ${callControlId} answered successfully`);
     } catch (error) {
       console.error(`❌ Error answering call ${callControlId}:`, error);
@@ -1124,7 +1127,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`📞 Hanging up call ${callControlId}: ${reason || 'No reason provided'}`);
       // Use empty payload for hangup - no parameters needed
-      await this.telnyxClient.calls.hangup(callControlId);
+      await this.telnyxClient.calls.hangup(callControlId, {});
       console.log(`✅ Call ${callControlId} hung up successfully`);
     } catch (error) {
       console.error(`❌ Error hanging up call ${callControlId}:`, error);
@@ -2135,7 +2138,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         // Note: After getting the name, Sofia will continue the conversation naturally
         console.log(`💼 Sales welcome message generated for ${operationId}`);
       } else {
-        welcomeMessage += ". Esta é uma ligação de teste para demonstrar nosso sistema de atendimento automatizado.";
+        // Fixed: Start with a proper greeting for test calls
+        welcomeMessage = "Olá! Aqui é a Sofia, sua assistente virtual. Esta é uma ligação de teste para demonstrar nosso sistema de atendimento automatizado. Como posso ajudá-lo hoje?";
         console.log(`🧪 Test welcome message generated for ${operationId}`);
       }
       
@@ -2515,7 +2519,7 @@ Responda apenas com o texto que você falará para o cliente:`;
       
       if (!userResponse || userResponse.trim().length === 0) {
         console.log(`⚠️ No user response - ending conversation`);
-        await this.telnyxClient.calls.hangup(callControlId);
+        await this.telnyxClient.calls.hangup(callControlId, {});
         return;
       }
 
@@ -2525,7 +2529,7 @@ Responda apenas com o texto que você falará para o cliente:`;
       
       if (!aiResult?.response) {
         console.log(`❌ Failed to generate AI response - ending conversation`);
-        await this.telnyxClient.calls.hangup(callControlId);
+        await this.telnyxClient.calls.hangup(callControlId, {});
         return;
       }
 
