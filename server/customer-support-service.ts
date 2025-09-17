@@ -1092,85 +1092,57 @@ Sofia:`;
         throw new Error(`Invalid public URL configuration: ${urlValidation.error}`);
       }
 
-      // Initialize Twilio client
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      
-      if (!accountSid || !authToken) {
-        throw new Error('Twilio credentials not configured');
-      }
-
-      const twilioClient = twilio(accountSid, authToken);
-
-      // Get operation's Twilio phone number
+      // Get operation's Telnyx phone number
       const voiceSettings = await this.db
         .select()
         .from(this.schema.voiceSettings)
         .where(eq(this.schema.voiceSettings.operationId, operationId))
         .limit(1);
 
-      const twilioPhoneNumber = voiceSettings[0]?.twilioPhoneNumber;
+      const telnyxPhoneNumber = voiceSettings[0]?.telnyxPhoneNumber;
       
-      if (!twilioPhoneNumber) {
-        throw new Error('No Twilio phone number configured for this operation. Please provision a number first.');
+      if (!telnyxPhoneNumber) {
+        throw new Error('No Telnyx phone number configured for this operation. Please provision a number first.');
       }
 
-      // Build TwiML URLs using validated domain (no fallback to localhost)
+      // Import and use Telnyx provisioning service
+      const { TelnyxProvisioningService } = await import('./telnyx-provisioning-service');
+      const telnyxService = new TelnyxProvisioningService();
+
+      // Build webhook URLs using validated domain
       const webhookDomain = urlValidation.domain!;
-      const twimlUrl = `https://${webhookDomain}/api/voice/test-call-handler?operationId=${operationId}&callType=${callType}`;
+      const webhookUrl = `https://${webhookDomain}/api/voice/telnyx-incoming-call?operationId=${operationId}&callType=${callType}`;
 
-      console.log(`🔗 Using validated TwiML URL: ${twimlUrl}`);
+      console.log(`🔗 Using validated webhook URL: ${webhookUrl}`);
 
-      // Make the call
-      const call = await twilioClient.calls.create({
-        to: customerPhone,
-        from: twilioPhoneNumber,
-        url: twimlUrl,
-        method: 'POST',
-        statusCallback: `https://${webhookDomain}/api/voice/call-status`,
-        statusCallbackMethod: 'POST',
-        statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
-      });
+      // Make the call using Telnyx
+      const callResult = await telnyxService.makeOutboundCall(
+        telnyxPhoneNumber,
+        customerPhone,
+        webhookUrl
+      );
 
-      console.log(`✅ Test call initiated: ${call.sid}, status: ${call.status}`);
+      console.log(`✅ Test call initiated via Telnyx: ${callResult.call_control_id}, status: ${callResult.status}`);
 
       return {
-        callSid: call.sid,
-        status: call.status
+        callSid: callResult.call_control_id || 'unknown',
+        status: callResult.status || 'initiated'
       };
 
     } catch (error) {
       console.error('❌ Error making test call:', error);
       
-      // Handle specific Twilio errors with detailed messages
-      if (error && typeof error === 'object' && 'code' in error) {
-        const twilioError = error as any;
-        switch (twilioError.code) {
-          case 10005:
-            throw new Error('Voice calling está desabilitado na sua conta Twilio. Acesse Console Twilio → Account → Settings → Voice → Geographic Permissions e habilite "Outbound Calls" para Brasil (+55).');
-          case 20003:
-            throw new Error('Credenciais Twilio inválidas. Verifique se TWILIO_ACCOUNT_SID e TWILIO_AUTH_TOKEN estão corretos nos Secrets.');
-          case 13224:
-            throw new Error(`Contas Trial não podem ligar para números não verificados. Adicione ${customerPhone} como número verificado no Console Twilio ou faça upgrade da conta.`);
-          case 21211:
-            throw new Error(`Número de destino inválido: ${customerPhone}. Use formato internacional com código do país (ex: +55 11 99999-9999).`);
-          case 21215:
-            throw new Error(`O número de destino ${customerPhone} não é válido ou não está verificado na sua conta Trial. Adicione o número como verificado no Console Twilio.`);
-          case 21217:
-            throw new Error(`Permissões geográficas não habilitadas para ${customerPhone}. Acesse Console → Voice → Geographic Permissions e habilite o país/região de destino.`);
-          case 21612:
-            throw new Error('Saldo insuficiente na conta Twilio. Adicione créditos ou faça upgrade da conta Trial.');
-          case 21606:
-            throw new Error('O número Twilio de origem não está configurado para voice calls. Verifique as configurações no Console.');
-          case 21218:
-            throw new Error('Sua conta Twilio não tem permissão para fazer chamadas para este destino. Verifique Geographic Permissions.');
-          case 21219:
-            throw new Error('Limite de chamadas por minuto excedido. Aguarde alguns minutos antes de tentar novamente.');
-          case 20429:
-            throw new Error('Muitas requisições simultâneas. Aguarde alguns segundos antes de tentar novamente.');
-          default:
-            const moreInfo = twilioError.moreInfo || `https://www.twilio.com/docs/errors/${twilioError.code}`;
-            throw new Error(`Erro Twilio (${twilioError.code}): ${twilioError.message}. Mais informações: ${moreInfo}`);
+      // Handle specific Telnyx errors with detailed messages
+      if (error && typeof error === 'object' && 'message' in error) {
+        const telnyxError = error as any;
+        if (telnyxError.message.includes('Invalid phone number')) {
+          throw new Error(`Número de telefone inválido: ${customerPhone}. Verifique o formato (+5511999999999).`);
+        }
+        if (telnyxError.message.includes('insufficient funds')) {
+          throw new Error('Saldo insuficiente na conta Telnyx. Adicione créditos para fazer chamadas.');
+        }
+        if (telnyxError.message.includes('not found')) {
+          throw new Error(`Número Telnyx ${telnyxPhoneNumber} não encontrado. Verifique se está corretamente provisionado.`);
         }
       }
       
