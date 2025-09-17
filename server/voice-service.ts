@@ -351,12 +351,12 @@ export class VoiceService {
       // Fallback to gather_using_ai if transcription is not active
       else if (decodedState?.action === 'speaking_welcome') {
         console.log(`✅ Welcome message completed - starting speech recognition`);
-        // Try transcription first, fallback to gather if it fails
+        // Try Whisper transcription first, fallback to gather if it fails
         try {
-          await this.startRealTimeTranscription(callData.call_control_id, operationId, callType);
+          await this.startWhisperTranscription(callData.call_control_id, operationId, callType);
           this.transcriptionActive.set(callData.call_control_id, true);
         } catch (error) {
-          console.log(`🔄 Transcription failed, falling back to gather_using_ai`);
+          console.log(`🔄 Whisper transcription failed, falling back to gather_using_ai`);
           await this.startSpeechGather(callData.call_control_id, operationId, callType);
         }
       } else if (decodedState?.action === 'speaking_response') {
@@ -435,9 +435,9 @@ export class VoiceService {
         // The real-time transcription will detect if user speaks
         // When detected, it will call processTranscription which will stop Sofia
       } else {
-        console.log(`🔄 Starting transcription to enable barge-in`);
-        // Start transcription so we can detect user speech
-        await this.startRealTimeTranscription(callControlId);
+        console.log(`🔄 Starting Whisper transcription to enable barge-in`);
+        // Start Whisper transcription so we can detect user speech
+        await this.startWhisperTranscription(callControlId);
         this.transcriptionActive.set(callControlId, true);
       }
       
@@ -2321,11 +2321,14 @@ Responda apenas com o texto que você falará para o cliente:`;
    */
   async resumeTranscription(callControlId: string): Promise<void> {
     try {
-      // Re-start transcription
-      await this.startRealTimeTranscription(callControlId);
-      console.log(`▶️ Transcription resumed for ${callControlId}`);
+      // Re-start Whisper transcription
+      await this.startWhisperTranscription(callControlId);
+      console.log(`▶️ Whisper transcription resumed for ${callControlId}`);
     } catch (error) {
       console.error(`❌ Error resuming transcription:`, error);
+      // Fallback to speech gather if Whisper fails
+      console.log(`🔄 Falling back to speech gather`);
+      await this.startSpeechGather(callControlId, '', 'test');
     }
   }
 
