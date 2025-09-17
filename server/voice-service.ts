@@ -303,10 +303,10 @@ export class VoiceService {
       
       // Only activate conversation system if this was the welcome message
       if (decodedState?.action === 'speaking_welcome') {
-        console.log(`✅ Welcome message completed - starting media streaming for conversation`);
+        console.log(`✅ Welcome message completed - starting speech recognition for conversation`);
         
-        // Start media streaming for bidirectional conversation
-        await this.startMediaStreaming(callData.call_control_id, operationId, callType);
+        // Start speech recognition for Portuguese conversation
+        await this.startSpeechGather(callData.call_control_id, operationId, callType);
       } else {
         console.log(`ℹ️ Speak ended but not welcome message - skipping conversation activation`);
       }
@@ -1059,8 +1059,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`🎵 Starting media streaming for call ${callControlId}`);
       
-      // Skip streaming for now - use speech recognition instead
-      throw new Error(`Using speech recognition instead of streaming`);
+      // DEPRECATED: Media streaming replaced by gather_using_speech
+      console.log(`⚠️ Media streaming deprecated - redirecting to speech recognition`);
+      await this.startSpeechGather(callControlId, operationId, callType);
+      return;
       
       console.log(`✅ Media streaming activated for call ${callControlId}`);
       
@@ -1074,7 +1076,39 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * SIMPLIFIED WORKING voice conversation system
+   * Start speech recognition using Telnyx gather_using_speech
+   */
+  private async startSpeechGather(callControlId: string, operationId: string, callType: string): Promise<void> {
+    if (!this.telnyxClient) return;
+    
+    try {
+      console.log(`🎤 Starting speech recognition for call ${callControlId}`);
+      
+      // Use gather_using_speech for Portuguese voice recognition
+      await this.telnyxClient.calls.gather_using_speech(callControlId, {
+        language: 'pt-BR',
+        timeout_millis: 30000,
+        interim_results: false,
+        client_state: Buffer.from(JSON.stringify({
+          action: 'voice_input',
+          operationId,
+          callType,
+          timestamp: Date.now()
+        })).toString('base64')
+      });
+
+      console.log(`🎤 Voice recognition active for ${callControlId} (Portuguese)`);
+      
+    } catch (error) {
+      console.error(`❌ Error starting speech recognition:`, error);
+      
+      // Fallback to DTMF if speech fails
+      await this.startPromptBasedConversation(callControlId, operationId, callType);
+    }
+  }
+
+  /**
+   * SIMPLIFIED WORKING voice conversation system (DTMF fallback)
    */
   private async startPromptBasedConversation(callControlId: string, operationId: string, callType: string): Promise<void> {
     if (!this.telnyxClient) return;
@@ -1099,7 +1133,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         })).toString('base64')
       });
 
-      console.log(`🎤 Input gathering active for ${callControlId}`);
+      console.log(`🎤 DTMF input gathering active for ${callControlId}`);
       
     } catch (error) {
       console.error(`❌ Error starting conversation:`, error);
@@ -1123,9 +1157,57 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`🎤 Processing input for call ${callData.call_control_id}`);
       console.log(`📝 Gather status: ${callData.status}`);
-      console.log(`🔢 Digits: ${callData.digits || 'none'}`);
+      console.log(`🗣️ Speech result: "${callData.speech || 'none'}"`);
+      console.log(`🔢 Digits result: "${callData.digits || 'none'}"`);
       
-      if (callData.status === 'valid' && callData.digits) {
+      // Check client state to determine if this is voice or DTMF
+      const clientState = callData.client_state;
+      let decodedState = null;
+      
+      if (clientState) {
+        try {
+          decodedState = JSON.parse(Buffer.from(clientState, 'base64').toString());
+        } catch (e) {
+          console.warn('⚠️ Could not decode client_state:', e);
+        }
+      }
+      
+      const isVoiceInput = decodedState?.action === 'voice_input';
+      
+      // Process voice input
+      if (callData.status === 'valid' && callData.speech && isVoiceInput) {
+        const userSpeech = callData.speech;
+        console.log(`✅ User said: "${userSpeech}"`);
+        
+        // Generate AI response based on what the user said
+        const aiResponse = await this.generateConversationalResponse(userSpeech, operationId, callType);
+        console.log(`🤖 AI Response: "${aiResponse}"`);
+        
+        // Speak the response
+        try {
+          await this.telnyxClient.calls.speak(callData.call_control_id, {
+            payload: aiResponse,
+            payload_type: 'text',
+            service_level: 'basic',
+            voice: 'female',
+            client_state: Buffer.from(JSON.stringify({
+              action: 'speaking_ai_response'
+            })).toString('base64')
+          });
+          console.log(`🎙️ AI response sent successfully`);
+        } catch (speakError) {
+          console.error('❌ Speak error:', speakError);
+        }
+        
+        // Continue voice recognition after response
+        setTimeout(async () => {
+          console.log(`🔄 Continuing voice conversation...`);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType);
+        }, 3000);
+        
+      } 
+      // Process DTMF input
+      else if (callData.status === 'valid' && callData.digits && !isVoiceInput) {
         const userInput = callData.digits;
         console.log(`✅ User pressed: "${userInput}"`);
         
@@ -1133,7 +1215,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         const aiResponse = await this.generateSimpleResponse(userInput, operationId, callType);
         console.log(`🤖 AI Response: "${aiResponse}"`);
         
-        // Speak the response with ALL required parameters
+        // Speak the response
         try {
           await this.telnyxClient.calls.speak(callData.call_control_id, {
             payload: aiResponse,
@@ -1144,49 +1226,99 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           console.log(`🎙️ Response sent successfully`);
         } catch (speakError) {
           console.error('❌ Speak error:', speakError);
-          // Continue without speaking
         }
         
-        // Continue the conversation
+        // Continue with voice recognition (upgrade from DTMF)
         setTimeout(async () => {
-          console.log(`🔄 Continuing conversation...`);
-          await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
+          console.log(`🔄 Upgrading to voice conversation...`);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType);
         }, 3000);
         
-      } else if (callData.status === 'timeout') {
-        console.log(`⏰ No input - prompting user to interact`);
+      } 
+      // Handle timeouts
+      else if (callData.status === 'timeout') {
+        console.log(`⏰ No input received - prompting user to speak`);
         
-        // Speak to encourage interaction
+        // Encourage speech interaction
         try {
           await this.telnyxClient.calls.speak(callData.call_control_id, {
-            payload: "Estou aqui para ajudar! Pressione qualquer tecla no seu telefone, como 1, 2 ou 3.",
+            payload: "Estou aqui para conversar! Pode falar comigo sobre o que precisar.",
             payload_type: 'text',
             service_level: 'basic',
             voice: 'female'
           });
-          console.log(`🎙️ Encouragement message sent successfully`);
+          console.log(`🎙️ Speech encouragement sent successfully`);
         } catch (speakError) {
-          console.error('❌ Encouragement speak error:', speakError);
+          console.error('❌ Speech encouragement error:', speakError);
         }
         
-        // Continue after encouragement
+        // Continue voice recognition
         setTimeout(async () => {
-          await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
-        }, 5000);
+          await this.startSpeechGather(callData.call_control_id, operationId, callType);
+        }, 4000);
         
       } else {
-        console.log(`❌ Invalid input - hanging up directly`);
-        await this.hangupCall(callData.call_control_id, 'Invalid input');
+        console.log(`❌ Invalid input or call hangup - ending conversation`);
+        await this.endCallGracefully(callData.call_control_id);
       }
       
     } catch (error) {
       console.error('Error handling gather ended:', error);
-      // Just hang up directly without trying to speak
       try {
-        await this.hangupCall(callData.call_control_id, 'Error in conversation');
+        await this.endCallGracefully(callData.call_control_id);
       } catch (e) {
-        console.error('Error hanging up:', e);
+        console.error('Error ending call gracefully:', e);
       }
+    }
+  }
+
+  /**
+   * Generate conversational AI response based on user speech
+   */
+  private async generateConversationalResponse(userSpeech: string, operationId: string, callType: string): Promise<string> {
+    try {
+      console.log(`🤖 Generating conversational response for: "${userSpeech}"`);
+      
+      // Get customer support service for AI response
+      const customerSupportService = container.resolve('customerSupportService') as CustomerSupportService;
+      
+      // Generate context-aware AI response
+      const aiResponse = await customerSupportService.generateAIResponse({
+        message: userSpeech,
+        operationId,
+        context: {
+          callType,
+          conversationType: 'voice'
+        }
+      });
+      
+      console.log(`🎯 AI generated response: "${aiResponse}"`);
+      return aiResponse;
+      
+    } catch (error) {
+      console.error('❌ Error generating conversational response:', error);
+      
+      // Fallback responses based on keywords
+      const lowerSpeech = userSpeech.toLowerCase();
+      
+      if (lowerSpeech.includes('oi') || lowerSpeech.includes('olá') || lowerSpeech.includes('alô')) {
+        return 'Olá! Como posso ajudar você hoje?';
+      }
+      
+      if (lowerSpeech.includes('produto') || lowerSpeech.includes('comprar')) {
+        return 'Temos ótimos produtos disponíveis! Gostaria que eu conte mais sobre eles?';
+      }
+      
+      if (lowerSpeech.includes('preço') || lowerSpeech.includes('valor') || lowerSpeech.includes('custa')) {
+        return 'Nossos preços são muito competitivos! Posso passar mais detalhes para você.';
+      }
+      
+      if (lowerSpeech.includes('entrega') || lowerSpeech.includes('entregar')) {
+        return 'Fazemos entrega em todo o Brasil! A entrega é rápida e segura.';
+      }
+      
+      // Default conversational response
+      return 'Entendi! Pode me contar mais detalhes? Estou aqui para te ajudar da melhor forma possível.';
     }
   }
 
