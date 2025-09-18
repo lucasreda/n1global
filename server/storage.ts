@@ -31,6 +31,7 @@ export interface IStorage {
 
   // Operation methods
   getUserOperations(userId: string): Promise<Operation[]>;
+  updateOperation(operationId: string, updates: Partial<Operation>): Promise<Operation | undefined>;
   
   // Onboarding methods
   updateOnboardingStep(userId: string, stepId: string, completed: boolean): Promise<void>;
@@ -224,6 +225,7 @@ export class DatabaseStorage implements IStorage {
         description: operations.description,
         country: operations.country,
         currency: operations.currency, // CRITICAL: Include missing currency field
+        operationType: operations.operationType, // Include operationType field
         status: operations.status,
         createdAt: operations.createdAt,
         updatedAt: operations.updatedAt,
@@ -236,6 +238,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(operations.createdAt));
     
     return userOps;
+  }
+
+  async updateOperation(operationId: string, updates: Partial<Operation>): Promise<Operation | undefined> {
+    const [operation] = await db
+      .update(operations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(operations.id, operationId))
+      .returning();
+    
+    return operation || undefined;
   }
 
   // Onboarding methods

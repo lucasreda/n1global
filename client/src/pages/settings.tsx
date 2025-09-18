@@ -2,21 +2,84 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { User, Bell, Shield, Database, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useOperationStore } from "@/store/operations";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
+  const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const { currentOperation } = useOperationStore();
+  const { toast } = useToast();
+
+  // Fetch current operation to get operationType
+  const { data: operations } = useQuery({
+    queryKey: ['/api/operations'],
+    enabled: !!currentOperation,
+  });
+
+  // Set initial operationType from current operation
+  useEffect(() => {
+    if (operations && currentOperation) {
+      const operation = operations.find((op: any) => op.id === currentOperation);
+      if (operation?.operationType) {
+        setOperationType(operation.operationType);
+        setOriginalOperationType(operation.operationType);
+        setHasChanges(false);
+      }
+    }
+  }, [operations, currentOperation]);
 
   const handleOperationTypeChange = (value: string) => {
     setOperationType(value);
-    setHasChanges(true);
+    setHasChanges(value !== originalOperationType);
   };
 
-  const handleSave = () => {
-    // TODO: Implement save logic
-    console.log('Saving operation type:', operationType);
-    setHasChanges(false);
+  const handleSave = async () => {
+    if (!currentOperation) {
+      toast({
+        title: "Erro",
+        description: "Nenhuma operação selecionada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await apiRequest(`/api/operations/${currentOperation}/type`, {
+        method: 'PATCH',
+        body: JSON.stringify({ operationType }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      setOriginalOperationType(operationType);
+      setHasChanges(false);
+      
+      // Invalidate cache to refresh operations data across the app
+      queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
+      
+      toast({
+        title: "Sucesso",
+        description: "Tipo de operação atualizado com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar operationType:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar tipo de operação",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const settingSections = [
@@ -123,15 +186,15 @@ export default function Settings() {
           
           <Button 
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasChanges || isSaving}
             className={`w-full transition-all duration-200 ${
-              hasChanges 
+              hasChanges && !isSaving
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                 : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
             }`}
             data-testid="button-save-operation-type"
           >
-            Salvar Configuração
+            {isSaving ? 'Salvando...' : 'Salvar Configuração'}
           </Button>
         </div>
       </div>

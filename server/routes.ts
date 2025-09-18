@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema } from "@shared/schema";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -1020,6 +1020,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Create operation error:", error);
       res.status(500).json({ message: "Erro ao criar operação" });
+    }
+  });
+
+  // Update operation type
+  app.patch("/api/operations/:operationId/type", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      
+      // Validate request body
+      const { operationType } = updateOperationTypeSchema.parse(req.body);
+      
+      // Verify user has access to this operation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const hasAccess = userOperations.some(op => op.id === operationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Acesso negado à esta operação" });
+      }
+
+      // Update operation type
+      const updatedOperation = await storage.updateOperation(operationId, { operationType });
+      
+      if (!updatedOperation) {
+        return res.status(404).json({ message: "Operação não encontrada" });
+      }
+
+      console.log(`Operation type updated: ${operationId} -> ${operationType}`);
+      res.json({ 
+        success: true, 
+        operation: updatedOperation,
+        message: "Tipo de operação atualizado com sucesso" 
+      });
+    } catch (error) {
+      console.error("Update operation type error:", error);
+      
+      // Handle Zod validation errors specifically
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          details: error.message 
+        });
+      }
+      
+      res.status(500).json({ message: "Erro ao atualizar tipo de operação" });
     }
   });
 
