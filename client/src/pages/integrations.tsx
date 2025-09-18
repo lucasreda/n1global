@@ -3,13 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { MultiProviderPanel } from "@/components/integration/multi-provider-panel";
 import { ShopifyIntegration } from "@/components/integrations/shopify-integration";
-import { CartPandaIntegration } from "@/components/integrations/cartpanda-integration";
+import { CartPandaIntegration } from "../components/integrations/cartpanda-integration";
 import { Settings, CheckCircle, AlertCircle, Store, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
+import cartpandaIcon from "@assets/carticon_1758210690464.avif";
 
 // Componente customizado para o ícone do Shopify
 const ShopifyIcon = ({ className, size }: { className?: string; size?: number }) => (
@@ -18,12 +19,23 @@ const ShopifyIcon = ({ className, size }: { className?: string; size?: number })
     alt="Shopify" 
     className={`${className} object-contain`}
     style={{ width: size || 30, height: size || 30 }}
+    loading="lazy"
+    decoding="async"
+    data-testid="img-logo-shopify"
   />
 );
 
 // Componente customizado para o ícone do CartPanda
 const CartPandaIcon = ({ className, size }: { className?: string; size?: number }) => (
-  <ShoppingCart className={`${className}`} size={size || 30} />
+  <img 
+    src={cartpandaIcon} 
+    alt="CartPanda" 
+    className={`${className} object-contain rounded-lg`}
+    style={{ width: size || 30, height: size || 30 }}
+    loading="lazy"
+    decoding="async"
+    data-testid="img-logo-cartpanda"
+  />
 );
 
 export default function Integrations() {
