@@ -165,8 +165,9 @@ router.post("/funnels/vercel/connect", authenticateToken, async (req, res) => {
       });
     }
 
-    // Remove state after use (single-use)
-    oauthStates.delete(state);
+    // Don't remove state immediately to allow retries if the connection fails
+    // State will be cleaned up automatically after 10 minutes
+    // oauthStates.delete(state);
 
     // Generate server-side redirectUri (secure)
     // Use current working domain (can be overridden with VERCEL_OAUTH_REDIRECT_HOST env var)
@@ -178,7 +179,19 @@ router.post("/funnels/vercel/connect", authenticateToken, async (req, res) => {
     
     // Check if integration already exists for this operation
     const [existingIntegration] = await db
-      .select()
+      .select({
+        id: funnelIntegrations.id,
+        operationId: funnelIntegrations.operationId,
+        storeId: funnelIntegrations.storeId,
+        vercelAccessToken: funnelIntegrations.vercelAccessToken,
+        vercelUserId: funnelIntegrations.vercelUserId,
+        vercelTeamId: funnelIntegrations.vercelTeamId,
+        connectedAt: funnelIntegrations.connectedAt,
+        lastUsed: funnelIntegrations.lastUsed,
+        isActive: funnelIntegrations.isActive,
+        createdAt: funnelIntegrations.createdAt,
+        updatedAt: funnelIntegrations.updatedAt
+      })
       .from(funnelIntegrations)
       .where(eq(funnelIntegrations.operationId, operationId))
       .limit(1);
