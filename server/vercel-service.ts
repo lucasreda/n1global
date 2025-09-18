@@ -441,7 +441,7 @@ export class VercelService {
       client_id: process.env.VERCEL_CLIENT_ID!,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'user email deploy project read project:write',
+      scope: 'user:email',
     });
 
     if (state) {
