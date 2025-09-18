@@ -315,6 +315,7 @@ router.get("/funnels/vercel/status", authenticateToken, async (req, res) => {
     const [integration] = await db
       .select({
         id: funnelIntegrations.id,
+        vercelAccessToken: funnelIntegrations.vercelAccessToken,
         vercelUserId: funnelIntegrations.vercelUserId,
         vercelTeamId: funnelIntegrations.vercelTeamId,
         connectedAt: funnelIntegrations.connectedAt,
@@ -334,7 +335,7 @@ router.get("/funnels/vercel/status", authenticateToken, async (req, res) => {
     }
 
     // Test if token is still valid
-    const isValid = await vercelService.validateToken(integration.vercelUserId);
+    const isValid = await vercelService.validateToken(integration.vercelAccessToken);
     
     res.json({
       success: true,
