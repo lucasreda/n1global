@@ -56,13 +56,7 @@ export default function Settings() {
     try {
       console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/type`, 'with data:', { operationType });
       
-      const response = await apiRequest(`/api/operations/${selectedOperation}/type`, {
-        method: 'PATCH',
-        body: JSON.stringify({ operationType }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiRequest(`/api/operations/${selectedOperation}/type`, 'PATCH', { operationType });
       
       console.log('✅ API response received:', response);
 
