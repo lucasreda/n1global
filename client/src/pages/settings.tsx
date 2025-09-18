@@ -41,6 +41,8 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
+    console.log('🔄 Starting handleSave, currentOperation:', currentOperation, 'operationType:', operationType);
+    
     if (!currentOperation) {
       toast({
         title: "Erro",
@@ -52,13 +54,17 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      await apiRequest(`/api/operations/${currentOperation}/type`, {
+      console.log('📤 Making API request to:', `/api/operations/${currentOperation}/type`, 'with data:', { operationType });
+      
+      const response = await apiRequest(`/api/operations/${currentOperation}/type`, {
         method: 'PATCH',
         body: JSON.stringify({ operationType }),
         headers: {
           'Content-Type': 'application/json',
         },
       });
+      
+      console.log('✅ API response received:', response);
 
       setOriginalOperationType(operationType);
       setHasChanges(false);

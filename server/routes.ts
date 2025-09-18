@@ -1027,9 +1027,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/operations/:operationId/type", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
+      console.log(`🔄 PATCH /api/operations/${operationId}/type - User: ${req.user?.email}, Body:`, req.body);
       
       // Validate request body
       const { operationType } = updateOperationTypeSchema.parse(req.body);
+      console.log('✅ Validation passed, operationType:', operationType);
       
       // Verify user has access to this operation
       const userOperations = await storage.getUserOperations(req.user.id);
