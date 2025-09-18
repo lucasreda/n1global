@@ -53,6 +53,7 @@ export const operations = pgTable("operations", {
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links operation to store
   country: text("country").notNull(), // Country code e.g., "ES", "IT", "FR"
   currency: text("currency").notNull().default("EUR"), // Currency code e.g., "EUR", "PLN", "CZK"
+  operationType: text("operation_type").notNull().default("Cash on Delivery"), // 'Cash on Delivery', 'Pagamento no Cartão'
   status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
   settings: jsonb("settings"), // Operation-specific settings
   createdAt: timestamp("created_at").defaultNow(),
