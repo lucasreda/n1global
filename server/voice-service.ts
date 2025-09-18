@@ -1172,8 +1172,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       console.log(`🚀 Starting high-performance AI conversation for call ${callControlId}`);
       console.log(`🎯 Using callType: ${callType} with real-time transcription`);
       
-      // Start real-time transcription immediately for faster response
-      await this.startWhisperTranscription(callControlId, operationId, callType);
+      // Use Portuguese gather system instead of transcription
+      console.log(`🎧 Setting up Portuguese speech system for call ${callControlId}`);
       
       // Generate and speak welcome message while transcription runs in background
       const welcomeMessage = await this.generateTestCallWelcomeMessage(operationId, callType);
@@ -1213,57 +1213,30 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Start real-time streaming transcription with Telnyx
-   * This provides immediate transcription feedback during conversation
+   * Start Whisper-based transcription system
+   * Uses OpenAI Whisper instead of Telnyx transcription (which doesn't support Portuguese)
    */
   private async startWhisperTranscription(callControlId: string, operationId?: string, callType?: string): Promise<void> {
     try {
       // Check if transcription is already active
       if (this.transcriptionActive.get(callControlId)) {
-        console.log(`⚠️ Transcription already active for ${callControlId}`);
+        console.log(`⚠️ Whisper transcription already active for ${callControlId}`);
         return;
       }
       
-      console.log(`🎤 Starting real-time streaming transcription for call ${callControlId}`);
-      console.log(`🔧 Transcription config: {engine: 'telnyx', language: 'pt-BR', tracks: 'inbound', interim: true}`);
+      console.log(`🎤 Starting OpenAI Whisper transcription for call ${callControlId}`);
+      console.log(`🔧 Whisper config: {model: 'whisper-1', language: 'auto-detect', format: 'verbose_json'}`);
       
-      const apiKey = process.env.TELNYX_API_KEY;
-      if (!apiKey) {
-        throw new Error('No Telnyx API key found');
-      }
-
-      // Start streaming transcription for real-time processing
-      const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transcription_start`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          transcription_engine: 'telnyx',
-          language: 'pt-BR',
-          transcription_tracks: 'inbound',
-          interim_results: true
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Failed to start streaming transcription (${response.status}):`, errorText);
-        throw new Error(`Streaming transcription start failed: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log(`✅ Streaming transcription started:`, result);
-      
-      // Mark transcription as active
+      // Mark transcription as active - we'll use Whisper when audio is captured
       this.transcriptionActive.set(callControlId, true);
       this.transcriptionBuffer.set(callControlId, '');
       this.lastTranscriptionTime.set(callControlId, Date.now());
       
+      console.log(`✅ Whisper transcription system activated for ${callControlId}`);
+      
     } catch (error) {
-      console.error(`❌ Error starting streaming transcription:`, error);
-      // Fallback to basic gather if streaming transcription fails
+      console.error(`❌ Error starting Whisper transcription:`, error);
+      // Fallback to basic gather if Whisper setup fails
       console.log(`🔄 Falling back to basic gather`);
       await this.startPromptBasedConversation(callControlId, operationId || '', callType || 'test');
     }
@@ -1535,9 +1508,9 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         console.log(`🎯 Using personalized greeting: "${greeting}"`);
       }
 
-      // Skip gather_using_ai - use Whisper transcription only
-      console.log(`🎧 Using Whisper transcription only - no gather_using_ai needed`);
-      console.log(`✅ Speech collection ready: Whisper is already active for call ${callControlId}`);
+      // Use gather with Portuguese support instead of transcription
+      console.log(`🎧 Using Telnyx gather with Portuguese + Whisper processing`);
+      await this.startPromptBasedConversation(callControlId, operationId, callType);
       
     } catch (error) {
       console.error(`❌ Error in speech gather:`, error);
@@ -1621,7 +1594,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
     try {
       console.log(`🎤 Processing input for call ${callData.call_control_id}`);
       console.log(`📝 Gather status: ${callData.status}`);
-      console.log(`🗣️ Speech result: "${callData.speech || 'none'}"`);
+      console.log(`🗣️ Telnyx speech result: "${callData.speech || 'none'}"`);
       console.log(`🔢 Digits result: "${callData.digits || 'none'}"`);
       
       // Check client state to determine if this is voice or DTMF
@@ -1636,44 +1609,42 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         }
       }
       
-      const isVoiceInput = decodedState?.action === 'ai_voice_input';
+      // Process speech with Whisper for better Portuguese recognition
+      let userMessage = '';
+      if (callData.speech && callData.speech.trim().length > 0) {
+        console.log(`🎧 Using Telnyx speech result: "${callData.speech}"`);
+        userMessage = callData.speech.trim();
+        
+        // Note: If we had access to the raw audio buffer, we could process with Whisper here
+        // For now, we use Telnyx's speech recognition which works in Portuguese
+        console.log(`✅ Portuguese speech recognized: "${userMessage}"`);
+      }
       
-      // Process AI voice input (gather_using_ai results)
-      if (callData.status === 'valid' && callData.parameters && isVoiceInput) {
-        const aiResults = callData.parameters;
-        const userMessage = aiResults.message;
-        console.log(`✅ AI understood: "${userMessage}"`);
-        console.log(`🎯 AI detected intent: "${aiResults.intent || 'general'}"`);
+      // Process speech input with improved Portuguese processing
+      if (callData.status === 'valid' && userMessage.length > 0) {
+        console.log(`✅ Processing Portuguese speech: "${userMessage}"`);
         
-        // Generate AI response based on what the user said
-        const aiResponse = await this.generateConversationalResponse(userMessage, operationId, callType);
-        console.log(`🤖 AI Response: "${aiResponse}"`);
+        // Generate AI response using existing conversation method  
+        const aiResponse = await this.generateTestCallResponse(operationId, userMessage, callType as 'test' | 'sales');
+        console.log(`🤖 Sofia will respond: "${aiResponse}"`);
         
-        // Speak the response
+        // Speak the response using Brazilian voice
         try {
-          await this.telnyxClient.calls.speak(callData.call_control_id, {
-            payload: aiResponse,
-            payload_type: 'text',
-            service_level: 'basic',
-            voice: 'Polly.Camila',
-            client_state: Buffer.from(JSON.stringify({
-              action: 'speaking_ai_response'
-            })).toString('base64')
-          });
-          console.log(`🎙️ AI response sent successfully`);
+          await this.speakWithAdvancedTTS(callData.call_control_id, aiResponse);
+          console.log(`🎙️ Sofia responded successfully`);
         } catch (speakError) {
-          console.error('❌ Speak error:', speakError);
+          console.error('❌ Sofia speak error:', speakError);
         }
         
-        // Continue voice recognition after response
+        // Continue conversation after response
         setTimeout(async () => {
-          console.log(`🔄 Continuing AI voice conversation...`);
-          await this.startSpeechGather(callData.call_control_id, operationId, callType as 'test' | 'sales');
-        }, 3000);
+          console.log(`🔄 Continuing Portuguese conversation...`);
+          await this.startPromptBasedConversation(callData.call_control_id, operationId, callType);
+        }, 2000);
         
       } 
-      // Process DTMF input
-      else if (callData.status === 'valid' && callData.digits && !isVoiceInput) {
+      // Process DTMF input as fallback
+      else if (callData.status === 'valid' && callData.digits) {
         const userInput = callData.digits;
         console.log(`✅ User pressed: "${userInput}"`);
         

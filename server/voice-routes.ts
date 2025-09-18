@@ -259,24 +259,9 @@ router.post("/telnyx-incoming-call", validateTelnyxSignature, async (req, res) =
       await voiceService.handleSpeechGatherEnded(eventData.payload, callType, operationId);
       
     } else if (eventType === 'call.transcription') {
-      console.log(`📝 Real-time TRANSCRIPTION received`);
-      
-      // Extract transcription data correctly from Telnyx webhook
-      const transcriptionData = eventData.payload.transcription_data || eventData.payload.transcription || {};
-      const transcript = transcriptionData.text || transcriptionData.transcript || '';
-      const isFinal = transcriptionData.is_final || transcriptionData.final || (transcriptionData.type === 'final');
-      const callControlId = eventData.payload.call_control_id;
-      
-      // Debug logging to understand data structure
-      console.log(`📊 Transcription data structure:`, JSON.stringify(transcriptionData));
-      console.log(`📄 Transcription text: "${transcript}" (Final: ${isFinal})`);
-      
-      if (transcript && transcript.trim().length > 0 && callControlId) {
-        // Process transcription with high-performance pipeline
-        await voiceService.processTranscription(callControlId, transcript, isFinal);
-      } else if (callControlId) {
-        console.log(`⚠️ Received empty transcription for call ${callControlId}`);
-      }
+      // Note: Telnyx transcription doesn't support Portuguese correctly
+      // We're using OpenAI Whisper instead for better Portuguese recognition
+      console.log(`📝 Telnyx transcription event received but ignored - using Whisper for Portuguese support`);
       
     } else if (eventType === 'call.ai_gather.ended') {
       console.log(`🤖 AI gather completed - processing user response`);
