@@ -94,6 +94,9 @@ router.get("/funnels/vercel/oauth-url", authenticateToken, (req, res) => {
     
     const oauthUrl = vercelService.getOAuthUrl(redirectUri, state);
     
+    // Debug OAuth configuration
+    console.log(`🔍 OAuth URL gerada: ${oauthUrl}`);
+    
     res.json({
       success: true,
       oauthUrl,
