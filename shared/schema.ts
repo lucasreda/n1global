@@ -440,6 +440,10 @@ export const manualAdSpend = pgTable("manual_ad_spend", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Operation type validation
+export const operationTypeOptions = ["Cash on Delivery", "Pagamento no Cartão"] as const;
+export const operationTypeSchema = z.enum(operationTypeOptions);
+
 // Auth schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -463,6 +467,13 @@ export const insertOperationSchema = createInsertSchema(operations).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  operationType: operationTypeSchema,
+});
+
+// Operation update schema for API
+export const updateOperationTypeSchema = z.object({
+  operationType: operationTypeSchema,
 });
 
 // Facebook Ads integration schemas
