@@ -1213,8 +1213,8 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Start audio recording for OpenAI Whisper transcription
-   * This provides automatic language detection and superior accuracy
+   * Start real-time streaming transcription with Telnyx
+   * This provides immediate transcription feedback during conversation
    */
   private async startWhisperTranscription(callControlId: string, operationId?: string, callType?: string): Promise<void> {
     try {
@@ -1224,36 +1224,36 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         return;
       }
       
-      console.log(`🎤 Starting Whisper-based transcription with auto-language detection for call ${callControlId}`);
+      console.log(`🎤 Starting real-time streaming transcription for call ${callControlId}`);
       
       const apiKey = process.env.TELNYX_API_KEY;
       if (!apiKey) {
         throw new Error('No Telnyx API key found');
       }
 
-      // Start recording to capture audio for Whisper
-      const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/record_start`, {
+      // Start streaming transcription for real-time processing
+      const response = await fetch(`https://api.telnyx.com/v2/calls/${callControlId}/actions/transcription_start`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          format: 'wav',
-          channels: 'single',
-          play_beep: false,
-          include_silence: false
+          transcription_engine: 'telnyx',
+          language: 'pt-BR',
+          transcription_tracks: 'inbound_track',
+          interim_results: true
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ Failed to start recording for Whisper (${response.status}):`, errorText);
-        throw new Error(`Recording start failed: ${errorText}`);
+        console.error(`❌ Failed to start streaming transcription (${response.status}):`, errorText);
+        throw new Error(`Streaming transcription start failed: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log(`✅ Recording started for Whisper transcription:`, result);
+      console.log(`✅ Streaming transcription started:`, result);
       
       // Mark transcription as active
       this.transcriptionActive.set(callControlId, true);
@@ -1261,10 +1261,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       this.lastTranscriptionTime.set(callControlId, Date.now());
       
     } catch (error) {
-      console.error(`❌ Error starting Whisper transcription:`, error);
-      // Fallback to gather_using_ai if transcription fails
-      console.log(`🔄 Falling back to gather_using_ai`);
-      await this.startSpeechGather(callControlId, operationId || '', callType || 'test');
+      console.error(`❌ Error starting streaming transcription:`, error);
+      // Fallback to basic gather if streaming transcription fails
+      console.log(`🔄 Falling back to basic gather`);
+      await this.startPromptBasedConversation(callControlId, operationId || '', callType || 'test');
     }
   }
 
@@ -1304,7 +1304,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * Sofia's Neural HD TTS with robust fallbacks and SSML optimization
+   * Sofia's simplified TTS - direct Polly.Camila-Neural for reliability
    */
   private async speakWithAdvancedTTS(
     callControlId: string, 
@@ -1319,92 +1319,41 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       }
 
       const charCount = text.length;
-      console.log(`🎤 Sofia speaking (Neural HD): "${text.substring(0, 50)}..." (${charCount} chars)`);
+      console.log(`🎤 Sofia speaking: "${text}" (${charCount} chars)`);
       
-      // Enhanced SSML for more natural speech patterns
-      const enhancedText = this.enhanceTextWithSSMLFixed(text);
+      // Use Polly.Camila-Neural directly - most reliable for pt-BR
+      await this.telnyxClient?.calls.speak(callControlId, {
+        payload: text, // Plain text - no SSML complications
+        payload_type: 'text',
+        service_level: 'premium',
+        language: 'pt-BR',
+        voice: 'Polly.Camila-Neural',
+        client_state: clientState || Buffer.from(JSON.stringify({
+          action: 'sofia_speaking',
+          provider: 'polly_neural',
+          chars: charCount,
+          timestamp: Date.now()
+        })).toString('base64')
+      });
       
-      // Try Neural HD voice first (best quality)
-      try {
-        await this.telnyxClient?.calls.speak(callControlId, {
-          payload: enhancedText,
-          payload_type: 'ssml',
-          service_level: 'premium',
-          language: 'pt-BR',
-          voice: 'Azure.pt-BR-FranciscaNeural', // Azure Neural HD for Sofia
-          client_state: clientState || Buffer.from(JSON.stringify({
-            action: 'sofia_neural_speaking',
-            provider: 'azure_neural',
-            chars: charCount,
-            timestamp: Date.now()
-          })).toString('base64')
-        });
-        
-        console.log(`✅ Sofia spoke with Azure Neural HD (${charCount} chars)`);
-        return;
-      } catch (neuralError) {
-        console.log(`⚠️ Azure Neural HD failed, falling back to AWS Polly Neural: ${neuralError}`);
-        
-        // Fallback to AWS Polly Neural
-        try {
-          await this.telnyxClient?.calls.speak(callControlId, {
-            payload: text, // Use plain text for Polly
-            payload_type: 'text',
-            service_level: 'premium',
-            language: 'pt-BR',
-            voice: 'Polly.Camila-Neural',
-            client_state: clientState || Buffer.from(JSON.stringify({
-              action: 'sofia_neural_fallback',
-              provider: 'polly_neural',
-              chars: charCount,
-              timestamp: Date.now()
-            })).toString('base64')
-          });
-          
-          console.log(`✅ Sofia spoke with AWS Polly Neural fallback (${charCount} chars)`);
-          return;
-        } catch (pollyNeuralError) {
-          console.log(`⚠️ Polly Neural failed, using standard voice: ${pollyNeuralError}`);
-          
-          // Final fallback to standard Polly voice
-          await this.telnyxClient?.calls.speak(callControlId, {
-            payload: text,
-            payload_type: 'text',
-            service_level: 'premium',
-            language: 'pt-BR',
-            voice: 'Polly.Camila', // Consistent Sofia voice
-            client_state: clientState || Buffer.from(JSON.stringify({
-              action: 'sofia_standard_fallback',
-              provider: 'polly_standard',
-              chars: charCount,
-              timestamp: Date.now()
-            })).toString('base64')
-          });
-          
-          console.log(`✅ Sofia spoke with standard voice final fallback (${charCount} chars)`);
-        }
-      }
+      console.log(`✅ Sofia spoke with Polly Neural (${charCount} chars)`);
+      
     } catch (error) {
-      console.error(`❌ Critical TTS error for Sofia on call ${callControlId}:`, error);
+      console.error(`❌ TTS error for Sofia on call ${callControlId}:`, error);
       
-      // Emergency minimal message
+      // Try basic fallback
       try {
         await this.telnyxClient?.calls.speak(callControlId, {
-          payload: "Oi, tivemos uma dificuldade técnica.",
+          payload: text,
           payload_type: 'text',
           service_level: 'basic',
           language: 'pt-BR',
-          voice: 'Polly.Camila',
-          client_state: clientState || Buffer.from(JSON.stringify({
-            action: 'sofia_emergency',
-            provider: 'emergency',
-            timestamp: Date.now()
-          })).toString('base64')
+          voice: 'Polly.Camila'
         });
         
-        console.log(`🚨 Sofia used emergency voice recovery`);
-      } catch (emergencyError) {
-        console.error(`❌ Even Sofia's emergency voice failed:`, emergencyError);
+        console.log(`✅ Sofia spoke with basic voice fallback`);
+      } catch (fallbackError) {
+        console.error(`❌ Sofia's voice failed completely:`, fallbackError);
       }
     }
   }
