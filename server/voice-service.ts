@@ -1240,9 +1240,10 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         },
         body: JSON.stringify({
           transcription_engine: 'telnyx',
-          language: 'pt-BR',
+          language: 'pt',
           transcription_tracks: 'inbound',
-          interim_results: true
+          interim_results: true,
+          model: 'nova-2'
         })
       });
 
