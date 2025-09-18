@@ -14,26 +14,26 @@ export default function Settings() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  const { currentOperation } = useOperationStore();
+  const { selectedOperation } = useOperationStore();
   const { toast } = useToast();
 
   // Fetch current operation to get operationType
   const { data: operations } = useQuery({
     queryKey: ['/api/operations'],
-    enabled: !!currentOperation,
+    enabled: !!selectedOperation,
   });
 
   // Set initial operationType from current operation
   useEffect(() => {
-    if (operations && currentOperation) {
-      const operation = operations.find((op: any) => op.id === currentOperation);
+    if (operations && selectedOperation) {
+      const operation = operations.find((op: any) => op.id === selectedOperation);
       if (operation?.operationType) {
         setOperationType(operation.operationType);
         setOriginalOperationType(operation.operationType);
         setHasChanges(false);
       }
     }
-  }, [operations, currentOperation]);
+  }, [operations, selectedOperation]);
 
   const handleOperationTypeChange = (value: string) => {
     setOperationType(value);
@@ -41,9 +41,9 @@ export default function Settings() {
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, currentOperation:', currentOperation, 'operationType:', operationType);
+    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType);
     
-    if (!currentOperation) {
+    if (!selectedOperation) {
       toast({
         title: "Erro",
         description: "Nenhuma operação selecionada",
@@ -54,9 +54,9 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${currentOperation}/type`, 'with data:', { operationType });
+      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/type`, 'with data:', { operationType });
       
-      const response = await apiRequest(`/api/operations/${currentOperation}/type`, {
+      const response = await apiRequest(`/api/operations/${selectedOperation}/type`, {
         method: 'PATCH',
         body: JSON.stringify({ operationType }),
         headers: {
