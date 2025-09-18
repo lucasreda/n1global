@@ -2792,7 +2792,7 @@ export const funnelIntegrations = pgTable("funnel_integrations", {
   isActive: boolean("is_active").default(true),
   
   // OAuth refresh data
-  refreshToken: text("refresh_token"),
+  vercelRefreshToken: text("vercel_refresh_token"),
   expiresAt: timestamp("expires_at"),
   
   createdAt: timestamp("created_at").defaultNow(),

@@ -177,6 +177,20 @@ router.post("/funnels/vercel/connect", authenticateToken, async (req, res) => {
     // Exchange OAuth code for access token
     const oauthResult = await vercelService.exchangeOAuthCode(code, redirectUri);
     
+    // Get user's storeId
+    const [userInfo] = await db
+      .select({ storeId: users.storeId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    
+    if (!userInfo || !userInfo.storeId) {
+      return res.status(400).json({
+        success: false,
+        error: "Usuário não tem loja associada"
+      });
+    }
+    
     // Check if integration already exists for this operation
     const [existingIntegration] = await db
       .select({
@@ -215,7 +229,7 @@ router.post("/funnels/vercel/connect", authenticateToken, async (req, res) => {
         .insert(funnelIntegrations)
         .values({
           operationId,
-          storeId: (req as any).storeId,
+          storeId: userInfo.storeId,
           vercelAccessToken: oauthResult.accessToken,
           vercelTeamId: oauthResult.teamId || null,
           vercelUserId: oauthResult.user.id,
