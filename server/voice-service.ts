@@ -1225,6 +1225,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       }
       
       console.log(`🎤 Starting real-time streaming transcription for call ${callControlId}`);
+      console.log(`🔧 Transcription config: {engine: 'openai', model: 'whisper-1', language: 'pt-BR', translate: false}`);
       
       const apiKey = process.env.TELNYX_API_KEY;
       if (!apiKey) {
@@ -1239,18 +1240,12 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          transcription_engine: 'telnyx',
+          transcription_engine: 'openai',
+          model: 'whisper-1', 
           language: 'pt-BR',
           transcription_tracks: 'inbound',
           interim_results: true,
-          model: 'nova-2',
-          vocabulary: [
-            "Lucas", "Sofia", "com o Lucas", "aqui é o Lucas", "meu nome é Lucas",
-            "oi", "olá", "alô", "bom dia", "boa tarde", "boa noite",
-            "sim", "não", "obrigado", "obrigada", "por favor", "desculpa",
-            "produto", "preço", "valor", "entrega", "pedido", "compra",
-            "dúvida", "problema", "ajuda", "informação"
-          ]
+          translate: false
         })
       });
 
