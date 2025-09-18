@@ -82,7 +82,7 @@ const deployFunnelSchema = z.object({
 router.get("/funnels/vercel/oauth-url", authenticateToken, (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/funnels/vercel/callback`;
+    const redirectUri = `https://${req.get('host')}/api/funnels/vercel/callback`;
     const state = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`; // Secure random state
     
     // Store state for CSRF validation
@@ -155,7 +155,7 @@ router.post("/funnels/vercel/connect", authenticateToken, validateOperationAcces
     oauthStates.delete(state);
 
     // Generate server-side redirectUri (secure)
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/funnels/vercel/callback`;
+    const redirectUri = `https://${req.get('host')}/api/funnels/vercel/callback`;
 
     // Exchange OAuth code for access token
     const oauthResult = await vercelService.exchangeOAuthCode(code, redirectUri);
