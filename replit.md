@@ -61,13 +61,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (September 17, 2025)
 
-### Voice System Critical Fixes
-- Fixed transcription webhook parsing to correctly read transcription_data.text field
-- Updated API configuration to use proper 'pt-BR' language code (was using 'pt')
-- Added audio_track='inbound' to only capture customer speech
-- Removed non-standard transcription_engine='B' parameter
-- Added 8-second timeout fallback to gather_using_ai if transcription fails
-- Enhanced debug logging for transcription data structure analysis
+### Voice System Architecture Overhaul
+- **MAJOR CHANGE**: Completely removed Telnyx transcription system due to Portuguese limitations
+- Implemented clean Portuguese gather-only architecture with explicit PT-BR configuration
+- Eliminated all transcription-related methods, variables, and state management
+- Validated proper client_state flow: speaking_welcome → gather → speaking_response → gather loop
+- Sofia now uses pure Telnyx gather with language: 'pt-BR' for speech recognition
+- Simplified single-path architecture using only Telnyx gather instead of hybrid approach
+- Voice flow: Sofia speaks (Polly.Camila-Neural) → handleSpeakEnded → Portuguese gather → handleSpeechGatherEnded → AI response
 
 ## External Dependencies
 
