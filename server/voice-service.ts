@@ -1241,7 +1241,7 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         body: JSON.stringify({
           transcription_engine: 'telnyx',
           language: 'pt-BR',
-          transcription_tracks: 'inbound_track',
+          transcription_tracks: 'inbound',
           interim_results: true
         })
       });
@@ -1547,38 +1547,40 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
   }
 
   /**
-   * SIMPLIFIED WORKING voice conversation system (DTMF fallback)
+   * Voice conversation system with speech recognition fallback
    */
   private async startPromptBasedConversation(callControlId: string, operationId: string, callType: string): Promise<void> {
     if (!this.telnyxClient) return;
     
     // Check if call is still active
     if (!this.activeCallIds.has(callControlId)) {
-      console.log(`⚠️ Call ${callControlId} is no longer active, skipping DTMF conversation`);
+      console.log(`⚠️ Call ${callControlId} is no longer active, skipping voice conversation`);
       return;
     }
     
     try {
-      console.log(`🎙️ Starting conversation for call ${callControlId}`);
+      console.log(`🎙️ Starting voice conversation for call ${callControlId}`);
       
-      // Use gather with ALL required parameters
+      // Use gather with speech recognition enabled
       await this.telnyxClient.calls.gather(callControlId, {
-        minimum_digits: 1,
-        maximum_digits: 1,
-        timeout_millis: 15000,
-        inter_digit_timeout_millis: 2000,
-        initial_timeout_millis: 5000,
-        terminating_digit: '#',
-        valid_digits: '0123456789*#',
+        minimum_digits: 0, // Allow speech without digits
+        maximum_digits: 0, // Disable digit collection
+        timeout_millis: 30000, // 30 seconds for speech
+        inter_digit_timeout_millis: 8000, // 8 seconds of silence
+        initial_timeout_millis: 2000, // 2 seconds before listening
+        speech_timeout_millis: 30000,
+        speech_end_timeout_millis: 2000,
+        input_source: 'speech', // Focus on speech input
+        language: 'pt-BR',
         client_state: Buffer.from(JSON.stringify({
-          action: 'user_input',
+          action: 'voice_input',
           operationId,
           callType,
           timestamp: Date.now()
         })).toString('base64')
       });
 
-      console.log(`🎤 DTMF input gathering active for ${callControlId}`);
+      console.log(`🎤 Voice input gathering active for ${callControlId}`);
       
     } catch (error) {
       console.error(`❌ Error starting conversation:`, error);
