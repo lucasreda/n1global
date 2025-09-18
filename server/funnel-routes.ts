@@ -82,22 +82,33 @@ const deployFunnelSchema = z.object({
 router.get("/funnels/vercel/oauth-url", authenticateToken, (req, res) => {
   try {
     const userId = (req as any).user.id;
+    const operationId = req.query.operationId as string;
+    
+    if (!operationId) {
+      return res.status(400).json({
+        success: false,
+        error: "Operation ID é obrigatório"
+      });
+    }
+    
     // Use current working domain (can be overridden with VERCEL_OAUTH_REDIRECT_HOST env var)
     const host = process.env.VERCEL_OAUTH_REDIRECT_HOST || req.get('host');
     const redirectUri = `https://${host}/api/funnels/vercel/callback`;
-    const state = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`; // Secure random state
+    
+    // Include operationId in state for recovery after callback
+    const state = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${operationId}`; // Include operationId
     
     // Store state for CSRF validation
     oauthStates.set(state, {
       userId,
       createdAt: Date.now(),
-      operationId: req.query.operationId as string || undefined,
+      operationId: operationId,
     });
     
     const oauthUrl = vercelService.getOAuthUrl(redirectUri, state);
     
     // Debug OAuth configuration
-    console.log(`🔍 OAuth URL gerada: ${oauthUrl}`);
+    console.log(`🔍 OAuth URL gerada com operation ${operationId}: ${oauthUrl}`);
     
     res.json({
       success: true,
@@ -133,11 +144,12 @@ router.post("/funnels/vercel/connect", authenticateToken, validateOperationAcces
     const { operationId, code, state } = validation.data;
     const userId = (req as any).user.id;
 
-    console.log(`🔐 Connecting Vercel for operation: ${operationId}`);
+    console.log(`🔐 Connecting Vercel for operation: ${operationId}, state: ${state}`);
 
     // Validate state for CSRF protection
     const storedState = oauthStates.get(state);
     if (!storedState) {
+      console.error(`❌ State not found in cache: ${state}`);
       return res.status(400).json({
         success: false,
         error: "Estado OAuth inválido ou expirado",

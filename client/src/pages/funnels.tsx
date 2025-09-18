@@ -117,34 +117,64 @@ export default function Funnels() {
       return;
     }
 
-    if (code && state && selectedOperation) {
-      handleOAuthCallback(code, state);
+    if (code && state) {
+      // Extract operationId from state (format: userId_timestamp_random_operationId)
+      const stateParts = state.split('_');
+      let operationId = selectedOperation;
+      
+      // Try to find operationId in state (if it was included in the state)
+      if (stateParts.length >= 4) {
+        operationId = stateParts.slice(3).join('_'); // Get everything after the third underscore
+      }
+      
+      // Use selectedOperation as fallback
+      if (!operationId) {
+        operationId = selectedOperation;
+      }
+      
+      // Only process if we have an operationId
+      if (operationId) {
+        console.log('🔐 Processing OAuth callback with operation:', operationId);
+        handleOAuthCallback(code, state, operationId);
+      } else {
+        console.warn('⚠️ OAuth callback received but no operation selected');
+        toast({
+          title: "Aviso",
+          description: "Por favor, selecione uma operação e tente conectar novamente",
+          variant: "default",
+        });
+      }
     }
   }, [selectedOperation, toast]);
 
   // Handle OAuth callback and connect integration
-  const handleOAuthCallback = async (code: string, state: string) => {
+  const handleOAuthCallback = async (code: string, state: string, operationId: string) => {
     try {
+      console.log('🔄 Connecting Vercel integration...');
       const response = await authenticatedApiRequest('POST', '/api/funnels/vercel/connect', {
-        operationId: selectedOperation,
+        operationId: operationId,
         code: code,
         state: state,
       });
 
       if (response.ok) {
         const result = await response.json();
+        console.log('✅ Vercel connected:', result);
         toast({
           title: "Sucesso",
           description: "Integração Vercel conectada com sucesso!",
         });
         refetchVercel();
       } else {
-        throw new Error('Erro ao conectar integração');
+        const errorData = await response.json();
+        console.error('❌ Connection failed:', errorData);
+        throw new Error(errorData.error || 'Erro ao conectar integração');
       }
     } catch (error) {
+      console.error('❌ OAuth callback error:', error);
       toast({
         title: "Erro",
-        description: "Erro ao conectar integração Vercel",
+        description: error instanceof Error ? error.message : "Erro ao conectar integração Vercel",
         variant: "destructive",
       });
     } finally {
