@@ -213,7 +213,7 @@ export default function Integrations() {
         </div>
       </div>
 
-      {/* Provedores de Fulfillment - Multi-Provider */}
+      {/* Armazéns - Multi-Provider */}
       <MultiProviderPanel />
     </div>
   );

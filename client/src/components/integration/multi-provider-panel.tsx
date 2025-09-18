@@ -196,7 +196,7 @@ export function MultiProviderPanel() {
       {/* Header com título padronizado */}
       <div className="flex items-center space-x-3 mb-6">
         <Package className="text-blue-400" size={20} />
-        <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Provedores de Fulfillment</h2>
+        <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Armazéns</h2>
       </div>
 
       {providersLoading ? (
