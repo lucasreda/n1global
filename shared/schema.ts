@@ -2791,10 +2791,6 @@ export const funnelIntegrations = pgTable("funnel_integrations", {
   lastUsed: timestamp("last_used"),
   isActive: boolean("is_active").default(true),
   
-  // OAuth refresh data
-  vercelRefreshToken: text("vercel_refresh_token"),
-  expiresAt: timestamp("expires_at"),
-  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
