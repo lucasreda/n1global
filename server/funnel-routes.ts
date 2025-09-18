@@ -83,7 +83,7 @@ router.get("/funnels/vercel/oauth-url", authenticateToken, (req, res) => {
   try {
     const userId = (req as any).user.id;
     // Use stable Replit domain instead of ephemeral spock subdomain
-    const host = process.env.VERCEL_OAUTH_REDIRECT_HOST || req.get('host');
+    const host = process.env.VERCEL_OAUTH_REDIRECT_HOST || `${process.env.REPL_SLUG || 'workspace'}.${process.env.REPL_OWNER || 'defaultuser'}.repl.co`;
     const redirectUri = `https://${host}/api/funnels/vercel/callback`;
     const state = `${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`; // Secure random state
     
@@ -158,7 +158,7 @@ router.post("/funnels/vercel/connect", authenticateToken, validateOperationAcces
 
     // Generate server-side redirectUri (secure)
     // Use stable Replit domain instead of ephemeral spock subdomain
-    const host = process.env.VERCEL_OAUTH_REDIRECT_HOST || req.get('host');
+    const host = process.env.VERCEL_OAUTH_REDIRECT_HOST || `${process.env.REPL_SLUG || 'workspace'}.${process.env.REPL_OWNER || 'defaultuser'}.repl.co`;
     const redirectUri = `https://${host}/api/funnels/vercel/callback`;
 
     // Exchange OAuth code for access token
