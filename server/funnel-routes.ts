@@ -10,7 +10,8 @@ import {
   insertFunnelIntegrationSchema,
   insertFunnelSchema,
   insertFunnelTemplateSchema,
-  insertFunnelDeploymentSchema
+  insertFunnelDeploymentSchema,
+  users
 } from "@shared/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { authenticateToken } from "./auth-middleware";
