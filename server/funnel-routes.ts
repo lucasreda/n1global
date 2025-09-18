@@ -127,7 +127,7 @@ router.get("/funnels/vercel/oauth-url", authenticateToken, (req, res) => {
 /**
  * Connect Vercel integration via OAuth
  */
-router.post("/funnels/vercel/connect", authenticateToken, validateOperationAccess, async (req, res) => {
+router.post("/funnels/vercel/connect", authenticateToken, async (req, res) => {
   try {
     const validation = connectVercelSchema.safeParse(req.body);
     if (!validation.success) {
@@ -273,7 +273,7 @@ router.get("/funnels/vercel/callback", async (req, res) => {
 /**
  * Get Vercel integration status for an operation
  */
-router.get("/funnels/vercel/status", authenticateToken, validateOperationAccess, async (req, res) => {
+router.get("/funnels/vercel/status", authenticateToken, async (req, res) => {
   try {
     const { operationId } = req.query;
 
@@ -357,7 +357,7 @@ router.get("/funnels/templates", authenticateToken, async (req, res) => {
 /**
  * Get funnels for an operation
  */
-router.get("/funnels", authenticateToken, validateOperationAccess, async (req, res) => {
+router.get("/funnels", authenticateToken, async (req, res) => {
   try {
     const { operationId } = req.query;
 

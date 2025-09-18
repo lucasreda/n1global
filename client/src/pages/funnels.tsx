@@ -247,7 +247,7 @@ export default function Funnels() {
       
       if (response.ok) {
         const { oauthUrl } = await response.json();
-        window.location.href = oauthUrl; // Redirect instead of opening new window for better flow
+        window.open(oauthUrl, '_blank', 'width=800,height=700'); // Volta a abrir em nova janela como antes
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Erro ao obter URL OAuth');
