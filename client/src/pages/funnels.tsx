@@ -234,13 +234,29 @@ export default function Funnels() {
   // Connect to Vercel
   const handleConnectVercel = async () => {
     try {
-      const response = await authenticatedApiRequest('GET', '/api/funnels/vercel/oauth-url');
-      const { oauthUrl } = await response.json();
-      window.open(oauthUrl, '_blank', 'width=600,height=700');
+      if (!selectedOperation) {
+        toast({
+          title: "Aviso",
+          description: "Por favor, selecione uma operação primeiro",
+          variant: "default",
+        });
+        return;
+      }
+      
+      const response = await authenticatedApiRequest('GET', `/api/funnels/vercel/oauth-url?operationId=${selectedOperation}`);
+      
+      if (response.ok) {
+        const { oauthUrl } = await response.json();
+        window.location.href = oauthUrl; // Redirect instead of opening new window for better flow
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao obter URL OAuth');
+      }
     } catch (error) {
+      console.error('❌ Error connecting to Vercel:', error);
       toast({
         title: "Erro",
-        description: "Erro ao conectar com Vercel",
+        description: error instanceof Error ? error.message : "Erro ao conectar com Vercel",
         variant: "destructive",
       });
     }
