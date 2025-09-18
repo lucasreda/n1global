@@ -1240,10 +1240,17 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
         },
         body: JSON.stringify({
           transcription_engine: 'telnyx',
-          language: 'pt',
+          language: 'pt-BR',
           transcription_tracks: 'inbound',
           interim_results: true,
-          model: 'nova-2'
+          model: 'nova-2',
+          vocabulary: [
+            "Lucas", "Sofia", "com o Lucas", "aqui é o Lucas", "meu nome é Lucas",
+            "oi", "olá", "alô", "bom dia", "boa tarde", "boa noite",
+            "sim", "não", "obrigado", "obrigada", "por favor", "desculpa",
+            "produto", "preço", "valor", "entrega", "pedido", "compra",
+            "dúvida", "problema", "ajuda", "informação"
+          ]
         })
       });
 
