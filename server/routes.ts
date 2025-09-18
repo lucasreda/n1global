@@ -23,6 +23,7 @@ import { registerSupportRoutes } from "./support-routes";
 import { registerCustomerSupportRoutes } from "./customer-support-routes";
 import voiceRoutes, { setupVoiceWebSocket } from "./voice-routes";
 import { cartpandaRoutes } from "./cartpanda-routes";
+import { funnelRoutes } from "./funnel-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -6234,6 +6235,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register CartPanda integration routes
   app.use("/api/integrations", cartpandaRoutes);
+
+  // Register Funnel Builder routes
+  app.use("/api", funnelRoutes);
 
   const httpServer = createServer(app);
   

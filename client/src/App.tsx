@@ -20,6 +20,7 @@ import Integrations from "@/pages/integrations";
 import Products from "@/pages/products";
 import Tools from "@/pages/tools";
 import CostCalculator from "@/pages/cost-calculator";
+import Funnels from "@/pages/funnels";
 import Settings from "@/pages/settings";
 import Ads from "@/pages/ads";
 import Creatives from "@/pages/creatives";
@@ -252,6 +253,7 @@ function Router() {
         <Route path="/orders" component={Orders} />
         {!isProductSeller && <Route path="/analytics" component={Analytics} />}
         <Route path="/integrations" component={Integrations} />
+        {!isProductSeller && <Route path="/funnels" component={Funnels} />}
         {!isProductSeller && <Route path="/ads" component={Ads} />}
         {!isProductSeller && <Route path="/creatives/:id" component={CreativeDetails} />}
         {!isProductSeller && <Route path="/creatives" component={Creatives} />}

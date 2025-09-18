@@ -16,7 +16,8 @@ import {
   MessageSquare,
   ChevronRight,
   Sparkles,
-  Store
+  Store,
+  Zap
 } from "lucide-react";
 import logoImage from "@assets/Dashboard_1756440445659.png";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = []) 
     { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3 },
     { id: 'ads', name: "Anúncios", href: "/ads", icon: Target },
     { id: 'creatives', name: "Criativos", href: "/creatives", icon: Sparkles },
+    { id: 'funnels', name: "Funis de Venda", href: "/funnels", icon: Zap },
     { name: "Produtos", href: "/products", icon: ShoppingCart }, // Always visible
     { 
       id: 'support',

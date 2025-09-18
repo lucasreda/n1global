@@ -2770,3 +2770,259 @@ export type InsertProductOperationLink = z.infer<typeof insertProductOperationLi
 
 export type Announcement = typeof announcements.$inferSelect;
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+
+// ========================================
+// Sales Funnels - AI Landing Page Builder
+// ========================================
+
+// Vercel integrations per operation
+export const funnelIntegrations = pgTable("funnel_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  
+  // Vercel OAuth credentials
+  vercelAccessToken: text("vercel_access_token").notNull(), // OAuth access token
+  vercelTeamId: text("vercel_team_id"), // Team ID if using teams
+  vercelUserId: text("vercel_user_id").notNull(), // User ID from Vercel
+  
+  // Connection metadata  
+  connectedAt: timestamp("connected_at").defaultNow(),
+  lastUsed: timestamp("last_used"),
+  isActive: boolean("is_active").default(true),
+  
+  // OAuth refresh data
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Funnel templates for different use cases
+export const funnelTemplates = pgTable("funnel_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // 'ecommerce', 'lead_gen', 'webinar', 'app', 'service'
+  
+  // Template configuration
+  templateConfig: jsonb("template_config").$type<{
+    sections: string[]; // 'hero', 'benefits', 'testimonials', 'pricing', 'faq', 'cta'
+    colorScheme: string; // 'modern', 'vibrant', 'minimal', 'dark'
+    layout: string; // 'single_page', 'multi_section', 'video_first'
+    conversionGoal: string; // 'purchase', 'email', 'phone', 'appointment'
+  }>(),
+  
+  // AI prompts for content generation
+  aiPrompts: jsonb("ai_prompts").$type<{
+    heroPrompt: string;
+    benefitsPrompt: string;
+    testimonialsPrompt: string;
+    ctaPrompt: string;
+    faqPrompt: string;
+  }>(),
+  
+  // Preview settings
+  previewImage: text("preview_image"), // Template screenshot
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Sales funnels created by users
+export const funnels = pgTable("funnels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  
+  // Basic info
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Template and AI settings
+  templateId: varchar("template_id").references(() => funnelTemplates.id),
+  
+  // Product/service info for AI generation
+  productInfo: jsonb("product_info").$type<{
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    targetAudience: string;
+    mainBenefits: string[];
+    objections: string[];
+    testimonials?: string[];
+  }>(),
+  
+  // AI generated content
+  generatedContent: jsonb("generated_content").$type<{
+    hero: { title: string; subtitle: string; cta: string; };
+    benefits: Array<{ title: string; description: string; icon?: string; }>;
+    testimonials: Array<{ name: string; text: string; rating?: number; }>;
+    faq: Array<{ question: string; answer: string; }>;
+    cta: { title: string; subtitle: string; buttonText: string; };
+  }>(),
+  
+  // Tracking and analytics
+  trackingConfig: jsonb("tracking_config").$type<{
+    facebookPixelId?: string;
+    googleAnalyticsId?: string;
+    googleTagManagerId?: string;
+    tiktokPixelId?: string;
+    customTracking?: Array<{ name: string; code: string; }>;
+  }>(),
+  
+  // Status and metadata
+  status: text("status").notNull().default("draft"), // 'draft', 'generating', 'ready', 'deployed', 'error'
+  isActive: boolean("is_active").default(true),
+  
+  // Generation metadata
+  aiCost: decimal("ai_cost", { precision: 8, scale: 4 }).default("0"), // Cost of AI generation
+  generatedAt: timestamp("generated_at"),
+  lastRegeneratedAt: timestamp("last_regenerated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Vercel deployment history
+export const funnelDeployments = pgTable("funnel_deployments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id),
+  
+  // Vercel project info
+  vercelProjectId: text("vercel_project_id").notNull(),
+  vercelProjectName: text("vercel_project_name").notNull(),
+  vercelDeploymentId: text("vercel_deployment_id").notNull(),
+  vercelUrl: text("vercel_url").notNull(), // Generated Vercel URL
+  
+  // Custom domain (if configured)
+  customDomain: text("custom_domain"),
+  customDomainStatus: text("custom_domain_status"), // 'pending', 'active', 'error'
+  
+  // Deployment status
+  status: text("status").notNull(), // 'building', 'ready', 'error', 'canceled'
+  deploymentUrl: text("deployment_url").notNull(), // Final URL to access funnel
+  
+  // SSL and performance
+  sslEnabled: boolean("ssl_enabled").default(true),
+  performanceScore: integer("performance_score"), // Lighthouse score if available
+  
+  // Deployment metadata
+  buildTime: integer("build_time"), // Build time in seconds
+  deployedAt: timestamp("deployed_at"),
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Analytics for funnel performance
+export const funnelAnalytics = pgTable("funnel_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id),
+  deploymentId: varchar("deployment_id").references(() => funnelDeployments.id),
+  
+  // Time period
+  date: text("date").notNull(), // YYYY-MM-DD
+  period: text("period").notNull().default("daily"), // 'daily', 'weekly', 'monthly'
+  
+  // Traffic metrics
+  visits: integer("visits").default(0),
+  uniqueVisitors: integer("unique_visitors").default(0),
+  pageViews: integer("page_views").default(0),
+  bounceRate: decimal("bounce_rate", { precision: 5, scale: 2 }).default("0"),
+  avgSessionDuration: integer("avg_session_duration").default(0), // in seconds
+  
+  // Conversion metrics
+  conversions: integer("conversions").default(0),
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0"),
+  revenue: decimal("revenue", { precision: 12, scale: 2 }).default("0"),
+  avgOrderValue: decimal("avg_order_value", { precision: 8, scale: 2 }).default("0"),
+  
+  // Traffic sources
+  trafficSources: jsonb("traffic_sources").$type<{
+    direct: number;
+    organic: number;
+    social: number;
+    paid: number;
+    referral: number;
+    email: number;
+  }>().default({
+    direct: 0,
+    organic: 0,
+    social: 0,
+    paid: 0,
+    referral: 0,
+    email: 0,
+  }),
+  
+  // Device breakdown
+  deviceTypes: jsonb("device_types").$type<{
+    desktop: number;
+    mobile: number;
+    tablet: number;
+  }>().default({
+    desktop: 0,
+    mobile: 0,
+    tablet: 0,
+  }),
+  
+  // Location data (top 5 countries)
+  topCountries: jsonb("top_countries").$type<Array<{
+    country: string;
+    visits: number;
+  }>>().default([]),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for funnel entities
+export const insertFunnelIntegrationSchema = createInsertSchema(funnelIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  connectedAt: true,
+});
+
+export const insertFunnelTemplateSchema = createInsertSchema(funnelTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFunnelSchema = createInsertSchema(funnels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  generatedAt: true,
+  lastRegeneratedAt: true,
+});
+
+export const insertFunnelDeploymentSchema = createInsertSchema(funnelDeployments).omit({
+  id: true,
+  createdAt: true,
+  deployedAt: true,
+});
+
+export const insertFunnelAnalyticsSchema = createInsertSchema(funnelAnalytics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for funnel entities
+export type FunnelIntegration = typeof funnelIntegrations.$inferSelect;
+export type InsertFunnelIntegration = z.infer<typeof insertFunnelIntegrationSchema>;
+
+export type FunnelTemplate = typeof funnelTemplates.$inferSelect;
+export type InsertFunnelTemplate = z.infer<typeof insertFunnelTemplateSchema>;
+
+export type Funnel = typeof funnels.$inferSelect;
+export type InsertFunnel = z.infer<typeof insertFunnelSchema>;
+
+export type FunnelDeployment = typeof funnelDeployments.$inferSelect;
+export type InsertFunnelDeployment = z.infer<typeof insertFunnelDeploymentSchema>;
+
+export type FunnelAnalytics = typeof funnelAnalytics.$inferSelect;
+export type InsertFunnelAnalytics = z.infer<typeof insertFunnelAnalyticsSchema>;
