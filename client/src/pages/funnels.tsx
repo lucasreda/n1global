@@ -277,19 +277,14 @@ export default function Funnels() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <DashboardHeader />
+      <DashboardHeader 
+        title="Funis de Venda"
+        subtitle="Crie landing pages com IA e deploy automático no Vercel"
+      />
       
       <main className="container mx-auto px-6 py-8">
-        {/* Header Section */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-page-title">
-              Funis de Venda
-            </h1>
-            <p className="text-gray-400" data-testid="text-page-description">
-              Crie landing pages com IA e deploy automático no Vercel
-            </p>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end mb-8">
           
           <div className="flex gap-4">
             {!vercelIntegration?.connected ? (

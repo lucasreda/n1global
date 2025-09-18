@@ -30,11 +30,11 @@ setInterval(() => {
   const now = Date.now();
   const tenMinutesAgo = now - (10 * 60 * 1000);
   
-  for (const [state, data] of oauthStates.entries()) {
+  Array.from(oauthStates.entries()).forEach(([state, data]) => {
     if (data.createdAt < tenMinutesAgo) {
       oauthStates.delete(state);
     }
-  }
+  });
 }, 60000); // Clean every minute
 
 // Validation schemas

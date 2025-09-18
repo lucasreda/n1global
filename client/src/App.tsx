@@ -56,6 +56,9 @@ import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
 import Hub from "@/pages/hub";
 import HubControl from "@/pages/inside/hub-control";
 import NotFound from "@/pages/not-found";
+import DocsVercelIntegration from "@/pages/docs-vercel-integration";
+import EULA from "@/pages/eula";
+import PrivacyPolicy from "@/pages/privacy-policy";
 
 interface OnboardingStatus {
   onboardingCompleted: boolean;
@@ -360,6 +363,19 @@ function AppContent() {
   
   if (location === '/login') {
     return <Login />;
+  }
+
+  // Public Vercel integration pages (required for OAuth approval)
+  if (location === '/docs/integrations/vercel') {
+    return <DocsVercelIntegration />;
+  }
+
+  if (location === '/eula') {
+    return <EULA />;
+  }
+
+  if (location === '/privacy-policy') {
+    return <PrivacyPolicy />;
   }
   
   // Show landing page if not authenticated

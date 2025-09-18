@@ -59,9 +59,18 @@ Preferred communication style: Simple, everyday language.
 - **Bug Fixes**: Corrected webhook parsing for transcription_data.text field
 - **Safety**: 8-second timeout fallback to prevent permanent silence
 
-## Recent Changes (September 17, 2025)
+## Recent Changes (September 18, 2025)
 
-### Voice System Architecture Overhaul
+### Vercel OAuth Integration Public Pages
+- **NEW**: Created mandatory public pages for Vercel OAuth integration approval
+- Added `/docs/integrations/vercel` - Complete integration documentation with security details
+- Added `/eula` - Comprehensive End User License Agreement with usage rights and limitations 
+- Added `/privacy-policy` - Detailed privacy policy covering data collection, security, and user rights
+- All pages are publicly accessible (no authentication required) and fully responsive
+- Pages include professional branding, comprehensive legal coverage, and user-friendly explanations
+- Routes registered in public section of App.tsx routing system
+
+### Voice System Architecture Overhaul (September 17, 2025)
 - **MAJOR CHANGE**: Completely removed Telnyx transcription system due to Portuguese limitations
 - Implemented clean Portuguese gather-only architecture with explicit PT-BR configuration
 - Eliminated all transcription-related methods, variables, and state management
