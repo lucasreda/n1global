@@ -147,7 +147,7 @@ export default function Integrations() {
       id: "cartpanda",
       name: "CartPanda",
       status: getCartPandaStatus(),
-      description: "Integração com loja CartPanda para importar pedidos e atualizar fulfillment",
+      description: "Integração com a CartPanda para gestão de pedidos",
       icon: CartPandaIcon,
       color: "orange",
       hasPanel: true,
