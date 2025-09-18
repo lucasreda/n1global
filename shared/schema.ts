@@ -521,6 +521,13 @@ export const insertShopifyIntegrationSchema = createInsertSchema(shopifyIntegrat
   updatedAt: true,
 });
 
+// CartPanda integration schemas
+export const insertCartpandaIntegrationSchema = createInsertSchema(cartpandaIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // User operation access schemas
 export const insertUserOperationAccessSchema = createInsertSchema(userOperationAccess).omit({
   id: true,

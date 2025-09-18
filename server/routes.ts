@@ -22,6 +22,7 @@ import { FacebookAdsService } from "./facebook-ads-service";
 import { registerSupportRoutes } from "./support-routes";
 import { registerCustomerSupportRoutes } from "./customer-support-routes";
 import voiceRoutes, { setupVoiceWebSocket } from "./voice-routes";
+import { cartpandaRoutes } from "./cartpanda-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -6230,6 +6231,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register voice support routes
   app.use("/api/voice", voiceRoutes);
+
+  // Register CartPanda integration routes
+  app.use("/api/integrations", cartpandaRoutes);
 
   const httpServer = createServer(app);
   

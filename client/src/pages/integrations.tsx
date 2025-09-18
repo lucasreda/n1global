@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { MultiProviderPanel } from "@/components/integration/multi-provider-panel";
 import { ShopifyIntegration } from "@/components/integrations/shopify-integration";
-import { Settings, CheckCircle, AlertCircle, Store } from "lucide-react";
+import { CartPandaIntegration } from "@/components/integrations/cartpanda-integration";
+import { Settings, CheckCircle, AlertCircle, Store, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -20,45 +21,76 @@ const ShopifyIcon = ({ className, size }: { className?: string; size?: number })
   />
 );
 
+// Componente customizado para o ícone do CartPanda
+const CartPandaIcon = ({ className, size }: { className?: string; size?: number }) => (
+  <ShoppingCart className={`${className}`} size={size || 30} />
+);
+
 export default function Integrations() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const { selectedOperation } = useCurrentOperation();
   const [shopifyData, setShopifyData] = useState(null);
+  const [cartpandaData, setCartpandaData] = useState(null);
 
   console.log("🔍 Component render - selectedOperation:", selectedOperation);
 
-  // Fetch shopify integration when operation changes
+  // Fetch integrations when operation changes
   useEffect(() => {
-    const fetchShopifyIntegration = async () => {
+    const fetchIntegrations = async () => {
       if (!selectedOperation) {
         setShopifyData(null);
+        setCartpandaData(null);
         return;
       }
       
+      // Fetch Shopify integration
       console.log("🔄 Fetching Shopify integration for operation:", selectedOperation);
       try {
         const response = await authenticatedApiRequest("GET", `/api/integrations/shopify?operationId=${selectedOperation}`);
         if (response.status === 404) {
           console.log("📋 No Shopify integration found for", selectedOperation);
           setShopifyData(null);
-          return;
+        } else {
+          const data = await response.json();
+          console.log("📋 Shopify integration found for", selectedOperation, ":", data?.id);
+          setShopifyData(data);
         }
-        const data = await response.json();
-        console.log("📋 Shopify integration found for", selectedOperation, ":", data?.id);
-        setShopifyData(data);
       } catch (error) {
         console.error("❌ Error fetching Shopify integration:", error);
         setShopifyData(null);
       }
+
+      // Fetch CartPanda integration
+      console.log("🔄 Fetching CartPanda integration for operation:", selectedOperation);
+      try {
+        const response = await authenticatedApiRequest("GET", `/api/integrations/cartpanda?operationId=${selectedOperation}`);
+        if (response.status === 404) {
+          console.log("📋 No CartPanda integration found for", selectedOperation);
+          setCartpandaData(null);
+        } else {
+          const data = await response.json();
+          console.log("📋 CartPanda integration found for", selectedOperation, ":", data?.id);
+          setCartpandaData(data);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching CartPanda integration:", error);
+        setCartpandaData(null);
+      }
     };
 
-    fetchShopifyIntegration();
+    fetchIntegrations();
   }, [selectedOperation]);
 
   // Determinar status real da integração Shopify
   const getShopifyStatus = () => {
     if (!shopifyData) return "pending";
     return (shopifyData as any).status || "pending";
+  };
+
+  // Determinar status real da integração CartPanda
+  const getCartPandaStatus = () => {
+    if (!cartpandaData) return "pending";
+    return (cartpandaData as any).status || "pending";
   };
 
   const getStatusInfo = (status: string) => {
@@ -97,6 +129,15 @@ export default function Integrations() {
       description: "Integração com loja Shopify para importar pedidos e produtos",
       icon: ShopifyIcon,
       color: "green",
+      hasPanel: true,
+    },
+    {
+      id: "cartpanda",
+      name: "CartPanda",
+      status: getCartPandaStatus(),
+      description: "Integração com loja CartPanda para importar pedidos e atualizar fulfillment",
+      icon: CartPandaIcon,
+      color: "orange",
       hasPanel: true,
     },
   ];
@@ -151,6 +192,7 @@ export default function Integrations() {
                       </DialogTitle>
                     </DialogHeader>
                     {integration.id === "shopify" && <ShopifyIntegration />}
+                    {integration.id === "cartpanda" && <CartPandaIntegration />}
                   </DialogContent>
                 </Dialog>
               </div>
