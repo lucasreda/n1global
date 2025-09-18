@@ -138,7 +138,7 @@ export default function Integrations() {
       id: "shopify",
       name: "Shopify",
       status: getShopifyStatus(),
-      description: "Integração com loja Shopify para importar pedidos e produtos",
+      description: "Integração com a Shopify para gestão de pedidos",
       icon: ShopifyIcon,
       color: "green",
       hasPanel: true,
