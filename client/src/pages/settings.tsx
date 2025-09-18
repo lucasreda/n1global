@@ -1,7 +1,24 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { User, Bell, Shield, Database } from "lucide-react";
+import { User, Bell, Shield, Database, Briefcase } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 export default function Settings() {
+  const [operationType, setOperationType] = useState<string>("Cash on Delivery");
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const handleOperationTypeChange = (value: string) => {
+    setOperationType(value);
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
+    // TODO: Implement save logic
+    console.log('Saving operation type:', operationType);
+    setHasChanges(false);
+  };
+
   const settingSections = [
     {
       title: "Perfil do Usuário",
@@ -64,6 +81,59 @@ export default function Settings() {
             </div>
           </div>
         ))}
+      </div>
+      
+      {/* Card Negócio */}
+      <div 
+        className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+        style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+      >
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
+            <Briefcase className="text-green-400" size={20} />
+          </div>
+          <div>
+            <h3 className="text-white font-semibold">Negócio</h3>
+            <p className="text-gray-400 text-sm">Configure o tipo de operação do seu negócio</p>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+            <label className="text-gray-300 text-sm mb-3 block">Tipo de Operação</label>
+            <Select value={operationType} onValueChange={handleOperationTypeChange}>
+              <SelectTrigger 
+                className="bg-black/20 border-white/10 text-white hover:bg-black/30"
+                data-testid="select-operation-type"
+              >
+                <SelectValue placeholder="Selecione o tipo de operação" />
+              </SelectTrigger>
+              <SelectContent className="bg-black/90 border-white/10">
+                <SelectItem value="Cash on Delivery" data-testid="option-cash-on-delivery">
+                  Cash on Delivery
+                </SelectItem>
+                <SelectItem value="Pagamento no Cartão" data-testid="option-pagamento-cartao">
+                  Pagamento no Cartão
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Button 
+            onClick={handleSave}
+            disabled={!hasChanges}
+            className={`w-full transition-all duration-200 ${
+              hasChanges 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+            }`}
+            data-testid="button-save-operation-type"
+          >
+            Salvar Configuração
+          </Button>
+        </div>
       </div>
       
       <div 
