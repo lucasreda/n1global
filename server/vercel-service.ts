@@ -437,18 +437,19 @@ export class VercelService {
    * Generate OAuth URL for Vercel integration
    */
   getOAuthUrl(redirectUri: string, state?: string): string {
-    const params = new URLSearchParams({
-      client_id: process.env.VERCEL_CLIENT_ID!,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'user:email',
-    });
-
+    // For Vercel Integrations, use the integration flow instead of OAuth direct
+    const integrationSlug = 'n1funnelbuilder'; // Your Integration slug
+    const params = new URLSearchParams();
+    
+    // Add redirect URI and state for the integration flow
+    params.append('redirect_uri', redirectUri);
+    
     if (state) {
       params.append('state', state);
     }
 
-    return `https://vercel.com/oauth/authorize?${params.toString()}`;
+    // Use Integration flow URL instead of OAuth direct
+    return `https://vercel.com/integrations/${integrationSlug}/new?${params.toString()}`;
   }
 }
 
