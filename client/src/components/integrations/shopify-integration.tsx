@@ -209,7 +209,7 @@ export function ShopifyIntegration() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2" style={{ fontSize: '20px' }}>
             <Store className="w-5 h-5" />
             Integração Shopify
           </CardTitle>
@@ -305,7 +305,7 @@ export function ShopifyIntegration() {
       {(isConfiguring || !integration) && (
         <Card>
           <CardHeader>
-            <CardTitle>Configurar Integração</CardTitle>
+            <CardTitle style={{ fontSize: '20px' }}>Configurar Integração</CardTitle>
             <CardDescription>
               Configure as credenciais da sua loja Shopify
             </CardDescription>
@@ -381,7 +381,7 @@ export function ShopifyIntegration() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2" style={{ fontSize: '20px' }}>
             <Package className="w-5 h-5" />
             Como configurar
           </CardTitle>

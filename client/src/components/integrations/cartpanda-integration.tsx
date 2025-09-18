@@ -184,7 +184,7 @@ export function CartPandaIntegration() {
       {/* Status atual */}
       <Card className="bg-black/20 border-white/10">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
             <ShoppingCart className="text-orange-400" size={20} />
             Status da Integração
           </CardTitle>
@@ -222,7 +222,7 @@ export function CartPandaIntegration() {
       {/* Configuração */}
       <Card className="bg-black/20 border-white/10">
         <CardHeader>
-          <CardTitle className="text-white">
+          <CardTitle className="text-white" style={{ fontSize: '20px' }}>
             {integration ? "Atualizar" : "Configurar"} Integração CartPanda
           </CardTitle>
           <CardDescription className="text-gray-400">
@@ -303,7 +303,7 @@ export function CartPandaIntegration() {
       {integration && integration.status === "active" && (
         <Card className="bg-black/20 border-white/10">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
               <RefreshCw className="text-blue-400" size={20} />
               Sincronização de Dados
             </CardTitle>
