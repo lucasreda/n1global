@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import cartpandaIcon from "@assets/carticon_1758210690464.avif";
 
 interface CartPandaIntegration {
   id: string;
@@ -185,7 +186,14 @@ export function CartPandaIntegration() {
       <Card className="bg-black/20 border-white/10">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2" style={{ fontSize: '20px' }}>
-            <ShoppingCart className="text-orange-400" size={20} />
+            <img 
+              src={cartpandaIcon} 
+              alt="CartPanda" 
+              className="object-contain rounded-lg"
+              style={{ width: 20, height: 20 }}
+              loading="lazy"
+              decoding="async"
+            />
             Status da Integração
           </CardTitle>
         </CardHeader>
@@ -285,7 +293,7 @@ export function CartPandaIntegration() {
             <Button
               onClick={handleConfigure}
               disabled={configureMutation.isPending || !storeSlug.trim() || !bearerToken.trim()}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid="button-save-integration"
             >
               {configureMutation.isPending ? (
