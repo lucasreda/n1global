@@ -1588,11 +1588,97 @@ Exemplo: "Entendo sua frustração com o atraso na entrega. Vou resolver isso im
       // Skip gather_using_ai - use Whisper transcription only
       console.log(`🎧 Using Whisper transcription only - no gather_using_ai needed`);
       console.log(`✅ Speech collection ready: Whisper is already active for call ${callControlId}`);
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ HTTP API Error (${response.status}):`, errorText);
+        
+        // Log simplified error info instead of duplicating the entire config
+        console.error(`❌ Failed gather_using_ai for call ${callControlId} with greeting: "${greeting.substring(0, 50)}..."`);
+        
+        /* Old duplicate logging removed - config is already visible above
+        console.error(`❌ Request payload was:`, JSON.stringify({
+          greeting,
+          parameters: {
+            type: "object",
+            properties: {
+              message: {
+                type: "string",
+                description: "O que o cliente está falando ou perguntando"
+              },
+              intent: {
+                type: "string", 
+                description: "A intenção do cliente: produto, preço, dúvida, reclamação, etc."
+              }
+            },
+            required: ["message"]
+          },
+          voice: "Polly.Camila",
+          language: "pt-BR",
+          transcription: {
+            provider: "telnyx",
+            language: "pt-BR",
+            model: "latest_long"
+          },
+          speech: {
+            provider: "aws",
+            language: "pt-BR",
+            voice: "Polly.Camila"
+          },
+          hints: [
+            // Português brasileiro - cumprimentos
+            "oi", "olá", "alô", "bom dia", "boa tarde", "boa noite",
+            // Português brasileiro - palavras comuns
+            "sim", "não", "obrigado", "obrigada", "tchau", "até logo",
+            // Português brasileiro - nomes
+            "Lucas", "Lucca", "Sofia", "com o Lucas", "com Lucas", 
+            "aqui é o Lucas", "eu sou o Lucas", "meu nome é Lucas",
+            // Português brasileiro - frases comerciais
+            "quero falar com", "gostaria de", "preciso de", "produto", 
+            "preço", "valor", "entrega", "comprar", "dúvida", "problema"
+          ],
+          interruption: { enabled: true },
+          send_partial_results: false,
+          user_response_timeout: 30000,  // Increase timeout to 30 seconds
+          llm_model: "meta-llama/Meta-Llama-3.1-70B-Instruct",
+          llm_temperature: 0.7,
+          llm_max_tokens: 256,
+          message_history: messageHistory,
+          client_state: Buffer.from(JSON.stringify({
+            action: 'ai_voice_input',
+            operationId,
+            callType,
+            timestamp: Date.now()
+          })).toString('base64')
+        }, null, 2));
+        */
+        
+        // Parse error to understand what's wrong
+        try {
+          const errorObj = JSON.parse(errorText);
+          console.error(`❌ Telnyx API Error Details:`, errorObj);
+        } catch (e) {
+          console.error(`❌ Raw error text:`, errorText);
+        }
+        
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
       
     } catch (error) {
-      console.error(`❌ Error in speech gather:`, error);
+      console.error(`❌ Error starting AI speech collection:`, error);
       
-      // Fallback to prompt-based conversation if needed
+      // Check if error is due to call already ended
+      if (error.message && error.message.includes('Call has already ended')) {
+        console.log(`⚠️ Call ${callControlId} has already ended, skipping fallback`);
+        return;
+      }
+      
+      // Check if call is still active before attempting fallback
+      if (!this.activeCallIds.has(callControlId)) {
+        console.log(`⚠️ Call ${callControlId} is no longer active, skipping fallback`);
+        return;
+      }
+      
+      // Fallback to DTMF if AI speech fails and call is still active
       await this.startPromptBasedConversation(callControlId, operationId, callType);
     }
   }
