@@ -1,0 +1,1572 @@
+## Autenticação
+
+Todas as requisições exigem um Bearer Token via cabeçalho de Autorização, que é único para cada loja. Este token está disponível para o proprietário/administrador da loja em seu painel.
+
+Todas as requisições disponíveis em nossa API seguem o prefixo: `https://accounts.cartpanda.com/api/{store-slug}/`
+
+### Bearer Token
+
+No canto superior direito do painel da sua loja, clique no ícone de perfil e você poderá copiar o token no menu suspenso.
+
+### Store-slug
+
+O store slug é o nome exclusivo da sua loja fornecido pela Cartpanda. Por exemplo, se o domínio da sua loja for `example-test.mycartpanda.com`, então o subdomínio `example-test` é o seu store slug exclusivo e você deve usá-lo aqui ao fazer uma chamada de API.
+
+## Carrinho Abandonado
+
+### Listar Carrinhos Abandonados
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/abandoned
+- **Descrição:** Obtém uma lista de todos os carrinhos abandonados da loja após 30 minutos.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Parâmetros de Query:**
+  - `created_at_max` (string, opcional): Intervalo máximo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `created_at_min` (string, opcional): Intervalo mínimo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `since_id` (integer, opcional): Obtém registros após este ID.
+  - `updated_at_max` (string, opcional): Intervalo máximo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+  - `updated_at_min` (string, opcional): Intervalo mínimo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/abandoned \
+  --header 'Accept: application/json, application/xml' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Contagem de Carrinhos Abandonados
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/abandoned/count
+- **Descrição:** Obtém a contagem de todos os carrinhos abandonados da loja.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Parâmetros de Query:**
+  - `created_at_max` (string, opcional): Intervalo máximo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `created_at_min` (string, opcional): Intervalo mínimo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `since_id` (integer, opcional): Obtém registros após este ID.
+  - `updated_at_max` (string, opcional): Intervalo máximo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+  - `updated_at_min` (string, opcional): Intervalo mínimo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/abandoned/count \
+  --header 'Accept: application/json, application/xml' \
+  --header 'Authorization: Bearer 123'
+```
+
+```
+
+
+## Carrinho
+
+### Atualizar Carrinho
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/cart/{cart-token}
+- **Descrição:** Atualiza os itens de linha de um carrinho.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `cart-token` (string, obrigatório): Token do carrinho.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "line_items": [
+    { "variant_id": 300926, "quantity": 2 },
+    { "variant_id": 300852, "quantity": 3 }
+  ]
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/cart/{cart-token} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "line_items": [
+    {
+      "variant_id": 300926,
+      "quantity": 2
+    },
+    {
+      "variant_id": 300852,
+      "quantity": 3
+    }
+  ]
+}'
+```
+
+### Criar Carrinho
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/cart
+- **Descrição:** Cria um novo carrinho.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "line_items": [
+    { "variant_id": 300926, "quantity": 2 },
+    { "variant_id": 300852, "quantity": 3 }
+  ]
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/cart \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "line_items": [
+    {
+      "variant_id": 300926,
+      "quantity": 2
+    },
+    {
+      "variant_id": 300852,
+      "quantity": 3
+    }
+  ]
+}'
+```
+
+
+
+
+## Clientes
+
+### Obter Cliente por ID
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/customer/{customer-id}
+- **Descrição:** Obtém informações de um cliente específico pelo ID.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `customer-id` (string, obrigatório): ID único do cliente.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/customer/{customer-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Atualizar Cliente por ID
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/customer/{customer-id}
+- **Descrição:** Atualiza as informações de um cliente específico pelo ID.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `customer-id` (string, obrigatório): ID único do cliente.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@example.com",
+  "phone": "+5511987654321",
+  "cpf": "12345678900",
+  "tags": ["VIP", "Newsletter"]
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/customer/{customer-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@example.com",
+  "phone": "+5511987654321",
+  "cpf": "12345678900",
+  "tags": ["VIP", "Newsletter"]
+}'
+```
+
+### Listar Clientes
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/customer
+- **Descrição:** Recupera uma lista de todos os clientes da loja.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Parâmetros de Query:**
+  - `created_at_max` (string, opcional): Intervalo máximo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `created_at_min` (string, opcional): Intervalo mínimo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `email` (string, opcional): Filtra por e-mail do cliente.
+  - `first_name` (string, opcional): Filtra por primeiro nome do cliente.
+  - `last_name` (string, opcional): Filtra por último nome do cliente.
+  - `phone` (string, opcional): Filtra por telefone do cliente.
+  - `since_id` (integer, opcional): Obtém registros após este ID.
+  - `updated_at_max` (string, opcional): Intervalo máximo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+  - `updated_at_min` (string, opcional): Intervalo mínimo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/customer \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Criar Cliente
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/customer
+- **Descrição:** Cria um novo cliente.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "email": "jane.doe@example.com",
+  "phone": "+5511912345678",
+  "cpf": "09876543210",
+  "tags": ["New Customer"]
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/customer \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "email": "jane.doe@example.com",
+  "phone": "+5511912345678",
+  "cpf": "09876543210",
+  "tags": ["New Customer"]
+}'
+```
+
+
+
+
+## Descontos
+
+### Listar Descontos
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/discount
+- **Descrição:** Recupera a lista de descontos.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Parâmetros de Query:**
+  - `code` (string, opcional): Código de desconto para pesquisa.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/discount \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Criar Novo Desconto
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/discount
+- **Descrição:** Cria um novo desconto.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "code": "BUY_2_GET_w8",
+  "type": "free_shipping",
+  "category": "automatic",
+  "min_requirement": "none",
+  "min_total": "10",
+  "min_quantity": "5",
+  "coupon_start_date": "2021-02-18",
+  "coupon_start_time": "00:00:00",
+  "coupon_end_date": "2021-03-18",
+  "coupon_end_time": "23:59:59",
+  "max_number_of_coupons": "10",
+  "limit_to_one_per_customer": "1",
+  "applies_to": "entire_order",
+  "applies_to_specific_collection": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "applies_to_specific_product": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "buy_x_quantity": "2",
+  "buy_x_type": "specific_product",
+  "buy_from_products": [
+    "4512",
+    "8754"
+  ],
+  "buy_from_collections": [
+    "4512",
+    "8754"
+  ],
+  "get_y_quantity": "1",
+  "get_y_type": "specific_product",
+  "get_from_products": [
+    "47845",
+    "658236"
+  ],
+  "get_from_collections": [
+    "47845",
+    "658236"
+  ],
+  "xny_discount": "percentage",
+  "percentage_amount_discoun_to_nxny": "50",
+  "max_uses_per_order": "5"
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/discount \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "code": "BUY_2_GET_w8",
+  "type": "free_shipping",
+  "category": "automatic",
+  "min_requirement": "none",
+  "min_total": "10",
+  "min_quantity": "5",
+  "coupon_start_date": "2021-02-18",
+  "coupon_start_time": "00:00:00",
+  "coupon_end_date": "2021-03-18",
+  "coupon_end_time": "23:59:59",
+  "max_number_of_coupons": "10",
+  "limit_to_one_per_customer": "1",
+  "applies_to": "entire_order",
+  "applies_to_specific_collection": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "applies_to_specific_product": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "buy_x_quantity": "2",
+  "buy_x_type": "specific_product",
+  "buy_from_products": [
+    "4512",
+    "8754"
+  ],
+  "buy_from_collections": [
+    "4512",
+    "8754"
+  ],
+  "get_y_quantity": "1",
+  "get_y_type": "specific_product",
+  "get_from_products": [
+    "47845",
+    "658236"
+  ],
+  "get_from_collections": [
+    "47845",
+    "658236"
+  ],
+  "xny_discount": "percentage",
+  "percentage_amount_discoun_to_nxny": "50",
+  "max_uses_per_order": "5"
+}
+'
+```
+
+### Obter Detalhes do Desconto
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/discount/{discount-id}
+- **Descrição:** Obtém detalhes de um desconto específico.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `discount-id` (string, obrigatório): ID do desconto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/discount/{discount-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Atualizar Desconto
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/discount/{discount-id}
+- **Descrição:** Atualiza um código de desconto existente.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `discount-id` (string, obrigatório): ID do desconto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "code": "BUY_2_GET_w8",
+  "type": "free_shipping",
+  "category": "automatic",
+  "min_requirement": "none",
+  "min_total": "10",
+  "min_quantity": "5",
+  "coupon_start_date": "2021-02-18",
+  "coupon_start_time": "00:00:00",
+  "coupon_end_date": "2021-04-18",
+  "coupon_end_time": "23:59:59",
+  "max_number_of_coupons": "10",
+  "limit_to_one_per_customer": "1",
+  "applies_to": "entire_order",
+  "applies_to_specific_collection": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "applies_to_specific_product": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "buy_x_quantity": "2",
+  "buy_x_type": "specific_product",
+  "buy_from_products": [
+    "4512",
+    "8754"
+  ],
+  "buy_from_collections": [
+    "4512",
+    "8754"
+  ],
+  "get_y_quantity": "1",
+  "get_y_type": "specific_product",
+  "get_from_products": [
+    "47845",
+    "658236"
+  ],
+  "get_from_collections": [
+    "47845",
+    "658236"
+  ],
+  "xny_discount": "percentage",
+  "percentage_amount_discoun_to_nxny": "50",
+  "max_uses_per_order": "5",
+  "status": 1
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/discount/{discount-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "code": "BUY_2_GET_w8",
+  "type": "free_shipping",
+  "category": "automatic",
+  "min_requirement": "none",
+  "min_total": "10",
+  "min_quantity": "5",
+  "coupon_start_date": "2021-02-18",
+  "coupon_start_time": "00:00:00",
+  "coupon_end_date": "2021-04-18",
+  "coupon_end_time": "23:59:59",
+  "max_number_of_coupons": "10",
+  "limit_to_one_per_customer": "1",
+  "applies_to": "entire_order",
+  "applies_to_specific_collection": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "applies_to_specific_product": [
+    "34883",
+    "34884",
+    "34885"
+  ],
+  "buy_x_quantity": "2",
+  "buy_x_type": "specific_product",
+  "buy_from_products": [
+    "4512",
+    "8754"
+  ],
+  "buy_from_collections": [
+    "4512",
+    "8754"
+  ],
+  "get_y_quantity": "1",
+  "get_y_type": "specific_product",
+  "get_from_products": [
+    "47845",
+    "658236"
+  ],
+  "get_from_collections": [
+    "47845",
+    "658236"
+  ],
+  "xny_discount": "percentage",
+  "percentage_amount_discoun_to_nxny": "50",
+  "max_uses_per_order": "5",
+  "status": 1
+}
+'
+```
+
+### Deletar Código de Desconto
+
+- **Método:** DELETE
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/discount/{discount-id}
+- **Descrição:** Deleta um código de desconto existente.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `discount-id` (string, obrigatório): ID do desconto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request DELETE \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/discount/{discount-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+
+
+
+## Fulfillment
+
+### Criar Fulfillment
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/fulfillment
+- **Descrição:** Cria um novo fulfillment para um pedido.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "order_id": 12345,
+  "tracking_company": "Correios",
+  "tracking_number": "AB123456789BR",
+  "tracking_url": "https://www.correios.com.br/rastreamento?objeto=AB123456789BR",
+  "line_items": [
+    {
+      "variant_id": 300926,
+      "quantity": 1
+    }
+  ]
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/fulfillment \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "order_id": 12345,
+  "tracking_company": "Correios",
+  "tracking_number": "AB123456789BR",
+  "tracking_url": "https://www.correios.com.br/rastreamento?objeto=AB123456789BR",
+  "line_items": [
+    {
+      "variant_id": 300926,
+      "quantity": 1
+    }
+  ]
+}
+'
+```
+
+### Atualizar Fulfillment
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/fulfillment/{fulfillment-id}
+- **Descrição:** Atualiza um fulfillment existente.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `fulfillment-id` (string, obrigatório): ID do fulfillment.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "tracking_company": "Nova Transportadora",
+  "tracking_number": "CD987654321BR",
+  "tracking_url": "https://www.novatransportadora.com.br/rastreamento?objeto=CD987654321BR"
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/fulfillment/{fulfillment-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "tracking_company": "Nova Transportadora",
+  "tracking_number": "CD987654321BR",
+  "tracking_url": "https://www.novatransportadora.com.br/rastreamento?objeto=CD987654321BR"
+}
+'
+```
+
+### Listar Fulfillments
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/fulfillment
+- **Descrição:** Recupera a lista de fulfillments.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Parâmetros de Query:**
+  - `order_id` (integer, opcional): Filtra por ID do pedido.
+  - `tracking_company` (string, opcional): Filtra por nome da empresa de rastreamento.
+  - `tracking_number` (string, opcional): Filtra por número de rastreamento.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/fulfillment \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+
+
+
+## Pedidos
+
+### Pedido Individual
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/order/{order-id}
+- **Descrição:** Obtém informações de um pedido específico, incluindo itens de linha, endereço de entrega e informações de pagamento.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `order-id` (string, obrigatório): ID único do pedido.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/order/{order-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Listar Pedidos
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/order
+- **Descrição:** Recupera a lista de pedidos.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Parâmetros de Query:**
+  - `created_at_max` (string, opcional): Intervalo máximo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `created_at_min` (string, opcional): Intervalo mínimo de criação (formato: AAAA-MM-DD HH:MM:SS).
+  - `email` (string, opcional): Filtra por e-mail do cliente.
+  - `financial_status` (string, opcional): Filtra por status financeiro (e.g., 'pending', 'paid', 'refunded').
+  - `fulfillment_status` (string, opcional): Filtra por status de fulfillment (e.g., 'fulfilled', 'unfulfilled').
+  - `name` (string, opcional): Filtra por nome do pedido (e.g., '#1001').
+  - `phone` (string, opcional): Filtra por telefone do cliente.
+  - `since_id` (integer, opcional): Obtém registros após este ID.
+  - `status` (string, opcional): Filtra por status do pedido (e.g., 'open', 'closed', 'cancelled').
+  - `updated_at_max` (string, opcional): Intervalo máximo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+  - `updated_at_min` (string, opcional): Intervalo mínimo de atualização (formato: AAAA-MM-DD HH:MM:SS).
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/order \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Criar Pedido
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/order
+- **Descrição:** Cria um novo pedido.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "cart_token": "xxxxxxx",
+  "currency": "R$",
+  "discount_code": "disc",
+  "email": "test@example.com",
+  "phone": "+51416385",
+  "presentment_currency": "R$",
+  "subtotal_amount": 1000,
+  "card_token": "visa",
+  "customer_token": "qetgdgsdfg",
+  "order_discount": 500,
+  "products_total_amount": 1000,
+  "total_amount": 500,
+  "payment_status": "paid",
+  "line_items": [
+    {
+      "variant_id": 2007748,
+      "quantity": 2
+    },
+    {
+      "variant_id": 2799311,
+      "quantity": 3
+    }
+  ],
+  "shipping_address": {
+    "address1": "Address 1",
+    "address2": "Address 2",
+    "address": "Address",
+    "house_no": "135",
+    "compartment": "comp",
+    "neighborhood": "neighborhood",
+    "city": "city",
+    "company": "company",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "phone": "+5118651268",
+    "province": "Rio de Janeiro",
+    "zip": 140101010,
+    "name": "Name",
+    "province_code": "RJ"
+  },
+  "billing_address": {
+    "address1": "Address 1",
+    "address2": "Address 2",
+    "address": "Address",
+    "house_no": "135",
+    "compartment": "comp",
+    "neighborhood": "neighborhood",
+    "city": "city",
+    "company": "company",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "phone": "+5118651268",
+    "province": "Rio de Janeiro",
+    "zip": 140101010,
+    "name": "Name",
+    "province_code": "RJ"
+  },
+  "shipping": {
+    "price": 10,
+    "source": "source",
+    "title": "title"
+  },
+  "payment": {
+    "payment_gateway_id": "appmax",
+    "amount": 10,
+    "gateway": "appmax",
+    "type": "cc",
+    "boleto_link": "boleto_link",
+    "boleto_code": "boleto_code",
+    "boleto_limit_date": "2020-12-12"
+  },
+  "discount": {
+    "value": 10,
+    "amount": 10,
+    "value_type": "percentage",
+    "note": "note"
+  },
+  "customer": {
+    "id": 10,
+    "email": "test@example.com",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "cpf": 12345678900,
+    "tags": [
+      "tag1",
+      "tag2"
+    ]
+  }
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/order \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "cart_token": "xxxxxxx",
+  "currency": "R$",
+  "discount_code": "disc",
+  "email": "test@example.com",
+  "phone": "+51416385",
+  "presentment_currency": "R$",
+  "subtotal_amount": 1000,
+  "card_token": "visa",
+  "customer_token": "qetgdgsdfg",
+  "order_discount": 500,
+  "products_total_amount": 1000,
+  "total_amount": 500,
+  "payment_status": "paid",
+  "line_items": [
+    {
+      "variant_id": 2007748,
+      "quantity": 2
+    },
+    {
+      "variant_id": 2799311,
+      "quantity": 3
+    }
+  ],
+  "shipping_address": {
+    "address1": "Address 1",
+    "address2": "Address 2",
+    "address": "Address",
+    "house_no": "135",
+    "compartment": "comp",
+    "neighborhood": "neighborhood",
+    "city": "city",
+    "company": "company",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "phone": "+5118651268",
+    "province": "Rio de Janeiro",
+    "zip": 140101010,
+    "name": "Name",
+    "province_code": "RJ"
+  },
+  "billing_address": {
+    "address1": "Address 1",
+    "address2": "Address 2",
+    "address": "Address",
+    "house_no": "135",
+    "compartment": "comp",
+    "neighborhood": "neighborhood",
+    "city": "city",
+    "company": "company",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "phone": "+5118651268",
+    "province": "Rio de Janeiro",
+    "zip": 140101010,
+    "name": "Name",
+    "province_code": "RJ"
+  },
+  "shipping": {
+    "price": 10,
+    "source": "source",
+    "title": "title"
+  },
+  "payment": {
+    "payment_gateway_id": "appmax",
+    "amount": 10,
+    "gateway": "appmax",
+    "type": "cc",
+    "boleto_link": "boleto_link",
+    "boleto_code": "boleto_code",
+    "boleto_limit_date": "2020-12-12"
+  },
+  "discount": {
+    "value": 10,
+    "amount": 10,
+    "value_type": "percentage",
+    "note": "note"
+  },
+  "customer": {
+    "id": 10,
+    "email": "test@example.com",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "cpf": 12345678900,
+    "tags": [
+      "tag1",
+      "tag2"
+    ]
+  }
+}
+'
+```
+
+### Adicionar Comentário na Linha do Tempo do Pedido
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/order/{order-id}/timeline
+- **Descrição:** Adiciona um comentário à linha do tempo de um pedido.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `order-id` (string, obrigatório): ID único do pedido.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "message": "Comentário adicionado pelo cliente."
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/order/{order-id}/timeline \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "message": "Comentário adicionado pelo cliente."
+}
+'
+```
+
+### Atualizar Pedido
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/order/{order-id}
+- **Descrição:** Atualiza um pedido já criado.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `order-id` (string, obrigatório): ID do pedido.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "cart_token": "xxxxxxx",
+  "currency": "R$",
+  "discount_code": "disc",
+  "email": "test@example.com",
+  "phone": "+51416385",
+  "presentment_currency": "R$",
+  "subtotal_amount": 1000,
+  "card_token": "visa",
+  "customer_token": "qetgdgsdfg",
+  "order_discount": 500,
+  "products_total_amount": 1000,
+  "total_amount": 500,
+  "payment_status": "paid",
+  "line_items": [
+    {
+      "variant_id": 2007748,
+      "quantity": 2
+    },
+    {
+      "variant_id": 2799311,
+      "quantity": 3
+    }
+  ],
+  "shipping_address": {
+    "address1": "Address 1",
+    "address2": "Address 2",
+    "address": "Address",
+    "house_no": "135",
+    "compartment": "comp",
+    "neighborhood": "neighborhood",
+    "city": "city",
+    "company": "company",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "phone": "+5118651268",
+    "province": "Rio de Janeiro",
+    "zip": 140101010,
+    "name": "Name",
+    "province_code": "RJ"
+  },
+  "billing_address": {
+    "address1": "Address 1",
+    "address2": "Address 2",
+    "address": "Address",
+    "house_no": "135",
+    "compartment": "comp",
+    "neighborhood": "neighborhood",
+    "city": "city",
+    "company": "company",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "phone": "+5118651268",
+    "province": "Rio de Janeiro",
+    "zip": 140101010,
+    "name": "Name",
+    "province_code": "RJ"
+  },
+  "shipping": {
+    "price": 10,
+    "source": "source",
+    "title": "title"
+  },
+  "payment": {
+    "payment_gateway_id": "appmax",
+    "amount": 10,
+    "gateway": "appmax",
+    "type": "cc",
+    "boleto_link": "boleto_link",
+    "boleto_code": "boleto_code",
+    "boleto_limit_date": "2020-12-12"
+  },
+  "discount": {
+    "value": 10,
+    "amount": 10,
+    "value_type": "percentage",
+    "note": "note"
+  },
+  "customer": {
+    "id": 10,
+    "email": "test@example.com",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "cpf": 12345678900,
+    "tags": [
+      "tag1",
+      "tag2"
+    ]
+  }
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/order/{order-id} \
+  --header \
+    'Accept: application/json' \
+  --header \
+    'Authorization: Bearer 123' \
+  --header \
+    'Content-Type: application/json' \
+  --data \
+    '{
+      "cart_token": "xxxxxxx",
+      "currency": "R$",
+      "discount_code": "disc",
+      "email": "test@example.com",
+      "phone": "+51416385",
+      "presentment_currency": "R$",
+      "subtotal_amount": 1000,
+      "card_token": "visa",
+      "customer_token": "qetgdgsdfg",
+      "order_discount": 500,
+      "products_total_amount": 1000,
+      "total_amount": 500,
+      "payment_status": "paid",
+      "line_items": [
+        {
+          "variant_id": 2007748,
+          "quantity": 2
+        },
+        {
+          "variant_id": 2799311,
+          "quantity": 3
+        }
+      ],
+      "shipping_address": {
+        "address1": "Address 1",
+        "address2": "Address 2",
+        "address": "Address",
+        "house_no": "135",
+        "compartment": "comp",
+        "neighborhood": "neighborhood",
+        "city": "city",
+        "company": "company",
+        "first_name": "First Name",
+        "last_name": "Last Name",
+        "phone": "+5118651268",
+        "province": "Rio de Janeiro",
+        "zip": 140101010,
+        "name": "Name",
+        "province_code": "RJ"
+      },
+      "billing_address": {
+        "address1": "Address 1",
+        "address2": "Address 2",
+        "address": "Address",
+        "house_no": "135",
+        "compartment": "comp",
+        "neighborhood": "neighborhood",
+        "city": "city",
+        "company": "company",
+        "first_name": "First Name",
+        "last_name": "Last Name",
+        "phone": "+5118651268",
+        "province": "Rio de Janeiro",
+        "zip": 140101010,
+        "name": "Name",
+        "province_code": "RJ"
+      },
+      "shipping": {
+        "price": 10,
+        "source": "source",
+        "title": "title"
+      },
+      "payment": {
+        "payment_gateway_id": "appmax",
+        "amount": 10,
+        "gateway": "appmax",
+        "type": "cc",
+        "boleto_link": "boleto_link",
+        "boleto_code": "boleto_code",
+        "boleto_limit_date": "2020-12-12"
+      },
+      "discount": {
+        "value": 10,
+        "amount": 10,
+        "value_type": "percentage",
+        "note": "note"
+      },
+      "customer": {
+        "id": 10,
+        "email": "test@example.com",
+        "first_name": "First Name",
+        "last_name": "Last Name",
+        "cpf": 12345678900,
+        "tags": [
+          "tag1",
+          "tag2"
+        ]
+      }
+    }
+    '
+```
+
+
+
+
+## Produtos
+
+### Listar Produtos
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products
+- **Descrição:** Recupera a lista de produtos com variantes e outras informações.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Parâmetros de Query:**
+  - `created_at_max` (string): Intervalo máximo de quando os dados foram criados (Ex: 2014-04-25 16:15:47)
+  - `created_at_min` (string): Intervalo mínimo de quando os dados foram criados (Ex: 2014-04-25 16:15:47)
+  - `title` (string): Busca por título do produto (Ex: T-shirt)
+  - `updated_at_max` (string): Intervalo máximo de quando os dados foram atualizados (Ex: 2014-04-25 16:15:47)
+  - `updated_at_min` (string): Intervalo mínimo de quando os dados foram atualizados (Ex: 2014-04-25 16:15:47)
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Criar Produto
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products
+- **Descrição:** Cria um novo produto.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "title": "string",
+  "description": "string",
+  "price": 0,
+  "compare_at_price": 0,
+  "cost_per_item": 0,
+  "sku": "string",
+  "barcode": "string",
+  "grams": 0,
+  "stock": 0,
+  "requires_shipping": true,
+  "taxable": true,
+  "image_url": "string",
+  "status": "active",
+  "variants": [
+    {
+      "title": "string",
+      "price": 0,
+      "compare_at_price": 0,
+      "cost_per_item": 0,
+      "sku": "string",
+      "barcode": "string",
+      "grams": 0,
+      "stock": 0,
+      "requires_shipping": true,
+      "taxable": true,
+      "image_url": "string"
+    }
+  ]
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{...}'
+```
+
+### Produto Individual
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}
+- **Descrição:** Obtém informações do produto, incluindo variantes e imagens de um pedido específico.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Atualizar Produto
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}
+- **Descrição:** Atualiza um produto existente.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "id": 78787,
+  "title": "Burton Custom Freestyle 151",
+  "description": "<strong>Good snowboard!</strong>",
+  "vendor": "Burton",
+  "product_type": "Snowboard",
+  "seo_title": "Your SEO title New",
+  "seo_description": "Your SEO description New",
+  "quantity": 10,
+  "price": 1000,
+  "compare_at_price": 1500,
+  "sku": "YOUR_SKU_NEW",
+  "taxable": 0,
+  "barcode": "YOUR_BARCODE",
+  "weight": 1,
+  "weight_unit": "kg",
+  "requires_shipping": 1,
+  "inventory_policy": 1,
+  "active": 1,
+  "active_for_bots": 1,
+  "length": 100,
+  "width": 100,
+  "height": 100,
+  "dimension_unit": "cm",
+  "prevent_out_of_stock_selling": 1,
+  "tags": ["Barnes & Noble", "Big Air"],
+  "collections": [3958],
+  "images": [
+    {
+      "id": 338584
+    },
+    {
+      "id": 338584,
+      "position": 1
+    },
+    {
+      "attachment": "data:image/jpeg;base64,..."
+    }
+  ]
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{...}'
+```
+
+### Adicionar Variante para Produto Específico
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/variants
+- **Descrição:** Adiciona uma variante para um produto específico pelo ID do produto.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "price": 10,
+  "compare_at_price": 12,
+  "sku": "123",
+  "barcode": "123",
+  "inventory_policy": 1,
+  "quantity": 10,
+  "length": 100,
+  "width": 100,
+  "height": 100,
+  "dimension_unit": "cm",
+  "weight": 1,
+  "weight_unit": "kg",
+  "prevent_out_of_stock_selling": 1,
+  "optionOneValue": "12",
+  "optionTwoValue": "BLUE",
+  "optionThreeValue": "SOMETHING",
+  "img_id": 338741,
+  "image": {
+    "attachment": "data:image/jpeg;base64,...",
+    "src": "https://www.example.com/your-image.png"
+  }
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/variants \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{...}'
+```
+
+### Atualizar Variante para Produto Específico
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/variants/{variant-id}
+- **Descrição:** Atualiza uma variante para um produto específico pelo ID do produto e ID da variante.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+  - `variant-id` (string, obrigatório): ID único da variante.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "id": 78787,
+  "price": 10,
+  "compare_at_price": 12,
+  "sku": "123",
+  "barcode": "123",
+  "inventory_policy": 1,
+  "quantity": 10,
+  "length": 100,
+  "width": 100,
+  "height": 100,
+  "dimension_unit": "cm",
+  "weight": 1,
+  "weight_unit": "kg",
+  "prevent_out_of_stock_selling": 1,
+  "optionOneValue": "12",
+  "optionTwoValue": "BLUE",
+  "optionThreeValue": "SOMETHING",
+  "img_id": 338741,
+  "image": {
+    "attachment": "data:image/jpeg;base64,...",
+    "src": "https://www.example.com/your-image.png"
+  }
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/variants/{variant-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{...}'
+```
+
+### Deletar Variante de Produto Específico
+
+- **Método:** DELETE
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/variants/{variant-id}
+- **Descrição:** Deleta uma variante de um produto específico.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+  - `variant-id` (string, obrigatório): ID único da variante.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request DELETE \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/variants/{variant-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Obter Lista de Imagens do Produto
+
+- **Método:** GET
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images
+- **Descrição:** Obtém a lista de imagens de um produto específico.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request GET \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+### Adicionar Imagem ao Produto
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images
+- **Descrição:** Adiciona uma nova imagem a um produto.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "attachment": "data:image/jpeg;base64,..."
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{"attachment": "data:image/jpeg;base64,..."}'
+```
+
+### Atualizar Imagem do Produto
+
+- **Método:** PUT
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images/{image-id}
+- **Descrição:** Atualiza uma imagem de produto existente.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+  - `image-id` (string, obrigatório): ID único da imagem.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "position": 2
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request PUT \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images/{image-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{"position": 2}'
+```
+
+### Deletar Imagem do Produto
+
+- **Método:** DELETE
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images/{image-id}
+- **Descrição:** Deleta uma imagem de um produto.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `product-id` (string, obrigatório): ID único do produto.
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+  - `image-id` (string, obrigatório): ID único da imagem.
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request DELETE \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/products/{product-id}/images/{image-id} \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123'
+```
+
+
+
+
+## Webhooks
+
+### Criar Webhooks
+
+- **Método:** POST
+- **URL:** https://accounts.cartpanda.com/api/{shop-slug}/webhook
+- **Descrição:** Cria um novo webhook.
+- **Autenticação:** Bearer Token (Authorization: Bearer 123)
+- **Parâmetros de Path:**
+  - `shop-slug` (string, obrigatório): O slug único da sua loja.
+- **Corpo da Requisição (Exemplo):**
+```json
+{
+  "topic": "order.paid",
+  "address": "https://example.com/webhook-receiver"
+}
+```
+- **Exemplo de Requisição (cURL):**
+```bash
+curl --request POST \
+  --url https://accounts.cartpanda.com/api/{shop-slug}/webhook \
+  --header 'Accept: application/json' \
+  --header 'Authorization: Bearer 123' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "topic": "order.paid",
+  "address": "https://example.com/webhook-receiver"
+}'
+```
+
+### Webhook: order.paid
+
+- **Evento:** `order.paid`
+- **Descrição:** Resposta do webhook para pedidos pagos.
+- **Estrutura do Payload (Exemplo):**
+```json
+{
+  "event": "order.paid",
+  "order": {
+    "id": 10993186,
+    "name": "#2800",
+    "email": "teste@cartpanda.com",
+    "phone": "+5516999999999",
+    "shop": {
+      "id": 9,
+      "name": "Teste Cartpanda",
+      "slug": "testecartx"
+    },
+    "address": {
+      "id": 15717055,
+      "zip": "14403-099",
+      "city": "Franca",
+      "name": "Cartpanda Teste",
+      "province": "São Paulo"
+    },
+    "payment": {
+      "id": 8027689,
+      "type": "boleto",
+      "amount": 7.5,
+      "status_id": 3,
+      "boleto_code": "23793.38029 61005.206992 44006.333304 4 90510000000750",
+      "boleto_link": "https://www.mercadopago.com.br/payments/24053848113/ticket?caller_id=732880463&payment_method_id=bolbradesco&payment_id=24053848113&payment_method_reference_id=10052069944&hash=b8e3a53a-1a51-44b8-95e2-9252fe4ed1c6",
+      "boleto_limit_date": "2022-07-20"
+    },
+    "customer": {
+      "id": 59072
+    }
+  }
+}
+```
+
+

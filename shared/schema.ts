@@ -302,6 +302,30 @@ export const shopifyIntegrations = pgTable("shopify_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// CartPanda integrations table
+export const cartpandaIntegrations = pgTable("cartpanda_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  storeSlug: text("store_slug").notNull(), // CartPanda store slug (e.g., "example-test")
+  bearerToken: text("bearer_token").notNull(), // CartPanda API Bearer Token
+  
+  status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  syncErrors: text("sync_errors"), // Error messages from last sync
+  
+  // Store metadata
+  metadata: jsonb("metadata").$type<{
+    storeName?: string;
+    storeUrl?: string;
+    currency?: string;
+    timezone?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // User operation access - defines which operations a user can access
 export const userOperationAccess = pgTable("user_operation_access", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
