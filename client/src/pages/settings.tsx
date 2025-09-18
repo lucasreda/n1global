@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useOperationStore } from "@/store/operations";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,10 +14,10 @@ export default function Settings() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  const { selectedOperation } = useOperationStore();
+  const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
 
-  // Fetch current operation to get operationType
+  // Fetch full operations data to get operationType
   const { data: operations } = useQuery({
     queryKey: ['/api/operations'],
     enabled: !!selectedOperation,
