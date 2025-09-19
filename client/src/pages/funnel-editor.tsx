@@ -69,7 +69,7 @@ export default function FunnelEditor() {
   const { data: funnel, isLoading, error } = useQuery({
     queryKey: ['/api/funnels', funnelId],
     queryFn: async () => {
-      const response = await authenticatedApiRequest(`/api/funnels/${funnelId}?operationId=${selectedOperation}`);
+      const response = await authenticatedApiRequest("GET", `/api/funnels/${funnelId}?operationId=${selectedOperation}`);
       if (!response.ok) {
         throw new Error('Falha ao carregar dados do funil');
       }
@@ -82,13 +82,9 @@ export default function FunnelEditor() {
   // Update funnel mutation
   const updateFunnelMutation = useMutation({
     mutationFn: async (updates: Partial<FunnelEditorData>) => {
-      const response = await authenticatedApiRequest(`/api/funnels/${funnelId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...updates, 
-          operationId: selectedOperation 
-        }),
+      const response = await authenticatedApiRequest("PUT", `/api/funnels/${funnelId}`, {
+        ...updates, 
+        operationId: selectedOperation 
       });
       
       if (!response.ok) {
