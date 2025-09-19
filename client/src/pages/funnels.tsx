@@ -214,17 +214,42 @@ export default function Funnels() {
   };
 
   // Navigate modal steps
-  const handleNextStep = () => {
+  const handleNextStep = (e?: React.MouseEvent) => {
+    // Prevent any form submission
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     setModalStep(prev => Math.min(prev + 1, 3));
   };
 
-  const handlePrevStep = () => {
+  const handlePrevStep = (e?: React.MouseEvent) => {
+    // Prevent any form submission
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     setModalStep(prev => Math.max(prev - 1, 1));
   };
 
   // Create new funnel
   const handleCreateFunnel = async (data: CreateFunnelData) => {
+    // Only allow creation in step 3
+    if (modalStep !== 3) {
+      console.warn('Tentativa de criar funil fora da etapa 3, ignorando');
+      return;
+    }
+    
+    // Validate required data
+    if (!selectedOperation) {
+      toast({
+        title: "Erro",
+        description: "Nenhuma operação selecionada. Por favor, selecione uma operação.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
+      console.log('🚀 Criando funil:', { data, operationId: selectedOperation });
       const response = await authenticatedApiRequest('POST', '/api/funnels', {
         ...data,
         operationId: selectedOperation,
@@ -581,7 +606,10 @@ export default function Funnels() {
                           <Button 
                             type="button" 
                             variant="outline" 
-                            onClick={handlePrevStep}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handlePrevStep(e);
+                            }}
                             className="border-white/20 text-muted-foreground hover:text-foreground hover:bg-white/5"
                             data-testid="button-prev-step"
                           >
@@ -604,7 +632,11 @@ export default function Funnels() {
                         {modalStep < 3 ? (
                           <Button 
                             type="button"
-                            onClick={handleNextStep}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleNextStep(e);
+                            }}
                             className="gradient-blue text-white"
                             data-testid="button-next-step"
                           >
@@ -614,7 +646,8 @@ export default function Funnels() {
                         ) : (
                           <Button 
                             type="submit" 
-                            className="gradient-blue text-white"
+                            disabled={!selectedOperation}
+                            className="gradient-blue text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             data-testid="button-submit-funnel"
                           >
                             <Sparkles className="w-4 h-4 mr-2" />
