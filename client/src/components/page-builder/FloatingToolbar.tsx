@@ -94,7 +94,7 @@ export function FloatingToolbar({
             onClick={() => onToggleFormat('bold')}
             data-testid="button-format-bold"
           >
-            <Bold className="w-4 h-4" />
+            <Bold className="w-4 h-4 text-gray-700" />
           </Button>
           <Button
             variant="ghost"
@@ -103,7 +103,7 @@ export function FloatingToolbar({
             onClick={() => onToggleFormat('italic')}
             data-testid="button-format-italic"
           >
-            <Italic className="w-4 h-4" />
+            <Italic className="w-4 h-4 text-gray-700" />
           </Button>
           <Button
             variant="ghost"
@@ -112,7 +112,7 @@ export function FloatingToolbar({
             onClick={() => onToggleFormat('underline')}
             data-testid="button-format-underline"
           >
-            <Underline className="w-4 h-4" />
+            <Underline className="w-4 h-4 text-gray-700" />
           </Button>
           <div className="w-px h-6 bg-gray-200 mx-1" />
         </>
@@ -128,7 +128,7 @@ export function FloatingToolbar({
             onClick={() => onAlignText('left')}
             data-testid="button-align-left"
           >
-            <AlignLeft className="w-4 h-4" />
+            <AlignLeft className="w-4 h-4 text-gray-700" />
           </Button>
           <Button
             variant="ghost"
@@ -137,7 +137,7 @@ export function FloatingToolbar({
             onClick={() => onAlignText('center')}
             data-testid="button-align-center"
           >
-            <AlignCenter className="w-4 h-4" />
+            <AlignCenter className="w-4 h-4 text-gray-700" />
           </Button>
           <Button
             variant="ghost"
@@ -146,7 +146,7 @@ export function FloatingToolbar({
             onClick={() => onAlignText('right')}
             data-testid="button-align-right"
           >
-            <AlignRight className="w-4 h-4" />
+            <AlignRight className="w-4 h-4 text-gray-700" />
           </Button>
           <div className="w-px h-6 bg-gray-200 mx-1" />
         </>
@@ -161,7 +161,7 @@ export function FloatingToolbar({
         title="Tamanho da fonte"
         data-testid="button-font-size"
       >
-        <Type className="w-4 h-4" />
+        <Type className="w-4 h-4 text-gray-700" />
       </Button>
 
       {/* Color Tool */}
@@ -173,7 +173,7 @@ export function FloatingToolbar({
         title="Cor"
         data-testid="button-color"
       >
-        <Palette className="w-4 h-4" />
+        <Palette className="w-4 h-4 text-gray-700" />
       </Button>
 
       {/* Link Tool (for text/button elements) */}
@@ -194,7 +194,7 @@ export function FloatingToolbar({
           title="Adicionar link"
           data-testid="button-link"
         >
-          <Link className="w-4 h-4" />
+          <Link className="w-4 h-4 text-gray-700" />
         </Button>
       )}
 
@@ -209,7 +209,7 @@ export function FloatingToolbar({
         title="Mover para cima"
         data-testid="button-move-up"
       >
-        <ArrowUp className="w-4 h-4" />
+        <ArrowUp className="w-4 h-4 text-gray-700" />
       </Button>
       
       <Button
@@ -220,7 +220,7 @@ export function FloatingToolbar({
         title="Mover para baixo"
         data-testid="button-move-down"
       >
-        <ArrowDown className="w-4 h-4" />
+        <ArrowDown className="w-4 h-4 text-gray-700" />
       </Button>
 
       <Button
@@ -231,7 +231,7 @@ export function FloatingToolbar({
         title="Duplicar elemento"
         data-testid="button-duplicate"
       >
-        <Copy className="w-4 h-4" />
+        <Copy className="w-4 h-4 text-gray-700" />
       </Button>
 
       <Button
@@ -255,7 +255,7 @@ export function FloatingToolbar({
         title="Configurações avançadas"
         data-testid="button-settings"
       >
-        <Settings className="w-4 h-4" />
+        <Settings className="w-4 h-4 text-gray-700" />
       </Button>
     </div>,
     document.body
