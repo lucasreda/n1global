@@ -3414,17 +3414,63 @@ export type BlockElement = {
   type: 'heading' | 'text' | 'button' | 'image' | 'spacer' | 'divider' | 'video' | 'form' | 'embed';
   props: Record<string, any>;
   styles: {
-    padding?: string;
-    margin?: string;
-    backgroundColor?: string;
-    textAlign?: 'left' | 'center' | 'right';
+    // Typography
     fontSize?: string;
+    lineHeight?: string;
+    letterSpacing?: string;
     fontWeight?: string;
+    fontStyle?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
     color?: string;
+    
+    // Spacing - Individual sides for precise control
+    paddingTop?: string;
+    paddingRight?: string;
+    paddingBottom?: string;
+    paddingLeft?: string;
+    marginTop?: string;
+    marginRight?: string;
+    marginBottom?: string;
+    marginLeft?: string;
+    
+    // Background
+    backgroundColor?: string;
+    backgroundImage?: string;
+    backgroundSize?: string;
+    backgroundPosition?: string;
+    
+    // Borders - Individual sides and corners
+    borderStyle?: 'none' | 'solid' | 'dashed' | 'dotted';
+    borderColor?: string;
+    borderWidth?: string;
+    borderTopWidth?: string;
+    borderRightWidth?: string;
+    borderBottomWidth?: string;
+    borderLeftWidth?: string;
+    borderTopColor?: string;
+    borderRightColor?: string;
+    borderBottomColor?: string;
+    borderLeftColor?: string;
     borderRadius?: string;
-    border?: string;
+    borderTopLeftRadius?: string;
+    borderTopRightRadius?: string;
+    borderBottomRightRadius?: string;
+    borderBottomLeftRadius?: string;
+    
+    // Size & Layout
     width?: string;
     height?: string;
+    minWidth?: string;
+    maxWidth?: string;
+    minHeight?: string;
+    maxHeight?: string;
+    
+    // Legacy support (will be deprecated)
+    padding?: string;
+    margin?: string;
+    border?: string;
+    
     [key: string]: any;
   };
   content?: {
@@ -3470,12 +3516,53 @@ export type BlockSection = {
   name: string;
   rows: BlockRow[];
   styles: {
-    padding?: string;
-    margin?: string;
+    // Spacing - Individual sides for precise control
+    paddingTop?: string;
+    paddingRight?: string;
+    paddingBottom?: string;
+    paddingLeft?: string;
+    marginTop?: string;
+    marginRight?: string;
+    marginBottom?: string;
+    marginLeft?: string;
+    
+    // Background
     backgroundColor?: string;
     backgroundImage?: string;
-    minHeight?: string;
+    backgroundSize?: string;
+    backgroundPosition?: string;
+    
+    // Borders - Individual sides and corners
+    borderStyle?: 'none' | 'solid' | 'dashed' | 'dotted';
+    borderColor?: string;
+    borderWidth?: string;
+    borderTopWidth?: string;
+    borderRightWidth?: string;
+    borderBottomWidth?: string;
+    borderLeftWidth?: string;
+    borderTopColor?: string;
+    borderRightColor?: string;
+    borderBottomColor?: string;
+    borderLeftColor?: string;
+    borderRadius?: string;
+    borderTopLeftRadius?: string;
+    borderTopRightRadius?: string;
+    borderBottomRightRadius?: string;
+    borderBottomLeftRadius?: string;
+    
+    // Size & Layout
+    width?: string;
+    height?: string;
+    minWidth?: string;
     maxWidth?: string;
+    minHeight?: string;
+    maxHeight?: string;
+    
+    // Legacy support (will be deprecated)
+    padding?: string;
+    margin?: string;
+    border?: string;
+    
     [key: string]: any;
   };
   settings: {
