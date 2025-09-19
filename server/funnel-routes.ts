@@ -7,9 +7,15 @@ import {
   funnelTemplates,
   // funnelDeployments, // TODO: Enable when table is created
   funnelAnalytics,
+  funnelPageTemplates,
+  funnelPages,
+  funnelPageRevisions,
   insertFunnelIntegrationSchema,
   insertFunnelSchema,
   insertFunnelTemplateSchema,
+  insertFunnelPageTemplateSchema,
+  insertFunnelPageSchema,
+  insertFunnelPageRevisionSchema,
   // insertFunnelDeploymentSchema, // TODO: Enable when table is created
   users
 } from "@shared/schema";
@@ -948,6 +954,553 @@ router.put("/funnels/:id", authenticateToken, validateOperationAccess, async (re
     });
   } catch (error) {
     console.error('❌ Erro ao atualizar funil:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+// ================================
+// FUNNEL PAGES CRUD ROUTES
+// ================================
+
+/**
+ * Get all pages for a funnel
+ */
+router.get("/funnels/:funnelId/pages", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId } = req.params;
+    const operationId = req.validatedOperationId;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Get all pages for this funnel
+    const pages = await db
+      .select()
+      .from(funnelPages)
+      .where(eq(funnelPages.funnelId, funnelId))
+      .orderBy(funnelPages.createdAt);
+
+    return res.json({
+      success: true,
+      pages
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar páginas:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Create a new page for a funnel
+ */
+router.post("/funnels/:funnelId/pages", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId } = req.params;
+    const operationId = req.validatedOperationId;
+    const userId = (req as any).user.id;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Validate required fields
+    const pageData = insertFunnelPageSchema.parse({
+      ...req.body,
+      funnelId,
+      lastEditedBy: userId
+    });
+
+    // Check if path is unique within this funnel
+    const [existingPage] = await db
+      .select()
+      .from(funnelPages)
+      .where(
+        and(
+          eq(funnelPages.funnelId, funnelId),
+          eq(funnelPages.path, pageData.path)
+        )
+      )
+      .limit(1);
+
+    if (existingPage) {
+      return res.status(400).json({
+        success: false,
+        error: "Já existe uma página com este caminho neste funil"
+      });
+    }
+
+    // Create the page
+    const [newPage] = await db
+      .insert(funnelPages)
+      .values([pageData])
+      .returning();
+
+    // Create initial revision
+    await db
+      .insert(funnelPageRevisions)
+      .values([{
+        pageId: newPage.id,
+        version: 1,
+        changeType: 'manual',
+        model: newPage.model,
+        changeDescription: 'Página criada',
+        createdBy: userId
+      }]);
+
+    return res.status(201).json({
+      success: true,
+      message: "Página criada com sucesso",
+      page: newPage
+    });
+  } catch (error) {
+    console.error('❌ Erro ao criar página:', error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: "Dados inválidos",
+        details: error.errors
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Get a specific page
+ */
+router.get("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId, pageId } = req.params;
+    const operationId = req.validatedOperationId;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Get the page
+    const [page] = await db
+      .select()
+      .from(funnelPages)
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      )
+      .limit(1);
+
+    if (!page) {
+      return res.status(404).json({
+        success: false,
+        error: "Página não encontrada"
+      });
+    }
+
+    return res.json({
+      success: true,
+      page
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar página:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Update a page
+ */
+router.put("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId, pageId } = req.params;
+    const operationId = req.validatedOperationId;
+    const userId = (req as any).user.id;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Get current page
+    const [currentPage] = await db
+      .select()
+      .from(funnelPages)
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      )
+      .limit(1);
+
+    if (!currentPage) {
+      return res.status(404).json({
+        success: false,
+        error: "Página não encontrada"
+      });
+    }
+
+    // Extract updateable fields
+    const {
+      name,
+      pageType,
+      path,
+      model,
+      templateId,
+      status,
+      isActive,
+      lastAiPrompt
+    } = req.body;
+
+    const updateData: any = {
+      lastEditedBy: userId,
+      updatedAt: new Date()
+    };
+
+    if (name !== undefined) updateData.name = name;
+    if (pageType !== undefined) updateData.pageType = pageType;
+    if (path !== undefined) {
+      // Check path uniqueness if changed
+      if (path !== currentPage.path) {
+        const [existingPage] = await db
+          .select()
+          .from(funnelPages)
+          .where(
+            and(
+              eq(funnelPages.funnelId, funnelId),
+              eq(funnelPages.path, path)
+            )
+          )
+          .limit(1);
+
+        if (existingPage) {
+          return res.status(400).json({
+            success: false,
+            error: "Já existe uma página com este caminho neste funil"
+          });
+        }
+      }
+      updateData.path = path;
+    }
+    if (model !== undefined) {
+      updateData.model = model;
+      updateData.version = currentPage.version + 1;
+    }
+    if (templateId !== undefined) updateData.templateId = templateId;
+    if (status !== undefined) updateData.status = status;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (lastAiPrompt !== undefined) updateData.lastAiPrompt = lastAiPrompt;
+
+    // Update the page
+    const [updatedPage] = await db
+      .update(funnelPages)
+      .set(updateData)
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      )
+      .returning();
+
+    // Create revision if model changed
+    if (model !== undefined) {
+      await db
+        .insert(funnelPageRevisions)
+        .values([{
+          pageId: pageId,
+          version: updatedPage.version,
+          changeType: lastAiPrompt ? 'ai_patch' : 'manual',
+          model: updatedPage.model,
+          aiPrompt: lastAiPrompt,
+          changeDescription: lastAiPrompt ? 'Modificação por IA' : 'Edição manual',
+          createdBy: userId
+        }]);
+    }
+
+    return res.json({
+      success: true,
+      message: "Página atualizada com sucesso",
+      page: updatedPage
+    });
+  } catch (error) {
+    console.error('❌ Erro ao atualizar página:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Delete a page
+ */
+router.delete("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId, pageId } = req.params;
+    const operationId = req.validatedOperationId;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Check if page exists
+    const [page] = await db
+      .select()
+      .from(funnelPages)
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      )
+      .limit(1);
+
+    if (!page) {
+      return res.status(404).json({
+        success: false,
+        error: "Página não encontrada"
+      });
+    }
+
+    // Delete the page (cascade will handle revisions)
+    await db
+      .delete(funnelPages)
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      );
+
+    return res.json({
+      success: true,
+      message: "Página excluída com sucesso"
+    });
+  } catch (error) {
+    console.error('❌ Erro ao excluir página:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Get page revision history
+ */
+router.get("/funnels/:funnelId/pages/:pageId/revisions", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId, pageId } = req.params;
+    const operationId = req.validatedOperationId;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Check if page exists
+    const [page] = await db
+      .select()
+      .from(funnelPages)
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      )
+      .limit(1);
+
+    if (!page) {
+      return res.status(404).json({
+        success: false,
+        error: "Página não encontrada"
+      });
+    }
+
+    // Get revision history
+    const revisions = await db
+      .select({
+        id: funnelPageRevisions.id,
+        version: funnelPageRevisions.version,
+        changeType: funnelPageRevisions.changeType,
+        aiPrompt: funnelPageRevisions.aiPrompt,
+        changeDescription: funnelPageRevisions.changeDescription,
+        createdAt: funnelPageRevisions.createdAt,
+        createdBy: users.email
+      })
+      .from(funnelPageRevisions)
+      .leftJoin(users, eq(funnelPageRevisions.createdBy, users.id))
+      .where(eq(funnelPageRevisions.pageId, pageId))
+      .orderBy(desc(funnelPageRevisions.version));
+
+    return res.json({
+      success: true,
+      revisions
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar histórico:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Get specific revision content
+ */
+router.get("/funnels/:funnelId/pages/:pageId/revisions/:revisionId", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId, pageId, revisionId } = req.params;
+    const operationId = req.validatedOperationId;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Get specific revision
+    const [revision] = await db
+      .select()
+      .from(funnelPageRevisions)
+      .where(
+        and(
+          eq(funnelPageRevisions.id, revisionId),
+          eq(funnelPageRevisions.pageId, pageId)
+        )
+      )
+      .limit(1);
+
+    if (!revision) {
+      return res.status(404).json({
+        success: false,
+        error: "Revisão não encontrada"
+      });
+    }
+
+    return res.json({
+      success: true,
+      revision
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar revisão:', error);
     return res.status(500).json({
       success: false,
       error: "Erro interno do servidor"
