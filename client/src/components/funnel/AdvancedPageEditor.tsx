@@ -396,12 +396,13 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
       </div>
 
       {/* Main Editor Area */}
-      <div className="flex-1 overflow-hidden">
-        <div className={`h-full transition-all duration-300 ${viewportClasses[viewportMode]}`}>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ minHeight: 'calc(100vh - 80px)' }}>
+        <div className={`flex-1 h-full transition-all duration-300 ${viewportClasses[viewportMode]}`} style={{ minHeight: 'calc(100vh - 80px)' }}>
           <VisualEditor
             model={currentModel}
             onChange={handleModelChange}
             className="h-full"
+            style={{ minHeight: 'calc(100vh - 80px)' }}
           />
         </div>
       </div>
