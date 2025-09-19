@@ -446,6 +446,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 onDeleteSection={deleteSection}
                 onDuplicateSection={duplicateSection}
                 onAddSection={addSection}
+                draggedItem={draggedItem}
               />
             </div>
           </div>
@@ -1273,6 +1274,7 @@ interface PageFrameProps {
   onDeleteSection: (sectionId: string) => void;
   onDuplicateSection: (sectionId: string) => void;
   onAddSection: () => void;
+  draggedItem: any;
 }
 
 function PageFrame({ 
@@ -1287,7 +1289,8 @@ function PageFrame({
   onUpdateElement, 
   onDeleteSection, 
   onDuplicateSection,
-  onAddSection 
+  onAddSection,
+  draggedItem 
 }: PageFrameProps) {
   const viewportStyles = {
     desktop: 'w-full max-w-none',
@@ -1360,6 +1363,7 @@ function PageFrame({
                       onDuplicateSection={onDuplicateSection}
                       onAddSectionAfter={() => onAddSection()}
                       showAddButton={index === model.sections.length - 1}
+                      draggedItem={draggedItem}
                     />
                   </div>
                 ))}
@@ -1387,6 +1391,7 @@ interface EnhancedSortableSectionProps {
   onDuplicateSection: (sectionId: string) => void;
   onAddSectionAfter: () => void;
   showAddButton: boolean;
+  draggedItem: any;
 }
 
 function EnhancedSortableSection({ 
@@ -1402,7 +1407,8 @@ function EnhancedSortableSection({
   onDeleteSection,
   onDuplicateSection,
   onAddSectionAfter,
-  showAddButton
+  showAddButton,
+  draggedItem
 }: EnhancedSortableSectionProps) {
   const {
     attributes,
@@ -1506,6 +1512,7 @@ function EnhancedSortableSection({
           onSelectElement={onSelectElement}
           onUpdateElement={onUpdateElement}
           isHovered={isHovered}
+          isDragging={!!draggedItem}
         />
       </div>
 
@@ -2436,9 +2443,10 @@ interface SectionDropZoneProps {
   columnId: string;
   position: number;
   isEmpty?: boolean;
+  isDragging: boolean;
 }
 
-function SectionDropZone({ id, sectionId, columnId, position, isEmpty = false }: SectionDropZoneProps) {
+function SectionDropZone({ id, sectionId, columnId, position, isEmpty = false, isDragging }: SectionDropZoneProps) {
   const { setNodeRef, isOver } = useDroppable({
     id,
     data: {
@@ -2449,10 +2457,15 @@ function SectionDropZone({ id, sectionId, columnId, position, isEmpty = false }:
     },
   });
 
+  // Only show drop zone when dragging
+  if (!isDragging) {
+    return null;
+  }
+
   return (
     <div
       ref={setNodeRef}
-      className={`section-drop-zone transition-all duration-200 ${
+      className={`section-drop-zone transition-all duration-200 pointer-events-auto ${
         isOver ? 'bg-blue-100 border-blue-400' : 'border-transparent'
       } ${
         isEmpty 
@@ -2480,6 +2493,7 @@ interface SectionWithDropZonesProps {
   onSelectElement: (elementId: string | null) => void;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
   isHovered: boolean;
+  isDragging: boolean;
 }
 
 function SectionWithDropZones({ 
@@ -2488,7 +2502,8 @@ function SectionWithDropZones({
   selectedElementId, 
   onSelectElement, 
   onUpdateElement, 
-  isHovered 
+  isHovered,
+  isDragging 
 }: SectionWithDropZonesProps) {
   return (
     <div 
@@ -2519,9 +2534,9 @@ function SectionWithDropZones({
         ))}
       </SortableContext>
 
-      {/* Enhanced Drop Zones for first column elements */}
-      {section.rows.length > 0 && section.rows[0].columns.length > 0 && (
-        <div className="absolute inset-0 pointer-events-none">
+      {/* Enhanced Drop Zones for first column elements - only when dragging */}
+      {isDragging && section.rows.length > 0 && section.rows[0].columns.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none z-20">
           <div 
             className="pointer-events-auto" 
             style={{
@@ -2542,6 +2557,7 @@ function SectionWithDropZones({
                     columnId={firstColumn.id}
                     position={0}
                     isEmpty={elements.length === 0}
+                    isDragging={isDragging}
                   />
 
                   {/* Drop zones between elements */}
@@ -2558,6 +2574,7 @@ function SectionWithDropZones({
                         sectionId={section.id}
                         columnId={firstColumn.id}
                         position={index + 1}
+                        isDragging={isDragging}
                       />
                     </div>
                   ))}
