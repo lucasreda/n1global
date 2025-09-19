@@ -593,7 +593,7 @@ function DroppableContainer({ element, theme, editorMode }: DroppableContainerPr
             transition: 'all 0.2s ease',
           }}
         >
-          {isOver ? 'Solte o elemento aqui' : 'Arraste elementos aqui'}
+          {isOver ? 'Solte o elemento aqui' : 'Adicionar elementos'}
         </div>
       )}
     </div>
