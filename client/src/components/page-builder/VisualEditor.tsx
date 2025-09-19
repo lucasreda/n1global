@@ -1037,7 +1037,7 @@ function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }
         {/* Element Type Badge */}
         <div>
           <div className="inline-flex items-center gap-2 px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-            {React.createElement(getElementIcon(selectedElement.type), { size: 12 })}
+            <span className="text-xs">📝</span>
             {selectedElement.type}
           </div>
         </div>
