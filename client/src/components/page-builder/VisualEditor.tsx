@@ -98,6 +98,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   };
 
   const addSection = useCallback(() => {
+    console.log('🔥 addSection called!', { sectionsCount: model.sections.length });
+    
     const newSection: BlockSection = {
       id: `section_${Date.now()}`,
       type: 'content',
@@ -120,10 +122,13 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       },
     };
 
-    onChange({
+    const newModel = {
       ...model,
       sections: [...model.sections, newSection],
-    });
+    };
+    
+    console.log('🔥 New model created:', { newSectionsCount: newModel.sections.length });
+    onChange(newModel);
   }, [model, onChange]);
 
   const deleteSection = useCallback((sectionId: string) => {
@@ -924,7 +929,12 @@ function EnhancedSortableSection({
       {showAddButton && (
         <div className="flex items-center justify-center py-6">
           <button
-            onClick={onAddSectionAfter}
+            onClick={(e) => {
+              console.log('🚀 Add Section button clicked!');
+              e.preventDefault();
+              e.stopPropagation();
+              onAddSectionAfter();
+            }}
             className="group flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg border-2 border-blue-600 hover:border-blue-700 transition-all duration-200"
             data-testid="button-add-section-after"
           >
