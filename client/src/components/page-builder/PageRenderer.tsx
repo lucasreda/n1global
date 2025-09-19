@@ -434,6 +434,128 @@ function ElementRenderer({ element, theme, editorMode }: ElementRendererProps) {
         />
       );
 
+    case 'container':
+      return (
+        <div
+          style={{
+            ...baseStyles,
+            display: element.styles.display || 'block',
+            padding: element.styles.padding || theme.spacing.md,
+            backgroundColor: element.styles.backgroundColor || 'transparent',
+          }}
+          data-testid={`element-${element.id}`}
+          data-element-type="container"
+        >
+          {element.children && element.children.length > 0 ? (
+            element.children.map((childElement) => (
+              <ElementRenderer
+                key={childElement.id}
+                element={childElement}
+                theme={theme}
+                editorMode={editorMode}
+              />
+            ))
+          ) : (
+            editorMode && (
+              <div
+                style={{
+                  padding: theme.spacing.lg,
+                  border: '2px dashed #d1d5db',
+                  borderRadius: theme.borderRadius.md,
+                  textAlign: 'center',
+                  color: '#6b7280',
+                  backgroundColor: '#f9fafb',
+                }}
+              >
+                Arraste elementos aqui
+              </div>
+            )
+          )}
+        </div>
+      );
+
+    case 'block':
+      const columns = element.config?.columns || 1;
+      const columnDistribution = element.config?.columnDistribution || 'equal';
+      const columnWidths = element.config?.columnWidths || [];
+      
+      // Generate column widths for equal distribution
+      const getColumnWidth = (index: number) => {
+        if (columnDistribution === 'custom' && columnWidths[index]) {
+          return columnWidths[index];
+        }
+        return `${100 / columns}%`;
+      };
+
+      // Split children into columns
+      const childrenPerColumn = Math.ceil((element.children?.length || 0) / columns);
+      const columnElements: BlockElement[][] = [];
+      
+      for (let i = 0; i < columns; i++) {
+        const startIndex = i * childrenPerColumn;
+        const endIndex = startIndex + childrenPerColumn;
+        columnElements[i] = element.children?.slice(startIndex, endIndex) || [];
+      }
+
+      return (
+        <div
+          style={{
+            ...baseStyles,
+            display: 'flex',
+            flexDirection: element.styles.flexDirection || 'row',
+            justifyContent: element.styles.justifyContent || 'flex-start',
+            alignItems: element.styles.alignItems || 'flex-start',
+            gap: element.styles.gap || theme.spacing.md,
+            padding: element.styles.padding || theme.spacing.md,
+            backgroundColor: element.styles.backgroundColor || 'transparent',
+          }}
+          data-testid={`element-${element.id}`}
+          data-element-type="block"
+        >
+          {Array.from({ length: columns }).map((_, columnIndex) => (
+            <div
+              key={columnIndex}
+              style={{
+                width: getColumnWidth(columnIndex),
+                flex: columnDistribution === 'equal' ? 1 : 'none',
+              }}
+              data-testid={`block-column-${columnIndex}`}
+            >
+              {columnElements[columnIndex] && columnElements[columnIndex].length > 0 ? (
+                columnElements[columnIndex].map((childElement) => (
+                  <ElementRenderer
+                    key={childElement.id}
+                    element={childElement}
+                    theme={theme}
+                    editorMode={editorMode}
+                  />
+                ))
+              ) : (
+                editorMode && (
+                  <div
+                    style={{
+                      padding: theme.spacing.md,
+                      border: '1px dashed #d1d5db',
+                      borderRadius: theme.borderRadius.sm,
+                      textAlign: 'center',
+                      color: '#9ca3af',
+                      backgroundColor: '#f9fafb',
+                      minHeight: '60px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Coluna {columnIndex + 1}
+                  </div>
+                )
+              )}
+            </div>
+          ))}
+        </div>
+      );
+
     default:
       return (
         <div
