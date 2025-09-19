@@ -835,7 +835,57 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
     );
   }
 
-  // For containers or blocks without columns, use simple nested element layout
+  // For containers, render without the element wrapper to avoid duplication
+  if (isContainer) {
+    const containerStyles = {
+      display: element.styles?.display || 'block',
+      padding: element.styles?.padding || theme.spacing.md,
+      backgroundColor: element.styles?.backgroundColor || 'transparent',
+      border: '2px dashed #cbd5e1',
+      borderRadius: '0.5rem',
+      minHeight: children.length === 0 ? '80px' : 'auto',
+    };
+
+    return (
+      <div className="structural-element" style={containerStyles}>
+        {/* Drop zone at the beginning */}
+        <ElementDropZone
+          id={`${element.id}-start`}
+          elementId={element.id}
+          position={0}
+        />
+
+        {children.map((child, index) => (
+          <div key={child.id}>
+            <ModernElement
+              element={child}
+              theme={theme}
+              isSelected={isSelected}
+              onSelect={() => {}}
+              onUpdate={(elementId, updates) => onUpdate(updates)}
+            />
+            {/* Drop zone after each child */}
+            <ElementDropZone
+              id={`${element.id}-${index + 1}`}
+              elementId={element.id}
+              position={index + 1}
+            />
+          </div>
+        ))}
+
+        {children.length === 0 && (
+          <ElementDropZone
+            id={`${element.id}-empty`}
+            elementId={element.id}
+            position={0}
+            isEmpty={true}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // For blocks without columns, use simple nested element layout  
   return (
     <div className="structural-element">
       <ElementRenderer 
