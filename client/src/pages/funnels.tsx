@@ -381,16 +381,16 @@ export default function Funnels() {
                                 key={type}
                                 className={`glassmorphism-light cursor-pointer transition-all hover:bg-white/5 border-white/10 ${
                                   isSelected 
-                                    ? 'bg-blue-600/20 border-blue-500/30 ring-2 ring-blue-500' 
+                                    ? 'bg-blue-600 border-blue-500 ring-2 ring-blue-400' 
                                     : 'hover:border-white/20'
                                 }`}
                                 onClick={() => form.setValue("type", type as any)}
                                 data-testid={`card-funnel-type-${type}`}
                               >
                                 <CardContent className="p-6 text-center">
-                                  <IconComponent className={`w-12 h-12 mx-auto mb-4 ${isSelected ? 'text-blue-400' : 'text-primary'}`} />
-                                  <h4 className={`font-semibold text-lg mb-2 ${isSelected ? 'text-blue-400' : 'text-foreground'}`}>{typeInfo.title}</h4>
-                                  <p className={`text-sm ${isSelected ? 'text-blue-400/80' : 'text-muted-foreground'}`}>{typeInfo.description}</p>
+                                  <IconComponent className={`w-12 h-12 mx-auto mb-4 ${isSelected ? 'text-white' : 'text-primary'}`} />
+                                  <h4 className={`font-semibold text-lg mb-2 ${isSelected ? 'text-white' : 'text-foreground'}`}>{typeInfo.title}</h4>
+                                  <p className={`text-sm ${isSelected ? 'text-white/80' : 'text-muted-foreground'}`}>{typeInfo.description}</p>
                                 </CardContent>
                               </Card>
                             );
