@@ -3016,10 +3016,17 @@ export const createFunnelSchema = z.object({
   type: z.enum(["ecommerce", "nutraceutico", "infoproduto"], {
     required_error: "Tipo do funil é obrigatório"
   }),
-  language: z.enum(["pt-BR", "en-US", "es-ES"], {
+  language: z.enum([
+    "pt-BR", "en-US", "es-ES", "fr-FR", "de-DE", "it-IT", "nl-NL", 
+    "ru-RU", "pl-PL", "sv-SE", "da-DK", "no-NO", "fi-FI", "el-GR", 
+    "hu-HU", "cs-CZ", "ar-SA"
+  ], {
     required_error: "Idioma é obrigatório"
   }),
-  currency: z.enum(["EUR", "USD", "BRL"], {
+  currency: z.enum([
+    "EUR", "USD", "BRL", "GBP", "CHF", "SEK", "DKK", "NOK", "PLN", 
+    "CZK", "HUF", "RON", "BGN", "AED", "SAR"
+  ], {
     required_error: "Moeda é obrigatória"
   }),
 });
