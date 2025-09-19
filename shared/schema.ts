@@ -2835,6 +2835,9 @@ export const funnels = pgTable("funnels", {
   // Basic info
   name: text("name").notNull(),
   description: text("description"),
+  type: text("type").notNull().default("ecommerce"), // 'ecommerce', 'nutraceutico', 'infoproduto'
+  language: text("language").notNull().default("pt-BR"), // 'pt-BR', 'en-US', 'es-ES'
+  currency: text("currency").notNull().default("EUR"), // 'EUR', 'USD', 'BRL'
   
   // Template and AI settings
   templateId: varchar("template_id").references(() => funnelTemplates.id),
@@ -3006,6 +3009,22 @@ export const insertFunnelAnalyticsSchema = createInsertSchema(funnelAnalytics).o
   createdAt: true,
   updatedAt: true,
 });
+
+// Schema for the simplified funnel creation modal
+export const createFunnelSchema = z.object({
+  name: z.string().min(1, "Nome do funil é obrigatório"),
+  type: z.enum(["ecommerce", "nutraceutico", "infoproduto"], {
+    required_error: "Tipo do funil é obrigatório"
+  }),
+  language: z.enum(["pt-BR", "en-US", "es-ES"], {
+    required_error: "Idioma é obrigatório"
+  }),
+  currency: z.enum(["EUR", "USD", "BRL"], {
+    required_error: "Moeda é obrigatória"
+  }),
+});
+
+export type CreateFunnelData = z.infer<typeof createFunnelSchema>;
 
 // Types for funnel entities
 export type FunnelIntegration = typeof funnelIntegrations.$inferSelect;

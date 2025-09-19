@@ -23,7 +23,13 @@ import {
   AlertCircle,
   Clock,
   Star,
-  Sparkles
+  Sparkles,
+  ShoppingCart,
+  Pill,
+  BookOpen,
+  ChevronRight,
+  ChevronLeft,
+  Check
 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -31,71 +37,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-
-// Schemas for form validation
-const createFunnelSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  description: z.string().optional(),
-  templateId: z.string().optional(),
-  productInfo: z.object({
-    name: z.string().min(1, "Nome do produto é obrigatório"),
-    description: z.string().min(1, "Descrição é obrigatória"),
-    price: z.number().positive("Preço deve ser positivo"),
-    currency: z.string().default("EUR"),
-    targetAudience: z.string().min(1, "Público-alvo é obrigatório"),
-    mainBenefits: z.array(z.string()).min(1, "Pelo menos um benefício é obrigatório"),
-    objections: z.array(z.string()).min(1, "Pelo menos uma objeção é obrigatória"),
-  }),
-  trackingConfig: z.object({
-    facebookPixelId: z.string().optional(),
-    googleAnalyticsId: z.string().optional(),
-  }).optional(),
-});
-
-type CreateFunnelData = z.infer<typeof createFunnelSchema>;
-
-interface FunnelTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  previewImage?: string;
-  templateConfig: {
-    sections: string[];
-    colorScheme: string;
-    layout: string;
-    conversionGoal: string;
-  };
-}
-
-interface Funnel {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  isActive: boolean;
-  aiCost: string;
-  generatedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-  templateId?: string;
-  templateName?: string;
-  deploymentUrl?: string;
-  deploymentStatus?: string;
-}
-
-interface VercelIntegration {
-  connected: boolean;
-  integration?: {
-    id: string;
-    connectedAt: string;
-    lastUsed?: string;
-    isActive: boolean;
-  };
-}
+import { 
+  createFunnelSchema, 
+  CreateFunnelData,
+  VercelIntegration, 
+  Funnel, 
+  FunnelTemplate 
+} from "@shared/schema";
 
 export default function Funnels() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
+  const [modalStep, setModalStep] = useState(1);
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
 
@@ -188,17 +140,9 @@ export default function Funnels() {
     resolver: zodResolver(createFunnelSchema),
     defaultValues: {
       name: "",
-      description: "",
-      productInfo: {
-        name: "",
-        description: "",
-        price: 0,
-        currency: "EUR",
-        targetAudience: "",
-        mainBenefits: [""],
-        objections: [""],
-      },
-      trackingConfig: {},
+      type: "ecommerce" as const,
+      language: "pt-BR" as const,
+      currency: "EUR" as const,
     },
   });
 
@@ -262,17 +206,28 @@ export default function Funnels() {
     }
   };
 
+  // Reset modal steps when closing
+  const handleCloseModal = () => {
+    setOpenDialog(null);
+    setModalStep(1);
+    form.reset();
+  };
+
+  // Navigate modal steps
+  const handleNextStep = () => {
+    setModalStep(prev => Math.min(prev + 1, 3));
+  };
+
+  const handlePrevStep = () => {
+    setModalStep(prev => Math.max(prev - 1, 1));
+  };
+
   // Create new funnel
   const handleCreateFunnel = async (data: CreateFunnelData) => {
     try {
       const response = await authenticatedApiRequest('POST', '/api/funnels', {
         ...data,
         operationId: selectedOperation,
-        productInfo: {
-          ...data.productInfo,
-          mainBenefits: data.productInfo.mainBenefits.filter(b => b.trim()),
-          objections: data.productInfo.objections.filter(o => o.trim()),
-        },
       });
 
       if (response.ok) {
@@ -281,8 +236,7 @@ export default function Funnels() {
           title: "Sucesso",
           description: "Funil criado com sucesso! IA está gerando conteúdo...",
         });
-        setOpenDialog(null);
-        form.reset();
+        handleCloseModal();
         refetchFunnels();
       } else {
         throw new Error('Erro ao criar funil');
@@ -294,6 +248,28 @@ export default function Funnels() {
         variant: "destructive",
       });
     }
+  };
+
+  // Get funnel type info
+  const getFunnelTypeInfo = (type: string) => {
+    const types = {
+      ecommerce: { 
+        title: "E-commerce", 
+        description: "Funil para venda de produtos físicos",
+        icon: ShoppingCart,
+      },
+      nutraceutico: { 
+        title: "Nutracêutico", 
+        description: "Funil para suplementos e produtos de saúde",
+        icon: Pill,
+      },
+      infoproduto: { 
+        title: "Infoproduto", 
+        description: "Funil para cursos, ebooks e conteúdo digital",
+        icon: BookOpen,
+      },
+    };
+    return types[type as keyof typeof types] || types.ecommerce;
   };
 
   const getStatusBadge = (status: string) => {
@@ -343,7 +319,7 @@ export default function Funnels() {
                 Conectar Vercel
               </Button>
             ) : (
-              <Dialog open={openDialog === 'create'} onOpenChange={(open) => setOpenDialog(open ? 'create' : null)}>
+              <Dialog open={openDialog === 'create'} onOpenChange={handleCloseModal}>
                 <DialogTrigger asChild>
                   <Button 
                     className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
@@ -353,162 +329,252 @@ export default function Funnels() {
                     Criar Funil
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                       <Sparkles className="w-5 h-5" />
                       Criar Funil com IA
                     </DialogTitle>
+                    <div className="flex items-center gap-2 mt-4">
+                      <div className="flex gap-2">
+                        {[1, 2, 3].map((step) => (
+                          <div
+                            key={step}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors
+                              ${modalStep >= step 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-200 text-gray-600'
+                              }`}
+                          >
+                            {modalStep > step ? <Check className="w-4 h-4" /> : step}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex-1 bg-gray-200 h-1 rounded-full mx-4">
+                        <div 
+                          className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                          style={{ width: `${((modalStep - 1) / 2) * 100}%` }}
+                        />
+                      </div>
+                    </div>
                   </DialogHeader>
                   
-                  <form onSubmit={form.handleSubmit(handleCreateFunnel)} className="space-y-6">
-                    <Tabs defaultValue="basic">
-                      <TabsList>
-                        <TabsTrigger value="basic">Básico</TabsTrigger>
-                        <TabsTrigger value="product">Produto</TabsTrigger>
-                        <TabsTrigger value="tracking">Tracking</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="basic" className="space-y-4">
-                        <div>
-                          <Label htmlFor="name">Nome do Funil</Label>
-                          <Input
-                            id="name"
-                            {...form.register("name")}
-                            placeholder="Ex: Lançamento Produto X"
-                            data-testid="input-funnel-name"
-                          />
-                          {form.formState.errors.name && (
-                            <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>
-                          )}
+                  <form onSubmit={form.handleSubmit(handleCreateFunnel)} className="mt-6">
+                    {/* Step 1: Tipo do Funil */}
+                    {modalStep === 1 && (
+                      <div className="space-y-6">
+                        <div className="text-center">
+                          <h3 className="text-xl font-semibold mb-2">Escolha o Tipo do Funil</h3>
+                          <p className="text-gray-600 text-sm">
+                            Selecione o tipo que melhor se adapta ao seu produto ou serviço
+                          </p>
                         </div>
                         
-                        <div>
-                          <Label htmlFor="description">Descrição (Opcional)</Label>
-                          <Textarea
-                            id="description"
-                            {...form.register("description")}
-                            placeholder="Descreva o objetivo deste funil..."
-                            data-testid="input-funnel-description"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {["ecommerce", "nutraceutico", "infoproduto"].map((type) => {
+                            const typeInfo = getFunnelTypeInfo(type);
+                            const IconComponent = typeInfo.icon;
+                            const isSelected = form.watch("type") === type;
+                            
+                            return (
+                              <Card
+                                key={type}
+                                className={`cursor-pointer transition-all hover:shadow-md ${
+                                  isSelected 
+                                    ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' 
+                                    : 'hover:border-gray-300'
+                                }`}
+                                onClick={() => form.setValue("type", type as any)}
+                                data-testid={`card-funnel-type-${type}`}
+                              >
+                                <CardContent className="p-6 text-center">
+                                  <IconComponent className="w-12 h-12 mx-auto mb-4 text-blue-600" />
+                                  <h4 className="font-semibold text-lg mb-2">{typeInfo.title}</h4>
+                                  <p className="text-gray-600 text-sm">{typeInfo.description}</p>
+                                  {isSelected && (
+                                    <div className="mt-3">
+                                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                        <Check className="w-3 h-3 mr-1" />
+                                        Selecionado
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 2: Configurações Básicas */}
+                    {modalStep === 2 && (
+                      <div className="space-y-6">
+                        <div className="text-center">
+                          <h3 className="text-xl font-semibold mb-2">Configurações Básicas</h3>
+                          <p className="text-gray-600 text-sm">
+                            Configure as informações principais do seu funil
+                          </p>
                         </div>
                         
-                        <div>
-                          <Label htmlFor="template">Template</Label>
-                          <Select onValueChange={(value) => form.setValue("templateId", value)}>
-                            <SelectTrigger data-testid="select-template">
-                              <SelectValue placeholder="Escolha um template" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {templates?.templates?.map((template) => (
-                                <SelectItem key={template.id} value={template.id}>
-                                  {getCategoryIcon(template.category)} {template.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="product" className="space-y-4">
-                        <div>
-                          <Label htmlFor="productName">Nome do Produto</Label>
-                          <Input
-                            id="productName"
-                            {...form.register("productInfo.name")}
-                            placeholder="Ex: Curso de Marketing Digital"
-                            data-testid="input-product-name"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="productDescription">Descrição do Produto</Label>
-                          <Textarea
-                            id="productDescription"
-                            {...form.register("productInfo.description")}
-                            placeholder="Descreva o que seu produto faz e os problemas que resolve..."
-                            data-testid="input-product-description"
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4">
                           <div>
-                            <Label htmlFor="price">Preço</Label>
+                            <Label htmlFor="name">Nome do Funil</Label>
                             <Input
-                              id="price"
-                              type="number"
-                              step="0.01"
-                              {...form.register("productInfo.price", { valueAsNumber: true })}
-                              placeholder="97.00"
-                              data-testid="input-product-price"
+                              id="name"
+                              {...form.register("name")}
+                              placeholder="Ex: Lançamento Produto X"
+                              data-testid="input-funnel-name"
                             />
+                            {form.formState.errors.name && (
+                              <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>
+                            )}
                           </div>
-                          <div>
-                            <Label htmlFor="currency">Moeda</Label>
-                            <Select onValueChange={(value) => form.setValue("productInfo.currency", value)}>
-                              <SelectTrigger data-testid="select-currency">
-                                <SelectValue placeholder="EUR" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="EUR">EUR (€)</SelectItem>
-                                <SelectItem value="USD">USD ($)</SelectItem>
-                                <SelectItem value="BRL">BRL (R$)</SelectItem>
-                              </SelectContent>
-                            </Select>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="language">Idioma</Label>
+                              <Select 
+                                onValueChange={(value) => form.setValue("language", value as any)}
+                                defaultValue={form.getValues("language")}
+                              >
+                                <SelectTrigger data-testid="select-language">
+                                  <SelectValue placeholder="Selecione o idioma" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                                  <SelectItem value="en-US">English (US)</SelectItem>
+                                  <SelectItem value="es-ES">Español (España)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="currency">Moeda</Label>
+                              <Select 
+                                onValueChange={(value) => form.setValue("currency", value as any)}
+                                defaultValue={form.getValues("currency")}
+                              >
+                                <SelectTrigger data-testid="select-currency">
+                                  <SelectValue placeholder="Selecione a moeda" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                                  <SelectItem value="USD">USD ($)</SelectItem>
+                                  <SelectItem value="BRL">BRL (R$)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 3: Revisão */}
+                    {modalStep === 3 && (
+                      <div className="space-y-6">
+                        <div className="text-center">
+                          <h3 className="text-xl font-semibold mb-2">Revisar e Criar</h3>
+                          <p className="text-gray-600 text-sm">
+                            Confira as informações antes de criar seu funil
+                          </p>
                         </div>
                         
-                        <div>
-                          <Label htmlFor="targetAudience">Público-Alvo</Label>
-                          <Input
-                            id="targetAudience"
-                            {...form.register("productInfo.targetAudience")}
-                            placeholder="Ex: Empreendedores digitais iniciantes"
-                            data-testid="input-target-audience"
-                          />
-                        </div>
-                      </TabsContent>
-                      
-                      <TabsContent value="tracking" className="space-y-4">
-                        <div>
-                          <Label htmlFor="facebookPixel">Facebook Pixel ID (Opcional)</Label>
-                          <Input
-                            id="facebookPixel"
-                            {...form.register("trackingConfig.facebookPixelId")}
-                            placeholder="123456789012345"
-                            data-testid="input-facebook-pixel"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="googleAnalytics">Google Analytics ID (Opcional)</Label>
-                          <Input
-                            id="googleAnalytics"
-                            {...form.register("trackingConfig.googleAnalyticsId")}
-                            placeholder="GA-XXXXXXXXX-X"
-                            data-testid="input-google-analytics"
-                          />
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                        <Card className="bg-gray-50">
+                          <CardContent className="p-6">
+                            <h4 className="font-semibold mb-4">Resumo do Funil</h4>
+                            <div className="space-y-3">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Tipo:</span>
+                                <span className="font-medium">{getFunnelTypeInfo(form.watch("type")).title}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Nome:</span>
+                                <span className="font-medium">{form.watch("name") || "Sem nome"}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Idioma:</span>
+                                <span className="font-medium">
+                                  {form.watch("language") === "pt-BR" && "Português (Brasil)"}
+                                  {form.watch("language") === "en-US" && "English (US)"}
+                                  {form.watch("language") === "es-ES" && "Español (España)"}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Moeda:</span>
+                                <span className="font-medium">
+                                  {form.watch("currency") === "EUR" && "EUR (€)"}
+                                  {form.watch("currency") === "USD" && "USD ($)"}
+                                  {form.watch("currency") === "BRL" && "BRL (R$)"}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                              <div className="flex items-start gap-2">
+                                <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <div>
+                                  <p className="font-medium text-blue-800">IA irá gerar:</p>
+                                  <ul className="text-sm text-blue-700 mt-1 space-y-1">
+                                    <li>• Landing page otimizada para conversão</li>
+                                    <li>• Conteúdo personalizado para seu nicho</li>
+                                    <li>• Design responsivo e moderno</li>
+                                    <li>• Deploy automático no Vercel</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
                     
-                    <div className="flex gap-3">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setOpenDialog(null)}
-                        data-testid="button-cancel"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        className="bg-gradient-to-r from-blue-600 to-purple-600"
-                        data-testid="button-submit-funnel"
-                      >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Criar com IA
-                      </Button>
+                    {/* Navigation Buttons */}
+                    <div className="flex justify-between pt-6 border-t">
+                      <div className="flex gap-2">
+                        {modalStep > 1 && (
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={handlePrevStep}
+                            data-testid="button-prev-step"
+                          >
+                            <ChevronLeft className="w-4 h-4 mr-1" />
+                            Voltar
+                          </Button>
+                        )}
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={handleCloseModal}
+                          data-testid="button-cancel"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                      
+                      <div>
+                        {modalStep < 3 ? (
+                          <Button 
+                            type="button"
+                            onClick={handleNextStep}
+                            className="bg-blue-600 hover:bg-blue-700"
+                            data-testid="button-next-step"
+                          >
+                            Continuar
+                            <ChevronRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        ) : (
+                          <Button 
+                            type="submit" 
+                            className="bg-gradient-to-r from-blue-600 to-purple-600"
+                            data-testid="button-submit-funnel"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Criar Funil
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </form>
                 </DialogContent>
