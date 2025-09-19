@@ -23,7 +23,7 @@ import { createDefaultTheme } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
 import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
-import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail } from 'lucide-react';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3 } from 'lucide-react';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -522,6 +522,7 @@ const ElementsToolbar = React.memo(function ElementsToolbar() {
   const [activeTab, setActiveTab] = useState<'elements' | 'templates'>('elements');
   
   const elementTypes = [
+    // Basic Elements
     { type: 'heading', label: 'Título', icon: Type },
     { type: 'text', label: 'Texto', icon: FileText },
     { type: 'button', label: 'Botão', icon: RectangleHorizontal },
@@ -530,6 +531,10 @@ const ElementsToolbar = React.memo(function ElementsToolbar() {
     { type: 'form', label: 'Formulário', icon: FileInput },
     { type: 'spacer', label: 'Espaçador', icon: Space },
     { type: 'divider', label: 'Divisor', icon: Minus },
+    
+    // Structural Elements
+    { type: 'container', label: 'Container', icon: Box },
+    { type: 'block', label: 'Bloco', icon: Grid3X3 },
   ];
 
   const sectionTemplates = [

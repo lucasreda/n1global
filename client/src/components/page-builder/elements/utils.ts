@@ -11,7 +11,9 @@ import {
   Code,
   Heading1,
   Heading2,
-  Heading3
+  Heading3,
+  Box,
+  Grid3X3
 } from "lucide-react";
 
 export function createDefaultElement(type: BlockElement['type']): BlockElement {
@@ -145,6 +147,43 @@ export function createDefaultElement(type: BlockElement['type']): BlockElement {
         },
       };
 
+    case 'container':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '1rem',
+          backgroundColor: 'transparent',
+          display: 'block',
+        },
+        config: {
+          allowNesting: true,
+        },
+        children: [],
+      };
+
+    case 'block':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '1rem',
+          backgroundColor: 'transparent',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start',
+          gap: '1rem',
+        },
+        config: {
+          columns: 2,
+          allowNesting: true,
+          columnDistribution: 'equal',
+          columnWidths: ['50%', '50%'],
+        },
+        children: [],
+      };
+
     default:
       return baseElement;
   }
@@ -161,6 +200,8 @@ export function getElementIcon(type: BlockElement['type']) {
     video: Video,
     form: FileText,
     embed: Code,
+    container: Box,
+    block: Grid3X3,
   };
 
   return icons[type] || Type;
@@ -177,6 +218,8 @@ export function getElementLabel(type: BlockElement['type']): string {
     video: 'Vídeo',
     form: 'Formulário',
     embed: 'Código Embed',
+    container: 'Container',
+    block: 'Bloco',
   };
 
   return labels[type] || 'Elemento';
@@ -193,6 +236,8 @@ export function getElementCategory(type: BlockElement['type']): 'basic' | 'media
     divider: 'layout' as const,
     form: 'form' as const,
     embed: 'media' as const,
+    container: 'layout' as const,
+    block: 'layout' as const,
   };
 
   return categories[type] || 'basic';
