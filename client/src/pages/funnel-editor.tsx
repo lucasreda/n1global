@@ -24,7 +24,8 @@ import {
   Rocket,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
+  FileText
 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -255,9 +256,13 @@ export default function FunnelEditor() {
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-gray-900 border-gray-700">
-            <TabsTrigger value="content" className="data-[state=active]:bg-blue-600">
+            <TabsTrigger value="pages" className="data-[state=active]:bg-blue-600">
               <Palette className="w-4 h-4 mr-2" />
               Páginas
+            </TabsTrigger>
+            <TabsTrigger value="content" className="data-[state=active]:bg-blue-600">
+              <FileText className="w-4 h-4 mr-2" />
+              Conteúdo
             </TabsTrigger>
             <TabsTrigger value="tracking" className="data-[state=active]:bg-blue-600">
               <BarChart3 className="w-4 h-4 mr-2" />
