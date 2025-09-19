@@ -722,6 +722,226 @@ export class VercelService {
     // Use Integration flow URL instead of OAuth direct
     return `https://vercel.com/integrations/${integrationSlug}/new?${params.toString()}`;
   }
+
+  /**
+   * Deploy from preview session (PHASE 2.4 FEATURE)
+   * Takes a validated preview session and deploys it to Vercel
+   */
+  async deployFromPreviewSession(
+    accessToken: string,
+    sessionId: string,
+    projectName: string,
+    teamId?: string
+  ): Promise<{
+    project: VercelProject;
+    deployment: VercelDeployment;
+  }> {
+    console.log(`🎯 PHASE 2.4: Deploying from preview session: ${sessionId}`);
+
+    try {
+      // Import PreviewService to get session data
+      const { previewService } = await import('./preview-service.js');
+
+      // Get session metadata and files
+      const session = (previewService as any).sessions.get(sessionId);
+      if (!session) {
+        throw new Error(`Preview session ${sessionId} not found or expired`);
+      }
+
+      // Validate that the session has been validated and is ready for deploy
+      if (!session.validation) {
+        throw new Error('Preview session must be validated before deployment');
+      }
+
+      if (!session.validation.isValid) {
+        throw new Error(`Preview session validation failed (score: ${session.validation.score}/100). Fix issues before deployment.`);
+      }
+
+      if (session.validation.score < 70) {
+        console.warn(`⚠️ Preview session has low validation score (${session.validation.score}/100). Consider fixing issues for better deployment.`);
+      }
+
+      console.log(`✅ Session validation passed - Score: ${session.validation.score}/100`);
+
+      // Extract files and pages from session
+      const { files, pages, productInfo } = session;
+
+      // Create project first
+      console.log(`🏗️ Creating Vercel project: ${projectName}`);
+      const project = await this.createProject(accessToken, projectName, 'nextjs', teamId);
+      console.log(`✅ Project created: ${project.id}`);
+
+      // Convert session files to deployment format
+      const template: MultiPageFunnelTemplate = {
+        name: projectName,
+        framework: 'nextjs',
+        files: files,
+        pages: pages.map(page => ({
+          path: page.path,
+          name: page.name,
+          pageType: page.pageType,
+        })),
+        buildSettings: {
+          buildCommand: 'npm run build',
+          outputDirectory: '.next',
+          installCommand: 'npm install',
+          devCommand: 'npm run dev',
+        },
+      };
+
+      // Deploy using the existing multi-page deployment method
+      console.log(`🚀 Deploying ${Object.keys(files).length} files to Vercel...`);
+      const deployment = await this.deployMultiPageFunnel(accessToken, projectName, template, teamId);
+
+      console.log(`🎉 PHASE 2.4: Deployment from preview completed successfully!`);
+      console.log(`🌐 Live URL: ${deployment.url}`);
+
+      return {
+        project,
+        deployment,
+      };
+
+    } catch (error) {
+      console.error('❌ PHASE 2.4: Deploy from preview session failed:', error);
+      throw new Error(`Failed to deploy from preview session: ${error}`);
+    }
+  }
+
+  /**
+   * Get deployment statistics for analytics (PHASE 2.4 FEATURE)
+   */
+  async getDeploymentStats(
+    accessToken: string,
+    teamId?: string,
+    projectIds?: string[]
+  ): Promise<{
+    totalDeployments: number;
+    successfulDeployments: number;
+    failedDeployments: number;
+    avgBuildTime: number;
+    recentDeployments: VercelDeployment[];
+    deploymentsByProject: Record<string, number>;
+  }> {
+    console.log('📊 PHASE 2.4: Getting deployment statistics');
+
+    try {
+      let allDeployments: VercelDeployment[] = [];
+
+      if (projectIds && projectIds.length > 0) {
+        // Get deployments for specific projects
+        for (const projectId of projectIds) {
+          const deployments = await this.getProjectDeployments(accessToken, projectId, teamId);
+          allDeployments.push(...deployments);
+        }
+      } else {
+        // This would require listing all projects first, then getting their deployments
+        // For now, we'll return empty stats if no project IDs are provided
+        console.warn('⚠️ No project IDs provided for deployment stats');
+      }
+
+      // Calculate statistics
+      const totalDeployments = allDeployments.length;
+      const successfulDeployments = allDeployments.filter(d => d.state === 'READY').length;
+      const failedDeployments = allDeployments.filter(d => d.state === 'ERROR').length;
+
+      // Calculate average build time for successful deployments
+      const completedDeployments = allDeployments.filter(d => d.readyAt && d.buildingAt);
+      const avgBuildTime = completedDeployments.length > 0
+        ? completedDeployments.reduce((sum, d) => sum + (d.readyAt! - d.buildingAt!), 0) / completedDeployments.length
+        : 0;
+
+      // Count deployments by project
+      const deploymentsByProject: Record<string, number> = {};
+      for (const deployment of allDeployments) {
+        const projectName = deployment.name;
+        deploymentsByProject[projectName] = (deploymentsByProject[projectName] || 0) + 1;
+      }
+
+      // Get recent deployments (last 10)
+      const recentDeployments = allDeployments
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 10);
+
+      console.log(`📊 Deployment stats: ${totalDeployments} total, ${successfulDeployments} successful, ${failedDeployments} failed`);
+
+      return {
+        totalDeployments,
+        successfulDeployments,
+        failedDeployments,
+        avgBuildTime: Math.round(avgBuildTime / 1000), // Convert to seconds
+        recentDeployments,
+        deploymentsByProject,
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to get deployment statistics:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Redeploy an existing project with updated files (PHASE 2.4 FEATURE)
+   */
+  async redeployProject(
+    accessToken: string,
+    projectName: string,
+    sessionId: string,
+    teamId?: string
+  ): Promise<VercelDeployment> {
+    console.log(`🔄 PHASE 2.4: Redeploying project: ${projectName} from session: ${sessionId}`);
+
+    try {
+      // Import PreviewService to get session data
+      const { previewService } = await import('./preview-service.js');
+
+      // Get session metadata and files
+      const session = (previewService as any).sessions.get(sessionId);
+      if (!session) {
+        throw new Error(`Preview session ${sessionId} not found or expired`);
+      }
+
+      // Validate that the session has been validated
+      if (!session.validation || !session.validation.isValid) {
+        throw new Error('Preview session must be validated before redeployment');
+      }
+
+      console.log(`✅ Session validation passed for redeployment - Score: ${session.validation.score}/100`);
+
+      // Extract files from session
+      const { files, pages } = session;
+
+      // Convert session files to deployment format
+      const template: MultiPageFunnelTemplate = {
+        name: projectName,
+        framework: 'nextjs',
+        files: files,
+        pages: pages.map(page => ({
+          path: page.path,
+          name: page.name,
+          pageType: page.pageType,
+        })),
+        buildSettings: {
+          buildCommand: 'npm run build',
+          outputDirectory: '.next',
+          installCommand: 'npm install',
+          devCommand: 'npm run dev',
+        },
+      };
+
+      // Deploy using the existing multi-page deployment method
+      console.log(`🚀 Redeploying ${Object.keys(files).length} files to existing project...`);
+      const deployment = await this.deployMultiPageFunnel(accessToken, projectName, template, teamId);
+
+      console.log(`🎉 PHASE 2.4: Redeployment completed successfully!`);
+      console.log(`🌐 Updated URL: ${deployment.url}`);
+
+      return deployment;
+
+    } catch (error) {
+      console.error('❌ PHASE 2.4: Redeployment failed:', error);
+      throw new Error(`Failed to redeploy project: ${error}`);
+    }
+  }
 }
 
 // Export singleton instance

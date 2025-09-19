@@ -6967,6 +6967,166 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Deploy Management Routes (PHASE 2.4)
+  app.post("/api/deploy/from-preview", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { sessionId, projectName, teamId } = req.body;
+
+      if (!sessionId || !projectName) {
+        return res.status(400).json({
+          success: false,
+          error: "sessionId and projectName are required"
+        });
+      }
+
+      // Get user's Vercel integration from database
+      const storage = await import('./storage');
+      const vercelIntegration = await storage.memStorage.getVercelIntegration(req.user.id);
+      
+      if (!vercelIntegration || !vercelIntegration.accessToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Vercel integration not connected. Connect to Vercel first."
+        });
+      }
+
+      // Import VercelService
+      const { vercelService } = await import('./vercel-service');
+
+      // Deploy from preview session
+      console.log(`🚀 PHASE 2.4: Deploying from preview session ${sessionId} to project ${projectName}`);
+      
+      const result = await vercelService.deployFromPreviewSession(
+        vercelIntegration.accessToken,
+        sessionId,
+        projectName,
+        teamId
+      );
+
+      console.log(`✅ PHASE 2.4: Deploy completed - URL: ${result.deployment.url}`);
+
+      res.json({
+        success: true,
+        project: result.project,
+        deployment: result.deployment,
+        message: "Deployment from preview completed successfully"
+      });
+
+    } catch (error) {
+      console.error("❌ Deploy from preview error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to deploy from preview",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/deploy/redeploy", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { projectName, sessionId, teamId } = req.body;
+
+      if (!projectName || !sessionId) {
+        return res.status(400).json({
+          success: false,
+          error: "projectName and sessionId are required"
+        });
+      }
+
+      // Get user's Vercel integration from database
+      const storage = await import('./storage');
+      const vercelIntegration = await storage.memStorage.getVercelIntegration(req.user.id);
+      
+      if (!vercelIntegration || !vercelIntegration.accessToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Vercel integration not connected"
+        });
+      }
+
+      // Import VercelService
+      const { vercelService } = await import('./vercel-service');
+
+      // Redeploy project
+      console.log(`🔄 PHASE 2.4: Redeploying project ${projectName} from session ${sessionId}`);
+      
+      const deployment = await vercelService.redeployProject(
+        vercelIntegration.accessToken,
+        projectName,
+        sessionId,
+        teamId
+      );
+
+      console.log(`✅ PHASE 2.4: Redeploy completed - URL: ${deployment.url}`);
+
+      res.json({
+        success: true,
+        deployment,
+        message: "Redeployment completed successfully"
+      });
+
+    } catch (error) {
+      console.error("❌ Redeploy error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to redeploy project",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/deploy/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { teamId, projectIds } = req.query;
+
+      // Get user's Vercel integration from database
+      const storage = await import('./storage');
+      const vercelIntegration = await storage.memStorage.getVercelIntegration(req.user.id);
+      
+      if (!vercelIntegration || !vercelIntegration.accessToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Vercel integration not connected"
+        });
+      }
+
+      // Import VercelService
+      const { vercelService } = await import('./vercel-service');
+
+      // Parse project IDs from query
+      const projectIdArray = Array.isArray(projectIds) 
+        ? projectIds as string[]
+        : projectIds 
+          ? [projectIds as string]
+          : undefined;
+
+      // Get deployment statistics
+      console.log(`📊 PHASE 2.4: Getting deployment statistics`);
+      
+      const stats = await vercelService.getDeploymentStats(
+        vercelIntegration.accessToken,
+        teamId as string,
+        projectIdArray
+      );
+
+      console.log(`✅ PHASE 2.4: Deployment stats retrieved`);
+
+      res.json({
+        success: true,
+        stats,
+        message: "Deployment statistics retrieved successfully"
+      });
+
+    } catch (error) {
+      console.error("❌ Get deployment stats error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get deployment statistics",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   app.get("/api/validation/summary", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { period = '7d' } = req.query;
