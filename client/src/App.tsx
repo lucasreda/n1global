@@ -260,6 +260,8 @@ function Router() {
         <Route path="/integrations" component={Integrations} />
         {!isProductSeller && <Route path="/funnels" component={Funnels} />}
         {!isProductSeller && <Route path="/funnels/:id" component={FunnelEditor} />}
+        {!isProductSeller && <Route path="/funnels/:funnelId/pages/:pageId/edit" component={FunnelEditor} />}
+        {!isProductSeller && <Route path="/funnels/:funnelId/pages/:pageId/preview" component={FunnelPreview} />}
         {!isProductSeller && <Route path="/funnel-preview" component={FunnelPreview} />}
         {!isProductSeller && <Route path="/ads" component={Ads} />}
         {!isProductSeller && <Route path="/creatives/:id" component={CreativeDetails} />}
