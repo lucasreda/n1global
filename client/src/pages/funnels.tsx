@@ -381,7 +381,7 @@ export default function Funnels() {
                                 key={type}
                                 className={`glassmorphism-light cursor-pointer transition-all hover:bg-white/5 border-white/10 ${
                                   isSelected 
-                                    ? 'ring-2 ring-primary bg-primary/10 border-primary/20' 
+                                    ? 'ring-2 ring-blue-500 bg-blue-600/10 border-blue-500/30' 
                                     : 'hover:border-white/20'
                                 }`}
                                 onClick={() => form.setValue("type", type as any)}
@@ -393,7 +393,7 @@ export default function Funnels() {
                                   <p className="text-muted-foreground text-sm">{typeInfo.description}</p>
                                   {isSelected && (
                                     <div className="mt-3">
-                                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                                      <Badge variant="secondary" className="bg-blue-600/20 text-blue-400 border-blue-500/30">
                                         <Check className="w-3 h-3 mr-1" />
                                         Selecionado
                                       </Badge>
