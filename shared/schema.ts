@@ -3411,7 +3411,7 @@ export type VercelIntegration = {
 // Advanced Page Builder v2 - Enhanced Block System for Visual Editor
 export type BlockElement = {
   id: string;
-  type: 'heading' | 'text' | 'button' | 'image' | 'spacer' | 'divider' | 'video' | 'form' | 'embed' | 'container' | 'block' | 'benefits' | 'reviews' | 'slider';
+  type: 'heading' | 'text' | 'button' | 'image' | 'spacer' | 'divider' | 'video' | 'form' | 'embed' | 'container' | 'block' | 'benefits' | 'reviews' | 'slider' | 'hero' | 'features' | 'team' | 'contact';
   props: Record<string, any>;
   styles: {
     // Typography
