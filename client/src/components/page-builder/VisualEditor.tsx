@@ -22,6 +22,7 @@ import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "
 import { createDefaultTheme } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus } from 'lucide-react';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -566,14 +567,14 @@ function SortableElement({ element, theme, isSelected, onSelect, onUpdate }: Sor
 // Elements Toolbar
 function ElementsToolbar() {
   const elementTypes = [
-    { type: 'heading', label: 'Título', icon: '📝' },
-    { type: 'text', label: 'Texto', icon: '📄' },
-    { type: 'button', label: 'Botão', icon: '🔘' },
-    { type: 'image', label: 'Imagem', icon: '🖼️' },
-    { type: 'video', label: 'Vídeo', icon: '🎥' },
-    { type: 'form', label: 'Formulário', icon: '📋' },
-    { type: 'spacer', label: 'Espaçador', icon: '📏' },
-    { type: 'divider', label: 'Divisor', icon: '➖' },
+    { type: 'heading', label: 'Título', icon: Type },
+    { type: 'text', label: 'Texto', icon: FileText },
+    { type: 'button', label: 'Botão', icon: RectangleHorizontal },
+    { type: 'image', label: 'Imagem', icon: Image },
+    { type: 'video', label: 'Vídeo', icon: Video },
+    { type: 'form', label: 'Formulário', icon: FileInput },
+    { type: 'spacer', label: 'Espaçador', icon: Space },
+    { type: 'divider', label: 'Divisor', icon: Minus },
   ];
 
   return (
@@ -597,10 +598,10 @@ function ElementsToolbar() {
 interface DraggableElementProps {
   elementType: BlockElement['type'];
   label: string;
-  icon: string;
+  icon: React.ComponentType<{ className?: string; size?: number | string }>;
 }
 
-function DraggableElement({ elementType, label, icon }: DraggableElementProps) {
+function DraggableElement({ elementType, label, icon: IconComponent }: DraggableElementProps) {
   const {
     attributes,
     listeners,
@@ -629,7 +630,9 @@ function DraggableElement({ elementType, label, icon }: DraggableElementProps) {
       className="flex items-center gap-3 p-3 bg-secondary hover:bg-secondary/80 rounded-lg cursor-grab hover:cursor-grabbing transition-colors"
       data-testid={`draggable-${elementType}`}
     >
-      <span className="text-lg">{icon}</span>
+      <div className="flex items-center justify-center w-5 h-5 text-muted-foreground">
+        <IconComponent size={18} />
+      </div>
       <span className="text-sm font-medium text-foreground">{label}</span>
     </div>
   );
