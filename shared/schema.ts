@@ -2977,6 +2977,131 @@ export const funnelAnalytics = pgTable("funnel_analytics", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Funnel page templates (landing, checkout, upsell, etc.)
+export const funnelPageTemplates = pgTable("funnel_page_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Template info
+  name: text("name").notNull(), // "Landing Page Moderna", "Checkout Simplificado"
+  pageType: text("page_type").notNull(), // 'landing', 'checkout', 'upsell', 'downsell', 'thankyou'
+  category: text("category").notNull().default("standard"), // 'standard', 'premium', 'custom'
+  
+  // Template structure
+  defaultModel: jsonb("default_model").$type<{
+    layout: string; // 'single_page', 'multi_step', 'scroll'
+    sections: Array<{
+      id: string;
+      type: string; // 'hero', 'benefits', 'testimonials', 'faq', 'cta', 'checkout'
+      config: Record<string, any>;
+      content: Record<string, any>;
+    }>;
+    style: {
+      theme: string;
+      primaryColor: string;
+      secondaryColor: string;
+      fontFamily: string;
+    };
+  }>().notNull(),
+  
+  // Template constraints
+  allowedSections: jsonb("allowed_sections").$type<string[]>().default([]),
+  requiredSections: jsonb("required_sections").$type<string[]>().default([]),
+  
+  // Preview and metadata
+  previewImageUrl: text("preview_image_url"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Individual pages within funnels
+export const funnelPages = pgTable("funnel_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id, { onDelete: 'cascade' }),
+  
+  // Page info
+  name: text("name").notNull(), // "Página Principal", "Checkout"
+  pageType: text("page_type").notNull(), // 'landing', 'checkout', 'upsell', 'downsell', 'thankyou'
+  path: text("path").notNull(), // '/', '/checkout', '/upsell'
+  
+  // Page structure (JSON model)
+  model: jsonb("model").$type<{
+    layout: string;
+    sections: Array<{
+      id: string;
+      type: string;
+      config: Record<string, any>;
+      content: Record<string, any>;
+    }>;
+    style: {
+      theme: string;
+      primaryColor: string;
+      secondaryColor: string;
+      fontFamily: string;
+    };
+    seo: {
+      title: string;
+      description: string;
+      keywords?: string[];
+    };
+  }>().notNull(),
+  
+  // Template reference
+  templateId: varchar("template_id").references(() => funnelPageTemplates.id),
+  
+  // Status and metadata
+  status: text("status").notNull().default("draft"), // 'draft', 'preview', 'published'
+  version: integer("version").notNull().default(1),
+  isActive: boolean("is_active").default(true),
+  
+  // Last editor info
+  lastEditedBy: varchar("last_edited_by").references(() => users.id),
+  lastAiPrompt: text("last_ai_prompt"), // Last AI prompt used for modification
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Revision history for pages (for rollback and diff)
+export const funnelPageRevisions = pgTable("funnel_page_revisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pageId: varchar("page_id").notNull().references(() => funnelPages.id, { onDelete: 'cascade' }),
+  
+  // Revision info
+  version: integer("version").notNull(),
+  changeType: text("change_type").notNull(), // 'manual', 'ai_patch', 'template_apply', 'rollback'
+  
+  // Content snapshot
+  model: jsonb("model").$type<{
+    layout: string;
+    sections: Array<{
+      id: string;
+      type: string;
+      config: Record<string, any>;
+      content: Record<string, any>;
+    }>;
+    style: Record<string, any>;
+    seo: Record<string, any>;
+  }>().notNull(),
+  
+  // Change metadata
+  diff: jsonb("diff").$type<Array<{
+    op: string; // 'add', 'remove', 'replace'
+    path: string;
+    value?: any;
+    oldValue?: any;
+  }>>(), // JSON Patch format (RFC 6902)
+  
+  aiPrompt: text("ai_prompt"), // If change was made by AI
+  changeDescription: text("change_description"), // Human readable description
+  
+  // Author info
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas for funnel entities
 export const insertFunnelIntegrationSchema = createInsertSchema(funnelIntegrations).omit({
   id: true,
@@ -3008,6 +3133,23 @@ export const insertFunnelAnalyticsSchema = createInsertSchema(funnelAnalytics).o
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertFunnelPageTemplateSchema = createInsertSchema(funnelPageTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFunnelPageSchema = createInsertSchema(funnelPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFunnelPageRevisionSchema = createInsertSchema(funnelPageRevisions).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Schema for the simplified funnel creation modal
@@ -3048,3 +3190,12 @@ export type InsertFunnelDeployment = z.infer<typeof insertFunnelDeploymentSchema
 
 export type FunnelAnalytics = typeof funnelAnalytics.$inferSelect;
 export type InsertFunnelAnalytics = z.infer<typeof insertFunnelAnalyticsSchema>;
+
+export type FunnelPageTemplate = typeof funnelPageTemplates.$inferSelect;
+export type InsertFunnelPageTemplate = z.infer<typeof insertFunnelPageTemplateSchema>;
+
+export type FunnelPage = typeof funnelPages.$inferSelect;
+export type InsertFunnelPage = z.infer<typeof insertFunnelPageSchema>;
+
+export type FunnelPageRevision = typeof funnelPageRevisions.$inferSelect;
+export type InsertFunnelPageRevision = z.infer<typeof insertFunnelPageRevisionSchema>;
