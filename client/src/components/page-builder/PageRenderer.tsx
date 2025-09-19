@@ -1,4 +1,5 @@
 import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
+import { useDroppable } from '@dnd-kit/core';
 
 // Helper to build final styles from individual properties
 function buildFinalStyles(styles: any = {}) {
@@ -435,7 +436,9 @@ function ElementRenderer({ element, theme, editorMode }: ElementRendererProps) {
       );
 
     case 'container':
-      return (
+      return editorMode ? (
+        <DroppableContainer element={element} theme={theme} editorMode={editorMode} />
+      ) : (
         <div
           style={{
             ...baseStyles,
@@ -455,105 +458,15 @@ function ElementRenderer({ element, theme, editorMode }: ElementRendererProps) {
                 editorMode={editorMode}
               />
             ))
-          ) : (
-            editorMode && (
-              <div
-                style={{
-                  padding: theme.spacing.lg,
-                  border: '2px dashed #d1d5db',
-                  borderRadius: theme.borderRadius.md,
-                  textAlign: 'center',
-                  color: '#6b7280',
-                  backgroundColor: '#f9fafb',
-                }}
-              >
-                Arraste elementos aqui
-              </div>
-            )
-          )}
+          ) : null}
         </div>
       );
 
     case 'block':
-      const columns = element.config?.columns || 1;
-      const columnDistribution = element.config?.columnDistribution || 'equal';
-      const columnWidths = element.config?.columnWidths || [];
-      
-      // Generate column widths for equal distribution
-      const getColumnWidth = (index: number) => {
-        if (columnDistribution === 'custom' && columnWidths[index]) {
-          return columnWidths[index];
-        }
-        return `${100 / columns}%`;
-      };
-
-      // Split children into columns
-      const childrenPerColumn = Math.ceil((element.children?.length || 0) / columns);
-      const columnElements: BlockElement[][] = [];
-      
-      for (let i = 0; i < columns; i++) {
-        const startIndex = i * childrenPerColumn;
-        const endIndex = startIndex + childrenPerColumn;
-        columnElements[i] = element.children?.slice(startIndex, endIndex) || [];
-      }
-
-      return (
-        <div
-          style={{
-            ...baseStyles,
-            display: 'flex',
-            flexDirection: element.styles.flexDirection || 'row',
-            justifyContent: element.styles.justifyContent || 'flex-start',
-            alignItems: element.styles.alignItems || 'flex-start',
-            gap: element.styles.gap || theme.spacing.md,
-            padding: element.styles.padding || theme.spacing.md,
-            backgroundColor: element.styles.backgroundColor || 'transparent',
-          }}
-          data-testid={`element-${element.id}`}
-          data-element-type="block"
-        >
-          {Array.from({ length: columns }).map((_, columnIndex) => (
-            <div
-              key={columnIndex}
-              style={{
-                width: getColumnWidth(columnIndex),
-                flex: columnDistribution === 'equal' ? 1 : 'none',
-              }}
-              data-testid={`block-column-${columnIndex}`}
-            >
-              {columnElements[columnIndex] && columnElements[columnIndex].length > 0 ? (
-                columnElements[columnIndex].map((childElement) => (
-                  <ElementRenderer
-                    key={childElement.id}
-                    element={childElement}
-                    theme={theme}
-                    editorMode={editorMode}
-                  />
-                ))
-              ) : (
-                editorMode && (
-                  <div
-                    style={{
-                      padding: theme.spacing.md,
-                      border: '1px dashed #d1d5db',
-                      borderRadius: theme.borderRadius.sm,
-                      textAlign: 'center',
-                      color: '#9ca3af',
-                      backgroundColor: '#f9fafb',
-                      minHeight: '60px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Coluna {columnIndex + 1}
-                  </div>
-                )
-              )}
-            </div>
-          ))}
-        </div>
+      return editorMode ? (
+        <DroppableBlock element={element} theme={theme} editorMode={editorMode} />
+      ) : (
+        <BlockElementView element={element} theme={theme} baseStyles={baseStyles} editorMode={editorMode} />
       );
 
     default:
@@ -622,4 +535,240 @@ export function createDefaultTheme(): PageModelV2['theme'] {
       lg: '0.75rem',
     },
   };
+}
+
+// Droppable Container Component for Editor Mode
+interface DroppableContainerProps {
+  element: BlockElement;
+  theme: PageModelV2['theme'];
+  editorMode: boolean;
+}
+
+function DroppableContainer({ element, theme, editorMode }: DroppableContainerProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: element.id,
+    data: {
+      type: 'container',
+      containerId: element.id,
+    },
+  });
+
+  const baseStyles = {
+    display: element.styles?.display || 'block',
+    padding: element.styles?.padding || theme.spacing.md,
+    backgroundColor: element.styles?.backgroundColor || 'transparent',
+    border: isOver ? '2px solid #3b82f6' : '2px dashed #d1d5db',
+    borderRadius: theme.borderRadius.md,
+    minHeight: element.children?.length === 0 ? '80px' : 'auto',
+    transition: 'border-color 0.2s ease',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={baseStyles}
+      data-testid={`element-${element.id}`}
+      data-element-type="container"
+    >
+      {element.children && element.children.length > 0 ? (
+        element.children.map((childElement) => (
+          <ElementRenderer
+            key={childElement.id}
+            element={childElement}
+            theme={theme}
+            editorMode={editorMode}
+          />
+        ))
+      ) : (
+        <div
+          style={{
+            padding: theme.spacing.lg,
+            textAlign: 'center',
+            color: isOver ? '#3b82f6' : '#6b7280',
+            backgroundColor: isOver ? '#eff6ff' : '#f9fafb',
+            fontSize: '0.875rem',
+            fontWeight: isOver ? '500' : '400',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {isOver ? 'Solte o elemento aqui' : 'Arraste elementos aqui'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Droppable Block Component for Editor Mode
+interface DroppableBlockProps {
+  element: BlockElement;
+  theme: PageModelV2['theme'];
+  editorMode: boolean;
+}
+
+function DroppableBlock({ element, theme, editorMode }: DroppableBlockProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: element.id,
+    data: {
+      type: 'container',
+      containerId: element.id,
+    },
+  });
+
+  const columns = element.config?.columns || 1;
+  const columnDistribution = element.config?.columnDistribution || 'equal';
+  const columnWidths = element.config?.columnWidths || [];
+
+  // Generate column widths for equal distribution
+  const getColumnWidth = (index: number) => {
+    if (columnDistribution === 'custom' && columnWidths[index]) {
+      return columnWidths[index];
+    }
+    return `${100 / columns}%`;
+  };
+
+  // Split children into columns
+  const childrenPerColumn = Math.ceil((element.children?.length || 0) / columns);
+  const columnElements: BlockElement[][] = [];
+  
+  for (let i = 0; i < columns; i++) {
+    const startIndex = i * childrenPerColumn;
+    const endIndex = startIndex + childrenPerColumn;
+    columnElements[i] = element.children?.slice(startIndex, endIndex) || [];
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        display: 'flex',
+        flexDirection: element.styles?.flexDirection || 'row',
+        justifyContent: element.styles?.justifyContent || 'flex-start',
+        alignItems: element.styles?.alignItems || 'flex-start',
+        gap: element.styles?.gap || theme.spacing.md,
+        padding: element.styles?.padding || theme.spacing.md,
+        backgroundColor: element.styles?.backgroundColor || 'transparent',
+        border: isOver ? '2px solid #3b82f6' : '2px dashed #d1d5db',
+        borderRadius: theme.borderRadius.md,
+        minHeight: '60px',
+        transition: 'border-color 0.2s ease',
+      }}
+      data-testid={`element-${element.id}`}
+      data-element-type="block"
+    >
+      {Array.from({ length: columns }).map((_, columnIndex) => (
+        <div
+          key={columnIndex}
+          style={{
+            width: getColumnWidth(columnIndex),
+            flex: columnDistribution === 'equal' ? 1 : 'none',
+            border: '1px dashed #d1d5db',
+            borderRadius: theme.borderRadius.sm,
+            minHeight: '60px',
+            padding: theme.spacing.sm,
+          }}
+          data-testid={`block-column-${columnIndex}`}
+        >
+          {columnElements[columnIndex] && columnElements[columnIndex].length > 0 ? (
+            columnElements[columnIndex].map((childElement) => (
+              <ElementRenderer
+                key={childElement.id}
+                element={childElement}
+                theme={theme}
+                editorMode={editorMode}
+              />
+            ))
+          ) : (
+            <div
+              style={{
+                padding: theme.spacing.md,
+                textAlign: 'center',
+                color: isOver ? '#3b82f6' : '#9ca3af',
+                backgroundColor: isOver ? '#eff6ff' : '#f9fafb',
+                minHeight: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.875rem',
+                fontWeight: isOver ? '500' : '400',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {isOver ? `Solte na Coluna ${columnIndex + 1}` : `Coluna ${columnIndex + 1}`}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Block Element View for Non-Editor Mode
+interface BlockElementViewProps {
+  element: BlockElement;
+  theme: PageModelV2['theme'];
+  baseStyles: any;
+  editorMode: boolean;
+}
+
+function BlockElementView({ element, theme, baseStyles, editorMode }: BlockElementViewProps) {
+  const columns = element.config?.columns || 1;
+  const columnDistribution = element.config?.columnDistribution || 'equal';
+  const columnWidths = element.config?.columnWidths || [];
+  
+  // Generate column widths for equal distribution
+  const getColumnWidth = (index: number) => {
+    if (columnDistribution === 'custom' && columnWidths[index]) {
+      return columnWidths[index];
+    }
+    return `${100 / columns}%`;
+  };
+
+  // Split children into columns
+  const childrenPerColumn = Math.ceil((element.children?.length || 0) / columns);
+  const columnElements: BlockElement[][] = [];
+  
+  for (let i = 0; i < columns; i++) {
+    const startIndex = i * childrenPerColumn;
+    const endIndex = startIndex + childrenPerColumn;
+    columnElements[i] = element.children?.slice(startIndex, endIndex) || [];
+  }
+
+  return (
+    <div
+      style={{
+        ...baseStyles,
+        display: 'flex',
+        flexDirection: element.styles?.flexDirection || 'row',
+        justifyContent: element.styles?.justifyContent || 'flex-start',
+        alignItems: element.styles?.alignItems || 'flex-start',
+        gap: element.styles?.gap || theme.spacing.md,
+        padding: element.styles?.padding || theme.spacing.md,
+        backgroundColor: element.styles?.backgroundColor || 'transparent',
+      }}
+      data-testid={`element-${element.id}`}
+      data-element-type="block"
+    >
+      {Array.from({ length: columns }).map((_, columnIndex) => (
+        <div
+          key={columnIndex}
+          style={{
+            width: getColumnWidth(columnIndex),
+            flex: columnDistribution === 'equal' ? 1 : 'none',
+          }}
+          data-testid={`block-column-${columnIndex}`}
+        >
+          {columnElements[columnIndex] && columnElements[columnIndex].length > 0 && (
+            columnElements[columnIndex].map((childElement) => (
+              <ElementRenderer
+                key={childElement.id}
+                element={childElement}
+                theme={theme}
+                editorMode={editorMode}
+              />
+            ))
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }

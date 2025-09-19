@@ -91,10 +91,23 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       onChange(newModel);
     }
 
-    // Handle adding new element from toolbar
+    // Handle adding new element from toolbar to columns
     if (activeData?.type === 'new-element' && overData?.type === 'column') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToColumn(model, newElement, overData.columnId);
+      onChange(newModel);
+    }
+
+    // Handle adding new element from toolbar to containers/blocks
+    if (activeData?.type === 'new-element' && overData?.type === 'container') {
+      const newElement = createDefaultElement(activeData.elementType);
+      const newModel = addElementToContainer(model, newElement, overData.containerId);
+      onChange(newModel);
+    }
+
+    // Handle element reordering within containers/blocks
+    if (activeData?.type === 'element' && overData?.type === 'container') {
+      const newModel = moveElementToContainer(model, active.id as string, overData.containerId);
       onChange(newModel);
     }
   };
@@ -1663,4 +1676,118 @@ function moveElementInColumn(model: PageModelV2, elementId: string, direction: '
   }
   
   return model;
+}
+
+// Utility functions for structural elements (containers/blocks)
+function addElementToContainer(model: PageModelV2, element: BlockElement, containerId: string): PageModelV2 {
+  const newModel = { ...model };
+  
+  // First, search in columns (traditional structure)
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        // Find container/block in column elements
+        const containerIndex = column.elements.findIndex(e => e.id === containerId);
+        if (containerIndex !== -1) {
+          const container = column.elements[containerIndex];
+          if (container.type === 'container' || container.type === 'block') {
+            column.elements[containerIndex] = {
+              ...container,
+              children: [...(container.children || []), element]
+            };
+            return newModel;
+          }
+        }
+        
+        // Recursively search in nested containers/blocks
+        if (addElementToNestedContainer(column.elements, element, containerId)) {
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  return model;
+}
+
+function moveElementToContainer(model: PageModelV2, elementId: string, targetContainerId: string): PageModelV2 {
+  const newModel = { ...model };
+  let elementToMove: BlockElement | null = null;
+  
+  // First, find and remove the element from its current location
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        // Check in column elements
+        const elementIndex = column.elements.findIndex(e => e.id === elementId);
+        if (elementIndex !== -1) {
+          elementToMove = column.elements[elementIndex];
+          column.elements = column.elements.filter(e => e.id !== elementId);
+          break;
+        }
+        
+        // Check in nested containers/blocks
+        elementToMove = removeElementFromNested(column.elements, elementId);
+        if (elementToMove) break;
+      }
+      if (elementToMove) break;
+    }
+    if (elementToMove) break;
+  }
+  
+  // If element wasn't found, return original model
+  if (!elementToMove) {
+    return model;
+  }
+  
+  // Now add the element to the target container using addElementToContainer
+  return addElementToContainer(newModel, elementToMove, targetContainerId);
+}
+
+// Helper function to recursively add element to nested containers
+function addElementToNestedContainer(elements: BlockElement[], newElement: BlockElement, targetContainerId: string): boolean {
+  for (let i = 0; i < elements.length; i++) {
+    const element = elements[i];
+    
+    if (element.id === targetContainerId && (element.type === 'container' || element.type === 'block')) {
+      elements[i] = {
+        ...element,
+        children: [...(element.children || []), newElement]
+      };
+      return true;
+    }
+    
+    // Recurse into children if this is a structural element
+    if ((element.type === 'container' || element.type === 'block') && element.children) {
+      if (addElementToNestedContainer(element.children, newElement, targetContainerId)) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+// Helper function to recursively remove element from nested containers
+function removeElementFromNested(elements: BlockElement[], elementId: string): BlockElement | null {
+  for (let i = 0; i < elements.length; i++) {
+    const element = elements[i];
+    
+    // Check if this is a structural element with children
+    if ((element.type === 'container' || element.type === 'block') && element.children) {
+      // Check direct children
+      const childIndex = element.children.findIndex(child => child.id === elementId);
+      if (childIndex !== -1) {
+        const removedElement = element.children[childIndex];
+        element.children = element.children.filter(child => child.id !== elementId);
+        return removedElement;
+      }
+      
+      // Recurse into nested children
+      const found = removeElementFromNested(element.children, elementId);
+      if (found) return found;
+    }
+  }
+  
+  return null;
 }
