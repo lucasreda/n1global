@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { 
   DndContext, 
   DragEndEvent, 
@@ -22,20 +22,38 @@ import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "
 import { createDefaultTheme } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
-import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus } from 'lucide-react';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail } from 'lucide-react';
 
 interface VisualEditorProps {
   model: PageModelV2;
   onChange: (model: PageModelV2) => void;
+  viewport: 'desktop' | 'tablet' | 'mobile';
+  onViewportChange: (viewport: 'desktop' | 'tablet' | 'mobile') => void;
   className?: string;
 }
 
-export function VisualEditor({ model, onChange, className = "" }: VisualEditorProps) {
+export function VisualEditor({ model, onChange, viewport, onViewportChange, className = "" }: VisualEditorProps) {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<any>(null);
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
   const [isStylesPanelOpen, setIsStylesPanelOpen] = useState(false);
   const [selectedElement, setSelectedElement] = useState<BlockElement | null>(null);
+  const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
+
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleSectionHover = useCallback((sectionId: string | null) => {
+    if (hoveredSectionId !== sectionId) {
+      setHoveredSectionId(sectionId);
+    }
+  }, [hoveredSectionId]);
+
+  const handleElementSelect = useCallback((elementId: string | null) => {
+    if (selectedElement?.id !== elementId) {
+      setSelectedElement(
+        elementId ? findElementInModel(model, elementId) || null : null
+      );
+    }
+  }, [selectedElement?.id, model]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -236,46 +254,31 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
 
           {/* Main Editor Canvas */}
           <div 
-            className="flex-1 overflow-auto bg-background"
+            className="flex-1 flex flex-col bg-background overflow-hidden"
             style={{ 
               height: '100%', 
               minHeight: '100%'
             }}
           >
-            <div 
-              className="p-4"
-              style={{ 
-                height: '100%', 
-                minHeight: '100%'
-              }}
-            >
-              <SortableContext
-                items={model.sections.map(s => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {model.sections.map((section) => (
-                  <SortableSection
-                    key={section.id}
-                    section={section}
-                    theme={model.theme}
-                    selectedElementId={selectedElementId}
-                    onSelectElement={setSelectedElementId}
-                    onUpdateElement={updateElement}
-                    onDeleteSection={deleteSection}
-                  />
-                ))}
-              </SortableContext>
-
-              {/* Add Section Button */}
-              <div className="text-center py-8">
-                <button
-                  onClick={addSection}
-                  className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                  data-testid="button-add-section"
-                >
-                  + Adicionar Seção
-                </button>
-              </div>
+            {/* Viewport Controls */}
+            <ViewportControls 
+              viewport={viewport}
+              onViewportChange={onViewportChange}
+            />
+            
+            {/* Page Frame */}
+            <div className="flex-1 overflow-auto p-6">
+              <PageFrame 
+                viewport={viewport}
+                model={model}
+                selectedElementId={selectedElementId}
+                hoveredSectionId={hoveredSectionId}
+                onSelectElement={setSelectedElementId}
+                onHoverSection={setHoveredSectionId}
+                onUpdateElement={updateElement}
+                onDeleteSection={deleteSection}
+                onAddSection={addSection}
+              />
             </div>
           </div>
 
@@ -319,96 +322,7 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
   );
 }
 
-// Sortable Section Component
-interface SortableSectionProps {
-  section: BlockSection;
-  theme: PageModelV2['theme'];
-  selectedElementId: string | null;
-  onSelectElement: (id: string | null) => void;
-  onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
-  onDeleteSection: (sectionId: string) => void;
-}
-
-function SortableSection({ 
-  section, 
-  theme, 
-  selectedElementId, 
-  onSelectElement, 
-  onUpdateElement,
-  onDeleteSection 
-}: SortableSectionProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: section.id,
-    data: {
-      type: 'section',
-      section,
-    },
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="mb-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow relative group"
-      data-testid={`section-${section.id}`}
-    >
-      {/* Section Header */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-        <div className="flex items-center gap-2">
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab hover:cursor-grabbing p-1 hover:bg-gray-200 rounded"
-          >
-            ⋮⋮
-          </div>
-          <span className="font-medium text-sm text-gray-700">{section.name}</span>
-        </div>
-        <button
-          onClick={() => onDeleteSection(section.id)}
-          className="text-red-500 hover:text-red-700 text-sm"
-        >
-          Excluir
-        </button>
-      </div>
-
-      {/* Section Content */}
-      <div
-        style={{
-          ...section.styles,
-          padding: section.styles.padding || '2rem',
-          backgroundColor: section.styles.backgroundColor || 'transparent',
-        }}
-      >
-        {section.rows.map((row) => (
-          <SortableRow
-            key={row.id}
-            row={row}
-            theme={theme}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-            onUpdateElement={onUpdateElement}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Sortable Row Component
+// Modern Sortable Row Component (used by EnhancedSortableSection)
 interface SortableRowProps {
   row: BlockRow;
   theme: PageModelV2['theme'];
@@ -420,15 +334,15 @@ interface SortableRowProps {
 function SortableRow({ row, theme, selectedElementId, onSelectElement, onUpdateElement }: SortableRowProps) {
   return (
     <div
-      className="flex flex-wrap w-full"
+      className="flex flex-wrap w-full mb-4"
       style={{
-        gap: row.styles.gap || '1rem',
+        gap: row.styles?.gap || '1rem',
         ...row.styles,
       }}
       data-testid={`row-${row.id}`}
     >
       {row.columns.map((column) => (
-        <SortableColumn
+        <ModernColumn
           key={column.id}
           column={column}
           theme={theme}
@@ -441,8 +355,8 @@ function SortableRow({ row, theme, selectedElementId, onSelectElement, onUpdateE
   );
 }
 
-// Sortable Column Component
-interface SortableColumnProps {
+// Modern Column Component (droppable-only, no sortable)
+interface ModernColumnProps {
   column: BlockColumn;
   theme: PageModelV2['theme'];
   selectedElementId: string | null;
@@ -450,18 +364,7 @@ interface SortableColumnProps {
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
 }
 
-function SortableColumn({ column, theme, selectedElementId, onSelectElement, onUpdateElement }: SortableColumnProps) {
-  const {
-    setNodeRef,
-    isOver,
-  } = useSortable({
-    id: column.id,
-    data: {
-      type: 'column',
-      columnId: column.id,
-    },
-  });
-
+function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpdateElement }: ModernColumnProps) {
   const widthClasses = {
     'full': 'w-full',
     '1/2': 'w-1/2',
@@ -473,10 +376,7 @@ function SortableColumn({ column, theme, selectedElementId, onSelectElement, onU
 
   return (
     <div
-      ref={setNodeRef}
-      className={`${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} min-h-24 p-2 border-2 border-dashed border-gray-200 rounded ${
-        isOver ? 'border-blue-400 bg-blue-50' : ''
-      }`}
+      className={`${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} min-h-20 p-3 border border-dashed border-border/30 rounded-lg transition-colors hover:border-primary/50`}
       data-testid={`column-${column.id}`}
     >
       <SortableContext
@@ -484,7 +384,7 @@ function SortableColumn({ column, theme, selectedElementId, onSelectElement, onU
         strategy={verticalListSortingStrategy}
       >
         {column.elements.map((element) => (
-          <SortableElement
+          <ModernElement
             key={element.id}
             element={element}
             theme={theme}
@@ -496,16 +396,17 @@ function SortableColumn({ column, theme, selectedElementId, onSelectElement, onU
       </SortableContext>
 
       {column.elements.length === 0 && (
-        <div className="text-center text-gray-400 py-8 text-sm">
-          Arraste elementos aqui
+        <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
+          <Plus size={16} className="mb-2 opacity-50" />
+          <span className="text-xs">Arrastar elementos aqui</span>
         </div>
       )}
     </div>
   );
 }
 
-// Sortable Element Component  
-interface SortableElementProps {
+// Modern Element Component
+interface ModernElementProps {
   element: BlockElement;
   theme: PageModelV2['theme'];
   isSelected: boolean;
@@ -513,7 +414,13 @@ interface SortableElementProps {
   onUpdate: (elementId: string, updates: Partial<BlockElement>) => void;
 }
 
-function SortableElement({ element, theme, isSelected, onSelect, onUpdate }: SortableElementProps) {
+const ModernElement = React.memo(function ModernElement({ 
+  element, 
+  theme, 
+  isSelected, 
+  onSelect, 
+  onUpdate 
+}: ModernElementProps) {
   const {
     attributes,
     listeners,
@@ -535,9 +442,13 @@ function SortableElement({ element, theme, isSelected, onSelect, onUpdate }: Sor
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleUpdate = (updates: Partial<BlockElement>) => {
+  const handleUpdate = useCallback((updates: Partial<BlockElement>) => {
     onUpdate(element.id, updates);
-  };
+  }, [element.id, onUpdate]);
+
+  const handleClick = useCallback(() => {
+    onSelect();
+  }, [onSelect]);
 
   return (
     <div
@@ -545,14 +456,13 @@ function SortableElement({ element, theme, isSelected, onSelect, onUpdate }: Sor
       style={style}
       {...attributes}
       {...listeners}
-      className={`mb-2 relative group cursor-pointer ${
-        isSelected ? 'ring-2 ring-primary' : ''
+      className={`mb-2 relative group cursor-pointer rounded-md transition-colors ${
+        isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/20'
       }`}
-      onClick={onSelect}
+      onClick={handleClick}
       data-testid={`element-${element.id}`}
       data-element-id={element.id}
     >
-      {/* Render the actual element using our PageRenderer components */}
       <ElementRenderer 
         element={element} 
         theme={theme} 
@@ -562,10 +472,12 @@ function SortableElement({ element, theme, isSelected, onSelect, onUpdate }: Sor
       />
     </div>
   );
-}
+});
 
-// Elements Toolbar
-function ElementsToolbar() {
+// Elements Toolbar (Memoized for performance)
+const ElementsToolbar = React.memo(function ElementsToolbar() {
+  const [activeTab, setActiveTab] = useState<'elements' | 'templates'>('elements');
+  
   const elementTypes = [
     { type: 'heading', label: 'Título', icon: Type },
     { type: 'text', label: 'Texto', icon: FileText },
@@ -577,19 +489,143 @@ function ElementsToolbar() {
     { type: 'divider', label: 'Divisor', icon: Minus },
   ];
 
+  const sectionTemplates = [
+    { 
+      id: 'hero', 
+      label: 'Hero Section', 
+      icon: Layout,
+      description: 'Cabeçalho com título, subtítulo e CTA'
+    },
+    { 
+      id: 'features', 
+      label: 'Funcionalidades', 
+      icon: Star,
+      description: 'Grid de características do produto'
+    },
+    { 
+      id: 'testimonials', 
+      label: 'Depoimentos', 
+      icon: MessageCircle,
+      description: 'Seção de depoimentos de clientes'
+    },
+    { 
+      id: 'team', 
+      label: 'Nossa Equipe', 
+      icon: Users,
+      description: 'Apresentação da equipe'
+    },
+    { 
+      id: 'contact', 
+      label: 'Contato', 
+      icon: Mail,
+      description: 'Formulário de contato'
+    },
+  ];
+
   return (
-    <div className="w-64 bg-card border-r border-border p-4">
-      <h3 className="font-medium text-foreground mb-4">Elementos</h3>
-      <div className="space-y-2">
-        {elementTypes.map((elementType) => (
-          <DraggableElement
-            key={elementType.type}
-            elementType={elementType.type as BlockElement['type']}
-            label={elementType.label}
-            icon={elementType.icon}
-          />
-        ))}
+    <div className="w-64 bg-card border-r border-border flex flex-col">
+      {/* Tab Headers */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveTab('elements')}
+          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            activeTab === 'elements'
+              ? 'text-primary border-b-2 border-primary bg-primary/5'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Elementos
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            activeTab === 'templates'
+              ? 'text-primary border-b-2 border-primary bg-primary/5'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Templates
+        </button>
       </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 p-4 overflow-y-auto">
+        {activeTab === 'elements' && (
+          <div className="space-y-2">
+            {elementTypes.map((elementType) => (
+              <DraggableElement
+                key={elementType.type}
+                elementType={elementType.type as BlockElement['type']}
+                label={elementType.label}
+                icon={elementType.icon}
+              />
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'templates' && (
+          <div className="space-y-3">
+            {sectionTemplates.map((template) => (
+              <SectionTemplate
+                key={template.id}
+                template={template}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+// Section Template Component
+interface SectionTemplateProps {
+  template: {
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string; size?: number | string }>;
+    description: string;
+  };
+}
+
+function SectionTemplate({ template }: SectionTemplateProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useSortable({
+    id: `template-${template.id}`,
+    data: {
+      type: 'section-template',
+      templateId: template.id,
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="flex flex-col gap-2 p-3 bg-secondary hover:bg-secondary/80 rounded-lg cursor-grab hover:cursor-grabbing transition-colors border-2 border-transparent hover:border-primary/30"
+      data-testid={`template-${template.id}`}
+    >
+      <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center w-6 h-6 text-primary">
+          <template.icon size={20} />
+        </div>
+        <span className="text-sm font-medium text-foreground">{template.label}</span>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        {template.description}
+      </p>
     </div>
   );
 }
@@ -635,6 +671,314 @@ function DraggableElement({ elementType, label, icon: IconComponent }: Draggable
       </div>
       <span className="text-sm font-medium text-foreground">{label}</span>
     </div>
+  );
+}
+
+// Viewport Controls Component
+interface ViewportControlsProps {
+  viewport: 'desktop' | 'tablet' | 'mobile';
+  onViewportChange: (viewport: 'desktop' | 'tablet' | 'mobile') => void;
+}
+
+function ViewportControls({ viewport, onViewportChange }: ViewportControlsProps) {
+  const viewportOptions = [
+    { id: 'desktop', label: 'Desktop', icon: Monitor, width: 'w-full' },
+    { id: 'tablet', label: 'Tablet', icon: Tablet, width: 'w-[768px]' },
+    { id: 'mobile', label: 'Mobile', icon: Smartphone, width: 'w-[375px]' },
+  ] as const;
+
+  return (
+    <div className="flex items-center justify-center gap-2 bg-card border-b border-border p-3">
+      <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
+        {viewportOptions.map(({ id, label, icon: IconComponent }) => (
+          <button
+            key={id}
+            onClick={() => onViewportChange(id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              viewport === id
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-background'
+            }`}
+            data-testid={`viewport-${id}`}
+          >
+            <IconComponent size={16} />
+            <span className="hidden sm:block">{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Page Frame Component
+interface PageFrameProps {
+  viewport: 'desktop' | 'tablet' | 'mobile';
+  model: PageModelV2;
+  selectedElementId: string | null;
+  hoveredSectionId: string | null;
+  onSelectElement: (id: string | null) => void;
+  onHoverSection: (id: string | null) => void;
+  onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
+  onDeleteSection: (sectionId: string) => void;
+  onAddSection: () => void;
+}
+
+function PageFrame({ 
+  viewport, 
+  model, 
+  selectedElementId, 
+  hoveredSectionId,
+  onSelectElement, 
+  onHoverSection,
+  onUpdateElement, 
+  onDeleteSection, 
+  onAddSection 
+}: PageFrameProps) {
+  const viewportStyles = {
+    desktop: 'w-full max-w-none',
+    tablet: 'w-[768px]',
+    mobile: 'w-[375px]',
+  };
+
+  return (
+    <div className="flex justify-center min-h-full">
+      {/* Browser Frame */}
+      <div 
+        className={`${viewportStyles[viewport]} mx-auto transition-all duration-300 bg-white dark:bg-background rounded-lg shadow-2xl border border-border overflow-hidden`}
+        style={{ minHeight: '600px' }}
+      >
+        {/* Browser Header */}
+        <div className="flex items-center gap-2 bg-muted px-4 py-3 border-b border-border">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          </div>
+          <div className="flex-1 mx-4">
+            <div className="bg-background rounded-md px-3 py-1 text-xs text-muted-foreground border border-border">
+              preview.minhamarcafunil.com
+            </div>
+          </div>
+        </div>
+
+        {/* Page Content */}
+        <div className="relative bg-background min-h-[500px]">
+          <SortableContext
+            items={model.sections.map(s => s.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {model.sections.length === 0 ? (
+              // Empty State
+              <div className="flex flex-col items-center justify-center h-96 text-center">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                  <FileText size={24} className="text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">Página vazia</h3>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                  Comece criando sua primeira seção. Você pode adicionar títulos, textos, imagens e muito mais.
+                </p>
+                <button
+                  onClick={onAddSection}
+                  className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  data-testid="button-add-first-section"
+                >
+                  <Plus size={20} />
+                  Criar primeira seção
+                </button>
+              </div>
+            ) : (
+              // Sections
+              <>
+                {model.sections.map((section, index) => (
+                  <div key={section.id}>
+                    <EnhancedSortableSection
+                      section={section}
+                      theme={model.theme}
+                      selectedElementId={selectedElementId}
+                      isHovered={hoveredSectionId === section.id}
+                      onSelectElement={onSelectElement}
+                      onHover={onHoverSection}
+                      onUpdateElement={onUpdateElement}
+                      onDeleteSection={onDeleteSection}
+                      onAddSectionAfter={() => onAddSection()}
+                      showAddButton={index === model.sections.length - 1}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
+          </SortableContext>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Enhanced Sortable Section Component
+interface EnhancedSortableSectionProps {
+  section: BlockSection;
+  theme: PageModelV2['theme'];
+  selectedElementId: string | null;
+  isHovered: boolean;
+  onSelectElement: (id: string | null) => void;
+  onHover: (id: string | null) => void;
+  onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
+  onDeleteSection: (sectionId: string) => void;
+  onAddSectionAfter: () => void;
+  showAddButton: boolean;
+}
+
+function EnhancedSortableSection({ 
+  section, 
+  theme, 
+  selectedElementId, 
+  isHovered,
+  onSelectElement, 
+  onHover,
+  onUpdateElement,
+  onDeleteSection,
+  onAddSectionAfter,
+  showAddButton
+}: EnhancedSortableSectionProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: section.id,
+    data: {
+      type: 'section',
+      section,
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`relative group ${isDragging ? 'z-50' : ''}`}
+        onMouseEnter={() => onHover(section.id)}
+        onMouseLeave={() => onHover(null)}
+        data-testid={`section-${section.id}`}
+      >
+        {/* Section Hover Overlay */}
+        {isHovered && !isDragging && (
+          <div className="absolute inset-0 border-2 border-primary border-dashed bg-primary/5 rounded-lg pointer-events-none z-10">
+            {/* Section Label */}
+            <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium">
+              Seção {section.name || section.id.slice(0, 8)}
+            </div>
+          </div>
+        )}
+
+        {/* Section Controls */}
+        {isHovered && !isDragging && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 bg-card border border-border rounded-lg shadow-lg p-1 z-20">
+            {/* Drag Handle */}
+            <button
+              {...attributes}
+              {...listeners}
+              className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors cursor-grab active:cursor-grabbing"
+              title="Arrastar seção"
+            >
+              <GripVertical size={14} />
+            </button>
+            
+            {/* Copy Section */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // TODO: Implement section copy
+                console.log('Copy section', section.id);
+              }}
+              className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
+              title="Duplicar seção"
+            >
+              <Copy size={14} />
+            </button>
+
+            {/* Delete Section */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteSection(section.id);
+              }}
+              className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"
+              title="Excluir seção"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* Section Content */}
+        <div 
+          className={`min-h-[80px] p-6 transition-all duration-200 ${
+            isHovered ? 'bg-muted/20' : ''
+          }`}
+        >
+          {/* Section Rows */}
+          <SortableContext
+            items={section.rows.map(r => r.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {section.rows.map((row) => (
+              <SortableRow
+                key={row.id}
+                row={row}
+                theme={theme}
+                selectedElementId={selectedElementId}
+                onSelectElement={onSelectElement}
+                onUpdateElement={onUpdateElement}
+              />
+            ))}
+          </SortableContext>
+
+          {/* Empty Section State */}
+          {section.rows.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3">
+                <Plus size={20} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">Seção vazia</p>
+              <button
+                onClick={() => {
+                  // TODO: Add row to section
+                  console.log('Add row to section', section.id);
+                }}
+                className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Adicionar conteúdo
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add Section Button */}
+      {showAddButton && (
+        <div className="flex items-center justify-center py-6">
+          <button
+            onClick={onAddSectionAfter}
+            className="group flex items-center gap-2 px-4 py-2 bg-muted hover:bg-primary text-muted-foreground hover:text-primary-foreground rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-all duration-200"
+            data-testid="button-add-section-after"
+          >
+            <Plus size={16} className="group-hover:rotate-90 transition-transform duration-200" />
+            <span className="text-sm font-medium">Adicionar seção</span>
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 

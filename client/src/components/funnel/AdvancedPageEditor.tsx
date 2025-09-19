@@ -421,6 +421,8 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
           <VisualEditor
             model={currentModel}
             onChange={handleModelChange}
+            viewport={viewportMode}
+            onViewportChange={setViewportMode}
             className="w-full h-full"
             style={{ 
               height: '100%',
