@@ -3407,3 +3407,207 @@ export type VercelIntegration = {
   lastUsed?: string;
   isActive?: boolean;
 };
+
+// Advanced Page Builder v2 - Enhanced Block System for Visual Editor
+export type BlockElement = {
+  id: string;
+  type: 'heading' | 'text' | 'button' | 'image' | 'spacer' | 'divider' | 'video' | 'form' | 'embed';
+  props: Record<string, any>;
+  styles: {
+    padding?: string;
+    margin?: string;
+    backgroundColor?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    fontSize?: string;
+    fontWeight?: string;
+    color?: string;
+    borderRadius?: string;
+    border?: string;
+    width?: string;
+    height?: string;
+    [key: string]: any;
+  };
+  content?: {
+    text?: string;
+    html?: string;
+    lexicalState?: any; // Lexical editor state for rich text
+    src?: string; // For images/videos
+    alt?: string; // For images
+    href?: string; // For buttons/links
+    placeholder?: string; // For forms
+    [key: string]: any;
+  };
+};
+
+export type BlockColumn = {
+  id: string;
+  width: string; // '1/2', '1/3', '2/3', '1/4', '3/4', 'full'
+  elements: BlockElement[];
+  styles: {
+    padding?: string;
+    margin?: string;
+    backgroundColor?: string;
+    [key: string]: any;
+  };
+};
+
+export type BlockRow = {
+  id: string;
+  columns: BlockColumn[];
+  styles: {
+    padding?: string;
+    margin?: string;
+    backgroundColor?: string;
+    minHeight?: string;
+    gap?: string;
+    [key: string]: any;
+  };
+};
+
+export type BlockSection = {
+  id: string;
+  type: 'hero' | 'content' | 'cta' | 'benefits' | 'testimonials' | 'faq' | 'checkout' | 'custom';
+  name: string;
+  rows: BlockRow[];
+  styles: {
+    padding?: string;
+    margin?: string;
+    backgroundColor?: string;
+    backgroundImage?: string;
+    minHeight?: string;
+    maxWidth?: string;
+    [key: string]: any;
+  };
+  settings: {
+    containerWidth?: 'full' | 'container' | 'narrow';
+    verticalAlign?: 'top' | 'center' | 'bottom';
+    animation?: string;
+    [key: string]: any;
+  };
+};
+
+export type PageModelV2 = {
+  version: 2;
+  layout: 'single_page' | 'multi_step' | 'scroll';
+  sections: BlockSection[];
+  
+  // Global styles and theme
+  theme: {
+    colors: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      background: string;
+      text: string;
+      muted: string;
+    };
+    typography: {
+      headingFont: string;
+      bodyFont: string;
+      fontSize: {
+        xs: string;
+        sm: string;
+        base: string;
+        lg: string;
+        xl: string;
+        '2xl': string;
+        '3xl': string;
+        '4xl': string;
+      };
+    };
+    spacing: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+    };
+    borderRadius: {
+      sm: string;
+      md: string;
+      lg: string;
+    };
+  };
+  
+  // SEO settings
+  seo: {
+    title: string;
+    description: string;
+    keywords?: string[];
+    ogImage?: string;
+    ogTitle?: string;
+    ogDescription?: string;
+  };
+  
+  // Settings for the visual editor
+  settings: {
+    containerMaxWidth?: string;
+    showGrid?: boolean;
+    snapToGrid?: boolean;
+    enableAnimations?: boolean;
+    mobileFirst?: boolean;
+  };
+};
+
+// Legacy compatibility - extends existing model to work with v2
+export type EnhancedPageModel = {
+  // Legacy format (v1)
+  layout: string;
+  sections: Array<{
+    id: string;
+    type: string;
+    config: Record<string, any>;
+    content: Record<string, any>;
+  }>;
+  style: {
+    theme: string;
+    primaryColor: string;
+    secondaryColor: string;
+    fontFamily: string;
+  };
+  seo: {
+    title: string;
+    description: string;
+    keywords?: string[];
+  };
+} | PageModelV2; // OR new format (v2)
+
+// AI Integration types for content generation
+export type AIContentRequest = {
+  type: 'generate_section' | 'rewrite_text' | 'optimize_cta' | 'suggest_layout' | 'generate_copy';
+  context: {
+    sectionType?: string;
+    currentText?: string;
+    businessInfo?: {
+      name: string;
+      industry: string;
+      targetAudience: string;
+      valueProposition: string;
+    };
+    goal?: 'increase_conversion' | 'improve_clarity' | 'make_persuasive' | 'create_urgency';
+    tone?: 'professional' | 'friendly' | 'urgent' | 'trustworthy' | 'excited';
+    language?: string;
+  };
+  elementId?: string; // For targeted improvements
+};
+
+export type AIContentResponse = {
+  success: boolean;
+  content?: {
+    text?: string;
+    html?: string;
+    suggestions?: string[];
+    variants?: Array<{
+      text: string;
+      reason: string;
+    }>;
+  };
+  changes?: Array<{
+    elementId: string;
+    property: string;
+    newValue: any;
+    reason: string;
+  }>;
+  error?: string;
+};

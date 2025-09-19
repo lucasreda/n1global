@@ -6287,6 +6287,10 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   // Register Funnel Builder routes
   app.use("/api", funnelRoutes);
 
+  // Register AI Content routes
+  const aiContentRoutes = await import('./ai-content-routes');
+  app.use("/api/ai", aiContentRoutes.default);
+
   // Register Analytics routes
   const analyticsRoutes = await import('./analytics-routes');
   app.use("/api/analytics", analyticsRoutes.default);

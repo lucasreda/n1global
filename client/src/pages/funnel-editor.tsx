@@ -32,7 +32,7 @@ import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useToast } from "@/hooks/use-toast";
 import { Funnel } from "@shared/schema";
 import { FunnelPagesManager } from "@/components/funnel/FunnelPagesManager";
-import { PageVisualEditor } from "@/components/funnel/PageVisualEditor";
+import { AdvancedPageEditor } from "@/components/funnel/AdvancedPageEditor";
 
 interface FunnelEditorData {
   name: string;
@@ -378,7 +378,7 @@ export default function FunnelEditor() {
                     Voltar às Páginas
                   </Button>
                 </div>
-                <PageVisualEditor funnelId={funnelId} pageId={pageId} />
+                <AdvancedPageEditor funnelId={funnelId} pageId={pageId} />
               </div>
             ) : (
               <FunnelPagesManager funnelId={funnelId} />
