@@ -360,24 +360,27 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
                 size="sm"
                 onClick={() => setViewportMode('desktop')}
                 data-testid="viewport-desktop"
+                className={viewportMode === 'desktop' ? 'text-white' : ''}
               >
-                <Monitor className="w-4 h-4" />
+                <Monitor className={`w-4 h-4 ${viewportMode === 'desktop' ? 'text-white' : ''}`} />
               </Button>
               <Button
                 variant={viewportMode === 'tablet' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewportMode('tablet')}
                 data-testid="viewport-tablet"
+                className={viewportMode === 'tablet' ? 'text-white' : ''}
               >
-                <Tablet className="w-4 h-4" />
+                <Tablet className={`w-4 h-4 ${viewportMode === 'tablet' ? 'text-white' : ''}`} />
               </Button>
               <Button
                 variant={viewportMode === 'mobile' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewportMode('mobile')}
                 data-testid="viewport-mobile"
+                className={viewportMode === 'mobile' ? 'text-white' : ''}
               >
-                <Smartphone className="w-4 h-4" />
+                <Smartphone className={`w-4 h-4 ${viewportMode === 'mobile' ? 'text-white' : ''}`} />
               </Button>
             </div>
 
