@@ -5,10 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Eye, Edit, Trash2, Copy, ArrowUpDown } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { PageCard } from "./PageCard";
 import { CreatePageModal } from "./CreatePageModal";
-import { apiRequest } from "@/lib/queryClient";
+import { authenticatedApiRequest } from "@/lib/auth";
 
 interface FunnelPage {
   id: string;
@@ -37,7 +37,7 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
   const { data: pagesData, isLoading, error } = useQuery({
     queryKey: ['/api/funnels', funnelId, 'pages'],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/funnels/${funnelId}/pages?operationId=${selectedOperation}`);
+      const response = await authenticatedApiRequest('GET', `/api/funnels/${funnelId}/pages?operationId=${selectedOperation}`);
       if (!response.ok) {
         throw new Error('Falha ao carregar páginas');
       }
@@ -49,7 +49,7 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
   // Delete page mutation
   const deletePageMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      const response = await apiRequest('DELETE', `/api/funnels/${funnelId}/pages/${pageId}?operationId=${selectedOperation}`);
+      const response = await authenticatedApiRequest('DELETE', `/api/funnels/${funnelId}/pages/${pageId}?operationId=${selectedOperation}`);
       if (!response.ok) {
         throw new Error('Falha ao deletar página');
       }
@@ -74,7 +74,7 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
   // Duplicate page mutation
   const duplicatePageMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      const response = await apiRequest('POST', `/api/funnels/${funnelId}/pages/${pageId}/duplicate?operationId=${selectedOperation}`);
+      const response = await authenticatedApiRequest('POST', `/api/funnels/${funnelId}/pages/${pageId}/duplicate?operationId=${selectedOperation}`);
       if (!response.ok) {
         throw new Error('Falha ao duplicar página');
       }

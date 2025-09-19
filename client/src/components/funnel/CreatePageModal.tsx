@@ -33,7 +33,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, ShoppingCart, TrendingUp, Heart, Gift } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { authenticatedApiRequest } from "@/lib/auth";
 
 const createPageSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -80,7 +80,7 @@ export function CreatePageModal({ open, onOpenChange, funnelId, onSuccess }: Cre
   const { data: templatesData, isLoading: templatesLoading } = useQuery({
     queryKey: ['/api/funnels/page-templates'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/funnels/page-templates');
+      const response = await authenticatedApiRequest('GET', '/api/funnels/page-templates');
       if (!response.ok) {
         throw new Error('Falha ao carregar templates');
       }
@@ -92,7 +92,7 @@ export function CreatePageModal({ open, onOpenChange, funnelId, onSuccess }: Cre
   // Create page mutation
   const createPageMutation = useMutation({
     mutationFn: async (data: CreatePageForm) => {
-      const response = await apiRequest('POST', `/api/funnels/${funnelId}/pages?operationId=${selectedOperation}`, {
+      const response = await authenticatedApiRequest('POST', `/api/funnels/${funnelId}/pages?operationId=${selectedOperation}`, {
         ...data,
         templateId: selectedTemplate || undefined,
       });

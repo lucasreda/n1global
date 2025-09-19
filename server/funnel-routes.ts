@@ -1306,6 +1306,106 @@ router.put("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperat
 });
 
 /**
+ * Duplicate a page
+ */
+router.post("/funnels/:funnelId/pages/:pageId/duplicate", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId, pageId } = req.params;
+    const operationId = req.validatedOperationId;
+    const userId = (req as any).user.id;
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(and(
+        eq(funnels.id, funnelId),
+        eq(funnels.operationId, operationId)
+      ))
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado",
+      });
+    }
+
+    // Get original page
+    const [originalPage] = await db
+      .select()
+      .from(funnelPages)
+      .where(and(
+        eq(funnelPages.id, pageId),
+        eq(funnelPages.funnelId, funnelId)
+      ))
+      .limit(1);
+
+    if (!originalPage) {
+      return res.status(404).json({
+        success: false,
+        error: "Página não encontrada"
+      });
+    }
+
+    // Create slug for duplicate
+    const baseSlug = originalPage.slug.replace(/(_copy_\d+)?$/, '');
+    const copyNumber = await db
+      .select({ count: sql`count(*)` })
+      .from(funnelPages)
+      .where(and(
+        eq(funnelPages.funnelId, funnelId),
+        sql`${funnelPages.slug} LIKE ${baseSlug + '_copy_%'}`
+      ));
+
+    const nextCopyNumber = Number(copyNumber[0].count) + 1;
+    const newSlug = `${baseSlug}_copy_${nextCopyNumber}`;
+
+    // Create duplicate page
+    const [duplicatedPage] = await db
+      .insert(funnelPages)
+      .values({
+        funnelId,
+        templateId: originalPage.templateId,
+        name: `${originalPage.name} (Cópia)`,
+        slug: newSlug,
+        pageType: originalPage.pageType,
+        status: 'draft',
+        order: originalPage.order + 1,
+        model: originalPage.model,
+      })
+      .returning();
+
+    // Create initial revision for duplicated page
+    await db
+      .insert(funnelPageRevisions)
+      .values({
+        pageId: duplicatedPage.id,
+        version: 1,
+        model: originalPage.model,
+        changes: JSON.stringify({
+          action: 'duplicate',
+          originalPageId: pageId,
+          duplicatedAt: new Date().toISOString()
+        }),
+        userId,
+      });
+
+    return res.json({
+      success: true,
+      message: "Página duplicada com sucesso",
+      page: duplicatedPage
+    });
+  } catch (error) {
+    console.error('❌ Erro ao duplicar página:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro ao duplicar página"
+    });
+  }
+});
+
+/**
  * Delete a page
  */
 router.delete("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperationAccess, async (req, res) => {
