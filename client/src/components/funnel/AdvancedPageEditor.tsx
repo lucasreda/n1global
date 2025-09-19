@@ -188,9 +188,12 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
   useEffect(() => {
     if (pageResponse?.success && pageResponse.page) {
       setPageData(pageResponse.page);
-      reset(getInitialModel());
+      // Only reset if pageData changed to avoid infinite loops
+      if (!pageData || pageData.id !== pageResponse.page.id) {
+        reset(getInitialModel());
+      }
     }
-  }, [pageResponse, reset, getInitialModel]);
+  }, [pageResponse, reset, pageData]); // Removed getInitialModel from dependencies
 
   // AI Content hooks
   const aiContent = useAIContent({
