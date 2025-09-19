@@ -8,6 +8,9 @@ export { ElementDivider } from './ElementDivider';
 export { ElementVideo } from './ElementVideo';
 export { ElementForm } from './ElementForm';
 export { ElementEmbed } from './ElementEmbed';
+export { ElementBenefits } from './ElementBenefits';
+export { ElementReviews } from './ElementReviews';
+export { ElementSlider } from './ElementSlider';
 
 // Element types and utilities
 export type { ElementProps, ElementConfig } from './types';

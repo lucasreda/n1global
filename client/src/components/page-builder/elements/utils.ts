@@ -13,7 +13,10 @@ import {
   Heading2,
   Heading3,
   Box,
-  Grid3X3
+  Grid3X3,
+  Star,
+  MessageCircle,
+  Images
 } from "lucide-react";
 
 export function createDefaultElement(type: BlockElement['type']): BlockElement {
@@ -184,6 +187,107 @@ export function createDefaultElement(type: BlockElement['type']): BlockElement {
         children: [],
       };
 
+    case 'benefits':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '2rem',
+          backgroundColor: 'transparent',
+        },
+        content: {
+          benefits: [
+            {
+              id: '1',
+              title: 'Benefício 1',
+              description: 'Descrição do primeiro benefício',
+              icon: 'check'
+            },
+            {
+              id: '2',
+              title: 'Benefício 2',
+              description: 'Descrição do segundo benefício',
+              icon: 'star'
+            },
+            {
+              id: '3',
+              title: 'Benefício 3',
+              description: 'Descrição do terceiro benefício',
+              icon: 'zap'
+            }
+          ]
+        },
+      };
+
+    case 'reviews':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '2rem',
+          backgroundColor: 'transparent',
+        },
+        content: {
+          reviews: [
+            {
+              id: '1',
+              name: 'Maria Silva',
+              comment: 'Produto excelente! Superou minhas expectativas. Recomendo para todos.',
+              rating: 5,
+              role: 'Cliente Verificado'
+            },
+            {
+              id: '2',
+              name: 'João Santos',
+              comment: 'Muito bom, entrega rápida e produto de qualidade. Já comprei novamente.',
+              rating: 5,
+              role: 'Cliente Verificado'
+            },
+            {
+              id: '3',
+              name: 'Ana Costa',
+              comment: 'Adorei! Exatamente como descrito. Atendimento nota 10.',
+              rating: 5,
+              role: 'Cliente Verificado'
+            }
+          ]
+        },
+      };
+
+    case 'slider':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '1rem',
+          backgroundColor: 'transparent',
+        },
+        content: {
+          images: [
+            {
+              id: '1',
+              src: 'https://via.placeholder.com/800x400?text=Imagem+1',
+              alt: 'Imagem 1',
+              caption: 'Primeira imagem do slider'
+            },
+            {
+              id: '2',
+              src: 'https://via.placeholder.com/800x400?text=Imagem+2',
+              alt: 'Imagem 2',
+              caption: 'Segunda imagem do slider'
+            },
+            {
+              id: '3',
+              src: 'https://via.placeholder.com/800x400?text=Imagem+3',
+              alt: 'Imagem 3',
+              caption: 'Terceira imagem do slider'
+            }
+          ],
+          autoPlay: true,
+          autoPlayInterval: 5000
+        },
+      };
+
     default:
       return baseElement;
   }
@@ -202,6 +306,9 @@ export function getElementIcon(type: BlockElement['type']) {
     embed: Code,
     container: Box,
     block: Grid3X3,
+    benefits: Star,
+    reviews: MessageCircle,
+    slider: Images,
   };
 
   return icons[type] || Type;
@@ -220,12 +327,15 @@ export function getElementLabel(type: BlockElement['type']): string {
     embed: 'Código Embed',
     container: 'Container',
     block: 'Bloco',
+    benefits: 'Benefícios',
+    reviews: 'Depoimentos',
+    slider: 'Slider',
   };
 
   return labels[type] || 'Elemento';
 }
 
-export function getElementCategory(type: BlockElement['type']): 'basic' | 'media' | 'form' | 'layout' {
+export function getElementCategory(type: BlockElement['type']): 'basic' | 'media' | 'form' | 'layout' | 'template' {
   const categories = {
     heading: 'basic' as const,
     text: 'basic' as const,
@@ -238,6 +348,9 @@ export function getElementCategory(type: BlockElement['type']): 'basic' | 'media
     embed: 'media' as const,
     container: 'layout' as const,
     block: 'layout' as const,
+    benefits: 'template' as const,
+    reviews: 'template' as const,
+    slider: 'template' as const,
   };
 
   return categories[type] || 'basic';
