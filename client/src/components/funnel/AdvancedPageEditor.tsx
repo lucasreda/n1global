@@ -45,10 +45,10 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
   const { data: pageResponse, isLoading, error } = useQuery({
     queryKey: ['/api/funnels', funnelId, 'pages', pageId, selectedOperation],
     queryFn: async () => {
-      const operationId = typeof selectedOperation === 'string' ? selectedOperation : selectedOperation?.id || '';
+      const operationId = typeof selectedOperation === 'string' ? selectedOperation : (selectedOperation as any)?.id || '';
       const response = await authenticatedApiRequest(
-        `/api/funnels/${funnelId}/pages/${pageId}?operationId=${operationId}`,
-        { method: 'GET' }
+        'GET',
+        `/api/funnels/${funnelId}/pages/${pageId}?operationId=${operationId}`
       );
       if (!response.ok) {
         throw new Error('Falha ao carregar página');
@@ -125,10 +125,21 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
           background: '#ffffff',
           text: '#1e293b',
           accent: '#f59e0b',
+          muted: '#9ca3af',
         },
-        fonts: {
-          body: 'Inter, sans-serif',
-          heading: 'Inter, sans-serif',
+        typography: {
+          headingFont: 'Inter, sans-serif',
+          bodyFont: 'Inter, sans-serif',
+          fontSize: {
+            xs: '0.75rem',
+            sm: '0.875rem',
+            base: '1rem',
+            lg: '1.125rem',
+            xl: '1.25rem',
+            '2xl': '1.5rem',
+            '3xl': '1.875rem',
+            '4xl': '2.25rem',
+          },
         },
         spacing: {
           xs: '0.5rem',
@@ -136,6 +147,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
           md: '1.5rem',
           lg: '2rem',
           xl: '3rem',
+          '2xl': '4rem',
         },
       },
       seo: {
@@ -203,11 +215,9 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
       };
 
       const response = await authenticatedApiRequest(
+        'PUT',
         `/api/funnels/${funnelId}/pages/${pageId}?operationId=${selectedOperation}`,
-        {
-          method: 'PUT',
-          body: JSON.stringify(updatedPage),
-        }
+        updatedPage
       );
 
       if (!response.ok) {
