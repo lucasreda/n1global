@@ -730,6 +730,7 @@ export default function FunnelPreview() {
                   <FunnelDeployInterface
                     sessionId={selectedSession}
                     previewData={validationData || undefined}
+                    operationId={new URLSearchParams(window.location.search).get('operationId') || localStorage.getItem('selectedOperationId') || undefined}
                     onDeploymentComplete={(deployment) => {
                       toast({
                         title: "🎉 Deploy Concluído!",

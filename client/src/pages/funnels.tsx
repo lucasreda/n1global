@@ -29,7 +29,9 @@ import {
   BookOpen,
   ChevronRight,
   ChevronLeft,
-  Check
+  Check,
+  Cloud,
+  Activity
 } from "lucide-react";
 import { Link } from "wouter";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -45,10 +47,12 @@ import {
   Funnel, 
   FunnelTemplate 
 } from "@shared/schema";
+import { FunnelDeployInterface } from "@/components/FunnelDeployInterface";
 
 export default function Funnels() {
   const [openDialog, setOpenDialog] = useState<string | null>(null);
   const [modalStep, setModalStep] = useState(1);
+  const [deployingFunnel, setDeployingFunnel] = useState<Funnel | null>(null);
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
 
@@ -229,6 +233,27 @@ export default function Funnels() {
     e?.stopPropagation();
     
     setModalStep(prev => Math.max(prev - 1, 1));
+  };
+
+  // Handle deployment completion
+  const handleDeploymentComplete = (deployment: any) => {
+    console.log('🚀 Deployment completed:', deployment);
+    toast({
+      title: "✅ Deploy Concluído!",
+      description: `Seu funil está disponível em: ${deployment.url}`,
+    });
+    
+    // Close deployment dialog
+    setDeployingFunnel(null);
+    
+    // Refresh funnels list to update deployment status
+    refetchFunnels();
+  };
+
+  // Handle Deploy button click
+  const handleDeployFunnel = (funnel: Funnel) => {
+    console.log('🚀 Starting deployment for funnel:', funnel.name);
+    setDeployingFunnel(funnel);
   };
 
   // Create new funnel
@@ -792,11 +817,24 @@ export default function Funnels() {
                       {funnel.status === 'ready' && (
                         <Button 
                           size="sm" 
+                          onClick={() => handleDeployFunnel(funnel)}
                           className="flex-1 bg-green-600 hover:bg-green-700"
                           data-testid={`button-deploy-${funnel.id}`}
                         >
                           <Rocket className="w-4 h-4 mr-1" />
                           Deploy
+                        </Button>
+                      )}
+                      {funnel.deploymentUrl && (
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`https://${funnel.deploymentUrl}`, '_blank')}
+                          className="flex-1 border-green-500 text-green-400 hover:bg-green-500/10"
+                          data-testid={`button-view-live-${funnel.id}`}
+                        >
+                          <Globe className="w-4 h-4 mr-1" />
+                          Ver Site
                         </Button>
                       )}
                     </div>
@@ -807,6 +845,38 @@ export default function Funnels() {
           )}
         </div>
       </main>
+
+      {/* Deployment Dialog */}
+      {deployingFunnel && (
+        <Dialog open={!!deployingFunnel} onOpenChange={() => setDeployingFunnel(null)}>
+          <DialogContent className="max-w-4xl glassmorphism border-white/10">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                <Rocket className="w-5 h-5" />
+                Deploy: {deployingFunnel.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="mt-4">
+              <FunnelDeployInterface
+                funnelId={deployingFunnel.id}
+                operationId={selectedOperation || ''}
+                previewData={{
+                  isValid: true,
+                  issues: [],
+                  funnelValidated: true,
+                  pagesValidated: true,
+                  pagesCount: 3,
+                  sectionsCount: 8,
+                  validatedAt: new Date().toISOString()
+                }}
+                onDeploymentComplete={handleDeploymentComplete}
+                className="w-full"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

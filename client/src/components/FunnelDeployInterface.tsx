@@ -35,6 +35,7 @@ interface DeploymentStatus {
 interface FunnelDeployInterfaceProps {
   sessionId?: string;
   funnelId?: string;
+  operationId?: string;
   previewData?: {
     validation?: {
       isValid?: boolean;
@@ -54,6 +55,7 @@ interface FunnelDeployInterfaceProps {
 export function FunnelDeployInterface({ 
   sessionId, 
   funnelId,
+  operationId,
   previewData,
   onDeploymentComplete,
   className 
@@ -68,21 +70,22 @@ export function FunnelDeployInterface({
 
   // Get Vercel integration status
   const { data: vercelIntegration, isLoading: loadingIntegration } = useQuery({
-    queryKey: ['/api/funnels/vercel/status'],
+    queryKey: ['/api/funnels/vercel/status', operationId],
     queryFn: async () => {
-      // Get current operation ID from URL or context
-      const urlParams = new URLSearchParams(window.location.search);
-      const operationId = urlParams.get('operationId') || localStorage.getItem('selectedOperationId');
+      // Use operationId from props or fallback to context
+      const currentOperationId = operationId || 
+        new URLSearchParams(window.location.search).get('operationId') || 
+        localStorage.getItem('selectedOperationId');
       
-      if (!operationId) {
+      if (!currentOperationId) {
         throw new Error('Operation context is required for Vercel integration status');
       }
 
-      return await apiRequest(`/api/funnels/vercel/status?operationId=${operationId}`, {
+      return await apiRequest(`/api/funnels/vercel/status?operationId=${currentOperationId}`, {
         method: 'GET'
       });
     },
-    enabled: true,
+    enabled: !!operationId,
   });
 
   // Deploy from preview session mutation
@@ -92,15 +95,16 @@ export function FunnelDeployInterface({
       projectName: string; 
       customDomain?: string; 
     }) => {
-      // Get current operation ID from URL or context
-      const urlParams = new URLSearchParams(window.location.search);
-      const operationId = urlParams.get('operationId') || localStorage.getItem('selectedOperationId');
+      // Use operationId from props or fallback to context
+      const currentOperationId = operationId || 
+        new URLSearchParams(window.location.search).get('operationId') || 
+        localStorage.getItem('selectedOperationId');
       
-      if (!operationId) {
+      if (!currentOperationId) {
         throw new Error('Operation context is required for deployment');
       }
 
-      return await apiRequest(`/api/funnels/multi-page/create-and-deploy?operationId=${operationId}`, {
+      return await apiRequest(`/api/funnels/multi-page/create-and-deploy?operationId=${currentOperationId}`, {
         method: 'POST',
         body: {
           sessionId: data.sessionId,
@@ -124,8 +128,6 @@ export function FunnelDeployInterface({
       
       // Start polling for deployment status
       pollDeploymentStatus(data.deployment.id);
-      
-      onDeploymentComplete?.(data.deployment);
     },
     onError: (error: any) => {
       console.error('Deploy error:', error);
@@ -137,27 +139,54 @@ export function FunnelDeployInterface({
     },
   });
 
-  // Deploy regular funnel mutation
+  // Deploy regular funnel mutation (uses multi-page endpoint with user-managed tokens)
   const deployFunnelMutation = useMutation({
     mutationFn: async (data: { 
       funnelId: string; 
+      projectName: string;
       customDomain?: string; 
     }) => {
-      return await apiRequest('/api/funnels/deploy', {
+      // Use operationId from props or fallback to context
+      const currentOperationId = operationId || 
+        new URLSearchParams(window.location.search).get('operationId') || 
+        localStorage.getItem('selectedOperationId');
+      
+      if (!currentOperationId) {
+        throw new Error('Operation context is required for deployment');
+      }
+
+      // For regular funnel deployment, we'll use the create-and-deploy endpoint
+      // which handles server-side token management and operation scoping
+      return await apiRequest(`/api/funnels/multi-page/create-and-deploy?operationId=${currentOperationId}`, {
         method: 'POST',
         body: {
-          funnelId: data.funnelId,
+          sessionId: `funnel-${data.funnelId}`,
+          projectName: data.projectName,
           customDomain: data.customDomain,
         },
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: "🚀 Deploy Iniciado!",
-        description: "Seu funil está sendo implantado. Acompanhe o progresso na lista de funis.",
+        description: "Seu funil está sendo implantado no Vercel. Acompanhe o progresso abaixo.",
       });
       
-      queryClient.invalidateQueries({ queryKey: ['/api/funnels'] });
+      // Set deployment status if backend returns it
+      if (data.deployment) {
+        setDeploymentStatus({
+          id: data.deployment.id,
+          status: data.deployment.state,
+          url: data.deployment.url,
+          createdAt: data.deployment.createdAt,
+        });
+        
+        // Start polling for deployment status
+        pollDeploymentStatus(data.deployment.id);
+      } else {
+        // Fallback: just show toast and invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['/api/funnels'] });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -172,15 +201,16 @@ export function FunnelDeployInterface({
   const pollDeploymentStatus = async (deploymentId: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        // Get current operation ID from URL or context
-        const urlParams = new URLSearchParams(window.location.search);
-        const operationId = urlParams.get('operationId') || localStorage.getItem('selectedOperationId');
+        // Use operationId from props or fallback to context
+        const currentOperationId = operationId || 
+          new URLSearchParams(window.location.search).get('operationId') || 
+          localStorage.getItem('selectedOperationId');
         
-        if (!operationId) {
+        if (!currentOperationId) {
           throw new Error('Operation context is required for deployment status');
         }
 
-        const response = await apiRequest(`/api/funnels/deployment/${deploymentId}/status?operationId=${operationId}`, {
+        const response = await apiRequest(`/api/funnels/deployment/${deploymentId}/status?operationId=${currentOperationId}`, {
           method: 'GET'
         }) as any;
         
@@ -204,6 +234,8 @@ export function FunnelDeployInterface({
               title: "🎉 Deploy Concluído!",
               description: `Seu funil está agora disponível em: ${response.deployment.url}`,
             });
+            // Only call completion callback when deployment is actually ready
+            onDeploymentComplete?.(response.deployment);
             break;
           case 'ERROR':
           case 'CANCELED':
