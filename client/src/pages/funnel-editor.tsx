@@ -32,6 +32,7 @@ import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useToast } from "@/hooks/use-toast";
 import { Funnel } from "@shared/schema";
 import { FunnelPagesManager } from "@/components/funnel/FunnelPagesManager";
+import { PageVisualEditor } from "@/components/funnel/PageVisualEditor";
 
 interface FunnelEditorData {
   name: string;
@@ -376,20 +377,8 @@ export default function FunnelEditor() {
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Voltar às Páginas
                   </Button>
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">Editor de Página</h3>
-                    <p className="text-gray-400">Editando página: {pageId}</p>
-                  </div>
                 </div>
-                <Card className="bg-gray-900/50 border-gray-700">
-                  <CardContent className="p-6">
-                    <div className="text-center py-12">
-                      <h3 className="text-xl font-semibold text-white mb-2">Editor Visual de Página</h3>
-                      <p className="text-gray-400 mb-4">O editor visual será implementado aqui</p>
-                      <p className="text-sm text-gray-500">ID da Página: {pageId}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <PageVisualEditor funnelId={funnelId} pageId={pageId} />
               </div>
             ) : (
               <FunnelPagesManager funnelId={funnelId} />

@@ -28,8 +28,6 @@ interface FunnelPagesManagerProps {
 }
 
 export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
-  console.log('📋 FunnelPagesManager: RENDERED with funnelId:', funnelId);
-  
   const [showCreateModal, setShowCreateModal] = useState(false);
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
@@ -39,19 +37,14 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
   const { data: pagesData, isLoading, error } = useQuery({
     queryKey: ['/api/funnels', funnelId, 'pages'],
     queryFn: async () => {
-      console.log('📋 FunnelPagesManager: Fetching pages for funnelId:', funnelId, 'operation:', selectedOperation);
       const response = await authenticatedApiRequest('GET', `/api/funnels/${funnelId}/pages?operationId=${selectedOperation}`);
       if (!response.ok) {
         throw new Error('Falha ao carregar páginas');
       }
-      const result = await response.json();
-      console.log('📋 FunnelPagesManager: Pages loaded:', result);
-      return result;
+      return response.json();
     },
     enabled: !!funnelId && !!selectedOperation,
   });
-
-  console.log('📋 FunnelPagesManager: Query state:', { isLoading, error: error?.message, pagesCount: pagesData?.pages?.length });
 
   // Delete page mutation
   const deletePageMutation = useMutation({
