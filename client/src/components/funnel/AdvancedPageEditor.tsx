@@ -404,10 +404,10 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
             <Button
               onClick={handleSave}
               disabled={savePageMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid="button-save-page"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4 mr-2 text-white" />
               {savePageMutation.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
