@@ -205,6 +205,12 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       const newModel = moveElementToContainer(model, active.id as string, overData.containerId);
       onChange(newModel);
     }
+
+    // Handle moving existing element to section
+    if (activeData?.type === 'element' && overData?.type === 'section') {
+      const newModel = moveElementToSection(model, active.id as string, over.id as string);
+      onChange(newModel);
+    }
   };
 
   const addSection = useCallback(() => {
@@ -2403,6 +2409,34 @@ function moveElementToContainer(model: PageModelV2, elementId: string, targetCon
   
   // Now add the element to the target container using addElementToContainer
   return addElementToContainer(newModel, elementToMove, targetContainerId);
+}
+
+// Move element to section (adds to first column of first row)
+function moveElementToSection(model: PageModelV2, elementId: string, targetSectionId: string): PageModelV2 {
+  let elementToMove: BlockElement | null = null;
+  
+  // First, find and remove the element from its current location
+  const modelAfterRemove = removeElementFromModel(model, elementId);
+  elementToMove = findElementInModel(model, elementId);
+  
+  if (!elementToMove) {
+    return model;
+  }
+  
+  // Find the target section and add element to its first column
+  const newModel = { ...modelAfterRemove };
+  for (const section of newModel.sections) {
+    if (section.id === targetSectionId) {
+      // Add to first row, first column
+      if (section.rows.length > 0 && section.rows[0].columns.length > 0) {
+        const firstColumn = section.rows[0].columns[0];
+        firstColumn.elements = [...firstColumn.elements, elementToMove];
+        return newModel;
+      }
+    }
+  }
+  
+  return model;
 }
 
 // Helper function to recursively add element to nested containers
