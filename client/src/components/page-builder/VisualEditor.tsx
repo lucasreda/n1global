@@ -141,6 +141,24 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       onChange(newModel);
     }
 
+    // Handle moving existing element to block columns
+    if (activeData?.type === 'element' && overData?.type === 'block-column-zone') {
+      const newModel = moveElementToBlockColumn(model, active.id as string, overData.elementId, overData.columnIndex, overData.position);
+      onChange(newModel);
+    }
+
+    // Handle moving existing element to structural elements (blocks/containers)
+    if (activeData?.type === 'element' && overData?.type === 'element-zone') {
+      const newModel = moveElementToStructuralElement(model, active.id as string, overData.elementId, overData.position);
+      onChange(newModel);
+    }
+
+    // Handle moving existing element to containers
+    if (activeData?.type === 'element' && overData?.type === 'container') {
+      const newModel = moveElementToContainer(model, active.id as string, overData.containerId);
+      onChange(newModel);
+    }
+
     // Handle adding new element to block columns
     if (activeData?.type === 'new-element' && overData?.type === 'block-column-zone') {
       const newElement = createDefaultElement(activeData.elementType);
@@ -2082,6 +2100,22 @@ function moveElementToStructuralElement(model: PageModelV2, elementId: string, t
   
   // Then add it to the target
   return addElementToStructuralElement(modelAfterRemove, elementToMove, targetElementId, position);
+}
+
+// Move element to block column
+function moveElementToBlockColumn(model: PageModelV2, elementId: string, targetElementId: string, columnIndex: number, position: number): PageModelV2 {
+  let elementToMove: BlockElement | null = null;
+  
+  // First, find and remove the element
+  const modelAfterRemove = removeElementFromModel(model, elementId);
+  elementToMove = findElementInModel(model, elementId);
+  
+  if (!elementToMove) {
+    return model;
+  }
+  
+  // Then add it to the target block column
+  return addElementToBlockColumn(modelAfterRemove, elementToMove, targetElementId, columnIndex, position);
 }
 
 // Helper function to find an element in the model
