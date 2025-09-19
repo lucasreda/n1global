@@ -66,7 +66,7 @@ export function PageCard({
               {page.name}
             </CardTitle>
             <CardDescription className="text-gray-400 text-sm">
-              /{page.slug}
+              {page.path}
             </CardDescription>
           </div>
           <DropdownMenu>
