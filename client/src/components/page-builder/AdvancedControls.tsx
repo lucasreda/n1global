@@ -88,7 +88,7 @@ export function UnitSliderInput({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {units.map(unit => (
+              {units.filter(unit => unit !== '').map(unit => (
                 <SelectItem key={unit} value={unit}>{unit}</SelectItem>
               ))}
             </SelectContent>
