@@ -228,9 +228,11 @@ interface ElementRendererProps {
   element: BlockElement;
   theme: PageModelV2['theme'];
   editorMode: boolean;
+  isSelected?: boolean;
+  onUpdate?: (updates: Partial<BlockElement>) => void;
 }
 
-export function ElementRenderer({ element, theme, editorMode }: ElementRendererProps) {
+export function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate }: ElementRendererProps) {
   const finalStyles = buildFinalStyles(element.styles);
   
   const baseStyles = {

@@ -10,7 +10,9 @@ import {
   useDroppable,
   useSensor,
   useSensors,
-  closestCenter
+  closestCenter,
+  CollisionDetection,
+  rectIntersection
 } from '@dnd-kit/core';
 import { 
   SortableContext, 
@@ -58,6 +60,46 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       },
     })
   );
+
+  // Custom collision detection that prioritizes drop zones over elements
+  const customCollisionDetection: CollisionDetection = useCallback((args) => {
+    const { droppableContainers } = args;
+    
+    // Get all intersections using rect intersection
+    const intersections = rectIntersection(args);
+    
+    if (intersections.length === 0) {
+      return [];
+    }
+
+    // Priority order: column > container > section > element
+    const priorityOrder = ['column', 'container', 'section', 'element'];
+    
+    // Sort intersections by priority
+    const sortedIntersections = intersections.sort((a, b) => {
+      const aContainer = Array.from(droppableContainers.values()).find(c => c.id === a.id);
+      const bContainer = Array.from(droppableContainers.values()).find(c => c.id === b.id);
+      
+      const aType = aContainer?.data.current?.type || 'element';
+      const bType = bContainer?.data.current?.type || 'element';
+      
+      const aPriority = priorityOrder.indexOf(aType);
+      const bPriority = priorityOrder.indexOf(bType);
+      
+      return aPriority - bPriority;
+    });
+
+    console.log('🎯 Collision Detection:', {
+      total: intersections.length,
+      sorted: sortedIntersections.map(i => ({ 
+        id: i.id, 
+        type: Array.from(droppableContainers.values()).find(c => c.id === i.id)?.data.current?.type 
+      })),
+      selected: sortedIntersections[0]?.id
+    });
+
+    return [sortedIntersections[0]];
+  }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -308,7 +350,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     >
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={customCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
