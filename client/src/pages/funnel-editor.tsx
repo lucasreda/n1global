@@ -90,9 +90,18 @@ export default function FunnelEditor() {
         throw new Error('Falha ao carregar dados do funil');
       }
       const data = await response.json();
+      console.log('📄 FunnelEditor: Funnel data loaded:', data.funnel);
       return data.funnel as Funnel;
     },
     enabled: !!funnelId && !!selectedOperation,
+  });
+
+  console.log('🔄 FunnelEditor: Current state:', { 
+    isLoading, 
+    error: error?.message, 
+    hasFunnel: !!funnel, 
+    activeTab,
+    selectedOperation 
   });
 
   // Update funnel mutation
