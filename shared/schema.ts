@@ -1733,7 +1733,7 @@ export const creativeVariations = pgTable("creative_variations", {
   // Relationship tracking
   originalCreativeId: varchar("original_creative_id").notNull().references(() => adCreatives.id),
   variationCreativeId: varchar("variation_creative_id").notNull().references(() => adCreatives.id),
-  parentVariationId: varchar("parent_variation_id").references(() => creativeVariations.id),
+  parentVariationId: varchar("parent_variation_id"), // Self-reference - foreign key constraint added separately
   editPlanId: varchar("edit_plan_id").references(() => creativeEditPlans.id),
   
   // Variation metadata
@@ -3199,3 +3199,14 @@ export type InsertFunnelPage = z.infer<typeof insertFunnelPageSchema>;
 
 export type FunnelPageRevision = typeof funnelPageRevisions.$inferSelect;
 export type InsertFunnelPageRevision = z.infer<typeof insertFunnelPageRevisionSchema>;
+
+// VercelIntegration type alias for backwards compatibility
+export type VercelIntegration = {
+  connected: boolean;
+  accessToken?: string;
+  teamId?: string;
+  userId?: string;
+  connectedAt?: string;
+  lastUsed?: string;
+  isActive?: boolean;
+};

@@ -776,7 +776,7 @@ export class VercelService {
         name: projectName,
         framework: 'nextjs',
         files: files,
-        pages: pages.map(page => ({
+        pages: pages.map((page: any) => ({
           path: page.path,
           name: page.name,
           pageType: page.pageType,
@@ -915,7 +915,7 @@ export class VercelService {
         name: projectName,
         framework: 'nextjs',
         files: files,
-        pages: pages.map(page => ({
+        pages: pages.map((page: any) => ({
           path: page.path,
           name: page.name,
           pageType: page.pageType,

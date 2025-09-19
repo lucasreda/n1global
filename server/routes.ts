@@ -61,6 +61,12 @@ const funnelOptionsSchema = z.object({
   enableRouting: z.boolean().default(true)
 });
 
+const deployFromSessionSchema = z.object({
+  sessionId: z.string().min(1, "Session ID é obrigatório"),
+  projectName: z.string().min(1, "Nome do projeto é obrigatório"),
+  customDomain: z.string().optional()
+});
+
 const deployMultiPageFunnelSchema = z.object({
   projectName: z.string().min(1, "Nome do projeto é obrigatório"),
   funnelPages: z.array(funnelPageSchema).min(1, "Pelo menos uma página é obrigatória"),
@@ -6344,29 +6350,71 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   app.post("/api/funnels/multi-page/create-and-deploy", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      // Validate request data using Zod schema
-      const validatedData = deployMultiPageFunnelSchema.parse(req.body);
-      const { projectName, funnelPages, productInfo, options, vercelAccessToken, teamId } = validatedData;
+      // Validate request data using session-based schema (for preview deployment)
+      const validatedData = deployFromSessionSchema.parse(req.body);
+      const { sessionId, projectName, customDomain } = validatedData;
+
+      // Get user's Vercel integration from database (secure tenant scoping)
+      const userId = req.user.id;
+      const { db } = await import('./db');
+      const { funnelIntegrations, userOperations } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+
+      // Get user's current operation context from query params (should be set by frontend)
+      const { operationId } = req.query;
+      
+      if (!operationId) {
+        return res.status(400).json({
+          success: false,
+          error: "Operation context is required for deployment"
+        });
+      }
+
+      // Verify user has access to this operation
+      const [userAccess] = await db
+        .select()
+        .from(userOperations)
+        .where(and(
+          eq(userOperations.userId, userId),
+          eq(userOperations.operationId, operationId as string)
+        ))
+        .limit(1);
+
+      if (!userAccess) {
+        return res.status(403).json({
+          success: false,
+          error: "Access denied to this operation"
+        });
+      }
+
+      // Get Vercel integration for this specific operation (secure tenant scoping)
+      const [integration] = await db
+        .select()
+        .from(funnelIntegrations)
+        .where(and(
+          eq(funnelIntegrations.operationId, operationId as string),
+          eq(funnelIntegrations.isActive, true)
+        ))
+        .limit(1);
+
+      if (!integration) {
+        return res.status(400).json({
+          success: false,
+          error: "Vercel integration not found. Please connect Vercel first."
+        });
+      }
 
       // Import VercelService
       const { vercelService } = await import('./vercel-service');
 
-      console.log(`🏗️ Create project and deploy multi-page funnel: ${projectName}`);
+      console.log(`🏗️ Deploy from preview session: ${sessionId} -> ${projectName}`);
 
-      // Create project and deploy in one operation
-      const result = await vercelService.createProjectAndDeployFunnel(
-        vercelAccessToken,
+      // Deploy directly from preview session (secure token handling)
+      const result = await vercelService.deployFromPreviewSession(
+        integration.vercelAccessToken,
+        sessionId,
         projectName,
-        funnelPages,
-        productInfo,
-        options || {
-          colorScheme: 'modern',
-          layout: 'multi_section',
-          enableSharedComponents: true,
-          enableProgressTracking: true,
-          enableRouting: true
-        },
-        teamId
+        integration.vercelTeamId
       );
 
       res.json({
@@ -6385,8 +6433,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
           name: result.deployment.name,
           createdAt: result.deployment.createdAt
         },
-        message: `Project created and funnel deployed successfully!`,
-        liveUrl: result.deployment.url
+        message: `Funnel deployed from preview session successfully!`,
+        liveUrl: `https://${result.deployment.url}`,
+        sessionId: sessionId
       });
 
     } catch (error) {
@@ -6587,12 +6636,52 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   app.get("/api/funnels/deployment/:deploymentId/status", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { deploymentId } = req.params;
-      const { vercelAccessToken, teamId } = req.query;
+      const { operationId } = req.query;
 
-      if (!vercelAccessToken) {
+      if (!operationId) {
         return res.status(400).json({
           success: false,
-          error: "Vercel access token is required"
+          error: "Operation context is required for deployment status"
+        });
+      }
+
+      // Get user's Vercel integration from database (secure tenant scoping)
+      const userId = req.user.id;
+      const { db } = await import('./db');
+      const { funnelIntegrations, userOperations } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+
+      // Verify user has access to this operation
+      const [userAccess] = await db
+        .select()
+        .from(userOperations)
+        .where(and(
+          eq(userOperations.userId, userId),
+          eq(userOperations.operationId, operationId as string)
+        ))
+        .limit(1);
+
+      if (!userAccess) {
+        return res.status(403).json({
+          success: false,
+          error: "Access denied to this operation"
+        });
+      }
+
+      // Get Vercel integration for this specific operation
+      const [integration] = await db
+        .select()
+        .from(funnelIntegrations)
+        .where(and(
+          eq(funnelIntegrations.operationId, operationId as string),
+          eq(funnelIntegrations.isActive, true)
+        ))
+        .limit(1);
+
+      if (!integration) {
+        return res.status(400).json({
+          success: false,
+          error: "Vercel integration not found for this operation"
         });
       }
 
@@ -6600,9 +6689,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
       const { vercelService } = await import('./vercel-service');
 
       const deployment = await vercelService.getDeployment(
-        vercelAccessToken as string,
+        integration.vercelAccessToken,
         deploymentId,
-        teamId as string
+        integration.vercelTeamId
       );
 
       res.json({

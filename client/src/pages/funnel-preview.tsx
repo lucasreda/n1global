@@ -17,11 +17,13 @@ import {
   BarChart3,
   ExternalLink,
   FileText,
-  Zap
+  Zap,
+  Rocket
 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { FunnelDeployInterface } from "@/components/FunnelDeployInterface";
 
 interface PreviewSession {
   id: string;
@@ -216,6 +218,10 @@ export default function FunnelPreview() {
             </TabsTrigger>
             <TabsTrigger value="summary" data-testid="tab-summary">
               Relatório de Validação
+            </TabsTrigger>
+            <TabsTrigger value="deploy" data-testid="tab-deploy">
+              <Rocket className="w-4 h-4 mr-1" />
+              Deploy
             </TabsTrigger>
           </TabsList>
 
@@ -585,6 +591,164 @@ export default function FunnelPreview() {
                   </h3>
                   <p className="text-muted-foreground text-center">
                     Execute algumas validações primeiro para ver relatórios consolidados
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Deploy Tab */}
+          <TabsContent value="deploy" className="space-y-6">
+            {selectedSession ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Session Info */}
+                <div className="space-y-4">
+                  <Card className="glassmorphism border-white/10">
+                    <CardHeader>
+                      <CardTitle className="text-foreground text-lg">
+                        Sessão Selecionada para Deploy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(() => {
+                        const session = previewSessions?.find(s => s.id === selectedSession);
+                        if (!session) return <p className="text-muted-foreground">Sessão não encontrada</p>;
+                        
+                        return (
+                          <>
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-sm text-muted-foreground">Nome: </span>
+                                <span className="text-sm font-medium text-foreground">{session.name}</span>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">Páginas: </span>
+                                <span className="text-sm font-medium text-foreground">{session.pageCount}</span>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">Criado em: </span>
+                                <span className="text-sm font-medium text-foreground">{formatDate(session.createdAt)}</span>
+                              </div>
+                              <div>
+                                <span className="text-sm text-muted-foreground">Expira em: </span>
+                                <span className={`text-sm font-medium ${isExpired(session.expiresAt) ? 'text-red-500' : 'text-foreground'}`}>
+                                  {formatDate(session.expiresAt)}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="pt-3 border-t border-white/10">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(session.previewUrl, '_blank')}
+                                className="w-full"
+                                data-testid="button-preview-before-deploy"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Visualizar Preview
+                              </Button>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+
+                  {/* Validation Status for Deploy */}
+                  {validationData?.validation && (
+                    <Card className="glassmorphism border-white/10">
+                      <CardHeader>
+                        <CardTitle className="text-foreground text-lg">
+                          Status de Validação
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-foreground">Score Geral</span>
+                          {getScoreBadge(validationData.validation.score)}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Pontuação:</span>
+                            <span className={`font-medium ${getScoreColor(validationData.validation.score)}`}>
+                              {validationData.validation.score}/100
+                            </span>
+                          </div>
+                          <Progress value={validationData.validation.score} className="h-2" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Estrutura:</span>
+                            <span className="font-medium text-foreground">
+                              {validationData.validation.metrics.structure}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Conteúdo:</span>
+                            <span className="font-medium text-foreground">
+                              {validationData.validation.metrics.content}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Performance:</span>
+                            <span className="font-medium text-foreground">
+                              {validationData.validation.metrics.performance}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">SEO:</span>
+                            <span className="font-medium text-foreground">
+                              {validationData.validation.metrics.seo}
+                            </span>
+                          </div>
+                        </div>
+
+                        {validationData.validation.issues.length > 0 && (
+                          <div className="pt-2 border-t border-white/10">
+                            <div className="flex items-center gap-2 text-sm">
+                              {validationData.validation.isValid ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              )}
+                              <span className="text-muted-foreground">
+                                {validationData.validation.issues.length} problema(s) encontrado(s)
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Deploy Interface */}
+                <div>
+                  <FunnelDeployInterface
+                    sessionId={selectedSession}
+                    previewData={validationData || undefined}
+                    onDeploymentComplete={(deployment) => {
+                      toast({
+                        title: "🎉 Deploy Concluído!",
+                        description: `Seu funil está disponível em: ${deployment.url}`,
+                      });
+                    }}
+                    className="h-fit"
+                  />
+                </div>
+              </div>
+            ) : (
+              <Card className="glassmorphism border-white/10">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Rocket className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Selecione uma Sessão de Preview
+                  </h3>
+                  <p className="text-muted-foreground text-center">
+                    Selecione uma sessão de preview validada na aba "Sessões de Preview" para fazer o deploy
                   </p>
                 </CardContent>
               </Card>

@@ -707,7 +707,7 @@ export default function Funnels() {
                   <CardContent>
                     <p className="text-gray-400 text-xs mb-3">{template.description}</p>
                     <div className="flex gap-2 flex-wrap">
-                      {template.templateConfig.sections.slice(0, 3).map((section) => (
+                      {template.templateConfig?.sections?.slice(0, 3).map((section) => (
                         <Badge key={section} variant="outline" className="text-xs">
                           {section}
                         </Badge>
@@ -765,30 +765,13 @@ export default function Funnels() {
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
-                    {funnel.templateName && (
-                      <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <Star className="w-4 h-4" />
-                        {funnel.templateName}
-                      </div>
-                    )}
-                    
-                    {funnel.deploymentUrl && (
-                      <div className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-green-400" />
-                        <a 
-                          href={funnel.deploymentUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-green-400 hover:text-green-300 text-sm flex items-center gap-1"
-                          data-testid={`link-view-funnel-${funnel.id}`}
-                        >
-                          Ver Funil <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <Star className="w-4 h-4" />
+                      {getFunnelTypeInfo(funnel.type).title}
+                    </div>
                     
                     <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>Criado em {new Date(funnel.createdAt).toLocaleDateString('pt-BR')}</span>
+                      <span>Criado em {funnel.createdAt ? new Date(funnel.createdAt).toLocaleDateString('pt-BR') : 'Data não disponível'}</span>
                       {funnel.aiCost && parseFloat(funnel.aiCost) > 0 && (
                         <span>IA: ${parseFloat(funnel.aiCost).toFixed(4)}</span>
                       )}
