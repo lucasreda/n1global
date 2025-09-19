@@ -435,23 +435,23 @@ export default function Funnels() {
                                   <SelectValue placeholder="Selecione o idioma" className="placeholder:text-muted-foreground" />
                                 </SelectTrigger>
                                 <SelectContent className="glassmorphism border-white/10">
-                                  <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                                  <SelectItem value="en-US">English (US)</SelectItem>
-                                  <SelectItem value="es-ES">Español (España)</SelectItem>
-                                  <SelectItem value="fr-FR">Français (France)</SelectItem>
-                                  <SelectItem value="de-DE">Deutsch (Deutschland)</SelectItem>
-                                  <SelectItem value="it-IT">Italiano (Italia)</SelectItem>
-                                  <SelectItem value="nl-NL">Nederlands (Nederland)</SelectItem>
-                                  <SelectItem value="ru-RU">Русский (Россия)</SelectItem>
-                                  <SelectItem value="pl-PL">Polski (Polska)</SelectItem>
-                                  <SelectItem value="sv-SE">Svenska (Sverige)</SelectItem>
-                                  <SelectItem value="da-DK">Dansk (Danmark)</SelectItem>
-                                  <SelectItem value="no-NO">Norsk (Norge)</SelectItem>
-                                  <SelectItem value="fi-FI">Suomi (Suomi)</SelectItem>
-                                  <SelectItem value="el-GR">Ελληνικά (Ελλάδα)</SelectItem>
-                                  <SelectItem value="hu-HU">Magyar (Magyarország)</SelectItem>
-                                  <SelectItem value="cs-CZ">Čeština (Česká republika)</SelectItem>
-                                  <SelectItem value="ar-SA">العربية (السعودية)</SelectItem>
+                                  <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+                                  <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+                                  <SelectItem value="es-ES">🇪🇸 Español (España)</SelectItem>
+                                  <SelectItem value="fr-FR">🇫🇷 Français (France)</SelectItem>
+                                  <SelectItem value="de-DE">🇩🇪 Deutsch (Deutschland)</SelectItem>
+                                  <SelectItem value="it-IT">🇮🇹 Italiano (Italia)</SelectItem>
+                                  <SelectItem value="nl-NL">🇳🇱 Nederlands (Nederland)</SelectItem>
+                                  <SelectItem value="ru-RU">🇷🇺 Русский (Россия)</SelectItem>
+                                  <SelectItem value="pl-PL">🇵🇱 Polski (Polska)</SelectItem>
+                                  <SelectItem value="sv-SE">🇸🇪 Svenska (Sverige)</SelectItem>
+                                  <SelectItem value="da-DK">🇩🇰 Dansk (Danmark)</SelectItem>
+                                  <SelectItem value="no-NO">🇳🇴 Norsk (Norge)</SelectItem>
+                                  <SelectItem value="fi-FI">🇫🇮 Suomi (Suomi)</SelectItem>
+                                  <SelectItem value="el-GR">🇬🇷 Ελληνικά (Ελλάδα)</SelectItem>
+                                  <SelectItem value="hu-HU">🇭🇺 Magyar (Magyarország)</SelectItem>
+                                  <SelectItem value="cs-CZ">🇨🇿 Čeština (Česká republika)</SelectItem>
+                                  <SelectItem value="ar-SA">🇸🇦 العربية (السعودية)</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -466,21 +466,21 @@ export default function Funnels() {
                                   <SelectValue placeholder="Selecione a moeda" className="placeholder:text-muted-foreground" />
                                 </SelectTrigger>
                                 <SelectContent className="glassmorphism border-white/10">
-                                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                                  <SelectItem value="USD">USD ($)</SelectItem>
-                                  <SelectItem value="BRL">BRL (R$)</SelectItem>
-                                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                                  <SelectItem value="CHF">CHF (CHF)</SelectItem>
-                                  <SelectItem value="SEK">SEK (kr)</SelectItem>
-                                  <SelectItem value="DKK">DKK (kr)</SelectItem>
-                                  <SelectItem value="NOK">NOK (kr)</SelectItem>
-                                  <SelectItem value="PLN">PLN (zł)</SelectItem>
-                                  <SelectItem value="CZK">CZK (Kč)</SelectItem>
-                                  <SelectItem value="HUF">HUF (Ft)</SelectItem>
-                                  <SelectItem value="RON">RON (lei)</SelectItem>
-                                  <SelectItem value="BGN">BGN (лв)</SelectItem>
-                                  <SelectItem value="AED">AED (د.إ)</SelectItem>
-                                  <SelectItem value="SAR">SAR (﷼)</SelectItem>
+                                  <SelectItem value="EUR">🇪🇺 EUR (€)</SelectItem>
+                                  <SelectItem value="USD">🇺🇸 USD ($)</SelectItem>
+                                  <SelectItem value="BRL">🇧🇷 BRL (R$)</SelectItem>
+                                  <SelectItem value="GBP">🇬🇧 GBP (£)</SelectItem>
+                                  <SelectItem value="CHF">🇨🇭 CHF (CHF)</SelectItem>
+                                  <SelectItem value="SEK">🇸🇪 SEK (kr)</SelectItem>
+                                  <SelectItem value="DKK">🇩🇰 DKK (kr)</SelectItem>
+                                  <SelectItem value="NOK">🇳🇴 NOK (kr)</SelectItem>
+                                  <SelectItem value="PLN">🇵🇱 PLN (zł)</SelectItem>
+                                  <SelectItem value="CZK">🇨🇿 CZK (Kč)</SelectItem>
+                                  <SelectItem value="HUF">🇭🇺 HUF (Ft)</SelectItem>
+                                  <SelectItem value="RON">🇷🇴 RON (lei)</SelectItem>
+                                  <SelectItem value="BGN">🇧🇬 BGN (лв)</SelectItem>
+                                  <SelectItem value="AED">🇦🇪 AED (د.إ)</SelectItem>
+                                  <SelectItem value="SAR">🇸🇦 SAR (﷼)</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -514,43 +514,43 @@ export default function Funnels() {
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Idioma:</span>
                                 <span className="font-medium text-foreground">
-                                  {form.watch("language") === "pt-BR" && "Português (Brasil)"}
-                                  {form.watch("language") === "en-US" && "English (US)"}
-                                  {form.watch("language") === "es-ES" && "Español (España)"}
-                                  {form.watch("language") === "fr-FR" && "Français (France)"}
-                                  {form.watch("language") === "de-DE" && "Deutsch (Deutschland)"}
-                                  {form.watch("language") === "it-IT" && "Italiano (Italia)"}
-                                  {form.watch("language") === "nl-NL" && "Nederlands (Nederland)"}
-                                  {form.watch("language") === "ru-RU" && "Русский (Россия)"}
-                                  {form.watch("language") === "pl-PL" && "Polski (Polska)"}
-                                  {form.watch("language") === "sv-SE" && "Svenska (Sverige)"}
-                                  {form.watch("language") === "da-DK" && "Dansk (Danmark)"}
-                                  {form.watch("language") === "no-NO" && "Norsk (Norge)"}
-                                  {form.watch("language") === "fi-FI" && "Suomi (Suomi)"}
-                                  {form.watch("language") === "el-GR" && "Ελληνικά (Ελλάδα)"}
-                                  {form.watch("language") === "hu-HU" && "Magyar (Magyarország)"}
-                                  {form.watch("language") === "cs-CZ" && "Čeština (Česká republika)"}
-                                  {form.watch("language") === "ar-SA" && "العربية (السعودية)"}
+                                  {form.watch("language") === "pt-BR" && "🇧🇷 Português (Brasil)"}
+                                  {form.watch("language") === "en-US" && "🇺🇸 English (US)"}
+                                  {form.watch("language") === "es-ES" && "🇪🇸 Español (España)"}
+                                  {form.watch("language") === "fr-FR" && "🇫🇷 Français (France)"}
+                                  {form.watch("language") === "de-DE" && "🇩🇪 Deutsch (Deutschland)"}
+                                  {form.watch("language") === "it-IT" && "🇮🇹 Italiano (Italia)"}
+                                  {form.watch("language") === "nl-NL" && "🇳🇱 Nederlands (Nederland)"}
+                                  {form.watch("language") === "ru-RU" && "🇷🇺 Русский (Россия)"}
+                                  {form.watch("language") === "pl-PL" && "🇵🇱 Polski (Polska)"}
+                                  {form.watch("language") === "sv-SE" && "🇸🇪 Svenska (Sverige)"}
+                                  {form.watch("language") === "da-DK" && "🇩🇰 Dansk (Danmark)"}
+                                  {form.watch("language") === "no-NO" && "🇳🇴 Norsk (Norge)"}
+                                  {form.watch("language") === "fi-FI" && "🇫🇮 Suomi (Suomi)"}
+                                  {form.watch("language") === "el-GR" && "🇬🇷 Ελληνικά (Ελλάδα)"}
+                                  {form.watch("language") === "hu-HU" && "🇭🇺 Magyar (Magyarország)"}
+                                  {form.watch("language") === "cs-CZ" && "🇨🇿 Čeština (Česká republika)"}
+                                  {form.watch("language") === "ar-SA" && "🇸🇦 العربية (السعودية)"}
                                 </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Moeda:</span>
                                 <span className="font-medium text-foreground">
-                                  {form.watch("currency") === "EUR" && "EUR (€)"}
-                                  {form.watch("currency") === "USD" && "USD ($)"}
-                                  {form.watch("currency") === "BRL" && "BRL (R$)"}
-                                  {form.watch("currency") === "GBP" && "GBP (£)"}
-                                  {form.watch("currency") === "CHF" && "CHF (CHF)"}
-                                  {form.watch("currency") === "SEK" && "SEK (kr)"}
-                                  {form.watch("currency") === "DKK" && "DKK (kr)"}
-                                  {form.watch("currency") === "NOK" && "NOK (kr)"}
-                                  {form.watch("currency") === "PLN" && "PLN (zł)"}
-                                  {form.watch("currency") === "CZK" && "CZK (Kč)"}
-                                  {form.watch("currency") === "HUF" && "HUF (Ft)"}
-                                  {form.watch("currency") === "RON" && "RON (lei)"}
-                                  {form.watch("currency") === "BGN" && "BGN (лв)"}
-                                  {form.watch("currency") === "AED" && "AED (د.إ)"}
-                                  {form.watch("currency") === "SAR" && "SAR (﷼)"}
+                                  {form.watch("currency") === "EUR" && "🇪🇺 EUR (€)"}
+                                  {form.watch("currency") === "USD" && "🇺🇸 USD ($)"}
+                                  {form.watch("currency") === "BRL" && "🇧🇷 BRL (R$)"}
+                                  {form.watch("currency") === "GBP" && "🇬🇧 GBP (£)"}
+                                  {form.watch("currency") === "CHF" && "🇨🇭 CHF (CHF)"}
+                                  {form.watch("currency") === "SEK" && "🇸🇪 SEK (kr)"}
+                                  {form.watch("currency") === "DKK" && "🇩🇰 DKK (kr)"}
+                                  {form.watch("currency") === "NOK" && "🇳🇴 NOK (kr)"}
+                                  {form.watch("currency") === "PLN" && "🇵🇱 PLN (zł)"}
+                                  {form.watch("currency") === "CZK" && "🇨🇿 CZK (Kč)"}
+                                  {form.watch("currency") === "HUF" && "🇭🇺 HUF (Ft)"}
+                                  {form.watch("currency") === "RON" && "🇷🇴 RON (lei)"}
+                                  {form.watch("currency") === "BGN" && "🇧🇬 BGN (лв)"}
+                                  {form.watch("currency") === "AED" && "🇦🇪 AED (د.إ)"}
+                                  {form.watch("currency") === "SAR" && "🇸🇦 SAR (﷼)"}
                                 </span>
                               </div>
                             </div>
