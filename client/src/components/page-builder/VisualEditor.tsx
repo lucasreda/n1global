@@ -147,6 +147,15 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     });
   }, [model, onChange]);
 
+  // Memoize hover handlers to prevent infinite loops
+  const handleHoverSection = useCallback((sectionId: string | null) => {
+    setHoveredSectionId(sectionId);
+  }, []);
+
+  const handleSelectElement = useCallback((elementId: string | null) => {
+    setSelectedElementId(elementId);
+  }, []);
+
   const updateElement = useCallback((elementId: string, updates: Partial<BlockElement>) => {
     const newModel = updateElementInModel(model, elementId, updates);
     onChange(newModel);
@@ -268,8 +277,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 model={model}
                 selectedElementId={selectedElementId}
                 hoveredSectionId={hoveredSectionId}
-                onSelectElement={setSelectedElementId}
-                onHoverSection={setHoveredSectionId}
+                onSelectElement={handleSelectElement}
+                onHoverSection={handleHoverSection}
                 onUpdateElement={updateElement}
                 onDeleteSection={deleteSection}
                 onAddSection={addSection}
