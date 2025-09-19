@@ -844,4 +844,113 @@ async function deployToVercel(
   }
 }
 
+// Get single funnel by ID
+router.get("/funnels/:id", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const operationId = req.validatedOperationId;
+
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, id),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    return res.json({
+      success: true,
+      funnel
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar funil:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+// Update funnel
+router.put("/funnels/:id", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const operationId = req.validatedOperationId;
+
+    // Validate that funnel exists and belongs to this operation
+    const [existingFunnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, id),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!existingFunnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Extract updateable fields from request body
+    const {
+      name,
+      description,
+      isActive,
+      productInfo,
+      trackingConfig
+    } = req.body;
+
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (productInfo !== undefined) updateData.productInfo = productInfo;
+    if (trackingConfig !== undefined) updateData.trackingConfig = trackingConfig;
+
+    // Update the funnel
+    const [updatedFunnel] = await db
+      .update(funnels)
+      .set(updateData)
+      .where(
+        and(
+          eq(funnels.id, id),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .returning();
+
+    return res.json({
+      success: true,
+      message: "Funil atualizado com sucesso",
+      funnel: updatedFunnel
+    });
+  } catch (error) {
+    console.error('❌ Erro ao atualizar funil:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
 export { router as funnelRoutes };

@@ -31,6 +31,7 @@ import {
   ChevronLeft,
   Check
 } from "lucide-react";
+import { Link } from "wouter";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useToast } from "@/hooks/use-toast";
@@ -794,15 +795,17 @@ export default function Funnels() {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1"
-                        data-testid={`button-view-details-${funnel.id}`}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Detalhes
-                      </Button>
+                      <Link href={`/funnels/${funnel.id}`}>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          data-testid={`button-view-details-${funnel.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Detalhes
+                        </Button>
+                      </Link>
                       {funnel.status === 'ready' && (
                         <Button 
                           size="sm" 
