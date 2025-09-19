@@ -5,12 +5,12 @@ import {
   funnelIntegrations, 
   funnels, 
   funnelTemplates,
-  funnelDeployments,
+  // funnelDeployments, // TODO: Enable when table is created
   funnelAnalytics,
   insertFunnelIntegrationSchema,
   insertFunnelSchema,
   insertFunnelTemplateSchema,
-  insertFunnelDeploymentSchema,
+  // insertFunnelDeploymentSchema, // TODO: Enable when table is created
   users
 } from "@shared/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -416,13 +416,13 @@ router.get("/funnels", authenticateToken, async (req, res) => {
         // Template info
         templateId: funnels.templateId,
         templateName: funnelTemplates.name,
-        // Latest deployment
-        deploymentUrl: funnelDeployments.deploymentUrl,
-        deploymentStatus: funnelDeployments.status,
+        // Latest deployment - TODO: Enable when deployment table is created
+        // deploymentUrl: funnelDeployments.deploymentUrl,
+        // deploymentStatus: funnelDeployments.status,
       })
       .from(funnels)
       .leftJoin(funnelTemplates, eq(funnels.templateId, funnelTemplates.id))
-      .leftJoin(funnelDeployments, eq(funnels.id, funnelDeployments.funnelId))
+      // .leftJoin(funnelDeployments, eq(funnels.id, funnelDeployments.funnelId))
       .where(and(
         eq(funnels.operationId, operationId),
         eq(funnels.isActive, true)
@@ -666,17 +666,17 @@ router.get("/funnels/:funnelId", authenticateToken, async (req, res) => {
       });
     }
 
-    // Get deployments
-    const deployments = await db
-      .select()
-      .from(funnelDeployments)
-      .where(eq(funnelDeployments.funnelId, funnelId))
-      .orderBy(desc(funnelDeployments.createdAt));
+    // TODO: Get deployments when table is available
+    // const deployments = await db
+    //   .select()
+    //   .from(funnelDeployments)
+    //   .where(eq(funnelDeployments.funnelId, funnelId))
+    //   .orderBy(desc(funnelDeployments.createdAt));
 
     res.json({
       success: true,
       funnel,
-      deployments,
+      deployments: [], // Empty for now
     });
   } catch (error) {
     console.error("❌ Erro ao buscar detalhes do funil:", error);
@@ -783,20 +783,21 @@ async function deployToVercel(
     );
 
     // Save deployment record
-    const [deploymentRecord] = await db
-      .insert(funnelDeployments)
-      .values({
-        funnelId: funnel.id,
-        vercelProjectId: projectName,
-        vercelProjectName: projectName,
-        vercelDeploymentId: deployment.uid,
-        vercelUrl: deployment.url,
-        status: deployment.state.toLowerCase(),
-        deploymentUrl: `https://${deployment.url}`,
-        sslEnabled: true,
-        deployedAt: new Date(),
-      })
-      .returning();
+    // TODO: Insert deployment record when table is available
+    // const [deploymentRecord] = await db
+    //   .insert(funnelDeployments)
+    //   .values({
+    //     funnelId: funnel.id,
+    //     vercelProjectId: projectName,
+    //     vercelProjectName: projectName,
+    //     vercelDeploymentId: deployment.uid,
+    //     vercelUrl: deployment.url,
+    //     status: deployment.state.toLowerCase(),
+    //     deploymentUrl: `https://${deployment.url}`,
+    //     sslEnabled: true,
+    //     deployedAt: new Date(),
+    //   })
+    //   .returning();
 
     // Add custom domain if provided
     if (customDomain && deployment.state === 'READY') {
@@ -808,13 +809,14 @@ async function deployToVercel(
           integration.vercelTeamId
         );
         
-        await db
-          .update(funnelDeployments)
-          .set({
-            customDomain,
-            customDomainStatus: 'pending',
-          })
-          .where(eq(funnelDeployments.id, deploymentRecord.id));
+        // TODO: Update deployment record when table is available
+        // await db
+        //   .update(funnelDeployments)
+        //   .set({
+        //     customDomain,
+        //     customDomainStatus: 'pending',
+        //   })
+        //   .where(eq(funnelDeployments.id, deploymentRecord.id));
       } catch (domainError) {
         console.error(`⚠️ Failed to add custom domain: ${domainError}`);
       }
