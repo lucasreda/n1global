@@ -364,7 +364,31 @@ export default function FunnelEditor() {
 
           {/* Pages Tab */}
           <TabsContent value="pages" className="mt-6">
-            <FunnelPagesManager funnelId={funnelId} />
+            {pageId ? (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <Button variant="ghost" onClick={() => setLocation(`/funnels/${funnelId}`)} data-testid="button-back-to-pages">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Voltar às Páginas
+                  </Button>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">Editor de Página</h3>
+                    <p className="text-gray-400">Editando página: {pageId}</p>
+                  </div>
+                </div>
+                <Card className="bg-gray-900/50 border-gray-700">
+                  <CardContent className="p-6">
+                    <div className="text-center py-12">
+                      <h3 className="text-xl font-semibold text-white mb-2">Editor Visual de Página</h3>
+                      <p className="text-gray-400 mb-4">O editor visual será implementado aqui</p>
+                      <p className="text-sm text-gray-500">ID da Página: {pageId}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <FunnelPagesManager funnelId={funnelId} />
+            )}
           </TabsContent>
 
           {/* Content Tab */}
