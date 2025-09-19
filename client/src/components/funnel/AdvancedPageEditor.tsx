@@ -22,7 +22,8 @@ import {
   Type,
   Smartphone,
   Monitor,
-  Tablet
+  Tablet,
+  ArrowLeft
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 
@@ -316,7 +317,16 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
       <div className="bg-card border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-gray-900">{pageData.name}</h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation(`/editor/funnels/${funnelId}/pages`)}
+              className="text-white hover:bg-muted/20"
+              data-testid="button-back-to-pages"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <h1 className="text-xl font-semibold text-white">{pageData.name}</h1>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
