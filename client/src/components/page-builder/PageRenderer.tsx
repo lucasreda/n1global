@@ -1,5 +1,8 @@
 import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
 import { useDroppable } from '@dnd-kit/core';
+import { ElementBenefits } from './elements/ElementBenefits';
+import { ElementReviews } from './elements/ElementReviews';
+import { ElementSlider } from './elements/ElementSlider';
 
 // Helper to build final styles from individual properties
 function buildFinalStyles(styles: any = {}) {
@@ -470,6 +473,39 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
         <DroppableBlock element={element} theme={theme} editorMode={editorMode} />
       ) : (
         <BlockElementView element={element} theme={theme} baseStyles={baseStyles} editorMode={editorMode} />
+      );
+
+    case 'benefits':
+      return (
+        <ElementBenefits
+          element={element}
+          theme={theme}
+          editorMode={editorMode}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
+      );
+
+    case 'reviews':
+      return (
+        <ElementReviews
+          element={element}
+          theme={theme}
+          editorMode={editorMode}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
+      );
+
+    case 'slider':
+      return (
+        <ElementSlider
+          element={element}
+          theme={theme}
+          editorMode={editorMode}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
       );
 
     default:
