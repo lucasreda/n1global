@@ -581,7 +581,7 @@ function DropZone({ id, columnId, position, isEmpty = false }: DropZoneProps) {
       >
         <Plus size={16} className="mb-2 opacity-50" />
         <span className="text-xs">
-          {isOver ? 'Solte o elemento aqui!' : 'Arrastar elementos aqui'}
+          {isOver ? 'Solte o elemento aqui!' : 'Adicionar elementos'}
         </span>
       </div>
     );
@@ -946,7 +946,7 @@ function BlockColumnDropZone({ id, elementId, columnIndex, position, isEmpty = f
       >
         <Plus size={12} className="mb-1 opacity-50" />
         <span className="text-xs">
-          {isOver ? 'Solte aqui!' : 'Coluna vazia'}
+          {isOver ? 'Solte aqui!' : 'Adicionar elementos'}
         </span>
       </div>
     );
