@@ -779,7 +779,7 @@ function PageFrame({
                 </p>
                 <button
                   onClick={onAddSection}
-                  className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   data-testid="button-add-first-section"
                 >
                   <Plus size={20} />
@@ -970,7 +970,7 @@ function EnhancedSortableSection({
         <div className="flex items-center justify-center py-6">
           <button
             onClick={onAddSectionAfter}
-            className="group flex items-center gap-2 px-4 py-2 bg-muted hover:bg-primary text-muted-foreground hover:text-primary-foreground rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary transition-all duration-200"
+            className="group flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg border-2 border-blue-600 hover:border-blue-700 transition-all duration-200"
             data-testid="button-add-section-after"
           >
             <Plus size={16} className="group-hover:rotate-90 transition-transform duration-200" />
