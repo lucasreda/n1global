@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -67,8 +67,17 @@ export default function FunnelEditor() {
   const funnelId = (params.funnelId || params.id) as string;
   const pageId = params.pageId as string;
   
+  console.log('🚀 FunnelEditor RENDERED:', { funnelId, pageId, params });
+  
   // If we're editing a specific page, start on Pages tab
   const [activeTab, setActiveTab] = useState(pageId ? "pages" : "content");
+  
+  useEffect(() => {
+    if (pageId) {
+      console.log('✅ FunnelEditor: Switching to pages tab for pageId:', pageId);
+      setActiveTab("pages");
+    }
+  }, [pageId]);
 
   // Fetch funnel data
   const { data: funnel, isLoading, error } = useQuery({
