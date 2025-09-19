@@ -709,33 +709,52 @@ interface StructuralElementRendererProps {
 function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: StructuralElementRendererProps) {
   const children = element.children || [];
   const isBlock = element.type === 'block';
-  const hasColumns = isBlock && element.config?.columns && element.config.columns > 1;
+  const isContainer = element.type === 'container';
+  const hasColumns = (isBlock || isContainer) && element.config?.columns && element.config.columns > 1;
 
-  // If it's a block with columns configured, render custom columns with drop zones
+  // If it's a block or container with columns configured, render custom columns with drop zones
   if (hasColumns) {
     const columnCount = element.config!.columns!;
     const columnWidths = element.config!.columnWidths || Array(columnCount).fill(`${100/columnCount}%`);
     
-    // Apply element styles to main container
-    const blockStyles = {
-      padding: element.styles?.padding || '1rem',
-      margin: element.styles?.margin || '1rem 0',
-      backgroundColor: element.styles?.backgroundColor || '#f1f5f9',
-      border: element.styles?.border || '2px dashed #94a3b8',
-      borderRadius: element.styles?.borderRadius || '0.5rem',
-      minHeight: element.styles?.minHeight || '100px',
+    // Apply element styles to main container with defaults based on type
+    const defaultStyles = isContainer ? {
+      padding: '2rem',
+      margin: '2rem 0', 
+      backgroundColor: '#f8fafc',
+      border: '2px dashed #cbd5e1',
+      borderRadius: '0.5rem',
+      minHeight: '100px',
+    } : {
+      padding: '1rem',
+      margin: '1rem 0',
+      backgroundColor: '#f1f5f9', 
+      border: '2px dashed #94a3b8',
+      borderRadius: '0.5rem',
+      minHeight: '100px',
     };
 
+    const elementStyles = {
+      padding: element.styles?.padding || defaultStyles.padding,
+      margin: element.styles?.margin || defaultStyles.margin,
+      backgroundColor: element.styles?.backgroundColor || defaultStyles.backgroundColor,
+      border: element.styles?.border || defaultStyles.border,
+      borderRadius: element.styles?.borderRadius || defaultStyles.borderRadius,
+      minHeight: element.styles?.minHeight || defaultStyles.minHeight,
+    };
+
+    const elementTypeLabel = isContainer ? 'Container' : 'Bloco';
+
     return (
-      <div className="structural-element" style={blockStyles}>
-        {/* Block header/title if any */}
+      <div className="structural-element" style={elementStyles}>
+        {/* Element header/title if any */}
         {element.props?.title && (
           <div className="mb-2 font-semibold text-sm text-gray-600">
             {element.props.title}
           </div>
         )}
         
-        {/* Block columns layout - REPLACE original rendering */}
+        {/* Columns layout - REPLACE original rendering */}
         <div className="flex gap-2 h-full">
           {Array.from({ length: columnCount }, (_, index) => {
             // Get elements for this column from children array
@@ -1995,15 +2014,15 @@ function addElementToStructuralElement(model: PageModelV2, element: BlockElement
   return model;
 }
 
-// Add element to specific column in block
+// Add element to specific column in block or container
 function addElementToBlockColumn(model: PageModelV2, element: BlockElement, parentElementId: string, columnIndex: number, position: number): PageModelV2 {
   const newModel = JSON.parse(JSON.stringify(model)); // Deep clone
   
-  function findAndUpdateBlockElement(elements: BlockElement[]): boolean {
+  function findAndUpdateStructuralElement(elements: BlockElement[]): boolean {
     for (let i = 0; i < elements.length; i++) {
       const el = elements[i];
       
-      if (el.id === parentElementId && el.type === 'block') {
+      if (el.id === parentElementId && (el.type === 'block' || el.type === 'container')) {
         // Ensure children array exists
         if (!el.children) {
           el.children = [];
@@ -2028,7 +2047,7 @@ function addElementToBlockColumn(model: PageModelV2, element: BlockElement, pare
       }
       
       // Recursively search in children
-      if (el.children && findAndUpdateBlockElement(el.children)) {
+      if (el.children && findAndUpdateStructuralElement(el.children)) {
         return true;
       }
     }
@@ -2039,7 +2058,7 @@ function addElementToBlockColumn(model: PageModelV2, element: BlockElement, pare
   for (const section of newModel.sections) {
     for (const row of section.rows) {
       for (const column of row.columns) {
-        if (findAndUpdateBlockElement(column.elements)) {
+        if (findAndUpdateStructuralElement(column.elements)) {
           return newModel;
         }
       }
