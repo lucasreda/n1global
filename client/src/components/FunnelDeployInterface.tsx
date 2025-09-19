@@ -81,11 +81,11 @@ export function FunnelDeployInterface({
         throw new Error('Operation context is required for Vercel integration status');
       }
 
-      return await apiRequest(`/api/funnels/vercel/status?operationId=${currentOperationId}`, {
-        method: 'GET'
-      });
+      return await apiRequest(`/api/funnels/vercel/status?operationId=${currentOperationId}`, 'GET');
     },
-    enabled: !!operationId,
+    enabled: !!(operationId || 
+      new URLSearchParams(window.location.search).get('operationId') || 
+      localStorage.getItem('selectedOperationId')),
   });
 
   // Deploy from preview session mutation
@@ -104,13 +104,10 @@ export function FunnelDeployInterface({
         throw new Error('Operation context is required for deployment');
       }
 
-      return await apiRequest(`/api/funnels/multi-page/create-and-deploy?operationId=${currentOperationId}`, {
-        method: 'POST',
-        body: {
-          sessionId: data.sessionId,
-          projectName: data.projectName,
-          customDomain: data.customDomain,
-        },
+      return await apiRequest(`/api/funnels/multi-page/create-and-deploy?operationId=${currentOperationId}`, 'POST', {
+        sessionId: data.sessionId,
+        projectName: data.projectName,
+        customDomain: data.customDomain,
       });
     },
     onSuccess: (data: any) => {
@@ -139,11 +136,11 @@ export function FunnelDeployInterface({
     },
   });
 
-  // Deploy regular funnel mutation (uses multi-page endpoint with user-managed tokens)
+  // Deploy regular funnel mutation (uses multi-page endpoint with server-managed tokens)
   const deployFunnelMutation = useMutation({
     mutationFn: async (data: { 
       funnelId: string; 
-      projectName: string;
+      projectName?: string;
       customDomain?: string; 
     }) => {
       // Use operationId from props or fallback to context
@@ -157,13 +154,10 @@ export function FunnelDeployInterface({
 
       // For regular funnel deployment, we'll use the create-and-deploy endpoint
       // which handles server-side token management and operation scoping
-      return await apiRequest(`/api/funnels/multi-page/create-and-deploy?operationId=${currentOperationId}`, {
-        method: 'POST',
-        body: {
-          sessionId: `funnel-${data.funnelId}`,
-          projectName: data.projectName,
-          customDomain: data.customDomain,
-        },
+      return await apiRequest(`/api/funnels/multi-page/create-and-deploy?operationId=${currentOperationId}`, 'POST', {
+        sessionId: `funnel-${data.funnelId}`,
+        projectName: data.projectName || `funnel-${data.funnelId}`,
+        customDomain: data.customDomain,
       });
     },
     onSuccess: (data: any) => {
@@ -210,9 +204,7 @@ export function FunnelDeployInterface({
           throw new Error('Operation context is required for deployment status');
         }
 
-        const response = await apiRequest(`/api/funnels/deployment/${deploymentId}/status?operationId=${currentOperationId}`, {
-          method: 'GET'
-        }) as any;
+        const response = await apiRequest(`/api/funnels/vercel/deployment/${deploymentId}/status?operationId=${currentOperationId}`, 'GET') as any;
         
         setDeploymentStatus(response.deployment);
         
@@ -235,7 +227,9 @@ export function FunnelDeployInterface({
               description: `Seu funil está agora disponível em: ${response.deployment.url}`,
             });
             // Only call completion callback when deployment is actually ready
-            onDeploymentComplete?.(response.deployment);
+            if (onDeploymentComplete && response.deployment) {
+              onDeploymentComplete(response.deployment);
+            }
             break;
           case 'ERROR':
           case 'CANCELED':
@@ -282,6 +276,7 @@ export function FunnelDeployInterface({
       // Deploy regular funnel
       deployFunnelMutation.mutate({
         funnelId,
+        projectName: projectName.trim(),
         customDomain: customDomain.trim() || undefined,
       });
     }

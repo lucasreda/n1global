@@ -72,7 +72,7 @@ const deployMultiPageFunnelSchema = z.object({
   funnelPages: z.array(funnelPageSchema).min(1, "Pelo menos uma página é obrigatória"),
   productInfo: productInfoSchema,
   options: funnelOptionsSchema.optional(),
-  vercelAccessToken: z.string().min(1, "Token de acesso Vercel é obrigatório"),
+  vercelAccessToken: z.string().optional(), // Now optional - managed server-side
   teamId: z.string().optional()
 });
 
@@ -6299,9 +6299,11 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
       console.log(`🚀 Multi-page deploy initiated: ${projectName} with ${funnelPages.length} pages`);
 
-      // Deploy using the integrated method
+      // Deploy using the integrated method (with server-managed token if not provided)
+      const accessToken = vercelAccessToken || await getServerManagedVercelToken(req.user.id);
+      
       const deployment = await vercelService.deployFunnelFromGenerator(
-        vercelAccessToken,
+        accessToken,
         projectName,
         funnelPages,
         productInfo,
