@@ -871,7 +871,7 @@ function EnhancedSortableSection({
         {isHovered && !isDragging && (
           <div className="absolute inset-0 border-2 border-primary border-dashed bg-primary/5 rounded-lg pointer-events-none z-10">
             {/* Section Label */}
-            <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium">
+            <div className="absolute top-2 left-2 bg-primary text-white px-2 py-1 rounded text-xs font-medium">
               Seção {section.name || section.id.slice(0, 8)}
             </div>
           </div>
