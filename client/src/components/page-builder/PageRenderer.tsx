@@ -555,47 +555,52 @@ function DroppableContainer({ element, theme, editorMode }: DroppableContainerPr
     },
   });
 
-  const baseStyles = {
-    display: element.styles?.display || 'block',
-    padding: element.styles?.padding || theme.spacing.md,
-    backgroundColor: element.styles?.backgroundColor || 'transparent',
-    border: isOver ? '2px solid #3b82f6' : '2px dashed #d1d5db',
-    borderRadius: theme.borderRadius.md,
-    minHeight: element.children?.length === 0 ? '80px' : 'auto',
-    transition: 'border-color 0.2s ease',
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={baseStyles}
-      data-testid={`element-${element.id}`}
-      data-element-type="container"
-    >
-      {element.children && element.children.length > 0 ? (
-        element.children.map((childElement) => (
+  // If container has content, render it normally without any wrapper decoration
+  if (element.children && element.children.length > 0) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={{
+          display: element.styles?.display || 'block',
+          padding: element.styles?.padding || theme.spacing.md,
+          backgroundColor: element.styles?.backgroundColor || 'transparent',
+        }}
+        data-testid={`element-${element.id}`}
+        data-element-type="container"
+      >
+        {element.children.map((childElement) => (
           <ElementRenderer
             key={childElement.id}
             element={childElement}
             theme={theme}
             editorMode={editorMode}
           />
-        ))
-      ) : (
-        <div
-          style={{
-            padding: theme.spacing.lg,
-            textAlign: 'center',
-            color: isOver ? '#3b82f6' : '#6b7280',
-            backgroundColor: isOver ? '#eff6ff' : '#f9fafb',
-            fontSize: '0.875rem',
-            fontWeight: isOver ? '500' : '400',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {isOver ? 'Solte o elemento aqui' : 'Adicionar elementos'}
-        </div>
-      )}
+        ))}
+      </div>
+    );
+  }
+
+  // If container is empty, render a clean drop zone without extra decoration
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        display: element.styles?.display || 'block',
+        padding: theme.spacing.lg,
+        textAlign: 'center',
+        color: isOver ? '#3b82f6' : '#6b7280',
+        backgroundColor: isOver ? '#eff6ff' : 'transparent',
+        border: isOver ? '2px solid #3b82f6' : '2px dashed #d1d5db',
+        borderRadius: theme.borderRadius.md,
+        minHeight: '80px',
+        fontSize: '0.875rem',
+        fontWeight: isOver ? '500' : '400',
+        transition: 'all 0.2s ease',
+      }}
+      data-testid={`element-${element.id}`}
+      data-element-type="container"
+    >
+      {isOver ? 'Solte o elemento aqui' : 'Adicionar elementos'}
     </div>
   );
 }
