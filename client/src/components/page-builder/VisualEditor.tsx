@@ -1072,11 +1072,6 @@ const ElementsToolbar = React.memo(function ElementsToolbar() {
     // Structural Elements
     { type: 'container', label: 'Container', icon: Box },
     { type: 'block', label: 'Bloco', icon: Grid3X3 },
-    
-    // Template Elements
-    { type: 'benefits', label: 'Benefícios', icon: Star },
-    { type: 'reviews', label: 'Depoimentos', icon: MessageCircle },
-    { type: 'slider', label: 'Slider', icon: Images },
   ];
 
   const sectionTemplates = [
@@ -1109,6 +1104,25 @@ const ElementsToolbar = React.memo(function ElementsToolbar() {
       label: 'Contato', 
       icon: Mail,
       description: 'Formulário de contato'
+    },
+    // Template Elements
+    { 
+      id: 'benefits', 
+      label: 'Benefícios', 
+      icon: Star,
+      description: 'Lista de benefícios editável'
+    },
+    { 
+      id: 'reviews', 
+      label: 'Depoimentos', 
+      icon: MessageCircle,
+      description: 'Avaliações e comentários de clientes'
+    },
+    { 
+      id: 'slider', 
+      label: 'Slider', 
+      icon: Images,
+      description: 'Carrossel de imagens customizável'
     },
   ];
 
@@ -1179,15 +1193,21 @@ interface SectionTemplateProps {
 }
 
 function SectionTemplate({ template }: SectionTemplateProps) {
+  // Check if this is an element template (not a section template)
+  const isElementTemplate = ['benefits', 'reviews', 'slider'].includes(template.id);
+  
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     isDragging,
-  } = useSortable({
+  } = useDraggable({
     id: `template-${template.id}`,
-    data: {
+    data: isElementTemplate ? {
+      type: 'new-element',
+      elementType: template.id,
+    } : {
       type: 'section-template',
       templateId: template.id,
     },
