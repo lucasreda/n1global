@@ -696,11 +696,11 @@ function PageFrame({
   };
 
   return (
-    <div className="flex justify-center min-h-full">
+    <div className="flex justify-center h-full">
       {/* Browser Frame */}
       <div 
-        className={`${viewportStyles[viewport]} mx-auto transition-all duration-300 bg-white dark:bg-background rounded-lg shadow-2xl border border-border overflow-hidden h-full`}
-        style={{ minHeight: '600px' }}
+        className={`${viewportStyles[viewport]} mx-auto transition-all duration-300 bg-white dark:bg-background rounded-lg shadow-2xl border border-border overflow-hidden flex flex-col`}
+        style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}
       >
         {/* Browser Header */}
         <div className="flex items-center gap-2 bg-muted px-4 py-3 border-b border-border">
@@ -717,7 +717,7 @@ function PageFrame({
         </div>
 
         {/* Page Content */}
-        <div className="relative bg-white h-full min-h-[500px]">
+        <div className="relative bg-white flex-1 overflow-auto">
           <SortableContext
             items={model.sections.map(s => s.id)}
             strategy={verticalListSortingStrategy}
