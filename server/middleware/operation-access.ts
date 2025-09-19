@@ -19,13 +19,21 @@ declare global {
 export async function validateOperationAccess(req: Request, res: Response, next: NextFunction) {
   try {
     const user = (req as any).user;
-    const { operationId } = req.params;
+    
+    // Check for operationId in params (for GET requests) or body (for POST/PUT requests)
+    const operationId = req.params.operationId || req.body.operationId;
 
     if (!user) {
       return res.status(401).json({ message: "Usuário não autenticado" });
     }
 
     if (!operationId) {
+      console.log('🔍 Operation validation debug:', {
+        paramsOperationId: req.params.operationId,
+        bodyOperationId: req.body.operationId,
+        method: req.method,
+        body: req.body
+      });
       return res.status(400).json({ message: "Operation ID é obrigatório" });
     }
 
