@@ -580,27 +580,19 @@ function DroppableContainer({ element, theme, editorMode }: DroppableContainerPr
     );
   }
 
-  // If container is empty, render a clean drop zone without extra decoration
+  // If container is empty, render a minimal drop zone
   return (
     <div
       ref={setNodeRef}
       style={{
         display: element.styles?.display || 'block',
-        padding: theme.spacing.lg,
-        textAlign: 'center',
-        color: isOver ? '#3b82f6' : '#6b7280',
-        backgroundColor: isOver ? '#eff6ff' : 'transparent',
-        border: isOver ? '2px solid #3b82f6' : '2px dashed #d1d5db',
-        borderRadius: theme.borderRadius.md,
-        minHeight: '80px',
-        fontSize: '0.875rem',
-        fontWeight: isOver ? '500' : '400',
-        transition: 'all 0.2s ease',
+        padding: element.styles?.padding || theme.spacing.md,
+        backgroundColor: element.styles?.backgroundColor || 'transparent',
+        minHeight: '20px',
       }}
       data-testid={`element-${element.id}`}
       data-element-type="container"
     >
-      {isOver ? 'Solte o elemento aqui' : 'Adicionar elementos'}
     </div>
   );
 }
