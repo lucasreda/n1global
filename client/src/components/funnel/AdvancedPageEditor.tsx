@@ -308,7 +308,15 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
   };
 
   return (
-    <div className="min-h-screen h-full flex flex-col bg-gray-50" data-testid="advanced-page-editor">
+    <div 
+      className="flex flex-col bg-gray-50" 
+      data-testid="advanced-page-editor"
+      style={{ 
+        height: '100vh',
+        maxHeight: '100vh',
+        overflow: 'hidden'
+      }}
+    >
       {/* Top Toolbar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -396,13 +404,28 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
       </div>
 
       {/* Main Editor Area */}
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ minHeight: 'calc(100vh - 80px)' }}>
-        <div className={`flex-1 h-full transition-all duration-300 ${viewportClasses[viewportMode]}`} style={{ minHeight: 'calc(100vh - 80px)' }}>
+      <div 
+        className="flex-1 flex flex-col overflow-auto"
+        style={{ 
+          height: 'calc(100vh - 80px)',
+          maxHeight: 'calc(100vh - 80px)'
+        }}
+      >
+        <div 
+          className={`flex-1 transition-all duration-300 ${viewportClasses[viewportMode]}`}
+          style={{ 
+            height: '100%',
+            minHeight: '100%'
+          }}
+        >
           <VisualEditor
             model={currentModel}
             onChange={handleModelChange}
-            className="h-full"
-            style={{ minHeight: 'calc(100vh - 80px)' }}
+            className="w-full h-full"
+            style={{ 
+              height: '100%',
+              minHeight: '100%'
+            }}
           />
         </div>
       </div>
