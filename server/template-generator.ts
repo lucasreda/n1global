@@ -923,19 +923,19 @@ export default function FAQ({ content }) {
     const customTrackingScript = trackingConfig.customTracking ? 
       trackingConfig.customTracking.map(script => script.code).join('\n    ') : '';
 
-    return \`import { useEffect } from 'react';
+    return `import { useEffect } from 'react';
 
 export default function Analytics() {
   useEffect(() => {
-    \${googleAnalyticsScript}
-    \${facebookPixelScript}
-    \${tiktokPixelScript}
-    \${googleTagManagerScript}
-    \${customTrackingScript}
+    ${googleAnalyticsScript}
+    ${facebookPixelScript}
+    ${tiktokPixelScript}
+    ${googleTagManagerScript}
+    ${customTrackingScript}
   }, []);
 
   return null; // This component only handles script injection
-}\`;
+}`;
   }
 
   /**
@@ -1716,7 +1716,7 @@ module.exports = {
         return false;
       }
 
-      console.log(\`✅ Smoke test passed! Generated \${Object.keys(files).length} files\`);
+      console.log(`✅ Smoke test passed! Generated ${Object.keys(files).length} files`);
       return true;
       
     } catch (error) {
