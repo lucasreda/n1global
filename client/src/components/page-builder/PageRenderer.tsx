@@ -377,6 +377,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
               width: '100%',
               height: '100%',
               border: 'none',
+              pointerEvents: editorMode ? 'none' : 'auto',
             }}
             allowFullScreen
             title={element.content?.alt || 'Vídeo'}
