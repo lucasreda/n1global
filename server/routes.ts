@@ -6287,6 +6287,10 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   // Register Funnel Builder routes
   app.use("/api", funnelRoutes);
 
+  // Register Analytics routes
+  const analyticsRoutes = await import('./analytics-routes');
+  app.use("/api/analytics", analyticsRoutes.default);
+
   // Multi-Page Funnel Deploy Routes (PHASE 2.2)
   app.post("/api/funnels/multi-page/deploy", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

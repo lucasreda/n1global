@@ -2977,6 +2977,173 @@ export const funnelAnalytics = pgTable("funnel_analytics", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Tracking events table for detailed user behavior analytics
+export const trackingEvents = pgTable("tracking_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session and user identification
+  sessionId: varchar("session_id").notNull(), // Unique session identifier
+  visitorId: varchar("visitor_id").notNull(), // Persistent visitor identifier
+  userId: varchar("user_id"), // If logged in user
+  
+  // Funnel and page context
+  funnelId: varchar("funnel_id").references(() => funnels.id),
+  pageId: varchar("page_id").references(() => funnelPages.id),
+  deploymentId: varchar("deployment_id").references(() => funnelDeployments.id),
+  
+  // Event details
+  eventType: text("event_type").notNull(), // 'page_view', 'click', 'form_submit', 'conversion', 'scroll', 'time_on_page'
+  eventName: text("event_name"), // Specific event name like 'add_to_cart', 'purchase', 'signup'
+  eventValue: decimal("event_value", { precision: 10, scale: 2 }), // Monetary value if applicable
+  
+  // Event metadata
+  metadata: jsonb("metadata").$type<{
+    element?: string; // CSS selector or element ID
+    text?: string; // Button text, form data, etc
+    url?: string; // Current page URL
+    referrer?: string; // Referrer URL
+    scroll_depth?: number; // Scroll percentage for scroll events
+    time_on_page?: number; // Time spent on page in seconds
+    form_data?: Record<string, any>; // Form submission data
+    custom_props?: Record<string, any>; // Custom tracking properties
+  }>(),
+  
+  // Technical details
+  deviceInfo: jsonb("device_info").$type<{
+    user_agent?: string;
+    device_type?: 'desktop' | 'mobile' | 'tablet';
+    browser?: string;
+    os?: string;
+    screen_resolution?: string;
+    viewport_size?: string;
+  }>(),
+  
+  // Location and traffic source
+  geoLocation: jsonb("geo_location").$type<{
+    country?: string;
+    region?: string;
+    city?: string;
+    timezone?: string;
+    ip?: string; // Hashed for privacy
+  }>(),
+  
+  trafficSource: jsonb("traffic_source").$type<{
+    source?: string; // 'direct', 'google', 'facebook', 'instagram'
+    medium?: string; // 'organic', 'paid', 'email', 'social'
+    campaign?: string; // Campaign name
+    term?: string; // Keyword
+    content?: string; // Ad content
+    utm_params?: Record<string, string>; // All UTM parameters
+  }>(),
+  
+  // Performance tracking
+  pageLoadTime: integer("page_load_time"), // Page load time in milliseconds
+  serverTime: timestamp("server_time").defaultNow(), // Server timestamp
+  clientTime: timestamp("client_time"), // Client timestamp when event occurred
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Conversion funnels tracking table
+export const conversionFunnels = pgTable("conversion_funnels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Funnel context
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  // Conversion path definition
+  name: text("name").notNull(), // "Main Purchase Flow", "Email Signup Flow"
+  description: text("description"),
+  
+  // Funnel steps (ordered sequence)
+  steps: jsonb("steps").$type<Array<{
+    id: string;
+    name: string;
+    event_type: string;
+    event_name?: string;
+    page_id?: string;
+    required: boolean;
+    order: number;
+  }>>().notNull(),
+  
+  // Funnel configuration
+  config: jsonb("config").$type<{
+    time_window_hours?: number; // Max time between steps (default 24h)
+    allow_skipped_steps?: boolean; // Allow non-linear progression
+    conversion_value?: number; // Expected conversion value
+    goal_event: string; // Final conversion event
+  }>().default({
+    time_window_hours: 24,
+    allow_skipped_steps: false,
+    goal_event: "purchase",
+  }),
+  
+  // Status and metrics
+  isActive: boolean("is_active").default(true),
+  totalSessions: integer("total_sessions").default(0),
+  totalConversions: integer("total_conversions").default(0),
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0"),
+  
+  // Last calculation
+  lastCalculatedAt: timestamp("last_calculated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User sessions for analytics
+export const analyticsSessions = pgTable("analytics_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session identification
+  sessionId: varchar("session_id").notNull().unique(), // Unique session ID
+  visitorId: varchar("visitor_id").notNull(), // Persistent visitor ID
+  userId: varchar("user_id"), // If logged in
+  
+  // Funnel context
+  funnelId: varchar("funnel_id").references(() => funnels.id),
+  operationId: varchar("operation_id").references(() => operations.id),
+  
+  // Session metrics
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // Session duration in seconds
+  pageViews: integer("page_views").default(0),
+  eventsCount: integer("events_count").default(0),
+  
+  // Conversion tracking
+  converted: boolean("converted").default(false),
+  conversionEvent: text("conversion_event"), // Which event led to conversion
+  conversionValue: decimal("conversion_value", { precision: 10, scale: 2 }),
+  conversionTime: timestamp("conversion_time"),
+  
+  // Technical and context data
+  entryPage: text("entry_page"), // First page visited
+  exitPage: text("exit_page"), // Last page before leaving
+  deviceInfo: jsonb("device_info").$type<{
+    device_type?: 'desktop' | 'mobile' | 'tablet';
+    browser?: string;
+    os?: string;
+  }>(),
+  
+  trafficSource: jsonb("traffic_source").$type<{
+    source?: string;
+    medium?: string;
+    campaign?: string;
+    utm_params?: Record<string, string>;
+  }>(),
+  
+  geoLocation: jsonb("geo_location").$type<{
+    country?: string;
+    region?: string;
+    city?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Funnel page templates (landing, checkout, upsell, etc.)
 export const funnelPageTemplates = pgTable("funnel_page_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -3199,6 +3366,36 @@ export type InsertFunnelPage = z.infer<typeof insertFunnelPageSchema>;
 
 export type FunnelPageRevision = typeof funnelPageRevisions.$inferSelect;
 export type InsertFunnelPageRevision = z.infer<typeof insertFunnelPageRevisionSchema>;
+
+// Analytics and tracking table schemas
+export const insertTrackingEventSchema = createInsertSchema(trackingEvents).omit({
+  id: true,
+  serverTime: true,
+  createdAt: true,
+});
+
+export const insertConversionFunnelSchema = createInsertSchema(conversionFunnels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastCalculatedAt: true,
+});
+
+export const insertAnalyticsSessionSchema = createInsertSchema(analyticsSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Analytics and tracking types
+export type TrackingEvent = typeof trackingEvents.$inferSelect;
+export type InsertTrackingEvent = z.infer<typeof insertTrackingEventSchema>;
+
+export type ConversionFunnel = typeof conversionFunnels.$inferSelect;
+export type InsertConversionFunnel = z.infer<typeof insertConversionFunnelSchema>;
+
+export type AnalyticsSession = typeof analyticsSessions.$inferSelect;
+export type InsertAnalyticsSession = z.infer<typeof insertAnalyticsSessionSchema>;
 
 // VercelIntegration type alias for backwards compatibility
 export type VercelIntegration = {
