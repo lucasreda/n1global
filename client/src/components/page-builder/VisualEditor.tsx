@@ -7,6 +7,7 @@ import {
   MouseSensor,
   TouchSensor,
   useDraggable,
+  useDroppable,
   useSensor,
   useSensors,
   closestCenter
@@ -60,12 +61,18 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
+    console.log('🚀 Drag Start Event:', { id: active.id, data: active.data.current });
     setDraggedItem(active.data.current);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setDraggedItem(null);
+
+    console.log('🎯 Drag End Event:', { 
+      active: { id: active.id, data: active.data.current }, 
+      over: over ? { id: over.id, data: over.data.current } : null 
+    });
 
     if (!over || active.id === over.id) return;
 
@@ -430,9 +437,20 @@ function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpd
     '3/4': 'w-3/4',
   };
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+    data: {
+      type: 'column',
+      columnId: column.id,
+    },
+  });
+
   return (
     <div
-      className={`${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} min-h-20 p-3 border border-dashed border-border/30 rounded-lg transition-colors hover:border-primary/50`}
+      ref={setNodeRef}
+      className={`${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} min-h-20 p-3 border-2 border-dashed ${
+        isOver ? 'border-primary bg-primary/10' : 'border-border/30'
+      } rounded-lg transition-colors hover:border-primary/50`}
       data-testid={`column-${column.id}`}
     >
       <SortableContext
@@ -454,7 +472,9 @@ function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpd
       {column.elements.length === 0 && (
         <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
           <Plus size={16} className="mb-2 opacity-50" />
-          <span className="text-xs">Arrastar elementos aqui</span>
+          <span className="text-xs">
+            {isOver ? 'Solte o elemento aqui!' : 'Arrastar elementos aqui'}
+          </span>
         </div>
       )}
     </div>
