@@ -345,30 +345,6 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Viewport Toggle */}
-            <div className="flex items-center border border-gray-200 rounded-lg p-1">
-              <Button
-                variant={viewportMode === 'desktop' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewportMode('desktop')}
-              >
-                <Monitor className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewportMode === 'tablet' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewportMode('tablet')}
-              >
-                <Tablet className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewportMode === 'mobile' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewportMode('mobile')}
-              >
-                <Smartphone className="w-4 h-4" />
-              </Button>
-            </div>
 
             <Button
               variant="outline"
