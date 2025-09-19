@@ -711,79 +711,88 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
   const isBlock = element.type === 'block';
   const hasColumns = isBlock && element.config?.columns && element.config.columns > 1;
 
-  // If it's a block with columns configured, render columns
+  // If it's a block with columns configured, render custom columns with drop zones
   if (hasColumns) {
     const columnCount = element.config!.columns!;
     const columnWidths = element.config!.columnWidths || Array(columnCount).fill(`${100/columnCount}%`);
     
+    // Apply element styles to main container
+    const blockStyles = {
+      padding: element.styles?.padding || '1rem',
+      margin: element.styles?.margin || '1rem 0',
+      backgroundColor: element.styles?.backgroundColor || '#f1f5f9',
+      border: element.styles?.border || '2px dashed #94a3b8',
+      borderRadius: element.styles?.borderRadius || '0.5rem',
+      minHeight: element.styles?.minHeight || '100px',
+    };
+
     return (
-      <div className="structural-element">
-        <ElementRenderer 
-          element={element} 
-          theme={theme} 
-          editorMode={true}
-          isSelected={isSelected}
-          onUpdate={onUpdate}
-        />
+      <div className="structural-element" style={blockStyles}>
+        {/* Block header/title if any */}
+        {element.props?.title && (
+          <div className="mb-2 font-semibold text-sm text-gray-600">
+            {element.props.title}
+          </div>
+        )}
         
-        {/* Block columns layout */}
-        <div className="mt-2 border-2 border-dashed border-border/20 rounded p-2">
-          <div className="flex gap-2">
-            {Array.from({ length: columnCount }, (_, index) => {
-              // Get elements for this column from children array
-              const columnElements = children.filter((child, childIndex) => 
-                childIndex % columnCount! === index
-              );
-              
-              return (
-                <div 
-                  key={index}
-                  className="flex-1 min-h-16 p-2 border border-dashed border-border/30 rounded"
-                  style={{ width: columnWidths[index] }}
-                >
-                  {/* Drop zone at the beginning of column */}
+        {/* Block columns layout - REPLACE original rendering */}
+        <div className="flex gap-2 h-full">
+          {Array.from({ length: columnCount }, (_, index) => {
+            // Get elements for this column from children array
+            const columnElements = children.filter((child, childIndex) => 
+              childIndex % columnCount! === index
+            );
+            
+            return (
+              <div 
+                key={index}
+                className="flex-1 min-h-16 p-2 border border-dashed border-gray-300 rounded bg-white/50"
+                style={{ width: columnWidths[index] }}
+              >
+                <div className="text-xs text-gray-500 mb-2">Coluna {index + 1}</div>
+                
+                {/* Drop zone at the beginning of column */}
+                <BlockColumnDropZone
+                  id={`${element.id}-col-${index}-start`}
+                  elementId={element.id}
+                  columnIndex={index}
+                  position={0}
+                />
+
+                {columnElements.map((child, childIndex) => {
+                  const actualPosition = Math.floor(children.indexOf(child) / columnCount!) * columnCount! + index;
+                  return (
+                    <div key={child.id}>
+                      <ModernElement
+                        element={child}
+                        theme={theme}
+                        isSelected={isSelected}
+                        onSelect={() => {}}
+                        onUpdate={(elementId, updates) => onUpdate(updates)}
+                      />
+                      {/* Drop zone after each element in column */}
+                      <BlockColumnDropZone
+                        id={`${element.id}-col-${index}-${childIndex + 1}`}
+                        elementId={element.id}
+                        columnIndex={index}
+                        position={actualPosition + columnCount!}
+                      />
+                    </div>
+                  );
+                })}
+
+                {columnElements.length === 0 && (
                   <BlockColumnDropZone
-                    id={`${element.id}-col-${index}-start`}
+                    id={`${element.id}-col-${index}-empty`}
                     elementId={element.id}
                     columnIndex={index}
-                    position={0}
+                    position={index}
+                    isEmpty={true}
                   />
-
-                  {columnElements.map((child, childIndex) => {
-                    const actualPosition = Math.floor(children.indexOf(child) / columnCount!) * columnCount! + index;
-                    return (
-                      <div key={child.id}>
-                        <ModernElement
-                          element={child}
-                          theme={theme}
-                          isSelected={isSelected}
-                          onSelect={() => {}}
-                          onUpdate={(elementId, updates) => onUpdate(updates)}
-                        />
-                        {/* Drop zone after each element in column */}
-                        <BlockColumnDropZone
-                          id={`${element.id}-col-${index}-${childIndex + 1}`}
-                          elementId={element.id}
-                          columnIndex={index}
-                          position={actualPosition + columnCount!}
-                        />
-                      </div>
-                    );
-                  })}
-
-                  {columnElements.length === 0 && (
-                    <BlockColumnDropZone
-                      id={`${element.id}-col-${index}-empty`}
-                      elementId={element.id}
-                      columnIndex={index}
-                      position={index}
-                      isEmpty={true}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
