@@ -308,7 +308,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50" data-testid="advanced-page-editor">
+    <div className="min-h-screen h-full flex flex-col bg-gray-50" data-testid="advanced-page-editor">
       {/* Top Toolbar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
