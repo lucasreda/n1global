@@ -72,8 +72,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       return [];
     }
 
-    // Priority order: block-column-zone > element-zone > drop-zone > column > container > section > element
-    const priorityOrder = ['block-column-zone', 'element-zone', 'drop-zone', 'column', 'container', 'section', 'element'];
+    // Priority order: block-column-zone > element-zone > section-drop-zone > drop-zone > column > container > section > element
+    const priorityOrder = ['block-column-zone', 'element-zone', 'section-drop-zone', 'drop-zone', 'column', 'container', 'section', 'element'];
     
     // Sort intersections by priority
     const sortedIntersections = intersections.sort((a, b) => {
@@ -206,7 +206,20 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       onChange(newModel);
     }
 
-    // Handle moving existing element to section
+    // Handle moving existing element to section drop zones
+    if (activeData?.type === 'element' && overData?.type === 'section-drop-zone') {
+      const newModel = moveElementToSectionDropZone(model, active.id as string, overData.columnId, overData.position);
+      onChange(newModel);
+    }
+
+    // Handle adding new element to section drop zones
+    if (activeData?.type === 'new-element' && overData?.type === 'section-drop-zone') {
+      const newElement = createDefaultElement(activeData.elementType);
+      const newModel = addElementToColumn(model, newElement, overData.columnId, overData.position);
+      onChange(newModel);
+    }
+
+    // Handle moving existing element to section (fallback)
     if (activeData?.type === 'element' && overData?.type === 'section') {
       const newModel = moveElementToSection(model, active.id as string, over.id as string);
       onChange(newModel);
@@ -1485,54 +1498,15 @@ function EnhancedSortableSection({
           </div>
         )}
 
-        {/* Section Content */}
-        <div 
-          className={`min-h-[80px] transition-all duration-200 ${
-            isHovered ? 'bg-muted/20' : ''
-          }`}
-          style={{
-            backgroundColor: section.styles?.backgroundColor || 'transparent',
-            padding: section.styles?.padding || '1.5rem',
-            margin: section.styles?.margin || '0',
-            ...section.styles
-          }}
-        >
-          {/* Section Rows */}
-          <SortableContext
-            items={section.rows.map(r => r.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {section.rows.map((row) => (
-              <SortableRow
-                key={row.id}
-                row={row}
-                theme={theme}
-                selectedElementId={selectedElementId}
-                onSelectElement={onSelectElement}
-                onUpdateElement={onUpdateElement}
-              />
-            ))}
-          </SortableContext>
-
-          {/* Empty Section State */}
-          {section.rows.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3">
-                <Plus size={20} className="text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">Seção vazia</p>
-              <button
-                onClick={() => {
-                  // TODO: Add row to section
-                  console.log('Add row to section', section.id);
-                }}
-                className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-md hover:bg-primary/90 transition-colors"
-              >
-                Adicionar conteúdo
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Section Content with enhanced dropzones */}
+        <SectionWithDropZones 
+          section={section}
+          theme={theme}
+          selectedElementId={selectedElementId}
+          onSelectElement={onSelectElement}
+          onUpdateElement={onUpdateElement}
+          isHovered={isHovered}
+        />
       </div>
 
       {/* Add Section Button */}
@@ -2411,7 +2385,23 @@ function moveElementToContainer(model: PageModelV2, elementId: string, targetCon
   return addElementToContainer(newModel, elementToMove, targetContainerId);
 }
 
-// Move element to section (adds to first column of first row)
+// Move element to section drop zone with precise positioning
+function moveElementToSectionDropZone(model: PageModelV2, elementId: string, targetColumnId: string, position: number): PageModelV2 {
+  let elementToMove: BlockElement | null = null;
+  
+  // First, find and remove the element from its current location
+  const modelAfterRemove = removeElementFromModel(model, elementId);
+  elementToMove = findElementInModel(model, elementId);
+  
+  if (!elementToMove) {
+    return model;
+  }
+  
+  // Then add it to the target column at the specific position
+  return addElementToColumn(modelAfterRemove, elementToMove, targetColumnId, position);
+}
+
+// Move element to section (adds to first column of first row) - fallback
 function moveElementToSection(model: PageModelV2, elementId: string, targetSectionId: string): PageModelV2 {
   let elementToMove: BlockElement | null = null;
   
@@ -2437,6 +2427,168 @@ function moveElementToSection(model: PageModelV2, elementId: string, targetSecti
   }
   
   return model;
+}
+
+// Section Drop Zone Component
+interface SectionDropZoneProps {
+  id: string;
+  sectionId: string;
+  columnId: string;
+  position: number;
+  isEmpty?: boolean;
+}
+
+function SectionDropZone({ id, sectionId, columnId, position, isEmpty = false }: SectionDropZoneProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: {
+      type: 'section-drop-zone',
+      sectionId,
+      columnId,
+      position,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`section-drop-zone transition-all duration-200 ${
+        isOver ? 'bg-blue-100 border-blue-400' : 'border-transparent'
+      } ${
+        isEmpty 
+          ? 'min-h-[60px] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center m-2'
+          : 'min-h-[12px] border-2 border-dashed rounded m-1'
+      }`}
+      style={{
+        opacity: isOver ? 1 : 0.3,
+      }}
+    >
+      {isEmpty && (
+        <div className="text-sm text-gray-500 font-medium">
+          Adicionar elementos
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Enhanced Section Content with Precise Drop Zones
+interface SectionWithDropZonesProps {
+  section: BlockSection;
+  theme: PageModelV2['theme'];
+  selectedElementId: string | null;
+  onSelectElement: (elementId: string | null) => void;
+  onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
+  isHovered: boolean;
+}
+
+function SectionWithDropZones({ 
+  section, 
+  theme, 
+  selectedElementId, 
+  onSelectElement, 
+  onUpdateElement, 
+  isHovered 
+}: SectionWithDropZonesProps) {
+  return (
+    <div 
+      className={`min-h-[80px] transition-all duration-200 ${
+        isHovered ? 'bg-muted/20' : ''
+      }`}
+      style={{
+        backgroundColor: section.styles?.backgroundColor || 'transparent',
+        padding: section.styles?.padding || '1.5rem',
+        margin: section.styles?.margin || '0',
+        ...section.styles
+      }}
+    >
+      {/* Section Rows */}
+      <SortableContext
+        items={section.rows.map(r => r.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        {section.rows.map((row) => (
+          <SortableRow
+            key={row.id}
+            row={row}
+            theme={theme}
+            selectedElementId={selectedElementId}
+            onSelectElement={onSelectElement}
+            onUpdateElement={onUpdateElement}
+          />
+        ))}
+      </SortableContext>
+
+      {/* Enhanced Drop Zones for first column elements */}
+      {section.rows.length > 0 && section.rows[0].columns.length > 0 && (
+        <div className="absolute inset-0 pointer-events-none">
+          <div 
+            className="pointer-events-auto" 
+            style={{
+              padding: section.styles?.padding || '1.5rem',
+              margin: section.styles?.margin || '0',
+            }}
+          >
+            {(() => {
+              const firstColumn = section.rows[0].columns[0];
+              const elements = firstColumn.elements || [];
+              
+              return (
+                <>
+                  {/* Drop zone at the beginning */}
+                  <SectionDropZone
+                    id={`section-${section.id}-start`}
+                    sectionId={section.id}
+                    columnId={firstColumn.id}
+                    position={0}
+                    isEmpty={elements.length === 0}
+                  />
+
+                  {/* Drop zones between elements */}
+                  {elements.map((_, index) => (
+                    <div key={`drop-${index}`} className="relative">
+                      {/* Invisible spacer to align with actual elements */}
+                      <div className="invisible pointer-events-none">
+                        {/* This helps position our dropzones correctly */}
+                        <div className="min-h-[40px]"></div>
+                      </div>
+                      {/* Drop zone after each element */}
+                      <SectionDropZone
+                        id={`section-${section.id}-${index + 1}`}
+                        sectionId={section.id}
+                        columnId={firstColumn.id}
+                        position={index + 1}
+                      />
+                    </div>
+                  ))}
+                </>
+              );
+            })()
+            }
+          </div>
+        </div>
+      )}
+
+      {/* Empty Section State */}
+      {section.rows.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center mb-3">
+            <Plus size={20} className="text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">Seção vazia</p>
+          <button
+            onClick={() => {
+              // TODO: Add row to section
+              console.log('Add row to section', section.id);
+            }}
+            className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-md hover:bg-primary/90 transition-colors"
+          >
+            Adicionar conteúdo
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Helper function to recursively add element to nested containers
