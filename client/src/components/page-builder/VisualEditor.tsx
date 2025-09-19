@@ -19,7 +19,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
-import { createDefaultTheme } from './PageRenderer';
+import { createDefaultTheme, ElementRenderer } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
 import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
