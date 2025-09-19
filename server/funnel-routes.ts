@@ -1508,4 +1508,261 @@ router.get("/funnels/:funnelId/pages/:pageId/revisions/:revisionId", authenticat
   }
 });
 
+// ================================
+// FUNNEL PAGE TEMPLATES ROUTES
+// ================================
+
+/**
+ * Get all available page templates
+ */
+router.get("/funnels/page-templates", authenticateToken, async (req, res) => {
+  try {
+    const pageType = req.query.pageType as string;
+    const category = req.query.category as string;
+    
+    // Build WHERE conditions
+    const whereConditions = [
+      eq(funnelPageTemplates.isActive, true)
+    ];
+    
+    if (pageType) {
+      whereConditions.push(eq(funnelPageTemplates.pageType, pageType));
+    }
+    
+    if (category) {
+      whereConditions.push(eq(funnelPageTemplates.category, category));
+    }
+    
+    const templates = await db
+      .select()
+      .from(funnelPageTemplates)
+      .where(and(...whereConditions))
+      .orderBy(funnelPageTemplates.name);
+
+    return res.json({
+      success: true,
+      templates
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar templates:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Get a specific page template
+ */
+router.get("/funnels/page-templates/:templateId", authenticateToken, async (req, res) => {
+  try {
+    const { templateId } = req.params;
+
+    const [template] = await db
+      .select()
+      .from(funnelPageTemplates)
+      .where(
+        and(
+          eq(funnelPageTemplates.id, templateId),
+          eq(funnelPageTemplates.isActive, true)
+        )
+      )
+      .limit(1);
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: "Template não encontrado"
+      });
+    }
+
+    return res.json({
+      success: true,
+      template
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar template:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Apply a template to a page
+ */
+router.post("/funnels/:funnelId/pages/:pageId/apply-template", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId, pageId } = req.params;
+    const { templateId } = req.body;
+    const operationId = req.validatedOperationId;
+    const userId = (req as any).user.id;
+
+    if (!templateId) {
+      return res.status(400).json({
+        success: false,
+        error: "Template ID é obrigatório"
+      });
+    }
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Get current page
+    const [currentPage] = await db
+      .select()
+      .from(funnelPages)
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      )
+      .limit(1);
+
+    if (!currentPage) {
+      return res.status(404).json({
+        success: false,
+        error: "Página não encontrada"
+      });
+    }
+
+    // Get template
+    const [template] = await db
+      .select()
+      .from(funnelPageTemplates)
+      .where(
+        and(
+          eq(funnelPageTemplates.id, templateId),
+          eq(funnelPageTemplates.isActive, true)
+        )
+      )
+      .limit(1);
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: "Template não encontrado"
+      });
+    }
+
+    // Merge template model with existing page data
+    const mergedModel = {
+      ...template.defaultModel,
+      seo: {
+        ...template.defaultModel.seo,
+        title: currentPage.model.seo?.title || template.defaultModel.seo?.title || currentPage.name,
+        description: currentPage.model.seo?.description || template.defaultModel.seo?.description || "",
+        keywords: currentPage.model.seo?.keywords || template.defaultModel.seo?.keywords || []
+      }
+    };
+
+    // Update the page with template
+    const [updatedPage] = await db
+      .update(funnelPages)
+      .set({
+        model: mergedModel,
+        templateId: templateId,
+        pageType: template.pageType,
+        version: currentPage.version + 1,
+        lastEditedBy: userId,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(funnelPages.id, pageId),
+          eq(funnelPages.funnelId, funnelId)
+        )
+      )
+      .returning();
+
+    // Create revision for template application
+    await db
+      .insert(funnelPageRevisions)
+      .values([{
+        pageId: pageId,
+        version: updatedPage.version,
+        changeType: 'template_apply',
+        model: updatedPage.model,
+        changeDescription: `Template "${template.name}" aplicado`,
+        createdBy: userId
+      }]);
+
+    return res.json({
+      success: true,
+      message: "Template aplicado com sucesso",
+      page: updatedPage
+    });
+  } catch (error) {
+    console.error('❌ Erro ao aplicar template:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Create a new page template (admin only)
+ */
+router.post("/funnels/page-templates", authenticateToken, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    
+    // Only allow admins to create global page templates
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: "Acesso negado. Apenas administradores podem criar templates."
+      });
+    }
+    
+    const templateData = insertFunnelPageTemplateSchema.parse(req.body);
+
+    const [newTemplate] = await db
+      .insert(funnelPageTemplates)
+      .values([templateData])
+      .returning();
+
+    return res.status(201).json({
+      success: true,
+      message: "Template criado com sucesso",
+      template: newTemplate
+    });
+  } catch (error) {
+    console.error('❌ Erro ao criar template:', error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: "Dados inválidos",
+        details: error.errors
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
 export { router as funnelRoutes };
