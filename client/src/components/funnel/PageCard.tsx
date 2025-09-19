@@ -50,7 +50,7 @@ export function PageCard({
   const [, setLocation] = useLocation();
 
   const handleEdit = () => {
-    setLocation(`/funnels/${funnelId}/pages/${page.id}/edit`);
+    setLocation(`/editor/funnels/${funnelId}/pages/${page.id}/edit`);
   };
 
   const handlePreview = () => {

@@ -61,6 +61,7 @@ import EULA from "@/pages/eula";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import FunnelEditor from "@/pages/funnel-editor";
 import FunnelPreview from "@/pages/funnel-preview";
+import { AdvancedPageEditor } from "@/components/funnel/AdvancedPageEditor";
 
 interface OnboardingStatus {
   onboardingCompleted: boolean;
@@ -260,6 +261,9 @@ function Router() {
         <Route path="/integrations" component={Integrations} />
         {!isProductSeller && <Route path="/funnels" component={Funnels} />}
         {!isProductSeller && <Route path="/funnels/:funnelId/pages/:pageId/edit" component={FunnelEditor} />}
+        {!isProductSeller && <Route path="/editor/funnels/:funnelId/pages/:pageId/edit" component={({ params }: any) => (
+          <AdvancedPageEditor funnelId={params.funnelId} pageId={params.pageId} />
+        )} />}
         {!isProductSeller && <Route path="/funnels/:funnelId/pages/:pageId/preview" component={FunnelPreview} />}
         {!isProductSeller && <Route path="/funnels/:id" component={FunnelEditor} />}
         {!isProductSeller && <Route path="/funnel-preview" component={FunnelPreview} />}
@@ -392,8 +396,8 @@ function AppContent() {
   // Authenticated routes
   return (
     <>
-      {/* Fullscreen layout for onboarding and inside pages */}
-      {(location === '/onboarding' || location.startsWith('/inside')) ? (
+      {/* Fullscreen layout for onboarding, inside pages, and editor */}
+      {(location === '/onboarding' || location.startsWith('/inside') || location.startsWith('/editor/')) ? (
         <div className="min-h-screen">
           <Router />
         </div>
