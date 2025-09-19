@@ -48,6 +48,11 @@ const connectVercelSchema = z.object({
 const createFunnelSchema = z.object({
   operationId: z.string().uuid("Operation ID deve ser um UUID válido"),
   name: z.string().min(1, "Nome do funil é obrigatório"),
+  type: z.enum(["ecommerce", "nutraceutico", "infoproduto"], {
+    errorMap: () => ({ message: "Tipo deve ser: ecommerce, nutraceutico ou infoproduto" })
+  }),
+  language: z.string().min(2, "Idioma é obrigatório"),
+  currency: z.string().length(3, "Moeda deve ter 3 caracteres"),
   description: z.string().optional(),
   templateId: z.string().uuid("Template ID deve ser um UUID válido").optional(),
   productInfo: z.object({
@@ -59,7 +64,7 @@ const createFunnelSchema = z.object({
     mainBenefits: z.array(z.string()).min(1, "Pelo menos um benefício é obrigatório"),
     objections: z.array(z.string()).min(1, "Pelo menos uma objeção é obrigatória"),
     testimonials: z.array(z.string()).optional(),
-  }),
+  }).optional(),
   trackingConfig: z.object({
     facebookPixelId: z.string().optional(),
     googleAnalyticsId: z.string().optional(),
@@ -455,9 +460,9 @@ router.post("/funnels", authenticateToken, validateOperationAccess, async (req, 
       });
     }
 
-    const { operationId, name, description, templateId, productInfo, trackingConfig } = validation.data;
+    const { operationId, name, type, language, currency, description, templateId, productInfo, trackingConfig } = validation.data;
 
-    console.log(`🎯 Creating AI funnel: ${name} for operation: ${operationId}`);
+    console.log(`🎯 Creating AI funnel: ${name} (${type}) for operation: ${operationId}`);
 
     // Check if Vercel integration exists
     const [integration] = await db
@@ -504,17 +509,45 @@ router.post("/funnels", authenticateToken, validateOperationAccess, async (req, 
         operationId,
         storeId: (req as any).storeId,
         name,
+        type,
+        language,
+        currency,
         description: description || null,
         templateId: templateId || null,
-        productInfo,
+        productInfo: productInfo || null,
         trackingConfig: trackingConfig || null,
         status: 'generating',
         isActive: true,
       })
       .returning();
 
-    // Start AI content generation in background
-    generateFunnelContent(newFunnel.id, productInfo, templateConfig);
+    // Start AI content generation in background (if productInfo is available)
+    if (productInfo) {
+      generateFunnelContent(newFunnel.id, productInfo, templateConfig);
+    } else {
+      // Generate basic content based on type and language
+      console.log(`📝 Generating basic content for funnel ${newFunnel.id} (${type} in ${language})`);
+      // For now, just set status to ready - will implement AI generation later
+      await db
+        .update(funnels)
+        .set({ 
+          status: 'ready',
+          generatedContent: {
+            hero: {
+              title: `Bem-vindo ao ${name}`,
+              subtitle: 'Conteúdo será gerado pela IA em breve...',
+              cta: 'Começar agora'
+            },
+            benefits: [],
+            features: [],
+            testimonials: [],
+            faq: [],
+            pricing: null
+          },
+          generatedAt: new Date()
+        })
+        .where(eq(funnels.id, newFunnel.id));
+    }
 
     res.json({
       success: true,
