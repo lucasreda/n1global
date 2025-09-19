@@ -50,6 +50,8 @@ export function PageCard({
   const [, setLocation] = useLocation();
 
   const handleEdit = () => {
+    console.log('🔧 PageCard: Edit clicked for page:', page.id, page.name);
+    console.log('🔧 PageCard: Navigating to:', `/funnels/${funnelId}/pages/${page.id}/edit`);
     setLocation(`/funnels/${funnelId}/pages/${page.id}/edit`);
   };
 

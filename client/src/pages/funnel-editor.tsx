@@ -67,8 +67,14 @@ export default function FunnelEditor() {
   const funnelId = (params.funnelId || params.id) as string;
   const pageId = params.pageId as string;
   
+  console.log('🎯 FunnelEditor: Params received:', params);
+  console.log('🎯 FunnelEditor: Extracted funnelId:', funnelId);
+  console.log('🎯 FunnelEditor: Extracted pageId:', pageId);
+  
   // If we're editing a specific page, start on Pages tab
   const [activeTab, setActiveTab] = useState(pageId ? "pages" : "content");
+  
+  console.log('🎯 FunnelEditor: Initial activeTab:', pageId ? "pages" : "content");
 
   // Fetch funnel data
   const { data: funnel, isLoading, error } = useQuery({
