@@ -74,7 +74,9 @@ export default function FunnelEditor() {
   const { data: funnel, isLoading, error } = useQuery({
     queryKey: ['/api/funnels', funnelId],
     queryFn: async () => {
-      const response = await authenticatedApiRequest("GET", `/api/funnels/${funnelId}?operationId=${selectedOperation}`);
+      const operationId = typeof selectedOperation === 'string' ? selectedOperation : selectedOperation?.id || '';
+      console.log('🎯 FunnelEditor: Making API request with:', { funnelId, operationId });
+      const response = await authenticatedApiRequest("GET", `/api/funnels/${funnelId}?operationId=${operationId}`);
       if (!response.ok) {
         throw new Error('Falha ao carregar dados do funil');
       }
