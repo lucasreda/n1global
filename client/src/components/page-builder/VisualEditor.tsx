@@ -98,8 +98,6 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   };
 
   const addSection = useCallback(() => {
-    console.log('🔥 addSection called!', { sectionsCount: model.sections.length });
-    
     const newSection: BlockSection = {
       id: `section_${Date.now()}`,
       type: 'content',
@@ -122,19 +120,51 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       },
     };
 
-    const newModel = {
+    onChange({
       ...model,
       sections: [...model.sections, newSection],
-    };
-    
-    console.log('🔥 New model created:', { newSectionsCount: newModel.sections.length });
-    onChange(newModel);
+    });
   }, [model, onChange]);
 
   const deleteSection = useCallback((sectionId: string) => {
     onChange({
       ...model,
       sections: model.sections.filter(s => s.id !== sectionId),
+    });
+  }, [model, onChange]);
+
+  const duplicateSection = useCallback((sectionId: string) => {
+    const sectionIndex = model.sections.findIndex(s => s.id === sectionId);
+    if (sectionIndex === -1) return;
+
+    const originalSection = model.sections[sectionIndex];
+    
+    // Create a deep copy with new IDs
+    const duplicatedSection: BlockSection = {
+      ...originalSection,
+      id: `section_${Date.now()}`,
+      name: `${originalSection.name} (Cópia)`,
+      rows: originalSection.rows.map(row => ({
+        ...row,
+        id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        columns: row.columns.map(column => ({
+          ...column,
+          id: `column_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          elements: column.elements.map(element => ({
+            ...element,
+            id: `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          }))
+        }))
+      }))
+    };
+
+    // Insert the duplicated section right after the original
+    const newSections = [...model.sections];
+    newSections.splice(sectionIndex + 1, 0, duplicatedSection);
+    
+    onChange({
+      ...model,
+      sections: newSections,
     });
   }, [model, onChange]);
 
@@ -272,6 +302,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 onHoverSection={handleHoverSection}
                 onUpdateElement={updateElement}
                 onDeleteSection={deleteSection}
+                onDuplicateSection={duplicateSection}
                 onAddSection={addSection}
               />
             </div>
@@ -680,6 +711,7 @@ interface PageFrameProps {
   onHoverSection: (id: string | null) => void;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
   onDeleteSection: (sectionId: string) => void;
+  onDuplicateSection: (sectionId: string) => void;
   onAddSection: () => void;
 }
 
@@ -692,6 +724,7 @@ function PageFrame({
   onHoverSection,
   onUpdateElement, 
   onDeleteSection, 
+  onDuplicateSection,
   onAddSection 
 }: PageFrameProps) {
   const viewportStyles = {
@@ -760,6 +793,7 @@ function PageFrame({
                       onHover={onHoverSection}
                       onUpdateElement={onUpdateElement}
                       onDeleteSection={onDeleteSection}
+                      onDuplicateSection={onDuplicateSection}
                       onAddSectionAfter={() => onAddSection()}
                       showAddButton={index === model.sections.length - 1}
                     />
@@ -784,6 +818,7 @@ interface EnhancedSortableSectionProps {
   onHover: (id: string | null) => void;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
   onDeleteSection: (sectionId: string) => void;
+  onDuplicateSection: (sectionId: string) => void;
   onAddSectionAfter: () => void;
   showAddButton: boolean;
 }
@@ -797,6 +832,7 @@ function EnhancedSortableSection({
   onHover,
   onUpdateElement,
   onDeleteSection,
+  onDuplicateSection,
   onAddSectionAfter,
   showAddButton
 }: EnhancedSortableSectionProps) {
@@ -858,8 +894,7 @@ function EnhancedSortableSection({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // TODO: Implement section copy
-                console.log('Copy section', section.id);
+                onDuplicateSection(section.id);
               }}
               className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-colors"
               title="Duplicar seção"
@@ -930,7 +965,6 @@ function EnhancedSortableSection({
         <div className="flex items-center justify-center py-6">
           <button
             onClick={(e) => {
-              console.log('🚀 Add Section button clicked!');
               e.preventDefault();
               e.stopPropagation();
               onAddSectionAfter();
