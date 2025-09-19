@@ -580,21 +580,8 @@ function DroppableContainer({ element, theme, editorMode }: DroppableContainerPr
     );
   }
 
-  // If container is empty, render a minimal drop zone
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        display: element.styles?.display || 'block',
-        padding: element.styles?.padding || theme.spacing.md,
-        backgroundColor: element.styles?.backgroundColor || 'transparent',
-        minHeight: '20px',
-      }}
-      data-testid={`element-${element.id}`}
-      data-element-type="container"
-    >
-    </div>
-  );
+  // If container is empty, return null (no visual representation)
+  return null;
 }
 
 // Droppable Block Component for Editor Mode
