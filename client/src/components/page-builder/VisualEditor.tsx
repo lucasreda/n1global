@@ -72,8 +72,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       return [];
     }
 
-    // Priority order: column > container > section > element
-    const priorityOrder = ['column', 'container', 'section', 'element'];
+    // Priority order: drop-zone > column > container > section > element
+    const priorityOrder = ['drop-zone', 'column', 'container', 'section', 'element'];
     
     // Sort intersections by priority
     const sortedIntersections = intersections.sort((a, b) => {
@@ -141,7 +141,14 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       onChange(newModel);
     }
 
-    // Handle adding new element from toolbar to columns
+    // Handle adding new element from toolbar to drop zones (precise positioning)
+    if (activeData?.type === 'new-element' && overData?.type === 'drop-zone') {
+      const newElement = createDefaultElement(activeData.elementType);
+      const newModel = addElementToColumn(model, newElement, overData.columnId, overData.position);
+      onChange(newModel);
+    }
+
+    // Handle adding new element from toolbar to columns (fallback)
     if (activeData?.type === 'new-element' && overData?.type === 'column') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToColumn(model, newElement, overData.columnId);
@@ -479,47 +486,98 @@ function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpd
     '3/4': 'w-3/4',
   };
 
-  const { setNodeRef, isOver } = useDroppable({
-    id: column.id,
-    data: {
-      type: 'column',
-      columnId: column.id,
-    },
-  });
-
   return (
     <div
-      ref={setNodeRef}
-      className={`${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} min-h-20 p-3 border-2 border-dashed ${
-        isOver ? 'border-primary bg-primary/10' : 'border-border/30'
-      } rounded-lg transition-colors hover:border-primary/50`}
+      className={`${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} min-h-20 p-3 border border-dashed border-border/30 rounded-lg transition-colors hover:border-primary/50`}
       data-testid={`column-${column.id}`}
     >
       <SortableContext
         items={column.elements.map(e => e.id)}
         strategy={verticalListSortingStrategy}
       >
-        {column.elements.map((element) => (
-          <ModernElement
-            key={element.id}
-            element={element}
-            theme={theme}
-            isSelected={selectedElementId === element.id}
-            onSelect={() => onSelectElement(element.id)}
-            onUpdate={onUpdateElement}
-          />
+        {/* Drop zone at the beginning */}
+        <DropZone
+          id={`${column.id}-start`}
+          columnId={column.id}
+          position={0}
+        />
+
+        {column.elements.map((element, index) => (
+          <React.Fragment key={element.id}>
+            <ModernElement
+              element={element}
+              theme={theme}
+              isSelected={selectedElementId === element.id}
+              onSelect={() => onSelectElement(element.id)}
+              onUpdate={onUpdateElement}
+            />
+            {/* Drop zone after each element */}
+            <DropZone
+              id={`${column.id}-${index + 1}`}
+              columnId={column.id}
+              position={index + 1}
+            />
+          </React.Fragment>
         ))}
       </SortableContext>
 
       {column.elements.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
-          <Plus size={16} className="mb-2 opacity-50" />
-          <span className="text-xs">
-            {isOver ? 'Solte o elemento aqui!' : 'Arrastar elementos aqui'}
-          </span>
-        </div>
+        <DropZone
+          id={`${column.id}-empty`}
+          columnId={column.id}
+          position={0}
+          isEmpty={true}
+        />
       )}
     </div>
+  );
+}
+
+// Drop Zone Component for precise insertion
+interface DropZoneProps {
+  id: string;
+  columnId: string;
+  position: number;
+  isEmpty?: boolean;
+}
+
+function DropZone({ id, columnId, position, isEmpty = false }: DropZoneProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: {
+      type: 'drop-zone',
+      columnId,
+      position,
+    },
+  });
+
+  if (isEmpty) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={`flex flex-col items-center justify-center py-6 text-center text-muted-foreground ${
+          isOver ? 'bg-primary/10 border-primary' : ''
+        } rounded-md transition-colors`}
+      >
+        <Plus size={16} className="mb-2 opacity-50" />
+        <span className="text-xs">
+          {isOver ? 'Solte o elemento aqui!' : 'Arrastar elementos aqui'}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`h-2 transition-colors ${
+        isOver ? 'bg-primary/20' : 'transparent'
+      }`}
+      style={{
+        marginTop: position === 0 ? 0 : '4px',
+        marginBottom: '4px',
+      }}
+    />
   );
 }
 
@@ -1570,15 +1628,23 @@ function moveElement(model: PageModelV2, elementId: string, targetColumnId: stri
   return model;
 }
 
-function addElementToColumn(model: PageModelV2, element: BlockElement, columnId: string): PageModelV2 {
+function addElementToColumn(model: PageModelV2, element: BlockElement, columnId: string, position?: number): PageModelV2 {
   const newModel = { ...model };
   
-  // Find the column and add the element
+  // Find the column and add the element at the specified position
   for (const section of newModel.sections) {
     for (const row of section.rows) {
       for (const column of row.columns) {
         if (column.id === columnId) {
-          column.elements = [...column.elements, element];
+          if (position !== undefined && position >= 0 && position <= column.elements.length) {
+            // Insert at specific position
+            const newElements = [...column.elements];
+            newElements.splice(position, 0, element);
+            column.elements = newElements;
+          } else {
+            // Fallback to append at end
+            column.elements = [...column.elements, element];
+          }
           return newModel;
         }
       }
