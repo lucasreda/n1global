@@ -62,9 +62,13 @@ export default function FunnelEditor() {
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("content");
 
-  const funnelId = params.id as string;
+  // Handle different URL patterns: /funnels/:id vs /funnels/:funnelId/pages/:pageId/edit
+  const funnelId = (params.funnelId || params.id) as string;
+  const pageId = params.pageId as string;
+  
+  // If we're editing a specific page, start on Pages tab
+  const [activeTab, setActiveTab] = useState(pageId ? "pages" : "content");
 
   // Fetch funnel data
   const { data: funnel, isLoading, error } = useQuery({
