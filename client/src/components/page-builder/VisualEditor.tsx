@@ -488,7 +488,8 @@ const ModernElement = React.memo(function ModernElement({
     onUpdate(element.id, updates);
   }, [element.id, onUpdate]);
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); // Impede que o clique seja propagado para a seção
     onSelect();
   }, [onSelect]);
 
