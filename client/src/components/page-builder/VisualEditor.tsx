@@ -40,20 +40,6 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const [selectedElement, setSelectedElement] = useState<BlockElement | null>(null);
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
 
-  // Memoized handlers to prevent unnecessary re-renders
-  const handleSectionHover = useCallback((sectionId: string | null) => {
-    if (hoveredSectionId !== sectionId) {
-      setHoveredSectionId(sectionId);
-    }
-  }, [hoveredSectionId]);
-
-  const handleElementSelect = useCallback((elementId: string | null) => {
-    if (selectedElement?.id !== elementId) {
-      setSelectedElement(
-        elementId ? findElementInModel(model, elementId) || null : null
-      );
-    }
-  }, [selectedElement?.id, model]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {

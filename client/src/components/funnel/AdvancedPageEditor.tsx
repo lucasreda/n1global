@@ -301,11 +301,6 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
     );
   }
 
-  const viewportClasses = {
-    desktop: 'w-full',
-    tablet: 'w-[768px] mx-auto',
-    mobile: 'w-[375px] mx-auto',
-  };
 
   return (
     <div 
@@ -415,7 +410,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
         }}
       >
         <div 
-          className={`flex-1 transition-all duration-300 ${viewportClasses[viewportMode]}`}
+          className="flex-1"
           style={{ 
             height: '100%',
             minHeight: '100%'
