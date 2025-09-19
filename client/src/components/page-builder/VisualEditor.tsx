@@ -6,6 +6,7 @@ import {
   DragStartEvent,
   MouseSensor,
   TouchSensor,
+  useDraggable,
   useSensor,
   useSensors,
   closestCenter
@@ -705,7 +706,7 @@ function DraggableElement({ elementType, label, icon: IconComponent }: Draggable
     setNodeRef,
     transform,
     isDragging,
-  } = useSortable({
+  } = useDraggable({
     id: `new-${elementType}`,
     data: {
       type: 'new-element',
