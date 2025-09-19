@@ -448,11 +448,8 @@ router.get("/funnels", authenticateToken, async (req, res) => {
  */
 router.post("/funnels", authenticateToken, validateOperationAccess, async (req, res) => {
   try {
-    console.log('🔍 Request body debug:', JSON.stringify(req.body, null, 2));
-    
     const validation = createFunnelSchema.safeParse(req.body);
     if (!validation.success) {
-      console.error('❌ Validation failed:', validation.error.issues);
       return res.status(400).json({
         success: false,
         error: "Dados inválidos",

@@ -28,12 +28,6 @@ export async function validateOperationAccess(req: Request, res: Response, next:
     }
 
     if (!operationId) {
-      console.log('🔍 Operation validation debug:', {
-        paramsOperationId: req.params.operationId,
-        bodyOperationId: req.body.operationId,
-        method: req.method,
-        body: req.body
-      });
       return res.status(400).json({ message: "Operation ID é obrigatório" });
     }
 
