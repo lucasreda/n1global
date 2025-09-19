@@ -16,7 +16,8 @@ import {
   Monitor,
   ChevronDown,
   RotateCcw,
-  Settings
+  Settings,
+  Grid3X3
 } from 'lucide-react';
 import { 
   UnitSliderInput, 
@@ -46,7 +47,8 @@ export function AdvancedPropertiesPanel({
     spacing: true,
     border: false,
     background: true,
-    layout: false
+    layout: false,
+    structure: true
   });
 
   // Determine current target (element or section)
@@ -79,6 +81,14 @@ export function AdvancedPropertiesPanel({
       onUpdateSection(selectedSection.id, { styles: newStyles });
     }
   }, [target, selectedElement, selectedSection, onUpdateElement, onUpdateSection]);
+
+  // Config update handler for structural elements
+  const handleConfigUpdate = useCallback((updates: Record<string, any>) => {
+    if (!selectedElement || !onUpdateElement) return;
+    
+    const newConfig = { ...selectedElement.config, ...updates };
+    onUpdateElement(selectedElement.id, { config: newConfig });
+  }, [selectedElement, onUpdateElement]);
 
   // Reset styles for current section
   const resetSection = useCallback((section: string) => {
@@ -129,6 +139,20 @@ export function AdvancedPropertiesPanel({
         resetUpdates.maxWidth = undefined;
         resetUpdates.minHeight = undefined;
         resetUpdates.maxHeight = undefined;
+        break;
+      case 'structure':
+        // Reset config properties for structural elements
+        if (selectedElement && onUpdateElement) {
+          onUpdateElement(selectedElement.id, { 
+            config: {
+              ...selectedElement.config,
+              columns: selectedElement.type === 'block' ? 2 : undefined,
+              columnDistribution: 'equal',
+              columnWidths: selectedElement.type === 'block' ? ['50%', '50%'] : undefined
+            }
+          });
+        }
+        return;
         break;
     }
     
@@ -520,6 +544,133 @@ export function AdvancedPropertiesPanel({
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Structure Section - Only show for structural elements */}
+          {targetType === 'element' && selectedElement && 
+           (selectedElement.type === 'block' || selectedElement.type === 'container') && (
+            <>
+              <Separator />
+              <Collapsible 
+                open={openSections.structure}
+                onOpenChange={() => toggleSection('structure')}
+              >
+                <SectionHeader 
+                  title="Estrutura" 
+                  icon={Grid3X3} 
+                  section="structure"
+                  hasChanges={!!(selectedElement.config?.columns && selectedElement.config.columns !== 2)}
+                />
+                <CollapsibleContent>
+                  <div className="px-3 pb-4 space-y-4">
+                    {/* Show column controls only for block elements */}
+                    {selectedElement.type === 'block' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Número de Colunas</Label>
+                          <Select
+                            value={String(selectedElement.config?.columns || 2)}
+                            onValueChange={(value) => {
+                              const columns = parseInt(value);
+                              const columnWidths = Array(columns).fill(`${100/columns}%`);
+                              handleConfigUpdate({ 
+                                columns,
+                                columnWidths,
+                                columnDistribution: 'equal'
+                              });
+                            }}
+                          >
+                            <SelectTrigger data-testid={`${testId}-columns`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">1 Coluna</SelectItem>
+                              <SelectItem value="2">2 Colunas</SelectItem>
+                              <SelectItem value="3">3 Colunas</SelectItem>
+                              <SelectItem value="4">4 Colunas</SelectItem>
+                              <SelectItem value="6">6 Colunas</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Distribuição das Colunas</Label>
+                          <Select
+                            value={selectedElement.config?.columnDistribution || 'equal'}
+                            onValueChange={(value) => {
+                              const columns = selectedElement.config?.columns || 2;
+                              let columnWidths: string[] = [];
+                              
+                              if (value === 'equal') {
+                                columnWidths = Array(columns).fill(`${100/columns}%`);
+                              } else if (value === '2-1' && columns === 2) {
+                                columnWidths = ['66.67%', '33.33%'];
+                              } else if (value === '1-2' && columns === 2) {
+                                columnWidths = ['33.33%', '66.67%'];
+                              } else if (value === '3-1-1' && columns === 3) {
+                                columnWidths = ['60%', '20%', '20%'];
+                              } else if (value === '1-3-1' && columns === 3) {
+                                columnWidths = ['20%', '60%', '20%'];
+                              } else {
+                                columnWidths = Array(columns).fill(`${100/columns}%`);
+                              }
+                              
+                              handleConfigUpdate({ 
+                                columnDistribution: value,
+                                columnWidths
+                              });
+                            }}
+                          >
+                            <SelectTrigger data-testid={`${testId}-column-distribution`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="equal">Igual</SelectItem>
+                              {(selectedElement.config?.columns || 2) === 2 && (
+                                <>
+                                  <SelectItem value="2-1">2:1</SelectItem>
+                                  <SelectItem value="1-2">1:2</SelectItem>
+                                </>
+                              )}
+                              {(selectedElement.config?.columns || 2) === 3 && (
+                                <>
+                                  <SelectItem value="3-1-1">3:1:1</SelectItem>
+                                  <SelectItem value="1-3-1">1:3:1</SelectItem>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Gap entre Colunas</Label>
+                          <UnitSliderInput
+                            label=""
+                            value={selectedElement.styles?.gap || '1rem'}
+                            onChange={(value) => handleStyleUpdate({ gap: value })}
+                            min={0}
+                            max={5}
+                            step={0.25}
+                            units={['rem', 'px']}
+                            data-testid={`${testId}-column-gap`}
+                          />
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Container specific controls */}
+                    {selectedElement.type === 'container' && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Tipo de Container</Label>
+                        <div className="text-sm text-muted-foreground">
+                          Container simples para agrupar elementos. Use blocos para layouts em colunas.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </>
+          )}
         </div>
       </ScrollArea>
     </Card>
