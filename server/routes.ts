@@ -6628,6 +6628,432 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     }
   });
 
+  // Preview System Routes (PHASE 2.3)
+  app.post("/api/preview/create", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Validate request data using existing schema
+      const validatedData = validateFunnelSchema.parse(req.body);
+      const { funnelPages, productInfo, options } = validatedData;
+
+      // Import PreviewService
+      const { previewService } = await import('./preview-service');
+
+      console.log(`🎭 Creating preview for ${funnelPages.length} pages`);
+
+      // Create preview session
+      const previewMetadata = await previewService.createPreview(
+        funnelPages,
+        productInfo,
+        options || {
+          colorScheme: 'modern',
+          layout: 'multi_section',
+          enableSharedComponents: true,
+          enableProgressTracking: true,
+          enableRouting: true
+        }
+      );
+
+      res.json({
+        success: true,
+        preview: previewMetadata,
+        message: `Preview criado com sucesso para ${funnelPages.length} páginas`
+      });
+
+    } catch (error) {
+      console.error("❌ Create preview error:", error);
+      
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Dados de entrada inválidos",
+          details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: "Failed to create preview",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/preview/:sessionId", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const { file } = req.query;
+
+      // Import PreviewService
+      const { previewService } = await import('./preview-service');
+
+      // Get session metadata
+      const metadata = previewService.getPreviewMetadata(sessionId);
+      if (!metadata) {
+        return res.status(404).json({
+          success: false,
+          error: "Preview session not found or expired"
+        });
+      }
+
+      // If no specific file requested, return index.html or session info
+      if (!file) {
+        const indexContent = previewService.getPreviewFile(sessionId, 'pages/index.js');
+        if (indexContent) {
+          // Return a simple HTML page that shows the preview info
+          const htmlContent = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview: ${metadata.name}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .preview-info { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .file-list { background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .file-item { padding: 8px; border-bottom: 1px solid #eee; }
+        .expires { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="preview-info">
+        <h1>🎭 Preview: ${metadata.name}</h1>
+        <p><strong>Páginas:</strong> ${metadata.pageCount}</p>
+        <p><strong>Criado em:</strong> ${new Date(metadata.createdAt).toLocaleString('pt-BR')}</p>
+        <p class="expires"><strong>Expira em:</strong> ${new Date(metadata.expiresAt).toLocaleString('pt-BR')}</p>
+    </div>
+    <div class="file-list">
+        <h3>Arquivos Disponíveis:</h3>
+        <div class="file-item"><a href="/api/preview/${sessionId}?file=package.json">package.json</a></div>
+        <div class="file-item"><a href="/api/preview/${sessionId}?file=pages/index.js">pages/index.js</a></div>
+        <div class="file-item"><a href="/api/preview/${sessionId}?file=styles/globals.css">styles/globals.css</a></div>
+        <div class="file-item"><a href="/api/preview/${sessionId}?file=tailwind.config.js">tailwind.config.js</a></div>
+    </div>
+</body>
+</html>`;
+          res.setHeader('Content-Type', 'text/html');
+          return res.send(htmlContent);
+        }
+
+        return res.json({
+          success: true,
+          metadata,
+          message: "Use ?file=<filepath> para visualizar arquivos específicos"
+        });
+      }
+
+      // Get specific file content
+      const fileContent = previewService.getPreviewFile(sessionId, file as string);
+      if (!fileContent) {
+        return res.status(404).json({
+          success: false,
+          error: `File '${file}' not found in preview session`
+        });
+      }
+
+      // Set appropriate content type based on file extension
+      const fileExt = (file as string).split('.').pop()?.toLowerCase();
+      const contentTypes: Record<string, string> = {
+        'js': 'application/javascript',
+        'css': 'text/css',
+        'json': 'application/json',
+        'html': 'text/html',
+        'txt': 'text/plain'
+      };
+
+      const contentType = contentTypes[fileExt || ''] || 'text/plain';
+      res.setHeader('Content-Type', contentType);
+      res.send(fileContent);
+
+    } catch (error) {
+      console.error("❌ Get preview error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get preview",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/preview/:sessionId/info", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+
+      // Import PreviewService
+      const { previewService } = await import('./preview-service');
+
+      const metadata = previewService.getPreviewMetadata(sessionId);
+      if (!metadata) {
+        return res.status(404).json({
+          success: false,
+          error: "Preview session not found or expired"
+        });
+      }
+
+      const sessionPages = previewService.getSessionPages(sessionId);
+      const validation = previewService.validatePreviewFiles(sessionId);
+
+      res.json({
+        success: true,
+        preview: {
+          metadata,
+          pages: sessionPages?.pages || [],
+          productInfo: sessionPages?.productInfo,
+          validation,
+          availableFiles: sessionPages?.availableFiles || []
+        }
+      });
+
+    } catch (error) {
+      console.error("❌ Get preview info error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get preview info",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/preview", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Import PreviewService
+      const { previewService } = await import('./preview-service');
+
+      const activePreviews = previewService.listActivePreviews();
+
+      res.json({
+        success: true,
+        previews: activePreviews,
+        count: activePreviews.length
+      });
+
+    } catch (error) {
+      console.error("❌ List previews error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to list previews",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.delete("/api/preview/:sessionId", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+
+      // Import PreviewService
+      const { previewService } = await import('./preview-service');
+
+      const success = previewService.deletePreview(sessionId);
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          error: "Preview session not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Preview session deleted successfully"
+      });
+
+    } catch (error) {
+      console.error("❌ Delete preview error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete preview",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Funnel Validation Routes (PHASE 2.3.3)
+  app.get("/api/preview/:sessionId/validation", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+
+      // Import PreviewService
+      const { previewService } = await import('./preview-service');
+
+      const metadata = previewService.getPreviewMetadata(sessionId);
+      if (!metadata) {
+        return res.status(404).json({
+          success: false,
+          error: "Preview session not found or expired"
+        });
+      }
+
+      const sessionPages = previewService.getSessionPages(sessionId);
+      const session = (previewService as any).sessions.get(sessionId);
+
+      if (!session?.validation) {
+        return res.json({
+          success: true,
+          validation: null,
+          message: "Validation not yet completed for this session"
+        });
+      }
+
+      res.json({
+        success: true,
+        validation: session.validation,
+        sessionInfo: {
+          id: sessionId,
+          name: metadata.name,
+          pageCount: metadata.pageCount,
+          createdAt: metadata.createdAt
+        }
+      });
+
+    } catch (error) {
+      console.error("❌ Get validation error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get validation results",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/preview/:sessionId/validate", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+
+      // Import services
+      const { previewService } = await import('./preview-service');
+      const { funnelValidator } = await import('./funnel-validator');
+
+      const session = (previewService as any).sessions.get(sessionId);
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          error: "Preview session not found or expired"
+        });
+      }
+
+      console.log(`🧪 Manual validation requested for session: ${sessionId}`);
+
+      // Run validation
+      const validation = await funnelValidator.validateFunnel(
+        sessionId,
+        session.files,
+        session.pages,
+        session.productInfo
+      );
+
+      // Update session with new validation results
+      session.validation = validation;
+      (previewService as any).sessions.set(sessionId, session);
+
+      // Persist updated session
+      await (previewService as any).persistSessionMetadata(session);
+
+      console.log(`🧪 Manual validation completed - Score: ${validation.score}/100`);
+
+      res.json({
+        success: true,
+        validation,
+        message: "Validation completed successfully"
+      });
+
+    } catch (error) {
+      console.error("❌ Manual validation error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to run validation",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/validation/summary", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { period = '7d' } = req.query;
+
+      // Import PreviewService
+      const { previewService } = await import('./preview-service');
+
+      const activePreviews = previewService.listActivePreviews();
+      const sessionsWithValidation = activePreviews.filter(preview => {
+        const session = (previewService as any).sessions.get(preview.id);
+        return session?.validation;
+      });
+
+      // Calculate statistics
+      const validationStats = {
+        totalSessions: activePreviews.length,
+        validatedSessions: sessionsWithValidation.length,
+        averageScore: 0,
+        scoreDistribution: {
+          excellent: 0, // 85-100
+          good: 0,      // 70-84
+          fair: 0,      // 50-69
+          poor: 0       // 0-49
+        },
+        commonIssues: {} as Record<string, number>,
+        topRecommendations: [] as string[]
+      };
+
+      if (sessionsWithValidation.length > 0) {
+        let totalScore = 0;
+        const allIssues: string[] = [];
+        const allRecommendations: string[] = [];
+
+        for (const preview of sessionsWithValidation) {
+          const session = (previewService as any).sessions.get(preview.id);
+          const validation = session?.validation;
+          
+          if (validation) {
+            totalScore += validation.score;
+
+            // Score distribution
+            if (validation.score >= 85) validationStats.scoreDistribution.excellent++;
+            else if (validation.score >= 70) validationStats.scoreDistribution.good++;
+            else if (validation.score >= 50) validationStats.scoreDistribution.fair++;
+            else validationStats.scoreDistribution.poor++;
+
+            // Collect issues
+            validation.issues.forEach(issue => allIssues.push(issue.message));
+            allRecommendations.push(...validation.recommendations);
+          }
+        }
+
+        validationStats.averageScore = Math.round(totalScore / sessionsWithValidation.length);
+
+        // Count common issues
+        allIssues.forEach(issue => {
+          validationStats.commonIssues[issue] = (validationStats.commonIssues[issue] || 0) + 1;
+        });
+
+        // Get top recommendations
+        const recommendationCounts: Record<string, number> = {};
+        allRecommendations.forEach(rec => {
+          recommendationCounts[rec] = (recommendationCounts[rec] || 0) + 1;
+        });
+
+        validationStats.topRecommendations = Object.entries(recommendationCounts)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 5)
+          .map(([rec]) => rec);
+      }
+
+      res.json({
+        success: true,
+        stats: validationStats,
+        period
+      });
+
+    } catch (error) {
+      console.error("❌ Get validation summary error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get validation summary",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Setup voice WebSocket server
