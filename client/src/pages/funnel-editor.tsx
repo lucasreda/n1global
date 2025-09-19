@@ -362,9 +362,17 @@ export default function FunnelEditor() {
             </div>
           </TabsContent>
 
+          {/* Pages Tab */}
+          <TabsContent value="pages" className="mt-6">
+            <FunnelPagesManager funnelId={funnelId} />
+          </TabsContent>
+
           {/* Content Tab */}
           <TabsContent value="content" className="mt-6">
-            <FunnelPagesManager funnelId={funnelId} />
+            <div className="text-center py-12">
+              <h3 className="text-xl font-semibold text-white mb-2">Conteúdo do Funil</h3>
+              <p className="text-gray-400">Configurações de conteúdo e design serão implementadas aqui.</p>
+            </div>
           </TabsContent>
 
           {/* Tracking Tab */}
