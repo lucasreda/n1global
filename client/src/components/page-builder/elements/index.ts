@@ -11,6 +11,10 @@ export { ElementEmbed } from './ElementEmbed';
 export { ElementBenefits } from './ElementBenefits';
 export { ElementReviews } from './ElementReviews';
 export { ElementSlider } from './ElementSlider';
+export { ElementHero } from './ElementHero';
+export { ElementFeatures } from './ElementFeatures';
+export { ElementTeam } from './ElementTeam';
+export { ElementContact } from './ElementContact';
 
 // Element types and utilities
 export type { ElementProps, ElementConfig } from './types';

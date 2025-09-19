@@ -16,7 +16,10 @@ import {
   Grid3X3,
   Star,
   MessageCircle,
-  Images
+  Images,
+  Layout,
+  Users,
+  Mail
 } from "lucide-react";
 
 export function createDefaultElement(type: BlockElement['type']): BlockElement {
@@ -288,6 +291,116 @@ export function createDefaultElement(type: BlockElement['type']): BlockElement {
         },
       };
 
+    case 'hero':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '4rem 2rem',
+          textAlign: 'center',
+          backgroundColor: '#1e293b',
+          color: '#ffffff',
+        },
+        content: {
+          title: 'Título Hero',
+          subtitle: 'Subtítulo descritivo para engajar o visitante',
+          ctaText: 'Call to Action'
+        },
+      };
+
+    case 'features':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '3rem 2rem',
+          backgroundColor: 'transparent',
+        },
+        content: {
+          features: [
+            {
+              id: '1',
+              title: 'Funcionalidade 1',
+              description: 'Descrição da primeira funcionalidade',
+              icon: 'star'
+            },
+            {
+              id: '2',
+              title: 'Funcionalidade 2',
+              description: 'Descrição da segunda funcionalidade',
+              icon: 'zap'
+            },
+            {
+              id: '3',
+              title: 'Funcionalidade 3',
+              description: 'Descrição da terceira funcionalidade',
+              icon: 'trophy'
+            },
+            {
+              id: '4',
+              title: 'Funcionalidade 4',
+              description: 'Descrição da quarta funcionalidade',
+              icon: 'shield'
+            }
+          ]
+        },
+      };
+
+    case 'team':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '3rem 2rem',
+          backgroundColor: 'transparent',
+        },
+        content: {
+          members: [
+            {
+              id: '1',
+              name: 'João Silva',
+              position: 'CEO & Fundador',
+              bio: 'Especialista em estratégia digital com mais de 10 anos de experiência',
+              image: 'https://via.placeholder.com/200x200?text=João'
+            },
+            {
+              id: '2',
+              name: 'Maria Santos',
+              position: 'CTO',
+              bio: 'Desenvolvedora sênior apaixonada por tecnologias inovadoras',
+              image: 'https://via.placeholder.com/200x200?text=Maria'
+            },
+            {
+              id: '3',
+              name: 'Pedro Costa',
+              position: 'Designer',
+              bio: 'Designer criativo focado em experiência do usuário e interfaces intuitivas',
+              image: 'https://via.placeholder.com/200x200?text=Pedro'
+            }
+          ]
+        },
+      };
+
+    case 'contact':
+      return {
+        ...baseElement,
+        styles: {
+          ...baseElement.styles,
+          padding: '3rem 2rem',
+          backgroundColor: '#f8fafc',
+        },
+        content: {
+          contactInfo: {
+            email: 'contato@empresa.com',
+            phone: '+55 11 9999-9999',
+            address: 'Rua das Empresas, 123 - São Paulo, SP',
+            hours: 'Segunda à Sexta: 9h às 18h',
+            title: 'Entre em Contato',
+            description: 'Estamos aqui para ajudar você. Entre em contato conosco através dos canais abaixo.'
+          }
+        },
+      };
+
     default:
       return baseElement;
   }
@@ -309,6 +422,10 @@ export function getElementIcon(type: BlockElement['type']) {
     benefits: Star,
     reviews: MessageCircle,
     slider: Images,
+    hero: Layout,
+    features: Star,
+    team: Users,
+    contact: Mail,
   };
 
   return icons[type] || Type;
@@ -330,6 +447,10 @@ export function getElementLabel(type: BlockElement['type']): string {
     benefits: 'Benefícios',
     reviews: 'Depoimentos',
     slider: 'Slider',
+    hero: 'Hero Section',
+    features: 'Funcionalidades',
+    team: 'Nossa Equipe',
+    contact: 'Contato',
   };
 
   return labels[type] || 'Elemento';
@@ -351,6 +472,10 @@ export function getElementCategory(type: BlockElement['type']): 'basic' | 'media
     benefits: 'template' as const,
     reviews: 'template' as const,
     slider: 'template' as const,
+    hero: 'template' as const,
+    features: 'template' as const,
+    team: 'template' as const,
+    contact: 'template' as const,
   };
 
   return categories[type] || 'basic';

@@ -3,6 +3,10 @@ import { useDroppable } from '@dnd-kit/core';
 import { ElementBenefits } from './elements/ElementBenefits';
 import { ElementReviews } from './elements/ElementReviews';
 import { ElementSlider } from './elements/ElementSlider';
+import { ElementHero } from './elements/ElementHero';
+import { ElementFeatures } from './elements/ElementFeatures';
+import { ElementTeam } from './elements/ElementTeam';
+import { ElementContact } from './elements/ElementContact';
 
 // Helper to build final styles from individual properties
 function buildFinalStyles(styles: any = {}) {
@@ -500,6 +504,50 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
     case 'slider':
       return (
         <ElementSlider
+          element={element}
+          theme={theme}
+          editorMode={editorMode}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
+      );
+
+    case 'hero':
+      return (
+        <ElementHero
+          element={element}
+          theme={theme}
+          editorMode={editorMode}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
+      );
+
+    case 'features':
+      return (
+        <ElementFeatures
+          element={element}
+          theme={theme}
+          editorMode={editorMode}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
+      );
+
+    case 'team':
+      return (
+        <ElementTeam
+          element={element}
+          theme={theme}
+          editorMode={editorMode}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
+      );
+
+    case 'contact':
+      return (
+        <ElementContact
           element={element}
           theme={theme}
           editorMode={editorMode}
