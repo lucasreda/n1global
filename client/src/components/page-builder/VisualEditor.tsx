@@ -27,7 +27,7 @@ import { createDefaultTheme, ElementRenderer } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
 import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
-import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3 } from 'lucide-react';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images } from 'lucide-react';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -1072,6 +1072,11 @@ const ElementsToolbar = React.memo(function ElementsToolbar() {
     // Structural Elements
     { type: 'container', label: 'Container', icon: Box },
     { type: 'block', label: 'Bloco', icon: Grid3X3 },
+    
+    // Template Elements
+    { type: 'benefits', label: 'Benefícios', icon: Star },
+    { type: 'reviews', label: 'Depoimentos', icon: MessageCircle },
+    { type: 'slider', label: 'Slider', icon: Images },
   ];
 
   const sectionTemplates = [
