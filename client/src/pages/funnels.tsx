@@ -329,10 +329,10 @@ export default function Funnels() {
                     Criar Funil
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden">
+                <DialogContent className="glassmorphism sm:max-w-[800px] max-h-[90vh] overflow-hidden bg-transparent backdrop-blur-lg border-white/10">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5" />
+                    <DialogTitle className="flex items-center gap-2 text-foreground">
+                      <Sparkles className="w-5 h-5 text-primary" />
                       Criar Funil com IA
                     </DialogTitle>
                     <div className="flex items-center gap-2 mt-4">
@@ -342,17 +342,17 @@ export default function Funnels() {
                             key={step}
                             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors
                               ${modalStep >= step 
-                                ? 'bg-blue-600 text-white' 
-                                : 'bg-gray-200 text-gray-600'
+                                ? 'gradient-blue text-white' 
+                                : 'bg-white/10 text-muted-foreground border border-white/20'
                               }`}
                           >
                             {modalStep > step ? <Check className="w-4 h-4" /> : step}
                           </div>
                         ))}
                       </div>
-                      <div className="flex-1 bg-gray-200 h-1 rounded-full mx-4">
+                      <div className="flex-1 bg-white/10 h-1 rounded-full mx-4">
                         <div 
-                          className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                          className="gradient-blue h-1 rounded-full transition-all duration-300"
                           style={{ width: `${((modalStep - 1) / 2) * 100}%` }}
                         />
                       </div>
@@ -364,8 +364,8 @@ export default function Funnels() {
                     {modalStep === 1 && (
                       <div className="space-y-6">
                         <div className="text-center">
-                          <h3 className="text-xl font-semibold mb-2">Escolha o Tipo do Funil</h3>
-                          <p className="text-gray-600 text-sm">
+                          <h3 className="text-xl font-semibold mb-2 text-foreground">Escolha o Tipo do Funil</h3>
+                          <p className="text-muted-foreground text-sm">
                             Selecione o tipo que melhor se adapta ao seu produto ou serviço
                           </p>
                         </div>
@@ -379,21 +379,21 @@ export default function Funnels() {
                             return (
                               <Card
                                 key={type}
-                                className={`cursor-pointer transition-all hover:shadow-md ${
+                                className={`glassmorphism-light cursor-pointer transition-all hover:bg-white/5 border-white/10 ${
                                   isSelected 
-                                    ? 'ring-2 ring-blue-500 bg-blue-50 border-blue-200' 
-                                    : 'hover:border-gray-300'
+                                    ? 'ring-2 ring-primary bg-primary/10 border-primary/20' 
+                                    : 'hover:border-white/20'
                                 }`}
                                 onClick={() => form.setValue("type", type as any)}
                                 data-testid={`card-funnel-type-${type}`}
                               >
                                 <CardContent className="p-6 text-center">
-                                  <IconComponent className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-                                  <h4 className="font-semibold text-lg mb-2">{typeInfo.title}</h4>
-                                  <p className="text-gray-600 text-sm">{typeInfo.description}</p>
+                                  <IconComponent className="w-12 h-12 mx-auto mb-4 text-primary" />
+                                  <h4 className="font-semibold text-lg mb-2 text-foreground">{typeInfo.title}</h4>
+                                  <p className="text-muted-foreground text-sm">{typeInfo.description}</p>
                                   {isSelected && (
                                     <div className="mt-3">
-                                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                                         <Check className="w-3 h-3 mr-1" />
                                         Selecionado
                                       </Badge>
@@ -411,37 +411,38 @@ export default function Funnels() {
                     {modalStep === 2 && (
                       <div className="space-y-6">
                         <div className="text-center">
-                          <h3 className="text-xl font-semibold mb-2">Configurações Básicas</h3>
-                          <p className="text-gray-600 text-sm">
+                          <h3 className="text-xl font-semibold mb-2 text-foreground">Configurações Básicas</h3>
+                          <p className="text-muted-foreground text-sm">
                             Configure as informações principais do seu funil
                           </p>
                         </div>
                         
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="name">Nome do Funil</Label>
+                            <Label htmlFor="name" className="text-foreground">Nome do Funil</Label>
                             <Input
                               id="name"
                               {...form.register("name")}
                               placeholder="Ex: Lançamento Produto X"
+                              className="bg-secondary text-foreground border-border placeholder:text-muted-foreground"
                               data-testid="input-funnel-name"
                             />
                             {form.formState.errors.name && (
-                              <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>
+                              <p className="text-destructive text-sm mt-1">{form.formState.errors.name.message}</p>
                             )}
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <Label htmlFor="language">Idioma</Label>
+                              <Label htmlFor="language" className="text-foreground">Idioma</Label>
                               <Select 
                                 onValueChange={(value) => form.setValue("language", value as any)}
                                 defaultValue={form.getValues("language")}
                               >
-                                <SelectTrigger data-testid="select-language">
-                                  <SelectValue placeholder="Selecione o idioma" />
+                                <SelectTrigger data-testid="select-language" className="bg-secondary text-foreground border-border">
+                                  <SelectValue placeholder="Selecione o idioma" className="placeholder:text-muted-foreground" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="glassmorphism border-white/10">
                                   <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
                                   <SelectItem value="en-US">English (US)</SelectItem>
                                   <SelectItem value="es-ES">Español (España)</SelectItem>
@@ -450,15 +451,15 @@ export default function Funnels() {
                             </div>
                             
                             <div>
-                              <Label htmlFor="currency">Moeda</Label>
+                              <Label htmlFor="currency" className="text-foreground">Moeda</Label>
                               <Select 
                                 onValueChange={(value) => form.setValue("currency", value as any)}
                                 defaultValue={form.getValues("currency")}
                               >
-                                <SelectTrigger data-testid="select-currency">
-                                  <SelectValue placeholder="Selecione a moeda" />
+                                <SelectTrigger data-testid="select-currency" className="bg-secondary text-foreground border-border">
+                                  <SelectValue placeholder="Selecione a moeda" className="placeholder:text-muted-foreground" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="glassmorphism border-white/10">
                                   <SelectItem value="EUR">EUR (€)</SelectItem>
                                   <SelectItem value="USD">USD ($)</SelectItem>
                                   <SelectItem value="BRL">BRL (R$)</SelectItem>
@@ -474,35 +475,35 @@ export default function Funnels() {
                     {modalStep === 3 && (
                       <div className="space-y-6">
                         <div className="text-center">
-                          <h3 className="text-xl font-semibold mb-2">Revisar e Criar</h3>
-                          <p className="text-gray-600 text-sm">
+                          <h3 className="text-xl font-semibold mb-2 text-foreground">Revisar e Criar</h3>
+                          <p className="text-muted-foreground text-sm">
                             Confira as informações antes de criar seu funil
                           </p>
                         </div>
                         
-                        <Card className="bg-gray-50">
+                        <Card className="glassmorphism-light border-white/10">
                           <CardContent className="p-6">
-                            <h4 className="font-semibold mb-4">Resumo do Funil</h4>
+                            <h4 className="font-semibold mb-4 text-foreground">Resumo do Funil</h4>
                             <div className="space-y-3">
                               <div className="flex justify-between">
-                                <span className="text-gray-600">Tipo:</span>
-                                <span className="font-medium">{getFunnelTypeInfo(form.watch("type")).title}</span>
+                                <span className="text-muted-foreground">Tipo:</span>
+                                <span className="font-medium text-foreground">{getFunnelTypeInfo(form.watch("type")).title}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-600">Nome:</span>
-                                <span className="font-medium">{form.watch("name") || "Sem nome"}</span>
+                                <span className="text-muted-foreground">Nome:</span>
+                                <span className="font-medium text-foreground">{form.watch("name") || "Sem nome"}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-600">Idioma:</span>
-                                <span className="font-medium">
+                                <span className="text-muted-foreground">Idioma:</span>
+                                <span className="font-medium text-foreground">
                                   {form.watch("language") === "pt-BR" && "Português (Brasil)"}
                                   {form.watch("language") === "en-US" && "English (US)"}
                                   {form.watch("language") === "es-ES" && "Español (España)"}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-600">Moeda:</span>
-                                <span className="font-medium">
+                                <span className="text-muted-foreground">Moeda:</span>
+                                <span className="font-medium text-foreground">
                                   {form.watch("currency") === "EUR" && "EUR (€)"}
                                   {form.watch("currency") === "USD" && "USD ($)"}
                                   {form.watch("currency") === "BRL" && "BRL (R$)"}
@@ -510,12 +511,12 @@ export default function Funnels() {
                               </div>
                             </div>
                             
-                            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                            <div className="mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
                               <div className="flex items-start gap-2">
-                                <Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <Sparkles className="w-5 h-5 text-primary mt-0.5" />
                                 <div>
-                                  <p className="font-medium text-blue-800">IA irá gerar:</p>
-                                  <ul className="text-sm text-blue-700 mt-1 space-y-1">
+                                  <p className="font-medium text-primary">IA irá gerar:</p>
+                                  <ul className="text-sm text-primary/80 mt-1 space-y-1">
                                     <li>• Landing page otimizada para conversão</li>
                                     <li>• Conteúdo personalizado para seu nicho</li>
                                     <li>• Design responsivo e moderno</li>
@@ -530,13 +531,14 @@ export default function Funnels() {
                     )}
                     
                     {/* Navigation Buttons */}
-                    <div className="flex justify-between pt-6 border-t">
+                    <div className="flex justify-between pt-6 border-t border-white/10">
                       <div className="flex gap-2">
                         {modalStep > 1 && (
                           <Button 
                             type="button" 
                             variant="outline" 
                             onClick={handlePrevStep}
+                            className="border-white/20 text-muted-foreground hover:text-foreground hover:bg-white/5"
                             data-testid="button-prev-step"
                           >
                             <ChevronLeft className="w-4 h-4 mr-1" />
@@ -547,6 +549,7 @@ export default function Funnels() {
                           type="button" 
                           variant="outline" 
                           onClick={handleCloseModal}
+                          className="border-white/20 text-muted-foreground hover:text-foreground hover:bg-white/5"
                           data-testid="button-cancel"
                         >
                           Cancelar
@@ -558,7 +561,7 @@ export default function Funnels() {
                           <Button 
                             type="button"
                             onClick={handleNextStep}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="gradient-blue text-white"
                             data-testid="button-next-step"
                           >
                             Continuar
@@ -567,7 +570,7 @@ export default function Funnels() {
                         ) : (
                           <Button 
                             type="submit" 
-                            className="bg-gradient-to-r from-blue-600 to-purple-600"
+                            className="gradient-blue text-white"
                             data-testid="button-submit-funnel"
                           >
                             <Sparkles className="w-4 h-4 mr-2" />
