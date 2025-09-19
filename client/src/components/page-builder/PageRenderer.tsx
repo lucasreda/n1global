@@ -1,5 +1,74 @@
 import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
 
+// Helper to build final styles from individual properties
+function buildFinalStyles(styles: any = {}) {
+  const finalStyles: any = { ...styles };
+  
+  // Build padding from individual sides or fallback to general padding
+  if (styles.paddingTop || styles.paddingRight || styles.paddingBottom || styles.paddingLeft) {
+    finalStyles.paddingTop = styles.paddingTop || '0';
+    finalStyles.paddingRight = styles.paddingRight || '0';
+    finalStyles.paddingBottom = styles.paddingBottom || '0';
+    finalStyles.paddingLeft = styles.paddingLeft || '0';
+    // Remove general padding to avoid conflicts
+    delete finalStyles.padding;
+  }
+  
+  // Build margin from individual sides or fallback to general margin
+  if (styles.marginTop || styles.marginRight || styles.marginBottom || styles.marginLeft) {
+    finalStyles.marginTop = styles.marginTop || '0';
+    finalStyles.marginRight = styles.marginRight || '0';
+    finalStyles.marginBottom = styles.marginBottom || '0';
+    finalStyles.marginLeft = styles.marginLeft || '0';
+    // Remove general margin to avoid conflicts
+    delete finalStyles.margin;
+  }
+  
+  // Build border-radius from individual corners or fallback to general border-radius
+  if (styles.borderTopLeftRadius || styles.borderTopRightRadius || styles.borderBottomRightRadius || styles.borderBottomLeftRadius) {
+    finalStyles.borderTopLeftRadius = styles.borderTopLeftRadius || '0';
+    finalStyles.borderTopRightRadius = styles.borderTopRightRadius || '0';
+    finalStyles.borderBottomRightRadius = styles.borderBottomRightRadius || '0';
+    finalStyles.borderBottomLeftRadius = styles.borderBottomLeftRadius || '0';
+    // Remove general border-radius to avoid conflicts
+    delete finalStyles.borderRadius;
+  }
+  
+  // Build borders from individual sides
+  if (styles.borderTopWidth || styles.borderRightWidth || styles.borderBottomWidth || styles.borderLeftWidth) {
+    const borderStyle = styles.borderStyle || 'solid';
+    const borderColor = styles.borderColor || '#000000';
+    
+    finalStyles.borderTop = `${styles.borderTopWidth || '0'} ${borderStyle} ${styles.borderTopColor || borderColor}`;
+    finalStyles.borderRight = `${styles.borderRightWidth || '0'} ${borderStyle} ${styles.borderRightColor || borderColor}`;
+    finalStyles.borderBottom = `${styles.borderBottomWidth || '0'} ${borderStyle} ${styles.borderBottomColor || borderColor}`;
+    finalStyles.borderLeft = `${styles.borderLeftWidth || '0'} ${borderStyle} ${styles.borderLeftColor || borderColor}`;
+    
+    // Remove general border properties to avoid conflicts
+    delete finalStyles.border;
+    delete finalStyles.borderWidth;
+    delete finalStyles.borderStyle;
+    delete finalStyles.borderColor;
+    delete finalStyles.borderTopWidth;
+    delete finalStyles.borderRightWidth;
+    delete finalStyles.borderBottomWidth;
+    delete finalStyles.borderLeftWidth;
+    delete finalStyles.borderTopColor;
+    delete finalStyles.borderRightColor;
+    delete finalStyles.borderBottomColor;
+    delete finalStyles.borderLeftColor;
+  } else if (styles.borderWidth && styles.borderStyle) {
+    // Use general border if individual sides are not specified
+    const borderColor = styles.borderColor || '#000000';
+    finalStyles.border = `${styles.borderWidth} ${styles.borderStyle} ${borderColor}`;
+    delete finalStyles.borderWidth;
+    delete finalStyles.borderStyle;
+    delete finalStyles.borderColor;
+  }
+  
+  return finalStyles;
+}
+
 interface PageRendererProps {
   model: PageModelV2;
   className?: string;
@@ -49,15 +118,18 @@ function SectionRenderer({ section, theme, editorMode }: SectionRendererProps) {
     bottom: 'items-end',
   };
 
+  const finalStyles = buildFinalStyles(section.styles);
+  
   return (
     <section
       className={`section-renderer ${containerClasses[section.settings.containerWidth || 'container']} ${verticalAlignClasses[section.settings.verticalAlign || 'top']}`}
       style={{
-        ...section.styles,
-        padding: section.styles.padding || theme.spacing.lg,
-        backgroundColor: section.styles.backgroundColor || 'transparent',
-        backgroundImage: section.styles.backgroundImage ? `url(${section.styles.backgroundImage})` : undefined,
-        minHeight: section.styles.minHeight || 'auto',
+        ...finalStyles,
+        // Apply fallbacks only if no specific values exist
+        padding: finalStyles.padding || theme.spacing.lg,
+        backgroundColor: finalStyles.backgroundColor || 'transparent',
+        backgroundImage: finalStyles.backgroundImage ? `url(${finalStyles.backgroundImage})` : undefined,
+        minHeight: finalStyles.minHeight || 'auto',
       }}
       data-testid={`section-${section.id}`}
       data-section-type={section.type}
@@ -81,16 +153,17 @@ interface RowRendererProps {
 }
 
 function RowRenderer({ row, theme, editorMode }: RowRendererProps) {
+  const finalStyles = buildFinalStyles(row.styles);
+  
   return (
     <div
       className="row-renderer flex flex-wrap w-full"
       style={{
-        ...row.styles,
-        gap: row.styles.gap || theme.spacing.md,
-        padding: row.styles.padding || '0',
-        margin: row.styles.margin || '0',
-        backgroundColor: row.styles.backgroundColor || 'transparent',
-        minHeight: row.styles.minHeight || 'auto',
+        ...finalStyles,
+        gap: finalStyles.gap || theme.spacing.md,
+        padding: finalStyles.padding || '0',
+        backgroundColor: finalStyles.backgroundColor || 'transparent',
+        minHeight: finalStyles.minHeight || 'auto',
       }}
       data-testid={`row-${row.id}`}
     >
@@ -126,14 +199,15 @@ function ColumnRenderer({ column, theme, editorMode }: ColumnRendererProps) {
     '4/5': 'w-4/5',
   };
 
+  const finalStyles = buildFinalStyles(column.styles);
+
   return (
     <div
       className={`column-renderer ${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} flex flex-col`}
       style={{
-        ...column.styles,
-        padding: column.styles.padding || theme.spacing.sm,
-        margin: column.styles.margin || '0',
-        backgroundColor: column.styles.backgroundColor || 'transparent',
+        ...finalStyles,
+        padding: finalStyles.padding || theme.spacing.sm,
+        backgroundColor: finalStyles.backgroundColor || 'transparent',
       }}
       data-testid={`column-${column.id}`}
     >
@@ -156,19 +230,24 @@ interface ElementRendererProps {
 }
 
 function ElementRenderer({ element, theme, editorMode }: ElementRendererProps) {
+  const finalStyles = buildFinalStyles(element.styles);
+  
   const baseStyles = {
-    ...element.styles,
-    color: element.styles.color || theme.colors.text,
-    fontSize: element.styles.fontSize || theme.typography.fontSize.base,
-    fontWeight: element.styles.fontWeight || 'normal',
-    textAlign: element.styles.textAlign || 'left',
-    padding: element.styles.padding || '0',
-    margin: element.styles.margin || '0',
-    backgroundColor: element.styles.backgroundColor || 'transparent',
-    borderRadius: element.styles.borderRadius || theme.borderRadius.sm,
-    border: element.styles.border || 'none',
-    width: element.styles.width || 'auto',
-    height: element.styles.height || 'auto',
+    ...finalStyles,
+    color: finalStyles.color || theme.colors.text,
+    fontSize: finalStyles.fontSize || theme.typography.fontSize.base,
+    lineHeight: finalStyles.lineHeight || 'normal',
+    letterSpacing: finalStyles.letterSpacing || 'normal',
+    fontWeight: finalStyles.fontWeight || 'normal',
+    fontStyle: finalStyles.fontStyle || 'normal',
+    textAlign: finalStyles.textAlign || 'left',
+    textTransform: finalStyles.textTransform || 'none',
+    padding: finalStyles.padding || '0',
+    backgroundColor: finalStyles.backgroundColor || 'transparent',
+    borderRadius: finalStyles.borderRadius || theme.borderRadius.sm,
+    border: finalStyles.border || 'none',
+    width: finalStyles.width || 'auto',
+    height: finalStyles.height || 'auto',
   };
 
   switch (element.type) {
