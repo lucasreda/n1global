@@ -30,6 +30,7 @@ import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useToast } from "@/hooks/use-toast";
 import { Funnel } from "@shared/schema";
+import { FunnelPagesManager } from "@/components/funnel/FunnelPagesManager";
 
 interface FunnelEditorData {
   name: string;
@@ -121,7 +122,7 @@ export default function FunnelEditor() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black">
-        <DashboardHeader />
+        <DashboardHeader title="Carregando Funil" subtitle="Aguarde enquanto carregamos os dados..." />
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
         </div>
@@ -132,7 +133,7 @@ export default function FunnelEditor() {
   if (error || !funnel) {
     return (
       <div className="min-h-screen bg-black">
-        <DashboardHeader />
+        <DashboardHeader title="Erro no Funil" subtitle="Não foi possível carregar os dados do funil" />
         <div className="container mx-auto p-6">
           <div className="flex items-center gap-4 mb-6">
             <Button variant="ghost" onClick={handleGoBack} data-testid="button-back">
@@ -179,7 +180,7 @@ export default function FunnelEditor() {
 
   return (
     <div className="min-h-screen bg-black">
-      <DashboardHeader />
+      <DashboardHeader title={funnel.name} subtitle="Gerenciar e editar páginas do funil" />
       
       <div className="container mx-auto p-6">
         {/* Header */}
@@ -279,7 +280,7 @@ export default function FunnelEditor() {
                   <div className="flex items-center space-x-2">
                     <Switch 
                       id="active" 
-                      defaultChecked={funnel.isActive}
+                      defaultChecked={funnel.isActive || false}
                       data-testid="switch-funnel-active"
                     />
                     <Label htmlFor="active">Funil Ativo</Label>
@@ -339,24 +340,7 @@ export default function FunnelEditor() {
 
           {/* Content Tab */}
           <TabsContent value="content" className="mt-6">
-            <Card className="bg-gray-900/50 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Editor de Conteúdo</CardTitle>
-                <CardDescription>Configure o conteúdo gerado pela IA</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Palette className="w-12 h-12 mx-auto text-gray-500 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-300 mb-2">Editor de Conteúdo</h3>
-                  <p className="text-gray-500 mb-4">
-                    Aqui você poderá editar todos os elementos do seu funil de vendas
-                  </p>
-                  <Badge variant="outline" className="text-yellow-400 border-yellow-400">
-                    Em desenvolvimento
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <FunnelPagesManager funnelId={funnelId} />
           </TabsContent>
 
           {/* Tracking Tab */}
