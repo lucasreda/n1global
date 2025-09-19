@@ -34,6 +34,7 @@ interface VisualEditorProps {
 
 export function VisualEditor({ model, onChange, viewport, onViewportChange, className = "" }: VisualEditorProps) {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<any>(null);
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
   const [isStylesPanelOpen, setIsStylesPanelOpen] = useState(false);
@@ -175,10 +176,21 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
 
   const handleSelectElement = useCallback((elementId: string | null) => {
     setSelectedElementId(elementId);
+    setSelectedSectionId(null); // Deselect section when selecting element
+  }, []);
+
+  const handleSelectSection = useCallback((sectionId: string | null) => {
+    setSelectedSectionId(sectionId);
+    setSelectedElementId(null); // Deselect element when selecting section
   }, []);
 
   const updateElement = useCallback((elementId: string, updates: Partial<BlockElement>) => {
     const newModel = updateElementInModel(model, elementId, updates);
+    onChange(newModel);
+  }, [model, onChange]);
+
+  const updateSection = useCallback((sectionId: string, updates: Partial<BlockSection>) => {
+    const newModel = updateSectionInModel(model, sectionId, updates);
     onChange(newModel);
   }, [model, onChange]);
 
@@ -297,8 +309,10 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 viewport={viewport}
                 model={model}
                 selectedElementId={selectedElementId}
+                selectedSectionId={selectedSectionId}
                 hoveredSectionId={hoveredSectionId}
                 onSelectElement={handleSelectElement}
+                onSelectSection={handleSelectSection}
                 onHoverSection={handleHoverSection}
                 onUpdateElement={updateElement}
                 onDeleteSection={deleteSection}
@@ -311,8 +325,10 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
           {/* Properties Panel */}
           <PropertiesPanel
             selectedElementId={selectedElementId}
+            selectedSectionId={selectedSectionId}
             model={model}
             onUpdateElement={updateElement}
+            onUpdateSection={updateSection}
             onChange={onChange}
           />
         </div>
@@ -706,8 +722,10 @@ interface PageFrameProps {
   viewport: 'desktop' | 'tablet' | 'mobile';
   model: PageModelV2;
   selectedElementId: string | null;
+  selectedSectionId: string | null;
   hoveredSectionId: string | null;
   onSelectElement: (id: string | null) => void;
+  onSelectSection: (id: string | null) => void;
   onHoverSection: (id: string | null) => void;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
   onDeleteSection: (sectionId: string) => void;
@@ -719,8 +737,10 @@ function PageFrame({
   viewport, 
   model, 
   selectedElementId, 
+  selectedSectionId,
   hoveredSectionId,
   onSelectElement, 
+  onSelectSection,
   onHoverSection,
   onUpdateElement, 
   onDeleteSection, 
@@ -788,8 +808,10 @@ function PageFrame({
                       section={section}
                       theme={model.theme}
                       selectedElementId={selectedElementId}
+                      selectedSectionId={selectedSectionId}
                       isHovered={hoveredSectionId === section.id}
                       onSelectElement={onSelectElement}
+                      onSelectSection={onSelectSection}
                       onHover={onHoverSection}
                       onUpdateElement={onUpdateElement}
                       onDeleteSection={onDeleteSection}
@@ -813,8 +835,10 @@ interface EnhancedSortableSectionProps {
   section: BlockSection;
   theme: PageModelV2['theme'];
   selectedElementId: string | null;
+  selectedSectionId: string | null;
   isHovered: boolean;
   onSelectElement: (id: string | null) => void;
+  onSelectSection: (id: string | null) => void;
   onHover: (id: string | null) => void;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
   onDeleteSection: (sectionId: string) => void;
@@ -827,8 +851,10 @@ function EnhancedSortableSection({
   section, 
   theme, 
   selectedElementId, 
+  selectedSectionId,
   isHovered,
   onSelectElement, 
+  onSelectSection,
   onHover,
   onUpdateElement,
   onDeleteSection,
@@ -865,10 +891,24 @@ function EnhancedSortableSection({
         className={`relative group ${isDragging ? 'z-50' : ''}`}
         onMouseEnter={() => onHover(section.id)}
         onMouseLeave={() => onHover(null)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectSection(section.id);
+        }}
         data-testid={`section-${section.id}`}
       >
+        {/* Section Selected Overlay */}
+        {selectedSectionId === section.id && !isDragging && (
+          <div className="absolute inset-0 border-2 border-blue-500 bg-blue-500/10 rounded-lg pointer-events-none z-10">
+            {/* Section Label */}
+            <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+              ✓ Seção Selecionada
+            </div>
+          </div>
+        )}
+
         {/* Section Hover Overlay */}
-        {isHovered && !isDragging && (
+        {isHovered && selectedSectionId !== section.id && !isDragging && (
           <div className="absolute inset-0 border-2 border-primary border-dashed bg-primary/5 rounded-lg pointer-events-none z-10">
             {/* Section Label */}
             <div className="absolute top-2 left-2 bg-primary text-white px-2 py-1 rounded text-xs font-medium">
@@ -984,13 +1024,16 @@ function EnhancedSortableSection({
 // Properties Panel
 interface PropertiesPanelProps {
   selectedElementId: string | null;
+  selectedSectionId: string | null;
   model: PageModelV2;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
+  onUpdateSection?: (sectionId: string, updates: Partial<BlockSection>) => void;
   onChange: (model: PageModelV2) => void;
 }
 
-function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }: PropertiesPanelProps) {
+function PropertiesPanel({ selectedElementId, selectedSectionId, model, onUpdateElement, onUpdateSection, onChange }: PropertiesPanelProps) {
   const selectedElement = selectedElementId ? findElementById(model, selectedElementId) : null;
+  const selectedSection = selectedSectionId ? model.sections.find(s => s.id === selectedSectionId) : null;
 
   const handleUpdateProperty = useCallback((property: string, value: any) => {
     if (!selectedElement || !selectedElementId) return;
@@ -1018,12 +1061,30 @@ function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }
     }
   }, [selectedElement, selectedElementId, onUpdateElement]);
 
-  if (!selectedElement) {
+  const handleUpdateSectionProperty = useCallback((property: string, value: any) => {
+    if (!selectedSection || !selectedSectionId || !onUpdateSection) return;
+    
+    if (property.startsWith('styles.')) {
+      const styleKey = property.replace('styles.', '');
+      onUpdateSection(selectedSectionId, {
+        styles: {
+          ...selectedSection.styles,
+          [styleKey]: value,
+        }
+      });
+    } else {
+      onUpdateSection(selectedSectionId, {
+        [property]: value,
+      });
+    }
+  }, [selectedSection, selectedSectionId, onUpdateSection]);
+
+  if (!selectedElement && !selectedSection) {
     return (
       <div className="w-80 bg-card border-l border-border p-4">
         <h3 className="font-medium text-foreground mb-4">Propriedades</h3>
         <div className="text-sm text-muted-foreground">
-          Selecione um elemento para editar suas propriedades
+          Selecione um elemento ou seção para editar suas propriedades
         </div>
       </div>
     );
@@ -1034,13 +1095,72 @@ function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }
       <h3 className="font-medium text-foreground mb-4">Propriedades</h3>
       
       <div className="space-y-6">
-        {/* Element Type Badge */}
-        <div>
-          <div className="inline-flex items-center gap-2 px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
-            <span className="text-xs">📝</span>
-            {selectedElement.type}
-          </div>
-        </div>
+        {/* Section Properties */}
+        {selectedSection && !selectedElement && (
+          <>
+            {/* Section Type Badge */}
+            <div>
+              <div className="inline-flex items-center gap-2 px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded text-xs font-medium">
+                <span className="text-xs">🔧</span>
+                Seção
+              </div>
+            </div>
+
+            {/* Section Style Properties */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-foreground">Estilo da Seção</h4>
+              
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Cor de Fundo
+                </label>
+                <input
+                  type="color"
+                  value={selectedSection.styles?.backgroundColor || '#ffffff'}
+                  onChange={(e) => handleUpdateSectionProperty('styles.backgroundColor', e.target.value)}
+                  className="w-full h-8 bg-background border border-border rounded-md cursor-pointer"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Padding (Espaçamento Interno)
+                </label>
+                <input
+                  type="text"
+                  value={selectedSection.styles?.padding || ''}
+                  onChange={(e) => handleUpdateSectionProperty('styles.padding', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="Ex: 20px ou 2rem"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Margin (Espaçamento Externo)
+                </label>
+                <input
+                  type="text"
+                  value={selectedSection.styles?.margin || ''}
+                  onChange={(e) => handleUpdateSectionProperty('styles.margin', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="Ex: 10px 0 ou 1rem"
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Element Properties */}
+        {selectedElement && (
+          <>
+            {/* Element Type Badge */}
+            <div>
+              <div className="inline-flex items-center gap-2 px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
+                <span className="text-xs">📝</span>
+                {selectedElement.type}
+              </div>
+            </div>
 
         {/* Content Properties */}
         <div className="space-y-3">
@@ -1284,6 +1404,8 @@ function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1425,6 +1547,18 @@ function updateElementInModel(model: PageModelV2, elementId: string, updates: Pa
   }
   
   return model;
+}
+
+function updateSectionInModel(model: PageModelV2, sectionId: string, updates: Partial<BlockSection>): PageModelV2 {
+  const newModel = { ...model };
+  
+  // Find and update the section
+  const sectionIndex = newModel.sections.findIndex(s => s.id === sectionId);
+  if (sectionIndex !== -1) {
+    newModel.sections[sectionIndex] = { ...newModel.sections[sectionIndex], ...updates };
+  }
+  
+  return newModel;
 }
 
 function findElementById(model: PageModelV2, elementId: string): BlockElement | null {
