@@ -260,11 +260,6 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
               minHeight: '100%'
             }}
           >
-            {/* Viewport Controls */}
-            <ViewportControls 
-              viewport={viewport}
-              onViewportChange={onViewportChange}
-            />
             
             {/* Page Frame */}
             <div className="flex-1 overflow-auto p-6">
@@ -674,41 +669,6 @@ function DraggableElement({ elementType, label, icon: IconComponent }: Draggable
   );
 }
 
-// Viewport Controls Component
-interface ViewportControlsProps {
-  viewport: 'desktop' | 'tablet' | 'mobile';
-  onViewportChange: (viewport: 'desktop' | 'tablet' | 'mobile') => void;
-}
-
-function ViewportControls({ viewport, onViewportChange }: ViewportControlsProps) {
-  const viewportOptions = [
-    { id: 'desktop', label: 'Desktop', icon: Monitor, width: 'w-full' },
-    { id: 'tablet', label: 'Tablet', icon: Tablet, width: 'w-[768px]' },
-    { id: 'mobile', label: 'Mobile', icon: Smartphone, width: 'w-[375px]' },
-  ] as const;
-
-  return (
-    <div className="flex items-center justify-center gap-2 bg-card border-b border-border p-3">
-      <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
-        {viewportOptions.map(({ id, label, icon: IconComponent }) => (
-          <button
-            key={id}
-            onClick={() => onViewportChange(id)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewport === id
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-background'
-            }`}
-            data-testid={`viewport-${id}`}
-          >
-            <IconComponent size={16} />
-            <span className="hidden sm:block">{label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // Page Frame Component
 interface PageFrameProps {
