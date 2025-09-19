@@ -213,7 +213,7 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
   }, [selectedElement, selectedElementId, updateElement]);
 
   return (
-    <div className={`visual-editor ${className}`} data-testid="visual-editor">
+    <div className={`visual-editor h-full ${className}`} data-testid="visual-editor">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -225,8 +225,8 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
           <ElementsToolbar />
 
           {/* Main Editor Canvas */}
-          <div className="flex-1 overflow-auto bg-gray-50">
-            <div className="min-h-full p-4">
+          <div className="flex-1 h-full overflow-auto bg-gray-50">
+            <div className="min-h-full h-full p-4">
               <SortableContext
                 items={model.sections.map(s => s.id)}
                 strategy={verticalListSortingStrategy}
