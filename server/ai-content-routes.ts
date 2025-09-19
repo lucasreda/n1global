@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from './auth-middleware';
-import { requireOperationAccess } from './middleware/operation-access.js';
+import { validateOperationAccess as operationAccess } from './middleware/operation-access';
 import { AIContentRequest, AIContentResponse } from '@shared/schema.js';
 import OpenAI from 'openai';
 
@@ -12,7 +12,7 @@ const openai = new OpenAI({
 });
 
 // Generate section content
-router.post('/generate-section', authenticateToken, requireOperationAccess, async (req, res) => {
+router.post('/generate-section', authenticateToken, operationAccess, async (req, res) => {
   try {
     const request: AIContentRequest = req.body;
     
@@ -78,7 +78,7 @@ router.post('/generate-section', authenticateToken, requireOperationAccess, asyn
 });
 
 // Rewrite existing text for better conversion
-router.post('/rewrite-text', authenticateToken, requireOperationAccess, async (req, res) => {
+router.post('/rewrite-text', authenticateToken, operationAccess, async (req, res) => {
   try {
     const { text, goal, tone, elementType, businessContext } = req.body;
     
@@ -148,7 +148,7 @@ Formate a resposta como JSON:
 });
 
 // Generate multiple CTA variations
-router.post('/generate-cta', authenticateToken, requireOperationAccess, async (req, res) => {
+router.post('/generate-cta', authenticateToken, operationAccess, async (req, res) => {
   try {
     const { businessInfo, pageType, currentCTA } = req.body;
     
@@ -221,7 +221,7 @@ Formate como JSON:
 });
 
 // Suggest improvements for specific elements
-router.post('/suggest-improvements', authenticateToken, requireOperationAccess, async (req, res) => {
+router.post('/suggest-improvements', authenticateToken, operationAccess, async (req, res) => {
   try {
     const { elementType, currentContent, pageContext } = req.body;
     
