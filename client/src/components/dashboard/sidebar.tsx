@@ -50,7 +50,15 @@ const getNavigationForRole = (userRole: string, userPermissions: string[] = []) 
     { id: 'analytics', name: "Análises", href: "/analytics", icon: BarChart3 },
     { id: 'ads', name: "Anúncios", href: "/ads", icon: Target },
     { id: 'creatives', name: "Criativos", href: "/creatives", icon: Sparkles },
-    { name: "Funis de Venda", href: "/funnels", icon: Zap }, // Always visible
+    { 
+      name: "Funis de Venda", 
+      icon: Zap,
+      isDropdown: true,
+      subItems: [
+        { name: "Gerenciar Funis", href: "/funnels" },
+        { name: "Preview & Validação", href: "/funnel-preview" }
+      ]
+    }, // Always visible
     { name: "Produtos", href: "/products", icon: ShoppingCart }, // Always visible
     { 
       id: 'support',

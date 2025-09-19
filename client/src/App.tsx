@@ -60,6 +60,7 @@ import DocsVercelIntegration from "@/pages/docs-vercel-integration";
 import EULA from "@/pages/eula";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import FunnelEditor from "@/pages/funnel-editor";
+import FunnelPreview from "@/pages/funnel-preview";
 
 interface OnboardingStatus {
   onboardingCompleted: boolean;
@@ -259,6 +260,7 @@ function Router() {
         <Route path="/integrations" component={Integrations} />
         {!isProductSeller && <Route path="/funnels" component={Funnels} />}
         {!isProductSeller && <Route path="/funnels/:id" component={FunnelEditor} />}
+        {!isProductSeller && <Route path="/funnel-preview" component={FunnelPreview} />}
         {!isProductSeller && <Route path="/ads" component={Ads} />}
         {!isProductSeller && <Route path="/creatives/:id" component={CreativeDetails} />}
         {!isProductSeller && <Route path="/creatives" component={Creatives} />}
