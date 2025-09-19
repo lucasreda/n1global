@@ -20,8 +20,8 @@ export async function validateOperationAccess(req: Request, res: Response, next:
   try {
     const user = (req as any).user;
     
-    // Check for operationId in params (for GET requests) or body (for POST/PUT requests)
-    const operationId = req.params.operationId || req.body.operationId;
+    // Check for operationId in params, query, or body
+    const operationId = req.params.operationId || req.query.operationId || req.body.operationId;
 
     if (!user) {
       return res.status(401).json({ message: "Usuário não autenticado" });

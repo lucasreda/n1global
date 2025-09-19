@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "./db";
 import { 
@@ -1348,18 +1349,18 @@ router.post("/funnels/:funnelId/pages/:pageId/duplicate", authenticateToken, val
       });
     }
 
-    // Create slug for duplicate
-    const baseSlug = originalPage.slug.replace(/(_copy_\d+)?$/, '');
+    // Create path for duplicate
+    const basePath = originalPage.path.replace(/(_copy_\d+)?$/, '');
     const copyNumber = await db
       .select({ count: sql`count(*)` })
       .from(funnelPages)
       .where(and(
         eq(funnelPages.funnelId, funnelId),
-        sql`${funnelPages.slug} LIKE ${baseSlug + '_copy_%'}`
+        sql`${funnelPages.path} LIKE ${basePath + '_copy_%'}`
       ));
 
     const nextCopyNumber = Number(copyNumber[0].count) + 1;
-    const newSlug = `${baseSlug}_copy_${nextCopyNumber}`;
+    const newPath = `${basePath}_copy_${nextCopyNumber}`;
 
     // Create duplicate page
     const [duplicatedPage] = await db
@@ -1368,10 +1369,9 @@ router.post("/funnels/:funnelId/pages/:pageId/duplicate", authenticateToken, val
         funnelId,
         templateId: originalPage.templateId,
         name: `${originalPage.name} (Cópia)`,
-        slug: newSlug,
+        path: newPath,
         pageType: originalPage.pageType,
         status: 'draft',
-        order: originalPage.order + 1,
         model: originalPage.model,
       })
       .returning();
@@ -1382,13 +1382,10 @@ router.post("/funnels/:funnelId/pages/:pageId/duplicate", authenticateToken, val
       .values({
         pageId: duplicatedPage.id,
         version: 1,
+        changeType: 'manual',
         model: originalPage.model,
-        changes: JSON.stringify({
-          action: 'duplicate',
-          originalPageId: pageId,
-          duplicatedAt: new Date().toISOString()
-        }),
-        userId,
+        changeDescription: `Página duplicada de ${originalPage.name}`,
+        createdBy: userId,
       });
 
     return res.json({
