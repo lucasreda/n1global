@@ -22,6 +22,7 @@ import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "
 import { createDefaultTheme } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
+import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail } from 'lucide-react';
 
 interface VisualEditorProps {
@@ -322,14 +323,13 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
             </div>
           </div>
 
-          {/* Properties Panel */}
-          <PropertiesPanel
-            selectedElementId={selectedElementId}
-            selectedSectionId={selectedSectionId}
-            model={model}
+          {/* Advanced Properties Panel */}
+          <AdvancedPropertiesPanel
+            selectedElement={selectedElementId ? findElementById(model, selectedElementId) : null}
+            selectedSection={selectedSectionId ? model.sections.find(s => s.id === selectedSectionId) : null}
             onUpdateElement={updateElement}
             onUpdateSection={updateSection}
-            onChange={onChange}
+            data-testid="visual-editor-properties-panel"
           />
         </div>
 

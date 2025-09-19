@@ -11,13 +11,15 @@ import { Link, Unlink, CornerUpLeft, CornerUpRight, CornerDownLeft, CornerDownRi
 // Interface for value with unit
 interface ValueWithUnit {
   value: number;
-  unit: 'px' | 'rem' | '%' | 'em' | 'auto';
+  unit: 'px' | 'rem' | '%' | 'em' | 'auto' | '' | 'none' | 'vh' | 'vw';
 }
 
 // Helper function to parse value with unit
 const parseValueWithUnit = (value: string = '0'): ValueWithUnit => {
   if (value === 'auto') return { value: 0, unit: 'auto' };
-  const match = value.match(/^(-?\d*\.?\d+)(px|rem|%|em)?$/);
+  if (value === 'none') return { value: 0, unit: 'none' };
+  if (value === 'transparent') return { value: 0, unit: '' };
+  const match = value.match(/^(-?\d*\.?\d+)(px|rem|%|em|vh|vw)?$/);
   return {
     value: match ? parseFloat(match[1]) : 0,
     unit: (match?.[2] as ValueWithUnit['unit']) || 'px'
@@ -27,6 +29,8 @@ const parseValueWithUnit = (value: string = '0'): ValueWithUnit => {
 // Helper function to format value with unit
 const formatValueWithUnit = (value: number, unit: ValueWithUnit['unit']): string => {
   if (unit === 'auto') return 'auto';
+  if (unit === 'none') return 'none';
+  if (unit === '') return value.toString();
   return `${value}${unit}`;
 };
 
