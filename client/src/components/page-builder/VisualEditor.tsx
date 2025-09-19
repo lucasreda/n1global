@@ -958,9 +958,15 @@ function EnhancedSortableSection({
 
         {/* Section Content */}
         <div 
-          className={`min-h-[80px] p-6 transition-all duration-200 ${
+          className={`min-h-[80px] transition-all duration-200 ${
             isHovered ? 'bg-muted/20' : ''
           }`}
+          style={{
+            backgroundColor: section.styles?.backgroundColor || 'transparent',
+            padding: section.styles?.padding || '1.5rem',
+            margin: section.styles?.margin || '0',
+            ...section.styles
+          }}
         >
           {/* Section Rows */}
           <SortableContext
@@ -1465,7 +1471,18 @@ function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate }: {
 
   return (
     <div style={baseStyles} data-testid={`rendered-element-${element.id}`}>
-      <span className="text-sm text-muted-foreground">{content}</span>
+      <span 
+        className="text-sm"
+        style={{ 
+          color: element.styles?.color || '#6b7280',
+          fontSize: element.styles?.fontSize || '0.875rem',
+          fontWeight: element.styles?.fontWeight || '400',
+          fontStyle: element.styles?.fontStyle || 'normal',
+          textAlign: element.styles?.textAlign as any || 'left'
+        }}
+      >
+        {content}
+      </span>
     </div>
   );
 }
