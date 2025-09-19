@@ -3411,7 +3411,7 @@ export type VercelIntegration = {
 // Advanced Page Builder v2 - Enhanced Block System for Visual Editor
 export type BlockElement = {
   id: string;
-  type: 'heading' | 'text' | 'button' | 'image' | 'spacer' | 'divider' | 'video' | 'form' | 'embed';
+  type: 'heading' | 'text' | 'button' | 'image' | 'spacer' | 'divider' | 'video' | 'form' | 'embed' | 'container' | 'block';
   props: Record<string, any>;
   styles: {
     // Typography
@@ -3466,6 +3466,13 @@ export type BlockElement = {
     minHeight?: string;
     maxHeight?: string;
     
+    // Layout for blocks - grid system
+    display?: 'block' | 'flex' | 'grid';
+    flexDirection?: 'row' | 'column';
+    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly';
+    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
+    gap?: string;
+    
     // Legacy support (will be deprecated)
     padding?: string;
     margin?: string;
@@ -3483,6 +3490,21 @@ export type BlockElement = {
     placeholder?: string; // For forms
     [key: string]: any;
   };
+  
+  // Configuration for structural elements (container & block)
+  config?: {
+    // For block type - number of columns
+    columns?: number;
+    // For both - allow nesting
+    allowNesting?: boolean;
+    // Column distribution (for blocks)
+    columnDistribution?: 'equal' | 'custom';
+    columnWidths?: string[]; // ['1/2', '1/2'] or ['1/3', '2/3'] etc
+    [key: string]: any;
+  };
+  
+  // Child elements for structural elements (containers and blocks)
+  children?: BlockElement[];
 };
 
 export type BlockColumn = {
