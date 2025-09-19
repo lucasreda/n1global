@@ -326,7 +326,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <h1 className="text-xl font-semibold text-white">{pageData.name}</h1>
+            <h1 className="font-semibold text-white" style={{ fontSize: '20px' }}>{pageData.name}</h1>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
@@ -432,10 +432,6 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
             viewport={viewportMode}
             onViewportChange={setViewportMode}
             className="w-full h-full"
-            style={{ 
-              height: '100%',
-              minHeight: '100%'
-            }}
           />
         </div>
       </div>
