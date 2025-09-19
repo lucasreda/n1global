@@ -72,8 +72,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       return [];
     }
 
-    // Priority order: element-zone > drop-zone > column > container > section > element
-    const priorityOrder = ['element-zone', 'drop-zone', 'column', 'container', 'section', 'element'];
+    // Priority order: block-column-zone > element-zone > drop-zone > column > container > section > element
+    const priorityOrder = ['block-column-zone', 'element-zone', 'drop-zone', 'column', 'container', 'section', 'element'];
     
     // Sort intersections by priority
     const sortedIntersections = intersections.sort((a, b) => {
@@ -138,6 +138,13 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     // Handle element reordering within columns
     if (activeData?.type === 'element' && overData?.type === 'element') {
       const newModel = moveElement(model, active.id as string, overData.columnId);
+      onChange(newModel);
+    }
+
+    // Handle adding new element to block columns
+    if (activeData?.type === 'new-element' && overData?.type === 'block-column-zone') {
+      const newElement = createDefaultElement(activeData.elementType);
+      const newModel = addElementToBlockColumn(model, newElement, overData.elementId, overData.columnIndex, overData.position);
       onChange(newModel);
     }
 
@@ -701,7 +708,88 @@ interface StructuralElementRendererProps {
 
 function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: StructuralElementRendererProps) {
   const children = element.children || [];
+  const isBlock = element.type === 'block';
+  const hasColumns = isBlock && element.config?.columns && element.config.columns > 1;
 
+  // If it's a block with columns configured, render columns
+  if (hasColumns) {
+    const columnCount = element.config!.columns!;
+    const columnWidths = element.config!.columnWidths || Array(columnCount).fill(`${100/columnCount}%`);
+    
+    return (
+      <div className="structural-element">
+        <ElementRenderer 
+          element={element} 
+          theme={theme} 
+          editorMode={true}
+          isSelected={isSelected}
+          onUpdate={onUpdate}
+        />
+        
+        {/* Block columns layout */}
+        <div className="mt-2 border-2 border-dashed border-border/20 rounded p-2">
+          <div className="flex gap-2">
+            {Array.from({ length: columnCount }, (_, index) => {
+              // Get elements for this column from children array
+              const columnElements = children.filter((child, childIndex) => 
+                childIndex % columnCount! === index
+              );
+              
+              return (
+                <div 
+                  key={index}
+                  className="flex-1 min-h-16 p-2 border border-dashed border-border/30 rounded"
+                  style={{ width: columnWidths[index] }}
+                >
+                  {/* Drop zone at the beginning of column */}
+                  <BlockColumnDropZone
+                    id={`${element.id}-col-${index}-start`}
+                    elementId={element.id}
+                    columnIndex={index}
+                    position={0}
+                  />
+
+                  {columnElements.map((child, childIndex) => {
+                    const actualPosition = Math.floor(children.indexOf(child) / columnCount!) * columnCount! + index;
+                    return (
+                      <div key={child.id}>
+                        <ModernElement
+                          element={child}
+                          theme={theme}
+                          isSelected={isSelected}
+                          onSelect={() => {}}
+                          onUpdate={(elementId, updates) => onUpdate(updates)}
+                        />
+                        {/* Drop zone after each element in column */}
+                        <BlockColumnDropZone
+                          id={`${element.id}-col-${index}-${childIndex + 1}`}
+                          elementId={element.id}
+                          columnIndex={index}
+                          position={actualPosition + columnCount!}
+                        />
+                      </div>
+                    );
+                  })}
+
+                  {columnElements.length === 0 && (
+                    <BlockColumnDropZone
+                      id={`${element.id}-col-${index}-empty`}
+                      elementId={element.id}
+                      columnIndex={index}
+                      position={index}
+                      isEmpty={true}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For containers or blocks without columns, use simple nested element layout
   return (
     <div className="structural-element">
       <ElementRenderer 
@@ -781,6 +869,56 @@ function ElementDropZone({ id, elementId, position, isEmpty = false }: ElementDr
         <Plus size={12} className="mb-1 opacity-50" />
         <span className="text-xs">
           {isOver ? 'Solte aqui!' : 'Adicionar elementos'}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`h-2 transition-colors ${
+        isOver ? 'bg-primary/20' : 'transparent'
+      }`}
+      style={{
+        marginTop: position === 0 ? 0 : '2px',
+        marginBottom: '2px',
+      }}
+    />
+  );
+}
+
+// Drop Zone Component for block columns
+interface BlockColumnDropZoneProps {
+  id: string;
+  elementId: string;
+  columnIndex: number;
+  position: number;
+  isEmpty?: boolean;
+}
+
+function BlockColumnDropZone({ id, elementId, columnIndex, position, isEmpty = false }: BlockColumnDropZoneProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: {
+      type: 'block-column-zone',
+      elementId,
+      columnIndex,
+      position,
+    },
+  });
+
+  if (isEmpty) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={`flex flex-col items-center justify-center py-3 text-center text-muted-foreground ${
+          isOver ? 'bg-primary/10 border-primary' : ''
+        } rounded-md transition-colors`}
+      >
+        <Plus size={12} className="mb-1 opacity-50" />
+        <span className="text-xs">
+          {isOver ? 'Solte aqui!' : 'Coluna vazia'}
         </span>
       </div>
     );
@@ -1839,6 +1977,60 @@ function addElementToStructuralElement(model: PageModelV2, element: BlockElement
     for (const row of section.rows) {
       for (const column of row.columns) {
         if (findAndUpdateElement(column.elements)) {
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  return model;
+}
+
+// Add element to specific column in block
+function addElementToBlockColumn(model: PageModelV2, element: BlockElement, parentElementId: string, columnIndex: number, position: number): PageModelV2 {
+  const newModel = JSON.parse(JSON.stringify(model)); // Deep clone
+  
+  function findAndUpdateBlockElement(elements: BlockElement[]): boolean {
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      
+      if (el.id === parentElementId && el.type === 'block') {
+        // Ensure children array exists
+        if (!el.children) {
+          el.children = [];
+        }
+        
+        const columnCount = el.config?.columns || 1;
+        
+        // Calculate the correct position in the children array
+        // Children are stored linearly but represent a grid layout
+        // Position calculation: row * columnCount + columnIndex
+        let targetIndex = position;
+        
+        // If position is provided as a column-relative position, convert to absolute
+        if (position >= 0) {
+          // For simple insertion, just add at the appropriate spot
+          targetIndex = Math.min(position, el.children.length);
+        }
+        
+        // Insert the element
+        el.children.splice(targetIndex, 0, element);
+        return true;
+      }
+      
+      // Recursively search in children
+      if (el.children && findAndUpdateBlockElement(el.children)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Search in all sections, rows, columns
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        if (findAndUpdateBlockElement(column.elements)) {
           return newModel;
         }
       }
