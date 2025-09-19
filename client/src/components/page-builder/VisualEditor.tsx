@@ -710,9 +710,9 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
   const children = element.children || [];
   const isBlock = element.type === 'block';
   const isContainer = element.type === 'container';
-  const hasColumns = (isBlock || isContainer) && element.config?.columns && element.config.columns > 1;
+  const hasColumns = isBlock && element.config?.columns && element.config.columns > 1;
 
-  // If it's a block or container with columns configured, render custom columns with drop zones
+  // If it's a block with columns configured, render custom columns with drop zones
   if (hasColumns) {
     const columnCount = element.config!.columns!;
     const columnWidths = element.config!.columnWidths || Array(columnCount).fill(`${100/columnCount}%`);
@@ -743,7 +743,7 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
       minHeight: element.styles?.minHeight || defaultStyles.minHeight,
     };
 
-    const elementTypeLabel = isContainer ? 'Container' : 'Bloco';
+    const elementTypeLabel = 'Bloco';
 
     return (
       <div className="structural-element" style={elementStyles}>
@@ -2014,15 +2014,15 @@ function addElementToStructuralElement(model: PageModelV2, element: BlockElement
   return model;
 }
 
-// Add element to specific column in block or container
+// Add element to specific column in block
 function addElementToBlockColumn(model: PageModelV2, element: BlockElement, parentElementId: string, columnIndex: number, position: number): PageModelV2 {
   const newModel = JSON.parse(JSON.stringify(model)); // Deep clone
   
-  function findAndUpdateStructuralElement(elements: BlockElement[]): boolean {
+  function findAndUpdateBlockElement(elements: BlockElement[]): boolean {
     for (let i = 0; i < elements.length; i++) {
       const el = elements[i];
       
-      if (el.id === parentElementId && (el.type === 'block' || el.type === 'container')) {
+      if (el.id === parentElementId && el.type === 'block') {
         // Ensure children array exists
         if (!el.children) {
           el.children = [];
@@ -2047,7 +2047,7 @@ function addElementToBlockColumn(model: PageModelV2, element: BlockElement, pare
       }
       
       // Recursively search in children
-      if (el.children && findAndUpdateStructuralElement(el.children)) {
+      if (el.children && findAndUpdateBlockElement(el.children)) {
         return true;
       }
     }
@@ -2058,7 +2058,7 @@ function addElementToBlockColumn(model: PageModelV2, element: BlockElement, pare
   for (const section of newModel.sections) {
     for (const row of section.rows) {
       for (const column of row.columns) {
-        if (findAndUpdateStructuralElement(column.elements)) {
+        if (findAndUpdateBlockElement(column.elements)) {
           return newModel;
         }
       }
