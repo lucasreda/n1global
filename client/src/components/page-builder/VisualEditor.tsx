@@ -72,8 +72,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       return [];
     }
 
-    // Priority order: drop-zone > column > container > section > element
-    const priorityOrder = ['drop-zone', 'column', 'container', 'section', 'element'];
+    // Priority order: element-zone > drop-zone > column > container > section > element
+    const priorityOrder = ['element-zone', 'drop-zone', 'column', 'container', 'section', 'element'];
     
     // Sort intersections by priority
     const sortedIntersections = intersections.sort((a, b) => {
@@ -141,6 +141,13 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       onChange(newModel);
     }
 
+    // Handle adding new element to structural elements (blocks/containers)
+    if (activeData?.type === 'new-element' && overData?.type === 'element-zone') {
+      const newElement = createDefaultElement(activeData.elementType);
+      const newModel = addElementToStructuralElement(model, newElement, overData.elementId, overData.position);
+      onChange(newModel);
+    }
+
     // Handle adding new element from toolbar to drop zones (precise positioning)
     if (activeData?.type === 'new-element' && overData?.type === 'drop-zone') {
       const newElement = createDefaultElement(activeData.elementType);
@@ -152,6 +159,12 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     if (activeData?.type === 'new-element' && overData?.type === 'column') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToColumn(model, newElement, overData.columnId);
+      onChange(newModel);
+    }
+
+    // Handle moving element to structural elements
+    if (activeData?.type === 'element' && overData?.type === 'element-zone') {
+      const newModel = moveElementToStructuralElement(model, active.id as string, overData.elementId, overData.position);
       onChange(newModel);
     }
 
@@ -503,7 +516,7 @@ function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpd
         />
 
         {column.elements.map((element, index) => (
-          <React.Fragment key={element.id}>
+          <div key={element.id}>
             <ModernElement
               element={element}
               theme={theme}
@@ -517,7 +530,7 @@ function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpd
               columnId={column.id}
               position={index + 1}
             />
-          </React.Fragment>
+          </div>
         ))}
       </SortableContext>
 
@@ -627,6 +640,33 @@ const ModernElement = React.memo(function ModernElement({
     onSelect();
   }, [onSelect]);
 
+  // Check if element is structural (can contain other elements)
+  const isStructural = element.type === 'container' || element.type === 'block';
+
+  if (isStructural) {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className={`mb-2 relative group cursor-pointer rounded-md transition-colors ${
+          isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/20'
+        }`}
+        onClick={handleClick}
+        data-testid={`element-${element.id}`}
+        data-element-id={element.id}
+      >
+        <StructuralElementRenderer
+          element={element}
+          theme={theme}
+          isSelected={isSelected}
+          onUpdate={handleUpdate}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -650,6 +690,115 @@ const ModernElement = React.memo(function ModernElement({
     </div>
   );
 });
+
+// Structural Element Renderer with nested drop zones
+interface StructuralElementRendererProps {
+  element: BlockElement;
+  theme: PageModelV2['theme'];
+  isSelected: boolean;
+  onUpdate: (updates: Partial<BlockElement>) => void;
+}
+
+function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: StructuralElementRendererProps) {
+  const children = element.children || [];
+
+  return (
+    <div className="structural-element">
+      <ElementRenderer 
+        element={element} 
+        theme={theme} 
+        editorMode={true}
+        isSelected={isSelected}
+        onUpdate={onUpdate}
+      />
+      
+      {/* Container for nested elements */}
+      <div className="p-2 border-2 border-dashed border-border/20 rounded mt-2">
+        {/* Drop zone at the beginning */}
+        <ElementDropZone
+          id={`${element.id}-start`}
+          elementId={element.id}
+          position={0}
+        />
+
+        {children.map((child, index) => (
+          <div key={child.id}>
+            <ModernElement
+              element={child}
+              theme={theme}
+              isSelected={isSelected}
+              onSelect={() => {}}
+              onUpdate={(elementId, updates) => onUpdate(updates)}
+            />
+            {/* Drop zone after each child */}
+            <ElementDropZone
+              id={`${element.id}-${index + 1}`}
+              elementId={element.id}
+              position={index + 1}
+            />
+          </div>
+        ))}
+
+        {children.length === 0 && (
+          <ElementDropZone
+            id={`${element.id}-empty`}
+            elementId={element.id}
+            position={0}
+            isEmpty={true}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Drop Zone Component for structural elements
+interface ElementDropZoneProps {
+  id: string;
+  elementId: string;
+  position: number;
+  isEmpty?: boolean;
+}
+
+function ElementDropZone({ id, elementId, position, isEmpty = false }: ElementDropZoneProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: {
+      type: 'element-zone',
+      elementId,
+      position,
+    },
+  });
+
+  if (isEmpty) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={`flex flex-col items-center justify-center py-4 text-center text-muted-foreground ${
+          isOver ? 'bg-primary/10 border-primary' : ''
+        } rounded-md transition-colors`}
+      >
+        <Plus size={12} className="mb-1 opacity-50" />
+        <span className="text-xs">
+          {isOver ? 'Solte aqui!' : 'Adicionar elementos'}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`h-2 transition-colors ${
+        isOver ? 'bg-primary/20' : 'transparent'
+      }`}
+      style={{
+        marginTop: position === 0 ? 0 : '2px',
+        marginBottom: '2px',
+      }}
+    />
+  );
+}
 
 // Elements Toolbar (Memoized for performance)
 const ElementsToolbar = React.memo(function ElementsToolbar() {
@@ -1645,6 +1794,126 @@ function addElementToColumn(model: PageModelV2, element: BlockElement, columnId:
             // Fallback to append at end
             column.elements = [...column.elements, element];
           }
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  return model;
+}
+
+// Add element to structural element (block/container)
+function addElementToStructuralElement(model: PageModelV2, element: BlockElement, parentElementId: string, position?: number): PageModelV2 {
+  const newModel = JSON.parse(JSON.stringify(model)); // Deep clone
+  
+  function findAndUpdateElement(elements: BlockElement[]): boolean {
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      
+      if (el.id === parentElementId) {
+        // Ensure children array exists
+        if (!el.children) {
+          el.children = [];
+        }
+        
+        // Insert at specific position or append
+        if (position !== undefined && position >= 0 && position <= el.children.length) {
+          el.children.splice(position, 0, element);
+        } else {
+          el.children.push(element);
+        }
+        return true;
+      }
+      
+      // Recursively search in children
+      if (el.children && findAndUpdateElement(el.children)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Search in all sections, rows, columns
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        if (findAndUpdateElement(column.elements)) {
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  return model;
+}
+
+// Move element to structural element
+function moveElementToStructuralElement(model: PageModelV2, elementId: string, targetElementId: string, position?: number): PageModelV2 {
+  let elementToMove: BlockElement | null = null;
+  
+  // First, find and remove the element
+  const modelAfterRemove = removeElementFromModel(model, elementId);
+  elementToMove = findElementInModel(model, elementId);
+  
+  if (!elementToMove) {
+    return model;
+  }
+  
+  // Then add it to the target
+  return addElementToStructuralElement(modelAfterRemove, elementToMove, targetElementId, position);
+}
+
+// Helper function to find an element in the model
+function findElementInModel(model: PageModelV2, elementId: string): BlockElement | null {
+  function searchInElements(elements: BlockElement[]): BlockElement | null {
+    for (const element of elements) {
+      if (element.id === elementId) {
+        return element;
+      }
+      if (element.children) {
+        const found = searchInElements(element.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  
+  // Search in all sections, rows, columns
+  for (const section of model.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        const found = searchInElements(column.elements);
+        if (found) return found;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to remove an element from the model
+function removeElementFromModel(model: PageModelV2, elementId: string): PageModelV2 {
+  const newModel = JSON.parse(JSON.stringify(model)); // Deep clone
+  
+  function removeFromElements(elements: BlockElement[]): boolean {
+    for (let i = 0; i < elements.length; i++) {
+      if (elements[i].id === elementId) {
+        elements.splice(i, 1);
+        return true;
+      }
+      if (elements[i].children && removeFromElements(elements[i].children!)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Search and remove from all sections, rows, columns
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        if (removeFromElements(column.elements)) {
           return newModel;
         }
       }
