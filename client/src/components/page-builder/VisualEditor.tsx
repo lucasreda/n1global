@@ -762,7 +762,7 @@ function PageFrame({
         </div>
 
         {/* Page Content */}
-        <div className="relative bg-background min-h-[500px]">
+        <div className="relative bg-white min-h-[500px]">
           <SortableContext
             items={model.sections.map(s => s.id)}
             strategy={verticalListSortingStrategy}
