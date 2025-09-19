@@ -61,7 +61,7 @@ export default function FunnelEditor() {
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("content");
 
   const funnelId = params.id as string;
 
@@ -230,13 +230,9 @@ export default function FunnelEditor() {
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-gray-900 border-gray-700">
-            <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
-              <Settings className="w-4 h-4 mr-2" />
-              Geral
-            </TabsTrigger>
             <TabsTrigger value="content" className="data-[state=active]:bg-blue-600">
               <Palette className="w-4 h-4 mr-2" />
-              Conteúdo
+              Páginas
             </TabsTrigger>
             <TabsTrigger value="tracking" className="data-[state=active]:bg-blue-600">
               <BarChart3 className="w-4 h-4 mr-2" />
@@ -245,6 +241,10 @@ export default function FunnelEditor() {
             <TabsTrigger value="deployment" className="data-[state=active]:bg-blue-600">
               <Globe className="w-4 h-4 mr-2" />
               Deployment
+            </TabsTrigger>
+            <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
+              <Settings className="w-4 h-4 mr-2" />
+              Configurações
             </TabsTrigger>
           </TabsList>
 
