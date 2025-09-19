@@ -309,7 +309,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
 
   return (
     <div 
-      className="flex flex-col bg-gray-50" 
+      className="flex flex-col bg-background" 
       data-testid="advanced-page-editor"
       style={{ 
         height: '100vh',
@@ -318,7 +318,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
       }}
     >
       {/* Top Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
+      <div className="bg-card border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold text-gray-900">{pageData.name}</h1>

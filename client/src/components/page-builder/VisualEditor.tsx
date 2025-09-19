@@ -235,7 +235,7 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
 
           {/* Main Editor Canvas */}
           <div 
-            className="flex-1 overflow-auto bg-gray-50"
+            className="flex-1 overflow-auto bg-background"
             style={{ 
               height: '100%', 
               minHeight: '100%'
@@ -269,7 +269,7 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
               <div className="text-center py-8">
                 <button
                   onClick={addSection}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                   data-testid="button-add-section"
                 >
                   + Adicionar Seção
@@ -545,7 +545,7 @@ function SortableElement({ element, theme, isSelected, onSelect, onUpdate }: Sor
       {...attributes}
       {...listeners}
       className={`mb-2 relative group cursor-pointer ${
-        isSelected ? 'ring-2 ring-blue-500' : ''
+        isSelected ? 'ring-2 ring-primary' : ''
       }`}
       onClick={onSelect}
       data-testid={`element-${element.id}`}
@@ -577,8 +577,8 @@ function ElementsToolbar() {
   ];
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 p-4">
-      <h3 className="font-medium text-gray-700 mb-4">Elementos</h3>
+    <div className="w-64 bg-card border-r border-border p-4">
+      <h3 className="font-medium text-foreground mb-4">Elementos</h3>
       <div className="space-y-2">
         {elementTypes.map((elementType) => (
           <DraggableElement
@@ -626,11 +626,11 @@ function DraggableElement({ elementType, label, icon }: DraggableElementProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg cursor-grab hover:cursor-grabbing transition-colors"
+      className="flex items-center gap-3 p-3 bg-secondary hover:bg-secondary/80 rounded-lg cursor-grab hover:cursor-grabbing transition-colors"
       data-testid={`draggable-${elementType}`}
     >
       <span className="text-lg">{icon}</span>
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+      <span className="text-sm font-medium text-foreground">{label}</span>
     </div>
   );
 }
@@ -647,24 +647,24 @@ function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }
   const selectedElement = selectedElementId ? findElementById(model, selectedElementId) : null;
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-4">
-      <h3 className="font-medium text-gray-700 mb-4">Propriedades</h3>
+    <div className="w-80 bg-card border-l border-border p-4">
+      <h3 className="font-medium text-foreground mb-4">Propriedades</h3>
       
       {selectedElement ? (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Tipo: {selectedElement.type}
             </label>
           </div>
           
           {/* Element-specific properties would go here */}
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             Propriedades do elemento em desenvolvimento...
           </div>
         </div>
       ) : (
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-muted-foreground">
           Selecione um elemento para editar suas propriedades
         </div>
       )}
@@ -676,7 +676,7 @@ function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }
 function DragOverlayContent({ item }: { item: any }) {
   if (item.type === 'new-element') {
     return (
-      <div className="bg-blue-100 border-2 border-blue-400 rounded-lg p-2 text-sm font-medium text-blue-700">
+      <div className="bg-primary/20 border-2 border-primary rounded-lg p-2 text-sm font-medium text-primary-foreground">
         Novo {item.elementType}
       </div>
     );
@@ -684,7 +684,7 @@ function DragOverlayContent({ item }: { item: any }) {
 
   if (item.type === 'element') {
     return (
-      <div className="bg-white border-2 border-blue-400 rounded-lg p-2 shadow-lg">
+      <div className="bg-card border-2 border-primary rounded-lg p-2 shadow-lg text-foreground">
         {item.element.type}
       </div>
     );
@@ -692,7 +692,7 @@ function DragOverlayContent({ item }: { item: any }) {
 
   if (item.type === 'section') {
     return (
-      <div className="bg-white border-2 border-blue-400 rounded-lg p-2 shadow-lg">
+      <div className="bg-card border-2 border-primary rounded-lg p-2 shadow-lg text-foreground">
         Seção: {item.section.name}
       </div>
     );
@@ -726,7 +726,7 @@ function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate }: {
 
   return (
     <div style={baseStyles} data-testid={`rendered-element-${element.id}`}>
-      <span className="text-sm text-gray-600">{content}</span>
+      <span className="text-sm text-muted-foreground">{content}</span>
     </div>
   );
 }
