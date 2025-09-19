@@ -992,28 +992,299 @@ interface PropertiesPanelProps {
 function PropertiesPanel({ selectedElementId, model, onUpdateElement, onChange }: PropertiesPanelProps) {
   const selectedElement = selectedElementId ? findElementById(model, selectedElementId) : null;
 
-  return (
-    <div className="w-80 bg-card border-l border-border p-4">
-      <h3 className="font-medium text-foreground mb-4">Propriedades</h3>
-      
-      {selectedElement ? (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Tipo: {selectedElement.type}
-            </label>
-          </div>
-          
-          {/* Element-specific properties would go here */}
-          <div className="text-sm text-muted-foreground">
-            Propriedades do elemento em desenvolvimento...
-          </div>
-        </div>
-      ) : (
+  const handleUpdateProperty = useCallback((property: string, value: any) => {
+    if (!selectedElement || !selectedElementId) return;
+    
+    if (property.startsWith('content.')) {
+      const contentKey = property.replace('content.', '');
+      onUpdateElement(selectedElementId, {
+        content: {
+          ...selectedElement.content,
+          [contentKey]: value,
+        }
+      });
+    } else if (property.startsWith('styles.')) {
+      const styleKey = property.replace('styles.', '');
+      onUpdateElement(selectedElementId, {
+        styles: {
+          ...selectedElement.styles,
+          [styleKey]: value,
+        }
+      });
+    } else {
+      onUpdateElement(selectedElementId, {
+        [property]: value,
+      });
+    }
+  }, [selectedElement, selectedElementId, onUpdateElement]);
+
+  if (!selectedElement) {
+    return (
+      <div className="w-80 bg-card border-l border-border p-4">
+        <h3 className="font-medium text-foreground mb-4">Propriedades</h3>
         <div className="text-sm text-muted-foreground">
           Selecione um elemento para editar suas propriedades
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-80 bg-card border-l border-border p-4 overflow-y-auto">
+      <h3 className="font-medium text-foreground mb-4">Propriedades</h3>
+      
+      <div className="space-y-6">
+        {/* Element Type Badge */}
+        <div>
+          <div className="inline-flex items-center gap-2 px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium">
+            {getElementIcon(selectedElement.type)({ size: 12 })}
+            {selectedElement.type}
+          </div>
+        </div>
+
+        {/* Content Properties */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-foreground">Conteúdo</h4>
+          
+          {(selectedElement.type === 'heading' || selectedElement.type === 'text') && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Texto
+              </label>
+              <textarea
+                value={selectedElement.content?.text || ''}
+                onChange={(e) => handleUpdateProperty('content.text', e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md resize-none"
+                rows={3}
+                placeholder="Digite o texto..."
+              />
+            </div>
+          )}
+
+          {selectedElement.type === 'button' && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Texto do Botão
+                </label>
+                <input
+                  type="text"
+                  value={selectedElement.content?.text || ''}
+                  onChange={(e) => handleUpdateProperty('content.text', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="Texto do botão"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Link (URL)
+                </label>
+                <input
+                  type="url"
+                  value={selectedElement.content?.href || ''}
+                  onChange={(e) => handleUpdateProperty('content.href', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="https://..."
+                />
+              </div>
+            </>
+          )}
+
+          {selectedElement.type === 'image' && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  URL da Imagem
+                </label>
+                <input
+                  type="url"
+                  value={selectedElement.content?.src || ''}
+                  onChange={(e) => handleUpdateProperty('content.src', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Texto Alternativo
+                </label>
+                <input
+                  type="text"
+                  value={selectedElement.content?.alt || ''}
+                  onChange={(e) => handleUpdateProperty('content.alt', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="Descrição da imagem"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Style Properties */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-foreground">Estilo</h4>
+          
+          {/* Colors */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Cor do Texto
+              </label>
+              <input
+                type="color"
+                value={selectedElement.styles?.color || '#000000'}
+                onChange={(e) => handleUpdateProperty('styles.color', e.target.value)}
+                className="w-full h-8 bg-background border border-border rounded-md cursor-pointer"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Cor de Fundo
+              </label>
+              <input
+                type="color"
+                value={selectedElement.styles?.backgroundColor || '#ffffff'}
+                onChange={(e) => handleUpdateProperty('styles.backgroundColor', e.target.value)}
+                className="w-full h-8 bg-background border border-border rounded-md cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* Typography */}
+          {(selectedElement.type === 'heading' || selectedElement.type === 'text' || selectedElement.type === 'button') && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Tamanho da Fonte
+                </label>
+                <input
+                  type="text"
+                  value={selectedElement.styles?.fontSize || '16px'}
+                  onChange={(e) => handleUpdateProperty('styles.fontSize', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="16px"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Peso da Fonte
+                </label>
+                <select
+                  value={selectedElement.styles?.fontWeight || 'normal'}
+                  onChange={(e) => handleUpdateProperty('styles.fontWeight', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="500">Médio</option>
+                  <option value="600">Semi-negrito</option>
+                  <option value="700">Negrito</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Alinhamento
+                </label>
+                <select
+                  value={selectedElement.styles?.textAlign || 'left'}
+                  onChange={(e) => handleUpdateProperty('styles.textAlign', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                >
+                  <option value="left">Esquerda</option>
+                  <option value="center">Centro</option>
+                  <option value="right">Direita</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Spacing */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Padding
+              </label>
+              <input
+                type="text"
+                value={selectedElement.styles?.padding || '0'}
+                onChange={(e) => handleUpdateProperty('styles.padding', e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                placeholder="1rem"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Margin
+              </label>
+              <input
+                type="text"
+                value={selectedElement.styles?.margin || '0'}
+                onChange={(e) => handleUpdateProperty('styles.margin', e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          {/* Border */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Borda
+            </label>
+            <input
+              type="text"
+              value={selectedElement.styles?.border || 'none'}
+              onChange={(e) => handleUpdateProperty('styles.border', e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+              placeholder="1px solid #ccc"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Raio da Borda
+            </label>
+            <input
+              type="text"
+              value={selectedElement.styles?.borderRadius || '0'}
+              onChange={(e) => handleUpdateProperty('styles.borderRadius', e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+              placeholder="8px"
+            />
+          </div>
+
+          {/* Dimensions */}
+          {(selectedElement.type === 'image' || selectedElement.type === 'spacer') && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Largura
+                </label>
+                <input
+                  type="text"
+                  value={selectedElement.styles?.width || 'auto'}
+                  onChange={(e) => handleUpdateProperty('styles.width', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="auto"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  Altura
+                </label>
+                <input
+                  type="text"
+                  value={selectedElement.styles?.height || 'auto'}
+                  onChange={(e) => handleUpdateProperty('styles.height', e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md"
+                  placeholder="auto"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

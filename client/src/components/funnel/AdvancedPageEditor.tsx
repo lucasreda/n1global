@@ -150,6 +150,12 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
           xl: '3rem',
           '2xl': '4rem',
         },
+        borderRadius: {
+          sm: '0.25rem',
+          md: '0.5rem',
+          lg: '0.75rem',
+          xl: '1rem',
+        },
       },
       seo: {
         title: pageData?.name || 'Nova Página',
