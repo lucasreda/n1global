@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken } from './auth-middleware';
 import { validateOperationAccess as operationAccess } from './middleware/operation-access';
-import { AIContentRequest, AIContentResponse } from '@shared/schema.js';
+import { AIContentRequest, AIContentResponse } from '@shared/schema';
 import OpenAI from 'openai';
 
 const router = Router();

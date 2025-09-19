@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { 
   DndContext, 
   DragEndEvent, 
@@ -21,6 +21,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
 import { createDefaultTheme } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
+import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -31,6 +32,9 @@ interface VisualEditorProps {
 export function VisualEditor({ model, onChange, className = "" }: VisualEditorProps) {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<any>(null);
+  const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isStylesPanelOpen, setIsStylesPanelOpen] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<BlockElement | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -129,6 +133,85 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
     onChange(newModel);
   }, [model, onChange]);
 
+  // Update selected element and toolbar position when selection changes
+  useEffect(() => {
+    if (selectedElementId) {
+      const element = findElementById(model, selectedElementId);
+      setSelectedElement(element);
+      
+      // Calculate toolbar position
+      const elementNode = document.querySelector(`[data-element-id="${selectedElementId}"]`);
+      if (elementNode) {
+        const rect = elementNode.getBoundingClientRect();
+        const position = calculateToolbarPosition(rect);
+        setToolbarPosition(position);
+      } else {
+        setToolbarPosition(null);
+      }
+    } else {
+      setSelectedElement(null);
+      setToolbarPosition(null);
+    }
+  }, [selectedElementId, model]);
+
+  // Toolbar action handlers
+  const handleUpdateElement = useCallback((element: BlockElement) => {
+    updateElement(element.id, element);
+  }, [updateElement]);
+
+  const handleDeleteElement = useCallback(() => {
+    if (selectedElementId) {
+      const newModel = deleteElementInModel(model, selectedElementId);
+      onChange(newModel);
+      setSelectedElementId(null);
+    }
+  }, [selectedElementId, model, onChange]);
+
+  const handleDuplicateElement = useCallback(() => {
+    if (selectedElement) {
+      const newElement = {
+        ...selectedElement,
+        id: `element_${Date.now()}`,
+      };
+      const newModel = duplicateElementInModel(model, selectedElementId!, newElement);
+      onChange(newModel);
+    }
+  }, [selectedElement, selectedElementId, model, onChange]);
+
+  const handleMoveElement = useCallback((direction: 'up' | 'down') => {
+    if (selectedElementId) {
+      const newModel = moveElementInColumn(model, selectedElementId, direction);
+      onChange(newModel);
+    }
+  }, [selectedElementId, model, onChange]);
+
+  const handleToggleFormat = useCallback((format: 'bold' | 'italic' | 'underline') => {
+    if (selectedElement) {
+      const currentStyles = selectedElement.styles || {};
+      const updates: Partial<BlockElement> = {
+        styles: {
+          ...currentStyles,
+          fontWeight: format === 'bold' ? (currentStyles.fontWeight === '700' ? '400' : '700') : currentStyles.fontWeight,
+          fontStyle: format === 'italic' ? (currentStyles.fontStyle === 'italic' ? 'normal' : 'italic') : currentStyles.fontStyle,
+          textDecoration: format === 'underline' ? (currentStyles.textDecoration === 'underline' ? 'none' : 'underline') : currentStyles.textDecoration,
+        }
+      };
+      updateElement(selectedElementId!, updates);
+    }
+  }, [selectedElement, selectedElementId, updateElement]);
+
+  const handleAlignText = useCallback((alignment: 'left' | 'center' | 'right') => {
+    if (selectedElement) {
+      const updates: Partial<BlockElement> = {
+        styles: {
+          ...selectedElement.styles,
+          textAlign: alignment,
+        }
+      };
+      updateElement(selectedElementId!, updates);
+    }
+  }, [selectedElement, selectedElementId, updateElement]);
+
   return (
     <div className={`visual-editor ${className}`} data-testid="visual-editor">
       <DndContext
@@ -187,6 +270,29 @@ export function VisualEditor({ model, onChange, className = "" }: VisualEditorPr
           {draggedItem && <DragOverlayContent item={draggedItem} />}
         </DragOverlay>
       </DndContext>
+
+      {/* Floating Toolbar */}
+      <FloatingToolbar
+        element={selectedElement}
+        position={toolbarPosition}
+        onUpdateElement={handleUpdateElement}
+        onDeleteElement={handleDeleteElement}
+        onDuplicateElement={handleDuplicateElement}
+        onMoveElement={handleMoveElement}
+        onOpenStylePanel={() => setIsStylesPanelOpen(true)}
+        onToggleFormat={handleToggleFormat}
+        onAlignText={handleAlignText}
+      />
+
+      {/* Styles Panel */}
+      {selectedElement && (
+        <StylesPanel
+          element={selectedElement}
+          isOpen={isStylesPanelOpen}
+          onClose={() => setIsStylesPanelOpen(false)}
+          onUpdateElement={handleUpdateElement}
+        />
+      )}
     </div>
   );
 }
@@ -422,6 +528,7 @@ function SortableElement({ element, theme, isSelected, onSelect, onUpdate }: Sor
       }`}
       onClick={onSelect}
       data-testid={`element-${element.id}`}
+      data-element-id={element.id}
     >
       {/* Render the actual element using our PageRenderer components */}
       <ElementRenderer 
@@ -605,8 +712,43 @@ function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate }: {
 
 // Utility functions
 function moveElement(model: PageModelV2, elementId: string, targetColumnId: string): PageModelV2 {
-  // Implementation for moving elements between columns
-  // This is a simplified version - would need full implementation
+  const newModel = { ...model };
+  let elementToMove: BlockElement | null = null;
+  
+  // First, find and remove the element from its current location
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        const elementIndex = column.elements.findIndex(e => e.id === elementId);
+        if (elementIndex !== -1) {
+          elementToMove = column.elements[elementIndex];
+          column.elements = column.elements.filter(e => e.id !== elementId);
+          break;
+        }
+      }
+      if (elementToMove) break;
+    }
+    if (elementToMove) break;
+  }
+  
+  // If element wasn't found, return original model
+  if (!elementToMove) {
+    return model;
+  }
+  
+  // Now add the element to the target column
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        if (column.id === targetColumnId) {
+          column.elements = [...column.elements, elementToMove];
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  // If target column wasn't found, return original model
   return model;
 }
 
@@ -657,4 +799,73 @@ function findElementById(model: PageModelV2, elementId: string): BlockElement | 
     }
   }
   return null;
+}
+
+function deleteElementInModel(model: PageModelV2, elementId: string): PageModelV2 {
+  const newModel = { ...model };
+  
+  // Find and delete the element
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        const elementIndex = column.elements.findIndex(e => e.id === elementId);
+        if (elementIndex !== -1) {
+          column.elements = column.elements.filter(e => e.id !== elementId);
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  return model;
+}
+
+function duplicateElementInModel(model: PageModelV2, elementId: string, newElement: BlockElement): PageModelV2 {
+  const newModel = { ...model };
+  
+  // Find element and duplicate it
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        const elementIndex = column.elements.findIndex(e => e.id === elementId);
+        if (elementIndex !== -1) {
+          // Insert the new element after the original
+          column.elements.splice(elementIndex + 1, 0, newElement);
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  return model;
+}
+
+function moveElementInColumn(model: PageModelV2, elementId: string, direction: 'up' | 'down'): PageModelV2 {
+  const newModel = { ...model };
+  
+  // Find element and move it within its column
+  for (const section of newModel.sections) {
+    for (const row of section.rows) {
+      for (const column of row.columns) {
+        const elementIndex = column.elements.findIndex(e => e.id === elementId);
+        if (elementIndex !== -1) {
+          const newIndex = direction === 'up' ? elementIndex - 1 : elementIndex + 1;
+          
+          // Check bounds
+          if (newIndex < 0 || newIndex >= column.elements.length) {
+            return model; // Can't move beyond bounds
+          }
+          
+          // Swap elements
+          const element = column.elements[elementIndex];
+          column.elements[elementIndex] = column.elements[newIndex];
+          column.elements[newIndex] = element;
+          
+          return newModel;
+        }
+      }
+    }
+  }
+  
+  return model;
 }
