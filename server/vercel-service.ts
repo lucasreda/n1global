@@ -52,12 +52,32 @@ interface VercelDomain {
   }[];
 }
 
-// Landing page template interface
+// Landing page template interface (legacy)
 interface LandingPageTemplate {
   name: string;
   framework: 'nextjs' | 'react' | 'html';
   files: {
     [path: string]: string;
+  };
+}
+
+// Multi-page funnel template interface
+interface MultiPageFunnelTemplate {
+  name: string;
+  framework: 'nextjs';
+  files: {
+    [path: string]: string;
+  };
+  pages: {
+    path: string;
+    name: string;
+    pageType: 'landing' | 'checkout' | 'upsell' | 'downsell' | 'thankyou';
+  }[];
+  buildSettings?: {
+    buildCommand?: string;
+    outputDirectory?: string;
+    installCommand?: string;
+    devCommand?: string;
   };
 }
 
@@ -189,7 +209,7 @@ export class VercelService {
   }
 
   /**
-   * Deploy a landing page to Vercel
+   * Deploy a landing page to Vercel (LEGACY)
    */
   async deployLandingPage(
     accessToken: string,
@@ -242,6 +262,257 @@ export class VercelService {
       return deployment;
     } catch (error) {
       console.error('❌ Deploy error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deploy a multi-page funnel to Vercel
+   */
+  async deployMultiPageFunnel(
+    accessToken: string,
+    projectName: string,
+    template: MultiPageFunnelTemplate,
+    teamId?: string
+  ): Promise<VercelDeployment> {
+    console.log(`🚀 Deploying multi-page funnel: ${projectName} with ${template.pages.length} pages`);
+
+    try {
+      const url = teamId 
+        ? `${this.baseUrl}/v13/deployments?teamId=${teamId}`
+        : `${this.baseUrl}/v13/deployments`;
+
+      // Validate that required files exist
+      this.validateMultiPageTemplate(template);
+
+      // Convert template files to Vercel deployment format
+      const files = Object.entries(template.files).map(([path, content]) => ({
+        file: path,
+        data: Buffer.from(content).toString('base64'),
+        encoding: 'base64',
+      }));
+
+      // Build settings with support for Tailwind
+      const buildSettings = template.buildSettings || {};
+      const projectSettings = {
+        framework: 'nextjs',
+        buildCommand: buildSettings.buildCommand || 'npm run build',
+        outputDirectory: buildSettings.outputDirectory || '.next',
+        installCommand: buildSettings.installCommand || 'npm install',
+        devCommand: buildSettings.devCommand || 'npm run dev',
+        nodeVersion: '18.x',
+      };
+
+      console.log(`📋 Deploying ${files.length} files including:`, {
+        pages: template.pages.map(p => `${p.path} (${p.pageType})`),
+        hasPackageJson: !!template.files['package.json'],
+        hasTailwindConfig: !!template.files['tailwind.config.js'],
+        hasPostCSSConfig: !!template.files['postcss.config.js'],
+        hasAppJs: !!template.files['pages/_app.js'],
+        hasGlobalCSS: !!template.files['styles/globals.css'],
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: projectName,
+          files,
+          projectSettings,
+          target: 'production',
+          meta: {
+            funnelType: 'multi-page',
+            pageCount: template.pages.length,
+            pageTypes: template.pages.map(p => p.pageType),
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json() as any;
+        console.error('❌ Multi-page funnel deployment failed:', errorData);
+        throw new Error(`Failed to deploy multi-page funnel: ${errorData.error?.message || response.statusText}`);
+      }
+
+      const deployment = await response.json() as VercelDeployment;
+      console.log(`✅ Multi-page funnel deployed: ${deployment.uid} - ${deployment.url}`);
+      console.log(`🎯 Pages deployed:`, template.pages.map(p => `${deployment.url}${p.path}`));
+      
+      return deployment;
+    } catch (error) {
+      console.error('❌ Multi-page funnel deploy error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate multi-page template structure
+   */
+  private validateMultiPageTemplate(template: MultiPageFunnelTemplate): void {
+    const requiredFiles = [
+      'package.json',
+      'pages/_app.js',
+      'styles/globals.css',
+    ];
+
+    const missingFiles = requiredFiles.filter(file => !template.files[file]);
+    
+    if (missingFiles.length > 0) {
+      throw new Error(`Missing required files for multi-page deployment: ${missingFiles.join(', ')}`);
+    }
+
+    // Validate that all pages have corresponding files
+    for (const page of template.pages) {
+      const pageFile = page.path === '/' ? 'pages/index.js' : `pages${page.path}.js`;
+      if (!template.files[pageFile]) {
+        throw new Error(`Missing page file for ${page.path}: ${pageFile}`);
+      }
+    }
+
+    // Check if we have at least one page
+    if (template.pages.length === 0) {
+      throw new Error('Multi-page funnel must have at least one page');
+    }
+
+    console.log(`✅ Multi-page template validation passed: ${template.pages.length} pages`);
+  }
+
+  /**
+   * Deploy funnel using TemplateGenerator integration
+   */
+  async deployFunnelFromGenerator(
+    accessToken: string,
+    projectName: string,
+    funnelPages: Array<{
+      id: string;
+      name: string;
+      pageType: 'landing' | 'checkout' | 'upsell' | 'downsell' | 'thankyou';
+      path: string;
+      model: any;
+    }>,
+    productInfo: {
+      name: string;
+      description: string;
+      price: number;
+      currency: string;
+      targetAudience: string;
+    },
+    options: {
+      colorScheme: 'modern' | 'vibrant' | 'minimal' | 'dark';
+      layout: 'single_page' | 'multi_section' | 'video_first';
+      trackingConfig?: any;
+      enableSharedComponents?: boolean;
+      enableProgressTracking?: boolean;
+      enableRouting?: boolean;
+    },
+    teamId?: string
+  ): Promise<VercelDeployment> {
+    console.log(`🎯 Deploying funnel with TemplateGenerator integration: ${projectName}`);
+
+    try {
+      // Import TemplateGenerator
+      const { templateGenerator } = await import('./template-generator.js');
+
+      // Generate files using TemplateGenerator
+      console.log('🏗️ Generating funnel files...');
+      const generatedFiles = templateGenerator.generateMultiPageFunnel(
+        funnelPages,
+        productInfo,
+        options
+      );
+
+      // Convert to MultiPageFunnelTemplate format
+      const template: MultiPageFunnelTemplate = {
+        name: projectName,
+        framework: 'nextjs',
+        files: generatedFiles,
+        pages: funnelPages.map(page => ({
+          path: page.path,
+          name: page.name,
+          pageType: page.pageType,
+        })),
+        buildSettings: {
+          buildCommand: 'npm run build',
+          outputDirectory: '.next',
+          installCommand: 'npm install',
+          devCommand: 'npm run dev',
+        },
+      };
+
+      console.log(`✅ Generated ${Object.keys(generatedFiles).length} files for ${funnelPages.length} pages`);
+
+      // Deploy using the new multi-page method
+      return await this.deployMultiPageFunnel(accessToken, projectName, template, teamId);
+
+    } catch (error) {
+      console.error('❌ Funnel deployment with TemplateGenerator failed:', error);
+      throw new Error(`Failed to deploy funnel: ${error}`);
+    }
+  }
+
+  /**
+   * Create project and deploy funnel in one operation
+   */
+  async createProjectAndDeployFunnel(
+    accessToken: string,
+    projectName: string,
+    funnelPages: Array<{
+      id: string;
+      name: string;
+      pageType: 'landing' | 'checkout' | 'upsell' | 'downsell' | 'thankyou';
+      path: string;
+      model: any;
+    }>,
+    productInfo: {
+      name: string;
+      description: string;
+      price: number;
+      currency: string;
+      targetAudience: string;
+    },
+    options: {
+      colorScheme: 'modern' | 'vibrant' | 'minimal' | 'dark';
+      layout: 'single_page' | 'multi_section' | 'video_first';
+      trackingConfig?: any;
+      enableSharedComponents?: boolean;
+      enableProgressTracking?: boolean;
+      enableRouting?: boolean;
+    },
+    teamId?: string
+  ): Promise<{
+    project: VercelProject;
+    deployment: VercelDeployment;
+  }> {
+    console.log(`🏗️ Creating project and deploying funnel: ${projectName}`);
+
+    try {
+      // Create project first
+      const project = await this.createProject(accessToken, projectName, 'nextjs', teamId);
+      console.log(`✅ Project created: ${project.id}`);
+
+      // Deploy funnel
+      const deployment = await this.deployFunnelFromGenerator(
+        accessToken,
+        projectName,
+        funnelPages,
+        productInfo,
+        options,
+        teamId
+      );
+
+      console.log(`🎉 Project and funnel deployment completed successfully!`);
+      console.log(`🌐 Live URL: ${deployment.url}`);
+
+      return {
+        project,
+        deployment,
+      };
+
+    } catch (error) {
+      console.error('❌ Project creation and funnel deployment failed:', error);
       throw error;
     }
   }

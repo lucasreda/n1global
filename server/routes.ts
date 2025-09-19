@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
 import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema } from "@shared/schema";
+import { z } from "zod";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -33,6 +34,47 @@ const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-developme
 interface AuthRequest extends Request {
   user?: any;
 }
+
+// Multi-Page Funnel Validation Schemas
+const funnelPageSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, "Nome da página é obrigatório"),
+  pageType: z.enum(["landing", "checkout", "upsell", "downsell", "thankyou"]),
+  path: z.string().min(1, "Caminho da página é obrigatório"),
+  model: z.record(z.any()).optional()
+});
+
+const productInfoSchema = z.object({
+  name: z.string().min(1, "Nome do produto é obrigatório"),
+  description: z.string().min(1, "Descrição do produto é obrigatória"),
+  price: z.number().positive("Preço deve ser positivo"),
+  currency: z.string().length(3, "Moeda deve ter 3 caracteres"),
+  targetAudience: z.string().min(1, "Público-alvo é obrigatório")
+});
+
+const funnelOptionsSchema = z.object({
+  colorScheme: z.enum(["modern", "vibrant", "minimal", "dark"]).default("modern"),
+  layout: z.enum(["single_page", "multi_section", "video_first"]).default("multi_section"),
+  trackingConfig: z.record(z.any()).optional(),
+  enableSharedComponents: z.boolean().default(true),
+  enableProgressTracking: z.boolean().default(true),
+  enableRouting: z.boolean().default(true)
+});
+
+const deployMultiPageFunnelSchema = z.object({
+  projectName: z.string().min(1, "Nome do projeto é obrigatório"),
+  funnelPages: z.array(funnelPageSchema).min(1, "Pelo menos uma página é obrigatória"),
+  productInfo: productInfoSchema,
+  options: funnelOptionsSchema.optional(),
+  vercelAccessToken: z.string().min(1, "Token de acesso Vercel é obrigatório"),
+  teamId: z.string().optional()
+});
+
+const validateFunnelSchema = z.object({
+  funnelPages: z.array(funnelPageSchema).min(1, "Pelo menos uma página é obrigatória"),
+  productInfo: productInfoSchema,
+  options: funnelOptionsSchema.optional()
+});
 
 import { authenticateToken, authenticateTokenOrQuery } from "./auth-middleware";
 
@@ -6238,6 +6280,353 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register Funnel Builder routes
   app.use("/api", funnelRoutes);
+
+  // Multi-Page Funnel Deploy Routes (PHASE 2.2)
+  app.post("/api/funnels/multi-page/deploy", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Validate request data using Zod schema
+      const validatedData = deployMultiPageFunnelSchema.parse(req.body);
+      const { projectName, funnelPages, productInfo, options, vercelAccessToken, teamId } = validatedData;
+
+      // Import VercelService
+      const { vercelService } = await import('./vercel-service');
+
+      console.log(`🚀 Multi-page deploy initiated: ${projectName} with ${funnelPages.length} pages`);
+
+      // Deploy using the integrated method
+      const deployment = await vercelService.deployFunnelFromGenerator(
+        vercelAccessToken,
+        projectName,
+        funnelPages,
+        productInfo,
+        options || {
+          colorScheme: 'modern',
+          layout: 'multi_section',
+          enableSharedComponents: true,
+          enableProgressTracking: true,
+          enableRouting: true
+        },
+        teamId
+      );
+
+      res.json({
+        success: true,
+        deployment: {
+          id: deployment.uid,
+          url: deployment.url,
+          state: deployment.state,
+          name: deployment.name,
+          createdAt: deployment.createdAt
+        },
+        message: `Multi-page funnel deployed successfully!`,
+        liveUrl: deployment.url
+      });
+
+    } catch (error) {
+      console.error("❌ Multi-page deploy error:", error);
+      
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Dados de entrada inválidos",
+          details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: "Failed to deploy multi-page funnel",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/funnels/multi-page/create-and-deploy", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Validate request data using Zod schema
+      const validatedData = deployMultiPageFunnelSchema.parse(req.body);
+      const { projectName, funnelPages, productInfo, options, vercelAccessToken, teamId } = validatedData;
+
+      // Import VercelService
+      const { vercelService } = await import('./vercel-service');
+
+      console.log(`🏗️ Create project and deploy multi-page funnel: ${projectName}`);
+
+      // Create project and deploy in one operation
+      const result = await vercelService.createProjectAndDeployFunnel(
+        vercelAccessToken,
+        projectName,
+        funnelPages,
+        productInfo,
+        options || {
+          colorScheme: 'modern',
+          layout: 'multi_section',
+          enableSharedComponents: true,
+          enableProgressTracking: true,
+          enableRouting: true
+        },
+        teamId
+      );
+
+      res.json({
+        success: true,
+        project: {
+          id: result.project.id,
+          name: result.project.name,
+          framework: result.project.framework,
+          accountId: result.project.accountId,
+          createdAt: result.project.createdAt
+        },
+        deployment: {
+          id: result.deployment.uid,
+          url: result.deployment.url,
+          state: result.deployment.state,
+          name: result.deployment.name,
+          createdAt: result.deployment.createdAt
+        },
+        message: `Project created and funnel deployed successfully!`,
+        liveUrl: result.deployment.url
+      });
+
+    } catch (error) {
+      console.error("❌ Create and deploy error:", error);
+      
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Dados de entrada inválidos",
+          details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: "Failed to create project and deploy funnel",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/funnels/multi-page/validate", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      // Validate request data using Zod schema
+      const validatedData = validateFunnelSchema.parse(req.body);
+      const { funnelPages, productInfo, options } = validatedData;
+
+      // Import TemplateGenerator for validation
+      const { templateGenerator } = await import('./template-generator');
+
+      console.log(`🔍 Validating funnel with ${funnelPages.length} pages`);
+
+      // Generate files to validate structure
+      const generatedFiles = templateGenerator.generateMultiPageFunnel(
+        funnelPages,
+        productInfo,
+        options || {
+          colorScheme: 'modern',
+          layout: 'multi_section',
+          enableSharedComponents: true,
+          enableProgressTracking: true,
+          enableRouting: true
+        }
+      );
+
+      // Validate that all required files are present
+      const requiredFiles = ['package.json', 'pages/_app.js', 'styles/globals.css'];
+      const missingFiles = requiredFiles.filter(file => !generatedFiles[file]);
+
+      // Validate that all pages have corresponding files
+      const pageValidation = funnelPages.map(page => {
+        const pageFile = page.path === '/' ? 'pages/index.js' : `pages${page.path}.js`;
+        return {
+          page: page.name,
+          path: page.path,
+          hasFile: !!generatedFiles[pageFile],
+          fileName: pageFile
+        };
+      });
+
+      const isValid = missingFiles.length === 0 && pageValidation.every(p => p.hasFile);
+
+      res.json({
+        success: true,
+        validation: {
+          isValid,
+          fileCount: Object.keys(generatedFiles).length,
+          missingFiles,
+          pageValidation,
+          hasPackageJson: !!generatedFiles['package.json'],
+          hasTailwindConfig: !!generatedFiles['tailwind.config.js'],
+          hasGlobalCSS: !!generatedFiles['styles/globals.css'],
+          summary: isValid ? "Funnel válido e pronto para deploy" : "Funnel inválido - verificar erros"
+        }
+      });
+
+    } catch (error) {
+      console.error("❌ Validate funnel error:", error);
+      
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Dados de entrada inválidos",
+          details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: "Failed to validate funnel",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/funnels/multi-page/generate-preview", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const {
+        funnelPages,
+        productInfo,
+        options
+      } = req.query;
+
+      if (!funnelPages || !productInfo) {
+        return res.status(400).json({
+          success: false,
+          error: "funnelPages e productInfo são obrigatórios"
+        });
+      }
+
+      // Parse JSON strings with error handling
+      let parsedPages, parsedProductInfo, parsedOptions;
+      
+      try {
+        parsedPages = JSON.parse(funnelPages as string);
+        parsedProductInfo = JSON.parse(productInfo as string);
+        parsedOptions = JSON.parse((options as string) || '{}');
+      } catch (parseError) {
+        return res.status(400).json({
+          success: false,
+          error: "Formato JSON inválido nos parâmetros"
+        });
+      }
+
+      // Validate parsed data
+      const validatedData = validateFunnelSchema.parse({
+        funnelPages: parsedPages,
+        productInfo: parsedProductInfo,
+        options: parsedOptions
+      });
+      
+      const { funnelPages: validatedPages, productInfo: validatedProduct, options: validatedOptions } = validatedData;
+
+      // Import TemplateGenerator
+      const { templateGenerator } = await import('./template-generator');
+
+      console.log(`🎯 Generating preview for ${validatedPages.length} pages`);
+
+      // Generate files for preview
+      const generatedFiles = templateGenerator.generateMultiPageFunnel(
+        validatedPages,
+        validatedProduct,
+        validatedOptions || {
+          colorScheme: 'modern',
+          layout: 'multi_section',
+          enableSharedComponents: true,
+          enableProgressTracking: true,
+          enableRouting: true
+        }
+      );
+
+      // Return file structure and key files for preview
+      const previewData = {
+        fileCount: Object.keys(generatedFiles).length,
+        pages: validatedPages.map((page: any) => ({
+          path: page.path,
+          name: page.name,
+          type: page.pageType,
+          hasFile: !!generatedFiles[page.path === '/' ? 'pages/index.js' : `pages${page.path}.js`]
+        })),
+        hasPackageJson: !!generatedFiles['package.json'],
+        hasTailwindConfig: !!generatedFiles['tailwind.config.js'],
+        hasGlobalCSS: !!generatedFiles['styles/globals.css'],
+        sampleFiles: {
+          'package.json': generatedFiles['package.json']?.substring(0, 500) + '...',
+          'pages/index.js': generatedFiles['pages/index.js']?.substring(0, 1000) + '...',
+        }
+      };
+
+      res.json({
+        success: true,
+        preview: previewData,
+        message: `Preview generated for ${validatedPages.length} pages`
+      });
+
+    } catch (error) {
+      console.error("❌ Generate preview error:", error);
+      
+      // Handle Zod validation errors
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Dados de entrada inválidos",
+          details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        error: "Failed to generate preview",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/funnels/deployment/:deploymentId/status", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { deploymentId } = req.params;
+      const { vercelAccessToken, teamId } = req.query;
+
+      if (!vercelAccessToken) {
+        return res.status(400).json({
+          success: false,
+          error: "Vercel access token is required"
+        });
+      }
+
+      // Import VercelService
+      const { vercelService } = await import('./vercel-service');
+
+      const deployment = await vercelService.getDeployment(
+        vercelAccessToken as string,
+        deploymentId,
+        teamId as string
+      );
+
+      res.json({
+        success: true,
+        deployment: {
+          id: deployment.uid,
+          url: deployment.url,
+          state: deployment.state,
+          name: deployment.name,
+          createdAt: deployment.createdAt,
+          buildingAt: deployment.buildingAt,
+          readyAt: deployment.readyAt
+        }
+      });
+
+    } catch (error) {
+      console.error("❌ Get deployment status error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to get deployment status",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   
