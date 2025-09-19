@@ -230,7 +230,7 @@ interface ElementRendererProps {
   editorMode: boolean;
 }
 
-function ElementRenderer({ element, theme, editorMode }: ElementRendererProps) {
+export function ElementRenderer({ element, theme, editorMode }: ElementRendererProps) {
   const finalStyles = buildFinalStyles(element.styles);
   
   const baseStyles = {

@@ -1465,47 +1465,6 @@ function DragOverlayContent({ item }: { item: any }) {
   return null;
 }
 
-// Simple Element Renderer (we'll improve this later)
-function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate }: {
-  element: BlockElement;
-  theme: PageModelV2['theme'];
-  editorMode: boolean;
-  isSelected: boolean;
-  onUpdate: (updates: Partial<BlockElement>) => void;
-}) {
-  // This is a simplified renderer - we'll integrate the full element components later
-  const baseStyles = {
-    ...element.styles,
-    padding: element.styles.padding || '0.5rem',
-    margin: element.styles.margin || '0',
-    backgroundColor: element.styles.backgroundColor || 'transparent',
-    border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e7eb',
-    borderRadius: '0.25rem',
-    minHeight: '2rem',
-    display: 'flex',
-    alignItems: 'center',
-  };
-
-  const content = element.content?.text || `${element.type} element`;
-
-  return (
-    <div style={baseStyles} data-testid={`rendered-element-${element.id}`}>
-      <span 
-        className="text-sm"
-        style={{ 
-          color: element.styles?.color || '#6b7280',
-          fontSize: element.styles?.fontSize || '0.875rem',
-          fontWeight: element.styles?.fontWeight || '400',
-          fontStyle: element.styles?.fontStyle || 'normal',
-          textAlign: element.styles?.textAlign as any || 'left'
-        }}
-      >
-        {content}
-      </span>
-    </div>
-  );
-}
-
 // Utility functions
 function moveElement(model: PageModelV2, elementId: string, targetColumnId: string): PageModelV2 {
   const newModel = { ...model };
