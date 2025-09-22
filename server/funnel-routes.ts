@@ -84,6 +84,15 @@ const createFunnelSchema = z.object({
   }).optional(),
 });
 
+const createAIPageSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  pageType: z.enum(["landing", "checkout", "upsell", "downsell", "thankyou"]),
+  product: z.string().min(1, "Produto/serviço é obrigatório"),
+  targetAudience: z.string().min(1, "Público-alvo é obrigatório"),
+  mainGoal: z.string().min(1, "Objetivo principal é obrigatório"),
+  additionalInfo: z.string().optional(),
+});
+
 const deployFunnelSchema = z.object({
   funnelId: z.string().uuid("Funnel ID deve ser um UUID válido"),
   customDomain: z.string().optional(),
@@ -1092,6 +1101,117 @@ router.post("/funnels/:funnelId/pages", authenticateToken, validateOperationAcce
     });
   } catch (error) {
     console.error('❌ Erro ao criar página:', error);
+    
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: "Dados inválidos",
+        details: error.errors
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
+    });
+  }
+});
+
+/**
+ * Create a new page using AI generation
+ */
+router.post("/funnels/:funnelId/pages/ai-generate", authenticateToken, validateOperationAccess, async (req, res) => {
+  try {
+    const { funnelId } = req.params;
+    const operationId = req.validatedOperationId;
+    const userId = (req as any).user.id;
+
+    console.log(`🤖 Creating AI-generated page for funnel: ${funnelId}`);
+
+    // Validate funnel exists and belongs to operation
+    const [funnel] = await db
+      .select()
+      .from(funnels)
+      .where(
+        and(
+          eq(funnels.id, funnelId),
+          eq(funnels.operationId, operationId)
+        )
+      )
+      .limit(1);
+
+    if (!funnel) {
+      return res.status(404).json({
+        success: false,
+        error: "Funil não encontrado"
+      });
+    }
+
+    // Validate AI page data
+    const aiPageData = createAIPageSchema.parse(req.body);
+    
+    // Generate unique path based on page name
+    const basePath = `/${aiPageData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
+    let path = basePath;
+    let counter = 1;
+    
+    // Ensure path is unique within this funnel
+    while (true) {
+      const [existingPage] = await db
+        .select()
+        .from(funnelPages)
+        .where(
+          and(
+            eq(funnelPages.funnelId, funnelId),
+            eq(funnelPages.path, path)
+          )
+        )
+        .limit(1);
+
+      if (!existingPage) break;
+      path = `${basePath}-${counter}`;
+      counter++;
+    }
+
+    // Generate AI content using OpenAI
+    const aiGeneratedModel = await generateAIPageModel(aiPageData, funnel);
+
+    // Create the page with AI-generated model
+    const pageData = {
+      funnelId,
+      name: aiPageData.name,
+      pageType: aiPageData.pageType,
+      path,
+      model: aiGeneratedModel,
+      status: "draft" as const,
+      lastEditedBy: userId
+    };
+
+    // Create the page
+    const [newPage] = await db
+      .insert(funnelPages)
+      .values([pageData])
+      .returning();
+
+    // Create initial revision
+    await db
+      .insert(funnelPageRevisions)
+      .values([{
+        pageId: newPage.id,
+        version: 1,
+        changeType: 'ai_generated',
+        model: newPage.model,
+        changeDescription: `Página criada com IA: ${aiPageData.pageType} para ${aiPageData.product}`,
+        createdBy: userId
+      }]);
+
+    return res.status(201).json({
+      success: true,
+      message: "Página criada com IA com sucesso",
+      page: newPage
+    });
+  } catch (error) {
+    console.error('❌ Erro ao criar página com IA:', error);
     
     if (error instanceof z.ZodError) {
       return res.status(400).json({
