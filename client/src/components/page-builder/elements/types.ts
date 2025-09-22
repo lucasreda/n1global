@@ -7,6 +7,7 @@ export interface ElementProps {
   onUpdate?: (updates: Partial<BlockElement>) => void;
   onSelect?: () => void;
   isSelected?: boolean;
+  viewport?: 'desktop' | 'tablet' | 'mobile';
 }
 
 export interface ElementToolbarProps {

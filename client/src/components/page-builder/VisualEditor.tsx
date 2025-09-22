@@ -568,6 +568,7 @@ function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpd
               isSelected={selectedElementId === element.id}
               onSelect={() => onSelectElement(element.id)}
               onUpdate={onUpdateElement}
+              viewport={viewport}
             />
             {/* Drop zone after each element */}
             <DropZone
@@ -646,6 +647,7 @@ interface ModernElementProps {
   isSelected: boolean;
   onSelect: () => void;
   onUpdate: (elementId: string, updates: Partial<BlockElement>) => void;
+  viewport: 'desktop' | 'tablet' | 'mobile';
 }
 
 const ModernElement = React.memo(function ModernElement({ 
@@ -653,7 +655,8 @@ const ModernElement = React.memo(function ModernElement({
   theme, 
   isSelected, 
   onSelect, 
-  onUpdate 
+  onUpdate,
+  viewport 
 }: ModernElementProps) {
   const {
     attributes,
@@ -707,6 +710,7 @@ const ModernElement = React.memo(function ModernElement({
           theme={theme}
           isSelected={isSelected}
           onUpdate={handleUpdate}
+          viewport={viewport}
         />
       </div>
     );
@@ -731,6 +735,7 @@ const ModernElement = React.memo(function ModernElement({
         editorMode={true}
         isSelected={isSelected}
         onUpdate={handleUpdate}
+        viewport={viewport}
       />
     </div>
   );
@@ -742,9 +747,10 @@ interface StructuralElementRendererProps {
   theme: PageModelV2['theme'];
   isSelected: boolean;
   onUpdate: (updates: Partial<BlockElement>) => void;
+  viewport: 'desktop' | 'tablet' | 'mobile';
 }
 
-function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: StructuralElementRendererProps) {
+function StructuralElementRenderer({ element, theme, isSelected, onUpdate, viewport }: StructuralElementRendererProps) {
   const children = element.children || [];
   const isBlock = element.type === 'block';
   const isContainer = element.type === 'container';
@@ -826,6 +832,7 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
                         isSelected={isSelected}
                         onSelect={() => {}}
                         onUpdate={(elementId, updates) => onUpdate(updates)}
+                        viewport={viewport}
                       />
                       {/* Drop zone after each element in column */}
                       <BlockColumnDropZone
@@ -883,6 +890,7 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
               isSelected={isSelected}
               onSelect={() => {}}
               onUpdate={(elementId, updates) => onUpdate(updates)}
+              viewport={viewport}
             />
             {/* Drop zone after each child */}
             <ElementDropZone
@@ -914,6 +922,7 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
         editorMode={true}
         isSelected={isSelected}
         onUpdate={onUpdate}
+        viewport={viewport}
       />
       
       {/* Container for nested elements */}
@@ -933,6 +942,7 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate }: Str
               isSelected={isSelected}
               onSelect={() => {}}
               onUpdate={(elementId, updates) => onUpdate(updates)}
+              viewport={viewport}
             />
             {/* Drop zone after each child */}
             <ElementDropZone

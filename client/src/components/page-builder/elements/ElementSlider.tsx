@@ -18,7 +18,8 @@ export function ElementSlider({
   editorMode = false, 
   onUpdate, 
   onSelect, 
-  isSelected = false 
+  isSelected = false,
+  viewport = 'desktop'
 }: ElementProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -37,6 +38,25 @@ export function ElementSlider({
   );
 
   const autoPlayInterval = element.content?.autoPlayInterval || 5000;
+
+  // Function to get the correct image source based on viewport
+  const getCurrentImageSrc = (image: SliderImage) => {
+    if (editorMode) {
+      // In editor mode, use viewport prop to determine which image to show
+      switch (viewport) {
+        case 'mobile':
+          return image.srcMobile || image.src;
+        case 'tablet':
+          return image.srcMobile || image.src; // Use mobile image for tablet too
+        case 'desktop':
+        default:
+          return image.srcDesktop || image.src;
+      }
+    } else {
+      // In preview mode, show desktop image by default (CSS handles responsiveness)
+      return image.srcDesktop || image.src;
+    }
+  };
 
   // Auto-play functionality
   useEffect(() => {
@@ -397,64 +417,12 @@ export function ElementSlider({
           height: '100%'
         }}>
           {images.map((image) => {
-            // Determinar qual imagem mostrar baseada no tamanho da tela
-            const getResponsiveImageSrc = () => {
-              // Se tiver imagens responsivas, usar media queries CSS
-              if (image.srcDesktop || image.srcMobile) {
-                return image.srcDesktop || image.srcMobile || image.src;
-              }
-              // Fallback para imagem padrão
-              return image.src;
-            };
-
-            const imageSrc = getResponsiveImageSrc();
+            const imageSrc = getCurrentImageSrc(image);
 
             return (
               <div key={image.id} style={{ width: `${100 / images.length}%`, height: '100%' }}>
-                {/* Para imagens responsivas, renderizar ambas e usar CSS para mostrar/ocultar */}
-                {(image.srcDesktop || image.srcMobile) ? (
-                  <>
-                    {/* Imagem Desktop */}
-                    {image.srcDesktop && (
-                      <img
-                        src={image.srcDesktop}
-                        alt={image.alt}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover' as const,
-                          display: 'block', // Usar CSS responsivo via classes se necessário
-                        }}
-                        className="block md:block sm:hidden" // Tailwind responsive classes
-                        onError={(e) => {
-                          console.error('Desktop image failed to load:', image.srcDesktop);
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                    {/* Imagem Mobile */}
-                    {image.srcMobile && (
-                      <img
-                        src={image.srcMobile}
-                        alt={image.alt}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover' as const,
-                          position: image.srcDesktop ? 'absolute' as const : 'static' as const,
-                          top: 0,
-                          left: 0,
-                        }}
-                        className="block md:hidden" // Tailwind responsive classes  
-                        onError={(e) => {
-                          console.error('Mobile image failed to load:', image.srcMobile);
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    )}
-                  </>
-                ) : (
-                  // Imagem única (compatibilidade)
+                {editorMode ? (
+                  // In editor mode, show only the viewport-appropriate image
                   <img
                     src={imageSrc}
                     alt={image.alt}
@@ -468,6 +436,44 @@ export function ElementSlider({
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
+                ) : (
+                  // In preview mode, render responsive images for CSS media queries
+                  <>
+                    {/* Desktop image */}
+                    {(image.srcDesktop || image.src) && (
+                      <img
+                        src={image.srcDesktop || image.src}
+                        alt={image.alt}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover' as const,
+                        }}
+                        className="hidden md:block"
+                        onError={(e) => {
+                          console.error('Desktop image failed to load:', image.srcDesktop || image.src);
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    {/* Mobile image */}
+                    {image.srcMobile && (
+                      <img
+                        src={image.srcMobile}
+                        alt={image.alt}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover' as const,
+                        }}
+                        className="block md:hidden"
+                        onError={(e) => {
+                          console.error('Mobile image failed to load:', image.srcMobile);
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                  </>
                 )}
                 
                 {image.caption && (

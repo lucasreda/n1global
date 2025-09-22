@@ -237,9 +237,10 @@ interface ElementRendererProps {
   editorMode: boolean;
   isSelected?: boolean;
   onUpdate?: (updates: Partial<BlockElement>) => void;
+  viewport?: 'desktop' | 'tablet' | 'mobile';
 }
 
-export function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate }: ElementRendererProps) {
+export function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate, viewport }: ElementRendererProps) {
   const finalStyles = buildFinalStyles(element.styles);
   
   const baseStyles = {
@@ -509,6 +510,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
           editorMode={editorMode}
           isSelected={isSelected}
           onUpdate={onUpdate}
+          viewport={viewport}
         />
       );
 
