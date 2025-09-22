@@ -595,9 +595,7 @@ router.get("/cartpanda/orders", authenticateToken, validateOperationAccess, asyn
       bearerToken: integration.bearerToken
     });
 
-    const orders = await cartpandaService.listOrders({
-      limit: parseInt(limit as string, 10)
-    });
+    const orders = await cartpandaService.listOrders();
 
     res.json({
       success: true,
