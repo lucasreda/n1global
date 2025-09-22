@@ -266,26 +266,7 @@ export function createDefaultElement(type: BlockElement['type']): BlockElement {
           backgroundColor: 'transparent',
         },
         content: {
-          images: [
-            {
-              id: '1',
-              src: 'https://via.placeholder.com/800x400?text=Imagem+1',
-              alt: 'Imagem 1',
-              caption: 'Primeira imagem do slider'
-            },
-            {
-              id: '2',
-              src: 'https://via.placeholder.com/800x400?text=Imagem+2',
-              alt: 'Imagem 2',
-              caption: 'Segunda imagem do slider'
-            },
-            {
-              id: '3',
-              src: 'https://via.placeholder.com/800x400?text=Imagem+3',
-              alt: 'Imagem 3',
-              caption: 'Terceira imagem do slider'
-            }
-          ],
+          images: [], // Iniciar vazio - sem placeholders quebrados
           autoPlay: true,
           autoPlayInterval: 5000
         },

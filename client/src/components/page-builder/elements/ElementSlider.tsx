@@ -64,7 +64,7 @@ export function ElementSlider({
   const addImage = () => {
     const newImage: SliderImage = {
       id: Date.now().toString(),
-      src: 'https://via.placeholder.com/800x400?text=Nova+Imagem',
+      src: '',
       alt: 'Nova imagem',
       caption: 'Legenda da nova imagem'
     };
@@ -263,6 +263,33 @@ export function ElementSlider({
             </div>
           </div>
         ))}
+        
+        {/* Botão para adicionar novo slide */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          marginTop: '1rem'
+        }}>
+          <button
+            onClick={addImage}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '500'
+            }}
+          >
+            <Plus size={16} />
+            Adicionar Slide
+          </button>
+        </div>
         
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
           <button
