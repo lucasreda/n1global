@@ -88,24 +88,63 @@ export function ElementSlider({
       alt: 'Nova imagem',
       caption: 'Legenda da nova imagem'
     };
-    setImages([...images, newImage]);
+    const newImages = [...images, newImage];
+    setImages(newImages);
+    
+    // Auto-save quando nova imagem é adicionada
+    if (onUpdate) {
+      onUpdate({
+        content: {
+          ...element.content,
+          images: newImages,
+          autoPlay: isAutoPlaying,
+          autoPlayInterval
+        },
+      });
+    }
   };
 
   const removeImage = (id: string) => {
-    setImages(images.filter(image => image.id !== id));
+    const newImages = images.filter(image => image.id !== id);
+    setImages(newImages);
     if (currentSlide >= images.length - 1) {
       setCurrentSlide(Math.max(0, images.length - 2));
+    }
+    
+    // Auto-save quando imagem é removida
+    if (onUpdate) {
+      onUpdate({
+        content: {
+          ...element.content,
+          images: newImages,
+          autoPlay: isAutoPlaying,
+          autoPlayInterval
+        },
+      });
     }
   };
 
   const updateImage = (id: string, updates: Partial<SliderImage>) => {
-    setImages(images.map(image => 
+    const newImages = images.map(image => 
       image.id === id ? { ...image, ...updates } : image
-    ));
+    );
+    setImages(newImages);
+    
+    // Auto-save quando imagem é atualizada (alt text, caption)
+    if (onUpdate) {
+      onUpdate({
+        content: {
+          ...element.content,
+          images: newImages,
+          autoPlay: isAutoPlaying,
+          autoPlayInterval
+        },
+      });
+    }
   };
 
   const updateImageUrls = (id: string, imageUrls: { desktop?: string; mobile?: string }) => {
-    setImages(images.map(image => {
+    const newImages = images.map(image => {
       if (image.id === id) {
         const updatedImage = { ...image };
         if (imageUrls.desktop) updatedImage.srcDesktop = imageUrls.desktop;
@@ -117,11 +156,25 @@ export function ElementSlider({
         return updatedImage;
       }
       return image;
-    }));
+    });
+    
+    setImages(newImages);
+    
+    // Auto-save quando imagens são carregadas
+    if (onUpdate) {
+      onUpdate({
+        content: {
+          ...element.content,
+          images: newImages,
+          autoPlay: isAutoPlaying,
+          autoPlayInterval
+        },
+      });
+    }
   };
 
   const removeImageUrl = (id: string, type: 'desktop' | 'mobile') => {
-    setImages(images.map(image => {
+    const newImages = images.map(image => {
       if (image.id === id) {
         const updatedImage = { ...image };
         if (type === 'desktop') {
@@ -132,7 +185,21 @@ export function ElementSlider({
         return updatedImage;
       }
       return image;
-    }));
+    });
+    
+    setImages(newImages);
+    
+    // Auto-save quando URL de imagem é removida
+    if (onUpdate) {
+      onUpdate({
+        content: {
+          ...element.content,
+          images: newImages,
+          autoPlay: isAutoPlaying,
+          autoPlayInterval
+        },
+      });
+    }
   };
 
   const saveChanges = () => {
