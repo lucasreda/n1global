@@ -1,10 +1,13 @@
 import { ElementProps } from './types';
 import { useState, useEffect } from 'react';
-import { Plus, X, ChevronLeft, ChevronRight, Image as ImageIcon, Play, Pause } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, Image as ImageIcon, Play, Pause, Monitor, Smartphone } from 'lucide-react';
+import { DualImageUploader } from '../DualImageUploader';
 
 type SliderImage = {
   id: string;
-  src: string;
+  src: string; // Mantemos para compatibilidade
+  srcDesktop?: string;
+  srcMobile?: string;
   alt: string;
   caption?: string;
 };
@@ -91,6 +94,37 @@ export function ElementSlider({
     ));
   };
 
+  const updateImageUrls = (id: string, imageUrls: { desktop?: string; mobile?: string }) => {
+    setImages(images.map(image => {
+      if (image.id === id) {
+        const updatedImage = { ...image };
+        if (imageUrls.desktop) updatedImage.srcDesktop = imageUrls.desktop;
+        if (imageUrls.mobile) updatedImage.srcMobile = imageUrls.mobile;
+        // Para compatibilidade, usamos desktop como src principal
+        if (imageUrls.desktop && !updatedImage.src) {
+          updatedImage.src = imageUrls.desktop;
+        }
+        return updatedImage;
+      }
+      return image;
+    }));
+  };
+
+  const removeImageUrl = (id: string, type: 'desktop' | 'mobile') => {
+    setImages(images.map(image => {
+      if (image.id === id) {
+        const updatedImage = { ...image };
+        if (type === 'desktop') {
+          updatedImage.srcDesktop = undefined;
+        } else {
+          updatedImage.srcMobile = undefined;
+        }
+        return updatedImage;
+      }
+      return image;
+    }));
+  };
+
   const saveChanges = () => {
     setIsEditing(false);
     if (onUpdate) {
@@ -172,24 +206,10 @@ export function ElementSlider({
             borderRadius: '0.5rem',
             border: '1px solid #e5e7eb'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
               <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#374151', minWidth: '60px' }}>
                 Slide {index + 1}
               </span>
-              
-              <input
-                type="text"
-                value={image.src}
-                onChange={(e) => updateImage(image.id, { src: e.target.value })}
-                placeholder="URL da imagem"
-                style={{
-                  flex: 1,
-                  padding: '0.5rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.25rem',
-                  fontSize: '0.875rem'
-                }}
-              />
               
               <button
                 onClick={() => removeImage(image.id)}
@@ -199,11 +219,22 @@ export function ElementSlider({
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.25rem',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  marginLeft: 'auto'
                 }}
               >
                 <X size={14} />
               </button>
+            </div>
+            
+            {/* Upload de imagens responsivas */}
+            <div style={{ marginBottom: '1rem' }}>
+              <DualImageUploader
+                onImageUpload={(imageUrls) => updateImageUrls(image.id, imageUrls)}
+                currentDesktopUrl={image.srcDesktop || image.src}
+                currentMobileUrl={image.srcMobile}
+                onImageRemove={(type) => removeImageUrl(image.id, type)}
+              />
             </div>
             
             <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -343,36 +374,94 @@ export function ElementSlider({
           width: `${images.length * 100}%`,
           height: '100%'
         }}>
-          {images.map((image) => (
-            <div key={image.id} style={{ width: `${100 / images.length}%`, height: '100%' }}>
-              <img
-                src={image.src}
-                alt={image.alt}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover' as const,
-                }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Imagem+não+encontrada';
-                }}
-              />
-              {image.caption && (
-                <div style={{
-                  position: 'absolute' as const,
-                  bottom: '0',
-                  left: '0',
-                  right: '0',
-                  background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
-                  color: 'white',
-                  padding: theme.spacing.md,
-                  fontSize: element.styles.captionFontSize || theme.typography.fontSize.sm,
-                }}>
-                  {image.caption}
-                </div>
-              )}
-            </div>
-          ))}
+          {images.map((image) => {
+            // Determinar qual imagem mostrar baseada no tamanho da tela
+            const getResponsiveImageSrc = () => {
+              // Se tiver imagens responsivas, usar media queries CSS
+              if (image.srcDesktop || image.srcMobile) {
+                return image.srcDesktop || image.srcMobile || image.src;
+              }
+              // Fallback para imagem padrão
+              return image.src;
+            };
+
+            const imageSrc = getResponsiveImageSrc();
+
+            return (
+              <div key={image.id} style={{ width: `${100 / images.length}%`, height: '100%' }}>
+                {/* Para imagens responsivas, renderizar ambas e usar CSS para mostrar/ocultar */}
+                {(image.srcDesktop || image.srcMobile) ? (
+                  <>
+                    {/* Imagem Desktop */}
+                    {image.srcDesktop && (
+                      <img
+                        src={image.srcDesktop}
+                        alt={image.alt}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover' as const,
+                          display: 'block', // Usar CSS responsivo via classes se necessário
+                        }}
+                        className="block md:block sm:hidden" // Tailwind responsive classes
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Desktop+não+encontrada';
+                        }}
+                      />
+                    )}
+                    {/* Imagem Mobile */}
+                    {image.srcMobile && (
+                      <img
+                        src={image.srcMobile}
+                        alt={image.alt}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover' as const,
+                          position: image.srcDesktop ? 'absolute' as const : 'static' as const,
+                          top: 0,
+                          left: 0,
+                        }}
+                        className="block md:hidden" // Tailwind responsive classes  
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Mobile+não+encontrada';
+                        }}
+                      />
+                    )}
+                  </>
+                ) : (
+                  // Imagem única (compatibilidade)
+                  <img
+                    src={imageSrc}
+                    alt={image.alt}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover' as const,
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Imagem+não+encontrada';
+                    }}
+                  />
+                )}
+                
+                {image.caption && (
+                  <div style={{
+                    position: 'absolute' as const,
+                    bottom: '0',
+                    left: '0',
+                    right: '0',
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                    color: 'white',
+                    padding: theme.spacing.md,
+                    fontSize: element.styles.captionFontSize || theme.typography.fontSize.sm,
+                  }}>
+                    {image.caption}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Navigation arrows */}
