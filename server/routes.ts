@@ -4332,7 +4332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/users/:userId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { userId } = req.params;
-      const { name, email, password, role, permissions } = req.body;
+      const { name, email, password, role, permissions, onboardingCompleted } = req.body;
 
       // Verificar se o usuário existe
       const existingUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -4384,6 +4384,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (permissions !== undefined) {
         updateData.permissions = permissions;
+      }
+
+      if (onboardingCompleted !== undefined) {
+        updateData.onboardingCompleted = Boolean(onboardingCompleted);
       }
 
       // Atualizar o usuário
