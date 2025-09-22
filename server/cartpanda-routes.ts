@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { CartPandaService, CartPandaCredentials } from "./cartpanda-service";
 import { db } from "./db";
-import { cartpandaIntegrations } from "@shared/schema";
+import { cartpandaIntegrations, orders } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { authenticateToken } from "./auth-middleware";
 import { validateOperationAccess } from "./middleware/operation-access";
@@ -234,15 +234,97 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const orders = await cartpandaService.listOrders({
+    const cartpandaOrders = await cartpandaService.listOrders({
       limit: 100,
       created_at_min: thirtyDaysAgo.toISOString().split('T')[0] + ' 00:00:00'
     });
 
-    console.log(`📊 ${orders.length} pedidos encontrados na CartPanda`);
+    console.log(`📊 ${cartpandaOrders.length} pedidos encontrados na CartPanda`);
 
-    // TODO: Implementar lógica de sincronização com a tabela orders
-    // Por enquanto, apenas retornar os dados para teste
+    let importedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    // Importar pedidos para a tabela orders
+    for (const cartpandaOrder of cartpandaOrders) {
+      try {
+        // Verificar se o pedido já existe
+        const existingOrder = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.id, `cartpanda_${cartpandaOrder.id}`))
+          .limit(1);
+
+        const orderData = {
+          id: `cartpanda_${cartpandaOrder.id}`,
+          storeId: '4a4377cc-38ed-44d2-a925-cd043c63fc31', // default store ID
+          operationId: operationId,
+          dataSource: 'cartpanda',
+          
+          // Customer information
+          customerId: cartpandaOrder.customer?.id?.toString() || null,
+          customerName: cartpandaOrder.customer ? `${cartpandaOrder.customer.first_name || ''} ${cartpandaOrder.customer.last_name || ''}`.trim() || 'Cliente CartPanda' : 'Cliente CartPanda',
+          customerEmail: cartpandaOrder.email || cartpandaOrder.customer?.email || null,
+          customerPhone: cartpandaOrder.customer?.phone || null,
+          customerAddress: cartpandaOrder.billing_address ? JSON.stringify(cartpandaOrder.billing_address) : null,
+          customerCity: null, // Extrair da billing_address se necessário
+          customerState: null, // Extrair da billing_address se necessário
+          customerCountry: null, // Extrair da billing_address se necessário 
+          customerZip: null, // Extrair da billing_address se necessário
+          
+          // Order details
+          status: mapCartPandaStatus(cartpandaOrder.status || 'pending'),
+          paymentStatus: mapCartPandaPaymentStatus((cartpandaOrder as any).payment_status || 'unpaid'),
+          paymentMethod: (cartpandaOrder as any).payment_method || 'unknown',
+          
+          // Financial
+          total: (cartpandaOrder as any).total || (cartpandaOrder as any).total_price || '0.00',
+          currency: (cartpandaOrder as any).currency || 'BRL',
+          
+          // Products
+          products: (cartpandaOrder as any).items || (cartpandaOrder as any).line_items || [],
+          
+          // Provider
+          provider: 'cartpanda',
+          providerOrderId: cartpandaOrder.id?.toString(),
+          
+          // Timestamps
+          orderDate: new Date(cartpandaOrder.created_at || Date.now()),
+          lastStatusUpdate: new Date(cartpandaOrder.updated_at || Date.now()),
+          
+          // Store complete CartPanda data
+          providerData: cartpandaOrder,
+          
+          // Standard timestamps
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        if (existingOrder.length > 0) {
+          // Atualizar pedido existente
+          await db
+            .update(orders)
+            .set({
+              ...orderData,
+              updatedAt: new Date()
+            })
+            .where(eq(orders.id, `cartpanda_${cartpandaOrder.id}`));
+          updatedCount++;
+          console.log(`🔄 Pedido atualizado: ${cartpandaOrder.id}`);
+        } else {
+          // Criar novo pedido
+          await db.insert(orders).values(orderData);
+          importedCount++;
+          console.log(`✅ Pedido importado: ${cartpandaOrder.id}`);
+        }
+
+      } catch (error) {
+        console.error(`❌ Erro ao importar pedido ${cartpandaOrder.id}:`, error);
+        skippedCount++;
+      }
+    }
+
+    console.log(`🎯 Importação concluída: ${importedCount} novos, ${updatedCount} atualizados, ${skippedCount} erros`);
 
     // Atualizar timestamp da última sincronização
     await db
@@ -256,11 +338,13 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
 
     res.json({
       success: true,
-      message: `Sincronização concluída: ${orders.length} pedidos processados`,
+      message: `Sincronização concluída: ${importedCount} novos, ${updatedCount} atualizados, ${skippedCount} erros`,
       data: {
-        ordersCount: orders.length,
-        syncedAt: new Date().toISOString(),
-        // orders: orders.slice(0, 5) // Retornar apenas os primeiros 5 para teste
+        ordersCount: cartpandaOrders.length,
+        importedCount,
+        updatedCount, 
+        skippedCount,
+        syncedAt: new Date().toISOString()
       }
     });
 
@@ -577,5 +661,38 @@ router.get("/cartpanda/fulfillments", authenticateToken, validateOperationAccess
     });
   }
 });
+
+/**
+ * Mapear status do CartPanda para status interno
+ */
+function mapCartPandaStatus(cartpandaStatus: string): string {
+  const statusMap: Record<string, string> = {
+    'pending': 'pending',
+    'confirmed': 'confirmed', 
+    'processing': 'confirmed',
+    'shipped': 'shipped',
+    'delivered': 'delivered',
+    'cancelled': 'cancelled',
+    'refunded': 'cancelled',
+    'fulfilled': 'delivered'
+  };
+  
+  return statusMap[cartpandaStatus?.toLowerCase()] || 'pending';
+}
+
+/**
+ * Mapear status de pagamento do CartPanda para status interno
+ */
+function mapCartPandaPaymentStatus(financialStatus: string): string {
+  const paymentMap: Record<string, string> = {
+    'paid': 'paid',
+    'pending': 'unpaid',
+    'refunded': 'refunded',
+    'partially_refunded': 'paid',
+    'unpaid': 'unpaid'
+  };
+  
+  return paymentMap[financialStatus?.toLowerCase()] || 'unpaid';
+}
 
 export { router as cartpandaRoutes };

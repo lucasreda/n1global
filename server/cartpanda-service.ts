@@ -188,9 +188,16 @@ export class CartPandaService {
       const data = await response.json();
       console.log(`📋 Estrutura da resposta CartPanda:`, JSON.stringify(data, null, 2));
       
-      // A API pode retornar um array diretamente ou um objeto com os pedidos dentro
-      const orders = Array.isArray(data) ? data : (data.orders || data.data || []);
-      console.log(`✅ ${orders.length} pedidos encontrados`);
+      // CartPanda retorna: { orders: { data: [], total: 0, ... } }
+      const orders = data.orders?.data || data.data || data.orders || [];
+      const total = data.orders?.total || data.total || orders.length;
+      
+      console.log(`✅ ${orders.length} pedidos encontrados de ${total} total na loja`);
+      
+      if (total === 0) {
+        console.log(`ℹ️  Loja CartPanda está vazia ou não possui pedidos no período solicitado`);
+      }
+      
       return orders;
     } catch (error) {
       console.error('❌ Erro ao listar pedidos:', error);
