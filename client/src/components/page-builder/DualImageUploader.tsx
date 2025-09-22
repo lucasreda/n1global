@@ -91,7 +91,7 @@ export function DualImageUploader({
 
     try {
       // Get upload URL from backend
-      const response = await apiRequest('POST', '/api/objects/upload');
+      const response = await apiRequest('/api/objects/upload', 'POST');
       const data = await response.json();
       
       // Upload file directly to storage
