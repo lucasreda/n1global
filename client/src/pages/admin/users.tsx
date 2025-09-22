@@ -480,7 +480,7 @@ export default function AdminUsers() {
                   <SelectValue placeholder="Selecione a função" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="store">Loja</SelectItem>
+                  <SelectItem value="user">Cliente</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                   <SelectItem value="admin_financeiro">Administrador Financeiro</SelectItem>
                   <SelectItem value="supplier">Fornecedor</SelectItem>
