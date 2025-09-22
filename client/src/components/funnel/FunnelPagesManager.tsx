@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, FileText } from "lucide-react";
 import { PageCard } from "./PageCard";
 import { CreatePageModal } from "./CreatePageModal";
+import { CreateAIPageModal } from "./CreateAIPageModal";
+import { PageCreationOptionsModal } from "./PageCreationOptionsModal";
 import { authenticatedApiRequest } from "@/lib/auth";
 
 interface FunnelPage {
@@ -28,7 +30,9 @@ interface FunnelPagesManagerProps {
 }
 
 export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -108,6 +112,22 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
     duplicatePageMutation.mutate(pageId);
   };
 
+  const handleSelectBlankPage = () => {
+    setShowOptionsModal(false);
+    setShowCreateModal(true);
+  };
+
+  const handleSelectAIPage = () => {
+    setShowOptionsModal(false);
+    setShowAIModal(true);
+  };
+
+  const handleModalSuccess = () => {
+    setShowCreateModal(false);
+    setShowAIModal(false);
+    queryClient.invalidateQueries({ queryKey: ['/api/funnels', funnelId, 'pages'] });
+  };
+
   const getPageTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       'landing': 'Landing Page',
@@ -181,7 +201,7 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
           </p>
         </div>
         <Button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => setShowOptionsModal(true)}
           className="bg-blue-600 hover:bg-blue-700"
           data-testid="button-create-page"
         >
@@ -200,7 +220,7 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
               Comece criando sua primeira página para este funil
             </p>
             <Button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => setShowOptionsModal(true)}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -229,15 +249,28 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
         </div>
       )}
 
+      {/* Page Creation Options Modal */}
+      <PageCreationOptionsModal
+        open={showOptionsModal}
+        onOpenChange={setShowOptionsModal}
+        onSelectBlankPage={handleSelectBlankPage}
+        onSelectAIPage={handleSelectAIPage}
+      />
+
       {/* Create Page Modal */}
       <CreatePageModal
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         funnelId={funnelId}
-        onSuccess={() => {
-          setShowCreateModal(false);
-          queryClient.invalidateQueries({ queryKey: ['/api/funnels', funnelId, 'pages'] });
-        }}
+        onSuccess={handleModalSuccess}
+      />
+
+      {/* Create AI Page Modal */}
+      <CreateAIPageModal
+        open={showAIModal}
+        onOpenChange={setShowAIModal}
+        funnelId={funnelId}
+        onSuccess={handleModalSuccess}
       />
     </div>
   );
