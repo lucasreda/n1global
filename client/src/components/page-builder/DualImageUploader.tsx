@@ -112,12 +112,14 @@ export function DualImageUploader({
       }
 
       const uploadUrl = data.uploadURL;
+      // Convert the GCS URL to the local object path that can be served by our backend
+      const convertedUrl = convertGcsUrlToObjectPath(uploadUrl);
       
-      // Call onImageUpload with the new URL for the specific type
+      // Call onImageUpload with the converted URL for the specific type
       if (type === 'desktop') {
-        onImageUpload({ desktop: uploadUrl });
+        onImageUpload({ desktop: convertedUrl });
       } else {
-        onImageUpload({ mobile: uploadUrl });
+        onImageUpload({ mobile: convertedUrl });
       }
 
       toast({
