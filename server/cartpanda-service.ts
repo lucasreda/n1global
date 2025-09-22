@@ -152,19 +152,28 @@ export class CartPandaService {
    * Lista pedidos da loja CartPanda
    */
   async listOrders(params?: {
-    limit?: number;
     created_at_min?: string;
     created_at_max?: string;
     status?: string;
-    financial_status?: string;
+    payment_status?: number;
+    email?: string;
+    opt_in?: string;
+    payment_gateway_id?: string;
+    updated_at_min?: string;
+    updated_at_max?: string;
   }): Promise<CartPandaOrder[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      // Usando parâmetros corretos da documentação CartPanda
       if (params?.created_at_min) queryParams.append('created_at_min', params.created_at_min);
       if (params?.created_at_max) queryParams.append('created_at_max', params.created_at_max);
       if (params?.status) queryParams.append('status', params.status);
-      if (params?.financial_status) queryParams.append('financial_status', params.financial_status);
+      if (params?.payment_status !== undefined) queryParams.append('payment_status', params.payment_status.toString());
+      if (params?.email) queryParams.append('email', params.email);
+      if (params?.opt_in) queryParams.append('opt_in', params.opt_in);
+      if (params?.payment_gateway_id) queryParams.append('payment_gateway_id', params.payment_gateway_id);
+      if (params?.updated_at_min) queryParams.append('updated_at_min', params.updated_at_min);
+      if (params?.updated_at_max) queryParams.append('updated_at_max', params.updated_at_max);
 
       const url = `${this.baseUrl}/${this.credentials.storeSlug}/orders?${queryParams.toString()}`;
       console.log(`📊 Buscando pedidos CartPanda: ${url}`);

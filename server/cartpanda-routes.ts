@@ -235,14 +235,14 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     
     let cartpandaOrders = [];
     
-    // Teste 1: Sem parâmetros
+    // Teste 1: Sem parâmetros (usa paginação padrão da CartPanda)
     console.log('📊 Teste 1: Sem parâmetros...');
-    cartpandaOrders = await cartpandaService.listOrders({});
+    cartpandaOrders = await cartpandaService.listOrders();
     
     if (cartpandaOrders.length === 0) {
-      // Teste 2: Com limit alto
-      console.log('📊 Teste 2: Com limit 1000...');
-      cartpandaOrders = await cartpandaService.listOrders({ limit: 1000 });
+      // Teste 2: Parâmetros vazios explícitos
+      console.log('📊 Teste 2: Com parâmetros vazios...');
+      cartpandaOrders = await cartpandaService.listOrders({});
     }
     
     if (cartpandaOrders.length === 0) {
@@ -253,7 +253,7 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
       for (const status of statusesToTest) {
         try {
           console.log(`🔍 Testando status: ${status}`);
-          const orders = await cartpandaService.listOrders({ status, limit: 100 });
+          const orders = await cartpandaService.listOrders({ status });
           console.log(`📋 Status ${status}: ${orders.length} pedidos`);
           if (orders.length > 0) {
             cartpandaOrders = orders;
@@ -266,15 +266,18 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     }
     
     if (cartpandaOrders.length === 0) {
-      // Teste 4: Com diferentes status de pagamento
+      // Teste 4: Com diferentes status de pagamento (números conforme documentação)
       console.log('📊 Teste 4: Testando diferentes status de pagamento...');
-      const paymentStatusesToTest = ['paid', 'unpaid', 'pending', 'partial'];
+      const paymentStatusesToTest = [0, 1, 2, 3]; // números conforme documentação
+      const paymentStatusNames = ['unpaid', 'paid', 'pending', 'partial']; // para logs
       
-      for (const paymentStatus of paymentStatusesToTest) {
+      for (let i = 0; i < paymentStatusesToTest.length; i++) {
+        const paymentStatus = paymentStatusesToTest[i];
+        const statusName = paymentStatusNames[i];
         try {
-          console.log(`🔍 Testando payment status: ${paymentStatus}`);
-          const orders = await cartpandaService.listOrders({ financial_status: paymentStatus, limit: 100 });
-          console.log(`📋 Payment status ${paymentStatus}: ${orders.length} pedidos`);
+          console.log(`🔍 Testando payment_status: ${paymentStatus} (${statusName})`);
+          const orders = await cartpandaService.listOrders({ payment_status: paymentStatus });
+          console.log(`📋 Payment status ${paymentStatus} (${statusName}): ${orders.length} pedidos`);
           if (orders.length > 0) {
             cartpandaOrders = orders;
             break;
@@ -292,8 +295,7 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         const orders = await cartpandaService.listOrders({ 
-          created_at_min: sixMonthsAgo.toISOString(),
-          limit: 1000 
+          created_at_min: sixMonthsAgo.toISOString()
         });
         console.log(`📋 Últimos 6 meses: ${orders.length} pedidos`);
         cartpandaOrders = orders;
@@ -303,10 +305,10 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     }
     
     if (cartpandaOrders.length === 0) {
-      // Teste 6: Chamada manual à API com todos os parâmetros possíveis
+      // Teste 6: Chamada manual à API (sem parâmetros, paginação padrão)
       console.log('📊 Teste 6: Chamada manual detalhada...');
       try {
-        const testUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders?limit=1000&page=1`;
+        const testUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders`;
         console.log(`🔗 URL de teste: ${testUrl}`);
         
         const testResponse = await fetch(testUrl, {
