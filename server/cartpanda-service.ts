@@ -185,7 +185,11 @@ export class CartPandaService {
         throw new Error(`Erro ao buscar pedidos: HTTP ${response.status}`);
       }
 
-      const orders = await response.json();
+      const data = await response.json();
+      console.log(`📋 Estrutura da resposta CartPanda:`, JSON.stringify(data, null, 2));
+      
+      // A API pode retornar um array diretamente ou um objeto com os pedidos dentro
+      const orders = Array.isArray(data) ? data : (data.orders || data.data || []);
       console.log(`✅ ${orders.length} pedidos encontrados`);
       return orders;
     } catch (error) {
