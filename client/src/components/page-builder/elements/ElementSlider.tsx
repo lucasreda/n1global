@@ -24,7 +24,16 @@ export function ElementSlider({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(element.content?.autoPlay !== false);
   const [images, setImages] = useState<SliderImage[]>(
-    element.content?.images || [] // Iniciar vazio ao invés de com placeholders quebrados
+    () => {
+      // Filtrar imagens quebradas de placeholder ao carregar
+      const originalImages = element.content?.images || [];
+      const cleanImages = originalImages.filter((img: SliderImage) => 
+        !img.src?.includes('via.placeholder.com') &&
+        !img.srcDesktop?.includes('via.placeholder.com') &&
+        !img.srcMobile?.includes('via.placeholder.com')
+      );
+      return cleanImages;
+    }
   );
 
   const autoPlayInterval = element.content?.autoPlayInterval || 5000;
@@ -391,7 +400,8 @@ export function ElementSlider({
                         }}
                         className="block md:block sm:hidden" // Tailwind responsive classes
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Desktop+não+encontrada';
+                          console.error('Desktop image failed to load:', image.srcDesktop);
+                          (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     )}
@@ -410,7 +420,8 @@ export function ElementSlider({
                         }}
                         className="block md:hidden" // Tailwind responsive classes  
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Mobile+não+encontrada';
+                          console.error('Mobile image failed to load:', image.srcMobile);
+                          (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     )}
@@ -426,7 +437,8 @@ export function ElementSlider({
                       objectFit: 'cover' as const,
                     }}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Imagem+não+encontrada';
+                      console.error('Image failed to load:', imageSrc);
+                      (e.target as HTMLImageElement).style.display = 'none';
                     }}
                   />
                 )}
