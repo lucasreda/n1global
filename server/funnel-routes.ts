@@ -1982,4 +1982,266 @@ router.post("/funnels/page-templates", authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * Generate AI-powered PageModelV2 using OpenAI
+ */
+async function generateAIPageModel(aiPageData: any, funnel: any): Promise<any> {
+  const OpenAI = (await import('openai')).default;
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const systemPrompt = `Você é um especialista em criação de páginas de conversão e landing pages. Sua tarefa é gerar uma estrutura PageModelV2 completa para um page-builder visual.
+
+ESTRUTURA OBRIGATÓRIA:
+{
+  "version": 2,
+  "layout": "single_page",
+  "sections": [
+    {
+      "id": "section-uuid",
+      "type": "hero" | "content" | "cta" | "footer",
+      "rows": [
+        {
+          "id": "row-uuid", 
+          "columns": [
+            {
+              "id": "column-uuid",
+              "width": "full" | "1/2" | "1/3" | "2/3" | "1/4" | "3/4",
+              "elements": [
+                {
+                  "id": "element-uuid",
+                  "type": "heading" | "text" | "button" | "image" | "spacer" | "divider" | "video" | "form" | "embed" | "container" | "block" | "benefits" | "reviews" | "slider" | "hero" | "features" | "team" | "contact",
+                  "props": { /* configurações específicas do elemento */ },
+                  "styles": { /* estilos CSS */ },
+                  "children": [] /* apenas para containers e blocks */
+                }
+              ],
+              "styles": {}
+            }
+          ],
+          "styles": {}
+        }
+      ],
+      "styles": {}
+    }
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#3B82F6",
+      "secondary": "#1E40AF", 
+      "accent": "#F59E0B",
+      "background": "#FFFFFF",
+      "text": "#1F2937",
+      "muted": "#6B7280"
+    },
+    "fonts": {
+      "primary": "Inter",
+      "heading": "Inter"
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "1rem", 
+      "md": "1.5rem",
+      "lg": "2rem",
+      "xl": "3rem"
+    }
+  },
+  "seo": {
+    "title": "Título da página",
+    "description": "Descrição da página",
+    "keywords": []
+  }
+}
+
+ELEMENTOS DISPONÍVEIS E SUAS CONFIGURAÇÕES:
+
+1. HEADING:
+   - props: { text, tag (h1-h6), align }
+   - styles: { fontSize, fontWeight, color, textAlign, marginBottom }
+
+2. TEXT:
+   - props: { content, align }
+   - styles: { fontSize, lineHeight, color, textAlign }
+
+3. BUTTON:
+   - props: { text, link, variant (primary/secondary), size }
+   - styles: { backgroundColor, color, padding, borderRadius, fontSize }
+
+4. IMAGE:
+   - props: { src, alt, width, height }
+   - styles: { borderRadius, objectFit }
+
+5. SPACER:
+   - props: { height }
+   - styles: { height }
+
+6. FORM:
+   - props: { fields: [{ type, label, placeholder, required }], submitText, action }
+   - styles: { gap, padding }
+
+7. BENEFITS:
+   - props: { title, items: [{ icon, title, description }] }
+   - styles: { gap, textAlign }
+
+8. REVIEWS:
+   - props: { title, testimonials: [{ name, avatar, text, rating }] }
+   - styles: { gap, layout }
+
+REGRAS IMPORTANTES:
+- Sempre gere IDs únicos usando crypto.randomUUID()
+- Use pelo menos 3-5 seções diferentes
+- Inclua elementos visuais relevantes (imagens, botões, forms)
+- Adapte o conteúdo ao tipo de página e produto
+- Use cores e estilos consistentes com o tema
+- Crie conteúdo persuasivo e relevante ao público-alvo
+- Para landing pages: hero + benefits + social proof + form/cta
+- Para checkout: form + trust elements + guarantee
+- Para upsell: comparison + urgency + benefits
+
+Responda APENAS com o JSON válido da estrutura PageModelV2.`;
+
+  const userPrompt = `Gere uma página ${aiPageData.pageType} para:
+Produto/Serviço: ${aiPageData.product}
+Público-alvo: ${aiPageData.targetAudience}
+Objetivo: ${aiPageData.mainGoal}
+${aiPageData.additionalInfo ? `Informações adicionais: ${aiPageData.additionalInfo}` : ''}
+
+A página deve ser profissional, persuasiva e otimizada para conversão.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 4000,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("OpenAI não retornou conteúdo");
+    }
+
+    // Parse the JSON response
+    const generatedModel = JSON.parse(content);
+    
+    // Validate basic structure
+    if (!generatedModel.version || !generatedModel.sections) {
+      throw new Error("Estrutura PageModelV2 inválida retornada pela IA");
+    }
+
+    console.log(`✅ AI generated page model with ${generatedModel.sections.length} sections`);
+    return generatedModel;
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar página com IA:', error);
+    
+    // Fallback to a simple default structure
+    return {
+      version: 2,
+      layout: "single_page",
+      sections: [
+        {
+          id: crypto.randomUUID(),
+          type: "hero",
+          rows: [
+            {
+              id: crypto.randomUUID(),
+              columns: [
+                {
+                  id: crypto.randomUUID(),
+                  width: "full",
+                  elements: [
+                    {
+                      id: crypto.randomUUID(),
+                      type: "heading",
+                      props: {
+                        text: aiPageData.name,
+                        tag: "h1",
+                        align: "center"
+                      },
+                      styles: {
+                        fontSize: "3rem",
+                        fontWeight: "bold",
+                        color: "#1F2937",
+                        textAlign: "center",
+                        marginBottom: "1rem"
+                      }
+                    },
+                    {
+                      id: crypto.randomUUID(),
+                      type: "text",
+                      props: {
+                        content: `Página ${aiPageData.pageType} para ${aiPageData.product}`,
+                        align: "center"
+                      },
+                      styles: {
+                        fontSize: "1.25rem",
+                        color: "#6B7280",
+                        textAlign: "center",
+                        marginBottom: "2rem"
+                      }
+                    },
+                    {
+                      id: crypto.randomUUID(),
+                      type: "button",
+                      props: {
+                        text: "Começar Agora",
+                        variant: "primary",
+                        size: "large"
+                      },
+                      styles: {
+                        backgroundColor: "#3B82F6",
+                        color: "#FFFFFF",
+                        padding: "1rem 2rem",
+                        borderRadius: "0.5rem",
+                        fontSize: "1.125rem"
+                      }
+                    }
+                  ],
+                  styles: {}
+                }
+              ],
+              styles: {}
+            }
+          ],
+          styles: {
+            padding: "4rem 1rem",
+            backgroundColor: "#F9FAFB"
+          }
+        }
+      ],
+      theme: {
+        colors: {
+          primary: "#3B82F6",
+          secondary: "#1E40AF",
+          accent: "#F59E0B",
+          background: "#FFFFFF",
+          text: "#1F2937",
+          muted: "#6B7280"
+        },
+        fonts: {
+          primary: "Inter",
+          heading: "Inter"
+        },
+        spacing: {
+          xs: "0.5rem",
+          sm: "1rem",
+          md: "1.5rem",
+          lg: "2rem",
+          xl: "3rem"
+        }
+      },
+      seo: {
+        title: aiPageData.name,
+        description: `${aiPageData.pageType} para ${aiPageData.product}`,
+        keywords: [aiPageData.product, aiPageData.pageType]
+      }
+    };
+  }
+}
+
 export { router as funnelRoutes };
