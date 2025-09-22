@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Circle, Loader2, Package, ShoppingCart, Truck, Target, Zap, X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
 
 // European countries with flags
 const EUROPEAN_COUNTRIES = [
@@ -50,27 +47,11 @@ interface NewOperationDialogProps {
   onOperationCreated?: (operationId: string) => void;
 }
 
-interface OnboardingStep {
-  id: string;
-  title: string;
-  description: string;
-  icon: any;
-  completed: boolean;
-}
 
 export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: NewOperationDialogProps) {
   const [operationName, setOperationName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('');
-  const [currentStep, setCurrentStep] = useState(1);
-  const [operationId, setOperationId] = useState<string>('');
-  const [completedSteps, setCompletedSteps] = useState({
-    step1_operation: false,
-    step2_shopify: false,
-    step3_shipping: false,
-    step4_ads: false,
-    step5_sync: false
-  });
   const { toast } = useToast();
 
   // Reset state when dialog opens/closes
@@ -79,15 +60,6 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       setOperationName('');
       setSelectedCountry('');
       setSelectedCurrency('');
-      setCurrentStep(1);
-      setOperationId('');
-      setCompletedSteps({
-        step1_operation: false,
-        step2_shopify: false,
-        step3_shipping: false,
-        step4_ads: false,
-        step5_sync: false
-      });
     }
   }, [open]);
 
@@ -100,43 +72,6 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     }
   };
 
-  const steps: OnboardingStep[] = [
-    {
-      id: 'step1_operation',
-      title: 'Criar nova operação',
-      description: 'Configure o nome da sua nova operação comercial',
-      icon: Package,
-      completed: completedSteps.step1_operation
-    },
-    {
-      id: 'step2_shopify',
-      title: 'Integração Shopify',
-      description: 'Configure a integração com sua loja Shopify',
-      icon: ShoppingCart,
-      completed: completedSteps.step2_shopify
-    },
-    {
-      id: 'step3_shipping',
-      title: 'Provedor de envios',
-      description: 'Configure as credenciais do provedor de envios',
-      icon: Truck,
-      completed: completedSteps.step3_shipping
-    },
-    {
-      id: 'step4_ads',
-      title: 'Integração de anúncios',
-      description: 'Conecte suas contas de publicidade',
-      icon: Target,
-      completed: completedSteps.step4_ads
-    },
-    {
-      id: 'step5_sync',
-      title: 'Sincronização de dados',
-      description: 'Importe seus pedidos e dados',
-      icon: Zap,
-      completed: completedSteps.step5_sync
-    }
-  ];
 
   // Create operation mutation
   const createOperationMutation = useMutation({
@@ -156,13 +91,13 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       return response.json();
     },
     onSuccess: (response: any) => {
-      setOperationId(response.id);
-      setCompletedSteps(prev => ({ ...prev, step1_operation: true }));
-      setCurrentStep(2);
       toast({
         title: "Operação criada com sucesso!",
         description: `A operação "${operationName}" foi criada.`,
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
+      onOperationCreated?.(response.id);
+      onOpenChange(false);
     },
     onError: (error: any) => {
       console.error('Erro ao criar operação:', error);
@@ -174,49 +109,6 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     },
   });
 
-  // Skip step mutation
-  const skipStepMutation = useMutation({
-    mutationFn: async (stepId: string) => {
-      const response = await fetch('/api/onboarding/skip-step', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify({ stepId, operationId }),
-      });
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Failed to skip step: ${errorData}`);
-      }
-      return response.json();
-    },
-    onSuccess: (_, stepId) => {
-      setCompletedSteps(prev => ({ ...prev, [stepId]: true }));
-      
-      // Move to next step
-      if (currentStep < 5) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        // All steps completed
-        toast({
-          title: "Configuração concluída!",
-          description: "Sua nova operação foi configurada com sucesso.",
-        });
-        queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
-        onOperationCreated?.(operationId);
-        onOpenChange(false);
-      }
-    },
-    onError: (error: any) => {
-      console.error('Erro ao pular etapa:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao pular etapa",
-        description: error.message || "Ocorreu um erro inesperado.",
-      });
-    },
-  });
 
   const handleCreateOperation = () => {
     if (!operationName.trim()) {
@@ -243,32 +135,13 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     });
   };
 
-  const handleSkipStep = (stepId: string) => {
-    skipStepMutation.mutate(stepId);
-  };
-
-  const handleCompleteSetup = () => {
-    toast({
-      title: "Configuração concluída!",
-      description: "Sua nova operação foi configurada com sucesso.",
-    });
-    queryClient.invalidateQueries({ queryKey: ['/api/operations'] });
-    onOperationCreated?.(operationId);
-    onOpenChange(false);
-  };
-
-  const progress = (completedSteps.step1_operation ? 20 : 0) +
-                  (completedSteps.step2_shopify ? 20 : 0) +
-                  (completedSteps.step3_shipping ? 20 : 0) +
-                  (completedSteps.step4_ads ? 20 : 0) +
-                  (completedSteps.step5_sync ? 20 : 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] overflow-y-auto bg-gray-900 border-gray-700 text-white">
+      <DialogContent className="max-w-lg bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl text-white">
+            <DialogTitle className="text-xl text-white">
               Criar Nova Operação
             </DialogTitle>
             <Button
@@ -282,175 +155,74 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
           </div>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Progress Bar */}
+        <div className="space-y-4">
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">Progresso da configuração</span>
-              <span className="text-gray-300">{Math.round(progress)}% concluído</span>
-            </div>
-            <Progress value={progress} className="w-full bg-gray-700" />
+            <Label className="text-white">Nome da Operação</Label>
+            <Input
+              type="text"
+              placeholder="Ex: Loja Europa"
+              value={operationName}
+              onChange={(e) => setOperationName(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white"
+              data-testid="input-operation-name"
+            />
           </div>
 
-          {/* Steps Overview */}
-          <div className="grid grid-cols-5 gap-4 mb-6">
-            {steps.map((step, index) => {
-              const StepIcon = step.icon;
-              const isActive = index + 1 === currentStep;
-              const isCompleted = step.completed;
-              
-              return (
-                <div
-                  key={step.id}
-                  className={`text-center p-3 rounded-lg transition-all ${
-                    isActive 
-                      ? 'bg-blue-600/20 border border-blue-500/30' 
-                      : isCompleted 
-                        ? 'bg-green-600/20 border border-green-500/30'
-                        : 'bg-gray-800/50 border border-gray-700'
-                  }`}
-                >
-                  <div className="flex justify-center mb-2">
-                    {isCompleted ? (
-                      <CheckCircle className="w-6 h-6 text-green-400" />
-                    ) : (
-                      <StepIcon className={`w-6 h-6 ${
-                        isActive ? 'text-blue-400' : 'text-gray-500'
-                      }`} />
-                    )}
-                  </div>
-                  <p className={`text-xs font-medium ${
-                    isActive ? 'text-blue-400' : isCompleted ? 'text-green-400' : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Step Content */}
-          <Card className="bg-gray-800/50 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                {steps[currentStep - 1]?.icon && (() => {
-                  const StepIcon = steps[currentStep - 1].icon;
-                  return <StepIcon className="w-5 h-5 text-blue-400" />;
-                })()}
-                {steps[currentStep - 1]?.title}
-              </CardTitle>
-              <p className="text-gray-300">
-                {steps[currentStep - 1]?.description}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {currentStep === 1 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-white">Nome da Operação</Label>
-                      <Input
-                        type="text"
-                        placeholder="Ex: Loja Europa"
-                        value={operationName}
-                        onChange={(e) => setOperationName(e.target.value)}
-                        className="bg-gray-800 border-gray-700 text-white"
-                        data-testid="input-operation-name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-white">País</Label>
-                      <Select value={selectedCountry} onValueChange={handleCountryChange}>
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder="Selecione o país" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700">
-                          {EUROPEAN_COUNTRIES.map((country) => (
-                            <SelectItem 
-                              key={country.code} 
-                              value={country.code}
-                              className="text-white hover:bg-gray-700"
-                            >
-                              {country.flag} {country.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-white">Moeda</Label>
-                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                        <SelectValue placeholder="Selecione a moeda" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        {EUROPEAN_CURRENCIES.map((currency) => (
-                          <SelectItem 
-                            key={currency.code} 
-                            value={currency.code}
-                            className="text-white hover:bg-gray-700"
-                          >
-                            {currency.symbol} {currency.name} ({currency.code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Button
-                    onClick={handleCreateOperation}
-                    disabled={createOperationMutation.isPending}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                    data-testid="button-create-operation"
+          <div className="space-y-2">
+            <Label className="text-white">País</Label>
+            <Select value={selectedCountry} onValueChange={handleCountryChange}>
+              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectValue placeholder="Selecione o país" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                {EUROPEAN_COUNTRIES.map((country) => (
+                  <SelectItem 
+                    key={country.code} 
+                    value={country.code}
+                    className="text-white hover:bg-gray-700"
                   >
-                    {createOperationMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Criando operação...
-                      </>
-                    ) : (
-                      'Criar Operação'
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {currentStep > 1 && currentStep <= 5 && (
-                <div className="text-center space-y-4">
-                  <p className="text-gray-300">
-                    Esta etapa pode ser configurada posteriormente nas integrações.
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSkipStep(steps[currentStep - 1].id)}
-                      disabled={skipStepMutation.isPending}
-                      className="border-gray-600 text-white hover:bg-gray-700"
-                    >
-                      {skipStepMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Pulando...
-                        </>
-                      ) : (
-                        'Pular por Agora'
-                      )}
-                    </Button>
-                    {currentStep === 5 && (
-                      <Button
-                        onClick={handleCompleteSetup}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        Concluir Configuração
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    {country.flag} {country.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="text-white">Moeda</Label>
+            <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectValue placeholder="Selecione a moeda" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                {EUROPEAN_CURRENCIES.map((currency) => (
+                  <SelectItem 
+                    key={currency.code} 
+                    value={currency.code}
+                    className="text-white hover:bg-gray-700"
+                  >
+                    {currency.symbol} {currency.name} ({currency.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Button
+            onClick={handleCreateOperation}
+            disabled={createOperationMutation.isPending}
+            className="w-full bg-blue-600 hover:bg-blue-700 mt-6"
+            data-testid="button-create-operation"
+          >
+            {createOperationMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Criando operação...
+              </>
+            ) : (
+              'Criar Operação'
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
