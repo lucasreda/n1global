@@ -230,10 +230,11 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
       bearerToken: integration.bearerToken
     });
 
-    // Buscar TODOS os pedidos desde 2020
+    // Buscar TODOS os pedidos sem filtro de data
+    console.log('🔍 Testando sem filtro de data...');
     const cartpandaOrders = await cartpandaService.listOrders({
-      limit: 100,
-      created_at_min: '2020-01-01 00:00:00'
+      limit: 100
+      // Removendo filtro de data para testar
     });
 
     console.log(`📊 ${cartpandaOrders.length} pedidos encontrados na CartPanda`);

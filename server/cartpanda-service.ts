@@ -193,9 +193,15 @@ export class CartPandaService {
       const total = data.orders?.total || data.total || orders.length;
       
       console.log(`✅ ${orders.length} pedidos encontrados de ${total} total na loja`);
+      console.log(`🔍 Parâmetros utilizados:`, params);
+      console.log(`🎯 URL da requisição: ${url}`);
+      console.log(`🔐 Store slug: ${this.credentials.storeSlug}`);
+      console.log(`🔑 Token iniciado com: ${this.credentials.bearerToken.substring(0, 10)}...`);
       
       if (total === 0) {
-        console.log(`ℹ️  Loja CartPanda está vazia ou não possui pedidos no período solicitado`);
+        console.log(`⚠️ PROBLEMA: Loja não retorna pedidos com os parâmetros atuais`);
+        console.log(`💡 SUGESTÃO: Verifique se a loja '${this.credentials.storeSlug}' está correta`);
+        console.log(`💡 SUGESTÃO: Verifique se o token tem permissões para acessar pedidos`);
       }
       
       return orders;
