@@ -188,9 +188,15 @@ export function Sidebar() {
             </SelectContent>
           </Select>
         ) : (
-          <div className="p-3 text-sm text-muted-foreground border rounded-md" data-testid="no-operations">
-            Carregando operações...
-          </div>
+          <Button 
+            onClick={() => setShowNewOperationDialog(true)} 
+            className="w-full" 
+            variant="outline"
+            data-testid="create-operation-button"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Criar Operação
+          </Button>
         )}
       </div>
 
