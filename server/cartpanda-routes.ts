@@ -246,10 +246,67 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     }
     
     if (cartpandaOrders.length === 0) {
-      // Teste 3: Testando URL completa manualmente
-      console.log('📊 Teste 3: Chamada manual à API...');
+      // Teste 3: Com diferentes status
+      console.log('📊 Teste 3: Testando diferentes status...');
+      const statusesToTest = ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'refunded'];
+      
+      for (const status of statusesToTest) {
+        try {
+          console.log(`🔍 Testando status: ${status}`);
+          const orders = await cartpandaService.listOrders({ status, limit: 100 });
+          console.log(`📋 Status ${status}: ${orders.length} pedidos`);
+          if (orders.length > 0) {
+            cartpandaOrders = orders;
+            break;
+          }
+        } catch (error) {
+          console.log(`❌ Erro testando status ${status}:`, error);
+        }
+      }
+    }
+    
+    if (cartpandaOrders.length === 0) {
+      // Teste 4: Com diferentes status de pagamento
+      console.log('📊 Teste 4: Testando diferentes status de pagamento...');
+      const paymentStatusesToTest = ['paid', 'unpaid', 'pending', 'partial'];
+      
+      for (const paymentStatus of paymentStatusesToTest) {
+        try {
+          console.log(`🔍 Testando payment status: ${paymentStatus}`);
+          const orders = await cartpandaService.listOrders({ financial_status: paymentStatus, limit: 100 });
+          console.log(`📋 Payment status ${paymentStatus}: ${orders.length} pedidos`);
+          if (orders.length > 0) {
+            cartpandaOrders = orders;
+            break;
+          }
+        } catch (error) {
+          console.log(`❌ Erro testando payment status ${paymentStatus}:`, error);
+        }
+      }
+    }
+    
+    if (cartpandaOrders.length === 0) {
+      // Teste 5: Últimos 6 meses sem filtros
+      console.log('📊 Teste 5: Últimos 6 meses...');
       try {
-        const testUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders`;
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const orders = await cartpandaService.listOrders({ 
+          created_at_min: sixMonthsAgo.toISOString(),
+          limit: 1000 
+        });
+        console.log(`📋 Últimos 6 meses: ${orders.length} pedidos`);
+        cartpandaOrders = orders;
+      } catch (error) {
+        console.log(`❌ Erro testando últimos 6 meses:`, error);
+      }
+    }
+    
+    if (cartpandaOrders.length === 0) {
+      // Teste 6: Chamada manual à API com todos os parâmetros possíveis
+      console.log('📊 Teste 6: Chamada manual detalhada...');
+      try {
+        const testUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders?limit=1000&page=1`;
         console.log(`🔗 URL de teste: ${testUrl}`);
         
         const testResponse = await fetch(testUrl, {
