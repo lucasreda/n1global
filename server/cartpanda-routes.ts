@@ -331,6 +331,57 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
     }
 
     console.log(`📊 ${cartpandaOrders.length} pedidos encontrados na CartPanda`);
+    
+    // Teste FINAL: Verificar se conseguimos acessar outros endpoints
+    if (cartpandaOrders.length === 0) {
+      console.log('🔍 TESTE FINAL: Verificando acesso a outros dados...');
+      
+      // Testar produtos
+      try {
+        const productsUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/products?limit=5`;
+        console.log(`🛍️ Testando produtos: ${productsUrl}`);
+        
+        const productsResponse = await fetch(productsUrl, {
+          headers: {
+            'Authorization': `Bearer ${integration.bearerToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json();
+          console.log('🛍️ Resposta de produtos:', JSON.stringify(productsData, null, 2));
+        } else {
+          console.log(`❌ Erro ao acessar produtos: ${productsResponse.status}`);
+        }
+      } catch (error) {
+        console.log(`❌ Erro testando produtos:`, error);
+      }
+      
+      // Testar informações da loja
+      try {
+        const storeUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/store`;
+        console.log(`🏪 Testando info da loja: ${storeUrl}`);
+        
+        const storeResponse = await fetch(storeUrl, {
+          headers: {
+            'Authorization': `Bearer ${integration.bearerToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (storeResponse.ok) {
+          const storeData = await storeResponse.json();
+          console.log('🏪 Resposta da loja:', JSON.stringify(storeData, null, 2));
+        } else {
+          console.log(`❌ Erro ao acessar info da loja: ${storeResponse.status}`);
+        }
+      } catch (error) {
+        console.log(`❌ Erro testando loja:`, error);
+      }
+    }
 
     let importedCount = 0;
     let updatedCount = 0;
