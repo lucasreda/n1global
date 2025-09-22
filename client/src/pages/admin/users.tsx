@@ -33,6 +33,7 @@ const USER_PAGES = [
   { id: 'ads', name: 'Anúncios', description: 'Campanhas publicitárias', icon: '📢' },
   { id: 'analytics', name: 'Analytics', description: 'Análises e relatórios', icon: '📈' },
   { id: 'creatives', name: 'Criativos', description: 'Gestão de criativos publicitários', icon: '🎨' },
+  { id: 'funnels', name: 'Funis de Venda', description: 'Criação e edição de funis de vendas', icon: '🔄' },
   { id: 'support', name: 'Suporte', description: 'Central de suporte ao cliente', icon: '🎧' },
   { id: 'integrations', name: 'Integrações', description: 'Configuração de integrações', icon: '🔌' },
   { id: 'tools', name: 'Ferramentas', description: 'Ferramentas do sistema', icon: '🔧' }
