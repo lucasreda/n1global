@@ -468,18 +468,6 @@ export default function Login() {
               </Form>
             )}
 
-                <div className="mt-8 pt-6 border-t border-border">
-                  <p className="text-center text-muted-foreground">
-                    {isLoginMode ? "Novo por aqui?" : "Já tem conta?"}{" "}
-                    <button
-                      onClick={() => setIsLoginMode(!isLoginMode)}
-                      className="text-primary hover:text-primary/80 font-medium transition-colors duration-200"
-                      data-testid="button-toggle-auth"
-                    >
-                      {isLoginMode ? "Criar conta" : "Fazer login"}
-                    </button>
-                  </p>
-                </div>
               </div>
             </div>
           </div>
