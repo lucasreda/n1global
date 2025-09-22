@@ -26,13 +26,31 @@ export function ElementSlider({
   const [isAutoPlaying, setIsAutoPlaying] = useState(element.content?.autoPlay !== false);
   const [images, setImages] = useState<SliderImage[]>(
     () => {
-      // Filtrar imagens quebradas de placeholder ao carregar
+      // Debug: Log das imagens originais
       const originalImages = element.content?.images || [];
-      const cleanImages = originalImages.filter((img: SliderImage) => 
-        !img.src?.includes('via.placeholder.com') &&
-        !img.srcDesktop?.includes('via.placeholder.com') &&
-        !img.srcMobile?.includes('via.placeholder.com')
-      );
+      console.log('🔍 ElementSlider INIT - Original images:', originalImages);
+      
+      // Filtrar apenas placeholders vazios ou via.placeholder.com
+      const cleanImages = originalImages.filter((img: SliderImage) => {
+        const hasValidUrl = img.src || img.srcDesktop || img.srcMobile;
+        const isPlaceholder = img.src?.includes('via.placeholder.com') ||
+                             img.srcDesktop?.includes('via.placeholder.com') ||
+                             img.srcMobile?.includes('via.placeholder.com');
+        
+        const shouldKeep = hasValidUrl && !isPlaceholder;
+        console.log(`🔍 Image ${img.id}:`, {
+          src: img.src,
+          srcDesktop: img.srcDesktop,
+          srcMobile: img.srcMobile,
+          hasValidUrl,
+          isPlaceholder,
+          shouldKeep
+        });
+        
+        return shouldKeep;
+      });
+      
+      console.log('🔍 ElementSlider INIT - Clean images:', cleanImages);
       return cleanImages;
     }
   );
