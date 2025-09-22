@@ -24,26 +24,7 @@ export function ElementSlider({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(element.content?.autoPlay !== false);
   const [images, setImages] = useState<SliderImage[]>(
-    element.content?.images || [
-      {
-        id: '1',
-        src: 'https://via.placeholder.com/800x400?text=Imagem+1',
-        alt: 'Imagem 1',
-        caption: 'Primeira imagem do slider'
-      },
-      {
-        id: '2', 
-        src: 'https://via.placeholder.com/800x400?text=Imagem+2',
-        alt: 'Imagem 2',
-        caption: 'Segunda imagem do slider'
-      },
-      {
-        id: '3',
-        src: 'https://via.placeholder.com/800x400?text=Imagem+3',
-        alt: 'Imagem 3', 
-        caption: 'Terceira imagem do slider'
-      }
-    ]
+    element.content?.images || [] // Iniciar vazio ao invés de com placeholders quebrados
   );
 
   const autoPlayInterval = element.content?.autoPlayInterval || 5000;
@@ -172,8 +153,13 @@ export function ElementSlider({
   if (editorMode && isEditing) {
     return (
       <div style={{ ...baseStyles, border: '2px dashed #3b82f6', background: '#f8fafc' }}>
-        <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#374151' }}>
-          Editar Slider
+        <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: '#374151', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span>Editar Slider</span>
+          {images.length === 0 && (
+            <span style={{ color: '#ef4444', fontSize: '0.75rem', fontStyle: 'italic' }}>
+              (Vazio - adicione pelo menos uma imagem)
+            </span>
+          )}
         </div>
         
         {/* Auto-play controls */}
