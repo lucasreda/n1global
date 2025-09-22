@@ -90,9 +90,13 @@ export function DualImageUploader({
     }
 
     try {
+      console.log(`🚀 [${type}] Starting upload process for file:`, file.name);
+      
       // Get upload URL from backend
       const response = await apiRequest('/api/objects/upload', 'POST');
+      console.log(`🔗 [${type}] API response received, status:`, response.status);
       const data = await response.json();
+      console.log(`📦 [${type}] Upload URL data:`, data);
       
       // Upload file directly to storage
       const uploadResponse = await fetch(data.uploadURL, {
@@ -171,9 +175,9 @@ export function DualImageUploader({
   }) => (
     <div className="flex-1">
       <div className="flex items-center gap-2 mb-2">
-        {type === 'desktop' ? <Monitor className="h-4 w-4 text-gray-700 dark:text-gray-300" /> : <Smartphone className="h-4 w-4 text-gray-700 dark:text-gray-300" />}
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          {type === 'desktop' ? 'Desktop' : 'Mobile'}
+        {type === 'desktop' ? <Monitor className="h-4 w-4 text-red-600" /> : <Smartphone className="h-4 w-4 text-blue-600" />}
+        <span className="text-sm font-bold text-black bg-white px-1 rounded">
+          {type === 'desktop' ? '🖥️ Desktop' : '📱 Mobile'}
         </span>
       </div>
       
@@ -212,12 +216,12 @@ export function DualImageUploader({
             {isUploading ? (
               <>
                 <Upload className="h-4 w-4 text-gray-400 animate-pulse" />
-                <span className="text-xs text-gray-700 dark:text-gray-300">Enviando...</span>
+                <span className="text-xs text-red-600 font-bold">Enviando...</span>
               </>
             ) : (
               <>
                 <ImageIcon className="h-4 w-4 text-gray-400" />
-                <span className="text-xs text-gray-700 dark:text-gray-300">Adicionar</span>
+                <span className="text-xs text-blue-600 font-bold">Adicionar</span>
               </>
             )}
           </div>
