@@ -359,6 +359,52 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
         console.log(`❌ Erro testando produtos:`, error);
       }
       
+      // Testar diferentes variações da URL de pedidos
+      try {
+        const urlVariations = [
+          `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders?per_page=250`,
+          `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders?page=1&per_page=250`,
+          `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders?limit=250&page=1`,
+          `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders/all`,
+          `https://api.cartpanda.com/${integration.storeSlug}/orders`,
+          `https://accounts.cartpanda.com/api/v1/${integration.storeSlug}/orders`,
+        ];
+        
+        console.log('🔍 TESTE AVANÇADO: Testando diferentes URLs...');
+        
+        for (const testUrl of urlVariations) {
+          console.log(`🌐 Testando URL: ${testUrl}`);
+          
+          const response = await fetch(testUrl, {
+            headers: {
+              'Authorization': `Bearer ${integration.bearerToken}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          console.log(`📊 Resposta ${response.status} para: ${testUrl}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            const totalOrders = data.orders?.total || data.total || (data.orders?.data || data.data || []).length;
+            console.log(`✅ ${totalOrders} pedidos encontrados com URL: ${testUrl}`);
+            
+            if (totalOrders > 0) {
+              console.log('🎉 ENCONTRAMOS OS PEDIDOS! URL correta:', testUrl);
+              console.log('📋 Dados dos pedidos:', JSON.stringify(data, null, 2));
+              cartpandaOrders = data.orders?.data || data.data || [];
+              break;
+            }
+          } else {
+            const errorText = await response.text();
+            console.log(`❌ Erro ${response.status}: ${errorText}`);
+          }
+        }
+      } catch (error) {
+        console.log(`❌ Erro testando variações de URL:`, error);
+      }
+      
       // Testar informações da loja
       try {
         const storeUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/store`;
