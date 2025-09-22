@@ -127,8 +127,8 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
 
     if (!testResult.success) {
       return res.status(400).json({
-        error: "Falha na conexão com CartPanda",
-        details: testResult.error
+        success: false,
+        error: testResult.error || "Falha na conexão com CartPanda"
       });
     }
 
