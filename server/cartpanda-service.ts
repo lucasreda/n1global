@@ -82,6 +82,7 @@ export class CartPandaService {
       
       // Testar a conexão fazendo uma chamada para listar pedidos com limite 1
       const url = `${this.baseUrl}/${this.credentials.storeSlug}/order?limit=1`;
+      console.log(`🌐 URL completa da requisição: ${url}`);
       const response = await fetch(url, {
         method: 'GET',
         headers: {

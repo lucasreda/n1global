@@ -154,8 +154,7 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
           lastSyncAt: null, // Reset last sync since credentials changed
           syncErrors: null,
           metadata: {
-            storeUrl: `https://${storeSlug}.mycartpanda.com`,
-            lastTestedAt: new Date().toISOString()
+            storeUrl: `https://${storeSlug}.mycartpanda.com`
           },
           updatedAt: new Date()
         })
@@ -173,8 +172,7 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
           bearerToken,
           status: "active",
           metadata: {
-            storeUrl: `https://${storeSlug}.mycartpanda.com`,
-            lastTestedAt: new Date().toISOString()
+            storeUrl: `https://${storeSlug}.mycartpanda.com`
           }
         })
         .returning();
