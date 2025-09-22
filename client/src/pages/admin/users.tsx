@@ -61,6 +61,7 @@ interface SystemUser {
   supplierType?: string;
   lastLoginAt?: string;
   isActive?: boolean;
+  onboardingCompleted?: boolean;
 }
 
 export default function AdminUsers() {
@@ -80,7 +81,8 @@ export default function AdminUsers() {
     email: '',
     password: '',
     role: '',
-    permissions: [] as string[]
+    permissions: [] as string[],
+    onboardingCompleted: false
   });
   const [activeTab, setActiveTab] = useState("general");
 
@@ -168,7 +170,7 @@ export default function AdminUsers() {
   });
 
   const editUserMutation = useMutation({
-    mutationFn: async (userData: { id: string; name?: string; email?: string; password?: string; role?: string; permissions?: string[] }) => {
+    mutationFn: async (userData: { id: string; name?: string; email?: string; password?: string; role?: string; permissions?: string[]; onboardingCompleted?: boolean }) => {
       const token = localStorage.getItem("auth_token");
       const response = await fetch(`/api/admin/users/${userData.id}`, {
         method: 'PUT',
@@ -301,7 +303,8 @@ export default function AdminUsers() {
       email: user.email,
       password: '',
       role: user.role,
-      permissions: user.permissions || []
+      permissions: user.permissions || [],
+      onboardingCompleted: user.onboardingCompleted || false
     });
     setActiveTab("general");
     setShowEditModal(true);
@@ -317,6 +320,9 @@ export default function AdminUsers() {
     if (editUserData.role !== userToEdit.role) updateData.role = editUserData.role;
     if (JSON.stringify(editUserData.permissions) !== JSON.stringify(userToEdit.permissions || [])) {
       updateData.permissions = editUserData.permissions;
+    }
+    if (editUserData.onboardingCompleted !== (userToEdit.onboardingCompleted || false)) {
+      updateData.onboardingCompleted = editUserData.onboardingCompleted;
     }
     
     editUserMutation.mutate(updateData);
@@ -586,6 +592,42 @@ export default function AdminUsers() {
                       <SelectItem value="super_admin" className="text-white hover:bg-gray-700">Super Admin</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Onboarding Status Card */}
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${editUserData.onboardingCompleted ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
+                        {editUserData.onboardingCompleted ? '✅' : '👤'}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-white mb-1">
+                        Status do Onboarding
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {editUserData.onboardingCompleted 
+                          ? 'O onboarding foi concluído pelo usuário'
+                          : 'O onboarding ainda não foi concluído'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Checkbox
+                        checked={editUserData.onboardingCompleted}
+                        onCheckedChange={(checked) => 
+                          setEditUserData({ ...editUserData, onboardingCompleted: checked === true })
+                        }
+                        data-testid="checkbox-onboarding-completed"
+                      />
+                    </div>
+                  </div>
+                  {editUserData.onboardingCompleted && (
+                    <div className="mt-3 p-2 bg-green-500/10 border border-green-500/20 rounded text-xs text-green-400">
+                      ✨ Usuário pode acessar todas as funcionalidades do sistema
+                    </div>
+                  )}
                 </div>
               </TabsContent>
               
