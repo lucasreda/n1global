@@ -81,7 +81,7 @@ export class CartPandaService {
       console.log(`🔗 Testando conexão CartPanda: ${this.credentials.storeSlug}`);
       
       // Testar a conexão fazendo uma chamada para listar pedidos com limite 1
-      const url = `${this.baseUrl}/${this.credentials.storeSlug}/order?limit=1`;
+      const url = `${this.baseUrl}/${this.credentials.storeSlug}/orders?limit=1`;
       console.log(`🌐 URL completa da requisição: ${url}`);
       const response = await fetch(url, {
         method: 'GET',
@@ -166,7 +166,7 @@ export class CartPandaService {
       if (params?.status) queryParams.append('status', params.status);
       if (params?.financial_status) queryParams.append('financial_status', params.financial_status);
 
-      const url = `${this.baseUrl}/${this.credentials.storeSlug}/order?${queryParams.toString()}`;
+      const url = `${this.baseUrl}/${this.credentials.storeSlug}/orders?${queryParams.toString()}`;
       console.log(`📊 Buscando pedidos CartPanda: ${url}`);
 
       const response = await fetch(url, {
@@ -199,7 +199,7 @@ export class CartPandaService {
    */
   async getOrder(orderId: string): Promise<CartPandaOrder> {
     try {
-      const url = `${this.baseUrl}/${this.credentials.storeSlug}/order/${orderId}`;
+      const url = `${this.baseUrl}/${this.credentials.storeSlug}/orders/${orderId}`;
       console.log(`📋 Buscando pedido CartPanda: ${orderId}`);
 
       const response = await fetch(url, {
