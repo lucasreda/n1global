@@ -64,7 +64,7 @@ export function ElementSlider({
   const addImage = () => {
     const newImage: SliderImage = {
       id: Date.now().toString(),
-      src: '',
+      src: '', // Vazio - sem placeholder
       alt: 'Nova imagem',
       caption: 'Legenda da nova imagem'
     };
@@ -226,7 +226,7 @@ export function ElementSlider({
             <div style={{ marginBottom: '1rem' }}>
               <DualImageUploader
                 onImageUpload={(imageUrls) => updateImageUrls(image.id, imageUrls)}
-                currentDesktopUrl={image.srcDesktop || image.src}
+                currentDesktopUrl={image.srcDesktop || (image.src && image.src.trim() ? image.src : undefined)}
                 currentMobileUrl={image.srcMobile}
                 onImageRemove={(type) => removeImageUrl(image.id, type)}
               />
