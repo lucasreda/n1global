@@ -230,13 +230,13 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
       bearerToken: integration.bearerToken
     });
 
-    // Buscar pedidos recentes (últimos 30 dias)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Buscar pedidos recentes (últimos 6 meses para garantir que encontremos dados)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
     const cartpandaOrders = await cartpandaService.listOrders({
       limit: 100,
-      created_at_min: thirtyDaysAgo.toISOString().split('T')[0] + ' 00:00:00'
+      created_at_min: sixMonthsAgo.toISOString().split('T')[0] + ' 00:00:00'
     });
 
     console.log(`📊 ${cartpandaOrders.length} pedidos encontrados na CartPanda`);
