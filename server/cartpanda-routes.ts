@@ -230,12 +230,48 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
       bearerToken: integration.bearerToken
     });
 
-    // Buscar TODOS os pedidos sem filtro de data
-    console.log('🔍 Testando sem filtro de data...');
-    const cartpandaOrders = await cartpandaService.listOrders({
-      limit: 100
-      // Removendo filtro de data para testar
-    });
+    // Testando múltiplas abordagens para encontrar os pedidos
+    console.log('🔍 Investigando CartPanda com múltiplos testes...');
+    
+    let cartpandaOrders = [];
+    
+    // Teste 1: Sem parâmetros
+    console.log('📊 Teste 1: Sem parâmetros...');
+    cartpandaOrders = await cartpandaService.listOrders({});
+    
+    if (cartpandaOrders.length === 0) {
+      // Teste 2: Com limit alto
+      console.log('📊 Teste 2: Com limit 1000...');
+      cartpandaOrders = await cartpandaService.listOrders({ limit: 1000 });
+    }
+    
+    if (cartpandaOrders.length === 0) {
+      // Teste 3: Testando URL completa manualmente
+      console.log('📊 Teste 3: Chamada manual à API...');
+      try {
+        const testUrl = `https://accounts.cartpanda.com/api/${integration.storeSlug}/orders`;
+        console.log(`🔗 URL de teste: ${testUrl}`);
+        
+        const testResponse = await fetch(testUrl, {
+          headers: {
+            'Authorization': `Bearer ${integration.bearerToken}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (testResponse.ok) {
+          const testData = await testResponse.json();
+          console.log('📋 Resposta manual da API:', JSON.stringify(testData, null, 2));
+          cartpandaOrders = testData.orders?.data || testData.data || [];
+        } else {
+          const errorText = await testResponse.text();
+          console.log(`❌ Erro na chamada manual: ${testResponse.status} - ${errorText}`);
+        }
+      } catch (error) {
+        console.log(`❌ Erro na chamada manual:`, error);
+      }
+    }
 
     console.log(`📊 ${cartpandaOrders.length} pedidos encontrados na CartPanda`);
 
