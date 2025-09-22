@@ -171,8 +171,8 @@ export function DualImageUploader({
   }) => (
     <div className="flex-1">
       <div className="flex items-center gap-2 mb-2">
-        {type === 'desktop' ? <Monitor className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
-        <span className="text-sm font-medium">
+        {type === 'desktop' ? <Monitor className="h-4 w-4 text-gray-700 dark:text-gray-300" /> : <Smartphone className="h-4 w-4 text-gray-700 dark:text-gray-300" />}
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
           {type === 'desktop' ? 'Desktop' : 'Mobile'}
         </span>
       </div>
@@ -212,12 +212,12 @@ export function DualImageUploader({
             {isUploading ? (
               <>
                 <Upload className="h-4 w-4 text-gray-400 animate-pulse" />
-                <span className="text-xs text-gray-600">Enviando...</span>
+                <span className="text-xs text-gray-700 dark:text-gray-300">Enviando...</span>
               </>
             ) : (
               <>
                 <ImageIcon className="h-4 w-4 text-gray-400" />
-                <span className="text-xs text-gray-600">Adicionar</span>
+                <span className="text-xs text-gray-700 dark:text-gray-300">Adicionar</span>
               </>
             )}
           </div>
