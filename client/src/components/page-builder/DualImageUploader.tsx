@@ -194,38 +194,42 @@ export function DualImageUploader({
               }
             }}
           />
-          <Button
+          <button
             type="button"
-            variant="destructive"
-            size="sm"
-            onClick={() => handleRemoveImage(type)}
-            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleRemoveImage(type);
+            }}
+            className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center cursor-pointer z-10"
+            style={{
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+            }}
           >
             <X className="h-3 w-3" />
-          </Button>
+          </button>
         </div>
       ) : (
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={() => handleButtonClick(type)}
           disabled={isUploading}
-          className="w-full h-16 border-2 border-dashed hover:border-gray-400 transition-colors"
+          className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border-none"
         >
           <div className="flex flex-col items-center justify-center gap-1">
             {isUploading ? (
               <>
-                <Upload className="h-4 w-4 text-gray-400 animate-pulse" />
-                <span className="text-xs text-red-600 font-bold">Enviando...</span>
+                <Upload className="h-4 w-4 text-white animate-pulse" />
+                <span className="text-xs text-white font-bold">Enviando...</span>
               </>
             ) : (
               <>
-                <ImageIcon className="h-4 w-4 text-gray-400" />
-                <span className="text-xs text-blue-600 font-bold">Adicionar</span>
+                <ImageIcon className="h-4 w-4 text-white" />
+                <span className="text-xs text-white font-bold">Adicionar</span>
               </>
             )}
           </div>
-        </Button>
+        </button>
       )}
     </div>
   );
