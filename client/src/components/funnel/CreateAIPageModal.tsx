@@ -35,7 +35,7 @@ import { authenticatedApiRequest } from "@/lib/auth";
 
 const createAIPageSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  pageType: z.string().min(1, "Tipo de página é obrigatório"),
+  pageType: z.enum(["landing", "checkout", "upsell", "downsell", "thankyou"]),
   product: z.string().min(1, "Produto/serviço é obrigatório"),
   targetAudience: z.string().min(1, "Público-alvo é obrigatório"),
   mainGoal: z.string().min(1, "Objetivo principal é obrigatório"),
@@ -59,7 +59,7 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
     resolver: zodResolver(createAIPageSchema),
     defaultValues: {
       name: "",
-      pageType: "",
+      pageType: "landing" as const,
       product: "",
       targetAudience: "",
       mainGoal: "",
@@ -102,7 +102,7 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
     { value: 'checkout', label: 'Checkout', description: 'Página de finalização de compra' },
     { value: 'upsell', label: 'Upsell', description: 'Oferta adicional após compra' },
     { value: 'downsell', label: 'Downsell', description: 'Oferta alternativa mais barata' },
-    { value: 'thank_you', label: 'Obrigado', description: 'Página de confirmação' },
+    { value: 'thankyou', label: 'Obrigado', description: 'Página de confirmação' },
   ];
 
   return (
