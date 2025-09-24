@@ -5,7 +5,7 @@ import { MediaEnrichmentEngine } from './engines/MediaEnrichmentEngine';
 import { QAReviewService } from './engines/QAReviewService';
 import { TemplateLibrary } from './engines/TemplateLibrary';
 import { PromptLibrary } from './engines/PromptLibrary';
-import { pageGenerationDrafts, pageGenerationTemplates } from '@shared/schema';
+import { pageGenerationDrafts, pageGenerationTemplates } from '../../shared/schema';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 
@@ -137,7 +137,7 @@ export class AIPageOrchestrator {
           templateId: selectedTemplate.id,
           generationMethod: 'ai_orchestrated',
           conversionFramework: selectedTemplate.conversionFramework,
-          qualityScore: qaResult.qualityScore,
+          qualityScore: qaResult.overallScore,
           generatedAt: new Date().toISOString()
         }
       };
@@ -147,23 +147,23 @@ export class AIPageOrchestrator {
         .set({
           templateId: selectedTemplate.id,
           generatedModel: finalModel,
-          qualityScore: qaResult.qualityScore,
+          qualityScore: qaResult.overallScore,
           generationSteps,
-          status: qaResult.qualityScore.overall >= 8.0 ? 'review_pending' : 'needs_improvement',
+          status: qaResult.overallScore >= 8.0 ? 'review_pending' : 'needs_improvement',
           aiCost: totalCost.toString(),
           generatedAt: new Date(),
         })
         .where(eq(pageGenerationDrafts.id, draftId));
 
-      console.log(`🚀 AI Generation Complete! Quality Score: ${qaResult.qualityScore.overall}/10`);
+      console.log(`🚀 AI Generation Complete! Quality Score: ${qaResult.overallScore}/10`);
       console.log(`💰 Total Cost: $${totalCost.toFixed(4)}`);
 
       return {
         draftId,
         generatedModel: finalModel,
-        qualityScore: qaResult.qualityScore,
+        qualityScore: qaResult.overallScore,
         generationSteps,
-        status: qaResult.qualityScore.overall >= 8.0 ? 'review_pending' : 'needs_improvement',
+        status: qaResult.overallScore >= 8.0 ? 'review_pending' : 'needs_improvement',
         totalCost
       };
 

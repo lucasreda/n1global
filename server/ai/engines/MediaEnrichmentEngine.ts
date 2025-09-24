@@ -417,7 +417,9 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     score += mediaCoverage * 1.0;
     
     // Bonus for global asset diversity
-    const assetTypes = Object.values(globalAssets).filter(assets => assets.length > 0).length;
+    const assetTypes = Object.values(globalAssets).filter(assets => 
+      Array.isArray(assets) && assets.length > 0
+    ).length;
     score += (assetTypes / 5) * 0.5;
     
     return Math.min(score, 10);
