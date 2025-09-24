@@ -1274,9 +1274,20 @@ router.get("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperat
       });
     }
 
+    // Parse the model JSON string if it exists
+    let parsedPage = { ...page };
+    if (page.model && typeof page.model === 'string') {
+      try {
+        parsedPage.model = JSON.parse(page.model);
+      } catch (error) {
+        console.error('❌ Erro ao fazer parse do model JSON:', error);
+        // Keep the original string if parsing fails
+      }
+    }
+
     return res.json({
       success: true,
-      page
+      page: parsedPage
     });
   } catch (error) {
     console.error('❌ Erro ao buscar página:', error);
