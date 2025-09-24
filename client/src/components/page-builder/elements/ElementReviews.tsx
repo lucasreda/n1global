@@ -115,11 +115,11 @@ export function ElementReviews({
 
   const baseStyles = {
     ...element.styles,
-    fontFamily: theme.typography.bodyFont,
-    padding: element.styles.padding || theme.spacing.lg,
+    fontFamily: theme.typography?.bodyFont || 'Inter, sans-serif',
+    padding: element.styles.padding || theme.spacing?.lg || '2rem',
     margin: element.styles.margin || '0',
     backgroundColor: element.styles.backgroundColor || 'transparent',
-    borderRadius: element.styles.borderRadius || theme.borderRadius.sm,
+    borderRadius: element.styles.borderRadius || theme.borderRadius?.sm || '0.25rem',
     outline: editorMode && isSelected ? '2px solid #3b82f6' : 'none',
     cursor: editorMode ? 'pointer' : 'default',
   };

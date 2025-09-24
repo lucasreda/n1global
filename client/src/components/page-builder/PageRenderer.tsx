@@ -579,7 +579,7 @@ function getHeadingSize(level: string, theme: PageModelV2['theme']): string {
     h3: theme.typography?.fontSize?.['2xl'] || '1.5rem',
     h4: theme.typography?.fontSize?.xl || '1.25rem',
     h5: theme.typography?.fontSize?.lg || '1.125rem',
-    h6: theme.typography.fontSize.base,
+    h6: theme.typography?.fontSize?.base || '1rem',
   };
   
   return sizes[level as keyof typeof sizes] || theme.typography?.fontSize?.['2xl'] || '1.5rem';
