@@ -669,7 +669,7 @@ export function ElementSlider({
           display: 'flex',
           justifyContent: 'center',
           gap: '0.5rem',
-          marginTop: theme.spacing.sm,
+          marginTop: theme.spacing?.sm || '1rem',
         }}>
           {images.map((_, index) => (
             <button

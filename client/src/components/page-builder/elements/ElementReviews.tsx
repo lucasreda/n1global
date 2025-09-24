@@ -297,7 +297,7 @@ export function ElementReviews({
             </div>
             
             {/* Rating */}
-            <div style={{ marginBottom: theme.spacing.sm }}>
+            <div style={{ marginBottom: theme.spacing?.sm || '1rem' }}>
               {renderStars(review.rating)}
             </div>
             
@@ -313,7 +313,7 @@ export function ElementReviews({
             </p>
             
             {/* Author */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing?.sm || '1rem' }}>
               <div style={{
                 width: '50px',
                 height: '50px',

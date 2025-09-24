@@ -62,15 +62,15 @@ export function ElementHeading({
 
   const baseStyles = {
     ...element.styles,
-    fontFamily: theme.typography.headingFont,
+    fontFamily: theme.typography?.headingFont || 'Inter, sans-serif',
     fontSize: getHeadingSize(headingLevel, theme),
     fontWeight: element.styles.fontWeight || '600',
-    color: element.styles.color || theme.colors.text,
+    color: element.styles.color || theme.colors?.text || '#1e293b',
     textAlign: element.styles.textAlign || 'left',
     padding: element.styles.padding || '0',
     margin: element.styles.margin || '0',
     backgroundColor: element.styles.backgroundColor || 'transparent',
-    borderRadius: element.styles.borderRadius || theme.borderRadius.sm,
+    borderRadius: element.styles.borderRadius || theme.borderRadius?.sm || '0.25rem',
     border: element.styles.border || 'none',
     width: element.styles.width || 'auto',
     outline: editorMode && isSelected ? '2px solid #3b82f6' : 'none',

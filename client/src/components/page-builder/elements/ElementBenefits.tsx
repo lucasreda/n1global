@@ -293,8 +293,8 @@ export function ElementBenefits({
                 fontSize: element.styles.titleFontSize || theme.typography.fontSize.lg,
                 fontWeight: element.styles.titleFontWeight || '600',
                 color: element.styles.titleColor || theme.colors.text,
-                marginBottom: theme.spacing.sm,
-                margin: `0 0 ${theme.spacing.sm} 0`
+                marginBottom: theme.spacing?.sm || '1rem',
+                margin: `0 0 ${theme.spacing?.sm || '1rem'} 0`
               }}>
                 {benefit.title}
               </h3>

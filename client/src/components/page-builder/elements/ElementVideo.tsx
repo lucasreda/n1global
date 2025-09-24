@@ -34,7 +34,7 @@ export function ElementVideo({
   const baseStyles = {
     ...element.styles,
     width: element.styles.width || '100%',
-    borderRadius: element.styles.borderRadius || theme.borderRadius.sm,
+    borderRadius: element.styles.borderRadius || theme.borderRadius?.sm || '0.25rem',
     outline: editorMode && isSelected ? '2px solid #3b82f6' : 'none',
     cursor: editorMode ? 'pointer' : 'default',
   };
