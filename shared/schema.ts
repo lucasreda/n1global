@@ -3269,6 +3269,139 @@ export const funnelPageRevisions = pgTable("funnel_page_revisions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// AI Page Generation System Tables - Professional AI page creation
+export const pageGenerationTemplates = pgTable("page_generation_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  industry: text("industry").notNull(), // 'ecommerce', 'saas', 'course', 'health', etc.
+  description: text("description"),
+  sectionsConfig: jsonb("sections_config").$type<{
+    sections: Array<{
+      id: string;
+      type: string;
+      required: boolean;
+      order: number;
+      mobileLayout?: any;
+      tabletLayout?: any;
+      desktopLayout?: any;
+    }>;
+    conversionFramework: 'PAS' | 'AIDA' | 'VSL' | 'BAB';
+    targetPersona: string;
+    industrySpecific: any;
+  }>().notNull(),
+  qualityMetrics: jsonb("quality_metrics").$type<{
+    expectedConversionRate: number;
+    averageScore: number;
+    usageCount: number;
+    successRate: number;
+  }>(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pageGenerationDrafts = pgTable("page_generation_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull(),
+  pageId: varchar("page_id"),
+  templateId: varchar("template_id").references(() => pageGenerationTemplates.id),
+  operationId: varchar("operation_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  
+  // Generation Input
+  briefData: jsonb("brief_data").$type<{
+    productInfo: {
+      name: string;
+      description: string;
+      price: number;
+      currency: string;
+      targetAudience: string;
+      mainBenefits: string[];
+      objections: string[];
+      industry: string;
+    };
+    conversionGoal: string;
+    brandGuidelines?: any;
+  }>().notNull(),
+  
+  // Generation Output
+  generatedModel: jsonb("generated_model").$type<any>(), // Full PageModelV2
+  qualityScore: jsonb("quality_score").$type<{
+    overall: number;
+    contentQuality: number;
+    mobileOptimization: number;
+    conversionPotential: number;
+    brandCompliance: number;
+    mediaRichness: number;
+    breakdown: any;
+  }>(),
+  
+  // Generation Process
+  generationSteps: jsonb("generation_steps").$type<{
+    briefEnrichment: any;
+    templateSelection: any;
+    contentGeneration: any;
+    layoutOptimization: any;
+    mediaEnrichment: any;
+    qualityAssurance: any;
+  }>(),
+  
+  status: text("status").notNull().default("generating"), // generating, review_pending, approved, rejected
+  aiCost: decimal("ai_cost", { precision: 10, scale: 4 }).default("0"),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  publishedAt: timestamp("published_at"),
+});
+
+export const pageGenerationReviews = pgTable("page_generation_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  draftId: varchar("draft_id").notNull().references(() => pageGenerationDrafts.id),
+  reviewerId: varchar("reviewer_id").notNull(),
+  
+  reviewScore: jsonb("review_score").$type<{
+    overall: number;
+    contentQuality: number;
+    designQuality: number;
+    conversionPotential: number;
+    brandAlignment: number;
+    feedback: string;
+  }>().notNull(),
+  
+  suggestions: jsonb("suggestions").$type<Array<{
+    sectionId: string;
+    type: 'content' | 'design' | 'layout' | 'media';
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    suggestedFix: string;
+  }>>(),
+  
+  status: text("status").notNull(), // approved, rejected, needs_revision
+  comments: text("comments"),
+  reviewedAt: timestamp("reviewed_at").defaultNow(),
+});
+
+export const pageGenerationAnalytics = pgTable("page_generation_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  draftId: varchar("draft_id").notNull().references(() => pageGenerationDrafts.id),
+  pageId: varchar("page_id"),
+  
+  // Performance Metrics
+  conversionRate: decimal("conversion_rate", { precision: 8, scale: 4 }),
+  bounceRate: decimal("bounce_rate", { precision: 8, scale: 4 }),
+  timeOnPage: integer("time_on_page"), // seconds
+  clickThroughRate: decimal("click_through_rate", { precision: 8, scale: 4 }),
+  
+  // A/B Testing
+  variantType: text("variant_type"), // 'original', 'variant_a', 'variant_b'
+  testId: varchar("test_id"),
+  
+  // User Feedback
+  userRating: integer("user_rating"), // 1-5
+  userFeedback: text("user_feedback"),
+  
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
 // Insert schemas for funnel entities
 export const insertFunnelIntegrationSchema = createInsertSchema(funnelIntegrations).omit({
   id: true,
