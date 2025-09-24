@@ -271,7 +271,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
           style={{
             ...baseStyles,
             fontFamily: theme.typography.headingFont,
-            fontSize: getHeadingSize(element.props.level, theme),
+            fontSize: getHeadingSize(element.props.level, theme) || element.styles.fontSize || '1.5rem',
             fontWeight: element.styles.fontWeight || '600',
           }}
           data-testid={`element-${element.id}`}
@@ -299,10 +299,10 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
           style={{
             ...baseStyles,
             display: 'inline-block',
-            padding: element.styles.padding || `${theme.spacing.sm} ${theme.spacing.md}`,
+            padding: element.styles.padding || `${theme.spacing?.sm || '1rem'} ${theme.spacing?.md || '1.5rem'}`,
             backgroundColor: element.styles.backgroundColor || theme.colors.primary,
             color: element.styles.color || '#ffffff',
-            borderRadius: element.styles.borderRadius || theme.borderRadius.md,
+            borderRadius: element.styles.borderRadius || theme.borderRadius?.md || '0.5rem',
             border: element.styles.border || 'none',
             cursor: 'pointer',
             fontWeight: element.styles.fontWeight || '500',
