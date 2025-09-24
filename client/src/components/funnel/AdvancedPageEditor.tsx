@@ -59,24 +59,9 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
     enabled: !!funnelId && !!pageId && !!selectedOperation,
   });
 
-  // Initialize page model with default structure if needed
-  const getInitialModel = useCallback((): PageModelV2 => {
-    console.log('📊 getInitialModel called:', {
-      hasPageData: !!pageData,
-      hasModel: !!pageData?.model,
-      modelType: typeof pageData?.model,
-      modelVersion: (pageData?.model as any)?.version,
-      sectionsCount: (pageData?.model as any)?.sections?.length
-    });
+  // Create default model structure
+  const getDefaultModel = useCallback((): PageModelV2 => {
 
-    if (pageData?.model && (pageData.model as any).version === 2) {
-      console.log('✅ Using existing PageModelV2 with', (pageData.model as any).sections?.length, 'sections');
-      return pageData.model as PageModelV2;
-    }
-
-    console.log('⚠️ Creating default model - no valid PageModelV2 found');
-
-    // Convert legacy model or create new one
     return {
       version: 2,
       layout: 'single_page',
@@ -216,7 +201,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
         mobileFirst: true,
       },
     };
-  }, [pageData]);
+  }, []);
 
   // Initialize history management
   const {
@@ -239,34 +224,30 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
 
   // Update page data when query responds
   useEffect(() => {
-    console.log('🔄 AdvancedPageEditor: pageResponse effect:', { 
-      hasResponse: !!pageResponse,
-      success: pageResponse?.success, 
-      hasPage: !!pageResponse?.page,
-      pageId: pageResponse?.page?.id,
-      hasModel: !!pageResponse?.page?.model,
-      modelSections: pageResponse?.page?.model?.sections?.length,
-      currentPageId: pageData?.id 
-    });
-    
     if (pageResponse?.success && pageResponse.page) {
-      console.log('✅ AdvancedPageEditor: Setting page data with model:', {
-        pageId: pageResponse.page.id,
-        name: pageResponse.page.name,
-        modelType: typeof pageResponse.page.model,
-        sectionsCount: pageResponse.page.model?.sections?.length
-      });
-      
       setPageData(pageResponse.page);
+      
       // Only reset if pageData changed to avoid infinite loops
       if (!pageData || pageData.id !== pageResponse.page.id) {
-        console.log('🔄 AdvancedPageEditor: Resetting model with new page data');
-        const initialModel = getInitialModel();
-        console.log('📊 AdvancedPageEditor: Initial model sections:', initialModel.sections?.length);
+        // Derive initial model directly from fresh page data to avoid stale state
+        const freshPageData = pageResponse.page;
+        let initialModel: PageModelV2;
+        
+        if (freshPageData.model && (freshPageData.model as any).version === 2) {
+          // Use the AI-generated model with 5 sections
+          initialModel = freshPageData.model as PageModelV2;
+          console.log('✅ Using AI-generated PageModelV2 with', initialModel.sections?.length, 'sections');
+        } else {
+          // Fallback to default model
+          initialModel = getDefaultModel();
+          console.log('⚠️ Using default model - no valid PageModelV2 found');
+        }
+        
+        console.log('🔄 Resetting React Hook Form with', initialModel.sections?.length, 'sections');
         reset(initialModel);
       }
     }
-  }, [pageResponse, reset, pageData]); // Removed getInitialModel from dependencies
+  }, [pageResponse, reset, pageData]);
 
   // AI Content hooks
   const aiContent = useAIContent({

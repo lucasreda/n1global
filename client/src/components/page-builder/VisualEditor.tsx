@@ -499,9 +499,10 @@ interface SortableRowProps {
   selectedElementId: string | null;
   onSelectElement: (id: string | null) => void;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
+  viewport: 'desktop' | 'tablet' | 'mobile';
 }
 
-function SortableRow({ row, theme, selectedElementId, onSelectElement, onUpdateElement }: SortableRowProps) {
+function SortableRow({ row, theme, selectedElementId, onSelectElement, onUpdateElement, viewport }: SortableRowProps) {
   return (
     <div
       className="flex flex-wrap w-full mb-4"
@@ -519,6 +520,7 @@ function SortableRow({ row, theme, selectedElementId, onSelectElement, onUpdateE
           selectedElementId={selectedElementId}
           onSelectElement={onSelectElement}
           onUpdateElement={onUpdateElement}
+          viewport={viewport}
         />
       ))}
     </div>
@@ -532,9 +534,10 @@ interface ModernColumnProps {
   selectedElementId: string | null;
   onSelectElement: (id: string | null) => void;
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
+  viewport: 'desktop' | 'tablet' | 'mobile';
 }
 
-function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpdateElement }: ModernColumnProps) {
+function ModernColumn({ column, theme, selectedElementId, onSelectElement, onUpdateElement, viewport }: ModernColumnProps) {
   const widthClasses = {
     'full': 'w-full',
     '1/2': 'w-1/2',
@@ -1327,6 +1330,41 @@ function PageFrame({
   onAddSection,
   draggedItem 
 }: PageFrameProps) {
+  // Debug logs for sections rendering
+  React.useEffect(() => {
+    console.log('🎨 PageFrame: Rendering with model:', {
+      sectionsCount: model.sections.length,
+      sectionsIds: model.sections.map(s => s.id),
+      sectionsTypes: model.sections.map(s => s.type),
+      sectionsHaveRows: model.sections.map(s => ({
+        id: s.id,
+        type: s.type,
+        name: s.name,
+        rowsCount: s.rows?.length || 0,
+        hasValidRows: !!s.rows && s.rows.length > 0
+      }))
+    });
+    
+    // Check each section structure
+    model.sections.forEach((section, index) => {
+      console.log(`📦 Section ${index + 1} (${section.id}):`, {
+        type: section.type,
+        name: section.name,
+        rowsCount: section.rows?.length || 0,
+        rows: section.rows?.map(r => ({
+          id: r.id,
+          columnsCount: r.columns?.length || 0,
+          columns: r.columns?.map(c => ({
+            id: c.id,
+            width: c.width,
+            elementsCount: c.elements?.length || 0,
+            elements: c.elements?.map(e => ({ id: e.id, type: e.type }))
+          }))
+        }))
+      });
+    });
+  }, [model.sections]);
+  
   const viewportStyles = {
     desktop: 'w-full max-w-none',
     tablet: 'w-[768px]',
@@ -1399,6 +1437,7 @@ function PageFrame({
                       onAddSectionAfter={() => onAddSection()}
                       showAddButton={index === model.sections.length - 1}
                       draggedItem={draggedItem}
+                      viewport={viewport}
                     />
                   </div>
                 ))}
@@ -1427,6 +1466,7 @@ interface EnhancedSortableSectionProps {
   onAddSectionAfter: () => void;
   showAddButton: boolean;
   draggedItem: any;
+  viewport: 'desktop' | 'tablet' | 'mobile';
 }
 
 function EnhancedSortableSection({ 
@@ -1443,7 +1483,8 @@ function EnhancedSortableSection({
   onDuplicateSection,
   onAddSectionAfter,
   showAddButton,
-  draggedItem
+  draggedItem,
+  viewport
 }: EnhancedSortableSectionProps) {
   const {
     attributes,
@@ -1548,6 +1589,7 @@ function EnhancedSortableSection({
           onUpdateElement={onUpdateElement}
           isHovered={isHovered}
           isDragging={!!draggedItem}
+          viewport={viewport}
         />
       </div>
 
@@ -2529,6 +2571,7 @@ interface SectionWithDropZonesProps {
   onUpdateElement: (elementId: string, updates: Partial<BlockElement>) => void;
   isHovered: boolean;
   isDragging: boolean;
+  viewport: 'desktop' | 'tablet' | 'mobile';
 }
 
 function SectionWithDropZones({ 
@@ -2538,7 +2581,8 @@ function SectionWithDropZones({
   onSelectElement, 
   onUpdateElement, 
   isHovered,
-  isDragging 
+  isDragging,
+  viewport
 }: SectionWithDropZonesProps) {
   return (
     <div 
@@ -2565,6 +2609,7 @@ function SectionWithDropZones({
             selectedElementId={selectedElementId}
             onSelectElement={onSelectElement}
             onUpdateElement={onUpdateElement}
+            viewport={viewport}
           />
         ))}
       </SortableContext>
