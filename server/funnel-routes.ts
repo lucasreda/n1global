@@ -2125,8 +2125,17 @@ A página deve ser profissional, persuasiva e otimizada para conversão.`;
       throw new Error("OpenAI não retornou conteúdo");
     }
 
+    // Extract JSON from markdown code blocks if present
+    let jsonContent = content.trim();
+    if (jsonContent.startsWith('```json') || jsonContent.startsWith('```')) {
+      const jsonMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[1].trim();
+      }
+    }
+
     // Parse the JSON response
-    const generatedModel = JSON.parse(content);
+    const generatedModel = JSON.parse(jsonContent);
     
     // Validate basic structure
     if (!generatedModel.version || !generatedModel.sections) {
