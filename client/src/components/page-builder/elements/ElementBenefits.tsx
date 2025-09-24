@@ -267,7 +267,7 @@ export function ElementBenefits({
               style={{
                 padding: theme.spacing?.md || '1.5rem',
                 backgroundColor: element.styles.cardBackgroundColor || 'rgba(255, 255, 255, 0.1)',
-                borderRadius: theme.borderRadius.md,
+                borderRadius: theme.borderRadius?.md || '0.375rem',
                 textAlign: 'center' as const,
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.2)'
