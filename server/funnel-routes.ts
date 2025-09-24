@@ -2121,15 +2121,18 @@ ESTRUTURA OBRIGATÓRIA (mantenha exatamente esta estrutura):
 🎨 ELEMENTOS DE ALTA CONVERSÃO:
 
 1. HEADING (Headlines Poderosas):
-   - props: { text: "Headline seguindo fórmulas comprovadas", tag: "h1-h6", align: "center/left" }
+   - props: { level: "h1-h6", align: "center/left" }
+   - content: { text: "Headline seguindo fórmulas comprovadas" }
    - styles: { fontSize: "3-4rem para h1", fontWeight: "bold", color: primário, textAlign, marginBottom }
 
 2. TEXT (Copy Persuasivo):
-   - props: { content: "Copy orientado a resultado com gatilhos", align }
+   - props: { align: "center/left" }
+   - content: { text: "Copy orientado a resultado com gatilhos", html: "HTML formatado" }
    - styles: { fontSize: "1.1-1.25rem", lineHeight: "1.6", color, textAlign }
 
 3. BUTTON (CTAs Irresistíveis):
-   - props: { text: "CTA específico com urgência", link: "#", variant: "primary", size: "large" }
+   - props: { variant: "primary", size: "large" }
+   - content: { text: "CTA específico com urgência", href: "#" }
    - styles: { backgroundColor: cores de urgência, color: branco, padding: generoso, borderRadius, fontSize: 18px+, boxShadow para destaque }
 
 4. BENEFITS (Benefícios Orientados a Resultado):
