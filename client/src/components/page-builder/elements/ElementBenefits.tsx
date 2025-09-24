@@ -290,7 +290,7 @@ export function ElementBenefits({
               </div>
               
               <h3 style={{
-                fontSize: element.styles.titleFontSize || theme.typography.fontSize.lg,
+                fontSize: element.styles.titleFontSize || theme.typography?.fontSize?.lg || '1.125rem',
                 fontWeight: element.styles.titleFontWeight || '600',
                 color: element.styles.titleColor || theme.colors.text,
                 marginBottom: theme.spacing?.sm || '1rem',
@@ -300,7 +300,7 @@ export function ElementBenefits({
               </h3>
               
               <p style={{
-                fontSize: element.styles.descriptionFontSize || theme.typography.fontSize.base,
+                fontSize: element.styles.descriptionFontSize || theme.typography?.fontSize?.base || '1rem',
                 color: element.styles.descriptionColor || theme.colors.text,
                 lineHeight: '1.6',
                 margin: '0'

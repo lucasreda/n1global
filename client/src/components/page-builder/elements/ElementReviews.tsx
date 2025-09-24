@@ -303,7 +303,7 @@ export function ElementReviews({
             
             {/* Comment */}
             <p style={{
-              fontSize: element.styles.commentFontSize || theme.typography.fontSize.base,
+              fontSize: element.styles.commentFontSize || theme.typography?.fontSize?.base || '1rem',
               color: element.styles.commentColor || theme.colors.text,
               lineHeight: '1.6',
               margin: `0 0 ${theme.spacing?.md || '1.5rem'} 0`,
@@ -344,7 +344,7 @@ export function ElementReviews({
               
               <div>
                 <h4 style={{
-                  fontSize: element.styles.nameFontSize || theme.typography.fontSize.base,
+                  fontSize: element.styles.nameFontSize || theme.typography?.fontSize?.base || '1rem',
                   fontWeight: element.styles.nameFontWeight || '600',
                   color: element.styles.nameColor || theme.colors.text,
                   margin: '0'
@@ -354,7 +354,7 @@ export function ElementReviews({
                 
                 {review.role && (
                   <p style={{
-                    fontSize: element.styles.roleFontSize || theme.typography.fontSize.sm,
+                    fontSize: element.styles.roleFontSize || theme.typography?.fontSize?.sm || '0.875rem',
                     color: element.styles.roleColor || theme.colors.muted,
                     margin: '0'
                   }}>
