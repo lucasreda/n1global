@@ -117,11 +117,11 @@ export function ElementForm({
             placeholder={placeholder}
             style={{
               width: '100%',
-              padding: theme.spacing.sm,
-              marginBottom: theme.spacing.sm,
-              border: `1px solid ${theme.colors.muted}`,
-              borderRadius: theme.borderRadius.sm,
-              fontSize: theme.typography.fontSize.base,
+              padding: theme.spacing?.sm || '1rem',
+              marginBottom: theme.spacing?.sm || '1rem',
+              border: `1px solid ${theme.colors?.muted || '#e2e8f0'}`,
+              borderRadius: theme.borderRadius?.sm || '0.25rem',
+              fontSize: theme.typography?.fontSize?.base || '1rem',
               outline: 'none',
             }}
             onClick={(e) => {
@@ -133,14 +133,14 @@ export function ElementForm({
           <button
             type="submit"
             style={{
-              padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-              backgroundColor: theme.colors.primary,
+              padding: `${theme.spacing?.sm || '1rem'} ${theme.spacing?.md || '1.5rem'}`,
+              backgroundColor: theme.colors?.primary || '#3b82f6',
               color: '#ffffff',
               border: 'none',
-              borderRadius: theme.borderRadius.sm,
+              borderRadius: theme.borderRadius?.sm || '0.25rem',
               cursor: editorMode ? 'pointer' : 'pointer',
               fontWeight: '500',
-              fontSize: theme.typography.fontSize.base,
+              fontSize: theme.typography?.fontSize?.base || '1rem',
             }}
             onClick={(e) => {
               if (editorMode) {

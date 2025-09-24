@@ -254,11 +254,11 @@ export function ElementSlider({
 
   const baseStyles = {
     ...element.styles,
-    fontFamily: theme.typography.bodyFont,
-    padding: element.styles.padding || theme.spacing.md,
+    fontFamily: theme.typography?.bodyFont || 'Inter, sans-serif',
+    padding: element.styles.padding || theme.spacing?.md || '1.5rem',
     margin: element.styles.margin || '0',
     backgroundColor: element.styles.backgroundColor || 'transparent',
-    borderRadius: element.styles.borderRadius || theme.borderRadius.sm,
+    borderRadius: element.styles.borderRadius || theme.borderRadius?.sm || '0.25rem',
     outline: editorMode && isSelected ? '2px solid #3b82f6' : 'none',
     cursor: editorMode ? 'pointer' : 'default',
     position: 'relative' as const,
@@ -569,7 +569,7 @@ export function ElementSlider({
                     right: '0',
                     background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
                     color: 'white',
-                    padding: theme.spacing.md,
+                    padding: theme.spacing?.md || '1.5rem',
                     fontSize: element.styles.captionFontSize || theme.typography.fontSize.sm,
                   }}>
                     {image.caption}

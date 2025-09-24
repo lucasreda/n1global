@@ -12,9 +12,9 @@ export function ElementDivider({
     ...element.styles,
     height: element.styles.height || '1px',
     width: element.styles.width || '100%',
-    backgroundColor: element.styles.backgroundColor || theme.colors.muted,
+    backgroundColor: element.styles.backgroundColor || theme.colors?.muted || '#e2e8f0',
     border: 'none',
-    margin: element.styles.margin || `${theme.spacing.md} 0`,
+    margin: element.styles.margin || `${theme.spacing?.md || '1.5rem'} 0`,
     outline: editorMode && isSelected ? '2px solid #3b82f6' : 'none',
     cursor: editorMode ? 'pointer' : 'default',
   };
