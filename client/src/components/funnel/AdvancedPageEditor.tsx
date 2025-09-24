@@ -212,7 +212,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
     redo,
     saveSnapshot,
     reset,
-  } = usePageModelHistory(getInitialModel());
+  } = usePageModelHistory(getDefaultModel());
 
   // Set up keyboard shortcuts
   const { handleKeyDown } = useUndoRedoShortcuts(undo, redo);
