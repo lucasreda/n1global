@@ -256,7 +256,7 @@ export function ElementBenefits({
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-        gap: theme.spacing.md 
+        gap: theme.spacing?.md || '1.5rem' 
       }}>
         {benefits.map((benefit) => {
           const IconComponent = iconMap[benefit.icon];
@@ -265,7 +265,7 @@ export function ElementBenefits({
             <div
               key={benefit.id}
               style={{
-                padding: theme.spacing.md,
+                padding: theme.spacing?.md || '1.5rem',
                 backgroundColor: element.styles.cardBackgroundColor || 'rgba(255, 255, 255, 0.1)',
                 borderRadius: theme.borderRadius.md,
                 textAlign: 'center' as const,

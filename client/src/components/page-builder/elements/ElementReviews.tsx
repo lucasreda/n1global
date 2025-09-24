@@ -272,13 +272,13 @@ export function ElementReviews({
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-        gap: theme.spacing.md 
+        gap: theme.spacing?.md || '1.5rem' 
       }}>
         {reviews.map((review) => (
           <div
             key={review.id}
             style={{
-              padding: theme.spacing.md,
+              padding: theme.spacing?.md || '1.5rem',
               backgroundColor: element.styles.cardBackgroundColor || 'rgba(255, 255, 255, 0.1)',
               borderRadius: theme.borderRadius.md,
               backdropFilter: 'blur(10px)',
@@ -306,7 +306,7 @@ export function ElementReviews({
               fontSize: element.styles.commentFontSize || theme.typography.fontSize.base,
               color: element.styles.commentColor || theme.colors.text,
               lineHeight: '1.6',
-              margin: `0 0 ${theme.spacing.md} 0`,
+              margin: `0 0 ${theme.spacing?.md || '1.5rem'} 0`,
               fontStyle: 'italic'
             }}>
               "{review.comment}"
