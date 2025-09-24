@@ -18,6 +18,7 @@ import {
   insertFunnelPageSchema,
   insertFunnelPageRevisionSchema,
   // insertFunnelDeploymentSchema, // TODO: Enable when table is created
+  operations,
   users
 } from "@shared/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
