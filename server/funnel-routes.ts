@@ -1238,6 +1238,8 @@ router.get("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperat
     const { funnelId, pageId } = req.params;
     const operationId = req.validatedOperationId;
 
+    console.log('🔍 GET PAGE Debug:', { funnelId, pageId, operationId });
+
     // Validate funnel exists and belongs to operation
     const [funnel] = await db
       .select()
@@ -1250,7 +1252,10 @@ router.get("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperat
       )
       .limit(1);
 
+    console.log('🔍 Funnel check:', { found: !!funnel, funnelId: funnel?.id });
+
     if (!funnel) {
+      console.log('❌ Funnel not found');
       return res.status(404).json({
         success: false,
         error: "Funil não encontrado"
@@ -1269,7 +1274,10 @@ router.get("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperat
       )
       .limit(1);
 
+    console.log('🔍 Page check:', { found: !!page, pageId: page?.id, hasModel: !!page?.model });
+
     if (!page) {
+      console.log('❌ Page not found');
       return res.status(404).json({
         success: false,
         error: "Página não encontrada"
@@ -1281,11 +1289,19 @@ router.get("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperat
     if (page.model && typeof page.model === 'string') {
       try {
         parsedPage.model = JSON.parse(page.model);
+        console.log('✅ Model parsed successfully, sections:', parsedPage.model.sections?.length);
       } catch (error) {
         console.error('❌ Erro ao fazer parse do model JSON:', error);
         // Keep the original string if parsing fails
       }
     }
+
+    console.log('📦 Returning page data:', {
+      id: parsedPage.id,
+      name: parsedPage.name,
+      hasModel: !!parsedPage.model,
+      modelType: typeof parsedPage.model
+    });
 
     return res.json({
       success: true,
