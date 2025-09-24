@@ -134,7 +134,7 @@ function SectionRenderer({ section, theme, editorMode }: SectionRendererProps) {
       style={{
         ...finalStyles,
         // Apply fallbacks only if no specific values exist
-        padding: finalStyles.padding || theme.spacing.lg,
+        padding: finalStyles.padding || theme.spacing?.lg || '2rem',
         backgroundColor: finalStyles.backgroundColor || 'transparent',
         backgroundImage: finalStyles.backgroundImage ? `url(${finalStyles.backgroundImage})` : undefined,
         minHeight: finalStyles.minHeight || 'auto',
@@ -168,7 +168,7 @@ function RowRenderer({ row, theme, editorMode }: RowRendererProps) {
       className="row-renderer flex flex-wrap w-full"
       style={{
         ...finalStyles,
-        gap: finalStyles.gap || theme.spacing.md,
+        gap: finalStyles.gap || theme.spacing?.md || '1.5rem',
         padding: finalStyles.padding || '0',
         backgroundColor: finalStyles.backgroundColor || 'transparent',
         minHeight: finalStyles.minHeight || 'auto',
@@ -214,7 +214,7 @@ function ColumnRenderer({ column, theme, editorMode }: ColumnRendererProps) {
       className={`column-renderer ${widthClasses[column.width as keyof typeof widthClasses] || 'w-full'} flex flex-col`}
       style={{
         ...finalStyles,
-        padding: finalStyles.padding || theme.spacing.sm,
+        padding: finalStyles.padding || theme.spacing?.sm || '1rem',
         backgroundColor: finalStyles.backgroundColor || 'transparent',
       }}
       data-testid={`column-${column.id}`}
@@ -245,8 +245,8 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
   
   const baseStyles = {
     ...finalStyles,
-    color: finalStyles.color || theme.colors.text,
-    fontSize: finalStyles.fontSize || theme.typography.fontSize.base,
+    color: finalStyles.color || theme.colors?.text || '#1e293b',
+    fontSize: finalStyles.fontSize || theme.typography?.fontSize?.base || '1rem',
     lineHeight: finalStyles.lineHeight || 'normal',
     letterSpacing: finalStyles.letterSpacing || 'normal',
     fontWeight: finalStyles.fontWeight || 'normal',
@@ -255,7 +255,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
     textTransform: finalStyles.textTransform || 'none',
     padding: finalStyles.padding || '0',
     backgroundColor: finalStyles.backgroundColor || 'transparent',
-    borderRadius: finalStyles.borderRadius || theme.borderRadius.sm,
+    borderRadius: finalStyles.borderRadius || theme.borderRadius?.sm || '0.25rem',
     border: finalStyles.border || 'none',
     width: finalStyles.width || 'auto',
     height: finalStyles.height || 'auto',
@@ -270,7 +270,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
         <HeadingComponent
           style={{
             ...baseStyles,
-            fontFamily: theme.typography.headingFont,
+            fontFamily: theme.typography?.headingFont || 'Inter, sans-serif',
             fontSize: getHeadingSize(element.props.level, theme) || element.styles.fontSize || '1.5rem',
             fontWeight: element.styles.fontWeight || '600',
           }}
@@ -300,7 +300,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
             ...baseStyles,
             display: 'inline-block',
             padding: element.styles.padding || `${theme.spacing?.sm || '1rem'} ${theme.spacing?.md || '1.5rem'}`,
-            backgroundColor: element.styles.backgroundColor || theme.colors.primary,
+            backgroundColor: element.styles.backgroundColor || theme.colors?.primary || '#3b82f6',
             color: element.styles.color || '#ffffff',
             borderRadius: element.styles.borderRadius || theme.borderRadius?.md || '0.5rem',
             border: element.styles.border || 'none',
@@ -354,9 +354,9 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
             ...baseStyles,
             border: 'none',
             height: '1px',
-            backgroundColor: element.styles.backgroundColor || theme.colors.muted,
+            backgroundColor: element.styles.backgroundColor || theme.colors?.muted || '#9ca3af',
             width: element.styles.width || '100%',
-            margin: element.styles.margin || `${theme.spacing.md} 0`,
+            margin: element.styles.margin || `${theme.spacing?.md || '1.5rem'} 0`,
           }}
           data-testid={`element-${element.id}`}
           data-element-type="divider"
@@ -410,21 +410,21 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
             placeholder={element.content?.placeholder || 'Digite seu email...'}
             style={{
               width: '100%',
-              padding: theme.spacing.sm,
-              marginBottom: theme.spacing.sm,
-              border: `1px solid ${theme.colors.muted}`,
-              borderRadius: theme.borderRadius.sm,
+              padding: theme.spacing?.sm || '1rem',
+              marginBottom: theme.spacing?.sm || '1rem',
+              border: `1px solid ${theme.colors?.muted || '#9ca3af'}`,
+              borderRadius: theme.borderRadius?.sm || '0.25rem',
               fontSize: theme.typography.fontSize.base,
             }}
           />
           <button
             type="submit"
             style={{
-              padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-              backgroundColor: theme.colors.primary,
+              padding: `${theme.spacing?.sm || '1rem'} ${theme.spacing?.md || '1.5rem'}`,
+              backgroundColor: theme.colors?.primary || '#3b82f6',
               color: '#ffffff',
               border: 'none',
-              borderRadius: theme.borderRadius.sm,
+              borderRadius: theme.borderRadius?.sm || '0.25rem',
               cursor: 'pointer',
               fontWeight: '500',
             }}
@@ -454,7 +454,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
           style={{
             ...baseStyles,
             display: element.styles.display || 'block',
-            padding: element.styles.padding || theme.spacing.md,
+            padding: element.styles.padding || theme.spacing?.md || '1.5rem',
             backgroundColor: element.styles.backgroundColor || 'transparent',
           }}
           data-testid={`element-${element.id}`}
@@ -574,15 +574,15 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
 // Helper function to get heading sizes based on level
 function getHeadingSize(level: string, theme: PageModelV2['theme']): string {
   const sizes = {
-    h1: theme.typography.fontSize['4xl'],
-    h2: theme.typography.fontSize['3xl'],
-    h3: theme.typography.fontSize['2xl'],
-    h4: theme.typography.fontSize.xl,
-    h5: theme.typography.fontSize.lg,
+    h1: theme.typography?.fontSize?.['4xl'] || '2.25rem',
+    h2: theme.typography?.fontSize?.['3xl'] || '1.875rem',
+    h3: theme.typography?.fontSize?.['2xl'] || '1.5rem',
+    h4: theme.typography?.fontSize?.xl || '1.25rem',
+    h5: theme.typography?.fontSize?.lg || '1.125rem',
     h6: theme.typography.fontSize.base,
   };
   
-  return sizes[level as keyof typeof sizes] || theme.typography.fontSize['2xl'];
+  return sizes[level as keyof typeof sizes] || theme.typography?.fontSize?.['2xl'] || '1.5rem';
 }
 
 // Helper function to create a default theme
@@ -649,7 +649,7 @@ function DroppableContainer({ element, theme, editorMode }: DroppableContainerPr
         ref={setNodeRef}
         style={{
           display: element.styles?.display || 'block',
-          padding: element.styles?.padding || theme.spacing.md,
+          padding: element.styles?.padding || theme.spacing?.md || '1.5rem',
           backgroundColor: element.styles?.backgroundColor || 'transparent',
         }}
         data-testid={`element-${element.id}`}
@@ -717,11 +717,11 @@ function DroppableBlock({ element, theme, editorMode }: DroppableBlockProps) {
         flexDirection: element.styles?.flexDirection || 'row',
         justifyContent: element.styles?.justifyContent || 'flex-start',
         alignItems: element.styles?.alignItems || 'flex-start',
-        gap: element.styles?.gap || theme.spacing.md,
-        padding: element.styles?.padding || theme.spacing.md,
+        gap: element.styles?.gap || theme.spacing?.md || '1.5rem',
+        padding: element.styles?.padding || theme.spacing?.md || '1.5rem',
         backgroundColor: element.styles?.backgroundColor || 'transparent',
         border: isOver ? '2px solid #3b82f6' : '2px dashed #d1d5db',
-        borderRadius: theme.borderRadius.md,
+        borderRadius: theme.borderRadius?.md || '0.5rem',
         minHeight: '60px',
         transition: 'border-color 0.2s ease',
       }}
@@ -735,9 +735,9 @@ function DroppableBlock({ element, theme, editorMode }: DroppableBlockProps) {
             width: getColumnWidth(columnIndex),
             flex: columnDistribution === 'equal' ? 1 : 'none',
             border: '1px dashed #d1d5db',
-            borderRadius: theme.borderRadius.sm,
+            borderRadius: theme.borderRadius?.sm || '0.25rem',
             minHeight: '60px',
-            padding: theme.spacing.sm,
+            padding: theme.spacing?.sm || '1rem',
           }}
           data-testid={`block-column-${columnIndex}`}
         >
@@ -753,7 +753,7 @@ function DroppableBlock({ element, theme, editorMode }: DroppableBlockProps) {
           ) : (
             <div
               style={{
-                padding: theme.spacing.md,
+                padding: theme.spacing?.md || '1.5rem',
                 textAlign: 'center',
                 color: isOver ? '#3b82f6' : '#9ca3af',
                 backgroundColor: isOver ? '#eff6ff' : '#f9fafb',
@@ -814,8 +814,8 @@ function BlockElementView({ element, theme, baseStyles, editorMode }: BlockEleme
         flexDirection: element.styles?.flexDirection || 'row',
         justifyContent: element.styles?.justifyContent || 'flex-start',
         alignItems: element.styles?.alignItems || 'flex-start',
-        gap: element.styles?.gap || theme.spacing.md,
-        padding: element.styles?.padding || theme.spacing.md,
+        gap: element.styles?.gap || theme.spacing?.md || '1.5rem',
+        padding: element.styles?.padding || theme.spacing?.md || '1.5rem',
         backgroundColor: element.styles?.backgroundColor || 'transparent',
       }}
       data-testid={`element-${element.id}`}
