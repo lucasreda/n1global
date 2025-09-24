@@ -61,9 +61,20 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
 
   // Initialize page model with default structure if needed
   const getInitialModel = useCallback((): PageModelV2 => {
+    console.log('📊 getInitialModel called:', {
+      hasPageData: !!pageData,
+      hasModel: !!pageData?.model,
+      modelType: typeof pageData?.model,
+      modelVersion: (pageData?.model as any)?.version,
+      sectionsCount: (pageData?.model as any)?.sections?.length
+    });
+
     if (pageData?.model && (pageData.model as any).version === 2) {
+      console.log('✅ Using existing PageModelV2 with', (pageData.model as any).sections?.length, 'sections');
       return pageData.model as PageModelV2;
     }
+
+    console.log('⚠️ Creating default model - no valid PageModelV2 found');
 
     // Convert legacy model or create new one
     return {
@@ -228,11 +239,31 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
 
   // Update page data when query responds
   useEffect(() => {
+    console.log('🔄 AdvancedPageEditor: pageResponse effect:', { 
+      hasResponse: !!pageResponse,
+      success: pageResponse?.success, 
+      hasPage: !!pageResponse?.page,
+      pageId: pageResponse?.page?.id,
+      hasModel: !!pageResponse?.page?.model,
+      modelSections: pageResponse?.page?.model?.sections?.length,
+      currentPageId: pageData?.id 
+    });
+    
     if (pageResponse?.success && pageResponse.page) {
+      console.log('✅ AdvancedPageEditor: Setting page data with model:', {
+        pageId: pageResponse.page.id,
+        name: pageResponse.page.name,
+        modelType: typeof pageResponse.page.model,
+        sectionsCount: pageResponse.page.model?.sections?.length
+      });
+      
       setPageData(pageResponse.page);
       // Only reset if pageData changed to avoid infinite loops
       if (!pageData || pageData.id !== pageResponse.page.id) {
-        reset(getInitialModel());
+        console.log('🔄 AdvancedPageEditor: Resetting model with new page data');
+        const initialModel = getInitialModel();
+        console.log('📊 AdvancedPageEditor: Initial model sections:', initialModel.sections?.length);
+        reset(initialModel);
       }
     }
   }, [pageResponse, reset, pageData]); // Removed getInitialModel from dependencies
