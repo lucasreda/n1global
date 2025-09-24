@@ -1229,62 +1229,6 @@ router.post("/funnels/:funnelId/pages/ai-generate", authenticateToken, validateO
   }
 });
 
-/**
- * Get a specific page - DEBUG VERSION WITHOUT AUTH
- */
-router.get("/funnels/:funnelId/pages/:pageId/debug", async (req, res) => {
-  try {
-    const { funnelId, pageId } = req.params;
-    const operationId = req.query.operationId as string;
-
-    console.log('🔍 DEBUG: Getting page without auth:', { funnelId, pageId, operationId });
-
-    // Get the page directly from database
-    const [page] = await db
-      .select()
-      .from(funnelPages)
-      .where(eq(funnelPages.id, pageId))
-      .limit(1);
-
-    if (!page) {
-      return res.status(404).json({
-        success: false,
-        error: "Página não encontrada"
-      });
-    }
-
-    // Parse the model JSON string if it exists
-    let parsedPage = { ...page };
-    if (page.model && typeof page.model === 'string') {
-      try {
-        parsedPage.model = JSON.parse(page.model);
-        console.log('✅ DEBUG: Model parsed successfully, sections:', parsedPage.model.sections?.length);
-      } catch (error) {
-        console.error('❌ DEBUG: Erro ao fazer parse do model JSON:', error);
-        // Keep the original string if parsing fails
-      }
-    }
-
-    console.log('📦 DEBUG: Returning page data:', {
-      id: parsedPage.id,
-      name: parsedPage.name,
-      hasModel: !!parsedPage.model,
-      modelType: typeof parsedPage.model
-    });
-
-    return res.json({
-      success: true,
-      page: parsedPage
-    });
-
-  } catch (error) {
-    console.error('❌ DEBUG: Erro ao buscar página:', error);
-    return res.status(500).json({
-      success: false,
-      error: "Erro interno do servidor"
-    });
-  }
-});
 
 /**
  * Get a specific page
