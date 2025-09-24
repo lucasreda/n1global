@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import { stockImageTool } from '../../../tools/stockImageTool';
 
 export interface MediaResult {
   enrichedContent: {
@@ -227,27 +226,29 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
   private async addHeroMedia(section: any, enrichedBrief: any, mediaAnalysis: any) {
     const heroNeed = mediaAnalysis.analysis.heroNeeds;
     
-    // Generate professional hero image
+    // Generate professional hero image URLs (placeholder implementation)
     const imageDescription = heroNeed?.primaryImage || 
-      `Professional ${enrichedBrief.marketContext.industry} ${heroNeed?.style || 'lifestyle'} image showing ${enrichedBrief.originalBrief.productInfo.name}`;
+      `Professional ${enrichedBrief.marketContext?.industry || 'business'} ${heroNeed?.style || 'lifestyle'} image`;
 
     try {
-      const images = await stockImageTool({
-        description: imageDescription,
-        limit: 2,
-        orientation: 'horizontal'
-      });
+      // Placeholder implementation - in production this would call real stock image service
+      const placeholderImages = [
+        '/api/placeholder/hero-1.jpg',
+        '/api/placeholder/hero-2.jpg'
+      ];
 
+      console.log(`  📸 Generated hero media for: ${imageDescription}`);
+      
       return {
         mediaAssets: {
-          images: images.map(img => img.downloadUrl),
+          images: placeholderImages,
           videos: [],
           icons: []
         },
         mediaAdded: ['hero background image', 'hero secondary image']
       };
     } catch (error) {
-      console.warn('Failed to fetch hero images:', error.message);
+      console.warn('Failed to generate hero images:', error.message);
       return {
         mediaAssets: { images: [], videos: [], icons: [] },
         mediaAdded: []
@@ -260,24 +261,20 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     const mediaAssets = { images: [], videos: [], icons: [] };
     const mediaAdded = [];
 
-    // Add icons for each benefit
+    // Add icons for each benefit (placeholder implementation)
     for (let i = 0; i < Math.min(benefits.length, 4); i++) {
       const benefit = benefits[i];
       const iconDescription = `Simple ${benefit.icon || 'benefit'} icon vector illustration`;
       
       try {
-        const icons = await stockImageTool({
-          description: iconDescription,
-          limit: 1,
-          orientation: 'all'
-        });
-
-        if (icons.length > 0) {
-          mediaAssets.icons.push(icons[0].downloadUrl);
-          mediaAdded.push(`${benefit.title} icon`);
-        }
+        // Placeholder implementation - generate icon URLs
+        const iconUrl = `/api/placeholder/icon-${benefit.icon || 'check'}-${i + 1}.svg`;
+        
+        mediaAssets.icons.push(iconUrl);
+        mediaAdded.push(`${benefit.title} icon`);
+        console.log(`  🎯 Generated icon for: ${iconDescription}`);
       } catch (error) {
-        console.warn(`Failed to fetch icon for benefit ${i + 1}:`, error.message);
+        console.warn(`Failed to generate icon for benefit ${i + 1}:`, error.message);
       }
     }
 
@@ -289,24 +286,20 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     const mediaAssets = { images: [], videos: [], icons: [] };
     const mediaAdded = [];
 
-    // Add avatar images for testimonials
+    // Add avatar images for testimonials (placeholder implementation)
     for (let i = 0; i < Math.min(testimonials.length, 5); i++) {
       const testimonial = testimonials[i];
       const avatarDescription = `Professional business person headshot portrait ${testimonial.name} style`;
       
       try {
-        const avatars = await stockImageTool({
-          description: avatarDescription,
-          limit: 1,
-          orientation: 'all'
-        });
-
-        if (avatars.length > 0) {
-          mediaAssets.images.push(avatars[0].downloadUrl);
-          mediaAdded.push(`${testimonial.name} avatar`);
-        }
+        // Placeholder implementation - generate avatar URLs
+        const avatarUrl = `/api/placeholder/avatar-${i + 1}.jpg`;
+        
+        mediaAssets.images.push(avatarUrl);
+        mediaAdded.push(`${testimonial.name} avatar`);
+        console.log(`  👤 Generated avatar for: ${avatarDescription}`);
       } catch (error) {
-        console.warn(`Failed to fetch avatar for testimonial ${i + 1}:`, error.message);
+        console.warn(`Failed to generate avatar for testimonial ${i + 1}:`, error.message);
       }
     }
 
@@ -316,26 +309,25 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
   private async addCTAMedia(section: any, enrichedBrief: any, mediaAnalysis: any) {
     const ctaStyle = mediaAnalysis.analysis.overallStyle || 'modern';
     
-    // Add urgent/action-oriented image
-    const imageDescription = `${ctaStyle} call to action background ${enrichedBrief.marketContext.industry} professional`;
+    // Add urgent/action-oriented image (placeholder implementation)
+    const imageDescription = `${ctaStyle} call to action background ${enrichedBrief.marketContext?.industry || 'business'} professional`;
     
     try {
-      const images = await stockImageTool({
-        description: imageDescription,
-        limit: 1,
-        orientation: 'horizontal'
-      });
-
+      // Placeholder implementation - generate CTA background URL
+      const ctaImageUrl = `/api/placeholder/cta-${ctaStyle}.jpg`;
+      
+      console.log(`  🎯 Generated CTA media for: ${imageDescription}`);
+      
       return {
         mediaAssets: {
-          images: images.map(img => img.downloadUrl),
+          images: [ctaImageUrl],
           videos: [],
           icons: []
         },
         mediaAdded: ['CTA background image']
       };
     } catch (error) {
-      console.warn('Failed to fetch CTA image:', error.message);
+      console.warn('Failed to generate CTA image:', error.message);
       return {
         mediaAssets: { images: [], videos: [], icons: [] },
         mediaAdded: []
@@ -354,22 +346,18 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     const mediaAssets = { images: [], videos: [], icons: [] };
     const mediaAdded = [];
 
-    // Add images based on section needs
+    // Add images based on section needs (placeholder implementation)
     if (sectionNeed.imageType === 'photos' && sectionNeed.descriptions) {
       for (const description of sectionNeed.descriptions.slice(0, 2)) {
         try {
-          const images = await stockImageTool({
-            description,
-            limit: 1,
-            orientation: 'horizontal'
-          });
-
-          if (images.length > 0) {
-            mediaAssets.images.push(images[0].downloadUrl);
-            mediaAdded.push(`${section.type} section image`);
-          }
+          // Placeholder implementation - generate section image URL
+          const imageUrl = `/api/placeholder/${section.type}-${Math.random().toString(36).substr(2, 5)}.jpg`;
+          
+          mediaAssets.images.push(imageUrl);
+          mediaAdded.push(`${section.type} section image`);
+          console.log(`  🖼️ Generated section image for: ${description}`);
         } catch (error) {
-          console.warn(`Failed to fetch image for ${section.type}:`, error.message);
+          console.warn(`Failed to generate image for ${section.type}:`, error.message);
         }
       }
     }
@@ -384,18 +372,19 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     const brandingImages = [];
     const mediaAdded = [];
 
-    // Add decorative background elements
+    // Add decorative background elements (placeholder implementation)
     try {
-      const decorative = await stockImageTool({
-        description: `${style} ${industry} abstract background pattern decoration`,
-        limit: 2,
-        orientation: 'horizontal'
-      });
-
-      brandingImages.push(...decorative.map(img => img.downloadUrl));
+      // Placeholder implementation - generate branding image URLs
+      const decorativeImages = [
+        `/api/placeholder/brand-bg-${style}.jpg`,
+        `/api/placeholder/brand-pattern-${industry}.jpg`
+      ];
+      
+      brandingImages.push(...decorativeImages);
       mediaAdded.push('decorative background', 'accent pattern');
+      console.log(`  🎨 Generated branding media for: ${style} ${industry}`);
     } catch (error) {
-      console.warn('Failed to fetch branding images:', error.message);
+      console.warn('Failed to generate branding images:', error.message);
     }
 
     return {

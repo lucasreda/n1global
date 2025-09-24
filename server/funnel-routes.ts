@@ -27,6 +27,7 @@ import { validateOperationAccess } from "./middleware/operation-access";
 import { vercelService } from "./vercel-service";
 import { aiFunnelGenerator } from "./ai-funnel-generator";
 import { templateGenerator } from "./template-generator";
+import { AIPageOrchestrator } from "./ai/AIPageOrchestrator";
 
 const router = Router();
 
@@ -2012,255 +2013,49 @@ router.post("/funnels/page-templates", authenticateToken, async (req, res) => {
 });
 
 /**
- * Generate AI-powered PageModelV2 using OpenAI
+ * Generate AI-powered PageModelV2 using the advanced AI Orchestrator system
  */
 async function generateAIPageModel(aiPageData: any, funnel: any): Promise<any> {
-  const OpenAI = (await import('openai')).default;
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-
-  const systemPrompt = `Você é um especialista copywriter e growth hacker especializado em criação de páginas de conversão de alta performance. Sua missão é gerar páginas que convertem em escala usando frameworks de copywriting comprovados, gatilhos psicológicos avançados e técnicas de persuasão científica.
-
-🎯 ESTRATÉGIA DE CONVERSÃO:
-Cada página deve seguir frameworks comprovados:
-- LANDING PAGES: Framework PAS (Problema-Agitação-Solução) + AIDA (Atenção-Interesse-Desejo-Ação)
-- CHECKOUT: Redução de atrito + elementos de confiança + urgência social
-- UPSELL: Contrast + anchoring + FOMO + benefício exclusivo
-- DOWNSELL: Recuperação emocional + oferta irresistível + última chance
-
-🧠 GATILHOS PSICOLÓGICOS OBRIGATÓRIOS:
-1. URGÊNCIA: "Últimas 24h", "Restam apenas X vagas", "Oferta expira em"
-2. ESCASSEZ: "Limitado a X pessoas", "Stock limitado", "Exclusivo para"
-3. PROVA SOCIAL: Números específicos, depoimentos detalhados, logos de clientes
-4. AUTORIDADE: Credenciais, certificações, anos de experiência, mídia
-5. RECIPROCIDADE: Bonuses gratuitos, conteúdo valioso, garantias
-6. COMPROMISSO: "Garanta sua vaga", formulários de comprometimento
-7. ANCORAGEM: Preço original vs oferta, comparações, "De X por Y"
-
-📝 COPYWRITING AVANÇADO:
-HEADLINES: Use fórmulas poderosas:
-- "Como [RESULTADO DESEJADO] sem [DOR/OBJEÇÃO] em apenas [TEMPO]"
-- "[NÚMERO] Segredos que [AUTORIDADE] não quer que você saiba sobre [TÓPICO]"
-- "Finalmente Revelado: O Método [ÚNICO] para [RESULTADO] (Funciona mesmo para [OBJEÇÃO])"
-
-BENEFÍCIOS: Sempre orientados a RESULTADO:
-- Não: "Interface fácil de usar"
-- Sim: "Economize 5 horas por semana automatizando suas vendas"
-- Inclua números específicos, timeframes, transformações tangíveis
-
-OBJEÇÕES: Antecipe e neutralize:
-- Preço: "Investimento que se paga em X dias"
-- Tempo: "Apenas 15 minutos por dia"
-- Complexidade: "Funciona mesmo se você nunca fez isso antes"
-- Ceticismo: "Garantia incondicional de 30 dias"
-
-CTA'S PODEROSOS:
-- Não: "Clique aqui", "Saiba mais", "Comprar"
-- Sim: "Quero Garantir Minha Vaga Agora", "Sim, Quero Transformar Minha Vida", "Começar Minha Transformação (Últimas Vagas)"
-
-ESTRUTURA OBRIGATÓRIA (mantenha exatamente esta estrutura):
-{
-  "version": 2,
-  "layout": "single_page",
-  "sections": [
-    {
-      "id": "section-uuid-hero", // USE crypto.randomUUID() real
-      "type": "hero" | "content" | "cta" | "footer",
-      "rows": [
-        {
-          "id": "row-uuid-hero", // USE crypto.randomUUID() real
-          "columns": [
-            {
-              "id": "column-uuid-hero", // USE crypto.randomUUID() real
-              "width": "full" | "1/2" | "1/3" | "2/3" | "1/4" | "3/4",
-              "elements": [
-                {
-                  "id": "element-uuid-hero-heading", // USE crypto.randomUUID() real
-                  "type": "heading" | "text" | "button" | "image" | "spacer" | "divider" | "video" | "form" | "embed" | "container" | "block" | "benefits" | "reviews" | "slider" | "hero" | "features" | "team" | "contact",
-                  "props": { /* AQUI coloque o copy persuasivo */ },
-                  "styles": { /* cores/estilos de conversão */ },
-                  "children": [] /* apenas para containers e blocks */
-                }
-              ],
-              "styles": {}
-            }
-          ],
-          "styles": {}
-        }
-      ],
-      "styles": {}
-    }
-  ],
-  "theme": {
-    "colors": {
-      "primary": "#FF6B35", // Laranja energético (urgência)
-      "secondary": "#004E89", // Azul confiança
-      "accent": "#FFC107", // Amarelo atenção
-      "success": "#28A745", // Verde conversão
-      "danger": "#DC3545", // Vermelho urgência
-      "background": "#FFFFFF",
-      "text": "#2C3E50",
-      "muted": "#6C757D"
-    },
-    "fonts": {
-      "primary": "Inter",
-      "heading": "Poppins" // Mais impactante para headlines
-    },
-    "spacing": {
-      "xs": "0.5rem", "sm": "1rem", "md": "1.5rem", "lg": "2rem", "xl": "3rem", "xxl": "4rem"
-    }
-  },
-  "seo": {
-    "title": "[Produto] - [Benefício Principal] | [Call to Action]",
-    "description": "[Frase de impacto] [Benefício específico] [Prova social]",
-    "keywords": ["[problema]", "[solução]", "[benefício]", "[público-alvo]"]
-  }
-}
-
-🎨 ELEMENTOS DE ALTA CONVERSÃO:
-
-1. HEADING (Headlines Poderosas):
-   - props: { level: "h1-h6", align: "center/left" }
-   - content: { text: "Headline seguindo fórmulas comprovadas" }
-   - styles: { fontSize: "3-4rem para h1", fontWeight: "bold", color: primário, textAlign, marginBottom }
-
-2. TEXT (Copy Persuasivo):
-   - props: { align: "center/left" }
-   - content: { text: "Copy orientado a resultado com gatilhos", html: "HTML formatado" }
-   - styles: { fontSize: "1.1-1.25rem", lineHeight: "1.6", color, textAlign }
-
-3. BUTTON (CTAs Irresistíveis):
-   - props: { variant: "primary", size: "large" }
-   - content: { text: "CTA específico com urgência", href: "#" }
-   - styles: { backgroundColor: cores de urgência, color: branco, padding: generoso, borderRadius, fontSize: 18px+, boxShadow para destaque }
-
-4. BENEFITS (Benefícios Orientados a Resultado):
-   - props: { title: "Transformação que você vai alcançar", items: [{ icon: relevante, title: específico, description: "com números e timeframe" }] }
-   - styles: { gap, textAlign: "center", cardEffect }
-
-5. REVIEWS (Prova Social Estratégica):
-   - props: { title: "Veja os resultados reais", testimonials: [{ name: "Nome + Sobrenome", avatar: placeholder, text: "resultado específico com números", rating: 5, location: "cidade", profession: "área" }] }
-   - styles: { gap, layout: grid, trustColors }
-
-6. FORM (Captura com Psychological Commitment):
-   - props: { fields: específicos, submitText: "CTA poderoso", action, placeholder: orientativo }
-   - styles: { design que reduz atrito, cores de confiança }
-
-7. COUNTDOWN (Urgência Temporal):
-   - props: { endDate: futuro próximo, text: "Oferta expira em:" }
-   - styles: { destaque visual, cores de urgência }
-
-🔥 ESTRUTURA POR TIPO DE PÁGINA:
-
-LANDING PAGE (5-7 seções):
-1. HERO: Headline impactante + subheadline + CTA primário + elemento visual
-2. PROBLEMA: Agitação da dor atual + custos de não agir
-3. SOLUÇÃO: Apresentação da solução + diferencial único
-4. BENEFÍCIOS: 3-6 benefícios orientados a resultado + ícones
-5. PROVA SOCIAL: Depoimentos específicos + números + logos
-6. OBJEÇÕES: FAQ estratégico neutralizando resistências
-7. CTA FINAL: Urgência + escassez + garantia + CTA poderoso
-
-CHECKOUT (3-4 seções):
-1. RESUMO: Produto + benefícios + valor + urgência
-2. FORMULÁRIO: Mínimo atrito + elementos de confiança
-3. GARANTIA: Risk reversal + badges de segurança
-4. UPSELL SUTIL: "Quem comprou isso também levou..."
-
-UPSELL (4-5 seções):
-1. PARABÉNS: Celebração + validação da decisão
-2. OPORTUNIDADE ÚNICA: "Só para quem já está dentro"
-3. COMPARAÇÃO: O que tem vs o que poderia ter
-4. URGÊNCIA: "Apenas agora" + contador
-5. CTA EXCLUSIVO: "Sim, quero aproveitar esta oportunidade única"
-
-REGRAS CRÍTICAS:
-✅ SEMPRE inclua números específicos (não "muitos", mas "2.847 clientes")
-✅ SEMPRE use gatilhos de urgência/escassez em CTAs
-✅ SEMPRE antecipe objeções com elementos de confiança
-✅ SEMPRE oriente benefícios a RESULTADOS tangíveis
-✅ SEMPRE use prova social específica (nome, local, resultado)
-✅ SEMPRE crie headlines que param o scroll
-✅ SEMPRE inclua elementos visuais que apoiam a mensagem
-✅ SEMPRE termine seções com micro-commitments
-✅ SEMPRE gere IDs únicos usando crypto.randomUUID() - nunca use strings literais
-✅ Use cores psicológicas (vermelho/laranja urgência, verde conversão, azul confiança)
-
-❌ NUNCA use copy genérico ("alta qualidade", "melhor preço")
-❌ NUNCA deixe CTAs sem gatilhos psicológicos
-❌ NUNCA esqueça elementos de confiança (garantia, segurança)
-❌ NUNCA use apenas benefícios funcionais (inclua emocionais)
-
-Responda APENAS com o JSON válido da estrutura PageModelV2 otimizada para máxima conversão.`;
-
-  const userPrompt = `🎯 MISSÃO: Criar uma página ${aiPageData.pageType} de ALTA CONVERSÃO que gere resultados excepcionais.
-
-📋 BRIEFING ESTRATÉGICO:
-• PRODUTO/SERVIÇO: ${aiPageData.product}
-• PÚBLICO-ALVO: ${aiPageData.targetAudience} 
-• OBJETIVO PRINCIPAL: ${aiPageData.mainGoal}
-${aiPageData.additionalInfo ? `• CONTEXTO ADICIONAL: ${aiPageData.additionalInfo}` : ''}
-
-🔥 MANDATÓRIOS PARA ESTA PÁGINA:
-1. HEADLINE que para o scroll e gera curiosidade
-2. BENEFÍCIOS específicos com números e timeframes
-3. PROVA SOCIAL com nomes reais e resultados tangíveis
-4. URGÊNCIA/ESCASSEZ em todos os CTAs
-5. ELEMENTOS DE CONFIANÇA (garantias, badges)
-6. OBJEÇÕES antecipadas e neutralizadas
-7. MULTIPLE CTAs estratégicos ao longo da página
-8. DESIGN que guia o olho para conversão
-
-📊 METAS DE CONVERSÃO:
-- Landing Page: Taxa de conversão objetivo 15-25%
-- Checkout: Reduzir abandono para menos de 30%
-- Upsell: Accept rate de 35-50%
-- Downsell: Recovery rate de 25-40%
-
-🧠 PSYCHOLOGY TARGET:
-Identifique as DORES PROFUNDAS do público-alvo e crie AGITAÇÃO emocional antes de apresentar a solução. Use gatilhos de urgência social ("outras pessoas estão comprando agora") e medo de perder oportunidade (FOMO).
-
-IMPORTANTE: Esta página precisa converter em ESCALA. Cada palavra, cor e elemento deve ter propósito estratégico de conversão. Não aceite mediocridade!`;
-
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-    });
-
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("OpenAI não retornou conteúdo");
-    }
-
-    // Extract JSON from markdown code blocks if present
-    let jsonContent = content.trim();
-    if (jsonContent.startsWith('```json') || jsonContent.startsWith('```')) {
-      const jsonMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonContent = jsonMatch[1].trim();
-      }
-    }
-
-    // Parse the JSON response
-    const generatedModel = JSON.parse(jsonContent);
+    console.log(`🚀 Generating AI page with advanced orchestrator system...`);
     
-    // Validate basic structure
-    if (!generatedModel.version || !generatedModel.sections) {
-      throw new Error("Estrutura PageModelV2 inválida retornada pela IA");
-    }
+    const orchestrator = new AIPageOrchestrator();
+    
+    // Convert aiPageData to the brief format expected by the orchestrator
+    const briefData = {
+      productInfo: {
+        name: aiPageData.product,
+        description: aiPageData.additionalInfo || `${aiPageData.pageType} para ${aiPageData.product}`,
+        price: 199, // Default price - could be enhanced to extract from funnel data
+        currency: funnel.currency || 'BRL',
+        targetAudience: aiPageData.targetAudience,
+        mainBenefits: [],
+        objections: []
+      },
+      conversionGoal: aiPageData.mainGoal,
+      pageType: aiPageData.pageType,
+      industry: 'general', // Could be enhanced to detect from product info
+      language: funnel.language || 'pt-BR'
+    };
 
-    console.log(`✅ AI generated page model with ${generatedModel.sections.length} sections`);
-    return generatedModel;
+    // Generate the page using the full AI orchestrator system
+    const result = await orchestrator.generatePage(briefData);
+    
+    console.log(`✅ Advanced AI system generated page:
+      - Content Score: ${result.contentQuality.score}/10
+      - Layout Score: ${result.layoutOptimization.mobileScore}/10
+      - Media Assets: ${result.mediaEnrichment.mediaAdded.length} items
+      - QA Score: ${result.qaReview.overallScore}/10
+      - Total Cost: $${result.totalCost.toFixed(4)}
+    `);
+
+    // Convert the orchestrator result to PageModelV2 format
+    const pageModel = convertToPageModelV2(result.finalContent, aiPageData);
+    
+    return pageModel;
 
   } catch (error) {
-    console.error('❌ Erro ao gerar página com IA:', error);
+    console.error('❌ Advanced AI generation failed, falling back to simple model:', error);
     
     // Fallback to a simple default structure
     return {
@@ -2298,7 +2093,7 @@ IMPORTANTE: Esta página precisa converter em ESCALA. Cada palavra, cor e elemen
                       id: crypto.randomUUID(),
                       type: "text",
                       props: {
-                        content: `Página ${aiPageData.pageType} para ${aiPageData.product}`,
+                        content: `Página ${aiPageData.pageType} para ${aiPageData.product} (sistema básico)`,
                         align: "center"
                       },
                       styles: {
@@ -2365,6 +2160,313 @@ IMPORTANTE: Esta página precisa converter em ESCALA. Cada palavra, cor e elemen
       }
     };
   }
+}
+
+/**
+ * Convert orchestrator result to PageModelV2 format
+ */
+function convertToPageModelV2(finalContent: any, aiPageData: any): any {
+  try {
+    // If finalContent already has version and sections, use it directly
+    if (finalContent.version && finalContent.sections) {
+      return finalContent;
+    }
+
+    // Otherwise convert from orchestrator format to PageModelV2
+    const sections = [];
+    
+    if (finalContent.sections && Array.isArray(finalContent.sections)) {
+      for (const section of finalContent.sections) {
+        const pageSection = {
+          id: crypto.randomUUID(),
+          type: mapSectionType(section.type),
+          rows: [
+            {
+              id: crypto.randomUUID(),
+              columns: [
+                {
+                  id: crypto.randomUUID(),
+                  width: "full",
+                  elements: convertSectionToElements(section),
+                  styles: {}
+                }
+              ],
+              styles: {}
+            }
+          ],
+          styles: section.style || {}
+        };
+        
+        sections.push(pageSection);
+      }
+    }
+
+    return {
+      version: 2,
+      layout: "single_page",
+      sections: sections.length > 0 ? sections : [createDefaultHeroSection(aiPageData)],
+      theme: finalContent.style || getDefaultTheme(),
+      seo: finalContent.seo || getDefaultSEO(aiPageData)
+    };
+
+  } catch (error) {
+    console.error('❌ Error converting to PageModelV2:', error);
+    return {
+      version: 2,
+      layout: "single_page",
+      sections: [createDefaultHeroSection(aiPageData)],
+      theme: getDefaultTheme(),
+      seo: getDefaultSEO(aiPageData)
+    };
+  }
+}
+
+function mapSectionType(type: string): string {
+  const typeMap = {
+    'hero': 'hero',
+    'problema': 'content',
+    'solução': 'content',
+    'benefícios': 'content',
+    'prova-social': 'content',
+    'objeções': 'content',
+    'cta': 'cta',
+    'guarantee': 'content'
+  };
+  return typeMap[type] || 'content';
+}
+
+function convertSectionToElements(section: any): any[] {
+  const elements = [];
+  
+  if (section.content) {
+    // Add heading if present
+    if (section.content.title || section.content.headline) {
+      elements.push({
+        id: crypto.randomUUID(),
+        type: "heading",
+        props: {
+          text: section.content.title || section.content.headline,
+          tag: "h2",
+          align: "center"
+        },
+        styles: {
+          fontSize: "2rem",
+          fontWeight: "bold",
+          color: "#1F2937",
+          textAlign: "center",
+          marginBottom: "1rem"
+        }
+      });
+    }
+
+    // Add content text
+    if (section.content.description || section.content.subtitle) {
+      elements.push({
+        id: crypto.randomUUID(),
+        type: "text",
+        props: {
+          content: section.content.description || section.content.subtitle,
+          align: "center"
+        },
+        styles: {
+          fontSize: "1.125rem",
+          lineHeight: "1.6",
+          color: "#4B5563",
+          textAlign: "center",
+          marginBottom: "1.5rem"
+        }
+      });
+    }
+
+    // Add CTA if present
+    if (section.content.cta || section.content.ctaText) {
+      elements.push({
+        id: crypto.randomUUID(),
+        type: "button",
+        props: {
+          text: section.content.cta || section.content.ctaText,
+          variant: "primary",
+          size: "large"
+        },
+        styles: {
+          backgroundColor: "#FF6B35",
+          color: "#FFFFFF",
+          padding: "1rem 2rem",
+          borderRadius: "0.5rem",
+          fontSize: "1.125rem",
+          fontWeight: "semibold"
+        }
+      });
+    }
+
+    // Add benefits if present
+    if (section.content.benefits && Array.isArray(section.content.benefits)) {
+      elements.push({
+        id: crypto.randomUUID(),
+        type: "benefits",
+        props: {
+          title: "Benefícios Principais",
+          items: section.content.benefits.map(benefit => ({
+            icon: "check",
+            title: benefit.title || benefit,
+            description: benefit.description || ""
+          }))
+        },
+        styles: {
+          gap: "1rem",
+          textAlign: "center"
+        }
+      });
+    }
+
+    // Add testimonials if present
+    if (section.content.testimonials && Array.isArray(section.content.testimonials)) {
+      elements.push({
+        id: crypto.randomUUID(),
+        type: "reviews",
+        props: {
+          title: "Depoimentos de Clientes",
+          testimonials: section.content.testimonials.map(testimonial => ({
+            name: testimonial.name || "Cliente Satisfeito",
+            text: testimonial.text || testimonial.comment || testimonial,
+            rating: testimonial.rating || 5,
+            avatar: testimonial.avatar || "",
+            location: testimonial.location || "",
+            profession: testimonial.profession || ""
+          }))
+        },
+        styles: {
+          gap: "1.5rem",
+          layout: "grid"
+        }
+      });
+    }
+  }
+
+  return elements.length > 0 ? elements : [createDefaultTextElement()];
+}
+
+function createDefaultHeroSection(aiPageData: any): any {
+  return {
+    id: crypto.randomUUID(),
+    type: "hero",
+    rows: [
+      {
+        id: crypto.randomUUID(),
+        columns: [
+          {
+            id: crypto.randomUUID(),
+            width: "full",
+            elements: [
+              {
+                id: crypto.randomUUID(),
+                type: "heading",
+                props: {
+                  text: aiPageData.name,
+                  tag: "h1",
+                  align: "center"
+                },
+                styles: {
+                  fontSize: "3rem",
+                  fontWeight: "bold",
+                  color: "#1F2937",
+                  textAlign: "center",
+                  marginBottom: "1rem"
+                }
+              },
+              {
+                id: crypto.randomUUID(),
+                type: "text",
+                props: {
+                  content: `${aiPageData.pageType} para ${aiPageData.product}`,
+                  align: "center"
+                },
+                styles: {
+                  fontSize: "1.25rem",
+                  color: "#6B7280",
+                  textAlign: "center",
+                  marginBottom: "2rem"
+                }
+              },
+              {
+                id: crypto.randomUUID(),
+                type: "button",
+                props: {
+                  text: "Começar Agora",
+                  variant: "primary",
+                  size: "large"
+                },
+                styles: {
+                  backgroundColor: "#FF6B35",
+                  color: "#FFFFFF",
+                  padding: "1rem 2rem",
+                  borderRadius: "0.5rem",
+                  fontSize: "1.125rem"
+                }
+              }
+            ],
+            styles: {}
+          }
+        ],
+        styles: {}
+      }
+    ],
+    styles: {
+      padding: "4rem 1rem",
+      backgroundColor: "#F9FAFB"
+    }
+  };
+}
+
+function createDefaultTextElement(): any {
+  return {
+    id: crypto.randomUUID(),
+    type: "text",
+    props: {
+      content: "Conteúdo gerado pela IA",
+      align: "center"
+    },
+    styles: {
+      fontSize: "1.125rem",
+      color: "#4B5563",
+      textAlign: "center",
+      marginBottom: "1rem"
+    }
+  };
+}
+
+function getDefaultTheme(): any {
+  return {
+    colors: {
+      primary: "#FF6B35",
+      secondary: "#004E89",
+      accent: "#FFC107",
+      success: "#28A745",
+      danger: "#DC3545",
+      background: "#FFFFFF",
+      text: "#2C3E50",
+      muted: "#6C757D"
+    },
+    fonts: {
+      primary: "Inter",
+      heading: "Poppins"
+    },
+    spacing: {
+      xs: "0.5rem",
+      sm: "1rem", 
+      md: "1.5rem",
+      lg: "2rem",
+      xl: "3rem"
+    }
+  };
+}
+
+function getDefaultSEO(aiPageData: any): any {
+  return {
+    title: `${aiPageData.product} - ${aiPageData.name}`,
+    description: `${aiPageData.pageType} para ${aiPageData.product}. ${aiPageData.mainGoal}`,
+    keywords: [aiPageData.product, aiPageData.pageType, "conversão", "alta performance"]
+  };
 }
 
 export { router as funnelRoutes };
