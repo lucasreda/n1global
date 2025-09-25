@@ -10,12 +10,14 @@ export function ElementButton({
   isSelected = false 
 }: ElementProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [text, setText] = useState(element.content?.text || 'Botão');
+  const [text, setText] = useState(element.props?.text || element.content?.text || 'Botão');
 
-  // Update text when element content changes
+  // Update text when element content or props change
   useEffect(() => {
-    setText(element.content?.text || 'Botão');
-  }, [element.content?.text]);
+    const newText = element.props?.text || element.content?.text || 'Botão';
+    console.log('🔍 ElementButton useEffect - props.text:', element.props?.text, 'content.text:', element.content?.text, 'final:', newText);
+    setText(newText);
+  }, [element.props?.text, element.content?.text]);
 
   const handleDoubleClick = () => {
     if (editorMode) {

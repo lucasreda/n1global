@@ -10,16 +10,18 @@ export function ElementHeading({
   isSelected = false 
 }: ElementProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [text, setText] = useState(element.content?.text || 'Título');
+  const [text, setText] = useState(element.props?.text || element.content?.text || 'Título');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const headingLevel = element.props.level || 'h2';
+  const headingLevel = element.props.level || element.props.tag || 'h2';
   const HeadingComponent = headingLevel as keyof JSX.IntrinsicElements;
 
-  // Update text when element content changes
+  // Update text when element content or props change
   useEffect(() => {
-    setText(element.content?.text || 'Título');
-  }, [element.content?.text]);
+    const newText = element.props?.text || element.content?.text || 'Título';
+    console.log('🔍 ElementHeading useEffect - props.text:', element.props?.text, 'content.text:', element.content?.text, 'final:', newText);
+    setText(newText);
+  }, [element.props?.text, element.content?.text]);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
