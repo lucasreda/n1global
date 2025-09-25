@@ -72,12 +72,12 @@ export function PageCreationOptionsModal({
 
           {/* Criar com IA */}
           <Card 
-            className="cursor-pointer transition-all hover:border-purple-500 hover:bg-purple-950/10 group"
+            className="cursor-pointer transition-all hover:border-blue-500 hover:bg-blue-950/10 group"
             onClick={onSelectAIPage}
             data-testid="card-ai-page"
           >
             <CardHeader className="text-center pb-4">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gray-700 rounded-full flex items-center justify-center group-hover:bg-purple-600 transition-colors">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-700 rounded-full flex items-center justify-center group-hover:bg-blue-600 transition-colors">
                 <Sparkles className="w-8 h-8 text-gray-300 group-hover:text-white" />
               </div>
               <CardTitle className="text-lg">Criar com IA</CardTitle>
@@ -93,7 +93,7 @@ export function PageCreationOptionsModal({
                 <li>• Ideal para resultados rápidos</li>
               </ul>
               <Button 
-                className="w-full group-hover:bg-purple-600 group-hover:text-white transition-colors"
+                className="w-full group-hover:bg-blue-600 group-hover:text-white transition-colors"
                 variant="outline"
                 onClick={(e) => {
                   e.stopPropagation();
