@@ -110,7 +110,7 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-500" />
+            <Sparkles className="w-5 h-5 text-blue-500" />
             Criar Página com IA
           </DialogTitle>
           <DialogDescription>
@@ -268,7 +268,7 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
               <Button
                 type="submit"
                 disabled={createAIPageMutation.isPending}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-blue-600 hover:bg-blue-700"
                 data-testid="button-create-ai-page"
               >
                 {createAIPageMutation.isPending && (
