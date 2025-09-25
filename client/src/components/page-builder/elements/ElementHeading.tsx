@@ -16,6 +16,11 @@ export function ElementHeading({
   const headingLevel = element.props.level || 'h2';
   const HeadingComponent = headingLevel as keyof JSX.IntrinsicElements;
 
+  // Update text when element content changes
+  useEffect(() => {
+    setText(element.content?.text || 'Título');
+  }, [element.content?.text]);
+
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();

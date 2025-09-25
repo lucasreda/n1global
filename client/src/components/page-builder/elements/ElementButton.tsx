@@ -1,5 +1,5 @@
 import { ElementProps } from './types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function ElementButton({ 
   element, 
@@ -11,6 +11,11 @@ export function ElementButton({
 }: ElementProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(element.content?.text || 'Botão');
+
+  // Update text when element content changes
+  useEffect(() => {
+    setText(element.content?.text || 'Botão');
+  }, [element.content?.text]);
 
   const handleDoubleClick = () => {
     if (editorMode) {
