@@ -2244,18 +2244,18 @@ function convertSectionToElements(section: any): any[] {
   const elements = [];
   
   if (section.content) {
-    // Add heading if present
-    if (section.content.title || section.content.headline) {
+    // Add heading if present (AI generates 'headline')
+    if (section.content.headline || section.content.title) {
       elements.push({
         id: crypto.randomUUID(),
         type: "heading",
         props: {
-          text: section.content.title || section.content.headline,
-          tag: "h2",
+          text: section.content.headline || section.content.title,
+          tag: section.type === "hero" ? "h1" : "h2",
           align: "center"
         },
         styles: {
-          fontSize: "2rem",
+          fontSize: section.type === "hero" ? "3rem" : "2rem",
           fontWeight: "bold",
           color: "#1F2937",
           textAlign: "center",
@@ -2264,13 +2264,13 @@ function convertSectionToElements(section: any): any[] {
       });
     }
 
-    // Add content text
-    if (section.content.description || section.content.subtitle) {
+    // Add content text (AI generates 'subheadline')
+    if (section.content.subheadline || section.content.description || section.content.subtitle) {
       elements.push({
         id: crypto.randomUUID(),
         type: "text",
         props: {
-          content: section.content.description || section.content.subtitle,
+          content: section.content.subheadline || section.content.description || section.content.subtitle,
           align: "center"
         },
         styles: {
@@ -2283,13 +2283,13 @@ function convertSectionToElements(section: any): any[] {
       });
     }
 
-    // Add CTA if present
-    if (section.content.cta || section.content.ctaText) {
+    // Add CTA if present (AI generates 'ctaText')
+    if (section.content.ctaText || section.content.cta) {
       elements.push({
         id: crypto.randomUUID(),
         type: "button",
         props: {
-          text: section.content.cta || section.content.ctaText,
+          text: section.content.ctaText || section.content.cta,
           variant: "primary",
           size: "large"
         },
