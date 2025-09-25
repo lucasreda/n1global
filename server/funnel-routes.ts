@@ -2039,18 +2039,23 @@ async function generateAIPageModel(aiPageData: any, funnel: any): Promise<any> {
     };
 
     // Generate the page using the full AI orchestrator system
-    const result = await orchestrator.generatePage(briefData);
+    const aiRequest = {
+      funnelId: funnel.id,
+      pageId: crypto.randomUUID(),
+      operationId: funnel.operationId,
+      userId: '4caffecf-9f5a-4c47-bc24-b40ae5686aa6', // TODO: Get from request context
+      briefData
+    };
+    const result = await orchestrator.generatePage(aiRequest);
     
     console.log(`✅ Advanced AI system generated page:
-      - Content Score: ${result.contentQuality.score}/10
-      - Layout Score: ${result.layoutOptimization.mobileScore}/10
-      - Media Assets: ${result.mediaEnrichment.mediaAdded.length} items
-      - QA Score: ${result.qaReview.overallScore}/10
+      - Quality Score: ${result.qualityScore}/10
+      - Status: ${result.status}
       - Total Cost: $${result.totalCost.toFixed(4)}
     `);
 
-    // Convert the orchestrator result to PageModelV2 format
-    const pageModel = convertToPageModelV2(result.finalContent, aiPageData);
+    // Convert the orchestrator result to PageModelV2 format  
+    const pageModel = convertToPageModelV2(result.generatedModel, aiPageData);
     
     return pageModel;
 
