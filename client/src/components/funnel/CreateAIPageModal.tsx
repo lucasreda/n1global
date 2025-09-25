@@ -268,7 +268,7 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
               <Button
                 type="submit"
                 disabled={createAIPageMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
                 data-testid="button-create-ai-page"
               >
                 {createAIPageMutation.isPending && (
