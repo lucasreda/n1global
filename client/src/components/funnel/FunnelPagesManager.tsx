@@ -202,7 +202,7 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
         </div>
         <Button
           onClick={() => setShowOptionsModal(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
           data-testid="button-create-page"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -221,7 +221,7 @@ export function FunnelPagesManager({ funnelId }: FunnelPagesManagerProps) {
             </p>
             <Button
               onClick={() => setShowOptionsModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
               Criar Primeira Página
