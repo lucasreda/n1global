@@ -205,7 +205,7 @@ export default function FunnelEditor() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       <DashboardHeader title={funnel.name} subtitle="Gerenciar e editar páginas do funil" />
       
       <div className="container mx-auto p-6">
