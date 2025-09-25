@@ -7,7 +7,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
 
   return (
-    <header className="p-4 sm:p-6 mb-6 animate-fade-in">
+    <header className="animate-fade-in">
       <div className="flex-1 min-w-0">
       </div>
     </header>
