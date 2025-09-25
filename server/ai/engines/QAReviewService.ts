@@ -167,7 +167,7 @@ Retorne JSON:
       messages: [
         {
           role: "system",
-          content: "Você é um especialista em copywriting e qualidade de conteúdo para páginas de conversão. Seja crítico mas construtivo na sua análise."
+          content: "Você é um especialista em copywriting e qualidade de conteúdo para páginas de conversão. Seja crítico mas construtivo na sua análise. Retorne sua resposta no formato JSON."
         },
         { role: "user", content: prompt }
       ],
@@ -226,7 +226,7 @@ Retorne JSON:
       messages: [
         {
           role: "system",
-          content: "Você é especialista em CRO (Conversion Rate Optimization) e psicologia de vendas. Analise criticamente os elementos de conversão."
+          content: "Você é especialista em CRO (Conversion Rate Optimization) e psicologia de vendas. Analise criticamente os elementos de conversão. Retorne sua resposta no formato JSON."
         },
         { role: "user", content: prompt }
       ],

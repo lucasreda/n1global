@@ -118,7 +118,7 @@ Forneça análise detalhada para mobile-first. Retorne JSON:
       messages: [
         {
           role: "system",
-          content: "Você é especialista em UX mobile e otimização de layouts responsivos. Foque em usabilidade móvel, performance e conversão."
+          content: "Você é especialista em UX mobile e otimização de layouts responsivos. Foque em usabilidade móvel, performance e conversão. Retorne sua resposta no formato JSON."
         },
         { role: "user", content: prompt }
       ],
@@ -178,7 +178,7 @@ Crie estratégia responsiva detalhada. Retorne JSON:
       messages: [
         {
           role: "system",
-          content: "Você é especialista em design responsivo e otimização de breakpoints. Crie estratégias que maximizem conversão em todos os dispositivos."
+          content: "Você é especialista em design responsivo e otimização de breakpoints. Crie estratégias que maximizem conversão em todos os dispositivos. Retorne sua resposta no formato JSON."
         },
         { role: "user", content: prompt }
       ],

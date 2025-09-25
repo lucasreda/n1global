@@ -144,7 +144,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
       messages: [
         {
           role: "system",
-          content: "Você é especialista em design visual e seleção de imagens para páginas de conversão. Identifique as necessidades visuais para maximizar impacto e conversão."
+          content: "Você é especialista em design visual e seleção de imagens para páginas de conversão. Identifique as necessidades visuais para maximizar impacto e conversão. Retorne sua resposta no formato JSON."
         },
         { role: "user", content: prompt }
       ],

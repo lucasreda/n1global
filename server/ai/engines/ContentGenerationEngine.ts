@@ -123,19 +123,19 @@ export class ContentGenerationEngine {
 
   private getSectionSystemPrompt(sectionType: string, framework: string): string {
     const prompts = {
-      hero: `Você é um especialista em headlines e hero sections de alta conversão. Use o framework ${framework} para criar um hero impactante que capture atenção imediatamente e comunique a proposta de valor única. Foque em clareza, benefício principal e chamada para ação irresistível.`,
+      hero: `Você é um especialista em headlines e hero sections de alta conversão. Use o framework ${framework} para criar um hero impactante que capture atenção imediatamente e comunique a proposta de valor única. Foque em clareza, benefício principal e chamada para ação irresistível. Retorne sua resposta no formato JSON.`,
       
-      problema: `Você é especialista em copywriting de agitação de problemas. Sua tarefa é intensificar a dor do cliente potencial, criando urgência e necessidade do produto. Use linguagem emocional e específica que ressoe profundamente com o público-alvo.`,
+      problema: `Você é especialista em copywriting de agitação de problemas. Sua tarefa é intensificar a dor do cliente potencial, criando urgência e necessidade do produto. Use linguagem emocional e específica que ressoe profundamente com o público-alvo. Retorne sua resposta no formato JSON.`,
       
-      solução: `Você é especialista em apresentar soluções de forma convincente. Posicione o produto como a solução perfeita e única para os problemas apresentados. Use transições suaves e linguagem que gere confiança e credibilidade.`,
+      solução: `Você é especialista em apresentar soluções de forma convincente. Posicione o produto como a solução perfeita e única para os problemas apresentados. Use transições suaves e linguagem que gere confiança e credibilidade. Retorne sua resposta no formato JSON.`,
       
-      benefícios: `Você é especialista em copywriting de benefícios focados em resultados. Transforme features em benefícios emocionais e tangíveis. Use a técnica "So What?" para ir além de características superficiais e conectar com desejos profundos.`,
+      benefícios: `Você é especialista em copywriting de benefícios focados em resultados. Transforme features em benefícios emocionais e tangíveis. Use a técnica "So What?" para ir além de características superficiais e conectar com desejos profundos. Retorne sua resposta no formato JSON.`,
       
-      'prova-social': `Você é especialista em criar prova social convincente. Desenvolva depoimentos realistas e específicos que abordem objeções comuns e demonstrem resultados tangíveis. Inclua detalhes que aumentem a credibilidade.`,
+      'prova-social': `Você é especialista em criar prova social convincente. Desenvolva depoimentos realistas e específicos que abordem objeções comuns e demonstrem resultados tangíveis. Inclua detalhes que aumentem a credibilidade. Retorne sua resposta no formato JSON.`,
       
-      objeções: `Você é especialista em reverter objeções de vendas. Antecipe e responda às principais objeções de forma empática mas assertiva. Use lógica, prova social e garantias para eliminar riscos percebidos.`,
+      objeções: `Você é especialista em reverter objeções de vendas. Antecipe e responda às principais objeções de forma empática mas assertiva. Use lógica, prova social e garantias para eliminar riscos percebidos. Retorne sua resposta no formato JSON.`,
       
-      cta: `Você é especialista em call-to-actions de alta conversão. Crie CTAs que geram urgência, reduzem fricção e maximizam cliques. Use linguagem orientada a ação e elementos de escassez/urgência quando apropriado.`
+      cta: `Você é especialista em call-to-actions de alta conversão. Crie CTAs que geram urgência, reduzem fricção e maximizam cliques. Use linguagem orientada a ação e elementos de escassez/urgência quando apropriado. Retorne sua resposta no formato JSON.`
     };
 
     return prompts[sectionType] || `Você é especialista em copywriting de conversão. Crie conteúdo persuasivo e otimizado para este tipo de seção.`;
@@ -285,7 +285,7 @@ Crie SEO otimizado para conversão. Retorne JSON:
       messages: [
         {
           role: "system",
-          content: "Você é especialista em SEO para landing pages de conversão. Crie títulos e descrições que ranqueiem bem e aumentem CTR."
+          content: "Você é especialista em SEO para landing pages de conversão. Crie títulos e descrições que ranqueiem bem e aumentem CTR. Retorne sua resposta no formato JSON."
         },
         { role: "user", content: prompt }
       ],
