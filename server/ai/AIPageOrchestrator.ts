@@ -147,7 +147,7 @@ export class AIPageOrchestrator {
         .set({
           templateId: selectedTemplate.id,
           generatedModel: finalModel,
-          qualityScore: qaResult.overallScore,
+          qualityScore: qaResult,
           generationSteps,
           status: qaResult.overallScore >= 8.0 ? 'review_pending' : 'needs_improvement',
           aiCost: totalCost.toString(),
