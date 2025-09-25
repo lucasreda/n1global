@@ -377,7 +377,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setLocation(`/editor/funnels/${funnelId}/pages`)}
+              onClick={() => setLocation(`/funnels/${funnelId}/pages`)}
               className="text-white hover:bg-muted/20"
               data-testid="button-back-to-pages"
             >
