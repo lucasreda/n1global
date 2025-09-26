@@ -277,7 +277,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
           data-testid={`element-${element.id}`}
           data-element-type="heading"
         >
-          {element.content?.text || 'Título'}
+          {element.content?.text || element.props?.text || 'Título'}
         </HeadingComponent>
       );
 
@@ -288,7 +288,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
           data-testid={`element-${element.id}`}
           data-element-type="text"
           dangerouslySetInnerHTML={{ 
-            __html: element.content?.html || element.content?.text || 'Texto aqui...' 
+            __html: element.content?.html || element.content?.text || element.props?.content || element.props?.text || 'Texto aqui...' 
           }}
         />
       );
@@ -316,7 +316,7 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
           data-testid={`element-${element.id}`}
           data-element-type="button"
         >
-          {element.content?.text || 'Botão'}
+          {element.content?.text || element.props?.text || 'Botão'}
         </button>
       );
 
