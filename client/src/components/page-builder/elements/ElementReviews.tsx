@@ -322,7 +322,7 @@ export function ElementReviews({
                 width: '50px',
                 height: '50px',
                 borderRadius: '50%',
-                backgroundColor: element.styles.avatarBackgroundColor || theme.colors.primary,
+                backgroundColor: element.styles.avatarBackgroundColor || theme.colors?.primary || '#3b82f6',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -359,7 +359,7 @@ export function ElementReviews({
                 {review.role && (
                   <p style={{
                     fontSize: element.styles.roleFontSize || theme.typography?.fontSize?.sm || '0.875rem',
-                    color: element.styles.roleColor || theme.colors.muted,
+                    color: element.styles.roleColor || theme.colors?.muted || '#6b7280',
                     margin: '0'
                   }}>
                     {review.role}
