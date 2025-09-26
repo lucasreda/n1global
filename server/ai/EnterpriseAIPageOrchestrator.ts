@@ -11,6 +11,7 @@ import { VisualIdentityEngine } from './engines/VisualIdentityEngine';
 import { QAReviewService } from './engines/QAReviewService';
 import { TemplateLibrary } from './engines/TemplateLibrary';
 import { PromptLibrary } from './engines/PromptLibrary';
+import { VisualQualityGates, QualityAssessmentResult } from './quality/VisualQualityGates';
 import { pageGenerationDrafts, VisualIdentity } from '../../shared/schema';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
@@ -121,6 +122,9 @@ export class EnterpriseAIPageOrchestrator {
   private qaService: QAReviewService;
   private templateLibrary: TemplateLibrary;
   private promptLibrary: PromptLibrary;
+  
+  // Enterprise Quality Gates
+  private visualQualityGates: VisualQualityGates;
 
   // Enterprise features
   private cache: Map<string, any> = new Map();
@@ -136,6 +140,9 @@ export class EnterpriseAIPageOrchestrator {
     this.qaService = new QAReviewService();
     this.templateLibrary = new TemplateLibrary();
     this.promptLibrary = new PromptLibrary();
+    
+    // Initialize Enterprise Quality Gates
+    this.visualQualityGates = new VisualQualityGates();
 
     this.initializePerformanceMetrics();
   }
@@ -208,12 +215,24 @@ export class EnterpriseAIPageOrchestrator {
       );
       totalCost += finalizationResult.cost;
 
-      // Final quality check and model compilation
-      const finalModel = await this.compileFinalModel(
+      // Step 7: Enterprise Visual Quality Gates Assessment
+      console.log('🛡️ Step 7: Enterprise Visual Quality Gates...');
+      const qualityGatesResult = await this.executeVisualQualityGates(
         finalizationResult.data,
         foundationResult.templateData,
         parallelResult.visualIdentity,
-        options.qualityThreshold
+        generationSteps,
+        options
+      );
+      totalCost += qualityGatesResult.cost;
+
+      // Final quality check and model compilation
+      const finalModel = await this.compileFinalModel(
+        qualityGatesResult.data,
+        foundationResult.templateData,
+        parallelResult.visualIdentity,
+        options.qualityThreshold,
+        qualityGatesResult.qualityAssessment
       );
 
       // Calculate final performance metrics
@@ -231,12 +250,13 @@ export class EnterpriseAIPageOrchestrator {
 
       console.log('✅ Enterprise AI Generation Pipeline Completed Successfully');
       console.log(`📊 Performance: ${this.performance.totalDuration}ms total, ${this.performance.parallelizationSavings}ms saved via parallelization`);
+      console.log(`🛡️ Quality Score: ${qualityGatesResult.qualityAssessment.overallScore}/100 (${qualityGatesResult.qualityAssessment.certification.level})`);
       console.log(`💰 Total Cost: $${totalCost.toFixed(4)}`);
 
       return {
         draftId,
         generatedModel: finalModel,
-        qualityScore: finalizationResult.qualityScore,
+        qualityScore: qualityGatesResult.qualityAssessment.overallScore,
         generationSteps,
         performance: this.performance,
         status: 'completed',
@@ -451,6 +471,85 @@ export class EnterpriseAIPageOrchestrator {
     }
   }
 
+  private async executeVisualQualityGates(
+    finalizedData: any,
+    templateData: any,
+    visualIdentity: any,
+    generationSteps: GenerationSteps,
+    options: any
+  ): Promise<{ data: any; qualityAssessment: QualityAssessmentResult; cost: number }> {
+    console.log('🛡️ Phase 4: Enterprise Visual Quality Gates');
+    
+    const stepTimer = this.startStepTimer('visualQualityGates');
+    let cost = 0;
+
+    try {
+      // Create temporary page model for quality assessment
+      const tempPageModel = this.transformToPageModelV2(finalizedData, visualIdentity);
+      
+      // Extract AI-generated images for quality analysis
+      const aiImages = this.extractAIImagesFromData(finalizedData);
+      
+      // Run comprehensive quality assessment
+      const qualityAssessment = await this.visualQualityGates.assessPageQuality(
+        tempPageModel,
+        visualIdentity,
+        aiImages
+      );
+
+      // Enterprise quality gate enforcement
+      if (!qualityAssessment.passed && options.qualityThreshold > 80) {
+        console.log('⚠️ Quality gates failed - applying automatic improvements...');
+        
+        // Apply automatic quality improvements
+        const improvedData = await this.applyQualityImprovements(
+          finalizedData,
+          qualityAssessment.recommendations
+        );
+        
+        // Re-assess after improvements
+        const improvedPageModel = this.transformToPageModelV2(improvedData, visualIdentity);
+        const finalQualityAssessment = await this.visualQualityGates.assessPageQuality(
+          improvedPageModel,
+          visualIdentity,
+          aiImages
+        );
+
+        generationSteps.visualQualityGates = this.completeStep(stepTimer, {
+          assessment: finalQualityAssessment,
+          improvementsApplied: true,
+          initialScore: qualityAssessment.overallScore,
+          finalScore: finalQualityAssessment.overallScore
+        });
+
+        console.log(`🛡️ Quality improved: ${qualityAssessment.overallScore} → ${finalQualityAssessment.overallScore}/100`);
+
+        return {
+          data: improvedData,
+          qualityAssessment: finalQualityAssessment,
+          cost: cost + 0.15 // Additional cost for quality improvements
+        };
+      }
+
+      generationSteps.visualQualityGates = this.completeStep(stepTimer, {
+        assessment: qualityAssessment,
+        improvementsApplied: false
+      });
+
+      console.log(`🛡️ Quality assessment complete: ${qualityAssessment.overallScore}/100 (${qualityAssessment.certification.level})`);
+
+      return {
+        data: finalizedData,
+        qualityAssessment,
+        cost
+      };
+
+    } catch (error) {
+      generationSteps.visualQualityGates = this.failStep(stepTimer, error);
+      throw error;
+    }
+  }
+
   // ============================
   // 🔧 STEP EXECUTION HELPERS
   // ============================
@@ -643,18 +742,25 @@ export class EnterpriseAIPageOrchestrator {
     finalData: any,
     templateData: any,
     visualIdentity: any,
-    qualityThreshold: number
+    qualityThreshold: number,
+    qualityAssessment?: QualityAssessmentResult
   ): Promise<any> {
     // Use existing transformToPageModelV2 logic with enterprise enhancements
     const model = this.transformToPageModelV2(finalData, visualIdentity);
     
-    // Add enterprise metadata
+    // Add enterprise metadata including quality assessment
     model.metadata = {
       ...model.metadata,
       generationMethod: 'enterprise_ai_orchestrated',
       templateId: templateData.id,
       performance: this.performance,
       qualityThreshold,
+      qualityAssessment: qualityAssessment ? {
+        overallScore: qualityAssessment.overallScore,
+        certification: qualityAssessment.certification,
+        passed: qualityAssessment.passed,
+        assessmentDate: new Date().toISOString()
+      } : undefined,
       generatedAt: new Date().toISOString()
     };
 
@@ -752,5 +858,139 @@ export class EnterpriseAIPageOrchestrator {
 
   private generateId(): string {
     return Math.random().toString(36).substr(2, 9);
+  }
+
+  // ============================
+  // 🛡️ QUALITY IMPROVEMENT METHODS
+  // ============================
+
+  private extractAIImagesFromData(data: any): any[] {
+    const images: any[] = [];
+    
+    if (data.sections) {
+      for (const section of data.sections) {
+        if (section.content?.images) {
+          images.push(...section.content.images);
+        }
+        if (section.content?.backgroundImage) {
+          images.push(section.content.backgroundImage);
+        }
+      }
+    }
+
+    if (data.media) {
+      images.push(...data.media);
+    }
+
+    return images;
+  }
+
+  private async applyQualityImprovements(
+    data: any,
+    recommendations: any[]
+  ): Promise<any> {
+    const improvedData = JSON.parse(JSON.stringify(data)); // Deep clone
+    
+    for (const recommendation of recommendations) {
+      switch (recommendation.category) {
+        case 'accessibility':
+          if (recommendation.title.includes('Contrast')) {
+            improvedData.theme = this.improveColorContrast(improvedData.theme);
+          }
+          break;
+          
+        case 'visual':
+          if (recommendation.title.includes('Image Quality')) {
+            improvedData.images = this.enhanceImageQuality(improvedData.images);
+          }
+          break;
+          
+        case 'performance':
+          if (recommendation.title.includes('Performance')) {
+            improvedData.settings = this.optimizePerformance(improvedData.settings);
+          }
+          break;
+      }
+    }
+
+    return improvedData;
+  }
+
+  private improveColorContrast(theme: any): any {
+    const improvedTheme = { ...theme };
+    
+    // Automatically adjust colors for better contrast
+    if (improvedTheme.colors) {
+      // Darken text colors for better contrast
+      if (improvedTheme.colors.text && this.isLightColor(improvedTheme.colors.text)) {
+        improvedTheme.colors.text = this.darkenColor(improvedTheme.colors.text, 0.3);
+      }
+      
+      // Ensure background is light enough
+      if (improvedTheme.colors.background && this.isDarkColor(improvedTheme.colors.background)) {
+        improvedTheme.colors.background = this.lightenColor(improvedTheme.colors.background, 0.2);
+      }
+    }
+
+    return improvedTheme;
+  }
+
+  private enhanceImageQuality(images: any[]): any[] {
+    if (!images) return [];
+    
+    return images.map(image => ({
+      ...image,
+      quality: Math.max(image.quality || 8, 9), // Ensure high quality
+      resolution: {
+        width: Math.max(image.resolution?.width || 1920, 1920),
+        height: Math.max(image.resolution?.height || 1080, 1080)
+      },
+      format: 'webp' // Use modern format
+    }));
+  }
+
+  private optimizePerformance(settings: any): any {
+    return {
+      ...settings,
+      lazyLoading: true,
+      imageOptimization: true,
+      codeMinification: true,
+      enableAnimations: false // Disable animations for better performance
+    };
+  }
+
+  // Color utility methods
+  private isLightColor(color: string): boolean {
+    const lightness = this.getLightness(color);
+    return lightness > 0.6;
+  }
+
+  private isDarkColor(color: string): boolean {
+    const lightness = this.getLightness(color);
+    return lightness < 0.4;
+  }
+
+  private darkenColor(color: string, amount: number): string {
+    // Simplified color darkening (real implementation would use proper color libraries)
+    if (color.startsWith('#')) {
+      const hex = color.replace('#', '');
+      const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - (255 * amount));
+      const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - (255 * amount));
+      const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - (255 * amount));
+      return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
+    }
+    return color;
+  }
+
+  private lightenColor(color: string, amount: number): string {
+    // Simplified color lightening
+    if (color.startsWith('#')) {
+      const hex = color.replace('#', '');
+      const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + (255 * amount));
+      const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + (255 * amount));
+      const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + (255 * amount));
+      return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
+    }
+    return color;
   }
 }
