@@ -95,6 +95,34 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
                     console.log(`⚠️ Element ${element.type} had no content, creating empty object`);
                   }
                   
+                  // Convert heading content
+                  if (element.type === 'heading' && element.props?.text) {
+                    convertedElement.content = {
+                      ...convertedElement.content,
+                      text: element.props.text
+                    };
+                    console.log(`✅ Converted heading text:`, element.props.text);
+                  }
+                  
+                  // Convert text content  
+                  if (element.type === 'text' && element.props?.content) {
+                    convertedElement.content = {
+                      ...convertedElement.content,
+                      text: element.props.content,
+                      html: `<p>${element.props.content}</p>`
+                    };
+                    console.log(`✅ Converted text content:`, element.props.content);
+                  }
+                  
+                  // Convert button content
+                  if (element.type === 'button' && element.props?.text) {
+                    convertedElement.content = {
+                      ...convertedElement.content,
+                      text: element.props.text
+                    };
+                    console.log(`✅ Converted button text:`, element.props.text);
+                  }
+                  
                   // Convert benefits content
                   if (element.type === 'benefits') {
                     const benefits = element.props?.items || element.content?.benefits || element.benefits || [];
