@@ -59,6 +59,106 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
     enabled: !!funnelId && !!pageId && !!selectedOperation,
   });
 
+  // Convert AI content to proper PageModelV2 structure
+  const convertAIContentToPageModel = useCallback((aiModel: any): PageModelV2 => {
+    if (!aiModel.sections) {
+      return getDefaultModel();
+    }
+
+    // Convert sections to proper structure
+    const convertedSections = aiModel.sections.map((section: any) => {
+      const convertedSection = { ...section };
+      
+      // Ensure proper row/column structure
+      if (convertedSection.rows) {
+        convertedSection.rows = convertedSection.rows.map((row: any) => {
+          const convertedRow = { ...row };
+          
+          if (convertedRow.columns) {
+            convertedRow.columns = convertedRow.columns.map((column: any) => {
+              const convertedColumn = { ...column };
+              
+              if (convertedColumn.elements) {
+                convertedColumn.elements = convertedColumn.elements.map((element: any) => {
+                  const convertedElement = { ...element };
+                  
+                  // Convert benefits content
+                  if (element.type === 'benefits' && element.content?.benefits) {
+                    convertedElement.content = {
+                      ...element.content,
+                      benefits: element.content.benefits.map((benefit: any, index: number) => ({
+                        id: benefit.id || `benefit_${index}`,
+                        title: benefit.title || 'Benefício',
+                        description: benefit.description || 'Descrição do benefício',
+                        icon: mapIconName(benefit.icon) || 'check'
+                      }))
+                    };
+                  }
+                  
+                  // Convert reviews/testimonials content
+                  if ((element.type === 'reviews' || element.type === 'testimonials') && element.content) {
+                    const testimonials = element.content.testimonials || element.content.reviews || [];
+                    convertedElement.content = {
+                      ...element.content,
+                      reviews: testimonials.map((testimonial: any, index: number) => ({
+                        id: testimonial.id || `review_${index}`,
+                        name: testimonial.name || 'Cliente',
+                        comment: testimonial.text || testimonial.comment || 'Depoimento do cliente',
+                        rating: testimonial.rating || 5,
+                        role: testimonial.role || 'Cliente Verificado',
+                        avatar: testimonial.avatar
+                      }))
+                    };
+                  }
+                  
+                  return convertedElement;
+                });
+              }
+              
+              return convertedColumn;
+            });
+          }
+          
+          return convertedRow;
+        });
+      }
+      
+      return convertedSection;
+    });
+
+    return {
+      ...aiModel,
+      sections: convertedSections
+    };
+  }, []);
+
+  // Map AI icon names to valid component icon names
+  const mapIconName = (iconName: string): string => {
+    if (!iconName) return 'check';
+    
+    const iconMap: { [key: string]: string } = {
+      'check': 'check',
+      'checkmark': 'check',
+      'tick': 'check',
+      'star': 'star',
+      'rating': 'star',
+      'zap': 'zap',
+      'lightning': 'zap',
+      'bolt': 'zap',
+      'heart': 'heart',
+      'love': 'heart',
+      'trophy': 'trophy',
+      'award': 'trophy',
+      'medal': 'trophy',
+      'shield': 'shield',
+      'security': 'shield',
+      'protection': 'shield',
+      'safe': 'shield'
+    };
+    
+    return iconMap[iconName.toLowerCase()] || 'check';
+  };
+
   // Create default model structure
   const getDefaultModel = useCallback((): PageModelV2 => {
 
@@ -234,8 +334,8 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
         let initialModel: PageModelV2;
         
         if (freshPageData.model && (freshPageData.model as any).version === 2) {
-          // Use the AI-generated model with 5 sections
-          initialModel = freshPageData.model as PageModelV2;
+          // Use the AI-generated model with conversion if needed
+          initialModel = convertAIContentToPageModel(freshPageData.model as any);
           console.log('✅ Using AI-generated PageModelV2 with', initialModel.sections?.length, 'sections');
         } else {
           // Fallback to default model

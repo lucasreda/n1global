@@ -19,6 +19,10 @@ export function ElementReviews({
   onSelect, 
   isSelected = false 
 }: ElementProps) {
+  // Debug: Log dos dados recebidos
+  console.log('🔍 ElementReviews DEBUG - element.content:', element.content);
+  console.log('🔍 ElementReviews DEBUG - element.content?.reviews:', element.content?.reviews);
+  
   const [isEditing, setIsEditing] = useState(false);
   const [reviews, setReviews] = useState<Review[]>(
     element.content?.reviews || [

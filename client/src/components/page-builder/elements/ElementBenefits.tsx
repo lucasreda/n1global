@@ -26,6 +26,10 @@ export function ElementBenefits({
   onSelect, 
   isSelected = false 
 }: ElementProps) {
+  // Debug: Log dos dados recebidos
+  console.log('🔍 ElementBenefits DEBUG - element.content:', element.content);
+  console.log('🔍 ElementBenefits DEBUG - element.content?.benefits:', element.content?.benefits);
+  
   const [isEditing, setIsEditing] = useState(false);
   const [benefits, setBenefits] = useState<Benefit[]>(
     element.content?.benefits || [
