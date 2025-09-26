@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import { GeneratedImage, GeneratedIcon, ColorPalette, ImagePromptTemplate } from '@shared/schema';
+import crypto from 'crypto';
 
 export interface MediaResult {
   enrichedContent: {
@@ -34,15 +36,18 @@ export interface MediaResult {
 
 export class MediaEnrichmentEngine {
   private openai: OpenAI;
+  private imageCache: Map<string, GeneratedImage> = new Map();
+  private promptTemplates: ImagePromptTemplate[] = [];
 
   constructor() {
+    // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
   }
 
-  async enrichWithMedia(content: any, enrichedBrief: any): Promise<MediaResult> {
-    console.log('🖼️ Media enrichment - adding professional stock images...');
+  async enrichWithMedia(content: any, enrichedBrief: any, visualIdentity?: any): Promise<MediaResult> {
+    console.log('🖼️ Media enrichment - generating AI images with visual identity...');
     
     try {
       let totalCost = 0;
@@ -140,7 +145,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     `;
 
     const completion = await this.openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5",
       messages: [
         {
           role: "system",
@@ -148,7 +153,6 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
         },
         { role: "user", content: prompt }
       ],
-      temperature: 0.6,
       response_format: { type: "json_object" }
     });
 
@@ -173,7 +177,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     try {
       switch (section.type) {
         case 'hero':
-          const heroMedia = await this.addHeroMedia(section, enrichedBrief, mediaAnalysis);
+          const heroMedia = await this.addHeroMediaAI(section, enrichedBrief, mediaAnalysis, visualIdentity);
           mediaAssets = heroMedia.mediaAssets;
           mediaAdded = heroMedia.mediaAdded;
           globalAssets = { heroImages: heroMedia.mediaAssets.images };
@@ -181,7 +185,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
 
         case 'benefícios':
         case 'benefits':
-          const benefitsMedia = await this.addBenefitsMedia(section, enrichedBrief, sectionNeed);
+          const benefitsMedia = await this.addBenefitsMediaAI(section, enrichedBrief, sectionNeed, visualIdentity);
           mediaAssets = benefitsMedia.mediaAssets;
           mediaAdded = benefitsMedia.mediaAdded;
           break;
@@ -189,7 +193,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
         case 'prova-social':
         case 'reviews':
         case 'testimonials':
-          const socialMedia = await this.addSocialProofMedia(section, enrichedBrief);
+          const socialMedia = await this.addSocialProofMediaAI(section, enrichedBrief, visualIdentity);
           mediaAssets = socialMedia.mediaAssets;
           mediaAdded = socialMedia.mediaAdded;
           globalAssets = { testimonialAvatars: socialMedia.mediaAssets.images };
@@ -423,6 +427,237 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     score += (assetTypes / 5) * 0.5;
     
     return Math.min(score, 10);
+  }
+
+  // ENTERPRISE AI IMAGE GENERATION METHODS
+
+  /**
+   * Generate cache key for consistent image caching
+   */
+  private generateCacheKey(prompt: string, style: string, aspectRatio: string): string {
+    const key = `${prompt}_${style}_${aspectRatio}`;
+    return crypto.createHash('md5').update(key).digest('hex');
+  }
+
+  /**
+   * Generate AI image using DALL-E 3 with intelligent caching
+   */
+  private async generateAIImage(
+    prompt: string, 
+    category: string,
+    visualIdentity?: any,
+    options: {
+      aspectRatio?: string;
+      quality?: 'standard' | 'hd';
+      style?: 'natural' | 'vivid';
+    } = {}
+  ): Promise<GeneratedImage> {
+    const { aspectRatio = '1024x1024', quality = 'hd', style = 'natural' } = options;
+    
+    // Generate cache key
+    const cacheKey = this.generateCacheKey(prompt, style, aspectRatio);
+    
+    // Check cache first
+    if (this.imageCache.has(cacheKey)) {
+      console.log(`  📋 Using cached image for: ${prompt.substring(0, 50)}...`);
+      return this.imageCache.get(cacheKey)!;
+    }
+
+    try {
+      const startTime = Date.now();
+      
+      // Enhance prompt with visual identity if available
+      let enhancedPrompt = prompt;
+      if (visualIdentity?.palette) {
+        const primaryColor = visualIdentity.palette.primary.main;
+        const secondaryColor = visualIdentity.palette.secondary.main;
+        enhancedPrompt = `${prompt}, color palette featuring ${primaryColor} and ${secondaryColor}, ${visualIdentity.palette.mood} mood`;
+      }
+
+      console.log(`  🎨 Generating AI image: ${enhancedPrompt.substring(0, 100)}...`);
+
+      const response = await this.openai.images.generate({
+        model: "dall-e-3",
+        prompt: enhancedPrompt,
+        n: 1,
+        size: aspectRatio as '1024x1024' | '1024x1792' | '1792x1024',
+        quality: quality,
+        style: style,
+      });
+
+      const processingTime = Date.now() - startTime;
+      const imageUrl = response.data[0].url;
+
+      if (!imageUrl) {
+        throw new Error('No image URL returned from DALL-E');
+      }
+
+      // Create GeneratedImage object
+      const generatedImage: GeneratedImage = {
+        id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: imageUrl,
+        width: aspectRatio.includes('1792') ? 1792 : 1024,
+        height: aspectRatio.includes('1792') && aspectRatio.startsWith('1024') ? 1792 : 1024,
+        format: 'webp',
+        size: 0, // Would need actual file size
+        alt: `AI generated image: ${category}`,
+        prompt: enhancedPrompt,
+        variants: {
+          mobile: imageUrl, // In production, generate responsive variants
+          tablet: imageUrl,
+          desktop: imageUrl,
+          thumbnail: imageUrl
+        },
+        dominantColors: visualIdentity?.palette ? [
+          visualIdentity.palette.primary.main,
+          visualIdentity.palette.secondary.main
+        ] : [],
+        aspectRatio: aspectRatio.replace('x', ':'),
+        generatedAt: new Date().toISOString(),
+        processingTime
+      };
+
+      // Cache the generated image
+      this.imageCache.set(cacheKey, generatedImage);
+      
+      console.log(`  ✅ Generated AI image in ${processingTime}ms: ${category}`);
+      return generatedImage;
+
+    } catch (error) {
+      console.error(`  ❌ Failed to generate AI image: ${error.message}`);
+      
+      // Return fallback image
+      return {
+        id: `img_fallback_${Date.now()}`,
+        url: `/api/placeholder/${category}.jpg`,
+        width: 1024,
+        height: 1024,
+        format: 'jpg',
+        size: 0,
+        alt: `Fallback image: ${category}`,
+        prompt: prompt,
+        variants: {
+          mobile: `/api/placeholder/${category}.jpg`,
+          tablet: `/api/placeholder/${category}.jpg`,
+          desktop: `/api/placeholder/${category}.jpg`,
+          thumbnail: `/api/placeholder/${category}.jpg`
+        },
+        dominantColors: [],
+        aspectRatio: '1:1',
+        generatedAt: new Date().toISOString(),
+        processingTime: 0
+      };
+    }
+  }
+
+  /**
+   * Replace hero media generation with AI
+   */
+  private async addHeroMediaAI(section: any, enrichedBrief: any, mediaAnalysis: any, visualIdentity?: any) {
+    const heroNeed = mediaAnalysis.analysis.heroNeeds;
+    const niche = enrichedBrief.originalBrief?.productInfo?.name || enrichedBrief.marketContext?.industry || 'business';
+    
+    const heroPrompt = `Professional ${niche} hero image, ${heroNeed?.style || 'lifestyle'} photography, ${heroNeed?.mood || 'confident'} atmosphere, premium lighting, clean composition, high-end commercial quality, suitable for website header`;
+
+    try {
+      const heroImage = await this.generateAIImage(
+        heroPrompt,
+        'hero',
+        visualIdentity,
+        { aspectRatio: '1792x1024', quality: 'hd', style: 'natural' }
+      );
+
+      return {
+        mediaAssets: {
+          images: [heroImage.url],
+          videos: [],
+          icons: []
+        },
+        mediaAdded: [`AI hero image: ${niche}`],
+        generatedImages: [heroImage]
+      };
+    } catch (error) {
+      console.warn('Failed to generate AI hero image, using fallback:', error.message);
+      return {
+        mediaAssets: { images: ['/api/placeholder/hero.jpg'], videos: [], icons: [] },
+        mediaAdded: ['fallback hero image'],
+        generatedImages: []
+      };
+    }
+  }
+
+  /**
+   * Replace benefits media with AI-generated icons
+   */
+  private async addBenefitsMediaAI(section: any, enrichedBrief: any, sectionNeed: any, visualIdentity?: any) {
+    const benefits = section.content?.benefits || [];
+    const mediaAssets = { images: [], videos: [], icons: [] };
+    const mediaAdded = [];
+    const generatedImages = [];
+
+    for (let i = 0; i < Math.min(benefits.length, 4); i++) {
+      const benefit = benefits[i];
+      
+      const iconPrompt = `Minimalist ${benefit.title || benefit.icon || 'benefit'} icon, clean vector style, simple lines, professional design, ${visualIdentity?.palette?.mood || 'modern'} aesthetic`;
+
+      try {
+        const iconImage = await this.generateAIImage(
+          iconPrompt,
+          'benefit-icon',
+          visualIdentity,
+          { aspectRatio: '1024x1024', quality: 'standard', style: 'natural' }
+        );
+
+        mediaAssets.icons.push(iconImage.url);
+        mediaAdded.push(`AI icon: ${benefit.title}`);
+        generatedImages.push(iconImage);
+        
+        console.log(`  🎯 Generated AI icon for: ${benefit.title}`);
+      } catch (error) {
+        console.warn(`Failed to generate AI icon for benefit ${i + 1}:`, error.message);
+        // Fallback to placeholder
+        mediaAssets.icons.push(`/api/placeholder/icon-${i + 1}.svg`);
+      }
+    }
+
+    return { mediaAssets, mediaAdded, generatedImages };
+  }
+
+  /**
+   * Replace social proof media with AI-generated avatars
+   */
+  private async addSocialProofMediaAI(section: any, enrichedBrief: any, visualIdentity?: any) {
+    const testimonials = section.content?.testimonials || [];
+    const mediaAssets = { images: [], videos: [], icons: [] };
+    const mediaAdded = [];
+    const generatedImages = [];
+
+    for (let i = 0; i < Math.min(testimonials.length, 5); i++) {
+      const testimonial = testimonials[i];
+      
+      const avatarPrompt = `Professional business person headshot portrait, ${testimonial.name || 'professional'} style, confident expression, corporate attire, clean background, high-quality portrait photography, diverse and authentic`;
+
+      try {
+        const avatarImage = await this.generateAIImage(
+          avatarPrompt,
+          'testimonial-avatar',
+          visualIdentity,
+          { aspectRatio: '1024x1024', quality: 'hd', style: 'natural' }
+        );
+
+        mediaAssets.images.push(avatarImage.url);
+        mediaAdded.push(`AI avatar: ${testimonial.name}`);
+        generatedImages.push(avatarImage);
+        
+        console.log(`  👤 Generated AI avatar for: ${testimonial.name}`);
+      } catch (error) {
+        console.warn(`Failed to generate AI avatar for testimonial ${i + 1}:`, error.message);
+        // Fallback to placeholder
+        mediaAssets.images.push(`/api/placeholder/avatar-${i + 1}.jpg`);
+      }
+    }
+
+    return { mediaAssets, mediaAdded, generatedImages };
   }
 
   private generateFallbackMedia(content: any, enrichedBrief: any): MediaResult {
