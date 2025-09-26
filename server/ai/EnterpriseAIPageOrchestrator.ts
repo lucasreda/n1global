@@ -16,6 +16,7 @@ import { pageGenerationDrafts, VisualIdentity } from '../../shared/schema';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
+import EventEmitter from 'events';
 
 // ============================
 // 🎯 ENTERPRISE INTERFACES
@@ -151,7 +152,7 @@ export class EnterpriseAIPageOrchestrator {
   // 🚀 ENTERPRISE GENERATION PIPELINE
   // ============================
 
-  async generatePage(request: EnterpriseAIGenerationRequest): Promise<EnterpriseGenerationResult> {
+  async generatePage(request: EnterpriseAIGenerationRequest, progressEmitter?: EventEmitter, sessionId?: string): Promise<EnterpriseGenerationResult> {
     const draftId = crypto.randomUUID();
     const startTime = Date.now();
     
@@ -170,13 +171,55 @@ export class EnterpriseAIPageOrchestrator {
     try {
       console.log('🚀 Enterprise AI Generation Pipeline Started');
       console.log(`📊 Options: Parallel=${options.enableParallelization}, Rollback=${options.enableRollback}`);
+      
+      // Emit initial progress
+      if (progressEmitter && sessionId) {
+        progressEmitter.emit('progress', {
+          type: 'step_started',
+          sessionId,
+          step: 'analyze',
+          stepIndex: 0,
+          totalSteps: 5,
+          progress: 5,
+          title: 'Analisando Brief',
+          description: 'Processando informações do produto e mercado',
+          timestamp: new Date().toISOString()
+        });
+      }
 
       // Initialize draft with enterprise tracking
       await this.createEnterpriseTrackingDraft(draftId, request);
 
       // Step 1: Brief Enrichment & Template Selection (Sequential - Foundation)
-      const foundationResult = await this.executeFoundationSteps(request, generationSteps);
+      const foundationResult = await this.executeFoundationSteps(request, generationSteps, progressEmitter, sessionId);
       totalCost += foundationResult.cost;
+      
+      // Emit progress after foundation
+      if (progressEmitter && sessionId) {
+        progressEmitter.emit('progress', {
+          type: 'step_completed',
+          sessionId,
+          step: 'analyze',
+          stepIndex: 0,
+          totalSteps: 5,
+          progress: 20,
+          title: 'Brief Analisado',
+          description: 'Informações processadas e template selecionado',
+          timestamp: new Date().toISOString()
+        });
+        
+        progressEmitter.emit('progress', {
+          type: 'step_started',
+          sessionId,
+          step: 'content',
+          stepIndex: 1,
+          totalSteps: 5,
+          progress: 25,
+          title: 'Gerando Conteúdo',
+          description: 'Criando textos persuasivos e estrutura',
+          timestamp: new Date().toISOString()
+        });
+      }
       
       // Save rollback point after foundation
       if (options.enableRollback) {
@@ -189,14 +232,18 @@ export class EnterpriseAIPageOrchestrator {
         parallelResult = await this.executeParallelSteps(
           foundationResult.data,
           generationSteps,
-          options
+          options,
+          progressEmitter,
+          sessionId
         );
         totalCost += parallelResult.cost;
       } else {
         parallelResult = await this.executeSequentialSteps(
           foundationResult.data,
           generationSteps,
-          options
+          options,
+          progressEmitter,
+          sessionId
         );
         totalCost += parallelResult.cost;
       }
@@ -206,12 +253,41 @@ export class EnterpriseAIPageOrchestrator {
         this.saveRollbackSnapshot('content_visual', parallelResult.data, parallelResult.cost);
       }
 
+      // Emit progress before media creation
+      if (progressEmitter && sessionId) {
+        progressEmitter.emit('progress', {
+          type: 'step_completed',
+          sessionId,
+          step: 'design',
+          stepIndex: 2,
+          totalSteps: 5,
+          progress: 60,
+          title: 'Design Definido',
+          description: 'Paleta visual e tipografia aplicadas',
+          timestamp: new Date().toISOString()
+        });
+        
+        progressEmitter.emit('progress', {
+          type: 'step_started',
+          sessionId,
+          step: 'media',
+          stepIndex: 3,
+          totalSteps: 5,
+          progress: 65,
+          title: 'Criando Imagens IA',
+          description: 'Gerando imagens profissionais com DALL-E',
+          timestamp: new Date().toISOString()
+        });
+      }
+      
       // Step 4-6: Optimization & Quality Pipeline (Sequential - Dependent)
       const finalizationResult = await this.executeFinalizationSteps(
         parallelResult.data,
         foundationResult.templateData,
         generationSteps,
-        options
+        options,
+        progressEmitter,
+        sessionId
       );
       totalCost += finalizationResult.cost;
 
@@ -291,7 +367,9 @@ export class EnterpriseAIPageOrchestrator {
 
   private async executeFoundationSteps(
     request: EnterpriseAIGenerationRequest,
-    generationSteps: GenerationSteps
+    generationSteps: GenerationSteps,
+    progressEmitter?: EventEmitter,
+    sessionId?: string
   ): Promise<{ data: any; templateData: any; cost: number }> {
     console.log('🎯 Phase 1: Foundation (Brief + Template)');
     
@@ -340,7 +418,9 @@ export class EnterpriseAIPageOrchestrator {
   private async executeParallelSteps(
     foundationData: any,
     generationSteps: GenerationSteps,
-    options: any
+    options: any,
+    progressEmitter?: EventEmitter,
+    sessionId?: string
   ): Promise<{ data: any; visualIdentity: any; cost: number }> {
     console.log('⚡ Phase 2: Parallel Execution (Visual Identity + Content)');
     
@@ -393,7 +473,9 @@ export class EnterpriseAIPageOrchestrator {
   private async executeSequentialSteps(
     foundationData: any,
     generationSteps: GenerationSteps,
-    options: any
+    options: any,
+    progressEmitter?: EventEmitter,
+    sessionId?: string
   ): Promise<{ data: any; visualIdentity: any; cost: number }> {
     console.log('🔄 Phase 2: Sequential Execution (Visual Identity → Content)');
     
@@ -411,7 +493,9 @@ export class EnterpriseAIPageOrchestrator {
     contentData: any,
     templateData: any,
     generationSteps: GenerationSteps,
-    options: any
+    options: any,
+    progressEmitter?: EventEmitter,
+    sessionId?: string
   ): Promise<{ data: any; qualityScore: number; cost: number }> {
     console.log('🔧 Phase 3: Finalization (Layout + Media + QA)');
     

@@ -7467,11 +7467,8 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     
     currentStep++;
     
-    // Add progress emitters for each major step
-    const originalGenerate = orchestrator.generatePage.bind(orchestrator);
-    
-    // Generate with progress tracking
-    const result = await originalGenerate(requestData);
+    // Generate with progress tracking using the orchestrator directly
+    const result = await orchestrator.generatePage(requestData, emitter, sessionId);
     
     return result;
   }
