@@ -97,7 +97,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
                   
                   // Convert benefits content
                   if (element.type === 'benefits') {
-                    const benefits = element.content?.benefits || element.benefits || [];
+                    const benefits = element.props?.items || element.content?.benefits || element.benefits || [];
                     console.log(`🔍 Benefits found for element:`, benefits);
                     
                     convertedElement.content = {
@@ -114,7 +114,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
                   
                   // Convert reviews/testimonials content  
                   if (element.type === 'reviews' || element.type === 'testimonials') {
-                    const testimonials = element.content?.testimonials || element.content?.reviews || element.testimonials || element.reviews || [];
+                    const testimonials = element.props?.testimonials || element.content?.testimonials || element.content?.reviews || element.testimonials || element.reviews || [];
                     console.log(`🔍 Reviews found for element:`, testimonials);
                     
                     convertedElement.content = {
