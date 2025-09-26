@@ -365,7 +365,6 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
           sm: '0.25rem',
           md: '0.5rem',
           lg: '0.75rem',
-          xl: '1rem',
         },
       },
       seo: {
@@ -412,14 +411,14 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
         const freshPageData = pageResponse.page;
         let initialModel: PageModelV2;
         
-        if (freshPageData.model && (freshPageData.model as any).version === 2) {
-          // Use the AI-generated model with conversion if needed
+        if (freshPageData.model) {
+          // ALWAYS use the AI-generated model with conversion
           initialModel = convertAIContentToPageModel(freshPageData.model as any);
-          console.log('✅ Using AI-generated PageModelV2 with', initialModel.sections?.length, 'sections');
+          console.log('✅ Using AI-generated model with conversion - sections:', initialModel.sections?.length);
         } else {
-          // Fallback to default model
+          // Fallback to default model only if no model exists
           initialModel = getDefaultModel();
-          console.log('⚠️ Using default model - no valid PageModelV2 found');
+          console.log('⚠️ Using default model - no model found in page data');
         }
         
         console.log('🔄 Resetting React Hook Form with', initialModel.sections?.length, 'sections');
