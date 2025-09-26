@@ -61,45 +61,64 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
 
   // Convert AI content to proper PageModelV2 structure
   const convertAIContentToPageModel = useCallback((aiModel: any): PageModelV2 => {
+    console.log('🔄 Converting AI model:', aiModel);
+    
     if (!aiModel.sections) {
+      console.log('⚠️ No sections found in AI model, using default');
       return getDefaultModel();
     }
 
     // Convert sections to proper structure
-    const convertedSections = aiModel.sections.map((section: any) => {
+    const convertedSections = aiModel.sections.map((section: any, sectionIndex: number) => {
+      console.log(`🔍 Converting section ${sectionIndex}:`, section);
       const convertedSection = { ...section };
       
       // Ensure proper row/column structure
       if (convertedSection.rows) {
-        convertedSection.rows = convertedSection.rows.map((row: any) => {
+        convertedSection.rows = convertedSection.rows.map((row: any, rowIndex: number) => {
+          console.log(`🔍 Converting row ${sectionIndex}-${rowIndex}:`, row);
           const convertedRow = { ...row };
           
           if (convertedRow.columns) {
-            convertedRow.columns = convertedRow.columns.map((column: any) => {
+            convertedRow.columns = convertedRow.columns.map((column: any, colIndex: number) => {
+              console.log(`🔍 Converting column ${sectionIndex}-${rowIndex}-${colIndex}:`, column);
               const convertedColumn = { ...column };
               
               if (convertedColumn.elements) {
-                convertedColumn.elements = convertedColumn.elements.map((element: any) => {
+                convertedColumn.elements = convertedColumn.elements.map((element: any, elemIndex: number) => {
+                  console.log(`🔍 Converting element ${sectionIndex}-${rowIndex}-${colIndex}-${elemIndex}:`, element);
                   const convertedElement = { ...element };
                   
+                  // Ensure content exists
+                  if (!convertedElement.content) {
+                    convertedElement.content = {};
+                    console.log(`⚠️ Element ${element.type} had no content, creating empty object`);
+                  }
+                  
                   // Convert benefits content
-                  if (element.type === 'benefits' && element.content?.benefits) {
+                  if (element.type === 'benefits') {
+                    const benefits = element.content?.benefits || element.benefits || [];
+                    console.log(`🔍 Benefits found for element:`, benefits);
+                    
                     convertedElement.content = {
-                      ...element.content,
-                      benefits: element.content.benefits.map((benefit: any, index: number) => ({
+                      ...convertedElement.content,
+                      benefits: benefits.map((benefit: any, index: number) => ({
                         id: benefit.id || `benefit_${index}`,
                         title: benefit.title || 'Benefício',
                         description: benefit.description || 'Descrição do benefício',
                         icon: mapIconName(benefit.icon) || 'check'
                       }))
                     };
+                    console.log(`✅ Converted benefits:`, convertedElement.content.benefits);
                   }
                   
-                  // Convert reviews/testimonials content
-                  if ((element.type === 'reviews' || element.type === 'testimonials') && element.content) {
-                    const testimonials = element.content.testimonials || element.content.reviews || [];
+                  // Convert reviews/testimonials content  
+                  if (element.type === 'reviews' || element.type === 'testimonials') {
+                    const testimonials = element.content?.testimonials || element.content?.reviews || element.testimonials || element.reviews || [];
+                    console.log(`🔍 Reviews found for element:`, testimonials);
+                    
                     convertedElement.content = {
-                      ...element.content,
+                      ...convertedElement.content,
                       reviews: testimonials.map((testimonial: any, index: number) => ({
                         id: testimonial.id || `review_${index}`,
                         name: testimonial.name || 'Cliente',
@@ -109,6 +128,7 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
                         avatar: testimonial.avatar
                       }))
                     };
+                    console.log(`✅ Converted reviews:`, convertedElement.content.reviews);
                   }
                   
                   return convertedElement;
@@ -126,10 +146,13 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
       return convertedSection;
     });
 
-    return {
+    const result = {
       ...aiModel,
       sections: convertedSections
     };
+    
+    console.log('✅ Final converted model:', result);
+    return result;
   }, []);
 
   // Map AI icon names to valid component icon names
