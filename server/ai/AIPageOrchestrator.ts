@@ -2,12 +2,14 @@ import { BriefEnrichmentEngine } from './engines/BriefEnrichmentEngine';
 import { ContentGenerationEngine } from './engines/ContentGenerationEngine';
 import { LayoutOptimizationEngine } from './engines/LayoutOptimizationEngine';
 import { MediaEnrichmentEngine } from './engines/MediaEnrichmentEngine';
+import { VisualIdentityEngine } from './engines/VisualIdentityEngine';
 import { QAReviewService } from './engines/QAReviewService';
 import { TemplateLibrary } from './engines/TemplateLibrary';
 import { PromptLibrary } from './engines/PromptLibrary';
-import { pageGenerationDrafts, pageGenerationTemplates } from '../../shared/schema';
+import { pageGenerationDrafts, pageGenerationTemplates, VisualIdentity } from '../../shared/schema';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
+import crypto from 'crypto';
 
 export interface AIGenerationRequest {
   operationId: string;
@@ -44,6 +46,7 @@ export class AIPageOrchestrator {
   private contentEngine: ContentGenerationEngine;
   private layoutEngine: LayoutOptimizationEngine;
   private mediaEngine: MediaEnrichmentEngine;
+  private visualIdentityEngine: VisualIdentityEngine;
   private qaService: QAReviewService;
   private templateLibrary: TemplateLibrary;
   private promptLibrary: PromptLibrary;
@@ -53,6 +56,7 @@ export class AIPageOrchestrator {
     this.contentEngine = new ContentGenerationEngine();
     this.layoutEngine = new LayoutOptimizationEngine();
     this.mediaEngine = new MediaEnrichmentEngine();
+    this.visualIdentityEngine = new VisualIdentityEngine();
     this.qaService = new QAReviewService();
     this.templateLibrary = new TemplateLibrary();
     this.promptLibrary = new PromptLibrary();
@@ -92,8 +96,19 @@ export class AIPageOrchestrator {
         matchScore: selectedTemplate.matchScore
       };
 
-      // Step 2: Content Generation
-      console.log('✍️ Step 2: Content generation...');
+      // Step 2: Visual Identity Generation - ENTERPRISE FEATURE
+      console.log('🎨 Step 2: Visual identity generation...');
+      const visualIdentityResult = await this.visualIdentityEngine.generateVisualIdentity(
+        enrichmentResult.enrichedBrief.marketContext?.industry || 'business',
+        enrichmentResult.enrichedBrief.targetPersona?.demographics || 'general audience',
+        ['professional', 'trustworthy'], // Brand personality from brief
+        enrichmentResult.enrichedBrief
+      );
+      generationSteps.visualIdentity = visualIdentityResult;
+      totalCost += visualIdentityResult.cost || 0;
+
+      // Step 3: Content Generation  
+      console.log('✍️ Step 3: Content generation...');
       const contentResult = await this.contentEngine.generateContent(
         enrichmentResult.enrichedBrief,
         selectedTemplate
@@ -101,8 +116,8 @@ export class AIPageOrchestrator {
       generationSteps.contentGeneration = contentResult;
       totalCost += contentResult.cost || 0;
 
-      // Step 3: Layout Optimization
-      console.log('📱 Step 3: Layout optimization...');
+      // Step 4: Layout Optimization
+      console.log('📱 Step 4: Layout optimization...');
       const layoutResult = await this.layoutEngine.optimizeLayout(
         contentResult.generatedContent,
         selectedTemplate,
@@ -111,17 +126,18 @@ export class AIPageOrchestrator {
       generationSteps.layoutOptimization = layoutResult;
       totalCost += layoutResult.cost || 0;
 
-      // Step 4: Media Enrichment
-      console.log('🖼️ Step 4: Media enrichment...');
+      // Step 5: AI Media Enrichment - ENTERPRISE FEATURE
+      console.log('🖼️ Step 5: AI media enrichment with visual identity...');
       const mediaResult = await this.mediaEngine.enrichWithMedia(
         layoutResult.optimizedContent,
-        enrichmentResult.enrichedBrief
+        enrichmentResult.enrichedBrief,
+        visualIdentityResult.visualIdentity // Pass visual identity for AI generation
       );
       generationSteps.mediaEnrichment = mediaResult;
       totalCost += mediaResult.cost || 0;
 
-      // Step 5: Quality Assurance
-      console.log('✅ Step 5: Quality assurance...');
+      // Step 6: Quality Assurance
+      console.log('✅ Step 6: Quality assurance...');
       const qaResult = await this.qaService.assessQuality(
         mediaResult.enrichedContent,
         enrichmentResult.enrichedBrief,
@@ -130,17 +146,18 @@ export class AIPageOrchestrator {
       generationSteps.qualityAssurance = qaResult;
       totalCost += qaResult.cost || 0;
 
-      // Compile final page model
+      // Compile final page model with enterprise visual identity
       const finalModel = this.transformToPageModelV2({
         ...mediaResult.enrichedContent,
         metadata: {
           templateId: selectedTemplate.id,
-          generationMethod: 'ai_orchestrated',
+          generationMethod: 'ai_orchestrated_enterprise',
           conversionFramework: selectedTemplate.conversionFramework,
           qualityScore: qaResult.overallScore,
-          generatedAt: new Date().toISOString()
+          generatedAt: new Date().toISOString(),
+          visualIdentityId: visualIdentityResult.visualIdentity.id
         }
-      });
+      }, visualIdentityResult.visualIdentity);
 
       // Update draft with final results
       await db.update(pageGenerationDrafts)
@@ -202,30 +219,34 @@ export class AIPageOrchestrator {
   }
 
   /**
-   * Transform AI-generated content to PageModelV2 structure
+   * Transform AI-generated content to PageModelV2 structure with enterprise visual identity
    */
-  private transformToPageModelV2(aiContent: any): any {
-    console.log('🔄 Transforming AI content to PageModelV2 structure...');
+  private transformToPageModelV2(aiContent: any, visualIdentity?: VisualIdentity): any {
+    console.log('🔄 Transforming AI content to PageModelV2 structure with enterprise theme...');
     
     // Create sections from AI-generated content
     const sections = this.transformSections(aiContent.sections || []);
+    
+    // Use enterprise visual identity tokens if available
+    const palette = visualIdentity?.palette;
+    const tokens = visualIdentity?.tokens;
     
     return {
       version: 2,
       sections,
       theme: {
         colors: {
-          primary: aiContent.style?.primaryColor || '#3b82f6',
-          secondary: aiContent.style?.secondaryColor || '#64748b',
-          accent: '#f59e0b',
-          background: '#ffffff',
-          text: '#1e293b',
-          muted: '#9ca3af',
+          primary: palette?.primary.main || aiContent.style?.primaryColor || '#3b82f6',
+          secondary: palette?.secondary.main || aiContent.style?.secondaryColor || '#64748b',
+          accent: palette?.accent.main || '#f59e0b',
+          background: palette?.neutral.white || '#ffffff',
+          text: palette?.neutral.dark || '#1e293b',
+          muted: palette?.neutral.medium || '#9ca3af',
         },
         typography: {
-          headingFont: aiContent.style?.fontFamily || 'Inter, sans-serif',
-          bodyFont: aiContent.style?.fontFamily || 'Inter, sans-serif',
-          fontSize: {
+          headingFont: tokens?.typography.fontFamilies.heading || 'Inter, sans-serif',
+          bodyFont: tokens?.typography.fontFamilies.body || 'Inter, sans-serif',
+          fontSize: tokens?.typography.fontSizes || {
             xs: '0.75rem',
             sm: '0.875rem',
             base: '1rem',
@@ -236,7 +257,7 @@ export class AIPageOrchestrator {
             '4xl': '2.25rem',
           },
         },
-        spacing: {
+        spacing: tokens?.spacing || {
           xs: '0.25rem',
           sm: '0.5rem',
           md: '1rem',
@@ -244,7 +265,7 @@ export class AIPageOrchestrator {
           xl: '2rem',
           '2xl': '3rem',
         },
-        borderRadius: {
+        borderRadius: tokens?.borderRadius || {
           sm: '0.25rem',
           md: '0.5rem',
           lg: '0.75rem',
@@ -256,8 +277,17 @@ export class AIPageOrchestrator {
         showGrid: false,
         snapToGrid: true,
         enableAnimations: true,
+        mobileFirst: true, // Enterprise mobile-first approach
       },
-      metadata: aiContent.metadata || {}
+      metadata: {
+        ...aiContent.metadata,
+        visualIdentity: visualIdentity ? {
+          id: visualIdentity.id,
+          name: visualIdentity.name,
+          mood: visualIdentity.palette.mood,
+          industry: visualIdentity.niche
+        } : undefined
+      }
     };
   }
 
