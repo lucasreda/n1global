@@ -51,8 +51,14 @@ export class MediaEnrichmentEngine {
     
     try {
       let totalCost = 0;
-      const mediaAdded = [];
-      const globalMediaAssets = {
+      const mediaAdded: string[] = [];
+      const globalMediaAssets: {
+        heroImages: string[];
+        productImages: string[];
+        testimonialAvatars: string[];
+        decorativeImages: string[];
+        iconSet: string[];
+      } = {
         heroImages: [],
         productImages: [],
         testimonialAvatars: [],
@@ -69,7 +75,7 @@ export class MediaEnrichmentEngine {
       for (const section of content.sections) {
         console.log(`  🎨 Adding media to ${section.type} section...`);
         
-        const sectionMedia = await this.addSectionMedia(section, enrichedBrief, mediaAnalysis);
+        const sectionMedia = await this.addSectionMedia(section, enrichedBrief, mediaAnalysis, visualIdentity);
         enrichedSections.push(sectionMedia.section);
         mediaAdded.push(...sectionMedia.mediaAdded);
         
@@ -84,7 +90,7 @@ export class MediaEnrichmentEngine {
       }
 
       // Step 3: Add global decorative and branding images
-      const brandingMedia = await this.addBrandingMedia(enrichedBrief);
+      const brandingMedia = await this.addBrandingMedia(enrichedBrief, visualIdentity);
       globalMediaAssets.decorativeImages.push(...brandingMedia.images);
       mediaAdded.push(...brandingMedia.mediaAdded);
 
@@ -165,14 +171,14 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     return { analysis, cost };
   }
 
-  private async addSectionMedia(section: any, enrichedBrief: any, mediaAnalysis: any) {
+  private async addSectionMedia(section: any, enrichedBrief: any, mediaAnalysis: any, visualIdentity?: any) {
     const sectionNeed = mediaAnalysis.analysis.sectionNeeds?.find(
       need => need.sectionType === section.type
     );
 
-    let mediaAssets = { images: [], videos: [], icons: [] };
-    let mediaAdded = [];
-    let globalAssets = {};
+    let mediaAssets: { images: string[]; videos: string[]; icons: string[] } = { images: [], videos: [], icons: [] };
+    let mediaAdded: string[] = [];
+    let globalAssets: any = {};
 
     try {
       switch (section.type) {
@@ -213,7 +219,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
           break;
       }
     } catch (error) {
-      console.warn(`⚠️ Failed to add media to ${section.type} section:`, error.message);
+      console.warn(`⚠️ Failed to add media to ${section.type} section:`, (error as Error).message);
       // Continue with empty media assets
     }
 
@@ -252,7 +258,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
         mediaAdded: ['hero background image', 'hero secondary image']
       };
     } catch (error) {
-      console.warn('Failed to generate hero images:', error.message);
+      console.warn('Failed to generate hero images:', (error as Error).message);
       return {
         mediaAssets: { images: [], videos: [], icons: [] },
         mediaAdded: []
@@ -278,7 +284,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
         mediaAdded.push(`${benefit.title} icon`);
         console.log(`  🎯 Generated icon for: ${iconDescription}`);
       } catch (error) {
-        console.warn(`Failed to generate icon for benefit ${i + 1}:`, error.message);
+        console.warn(`Failed to generate icon for benefit ${i + 1}:`, (error as Error).message);
       }
     }
 
@@ -303,7 +309,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
         mediaAdded.push(`${testimonial.name} avatar`);
         console.log(`  👤 Generated avatar for: ${avatarDescription}`);
       } catch (error) {
-        console.warn(`Failed to generate avatar for testimonial ${i + 1}:`, error.message);
+        console.warn(`Failed to generate avatar for testimonial ${i + 1}:`, (error as Error).message);
       }
     }
 
@@ -331,7 +337,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
         mediaAdded: ['CTA background image']
       };
     } catch (error) {
-      console.warn('Failed to generate CTA image:', error.message);
+      console.warn('Failed to generate CTA image:', (error as Error).message);
       return {
         mediaAssets: { images: [], videos: [], icons: [] },
         mediaAdded: []
@@ -361,7 +367,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
           mediaAdded.push(`${section.type} section image`);
           console.log(`  🖼️ Generated section image for: ${description}`);
         } catch (error) {
-          console.warn(`Failed to generate image for ${section.type}:`, error.message);
+          console.warn(`Failed to generate image for ${section.type}:`, (error as Error).message);
         }
       }
     }
@@ -369,7 +375,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
     return { mediaAssets, mediaAdded };
   }
 
-  private async addBrandingMedia(enrichedBrief: any) {
+  private async addBrandingMedia(enrichedBrief: any, visualIdentity?: any) {
     const industry = enrichedBrief.marketContext.industry;
     const style = enrichedBrief.copyStrategy.tone;
     
@@ -388,7 +394,7 @@ Identifique necessidades de imagens para cada seção. Retorne JSON:
       mediaAdded.push('decorative background', 'accent pattern');
       console.log(`  🎨 Generated branding media for: ${style} ${industry}`);
     } catch (error) {
-      console.warn('Failed to generate branding images:', error.message);
+      console.warn('Failed to generate branding images:', (error as Error).message);
     }
 
     return {
