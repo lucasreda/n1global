@@ -297,7 +297,7 @@ export function ElementReviews({
               right: '1rem',
               opacity: 0.2
             }}>
-              <MessageCircle size={24} color={element.styles.quoteColor || theme.colors.text} />
+              <MessageCircle size={24} color={element.styles.quoteColor || theme.colors?.text || '#9ca3af'} />
             </div>
             
             {/* Rating */}
@@ -308,7 +308,7 @@ export function ElementReviews({
             {/* Comment */}
             <p style={{
               fontSize: element.styles.commentFontSize || theme.typography?.fontSize?.base || '1rem',
-              color: element.styles.commentColor || theme.colors.text,
+              color: element.styles.commentColor || theme.colors?.text || '#4b5563',
               lineHeight: '1.6',
               margin: `0 0 ${theme.spacing?.md || '1.5rem'} 0`,
               fontStyle: 'italic'
@@ -350,7 +350,7 @@ export function ElementReviews({
                 <h4 style={{
                   fontSize: element.styles.nameFontSize || theme.typography?.fontSize?.base || '1rem',
                   fontWeight: element.styles.nameFontWeight || '600',
-                  color: element.styles.nameColor || theme.colors.text,
+                  color: element.styles.nameColor || theme.colors?.text || '#1f2937',
                   margin: '0'
                 }}>
                   {review.name}

@@ -281,7 +281,7 @@ export function ElementBenefits({
                 width: '60px',
                 height: '60px',
                 margin: '0 auto 1rem',
-                backgroundColor: element.styles.iconBackgroundColor || theme.colors.primary,
+                backgroundColor: element.styles.iconBackgroundColor || theme.colors?.primary || '#3b82f6',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -296,7 +296,7 @@ export function ElementBenefits({
               <h3 style={{
                 fontSize: element.styles.titleFontSize || theme.typography?.fontSize?.lg || '1.125rem',
                 fontWeight: element.styles.titleFontWeight || '600',
-                color: element.styles.titleColor || theme.colors.text,
+                color: element.styles.titleColor || theme.colors?.text || '#1f2937',
                 marginBottom: theme.spacing?.sm || '1rem',
                 margin: `0 0 ${theme.spacing?.sm || '1rem'} 0`
               }}>
@@ -305,7 +305,7 @@ export function ElementBenefits({
               
               <p style={{
                 fontSize: element.styles.descriptionFontSize || theme.typography?.fontSize?.base || '1rem',
-                color: element.styles.descriptionColor || theme.colors.text,
+                color: element.styles.descriptionColor || theme.colors?.text || '#4b5563',
                 lineHeight: '1.6',
                 margin: '0'
               }}>
