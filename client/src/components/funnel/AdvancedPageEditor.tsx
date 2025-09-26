@@ -95,32 +95,60 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
                     console.log(`⚠️ Element ${element.type} had no content, creating empty object`);
                   }
                   
+                  // Debug element props
+                  console.log(`🔍 Element ${element.type} debug:`, {
+                    type: element.type,
+                    hasProps: !!element.props,
+                    props: element.props,
+                    hasContent: !!element.content,
+                    content: element.content
+                  });
+                  
                   // Convert heading content
-                  if (element.type === 'heading' && element.props?.text) {
-                    convertedElement.content = {
-                      ...convertedElement.content,
-                      text: element.props.text
-                    };
-                    console.log(`✅ Converted heading text:`, element.props.text);
+                  if (element.type === 'heading') {
+                    const textContent = element.props?.text || element.props?.content;
+                    if (textContent) {
+                      convertedElement.content = {
+                        ...convertedElement.content,
+                        text: textContent
+                      };
+                      // Also update props to ensure compatibility
+                      convertedElement.props = {
+                        ...convertedElement.props,
+                        text: textContent
+                      };
+                      console.log(`✅ Converted heading:`, textContent);
+                    }
                   }
                   
                   // Convert text content  
-                  if (element.type === 'text' && element.props?.content) {
-                    convertedElement.content = {
-                      ...convertedElement.content,
-                      text: element.props.content,
-                      html: `<p>${element.props.content}</p>`
-                    };
-                    console.log(`✅ Converted text content:`, element.props.content);
+                  if (element.type === 'text') {
+                    const textContent = element.props?.content || element.props?.text;
+                    if (textContent && textContent !== 'Conteúdo gerado pela IA') {
+                      convertedElement.content = {
+                        ...convertedElement.content,
+                        text: textContent,
+                        html: `<p>${textContent}</p>`
+                      };
+                      console.log(`✅ Converted text:`, textContent);
+                    }
                   }
                   
                   // Convert button content
-                  if (element.type === 'button' && element.props?.text) {
-                    convertedElement.content = {
-                      ...convertedElement.content,
-                      text: element.props.text
-                    };
-                    console.log(`✅ Converted button text:`, element.props.text);
+                  if (element.type === 'button') {
+                    const textContent = element.props?.text || element.props?.content;
+                    if (textContent) {
+                      convertedElement.content = {
+                        ...convertedElement.content,
+                        text: textContent
+                      };
+                      // Also update props to ensure compatibility  
+                      convertedElement.props = {
+                        ...convertedElement.props,
+                        text: textContent
+                      };
+                      console.log(`✅ Converted button:`, textContent);
+                    }
                   }
                   
                   // Convert benefits content
