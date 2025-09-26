@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useToast } from "@/hooks/use-toast";
+import { useAIProgressStream } from "@/hooks/useAIProgressStream";
+import ProgressModal from "@/components/ui/ProgressModal";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -54,6 +56,18 @@ interface CreateAIPageModalProps {
 export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: CreateAIPageModalProps) {
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
+  
+  // AI Progress Stream hook
+  const {
+    isGenerating,
+    currentStepIndex,
+    overallProgress,
+    steps,
+    result,
+    error: aiError,
+    generatePage,
+    reset: resetAI
+  } = useAIProgressStream();
 
   const form = useForm<CreateAIPageForm>({
     resolver: zodResolver(createAIPageSchema),
@@ -67,34 +81,60 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
     },
   });
 
-  // Create AI page mutation
-  const createAIPageMutation = useMutation({
-    mutationFn: async (data: CreateAIPageForm) => {
-      const response = await authenticatedApiRequest('POST', `/api/funnels/${funnelId}/pages/ai-generate?operationId=${selectedOperation}`, data);
-      if (!response.ok) {
-        throw new Error('Falha ao criar página com IA');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
+  // Handle AI generation completion
+  useEffect(() => {
+    if (result) {
       toast({
         title: "Sucesso",
-        description: "Página criada com IA com sucesso! A IA está gerando o conteúdo otimizado.",
+        description: "Página criada com IA com sucesso! Conteúdo otimizado gerado.",
       });
       form.reset();
       onSuccess();
-    },
-    onError: (error) => {
+      onOpenChange(false);
+      // Reset AI state after successful completion
+      setTimeout(() => resetAI(), 1000);
+    }
+  }, [result, toast, form, onSuccess, onOpenChange, resetAI]);
+
+  // Handle AI generation errors
+  useEffect(() => {
+    if (aiError) {
       toast({
-        title: "Erro",
-        description: error.message,
+        title: "Erro na Geração IA",
+        description: aiError,
         variant: "destructive",
       });
-    },
-  });
+    }
+  }, [aiError, toast]);
 
-  const handleSubmit = (data: CreateAIPageForm) => {
-    createAIPageMutation.mutate(data);
+  const handleSubmit = async (data: CreateAIPageForm) => {
+    console.log('🚀 Starting AI page generation with data:', data);
+    
+    // Close the form modal when generation starts
+    onOpenChange(false);
+    
+    // Prepare brief data for AI generation
+    const briefData = {
+      productInfo: {
+        name: data.product,
+        description: data.additionalInfo || `${data.product} - ${data.mainGoal}`,
+        targetAudience: data.targetAudience,
+        mainGoal: data.mainGoal
+      },
+      pageInfo: {
+        name: data.name,
+        type: data.pageType,
+        funnelId: funnelId
+      },
+      additionalContext: data.additionalInfo || ''
+    };
+    
+    // Start AI generation with progress tracking
+    await generatePage(briefData, {
+      enableParallelization: true,
+      qualityThreshold: 8.0,
+      enableRollback: true
+    });
   };
 
   const pageTypes = [
@@ -267,20 +307,36 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
               </Button>
               <Button
                 type="submit"
-                disabled={createAIPageMutation.isPending}
+                disabled={isGenerating}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 data-testid="button-create-ai-page"
               >
-                {createAIPageMutation.isPending && (
+                {isGenerating && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 )}
                 <Sparkles className="w-4 h-4 mr-2" />
-                {createAIPageMutation.isPending ? 'Criando com IA...' : 'Criar com IA'}
+                {isGenerating ? 'Iniciando IA...' : 'Criar com IA'}
               </Button>
             </div>
           </form>
         </Form>
       </DialogContent>
+      
+      {/* Progress Modal */}
+      <ProgressModal
+        isOpen={isGenerating}
+        onClose={() => {
+          // Only allow closing if there's an error or completed
+          if (aiError || result) {
+            resetAI();
+          }
+        }}
+        steps={steps}
+        currentStepIndex={currentStepIndex}
+        overallProgress={overallProgress}
+        title="Gerando Página com IA"
+        subtitle="Criando uma experiência premium otimizada para conversão"
+      />
     </Dialog>
   );
 }

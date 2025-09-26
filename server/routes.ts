@@ -28,6 +28,8 @@ import { funnelRoutes } from "./funnel-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
+import { EnterpriseAIPageOrchestrator } from "./ai/EnterpriseAIPageOrchestrator.js";
+import EventEmitter from "events";
 
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
 
@@ -7316,6 +7318,163 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
       });
     }
   });
+
+  // ============================
+  // 🤖 AI PAGE GENERATION ROUTES
+  // ============================
+  
+  const orchestrator = new EnterpriseAIPageOrchestrator();
+  const progressEmitter = new EventEmitter();
+  
+  // Server-Sent Events endpoint for real-time progress
+  app.get("/api/ai/progress-stream/:sessionId", (req, res) => {
+    const { sessionId } = req.params;
+    
+    // Set up SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+    
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({
+      type: 'connected',
+      sessionId,
+      timestamp: new Date().toISOString()
+    })}\n\n`);
+    
+    // Listen for progress events for this session
+    const progressHandler = (data: any) => {
+      if (data.sessionId === sessionId) {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      }
+    };
+    
+    progressEmitter.on('progress', progressHandler);
+    
+    // Clean up on client disconnect
+    req.on('close', () => {
+      progressEmitter.removeListener('progress', progressHandler);
+    });
+  });
+  
+  // AI Page Generation endpoint with real-time progress
+  app.post("/api/ai/generate-page", authenticateToken, async (req: AuthRequest, res: Response) => {
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      console.log(`🤖 Starting AI page generation - Session: ${sessionId}`);
+      
+      // Validate request
+      const requestData = {
+        briefData: req.body.briefData || {},
+        templatePreference: req.body.templatePreference || 'auto',
+        options: {
+          enableParallelization: true,
+          enableRollback: true,
+          qualityThreshold: 8.0,
+          ...req.body.options
+        }
+      };
+      
+      // Send initial progress
+      progressEmitter.emit('progress', {
+        type: 'step_started',
+        sessionId,
+        step: 'initialize',
+        stepIndex: 0,
+        totalSteps: 5,
+        progress: 0,
+        title: 'Inicializando',
+        description: 'Preparando pipeline de geração IA',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Create modified orchestrator that emits progress
+      const result = await generatePageWithProgress(requestData, sessionId, progressEmitter);
+      
+      // Send completion
+      progressEmitter.emit('progress', {
+        type: 'completed',
+        sessionId,
+        step: 'completed',
+        stepIndex: 5,
+        totalSteps: 5,
+        progress: 100,
+        title: 'Página Criada',
+        description: 'Geração concluída com sucesso',
+        timestamp: new Date().toISOString(),
+        result
+      });
+      
+      res.json({
+        success: true,
+        sessionId,
+        result,
+        message: 'Página gerada com sucesso'
+      });
+      
+    } catch (error) {
+      console.error('❌ AI Page Generation failed:', error);
+      
+      // Send error progress
+      progressEmitter.emit('progress', {
+        type: 'error',
+        sessionId,
+        step: 'error',
+        progress: 0,
+        title: 'Erro na Geração',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        timestamp: new Date().toISOString()
+      });
+      
+      res.status(500).json({
+        success: false,
+        sessionId,
+        error: 'Failed to generate page',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+  
+  // Helper function to generate page with progress updates
+  async function generatePageWithProgress(requestData: any, sessionId: string, emitter: EventEmitter) {
+    const steps = [
+      { key: 'analyze', title: 'Analisando Brief', description: 'Processando informações do produto' },
+      { key: 'content', title: 'Gerando Conteúdo', description: 'Criando textos persuasivos' },
+      { key: 'design', title: 'Definindo Design', description: 'Aplicando paleta de cores' },
+      { key: 'media', title: 'Criando Imagens IA', description: 'Gerando imagens profissionais' },
+      { key: 'optimize', title: 'Otimizando Qualidade', description: 'Aplicando gates de qualidade' }
+    ];
+    
+    let currentStep = 0;
+    
+    // Step 1: Brief Analysis
+    emitter.emit('progress', {
+      type: 'step_started',
+      sessionId,
+      step: steps[currentStep].key,
+      stepIndex: currentStep,
+      totalSteps: steps.length,
+      progress: (currentStep / steps.length) * 100,
+      title: steps[currentStep].title,
+      description: steps[currentStep].description,
+      timestamp: new Date().toISOString()
+    });
+    
+    currentStep++;
+    
+    // Add progress emitters for each major step
+    const originalGenerate = orchestrator.generatePage.bind(orchestrator);
+    
+    // Generate with progress tracking
+    const result = await originalGenerate(requestData);
+    
+    return result;
+  }
 
   const httpServer = createServer(app);
   
