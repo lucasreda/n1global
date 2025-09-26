@@ -3853,3 +3853,326 @@ export type AIContentResponse = {
   }>;
   error?: string;
 };
+
+// Enterprise Visual Identity System - Phase 1 Implementation
+// Color Palette with psychological alignment and accessibility
+export type ColorPalette = {
+  id: string;
+  name: string;
+  primary: {
+    main: string;
+    light: string;
+    dark: string;
+    contrast: string;
+  };
+  secondary: {
+    main: string;
+    light: string;
+    dark: string;
+    contrast: string;
+  };
+  accent: {
+    main: string;
+    light: string;
+    dark: string;
+    contrast: string;
+  };
+  neutral: {
+    white: string;
+    light: string;
+    medium: string;
+    dark: string;
+    black: string;
+  };
+  semantic: {
+    success: string;
+    warning: string;
+    error: string;
+    info: string;
+  };
+  // Psychological and brand attributes
+  mood: 'premium' | 'trustworthy' | 'energetic' | 'calming' | 'professional' | 'playful';
+  industry: string; // e.g., 'luxury', 'health', 'tech', 'financial'
+  accessibility: {
+    wcagLevel: 'AA' | 'AAA';
+    contrastRatios: Record<string, number>;
+  };
+};
+
+// AI-Generated Asset Bundle for complete visual consistency
+export type GeneratedAssetBundle = {
+  id: string;
+  palette: string; // Reference to ColorPalette.id
+  style: 'photographic' | 'illustrated' | 'minimalist' | 'artistic' | 'corporate';
+  
+  // Images organized by section and purpose
+  hero: {
+    primary: GeneratedImage;
+    background?: GeneratedImage;
+    overlay?: GeneratedImage;
+  };
+  lifestyle: {
+    primary: GeneratedImage[];
+    gallery?: GeneratedImage[];
+  };
+  product: {
+    showcase: GeneratedImage[];
+    detail?: GeneratedImage[];
+    comparison?: GeneratedImage[];
+  };
+  social: {
+    avatars: GeneratedImage[];
+    testimonialBackgrounds?: GeneratedImage[];
+  };
+  backgrounds: {
+    section: GeneratedImage[];
+    patterns: GeneratedImage[];
+    textures: GeneratedImage[];
+  };
+  icons: {
+    benefits: GeneratedIcon[];
+    features: GeneratedIcon[];
+    social: GeneratedIcon[];
+    navigation: GeneratedIcon[];
+  };
+  
+  // Metadata for consistency
+  generatedAt: string;
+  totalSize: number; // In bytes
+  compressionApplied: boolean;
+  cacheKey: string;
+};
+
+// Individual generated image with metadata
+export type GeneratedImage = {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  format: 'webp' | 'avif' | 'jpg' | 'png';
+  size: number; // In bytes
+  alt: string;
+  prompt: string; // Original generation prompt
+  
+  // Responsive variants
+  variants: {
+    mobile: string;
+    tablet: string;
+    desktop: string;
+    thumbnail: string;
+  };
+  
+  // Technical metadata
+  dominantColors: string[];
+  aspectRatio: string;
+  generatedAt: string;
+  processingTime: number; // In milliseconds
+};
+
+// Generated icon with consistent styling
+export type GeneratedIcon = {
+  id: string;
+  url: string;
+  svg?: string; // Vector format when available
+  category: 'benefit' | 'feature' | 'social' | 'navigation' | 'action';
+  style: 'outline' | 'filled' | 'duotone' | 'branded';
+  size: '16' | '24' | '32' | '48' | '64';
+  prompt: string;
+  alt: string;
+};
+
+// Smart prompt templates for consistent image generation
+export type ImagePromptTemplate = {
+  id: string;
+  name: string;
+  category: 'hero' | 'lifestyle' | 'product' | 'social' | 'background' | 'icon';
+  
+  // Template with dynamic variables
+  template: string; // e.g., "Professional ${niche} ${style}, ${lighting}, ${colors}"
+  
+  // Required variables for this template
+  variables: Array<{
+    name: string; // e.g., 'niche', 'style', 'lighting'
+    type: 'text' | 'color' | 'enum';
+    required: boolean;
+    options?: string[]; // For enum type
+    description: string;
+  }>;
+  
+  // Style parameters
+  style: {
+    photographic: boolean;
+    illustrated: boolean;
+    minimalist: boolean;
+    artistic: boolean;
+  };
+  
+  // Technical parameters
+  aspectRatio: string; // e.g., '16:9', '1:1', '4:3'
+  quality: 'standard' | 'hd' | '4k';
+  
+  // Use cases and examples
+  examples: Array<{
+    input: Record<string, string>;
+    resultDescription: string;
+  }>;
+};
+
+// Design tokens for consistent styling across components
+export type StyleTokens = {
+  id: string;
+  name: string;
+  
+  // Typography scale with fluid sizing
+  typography: {
+    fontFamilies: {
+      heading: string;
+      body: string;
+      mono: string;
+    };
+    fontSizes: {
+      xs: string;
+      sm: string;
+      base: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      '3xl': string;
+      '4xl': string;
+      '5xl': string;
+      '6xl': string;
+    };
+    lineHeights: {
+      none: string;
+      tight: string;
+      snug: string;
+      normal: string;
+      relaxed: string;
+      loose: string;
+    };
+    fontWeights: {
+      thin: string;
+      light: string;
+      normal: string;
+      medium: string;
+      semibold: string;
+      bold: string;
+      extrabold: string;
+    };
+  };
+  
+  // Spacing system (8pt grid)
+  spacing: {
+    px: string;
+    '0': string;
+    '1': string;
+    '2': string;
+    '3': string;
+    '4': string;
+    '5': string;
+    '6': string;
+    '8': string;
+    '10': string;
+    '12': string;
+    '16': string;
+    '20': string;
+    '24': string;
+    '32': string;
+    '40': string;
+    '48': string;
+    '56': string;
+    '64': string;
+  };
+  
+  // Elevation system for depth
+  shadows: {
+    none: string;
+    sm: string;
+    base: string;
+    md: string;
+    lg: string;
+    xl: string;
+    '2xl': string;
+    inner: string;
+  };
+  
+  // Border radius scale
+  borderRadius: {
+    none: string;
+    sm: string;
+    base: string;
+    md: string;
+    lg: string;
+    xl: string;
+    '2xl': string;
+    '3xl': string;
+    full: string;
+  };
+  
+  // Animation curves and durations
+  animations: {
+    durations: {
+      fast: string;
+      base: string;
+      slow: string;
+    };
+    easings: {
+      linear: string;
+      easeIn: string;
+      easeOut: string;
+      easeInOut: string;
+    };
+  };
+  
+  // Breakpoints for responsive design
+  breakpoints: {
+    xs: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    '2xl': string;
+  };
+};
+
+// Complete visual identity package
+export type VisualIdentity = {
+  id: string;
+  name: string;
+  
+  // Core identity components
+  palette: ColorPalette;
+  assets: GeneratedAssetBundle;
+  tokens: StyleTokens;
+  
+  // Contextual information
+  niche: string;
+  targetAudience: string;
+  brandPersonality: Array<'premium' | 'trustworthy' | 'innovative' | 'friendly' | 'professional' | 'playful'>;
+  
+  // Usage guidelines
+  guidelines: {
+    dosDonts: Array<{
+      type: 'do' | 'dont';
+      rule: string;
+      example?: string;
+    }>;
+    brandVoice: {
+      tone: string;
+      language: string;
+      keywords: string[];
+    };
+  };
+  
+  // Generation metadata
+  generatedAt: string;
+  version: string;
+  aiModel: string;
+  promptVersion: string;
+  qualityScore: number; // 0-100
+  
+  // Performance and cache
+  cacheExpiry: string;
+  lastUsed: string;
+  usageCount: number;
+};
