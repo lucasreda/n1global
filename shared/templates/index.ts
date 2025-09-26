@@ -142,17 +142,22 @@ export interface ModularLayout {
 // ============================
 
 /**
+ * Configuração de identidade visual
+ */
+export interface VisualIdentityConfig {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  mood: 'professional' | 'friendly' | 'luxury' | 'playful' | 'trustworthy' | 'innovative';
+  industry: 'business' | 'ecommerce' | 'health' | 'education' | 'technology' | 'finance' | 'real-estate' | 'food' | 'travel' | 'fashion';
+}
+
+/**
  * Composição de template otimizada
  */
 export interface TemplateComposition {
   layout: ModularLayout;
-  visualIdentity: {
-    primaryColor: string;
-    secondaryColor: string;
-    accentColor: string;
-    mood: string;
-    industry: string;
-  };
+  visualIdentity: VisualIdentityConfig;
   aiImageConfig: {
     style: string;
     quality: '4K' | 'high' | 'standard';
