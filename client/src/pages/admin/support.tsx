@@ -300,13 +300,11 @@ export default function AdminSupport() {
     }
   };
 
-  // TODO: Fix selectedOperationId - For now, return null to prevent errors
-  const selectedOperationId = null; // Temporário - sem operação selecionada no painel admin global
+  // N1 Admin Support - Global (não vinculado a operações específicas)
   
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
-    queryKey: [`/api/customer-support/${selectedOperationId}/categories`],
-    enabled: !!selectedOperationId && selectedOperationId !== "default"
+    queryKey: ['/api/support/categories']
   });
 
   // Overview metrics for cards
@@ -316,8 +314,7 @@ export default function AdminSupport() {
     monthlyTickets: number;
     unreadTickets: number;
   }>({
-    queryKey: [`/api/customer-support/${selectedOperationId}/overview`],
-    enabled: !!selectedOperationId,
+    queryKey: ['/api/support/overview'],
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
@@ -329,8 +326,8 @@ export default function AdminSupport() {
   const shouldLoadTickets = hasSupportFilters || (selectedCategory === "all" && selectedTicketStatus === "all" && !supportSearchTerm.trim());
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading } = useQuery<{tickets: SupportTicket[], total: number}>({
-    queryKey: [`/api/customer-support/${selectedOperationId}/tickets`, selectedCategory, selectedTicketStatus, supportSearchTerm],
-    enabled: shouldLoadTickets && !!selectedOperationId,
+    queryKey: ['/api/support/tickets', selectedCategory, selectedTicketStatus, supportSearchTerm],
+    enabled: shouldLoadTickets,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (supportSearchTerm) params.append('search', supportSearchTerm);
@@ -339,7 +336,7 @@ export default function AdminSupport() {
       params.append('limit', '50');
       
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`/api/customer-support/${selectedOperationId}/tickets?${params.toString()}`, {
+      const response = await fetch(`/api/support/tickets?${params.toString()}`, {
         headers: {
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
@@ -360,53 +357,12 @@ export default function AdminSupport() {
     }
   });
 
-  // Se não há operação selecionada, mostre mensagem informativa
-  if (!selectedOperationId) {
-    return (
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte</h1>
-          <p className="text-slate-300">Gerenciamento centralizado de atendimento ao cliente com IA</p>
-        </div>
-        
-        <Card className="bg-white/10 border-white/20 backdrop-blur-md">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-400" />
-              Operação Não Selecionada
-            </CardTitle>
-            <CardDescription className="text-slate-300">
-              O sistema de suporte está vinculado a operações específicas
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-slate-300">
-              Para acessar o sistema de suporte de uma operação:
-            </p>
-            <ol className="list-decimal list-inside space-y-2 text-slate-300">
-              <li>Faça logout do painel administrativo</li>
-              <li>Entre novamente com suas credenciais de usuário normal</li>
-              <li>Selecione a operação desejada no menu superior</li>
-              <li>Acesse "Atendimento ao Cliente" no menu lateral</li>
-            </ol>
-            <div className="pt-4 border-t border-slate-600">
-              <p className="text-sm text-slate-400">
-                💡 <strong>Dica:</strong> O painel administrativo global é para gerenciar usuários, produtos e configurações gerais. 
-                O sistema de suporte é específico de cada operação.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte</h1>
-          <p className="text-slate-300">Gerenciamento centralizado de atendimento ao cliente com IA</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Suporte N1</h1>
+          <p className="text-slate-300">Central de atendimento aos clientes da plataforma N1 Hub</p>
         </div>
         <Button 
           variant="outline" 

@@ -59,6 +59,19 @@ Preferred communication style: Simple, everyday language.
 - **Bug Fixes**: Corrected webhook parsing for transcription_data.text field
 - **Safety**: 8-second timeout fallback to prevent permanent silence
 
+## Recent Changes (October 2, 2025)
+
+### Admin Support System Correction ✅
+- **CRITICAL FIX**: Corrected `/inside/support` page to use global N1 support infrastructure
+- **SEPARATION**: Clearly separated two distinct support systems:
+  - **N1 Admin Support** (`/inside/support`): Global support for N1 Hub platform clients using `/api/support/*` endpoints
+  - **Customer Support** (`/customer-support`): Per-operation support for each client's end customers using `/api/customer-support/:operationId/*` endpoints
+- **REMOVED**: Dependency on `selectedOperationId` from admin support page
+- **FIXED**: Query endpoints now correctly use `/api/support/categories`, `/api/support/overview`, `/api/support/tickets`
+- **UI UPDATED**: Changed page title to "Suporte N1" and description to "Central de atendimento aos clientes da plataforma N1 Hub"
+- **BACKEND**: Backend infrastructure was already correctly separated with distinct tables (`supportTickets` vs `customerSupportTickets`)
+- **TESTING**: Validated all endpoints working: 5 categories, 23 tickets, overview metrics functional
+
 ## Recent Changes (September 19, 2025)
 
 ### Multi-Page Funnel System - Phase 1 Complete ✅
