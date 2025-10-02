@@ -615,18 +615,16 @@ export default function AdminSupport() {
               ) : (
                 <div className="space-y-4">
                   {supportTicketsResponse.tickets.map((ticketResponse: any) => {
-                    console.log('🐛 DEBUG: ticketResponse:', ticketResponse);
-                    console.log('🐛 DEBUG: ticketResponse.email:', ticketResponse.email);
-                    console.log('🐛 DEBUG: hasAutoResponse:', ticketResponse.email?.hasAutoResponse);
+                    const ticket = ticketResponse.ticket;
                     return (
                     <div 
-                      key={ticketResponse.id} 
+                      key={ticket.id} 
                       className="relative border border-slate-700 rounded-lg p-4 hover:bg-white/5 transition-colors cursor-pointer" 
                       onClick={() => handleViewTicket(ticketResponse)}
-                      data-testid={`ticket-${ticketResponse.ticketNumber}`}
+                      data-testid={`ticket-${ticket.ticketNumber}`}
                     >
-                      {/* Círculo azul para tickets não lidos */}
-                      {!ticketResponse.isRead && (
+                      {/* Círculo vermelho para tickets não lidos */}
+                      {!ticket.isRead && (
                         <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full border border-slate-900 z-10" style={{ backgroundColor: '#f87171' }} />
                       )}
                       <div className="flex items-start justify-between mb-3">
@@ -637,53 +635,46 @@ export default function AdminSupport() {
                           />
                           <div>
                             <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-medium text-white">{ticketResponse.ticketNumber}</h3>
+                              <h3 className="font-medium text-white">{ticket.ticketNumber}</h3>
                               <Badge className="bg-slate-700 text-slate-300 text-xs">
                                 {ticketResponse.category?.displayName}
                               </Badge>
-                              {(() => {
-                                console.log(`🐛 BADGE DEBUG para ${ticketResponse.ticketNumber}:`, {
-                                  hasEmail: !!ticketResponse.email,
-                                  hasAutoResponse: ticketResponse.email?.hasAutoResponse,
-                                  emailObject: ticketResponse.email
-                                });
-                                return ticketResponse.email?.hasAutoResponse;
-                              })() && (
+                              {ticketResponse.email?.hasAutoResponse && (
                                 <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs">
                                   🤖 Sofia IA
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-slate-300 font-medium">{ticketResponse.subject}</p>
+                            <p className="text-sm text-slate-300 font-medium">{ticket.subject}</p>
                             <p className="text-xs text-slate-400 mt-1">
-                              De: {ticketResponse.customerEmail}
-                              {ticketResponse.customerName && ` (${ticketResponse.customerName})`}
+                              De: {ticket.customerEmail}
+                              {ticket.customerName && ` (${ticket.customerName})`}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
                           <Badge 
                             className={`text-xs ${
-                              ticketResponse.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
-                              ticketResponse.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
-                              ticketResponse.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
+                              ticket.status === 'open' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
+                              ticket.status === 'in_progress' ? 'bg-blue-600/20 text-blue-400 border-blue-600/30' :
+                              ticket.status === 'resolved' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
                               'bg-gray-600/20 text-gray-400 border-gray-600/30'
                             }`}
                           >
-                            {ticketResponse.status === 'open' ? 'Aberto' :
-                             ticketResponse.status === 'in_progress' ? 'Em Andamento' :
-                             ticketResponse.status === 'resolved' ? 'Resolvido' : 'Fechado'}
+                            {ticket.status === 'open' ? 'Aberto' :
+                             ticket.status === 'in_progress' ? 'Em Andamento' :
+                             ticket.status === 'resolved' ? 'Resolvido' : 'Fechado'}
                           </Badge>
                           <Badge 
                             variant="outline" 
                             className={`text-xs ${
-                              ticketResponse.priority === 'high' ? 'border-red-600 text-red-400' :
-                              ticketResponse.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
+                              ticket.priority === 'high' ? 'border-red-600 text-red-400' :
+                              ticket.priority === 'medium' ? 'border-yellow-600 text-yellow-400' :
                               'border-slate-600 text-slate-400'
                             }`}
                           >
-                            {ticketResponse.priority === 'high' ? 'Alta' :
-                             ticketResponse.priority === 'medium' ? 'Média' : 'Baixa'}
+                            {ticket.priority === 'high' ? 'Alta' :
+                             ticket.priority === 'medium' ? 'Média' : 'Baixa'}
                           </Badge>
                           <div className="flex items-center text-slate-400">
                             <Eye className="h-4 w-4" />
@@ -695,20 +686,20 @@ export default function AdminSupport() {
                         <div className="flex items-center space-x-4">
                           <div className="flex items-center space-x-1">
                             <Clock className="h-3 w-3" />
-                            <span>Criado: {new Date(ticketResponse.createdAt).toLocaleDateString('pt-BR')}</span>
+                            <span>Criado: {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <MessageSquare className="h-3 w-3" />
                             <span>0 mensagens</span>
                           </div>
-                          {ticketResponse.assignedToUserId && (
+                          {ticket.assignedToUserId && (
                             <div className="flex items-center space-x-1">
                               <User className="h-3 w-3" />
                               <span>Atribuído</span>
                             </div>
                           )}
                         </div>
-                        <span>Última atividade: {new Date(ticketResponse.updatedAt || ticketResponse.createdAt).toLocaleDateString('pt-BR')}</span>
+                        <span>Última atividade: {new Date(ticket.updatedAt || ticket.createdAt).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
                     );
