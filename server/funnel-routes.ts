@@ -1297,11 +1297,43 @@ router.get("/funnels/:funnelId/pages/:pageId", authenticateToken, validateOperat
       }
     }
 
+    // Detailed logging of sections structure
+    if (parsedPage.model?.sections) {
+      console.log('📦 DETAILED SECTIONS DEBUG:', {
+        totalSections: parsedPage.model.sections.length,
+        sectionTypes: parsedPage.model.sections.map((s: any) => s.type),
+        sectionNames: parsedPage.model.sections.map((s: any) => s.name),
+        sectionsWithRows: parsedPage.model.sections.map((s: any) => ({
+          id: s.id,
+          type: s.type,
+          rowsCount: s.rows?.length || 0
+        }))
+      });
+      
+      // Log first section in detail for debugging
+      if (parsedPage.model.sections.length > 0) {
+        const firstSection = parsedPage.model.sections[0];
+        console.log('🔍 First section detail:', {
+          id: firstSection.id,
+          type: firstSection.type,
+          name: firstSection.name,
+          hasRows: !!firstSection.rows,
+          rowsCount: firstSection.rows?.length,
+          firstRowStructure: firstSection.rows?.[0] ? {
+            hasColumns: !!firstSection.rows[0].columns,
+            columnsCount: firstSection.rows[0].columns?.length,
+            firstColumnElements: firstSection.rows[0].columns?.[0]?.elements?.length
+          } : null
+        });
+      }
+    }
+
     console.log('📦 Returning page data:', {
       id: parsedPage.id,
       name: parsedPage.name,
       hasModel: !!parsedPage.model,
-      modelType: typeof parsedPage.model
+      modelType: typeof parsedPage.model,
+      sectionsCount: parsedPage.model?.sections?.length || 0
     });
 
     return res.json({
