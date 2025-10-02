@@ -95,6 +95,7 @@ export default function AdminSupport() {
   const [newDirectiveTitle, setNewDirectiveTitle] = useState('');
   const [newDirectiveContent, setNewDirectiveContent] = useState('');
   const [editingDirective, setEditingDirective] = useState<AIDirective | null>(null);
+  const [togglingDirectiveIds, setTogglingDirectiveIds] = useState<Set<string>>(new Set());
 
   // Effect to scroll to last message when modal opens with conversations
   useEffect(() => {
@@ -479,6 +480,9 @@ export default function AdminSupport() {
       return apiRequest(`/api/support/directives/${id}`, 'PUT', { isActive });
     },
     onMutate: async ({ id, isActive }) => {
+      // Prevent multiple simultaneous toggles for the same directive
+      setTogglingDirectiveIds(prev => new Set(prev).add(id));
+      
       // Cancel ongoing refetches
       await queryClient.cancelQueries({ queryKey: ['/api/support/directives'] });
       
@@ -493,18 +497,30 @@ export default function AdminSupport() {
         );
       });
       
-      return { previousDirectives };
+      return { previousDirectives, id };
     },
     onError: (error: any, variables, context: any) => {
       // Rollback on error
       queryClient.setQueryData(['/api/support/directives'], context?.previousDirectives);
+      // Remove from toggling set
+      setTogglingDirectiveIds(prev => {
+        const next = new Set(prev);
+        next.delete(context?.id);
+        return next;
+      });
       toast({
         title: "Erro ao atualizar status",
         description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
     },
-    onSettled: () => {
+    onSettled: (data, error, variables, context: any) => {
+      // Remove from toggling set
+      setTogglingDirectiveIds(prev => {
+        const next = new Set(prev);
+        next.delete(context?.id);
+        return next;
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
     },
   });
@@ -543,9 +559,12 @@ export default function AdminSupport() {
   };
 
   const handleToggleDirective = useCallback((directive: AIDirective) => {
-    if (toggleDirectiveMutation.isPending) return;
+    // Prevent toggle if already toggling this specific directive
+    if (togglingDirectiveIds.has(directive.id)) {
+      return;
+    }
     toggleDirectiveMutation.mutate({ id: directive.id, isActive: !directive.isActive });
-  }, [toggleDirectiveMutation]);
+  }, [togglingDirectiveIds, toggleDirectiveMutation]);
 
   const startEditDirective = (directive: AIDirective) => {
     setEditingDirective(directive);
@@ -1349,7 +1368,7 @@ export default function AdminSupport() {
                           <Switch
                             checked={directive.isActive}
                             onCheckedChange={() => handleToggleDirective(directive)}
-                            disabled={toggleDirectiveMutation.isPending}
+                            disabled={togglingDirectiveIds.has(directive.id)}
                             data-testid={`switch-directive-${directive.id}`}
                           />
                           <Button
