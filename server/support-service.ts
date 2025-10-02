@@ -374,7 +374,7 @@ CONHECIMENTO DISPONÍVEL (Diretivas Administrativas):
 ${adminDirectives.map(d => `- ${d.title}: ${d.content}`).join('\n')}
 
 IMPORTANTE: Se o email do cliente se enquadra em alguma das diretivas acima, você PODE responder automaticamente.
-Nesse caso, categorize como "duvidas" (automação: sim) e defina requiresHuman = false.
+Nesse caso, categorize como "duvidas_gerais" (automação: sim) e defina requiresHuman = false.
 `
       : '';
 
@@ -384,6 +384,29 @@ Analise o seguinte email de suporte e categorize-o em uma das categorias dispon�
 CATEGORIAS DISPONÍVEIS:
 ${categoryDescriptions}
 ${adminDirectivesSection}
+
+CONTEXTO DO SUPORTE ADMINISTRATIVO N1 HUB:
+Você está atendendo PROPRIETÁRIOS DE OPERAÇÕES (clientes B2B da N1 Hub), não os clientes finais deles.
+
+FUNCIONALIDADES DA PLATAFORMA:
+- Funnels: Criação de landing pages e checkouts com deploy automático via Vercel
+- Hub/Marketplace: Catálogo global de produtos para dropshipping
+- Integrações: Shopify, Meta Ads, Google Ads, Vercel
+- Analytics: Métricas de tráfego, conversão e receita
+- Customer Support: Sistema para cada operação atender seus clientes finais
+
+CATEGORIZAÇÃO INTELIGENTE:
+- Se menciona integração (Shopify, Meta, Google, Vercel) → categoria: integracao
+- Se menciona bug, erro, falha → categoria: problema_tecnico
+- Se menciona cobrança, plano, pagamento, fatura → categoria: financeiro
+- Se menciona tutorial, como fazer, primeiros passos → categoria: onboarding ou duvidas_gerais
+- Se menciona sugestão, gostaria que tivesse, feature → categoria: feature_request
+
+PRIORIZAÇÃO AUTOMÁTICA:
+- Se email contém "URGENTE", "CRÍTICO", "BLOQUEADO" → marcar urgency como "critica"
+- Se categoria = problema_tecnico → verificar gravidade e ajustar urgency
+- Se categoria = financeiro → sempre requiresHuman = true
+
 EMAIL PARA ANÁLISE:
 ---
 CONTEÚDO PRINCIPAL (PRIORIDADE MÁXIMA): ${content}
@@ -393,10 +416,12 @@ Assunto (referência secundária): ${subject}
 INSTRUÇÃO CRÍTICA: Analise PRINCIPALMENTE o CONTEÚDO do email, não o assunto. 
 O assunto pode ser genérico (como "Bom dia", "Olá", "Contato") mas o que importa é o que o cliente escreve no corpo da mensagem.
 
-EXEMPLOS:
-- Assunto: "Bom dia" + Conteúdo: "Gostaria de saber quando meu pedido vai chegar" → CATEGORIA: duvidas
-- Assunto: "Olá" + Conteúdo: "Preciso cancelar minha compra" → CATEGORIA: cancelamento  
-- Assunto: "Contato" + Conteúdo: "Quero alterar o endereço de entrega" → CATEGORIA: alteracao_endereco
+EXEMPLOS B2B:
+- Assunto: "Bom dia" + Conteúdo: "Como conectar minha loja Shopify?" → CATEGORIA: integracao
+- Assunto: "Olá" + Conteúdo: "Meu funil não está fazendo deploy no Vercel" → CATEGORIA: problema_tecnico  
+- Assunto: "Contato" + Conteúdo: "Gostaria de fazer upgrade do meu plano" → CATEGORIA: financeiro
+- Assunto: "Ajuda" + Conteúdo: "Como adiciono produtos ao meu funil?" → CATEGORIA: onboarding
+- Assunto: "Dúvida" + Conteúdo: "Onde vejo minhas métricas de conversão?" → CATEGORIA: duvidas_gerais
 
 Responda em JSON no seguinte formato:
 {
@@ -451,28 +476,30 @@ escalationRisk: Risco de escalação (0-10)
 - 9-10: Risco crítico, cliente muito agressivo
 
 IMPORTANTE SOBRE requiresHuman:
-- DEFAULT é false (nossa IA Sofia pode responder a maioria dos casos)
-- Use requiresHuman = true APENAS para casos GRAVES: ameaças, problemas legais, linguagem agressiva, reclamações complexas
+- DEFAULT é false (nossa IA pode responder a maioria dos casos B2B)
+- Use requiresHuman = true para: problemas técnicos graves, questões financeiras, casos complexos
 
-EXEMPLOS DE requiresHuman = false:
-- "Quando meu pedido vai chegar?"
-- "Quero cancelar meu pedido" 
-- "Preciso alterar meu endereço"
-- "Meu produto ainda não chegou"
-- "Quanto tempo demora a entrega?"
+EXEMPLOS B2B DE requiresHuman = false:
+- "Como conectar Shopify?"
+- "Onde vejo minhas analytics?" 
+- "Como criar um funil?"
+- "Não consigo adicionar produtos"
+- "Tutorial de uso do dashboard"
 
-EXEMPLOS DE requiresHuman = true:
+EXEMPLOS B2B DE requiresHuman = true:
 - Linguagem agressiva ou ofensiva
-- Ameaças ou menções legais
-- Problemas técnicos complexos do site
-- Reclamações sobre produto com defeito
+- Problemas técnicos complexos/críticos que bloqueiam operação
+- Questões financeiras (cobranças, reembolsos, upgrades)
+- Bugs graves no sistema
 
-REGRAS:
-1. Para "duvidas" simples → requiresHuman = false
-2. Para "cancelamento" direto → requiresHuman = false  
-3. Para "alteracao_endereco" → requiresHuman = false
-4. Para "reclamacoes" → sempre requiresHuman = true
-5. Para "manual" → sempre requiresHuman = true
+REGRAS B2B:
+1. Para "duvidas_gerais" → requiresHuman = false (IA responde com diretivas)
+2. Para "integracao" → requiresHuman = false (IA guia reconexão)
+3. Para "onboarding" → requiresHuman = false (IA ensina uso)
+4. Para "problema_tecnico" → requiresHuman = true (requer análise técnica)
+5. Para "financeiro" → sempre requiresHuman = true (questões sensíveis)
+6. Para "feature_request" → requiresHuman = true (requer avaliação)
+7. Para "manual" → sempre requiresHuman = true
 `;
 
     try {
@@ -489,25 +516,25 @@ REGRAS:
       let requiresHuman =
         result.requiresHuman !== undefined ? result.requiresHuman : true;
 
-      // Override AI decision for simple cases - force AI response for basic inquiries
-      if (categoryName === "duvidas") {
+      // Override AI decision for B2B cases - force AI response for basic inquiries
+      if (["duvidas_gerais", "onboarding"].includes(categoryName)) {
         const contentLower = (subject + " " + content).toLowerCase();
         const simpleInquiryKeywords = [
-          "quando",
-          "chegar",
-          "chegou",
-          "entrega",
-          "prazo",
-          "demora",
-          "rastreamento",
-          "rastrear",
-          "acompanhar",
-          "status",
-          "pedido",
-          "produto",
-          "comprei",
-          "onde está",
-          "chegada",
+          "como",
+          "onde",
+          "tutorial",
+          "configurar",
+          "conectar",
+          "criar",
+          "adicionar",
+          "ver",
+          "visualizar",
+          "acesso",
+          "usar",
+          "funciona",
+          "configuração",
+          "dashboard",
+          "métricas",
         ];
 
         const hasSimpleKeywords = simpleInquiryKeywords.some((keyword) =>
@@ -515,40 +542,42 @@ REGRAS:
         );
 
         const hasComplexKeywords = [
-          "defeito",
-          "quebrado",
-          "problema",
-          "reclamação",
+          "bug crítico",
+          "sistema parado",
+          "perdendo dinheiro",
           "advogado",
           "processo",
           "judicial",
-          "indenização",
-          "dano",
         ].some((keyword) => contentLower.includes(keyword));
 
-        // If it's a simple delivery question without complex issues, AI can handle it
+        // If it's a simple platform question without critical issues, AI can handle it
         if (hasSimpleKeywords && !hasComplexKeywords) {
-          requiresHuman = false;
-          console.log(`🤖 Forçando IA para dúvida simples: ${subject}`);
-        }
-      }
-
-      // Always allow AI for cancellations and address changes (unless explicitly complex)
-      if (["cancelamento", "alteracao_endereco"].includes(categoryName)) {
-        const contentLower = (subject + " " + content).toLowerCase();
-        const hasComplexKeywords = [
-          "advogado",
-          "processo",
-          "judicial",
-          "indenização",
-          "dano",
-          "ameaça",
-        ].some((keyword) => contentLower.includes(keyword));
-
-        if (!hasComplexKeywords) {
           requiresHuman = false;
           console.log(`🤖 Forçando IA para ${categoryName}: ${subject}`);
         }
+      }
+
+      // Allow AI for integration issues (unless explicitly critical)
+      if (categoryName === "integracao") {
+        const contentLower = (subject + " " + content).toLowerCase();
+        const hasCriticalKeywords = [
+          "crítico",
+          "urgente",
+          "bloqueado",
+          "parado",
+          "não consigo trabalhar",
+        ].some((keyword) => contentLower.includes(keyword));
+
+        if (!hasCriticalKeywords) {
+          requiresHuman = false;
+          console.log(`🤖 Forçando IA para integração: ${subject}`);
+        }
+      }
+
+      // Always require human for financial and technical problems
+      if (["financeiro", "problema_tecnico", "feature_request"].includes(categoryName)) {
+        requiresHuman = true;
+        console.log(`👤 Requerendo humano para ${categoryName}: ${subject}`);
       }
 
       return {
