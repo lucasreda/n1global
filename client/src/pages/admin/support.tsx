@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -523,9 +523,10 @@ export default function AdminSupport() {
     deleteDirectiveMutation.mutate(id);
   };
 
-  const handleToggleDirective = (directive: AIDirective) => {
+  const handleToggleDirective = useCallback((directive: AIDirective) => {
+    if (toggleDirectiveMutation.isPending) return;
     toggleDirectiveMutation.mutate({ id: directive.id, isActive: !directive.isActive });
-  };
+  }, [toggleDirectiveMutation]);
 
   const startEditDirective = (directive: AIDirective) => {
     setEditingDirective(directive);
@@ -1329,6 +1330,7 @@ export default function AdminSupport() {
                           <Switch
                             checked={directive.isActive}
                             onCheckedChange={() => handleToggleDirective(directive)}
+                            disabled={toggleDirectiveMutation.isPending}
                             data-testid={`switch-directive-${directive.id}`}
                           />
                           <Button
