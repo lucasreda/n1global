@@ -478,15 +478,34 @@ export default function AdminSupport() {
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       return apiRequest(`/api/support/directives/${id}`, 'PUT', { isActive });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
+    onMutate: async ({ id, isActive }) => {
+      // Cancel ongoing refetches
+      await queryClient.cancelQueries({ queryKey: ['/api/support/directives'] });
+      
+      // Snapshot previous value
+      const previousDirectives = queryClient.getQueryData(['/api/support/directives']);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(['/api/support/directives'], (old: AIDirective[] | undefined) => {
+        if (!old) return old;
+        return old.map((directive) =>
+          directive.id === id ? { ...directive, isActive } : directive
+        );
+      });
+      
+      return { previousDirectives };
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context: any) => {
+      // Rollback on error
+      queryClient.setQueryData(['/api/support/directives'], context?.previousDirectives);
       toast({
         title: "Erro ao atualizar status",
         description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
     },
   });
 
