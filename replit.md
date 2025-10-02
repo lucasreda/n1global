@@ -61,6 +61,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2, 2025)
 
+### AI Page Generation Bug Fix ✅
+- **CRITICAL FIX**: Corrected token authentication in AI page generation system
+- **ROOT CAUSE**: useAIProgressStream hook was using wrong localStorage key (`token` instead of `auth_token`)
+- **BACKEND FIX**: Updated `/api/ai/generate-page` endpoint to properly map request data to EnterpriseAIGenerationRequest format
+- **DATA MAPPING**: Now correctly extracts `operationId` from funnel, `userId` from auth token, and maps `briefData` structure
+- **VALIDATION**: Added proper error handling and validation for missing required fields (funnelId, userId)
+- **TESTING**: Token issue resolved, endpoint now receives valid JWT authentication
+
 ### B2B Admin Support System Enhancement ✅
 - **MAJOR UPGRADE**: Transformed admin support from B2C to B2B context for operation owners
 - **NEW CATEGORIES**: Replaced customer-focused categories with B2B categories:

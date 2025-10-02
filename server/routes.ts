@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema, funnels } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
@@ -7368,17 +7368,58 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
     try {
       console.log(`🤖 Starting AI page generation - Session: ${sessionId}`);
       
-      // Validate request
+      // Extract user data from authenticated request
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new Error('User ID not found in authenticated request');
+      }
+
+      // Extract data from request body
+      const { briefData, options } = req.body;
+      
+      // Validate required fields
+      if (!briefData?.pageInfo?.funnelId) {
+        throw new Error('Funnel ID is required in briefData.pageInfo');
+      }
+
+      // Get funnel to extract operationId
+      const funnel = await db.query.funnels.findFirst({
+        where: eq(funnels.id, briefData.pageInfo.funnelId)
+      });
+
+      if (!funnel) {
+        throw new Error('Funnel not found');
+      }
+
+      // Build EnterpriseAIGenerationRequest with correct structure
       const requestData = {
-        briefData: req.body.briefData || {},
-        templatePreference: req.body.templatePreference || 'auto',
+        operationId: funnel.operationId,
+        userId: userId,
+        funnelId: briefData.pageInfo.funnelId,
+        pageId: briefData.pageInfo.pageId,
+        briefData: {
+          productInfo: {
+            name: briefData.productInfo?.name || '',
+            description: briefData.productInfo?.description || '',
+            price: briefData.productInfo?.price || 0,
+            currency: briefData.productInfo?.currency || funnel.currency || 'BRL',
+            targetAudience: briefData.productInfo?.targetAudience || '',
+            mainBenefits: briefData.productInfo?.mainBenefits || [],
+            objections: briefData.productInfo?.objections || [],
+            industry: briefData.productInfo?.industry || 'general'
+          },
+          conversionGoal: briefData.productInfo?.mainGoal || 'conversion',
+          brandGuidelines: briefData.brandGuidelines || null
+        },
         options: {
           enableParallelization: true,
           enableRollback: true,
           qualityThreshold: 8.0,
-          ...req.body.options
+          ...options
         }
       };
+
+      console.log('✅ Request data prepared:', { operationId: requestData.operationId, funnelId: requestData.funnelId });
       
       // Send initial progress
       progressEmitter.emit('progress', {
