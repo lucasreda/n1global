@@ -512,13 +512,39 @@ REGRAS B2B:
 
       const result = JSON.parse(response.choices[0].message.content || "{}");
 
-      const categoryName = result.categoryName || "manual";
+      let categoryName = result.categoryName || "manual";
       let requiresHuman =
         result.requiresHuman !== undefined ? result.requiresHuman : true;
+      let urgency = result.urgency || "media";
+
+      // AUTO-PRIORIZAÇÃO: Detectar palavras-chave e ajustar categoria/prioridade
+      const contentLower = (subject + " " + content).toLowerCase();
+
+      // 1. Se contém "URGENTE", "CRÍTICO", "BLOQUEADO" → urgency = critica
+      const urgentKeywords = ["urgente", "crítico", "bloqueado", "emergência", "imediato"];
+      if (urgentKeywords.some(keyword => contentLower.includes(keyword))) {
+        urgency = "critica";
+        console.log(`🚨 Auto-priorização: Marcado como CRÍTICO por keyword urgente`);
+      }
+
+      // 2. Se menciona "bug", "erro", "não funciona" → categoria = problema_tecnico
+      const bugKeywords = ["bug", "erro", "não funciona", "não está funcionando", "falha", "quebrado", "problema técnico"];
+      if (bugKeywords.some(keyword => contentLower.includes(keyword))) {
+        categoryName = "problema_tecnico";
+        requiresHuman = true;
+        console.log(`🐛 Auto-priorização: Forçado para problema_tecnico por keyword de bug`);
+      }
+
+      // 3. Se menciona "cobrança", "pagamento" → categoria = financeiro + human required
+      const financialKeywords = ["cobrança", "cobranca", "pagamento", "fatura", "reembolso", "cobrei", "cobrar", "valor", "preço"];
+      if (financialKeywords.some(keyword => contentLower.includes(keyword))) {
+        categoryName = "financeiro";
+        requiresHuman = true;
+        console.log(`💰 Auto-priorização: Forçado para financeiro por keyword financeira`);
+      }
 
       // Override AI decision for B2B cases - force AI response for basic inquiries
       if (["duvidas_gerais", "onboarding"].includes(categoryName)) {
-        const contentLower = (subject + " " + content).toLowerCase();
         const simpleInquiryKeywords = [
           "como",
           "onde",
@@ -559,7 +585,6 @@ REGRAS B2B:
 
       // Allow AI for integration issues (unless explicitly critical)
       if (categoryName === "integracao") {
-        const contentLower = (subject + " " + content).toLowerCase();
         const hasCriticalKeywords = [
           "crítico",
           "urgente",
@@ -587,7 +612,7 @@ REGRAS B2B:
         requiresHuman,
         sentiment: result.sentiment || "neutro",
         emotion: result.emotion || "calmo",
-        urgency: result.urgency || "media",
+        urgency, // Usar a variável local que pode ter sido ajustada pela auto-priorização
         tone: result.tone || "educado",
         hasTimeConstraint: result.hasTimeConstraint || false,
         escalationRisk: Math.min(10, Math.max(0, result.escalationRisk || 0)),
