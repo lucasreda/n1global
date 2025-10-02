@@ -330,7 +330,7 @@ export default function AdminSupport() {
 
   const { data: supportTicketsResponse, isLoading: ticketsLoading } = useQuery<{tickets: SupportTicket[], total: number}>({
     queryKey: [`/api/customer-support/${selectedOperationId}/tickets`, selectedCategory, selectedTicketStatus, supportSearchTerm],
-    enabled: shouldLoadTickets && selectedOperationId,
+    enabled: shouldLoadTickets && !!selectedOperationId,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (supportSearchTerm) params.append('search', supportSearchTerm);
