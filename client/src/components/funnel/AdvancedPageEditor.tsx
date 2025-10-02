@@ -9,6 +9,7 @@ import { VisualEditor } from '../page-builder/VisualEditor';
 import { usePageModelHistory, useUndoRedoShortcuts } from '@/hooks/useUndoRedo';
 import { useAIContent, useSectionGenerator } from '@/hooks/useAIContent';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -62,11 +63,19 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
   // Convert AI content to proper PageModelV2 structure
   const convertAIContentToPageModel = useCallback((aiModel: any): PageModelV2 => {
     console.log('🔄 Converting AI model:', aiModel);
+    console.log('📊 CONVERSION START - Input sections:', aiModel.sections?.length || 0);
     
     if (!aiModel.sections) {
       console.log('⚠️ No sections found in AI model, using default');
       return getDefaultModel();
     }
+    
+    console.log('📋 Sections to convert:', aiModel.sections.map((s: any) => ({
+      id: s.id,
+      type: s.type,
+      name: s.name,
+      rowsCount: s.rows?.length || 0
+    })));
 
     // Convert sections to proper structure
     const convertedSections = aiModel.sections.map((section: any, sectionIndex: number) => {
@@ -207,6 +216,10 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
       sections: convertedSections
     };
     
+    console.log('✅ CONVERSION COMPLETE:');
+    console.log('  📥 Input sections:', aiModel.sections.length);
+    console.log('  📤 Output sections:', convertedSections.length);
+    console.log('  ✅ All sections preserved:', aiModel.sections.length === convertedSections.length);
     console.log('✅ Final converted model:', result);
     return result;
   }, []);
@@ -562,6 +575,16 @@ export function AdvancedPageEditor({ funnelId, pageId }: AdvancedPageEditorProps
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <h1 className="font-semibold text-white" style={{ fontSize: '20px' }}>{pageData.name}</h1>
+            
+            {/* Debug: Sections Counter */}
+            <Badge 
+              variant="secondary" 
+              className="bg-blue-500/20 text-blue-300 border-blue-500/30"
+              data-testid="sections-counter"
+            >
+              {currentModel.sections.length} seções carregadas
+            </Badge>
+            
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
