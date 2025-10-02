@@ -646,5 +646,103 @@ export function registerSupportRoutes(app: Express) {
     }
   });
 
+  // ============================================================================
+  // ADMIN SUPPORT DIRECTIVES ENDPOINTS (Authenticated)
+  // ============================================================================
+
+  /**
+   * Get all admin support directives
+   */
+  app.get('/api/support/directives', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const directives = await supportService.getAdminDirectives();
+      res.json(directives);
+    } catch (error) {
+      console.error('❌ Error fetching admin directives:', error);
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
+    }
+  });
+
+  /**
+   * Create new admin support directive
+   */
+  app.post('/api/support/directives', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { type, title, content, isActive = true, sortOrder = 0 } = req.body;
+
+      if (!type || !title || !content) {
+        return res.status(400).json({ message: 'Tipo, título e conteúdo são obrigatórios' });
+      }
+
+      const directive = await supportService.createAdminDirective({
+        type,
+        title,
+        content,
+        isActive,
+        sortOrder
+      });
+
+      res.json(directive);
+    } catch (error) {
+      console.error('❌ Error creating admin directive:', error);
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
+    }
+  });
+
+  /**
+   * Update admin support directive
+   */
+  app.patch('/api/support/directives/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { type, title, content, isActive, sortOrder } = req.body;
+
+      const directive = await supportService.updateAdminDirective(id, {
+        type,
+        title,
+        content,
+        isActive,
+        sortOrder
+      });
+
+      if (!directive) {
+        return res.status(404).json({ message: 'Diretiva não encontrada' });
+      }
+
+      res.json(directive);
+    } catch (error) {
+      console.error('❌ Error updating admin directive:', error);
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
+    }
+  });
+
+  /**
+   * Delete admin support directive
+   */
+  app.delete('/api/support/directives/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const deleted = await supportService.deleteAdminDirective(id);
+
+      if (!deleted) {
+        return res.status(404).json({ message: 'Diretiva não encontrada' });
+      }
+
+      res.json({ message: 'Diretiva removida com sucesso', success: true });
+    } catch (error) {
+      console.error('❌ Error deleting admin directive:', error);
+      return res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
+    }
+  });
+
 
 }

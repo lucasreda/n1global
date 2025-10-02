@@ -13,6 +13,7 @@ import {
   supportResponses,
   supportConversations,
   supportMetrics,
+  adminSupportDirectives,
   customerSupportOperations,
   aiDirectives,
   operations,
@@ -973,8 +974,14 @@ REGRAS:
     // Get active AI directives for this operation
     const directives = await this.getActiveDirectives(operationId);
     
-    // Build dynamic prompt
-    const prompt = await this.buildDynamicPrompt(email, category, directives, sentimentData, orderContext);
+    // Get global admin support directives
+    const adminDirectives = await this.getAdminDirectives();
+    const activeAdminDirectives = adminDirectives.filter(d => d.isActive);
+    
+    console.log(`📋 Using ${activeAdminDirectives.length} admin directives + ${directives.length} operation directives`);
+    
+    // Build dynamic prompt with both admin and operation directives
+    const prompt = await this.buildDynamicPrompt(email, category, directives, sentimentData, orderContext, activeAdminDirectives);
 
     let content = "{}"; // Declarar fora do try para acessar no catch
     
@@ -2205,24 +2212,37 @@ REGRAS:
       hasTimeConstraint: boolean;
       escalationRisk: number;
     },
-    orderContext?: EmailOrderContext
+    orderContext?: EmailOrderContext,
+    adminDirectives: any[] = []
   ): Promise<string> {
-    console.log('🛠️ Building dynamic prompt with', directives.length, 'directives');
+    console.log('🛠️ Building dynamic prompt with', directives.length, 'operation directives and', adminDirectives.length, 'admin directives');
     const customerName = email.from.split("@")[0];
 
+    // Combine both admin and operation directives
+    const allDirectives = [...adminDirectives, ...directives];
+
     // Group directives by type
-    const directivesByType = directives.reduce((acc, directive) => {
+    const directivesByType = allDirectives.reduce((acc, directive) => {
       if (!acc[directive.type]) acc[directive.type] = [];
       acc[directive.type].push(directive);
       return acc;
     }, {} as Record<string, any[]>);
 
     console.log('📊 Directives grouped by type:', {
+      n1_info: directivesByType.n1_info?.length || 0,
       store_info: directivesByType.store_info?.length || 0,
       product_info: directivesByType.product_info?.length || 0,
       response_style: directivesByType.response_style?.length || 0,
       custom: directivesByType.custom?.length || 0
     });
+
+    // Build N1 platform information section (from admin directives)
+    const n1InfoSection = directivesByType.n1_info?.length > 0 
+      ? `
+INFORMAÇÕES DA PLATAFORMA N1 HUB:
+${directivesByType.n1_info.map(d => `- ${d.title}: ${d.content}`).join('\n')}
+` 
+      : '';
 
     // Build store information section
     const storeInfoSection = directivesByType.store_info?.length > 0 
@@ -2349,7 +2369,7 @@ ${customerStats.cancelledOrders > customerStats.deliveredOrders ?
     const prompt = `
 Você é Sofia, uma agente de atendimento ao cliente experiente e empática. 
 
-${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}${orderContextSection}
+${n1InfoSection}${storeInfoSection}${productInfoSection}${responseStyleSection}${customSection}${emotionalContextSection}${orderContextSection}
 EMAIL ORIGINAL:
 Remetente: ${email.from}
 Assunto: ${email.subject}  
@@ -2501,6 +2521,78 @@ RESPOSTA EXCELENTE DEVE TER:
     } catch (error) {
       console.error(`❌ Error during automatic cancellation of order ${orderId}:`, error);
     }
+  }
+
+  // ============================================================================
+  // ADMIN SUPPORT DIRECTIVES METHODS
+  // ============================================================================
+
+  /**
+   * Get all admin support directives
+   */
+  async getAdminDirectives() {
+    return await db
+      .select()
+      .from(adminSupportDirectives)
+      .orderBy(adminSupportDirectives.sortOrder, adminSupportDirectives.createdAt);
+  }
+
+  /**
+   * Create new admin support directive
+   */
+  async createAdminDirective(data: {
+    type: string;
+    title: string;
+    content: string;
+    isActive?: boolean;
+    sortOrder?: number;
+  }) {
+    const [directive] = await db
+      .insert(adminSupportDirectives)
+      .values({
+        type: data.type,
+        title: data.title,
+        content: data.content,
+        isActive: data.isActive ?? true,
+        sortOrder: data.sortOrder ?? 0,
+      })
+      .returning();
+
+    return directive;
+  }
+
+  /**
+   * Update admin support directive
+   */
+  async updateAdminDirective(id: string, data: {
+    type?: string;
+    title?: string;
+    content?: string;
+    isActive?: boolean;
+    sortOrder?: number;
+  }) {
+    const [directive] = await db
+      .update(adminSupportDirectives)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(adminSupportDirectives.id, id))
+      .returning();
+
+    return directive;
+  }
+
+  /**
+   * Delete admin support directive
+   */
+  async deleteAdminDirective(id: string) {
+    const result = await db
+      .delete(adminSupportDirectives)
+      .where(eq(adminSupportDirectives.id, id))
+      .returning();
+
+    return result.length > 0;
   }
 }
 

@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { 
   Search,
   Download,
@@ -22,8 +24,17 @@ import {
   FileText,
   X,
   Send,
-  XCircle
+  XCircle,
+  Lightbulb,
+  Sparkles,
+  Bot,
+  Globe,
+  Plus,
+  Edit3,
+  Trash2
 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface SupportCategory {
   id: string;
@@ -52,8 +63,17 @@ interface SupportTicket {
   conversationCount: number;
 }
 
+interface AIDirective {
+  id: string;
+  type: 'n1_info' | 'product_info' | 'response_style' | 'custom';
+  title: string;
+  content: string;
+  isActive: boolean;
+}
+
 export default function AdminSupport() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [supportSearchTerm, setSupportSearchTerm] = useState("");
   const [selectedTicketStatus, setSelectedTicketStatus] = useState<string>("all");
@@ -68,6 +88,13 @@ export default function AdminSupport() {
   const [newMessageContent, setNewMessageContent] = useState("");
   const [isSendingNewMessage, setIsSendingNewMessage] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+
+  const [isAddDirectiveModalOpen, setIsAddDirectiveModalOpen] = useState(false);
+  const [isEditDirectiveModalOpen, setIsEditDirectiveModalOpen] = useState(false);
+  const [newDirectiveType, setNewDirectiveType] = useState<AIDirective['type']>('n1_info');
+  const [newDirectiveTitle, setNewDirectiveTitle] = useState('');
+  const [newDirectiveContent, setNewDirectiveContent] = useState('');
+  const [editingDirective, setEditingDirective] = useState<AIDirective | null>(null);
 
   // Effect to scroll to last message when modal opens with conversations
   useEffect(() => {
@@ -357,6 +384,154 @@ export default function AdminSupport() {
     }
   });
 
+  const { data: aiDirectives, isLoading: directivesLoading } = useQuery<AIDirective[]>({
+    queryKey: ['/api/support/directives'],
+  });
+
+  const getDirectiveTypeIcon = (type: AIDirective['type']) => {
+    switch (type) {
+      case 'n1_info': return <Globe className="w-4 h-4" />;
+      case 'product_info': return <Sparkles className="w-4 h-4" />;
+      case 'response_style': return <Bot className="w-4 h-4" />;
+      case 'custom': return <Lightbulb className="w-4 h-4" />;
+      default: return <Lightbulb className="w-4 h-4" />;
+    }
+  };
+
+  const getDirectiveTypeLabel = (type: AIDirective['type']) => {
+    switch (type) {
+      case 'n1_info': return 'Informações da Plataforma N1';
+      case 'product_info': return 'Informações de Produto';
+      case 'response_style': return 'Estilo de Resposta';
+      case 'custom': return 'Customizado';
+      default: return 'Customizado';
+    }
+  };
+
+  const createDirectiveMutation = useMutation({
+    mutationFn: async (directive: Omit<AIDirective, 'id'>) => {
+      return apiRequest('/api/support/directives', 'POST', directive);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
+      toast({
+        title: "Diretiva criada",
+        description: "A diretiva foi criada com sucesso.",
+      });
+      setIsAddDirectiveModalOpen(false);
+      setNewDirectiveTitle('');
+      setNewDirectiveContent('');
+      setNewDirectiveType('n1_info');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao criar diretiva",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateDirectiveMutation = useMutation({
+    mutationFn: async ({ id, ...data }: AIDirective) => {
+      return apiRequest(`/api/support/directives/${id}`, 'PUT', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
+      toast({
+        title: "Diretiva atualizada",
+        description: "A diretiva foi atualizada com sucesso.",
+      });
+      setIsEditDirectiveModalOpen(false);
+      setEditingDirective(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar diretiva",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteDirectiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/support/directives/${id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
+      toast({
+        title: "Diretiva removida",
+        description: "A diretiva foi removida com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao remover diretiva",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleDirectiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      return apiRequest(`/api/support/directives/${id}`, 'PUT', { isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddDirective = () => {
+    if (!newDirectiveTitle.trim() || !newDirectiveContent.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Título e conteúdo são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createDirectiveMutation.mutate({
+      type: newDirectiveType,
+      title: newDirectiveTitle.trim(),
+      content: newDirectiveContent.trim(),
+      isActive: true,
+    });
+  };
+
+  const handleEditDirective = () => {
+    if (!editingDirective || !editingDirective.title.trim() || !editingDirective.content.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Título e conteúdo são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateDirectiveMutation.mutate(editingDirective);
+  };
+
+  const handleDeleteDirective = (id: string) => {
+    deleteDirectiveMutation.mutate(id);
+  };
+
+  const handleToggleDirective = (directive: AIDirective) => {
+    toggleDirectiveMutation.mutate({ id: directive.id, isActive: !directive.isActive });
+  };
+
+  const startEditDirective = (directive: AIDirective) => {
+    setEditingDirective(directive);
+    setIsEditDirectiveModalOpen(true);
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-start">
@@ -375,6 +550,19 @@ export default function AdminSupport() {
         </Button>
       </div>
 
+      <Tabs defaultValue="tickets" className="w-full">
+        <TabsList className="bg-white/10 border-white/20 backdrop-blur-md">
+          <TabsTrigger value="tickets" className="data-[state=active]:bg-white/20 data-[state=active]:text-white">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Tickets
+          </TabsTrigger>
+          <TabsTrigger value="directives" className="data-[state=active]:bg-white/20 data-[state=active]:text-white">
+            <Bot className="h-4 w-4 mr-2" />
+            Diretivas de IA
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tickets" className="space-y-6 mt-6">
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {overviewLoading ? (
@@ -1073,6 +1261,279 @@ export default function AdminSupport() {
           </div>
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="directives" className="space-y-6 mt-6">
+          <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-slate-200 flex items-center gap-2">
+                  <Bot className="h-5 w-5" />
+                  Diretivas de IA
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Configure as diretrizes que a IA Sofia seguirá ao responder tickets de suporte
+                </CardDescription>
+              </div>
+              <Button 
+                onClick={() => setIsAddDirectiveModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-add-directive"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Diretiva
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {directivesLoading ? (
+                <div className="text-center py-8 text-slate-400">
+                  <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+                  Carregando diretivas...
+                </div>
+              ) : !aiDirectives || aiDirectives.length === 0 ? (
+                <div className="text-center py-12 space-y-4">
+                  <Bot className="h-12 w-12 text-slate-500 mx-auto" />
+                  <div className="space-y-2">
+                    <p className="text-slate-300 font-medium">Nenhuma diretiva configurada</p>
+                    <p className="text-slate-400 text-sm">
+                      Adicione diretivas para treinar a IA Sofia sobre como responder tickets de suporte
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {aiDirectives.map((directive) => (
+                    <div 
+                      key={directive.id}
+                      className="border border-slate-700 rounded-lg p-4 bg-slate-800/50 hover:bg-slate-800/70 transition-colors"
+                      data-testid={`directive-${directive.id}`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start space-x-3 flex-1">
+                          <div className="mt-1">
+                            {getDirectiveTypeIcon(directive.type)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="font-medium text-white">{directive.title}</h3>
+                              <Badge className="bg-slate-700 text-slate-300 text-xs">
+                                {getDirectiveTypeLabel(directive.type)}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-slate-400 whitespace-pre-wrap">
+                              {directive.content}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          <Switch
+                            checked={directive.isActive}
+                            onCheckedChange={() => handleToggleDirective(directive)}
+                            data-testid={`switch-directive-${directive.id}`}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditDirective(directive)}
+                            className="text-slate-400 hover:text-white hover:bg-slate-700"
+                            data-testid={`button-edit-directive-${directive.id}`}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                                data-testid={`button-delete-directive-${directive.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-slate-900 border-slate-700">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-slate-200">
+                                  Remover Diretiva
+                                </AlertDialogTitle>
+                                <AlertDialogDescription className="text-slate-400">
+                                  Tem certeza de que deseja remover esta diretiva? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteDirective(directive.id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  Sim, Remover
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Add Directive Modal */}
+      <Dialog open={isAddDirectiveModalOpen} onOpenChange={setIsAddDirectiveModalOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-200">Adicionar Nova Diretiva</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm text-slate-400">Tipo de Diretiva</label>
+              <Select value={newDirectiveType} onValueChange={(value) => setNewDirectiveType(value as AIDirective['type'])}>
+                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectItem value="n1_info">Informações da Plataforma N1</SelectItem>
+                  <SelectItem value="product_info">Informações de Produto</SelectItem>
+                  <SelectItem value="response_style">Estilo de Resposta</SelectItem>
+                  <SelectItem value="custom">Customizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-slate-400">Título</label>
+              <Input
+                placeholder="Digite o título da diretiva"
+                value={newDirectiveTitle}
+                onChange={(e) => setNewDirectiveTitle(e.target.value)}
+                className="bg-slate-800 border-slate-700 text-white"
+                data-testid="input-directive-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-slate-400">Conteúdo</label>
+              <Textarea
+                placeholder="Digite o conteúdo da diretiva..."
+                value={newDirectiveContent}
+                onChange={(e) => setNewDirectiveContent(e.target.value)}
+                className="bg-slate-800 border-slate-700 text-white min-h-[120px]"
+                data-testid="textarea-directive-content"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddDirectiveModalOpen(false);
+                setNewDirectiveTitle('');
+                setNewDirectiveContent('');
+                setNewDirectiveType('n1_info');
+              }}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddDirective}
+              disabled={createDirectiveMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="button-save-directive"
+            >
+              {createDirectiveMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar Diretiva'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Directive Modal */}
+      <Dialog open={isEditDirectiveModalOpen} onOpenChange={setIsEditDirectiveModalOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-200">Editar Diretiva</DialogTitle>
+          </DialogHeader>
+          {editingDirective && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm text-slate-400">Tipo de Diretiva</label>
+                <Select 
+                  value={editingDirective.type} 
+                  onValueChange={(value) => setEditingDirective({ ...editingDirective, type: value as AIDirective['type'] })}
+                >
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectItem value="n1_info">Informações da Plataforma N1</SelectItem>
+                    <SelectItem value="product_info">Informações de Produto</SelectItem>
+                    <SelectItem value="response_style">Estilo de Resposta</SelectItem>
+                    <SelectItem value="custom">Customizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-slate-400">Título</label>
+                <Input
+                  placeholder="Digite o título da diretiva"
+                  value={editingDirective.title}
+                  onChange={(e) => setEditingDirective({ ...editingDirective, title: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-white"
+                  data-testid="input-edit-directive-title"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-slate-400">Conteúdo</label>
+                <Textarea
+                  placeholder="Digite o conteúdo da diretiva..."
+                  value={editingDirective.content}
+                  onChange={(e) => setEditingDirective({ ...editingDirective, content: e.target.value })}
+                  className="bg-slate-800 border-slate-700 text-white min-h-[120px]"
+                  data-testid="textarea-edit-directive-content"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditDirectiveModalOpen(false);
+                setEditingDirective(null);
+              }}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleEditDirective}
+              disabled={updateDirectiveMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="button-update-directive"
+            >
+              {updateDirectiveMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Atualizando...
+                </>
+              ) : (
+                'Atualizar Diretiva'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

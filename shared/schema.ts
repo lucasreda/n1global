@@ -1625,6 +1625,23 @@ export const supportMetrics = pgTable("support_metrics", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// AI training directives for N1 admin support (global, not per-operation)
+export const adminSupportDirectives = pgTable("admin_support_directives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 50 }).notNull(), // 'n1_info', 'product_info', 'response_style', 'custom'
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0), // For custom ordering
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    typeIdx: index().on(table.type),
+    activeIdx: index().on(table.isActive),
+  };
+});
+
 // ========================================
 // CREATIVE INTELLIGENCE ENHANCEMENT TABLES
 // ========================================
@@ -2036,6 +2053,16 @@ export type InsertSupportConversation = z.infer<typeof insertSupportConversation
 
 export type SupportMetrics = typeof supportMetrics.$inferSelect;
 export type InsertSupportMetrics = z.infer<typeof insertSupportMetricsSchema>;
+
+// Admin Support Directives Schema and Types
+export const insertAdminSupportDirectiveSchema = createInsertSchema(adminSupportDirectives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AdminSupportDirective = typeof adminSupportDirectives.$inferSelect;
+export type InsertAdminSupportDirective = z.infer<typeof insertAdminSupportDirectiveSchema>;
 
 // AI Directives Schema and Types
 export const insertAiDirectiveSchema = createInsertSchema(aiDirectives).omit({
