@@ -61,6 +61,32 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2, 2025)
 
+### B2B Admin Support System Enhancement ✅
+- **MAJOR UPGRADE**: Transformed admin support from B2C to B2B context for operation owners
+- **NEW CATEGORIES**: Replaced customer-focused categories with B2B categories:
+  - `duvidas_gerais`: Platform usage questions (automated)
+  - `integracao`: Shopify, Meta Ads, Google Ads, Vercel issues (automated)
+  - `onboarding`: Tutorials and first steps (automated)
+  - `problema_tecnico`: Bugs and technical issues (human required)
+  - `financeiro`: Billing, plans, invoices (human required)
+  - `feature_request`: Feature suggestions (human required)
+  - `manual`: Complex cases (human required)
+- **NEW DIRECTIVES**: Created 10 B2B administrative directives covering:
+  - Integration troubleshooting (Shopify token, Meta/Google Ads connection, Vercel deployment)
+  - Platform functionalities (funnel creation, product management, analytics)
+  - Plans and limits per tier
+  - Financial policies (upgrade process, refund policy)
+- **ENRICHED AI CONTEXT**: Enhanced categorization prompt with:
+  - B2B platform context (operation owners vs end customers)
+  - Platform functionality descriptions
+  - Intelligent categorization rules based on keywords
+  - B2B-specific examples (integrations, technical issues, billing)
+- **AUTO-PRIORITIZATION**: Implemented smart keyword detection:
+  - "URGENTE", "CRÍTICO", "BLOQUEADO" → urgency = critical
+  - "bug", "erro", "não funciona" → category = problema_tecnico
+  - "cobrança", "pagamento", "fatura" → category = financeiro + human required
+- **TESTING**: Validated 4 scenarios with 100% accuracy (Shopify error, financial query, onboarding, feature request)
+
 ### Admin Support System Correction ✅
 - **CRITICAL FIX**: Corrected `/inside/support` page to use global N1 support infrastructure
 - **SEPARATION**: Clearly separated two distinct support systems:
@@ -70,7 +96,7 @@ Preferred communication style: Simple, everyday language.
 - **FIXED**: Query endpoints now correctly use `/api/support/categories`, `/api/support/overview`, `/api/support/tickets`
 - **UI UPDATED**: Changed page title to "Suporte N1" and description to "Central de atendimento aos clientes da plataforma N1 Hub"
 - **BACKEND**: Backend infrastructure was already correctly separated with distinct tables (`supportTickets` vs `customerSupportTickets`)
-- **TESTING**: Validated all endpoints working: 5 categories, 23 tickets, overview metrics functional
+- **TESTING**: Validated all endpoints working: 7 B2B categories, admin directives active, overview metrics functional
 
 ## Recent Changes (September 19, 2025)
 
