@@ -95,8 +95,6 @@ export default function AdminSupport() {
   const [newDirectiveTitle, setNewDirectiveTitle] = useState('');
   const [newDirectiveContent, setNewDirectiveContent] = useState('');
   const [editingDirective, setEditingDirective] = useState<AIDirective | null>(null);
-  const [togglingDirectiveIds, setTogglingDirectiveIds] = useState<Set<string>>(new Set());
-  const toggleTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Effect to scroll to last message when modal opens with conversations
   useEffect(() => {
@@ -388,6 +386,13 @@ export default function AdminSupport() {
 
   const { data: aiDirectives, isLoading: directivesLoading } = useQuery<AIDirective[]>({
     queryKey: ['/api/support/directives'],
+    select: (data: any[]) => {
+      // Transform snake_case from backend to camelCase for frontend
+      return data.map(directive => ({
+        ...directive,
+        isActive: directive.is_active ?? directive.isActive ?? true,
+      }));
+    },
   });
 
   const getDirectiveTypeIcon = (type: AIDirective['type']) => {
@@ -478,12 +483,9 @@ export default function AdminSupport() {
 
   const toggleDirectiveMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      return apiRequest(`/api/support/directives/${id}`, 'PUT', { isActive });
+      return apiRequest(`/api/support/directives/${id}`, 'PATCH', { isActive });
     },
     onMutate: async ({ id, isActive }) => {
-      // Prevent multiple simultaneous toggles for the same directive
-      setTogglingDirectiveIds(prev => new Set(prev).add(id));
-      
       // Cancel ongoing refetches
       await queryClient.cancelQueries({ queryKey: ['/api/support/directives'] });
       
@@ -498,30 +500,18 @@ export default function AdminSupport() {
         );
       });
       
-      return { previousDirectives, id };
+      return { previousDirectives };
     },
     onError: (error: any, variables, context: any) => {
       // Rollback on error
       queryClient.setQueryData(['/api/support/directives'], context?.previousDirectives);
-      // Remove from toggling set
-      setTogglingDirectiveIds(prev => {
-        const next = new Set(prev);
-        next.delete(context?.id);
-        return next;
-      });
       toast({
         title: "Erro ao atualizar status",
         description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
     },
-    onSettled: (data, error, variables, context: any) => {
-      // Remove from toggling set
-      setTogglingDirectiveIds(prev => {
-        const next = new Set(prev);
-        next.delete(context?.id);
-        return next;
-      });
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/support/directives'] });
     },
   });
@@ -559,30 +549,12 @@ export default function AdminSupport() {
     deleteDirectiveMutation.mutate(id);
   };
 
-  const handleToggleDirective = useCallback((directive: AIDirective) => {
-    const directiveId = directive.id;
-    
-    // Prevent toggle if already toggling this specific directive
-    if (togglingDirectiveIds.has(directiveId)) {
-      console.log('⚠️ Toggle already in progress for:', directiveId);
-      return;
-    }
-
-    // Clear any existing timeout for this directive
-    const existingTimeout = toggleTimeoutRef.current.get(directiveId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
-
-    // Add a 1-second debounce to prevent rapid successive toggles
-    const timeout = setTimeout(() => {
-      console.log('✅ Toggling directive:', directiveId, 'to:', !directive.isActive);
-      toggleDirectiveMutation.mutate({ id: directiveId, isActive: !directive.isActive });
-      toggleTimeoutRef.current.delete(directiveId);
-    }, 300);
-
-    toggleTimeoutRef.current.set(directiveId, timeout);
-  }, [togglingDirectiveIds, toggleDirectiveMutation]);
+  const handleToggleDirective = (directive: AIDirective) => {
+    toggleDirectiveMutation.mutate({ 
+      id: directive.id, 
+      isActive: !directive.isActive 
+    });
+  };
 
   const startEditDirective = (directive: AIDirective) => {
     setEditingDirective(directive);
@@ -1386,7 +1358,6 @@ export default function AdminSupport() {
                           <Switch
                             checked={directive.isActive}
                             onCheckedChange={() => handleToggleDirective(directive)}
-                            disabled={togglingDirectiveIds.has(directive.id)}
                             data-testid={`switch-directive-${directive.id}`}
                           />
                           <Button
