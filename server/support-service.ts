@@ -2528,12 +2528,13 @@ RESPOSTA EXCELENTE DEVE TER:
   // ============================================================================
 
   /**
-   * Get all admin support directives
+   * Get all active admin support directives
    */
   async getAdminDirectives() {
     return await db
       .select()
       .from(adminSupportDirectives)
+      .where(eq(adminSupportDirectives.isActive, true))
       .orderBy(adminSupportDirectives.sortOrder, adminSupportDirectives.createdAt);
   }
 
