@@ -57,6 +57,43 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
+   * Test endpoint to verify AI categorization with admin directives
+   */
+  app.post("/api/support/test-categorization", async (req: Request, res: Response) => {
+    try {
+      console.log("🧪 TESTANDO CATEGORIZAÇÃO COM DIRETIVAS ADMINISTRATIVAS");
+      
+      const { subject, content } = req.body;
+      
+      if (!subject || !content) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Subject e content são obrigatórios" 
+        });
+      }
+      
+      // Testar categorização
+      const categorization = await supportService.categorizeEmail(subject, content);
+      
+      console.log("✅ TESTE DE CATEGORIZAÇÃO CONCLUÍDO:", categorization);
+      
+      res.json({ 
+        success: true, 
+        categorization,
+        message: "Categorização testada com sucesso!" 
+      });
+
+    } catch (error) {
+      console.error("❌ ERRO NO TESTE DE CATEGORIZAÇÃO:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        message: "Erro ao testar categorização!" 
+      });
+    }
+  });
+
+  /**
    * Test endpoint to verify AI is working
    */
   app.post("/api/support/test-ai", async (req: Request, res: Response) => {
