@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -96,6 +96,7 @@ export default function AdminSupport() {
   const [newDirectiveContent, setNewDirectiveContent] = useState('');
   const [editingDirective, setEditingDirective] = useState<AIDirective | null>(null);
   const [togglingDirectiveIds, setTogglingDirectiveIds] = useState<Set<string>>(new Set());
+  const toggleTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Effect to scroll to last message when modal opens with conversations
   useEffect(() => {
@@ -559,11 +560,28 @@ export default function AdminSupport() {
   };
 
   const handleToggleDirective = useCallback((directive: AIDirective) => {
+    const directiveId = directive.id;
+    
     // Prevent toggle if already toggling this specific directive
-    if (togglingDirectiveIds.has(directive.id)) {
+    if (togglingDirectiveIds.has(directiveId)) {
+      console.log('⚠️ Toggle already in progress for:', directiveId);
       return;
     }
-    toggleDirectiveMutation.mutate({ id: directive.id, isActive: !directive.isActive });
+
+    // Clear any existing timeout for this directive
+    const existingTimeout = toggleTimeoutRef.current.get(directiveId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // Add a 1-second debounce to prevent rapid successive toggles
+    const timeout = setTimeout(() => {
+      console.log('✅ Toggling directive:', directiveId, 'to:', !directive.isActive);
+      toggleDirectiveMutation.mutate({ id: directiveId, isActive: !directive.isActive });
+      toggleTimeoutRef.current.delete(directiveId);
+    }, 300);
+
+    toggleTimeoutRef.current.set(directiveId, timeout);
   }, [togglingDirectiveIds, toggleDirectiveMutation]);
 
   const startEditDirective = (directive: AIDirective) => {
