@@ -366,12 +366,24 @@ export class SupportService {
       )
       .join("\n");
 
+    // Load active admin directives to help categorization
+    const adminDirectives = await this.getAdminDirectives();
+    const adminDirectivesSection = adminDirectives.length > 0
+      ? `
+CONHECIMENTO DISPONÍVEL (Diretivas Administrativas):
+${adminDirectives.map(d => `- ${d.title}: ${d.content}`).join('\n')}
+
+IMPORTANTE: Se o email do cliente se enquadra em alguma das diretivas acima, você PODE responder automaticamente.
+Nesse caso, categorize como "duvidas" (automação: sim) e defina requiresHuman = false.
+`
+      : '';
+
     const prompt = `
 Analise o seguinte email de suporte e categorize-o em uma das categorias disponíveis.
 
 CATEGORIAS DISPONÍVEIS:
 ${categoryDescriptions}
-
+${adminDirectivesSection}
 EMAIL PARA ANÁLISE:
 ---
 CONTEÚDO PRINCIPAL (PRIORIDADE MÁXIMA): ${content}
