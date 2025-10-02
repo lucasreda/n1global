@@ -300,13 +300,13 @@ export default function AdminSupport() {
     }
   };
 
-  // TODO: Fix selectedOperationId
-  const selectedOperationId = "default"; // Temporário
+  // TODO: Fix selectedOperationId - For now, return null to prevent errors
+  const selectedOperationId = null; // Temporário - sem operação selecionada no painel admin global
   
   // Support system queries
   const { data: supportCategories, isLoading: categoriesLoading } = useQuery<SupportCategory[]>({
     queryKey: [`/api/customer-support/${selectedOperationId}/categories`],
-    enabled: !!selectedOperationId
+    enabled: !!selectedOperationId && selectedOperationId !== "default"
   });
 
   // Overview metrics for cards
@@ -359,6 +359,47 @@ export default function AdminSupport() {
       return { tickets: data.tickets || [], total: data.total || 0 };
     }
   });
+
+  // Se não há operação selecionada, mostre mensagem informativa
+  if (!selectedOperationId) {
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">Sistema de Suporte</h1>
+          <p className="text-slate-300">Gerenciamento centralizado de atendimento ao cliente com IA</p>
+        </div>
+        
+        <Card className="bg-white/10 border-white/20 backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+              Operação Não Selecionada
+            </CardTitle>
+            <CardDescription className="text-slate-300">
+              O sistema de suporte está vinculado a operações específicas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-slate-300">
+              Para acessar o sistema de suporte de uma operação:
+            </p>
+            <ol className="list-decimal list-inside space-y-2 text-slate-300">
+              <li>Faça logout do painel administrativo</li>
+              <li>Entre novamente com suas credenciais de usuário normal</li>
+              <li>Selecione a operação desejada no menu superior</li>
+              <li>Acesse "Atendimento ao Cliente" no menu lateral</li>
+            </ol>
+            <div className="pt-4 border-t border-slate-600">
+              <p className="text-sm text-slate-400">
+                💡 <strong>Dica:</strong> O painel administrativo global é para gerenciar usuários, produtos e configurações gerais. 
+                O sistema de suporte é específico de cada operação.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
