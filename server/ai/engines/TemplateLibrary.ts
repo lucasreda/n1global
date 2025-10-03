@@ -304,7 +304,9 @@ export class TemplateLibrary {
       if (criteria.framework && template.framework === criteria.framework) score += 6;
       
       // Target audience similarity (basic text matching)
-      if (criteria.targetAudience && template.targetAudience && 
+      if (criteria.targetAudience && 
+          typeof criteria.targetAudience === 'string' &&
+          template.targetAudience && 
           typeof template.targetAudience === 'string' &&
           template.targetAudience.toLowerCase().includes(
             criteria.targetAudience.toLowerCase().split(' ')[0]
