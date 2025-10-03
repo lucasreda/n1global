@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { publicRefundFormSchema, type PublicRefundForm } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,27 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, Package } from "lucide-react";
+
+interface LinkedOrder {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  totalPrice: string;
+  productName: string;
+  status: string;
+  createdAt: string;
+}
+
+interface RefundInfo {
+  ticket: {
+    ticketNumber: string;
+    customerEmail: string;
+    subject: string;
+    status: string;
+  };
+  linkedOrder: LinkedOrder | null;
+}
 
 export default function RefundFormPage() {
   const params = useParams();
@@ -24,6 +44,8 @@ export default function RefundFormPage() {
   const [, navigate] = useLocation();
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
+  const [isLoadingInfo, setIsLoadingInfo] = useState(true);
 
   const form = useForm<PublicRefundForm>({
     resolver: zodResolver(publicRefundFormSchema),
@@ -43,6 +65,42 @@ export default function RefundFormPage() {
       additionalDetails: "",
     },
   });
+
+  // Fetch ticket and order information
+  useEffect(() => {
+    const fetchRefundInfo = async () => {
+      try {
+        setIsLoadingInfo(true);
+        const response = await fetch(`/api/support/refund-info/${ticketNumber}`);
+        const data = await response.json();
+        
+        if (data.success && data.linkedOrder) {
+          setRefundInfo(data);
+          
+          // Pre-fill form with order information
+          form.setValue('customerName', data.linkedOrder.customerName || '');
+          form.setValue('customerEmail', data.linkedOrder.customerEmail || '');
+          form.setValue('orderNumber', data.linkedOrder.id || '');
+          form.setValue('productName', data.linkedOrder.productName || '');
+          form.setValue('refundAmount', data.linkedOrder.totalPrice || '');
+        } else if (data.success) {
+          setRefundInfo(data);
+          // Only set email if no linked order
+          if (data.ticket.customerEmail) {
+            form.setValue('customerEmail', data.ticket.customerEmail);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching refund info:', error);
+      } finally {
+        setIsLoadingInfo(false);
+      }
+    };
+
+    if (ticketNumber) {
+      fetchRefundInfo();
+    }
+  }, [ticketNumber]);
 
   const onSubmit = async (data: PublicRefundForm) => {
     setSubmitStatus('loading');
@@ -122,6 +180,56 @@ export default function RefundFormPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {isLoadingInfo && (
+              <div className="flex items-center justify-center py-8 mb-6">
+                <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+                <span className="ml-2 text-zinc-500">Carregando informações do pedido...</span>
+              </div>
+            )}
+
+            {!isLoadingInfo && refundInfo?.linkedOrder && (
+              <Alert className="mb-6 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20">
+                <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <div className="ml-2">
+                  <h4 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">
+                    Pedido Vinculado ao Ticket
+                  </h4>
+                  <div className="space-y-1 text-sm text-green-800 dark:text-green-200">
+                    <p>
+                      <span className="font-medium">Pedido:</span>{" "}
+                      <span className="font-mono">#{refundInfo.linkedOrder.id}</span>
+                    </p>
+                    <p>
+                      <span className="font-medium">Produto:</span> {refundInfo.linkedOrder.productName}
+                    </p>
+                    <p>
+                      <span className="font-medium">Valor:</span>{" "}
+                      {new Intl.NumberFormat('pt-BR', { 
+                        style: 'currency', 
+                        currency: 'BRL' 
+                      }).format(parseFloat(refundInfo.linkedOrder.totalPrice))}
+                    </p>
+                    <p>
+                      <span className="font-medium">Status:</span>{" "}
+                      <span className="capitalize">{refundInfo.linkedOrder.status}</span>
+                    </p>
+                  </div>
+                  <p className="text-xs text-green-700 dark:text-green-300 mt-2">
+                    Os campos do formulário foram preenchidos automaticamente com as informações deste pedido.
+                  </p>
+                </div>
+              </Alert>
+            )}
+
+            {!isLoadingInfo && !refundInfo?.linkedOrder && (
+              <Alert className="mb-6 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <AlertDescription className="text-amber-900 dark:text-amber-100">
+                  Este ticket não possui um pedido vinculado. Por favor, preencha todos os campos manualmente.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {submitStatus === 'error' && (
               <Alert variant="destructive" className="mb-6">
                 <AlertCircle className="h-4 w-4" />

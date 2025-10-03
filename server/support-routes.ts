@@ -336,6 +336,79 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
+   * PUBLIC: Get ticket and linked order info for refund form
+   * /api/support/refund-info/:ticketNumber
+   */
+  app.get("/api/support/refund-info/:ticketNumber", async (req: Request, res: Response) => {
+    try {
+      const { ticketNumber } = req.params;
+      
+      console.log(`🔍 Fetching refund info for ticket: ${ticketNumber}`);
+      
+      // Find ticket by ticket number
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.ticketNumber, ticketNumber))
+        .limit(1);
+      
+      if (!ticket) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Ticket não encontrado" 
+        });
+      }
+
+      let linkedOrder = null;
+      
+      // If ticket has a linked order, fetch order details
+      if (ticket.linkedOrderId) {
+        const [order] = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.id, ticket.linkedOrderId))
+          .limit(1);
+        
+        if (order) {
+          // Extract product name from products JSONB (first product)
+          let productName = 'Produto não especificado';
+          if (order.products && Array.isArray(order.products) && order.products.length > 0) {
+            productName = order.products[0].name || order.products[0].title || productName;
+          }
+          
+          linkedOrder = {
+            id: order.id,
+            customerName: order.customerName || '',
+            customerEmail: order.customerEmail || '',
+            totalPrice: order.total || '0',
+            productName: productName,
+            status: order.status,
+            createdAt: order.createdAt
+          };
+        }
+      }
+      
+      res.json({ 
+        success: true,
+        ticket: {
+          ticketNumber: ticket.ticketNumber,
+          customerEmail: ticket.customerEmail,
+          subject: ticket.subject,
+          status: ticket.status
+        },
+        linkedOrder
+      });
+      
+    } catch (error) {
+      console.error("❌ Error fetching refund info:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Erro ao buscar informações do reembolso" 
+      });
+    }
+  });
+
+  /**
    * PUBLIC: Submit refund request form
    * /api/support/refund-request/:ticketNumber
    */
