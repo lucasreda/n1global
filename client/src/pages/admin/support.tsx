@@ -31,7 +31,8 @@ import {
   Globe,
   Plus,
   Edit3,
-  Trash2
+  Trash2,
+  Package
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -1044,6 +1045,57 @@ export default function AdminSupport() {
                   </div>
                 </div>
               </div>
+
+              {/* Linked Order Section */}
+              {selectedTicket?.ticket?.linkedOrderId && (
+                <div className="bg-slate-800/50 rounded-lg p-4 border-l-4 border-blue-500">
+                  <h3 className="text-md font-semibold text-slate-200 mb-3 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Package className="h-4 w-4 mr-2" />
+                      Pedido Vinculado
+                    </div>
+                    <Badge 
+                      className={`text-xs ${
+                        selectedTicket?.ticket?.orderMatchConfidence === 'high' ? 'bg-green-600/20 text-green-400 border-green-600/30' :
+                        selectedTicket?.ticket?.orderMatchConfidence === 'medium' ? 'bg-yellow-600/20 text-yellow-400 border-yellow-600/30' :
+                        selectedTicket?.ticket?.orderMatchConfidence === 'manual' ? 'bg-purple-600/20 text-purple-400 border-purple-600/30' :
+                        'bg-gray-600/20 text-gray-400 border-gray-600/30'
+                      }`}
+                    >
+                      {selectedTicket?.ticket?.orderMatchConfidence === 'high' ? '🎯 Alta Confiança' :
+                       selectedTicket?.ticket?.orderMatchConfidence === 'medium' ? '⚠️ Média Confiança' :
+                       selectedTicket?.ticket?.orderMatchConfidence === 'manual' ? '👤 Vínculo Manual' :
+                       '❓ Baixa Confiança'}
+                    </Badge>
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">ID do Pedido:</span>
+                      <span className="text-slate-200 font-mono">{selectedTicket?.ticket?.linkedOrderId}</span>
+                    </div>
+                    {selectedTicket?.ticket?.orderMatchMethod && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Método de Vinculação:</span>
+                        <span className="text-slate-300">
+                          {selectedTicket?.ticket?.orderMatchMethod === 'explicit_mention' ? 'Menção Explícita' :
+                           selectedTicket?.ticket?.orderMatchMethod === 'temporal' ? 'Proximidade Temporal' :
+                           selectedTicket?.ticket?.orderMatchMethod === 'score' ? 'Score de Relevância' :
+                           selectedTicket?.ticket?.orderMatchMethod === 'manual' ? 'Manual' :
+                           selectedTicket?.ticket?.orderMatchMethod}
+                        </span>
+                      </div>
+                    )}
+                    {selectedTicket?.ticket?.orderLinkedAt && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Vinculado em:</span>
+                        <span className="text-slate-300">
+                          {new Date(selectedTicket?.ticket?.orderLinkedAt).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Email Content */}
               <div className="bg-slate-800/50 rounded-lg p-4">
