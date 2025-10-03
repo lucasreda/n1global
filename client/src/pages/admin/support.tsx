@@ -127,11 +127,17 @@ export default function AdminSupport() {
       if (response.ok) {
         const fullTicketData = await response.json();
         console.log('📋 Full ticket data:', fullTicketData);
+        console.log('📋 LinkedOrderId from fullTicketData:', fullTicketData.ticket?.linkedOrderId);
         
-        // Merge the full data with the original ticket response
+        // Merge the full data with the original ticket response - properly merge nested ticket object
         setSelectedTicket({
           ...ticketResponse,
-          ...fullTicketData,
+          ticket: {
+            ...ticketResponse.ticket,
+            ...fullTicketData.ticket
+          },
+          category: fullTicketData.category || ticketResponse.category,
+          email: fullTicketData.email || ticketResponse.email,
           conversations: fullTicketData.conversations || []
         });
         
