@@ -1103,6 +1103,8 @@ REGRAS B2B:
     });
 
     // 🔗 AUTOMATIC ORDER LINKING: Try to match ticket with customer's orders
+    console.log(`🔗 Starting automatic order linking for ticket ${ticketNumber}...`);
+    console.log(`🔗 Customer email: ${email.from}`);
     try {
       const orderMatch = await OrderMatcherService.findBestMatchingOrder({
         customerEmail: email.from,
@@ -1110,6 +1112,8 @@ REGRAS B2B:
         emailBody: email.textContent || email.htmlContent || "",
         ticketCreatedAt: new Date(),
       });
+
+      console.log(`🔗 Order match result:`, orderMatch);
 
       // If found a match with medium+ confidence, link it
       if (orderMatch && (orderMatch.confidence === 'high' || orderMatch.confidence === 'medium')) {
