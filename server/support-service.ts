@@ -399,7 +399,8 @@ FUNCIONALIDADES DA PLATAFORMA:
 CATEGORIZAÇÃO INTELIGENTE:
 - Se menciona integração (Shopify, Meta, Google, Vercel) → categoria: integracao
 - Se menciona bug, erro, falha → categoria: problema_tecnico
-- Se menciona cobrança, plano, pagamento, fatura → categoria: financeiro
+- Se menciona REEMBOLSO, devolver dinheiro, estorno, cancelar pedido e reembolsar → categoria: solicitacao_reembolso
+- Se menciona cobrança, plano, pagamento, fatura (SEM mencionar reembolso) → categoria: financeiro
 - Se menciona tutorial, como fazer, primeiros passos → categoria: onboarding ou duvidas_gerais
 - Se menciona sugestão, gostaria que tivesse, feature → categoria: feature_request
 
@@ -420,6 +421,7 @@ O assunto pode ser genérico (como "Bom dia", "Olá", "Contato") mas o que impor
 EXEMPLOS B2B:
 - Assunto: "Bom dia" + Conteúdo: "Como conectar minha loja Shopify?" → CATEGORIA: integracao
 - Assunto: "Olá" + Conteúdo: "Meu funil não está fazendo deploy no Vercel" → CATEGORIA: problema_tecnico  
+- Assunto: "REEMBOLSO" + Conteúdo: "Quero meu dinheiro de volta" → CATEGORIA: solicitacao_reembolso
 - Assunto: "Contato" + Conteúdo: "Gostaria de fazer upgrade do meu plano" → CATEGORIA: financeiro
 - Assunto: "Ajuda" + Conteúdo: "Como adiciono produtos ao meu funil?" → CATEGORIA: onboarding
 - Assunto: "Dúvida" + Conteúdo: "Onde vejo minhas métricas de conversão?" → CATEGORIA: duvidas_gerais
@@ -498,9 +500,10 @@ REGRAS B2B:
 2. Para "integracao" → requiresHuman = false (IA guia reconexão)
 3. Para "onboarding" → requiresHuman = false (IA ensina uso)
 4. Para "problema_tecnico" → requiresHuman = true (requer análise técnica)
-5. Para "financeiro" → sempre requiresHuman = true (questões sensíveis)
-6. Para "feature_request" → requiresHuman = true (requer avaliação)
-7. Para "manual" → sempre requiresHuman = true
+5. Para "solicitacao_reembolso" → requiresHuman = false (IA usa estratégia de retenção)
+6. Para "financeiro" → sempre requiresHuman = true (questões sensíveis)
+7. Para "feature_request" → requiresHuman = true (requer avaliação)
+8. Para "manual" → sempre requiresHuman = true
 `;
 
     try {
@@ -528,7 +531,15 @@ REGRAS B2B:
         console.log(`🚨 Auto-priorização: Marcado como CRÍTICO por keyword urgente`);
       }
 
-      // 2. Se menciona "bug", "erro", "não funciona" → categoria = problema_tecnico
+      // 2. Se menciona "reembolso", "estorno", "devolver dinheiro" → categoria = solicitacao_reembolso (PRIORIDADE ALTA)
+      const refundKeywords = ["reembolso", "estorno", "devolver dinheiro", "devolução do dinheiro", "quero meu dinheiro", "devolve", "reembolsar"];
+      if (refundKeywords.some(keyword => contentLower.includes(keyword))) {
+        categoryName = "solicitacao_reembolso";
+        requiresHuman = false; // AI usa estratégia de retenção
+        console.log(`💰 Auto-priorização: Forçado para solicitacao_reembolso por keyword de reembolso`);
+      }
+
+      // 3. Se menciona "bug", "erro", "não funciona" → categoria = problema_tecnico
       const bugKeywords = ["bug", "erro", "não funciona", "não está funcionando", "falha", "quebrado", "problema técnico"];
       if (bugKeywords.some(keyword => contentLower.includes(keyword))) {
         categoryName = "problema_tecnico";
@@ -536,9 +547,10 @@ REGRAS B2B:
         console.log(`🐛 Auto-priorização: Forçado para problema_tecnico por keyword de bug`);
       }
 
-      // 3. Se menciona "cobrança", "pagamento" → categoria = financeiro + human required
-      const financialKeywords = ["cobrança", "cobranca", "pagamento", "fatura", "reembolso", "cobrei", "cobrar", "valor", "preço"];
-      if (financialKeywords.some(keyword => contentLower.includes(keyword))) {
+      // 4. Se menciona "cobrança", "pagamento" (mas NÃO reembolso) → categoria = financeiro + human required
+      const financialKeywords = ["cobrança", "cobranca", "pagamento", "fatura", "cobrei", "cobrar", "valor cobrado", "preço cobrado"];
+      const isRefundRelated = refundKeywords.some(keyword => contentLower.includes(keyword));
+      if (financialKeywords.some(keyword => contentLower.includes(keyword)) && !isRefundRelated) {
         categoryName = "financeiro";
         requiresHuman = true;
         console.log(`💰 Auto-priorização: Forçado para financeiro por keyword financeira`);
@@ -600,10 +612,16 @@ REGRAS B2B:
         }
       }
 
-      // Always require human for financial and technical problems
+      // Always require human for financial and technical problems (EXCEPT solicitacao_reembolso que usa AI)
       if (["financeiro", "problema_tecnico", "feature_request"].includes(categoryName)) {
         requiresHuman = true;
         console.log(`👤 Requerendo humano para ${categoryName}: ${subject}`);
+      }
+
+      // Garantir que solicitacao_reembolso sempre use AI com estratégia de retenção
+      if (categoryName === "solicitacao_reembolso") {
+        requiresHuman = false;
+        console.log(`🤖 Usando IA para solicitacao_reembolso (estratégia de retenção): ${subject}`);
       }
 
       return {
