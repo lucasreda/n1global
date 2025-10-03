@@ -340,12 +340,18 @@ export function registerSupportRoutes(app: Express) {
   // ============================================================================
 
   /**
-   * Get all support categories
+   * Get all support categories (admin panel only - excludes customer-facing categories)
    */
   app.get("/api/support/categories", async (req: AuthRequest, res: Response) => {
     try {
-      const categories = await supportService.getCategories();
-      res.json(categories);
+      const allCategories = await supportService.getCategories();
+      
+      // Filter out customer-only categories that should not appear in admin panel
+      const adminCategories = allCategories.filter(cat => 
+        !['alteracao_endereco', 'cancelamento', 'duvidas_gerais'].includes(cat.name)
+      );
+      
+      res.json(adminCategories);
     } catch (error) {
       console.error("Error fetching categories:", error);
       res.status(500).json({ message: "Failed to fetch categories" });
