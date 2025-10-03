@@ -7434,48 +7434,51 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
         timestamp: new Date().toISOString()
       });
       
-      // Create modified orchestrator that emits progress
-      const result = await generatePageWithProgress(requestData, sessionId, progressEmitter);
-      
-      // Send completion
-      progressEmitter.emit('progress', {
-        type: 'completed',
-        sessionId,
-        step: 'completed',
-        stepIndex: 5,
-        totalSteps: 5,
-        progress: 100,
-        title: 'Página Criada',
-        description: 'Geração concluída com sucesso',
-        timestamp: new Date().toISOString(),
-        result
-      });
-      
+      // Return sessionId immediately and execute generation in background
       res.json({
         success: true,
         sessionId,
-        result,
-        message: 'Página gerada com sucesso'
+        message: 'Geração iniciada - conecte ao stream para acompanhar o progresso'
       });
+      
+      // Execute generation in background (don't await)
+      generatePageWithProgress(requestData, sessionId, progressEmitter)
+        .then(result => {
+          // Send completion event
+          progressEmitter.emit('progress', {
+            type: 'completed',
+            sessionId,
+            step: 'completed',
+            stepIndex: 5,
+            totalSteps: 5,
+            progress: 100,
+            title: 'Página Criada',
+            description: 'Geração concluída com sucesso',
+            timestamp: new Date().toISOString(),
+            result
+          });
+        })
+        .catch(error => {
+          console.error('❌ AI Page Generation failed:', error);
+          
+          // Send error progress
+          progressEmitter.emit('progress', {
+            type: 'error',
+            sessionId,
+            step: 'error',
+            progress: 0,
+            title: 'Erro na Geração',
+            description: error instanceof Error ? error.message : 'Erro desconhecido',
+            timestamp: new Date().toISOString()
+          });
+        });
       
     } catch (error) {
-      console.error('❌ AI Page Generation failed:', error);
-      
-      // Send error progress
-      progressEmitter.emit('progress', {
-        type: 'error',
-        sessionId,
-        step: 'error',
-        progress: 0,
-        title: 'Erro na Geração',
-        description: error instanceof Error ? error.message : 'Erro desconhecido',
-        timestamp: new Date().toISOString()
-      });
+      console.error('❌ AI Page Generation initialization failed:', error);
       
       res.status(500).json({
         success: false,
-        sessionId,
-        error: 'Failed to generate page',
+        error: 'Failed to start generation',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

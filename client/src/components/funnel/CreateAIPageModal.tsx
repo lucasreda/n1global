@@ -56,6 +56,7 @@ interface CreateAIPageModalProps {
 export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: CreateAIPageModalProps) {
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
+  const [showProgressModal, setShowProgressModal] = useState(false);
   
   // AI Progress Stream hook
   const {
@@ -81,31 +82,44 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
     },
   });
 
+  // Show progress modal when generation starts
+  useEffect(() => {
+    if (isGenerating) {
+      setShowProgressModal(true);
+    }
+  }, [isGenerating]);
+
   // Handle AI generation completion
   useEffect(() => {
     if (result) {
-      toast({
-        title: "Sucesso",
-        description: "Página criada com IA com sucesso! Conteúdo otimizado gerado.",
-      });
-      form.reset();
-      onSuccess();
-      onOpenChange(false);
-      // Reset AI state after successful completion
-      setTimeout(() => resetAI(), 1000);
+      // Wait 3 seconds to show completion state before closing
+      setTimeout(() => {
+        setShowProgressModal(false);
+        toast({
+          title: "Sucesso",
+          description: "Página criada com IA com sucesso! Conteúdo otimizado gerado.",
+        });
+        form.reset();
+        onSuccess();
+        onOpenChange(false);
+        // Reset AI state after successful completion
+        setTimeout(() => resetAI(), 500);
+      }, 3000);
     }
   }, [result, toast, form, onSuccess, onOpenChange, resetAI]);
 
   // Handle AI generation errors
   useEffect(() => {
     if (aiError) {
+      setShowProgressModal(false);
       toast({
         title: "Erro na Geração IA",
         description: aiError,
         variant: "destructive",
       });
+      setTimeout(() => resetAI(), 500);
     }
-  }, [aiError, toast]);
+  }, [aiError, toast, resetAI]);
 
   const handleSubmit = async (data: CreateAIPageForm) => {
     console.log('🚀 Starting AI page generation with data:', data);
@@ -324,10 +338,11 @@ export function CreateAIPageModal({ open, onOpenChange, funnelId, onSuccess }: C
       
       {/* Progress Modal */}
       <ProgressModal
-        isOpen={isGenerating}
+        isOpen={showProgressModal}
         onClose={() => {
           // Only allow closing if there's an error or completed
           if (aiError || result) {
+            setShowProgressModal(false);
             resetAI();
           }
         }}

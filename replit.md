@@ -1,165 +1,71 @@
 # COD Dashboard
 
 ## Overview
-The COD Dashboard is a modern full-stack web application designed for managing Cash on Delivery (COD) orders and providing business metric analysis. It features a comprehensive dashboard for order tracking, customer management, and performance monitoring with real-time data visualization, authentication, and integrations with shipping providers. The project aims to provide a robust solution for businesses to efficiently manage their COD operations and gain actionable insights. This includes AI-powered automatic responses for customer support, an empathetic virtual agent named Sofia with intelligent voice capabilities, comprehensive investment management functionalities for tracking portfolios and returns, and creative intelligence tools for analyzing Facebook Ads performance with AI-powered recommendations. The system is built to provide a robust solution for businesses to efficiently manage their COD operations and gain actionable insights, supporting multi-role access including investors, suppliers, finance, and administrators.
+The COD Dashboard is a full-stack web application for managing Cash on Delivery (COD) orders and business metric analysis. It offers order tracking, customer management, performance monitoring with real-time data visualization, and secure authentication. Key capabilities include AI-powered customer support, an empathetic virtual agent (Sofia) with intelligent voice capabilities, comprehensive investment management, and creative intelligence tools for analyzing Facebook Ads performance with AI-driven recommendations. The system supports multi-role access (investors, suppliers, finance, administrators) and aims to provide businesses with efficient COD operations and actionable insights.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 - **Framework**: React 18 with TypeScript and Vite
-- **UI Framework**: shadcn/ui components with Radix UI primitives
-- **Styling**: Tailwind CSS with custom glassmorphism design system and dark theme
-- **State Management**: Zustand for authentication state
-- **Data Fetching**: React Query (TanStack Query)
-- **Routing**: Wouter for lightweight client-side routing
-- **Charts**: Recharts for data visualization
-- **Form Handling**: React Hook Form with Zod validation
-- **Design Principles**: Mobile-first approach with adaptive layouts for data visualization, including revenue trends and order distribution charts, and real-time KPIs.
-- **UI/UX Decisions**: Apple-style sidebar navigation for investment dashboard, responsive design for progress bars, and consistent thumbnail displays in product cards and search results.
+- **UI**: shadcn/ui (Radix UI primitives), Tailwind CSS (glassmorphism, dark theme)
+- **State Management**: Zustand (authentication)
+- **Data Fetching**: React Query
+- **Routing**: Wouter
+- **Charts**: Recharts
+- **Forms**: React Hook Form with Zod
+- **Design**: Mobile-first, adaptive layouts, Apple-style sidebar, responsive elements.
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js
-- **Language**: TypeScript with ES modules
-- **Authentication**: JWT-based authentication with bcryptjs
-- **Data Storage**: In-memory storage with planned PostgreSQL migration via Drizzle ORM
-- **Session Management**: Express sessions with PostgreSQL session store (connect-pg-simple)
-- **API Design**: RESTful endpoints with structured error handling and logging middleware
-- **Core Features**: Multi-tenant architecture with operations-based data organization, supporting Store accounts as data owners and Product Seller accounts as view-only users accessing the same dataset. Implementation includes context-aware data access and unified business intelligence displays.
-- **Key Architectural Decisions**: Shopify-first data synchronization, where Shopify orders are the primary source, matched with carrier orders by customer name. Refactored fulfillment service to an instance-based architecture ensuring user-specific credentials and data isolation. Implemented a comprehensive gamified 5-step onboarding flow with progress tracking and automatic completion logic. Real-time sync progress tracking system provides feedback during data synchronization.
-- **AI Integration**: AI-powered automatic responses using OpenAI GPT-4 for specific customer queries (e.g., doubts, address changes, cancellations), integrated with business context (delivery times, payment policies). The AI agent, Sofia, is empathetic, adapts to the customer's language, and applies only to eligible categories. Enhanced voice capabilities include intelligent emotional context analysis, dynamic prompt generation using AI directives per operation, adaptive response tone based on customer sentiment, and intelligent ticket creation with priority levels. Voice system fully integrates with email support infrastructure ensuring consistent customer experience across all channels.
-- **Creative Intelligence**: AI-powered analysis of Facebook Ads creatives using OpenAI GPT-4, providing performance insights, recommendations, and variant generation. Features real-time SSE (Server-Sent Events) for job progress tracking, cost estimation per analysis, batch processing with per-creative status tracking, and comprehensive creative performance metrics (CTR, CPC, CPM, ROAS). Enhanced with advanced copywriting analysis capabilities including persuasion trigger detection, narrative structure analysis, performance metrics, persona/tone assessment, power words categorization, and scene-specific contextual suggestions. The CopyAnalysisService provides actionable insights to help operations teams create more persuasive advertisements.
-- **Email System**: Professional HTML email templates with corporate branding, multilingual support, Reply-To configuration, and a threading system that identifies customer replies to update ticket status and maintain conversation continuity. Smart keyword detection for automated responses.
+### Backend
+- **Runtime**: Node.js with Express.js (TypeScript, ES modules)
+- **Authentication**: JWT, bcryptjs
+- **Data Storage**: In-memory (planned PostgreSQL migration via Drizzle ORM), PostgreSQL for sessions (connect-pg-simple)
+- **API**: RESTful, structured error handling, logging
+- **Core Features**: Multi-tenant architecture (Store accounts as data owners, Product Seller accounts view-only), context-aware data access, Shopify-first data sync, instance-based fulfillment service, gamified 5-step onboarding, real-time sync progress tracking.
+- **AI Integration**:
+    - **Customer Support**: OpenAI GPT-4 for automatic responses (doubts, address changes, cancellations) integrated with business context.
+    - **Sofia Virtual Agent**: Empathetic AI with voice capabilities (Telnyx Voice API), intelligent emotional context analysis, dynamic prompt generation, adaptive response tone, intelligent ticket creation.
+    - **Creative Intelligence**: OpenAI GPT-4 for Facebook Ads creative analysis (performance insights, recommendations, variant generation), real-time SSE for progress, cost estimation, batch processing, comprehensive metrics (CTR, CPC, CPM, ROAS). Includes advanced copywriting analysis (persuasion triggers, narrative structure, persona/tone, power words).
+- **Email System**: Professional HTML templates, multilingual, Reply-To configuration, threading system, smart keyword detection for automated responses.
 
-### Database Design
-- **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Schema Structure**: Includes tables for users, orders, dashboard metrics, fulfillment leads, products, shipping providers, investment pools, investor profiles, investments, transactions, and performance history.
-- **Key Features**: UUID primary keys, automatic timestamps, decimal precision for financial data.
+### Database
+- **ORM**: Drizzle ORM (PostgreSQL dialect)
+- **Schema**: Tables for users, orders, metrics, fulfillment leads, products, shipping providers, investment pools, investor profiles, investments, transactions, performance history.
+- **Features**: UUID primary keys, automatic timestamps, decimal precision for financial data.
 
 ### Authentication & Authorization
-- **Strategy**: JWT tokens with secure HTTP-only cookies.
-- **Password Security**: Bcrypt hashing.
-- **Session Management**: PostgreSQL-backed sessions.
-- **Role System**: Admin, user, investor, supplier, and finance roles with different access levels.
-- **Frontend Protection**: Route guards and token-based API requests.
-- **Tenant Isolation**: Strict tenant isolation enforced for all services (e.g., Facebook and Google Ads) through `storeId` filtering and context middleware.
+- **Strategy**: JWT tokens (HTTP-only cookies), bcrypt hashing.
+- **Session Management**: PostgreSQL-backed.
+- **Roles**: Admin, user, investor, supplier, finance (different access levels).
+- **Security**: Frontend route guards, token-based API requests, strict tenant isolation via `storeId` filtering.
 
-### Shipping Integration Architecture
-- **Active Providers**: European Fulfillment Center API.
+### Shipping Integration
+- **Provider**: European Fulfillment Center API.
 - **Features**: Lead creation, status tracking, product management, country selection.
-- **Authentication**: JWT-based API authentication with token caching.
+- **Authentication**: JWT-based API with token caching.
 
-### Voice System Architecture
-- **Provider**: Telnyx Voice API with real-time transcription
-- **Virtual Agent**: Sofia - AI-powered sales and support assistant
-- **Features**: Outbound calling, real-time PT-BR transcription, adaptive responses
-- **Transcription Config**: language='pt-BR', audio_track='inbound', interim_results=true
-- **Bug Fixes**: Corrected webhook parsing for transcription_data.text field
-- **Safety**: 8-second timeout fallback to prevent permanent silence
-
-## Recent Changes (October 2, 2025)
-
-### AI Page Generation Bug Fix ✅
-- **CRITICAL FIX**: Corrected token authentication in AI page generation system
-- **ROOT CAUSE**: useAIProgressStream hook was using wrong localStorage key (`token` instead of `auth_token`)
-- **BACKEND FIX**: Updated `/api/ai/generate-page` endpoint to properly map request data to EnterpriseAIGenerationRequest format
-- **DATA MAPPING**: Now correctly extracts `operationId` from funnel, `userId` from auth token, and maps `briefData` structure
-- **VALIDATION**: Added proper error handling and validation for missing required fields (funnelId, userId)
-- **TESTING**: Token issue resolved, endpoint now receives valid JWT authentication
-
-### B2B Admin Support System Enhancement ✅
-- **MAJOR UPGRADE**: Transformed admin support from B2C to B2B context for operation owners
-- **NEW CATEGORIES**: Replaced customer-focused categories with B2B categories:
-  - `duvidas_gerais`: Platform usage questions (automated)
-  - `integracao`: Shopify, Meta Ads, Google Ads, Vercel issues (automated)
-  - `onboarding`: Tutorials and first steps (automated)
-  - `problema_tecnico`: Bugs and technical issues (human required)
-  - `financeiro`: Billing, plans, invoices (human required)
-  - `feature_request`: Feature suggestions (human required)
-  - `manual`: Complex cases (human required)
-- **NEW DIRECTIVES**: Created 10 B2B administrative directives covering:
-  - Integration troubleshooting (Shopify token, Meta/Google Ads connection, Vercel deployment)
-  - Platform functionalities (funnel creation, product management, analytics)
-  - Plans and limits per tier
-  - Financial policies (upgrade process, refund policy)
-- **ENRICHED AI CONTEXT**: Enhanced categorization prompt with:
-  - B2B platform context (operation owners vs end customers)
-  - Platform functionality descriptions
-  - Intelligent categorization rules based on keywords
-  - B2B-specific examples (integrations, technical issues, billing)
-- **AUTO-PRIORITIZATION**: Implemented smart keyword detection:
-  - "URGENTE", "CRÍTICO", "BLOQUEADO" → urgency = critical
-  - "bug", "erro", "não funciona" → category = problema_tecnico
-  - "cobrança", "pagamento", "fatura" → category = financeiro + human required
-- **TESTING**: Validated 4 scenarios with 100% accuracy (Shopify error, financial query, onboarding, feature request)
-
-### Admin Support System Correction ✅
-- **CRITICAL FIX**: Corrected `/inside/support` page to use global N1 support infrastructure
-- **SEPARATION**: Clearly separated two distinct support systems:
-  - **N1 Admin Support** (`/inside/support`): Global support for N1 Hub platform clients using `/api/support/*` endpoints
-  - **Customer Support** (`/customer-support`): Per-operation support for each client's end customers using `/api/customer-support/:operationId/*` endpoints
-- **REMOVED**: Dependency on `selectedOperationId` from admin support page
-- **FIXED**: Query endpoints now correctly use `/api/support/categories`, `/api/support/overview`, `/api/support/tickets`
-- **UI UPDATED**: Changed page title to "Suporte N1" and description to "Central de atendimento aos clientes da plataforma N1 Hub"
-- **BACKEND**: Backend infrastructure was already correctly separated with distinct tables (`supportTickets` vs `customerSupportTickets`)
-- **TESTING**: Validated all endpoints working: 7 B2B categories, admin directives active, overview metrics functional
-
-## Recent Changes (September 19, 2025)
-
-### Multi-Page Funnel System - Phase 1 Complete ✅
-- **MAJOR MILESTONE**: Completed Phase 1 of the multi-page funnel architecture with full architect approval
-- **NEW TABLES**: Created funnel_page_templates, funnel_pages, and funnel_page_revisions with comprehensive schema
-- **CRUD OPERATIONS**: Implemented 7 authenticated API routes for complete page management lifecycle
-- **TEMPLATE SYSTEM**: Created 3 default page templates (Landing Page Moderna, Checkout Simplificado, Upsell Persuasivo)
-- **VERSIONING**: Automatic revision history with change tracking and user attribution
-- **TESTING VALIDATED**: Successfully created test page "Página Principal" with template linking and revision system
-- **SECURITY**: Admin-only template creation, operation-scoped access control, route collision resolution
-- **DATABASE**: All foreign key relationships, JSON model storage, and query operations verified functional
-- **ARCHITECTURE**: Foundation ready for Phase 2 deployment system with isolated Vercel projects per funnel
-
-### Vercel OAuth Integration Public Pages (September 18, 2025)
-- **NEW**: Created mandatory public pages for Vercel OAuth integration approval
-- Added `/docs/integrations/vercel` - Complete integration documentation with security details
-- Added `/eula` - Comprehensive End User License Agreement with usage rights and limitations 
-- Added `/privacy-policy` - Detailed privacy policy covering data collection, security, and user rights
-- All pages are publicly accessible (no authentication required) and fully responsive
-- Pages include professional branding, comprehensive legal coverage, and user-friendly explanations
-- Routes registered in public section of App.tsx routing system
-
-### Voice System Architecture Overhaul (September 17, 2025)
-- **MAJOR CHANGE**: Completely removed Telnyx transcription system due to Portuguese limitations
-- Implemented clean Portuguese gather-only architecture with explicit PT-BR configuration
-- Eliminated all transcription-related methods, variables, and state management
-- Validated proper client_state flow: speaking_welcome → gather → speaking_response → gather loop
-- Sofia now uses pure Telnyx gather with language: 'pt-BR' for speech recognition
-- Simplified single-path architecture using only Telnyx gather instead of hybrid approach
-- Voice flow: Sofia speaks (Polly.Camila-Neural) → handleSpeakEnded → Portuguese gather → handleSpeechGatherEnded → AI response
+### Voice System
+- **Provider**: Telnyx Voice API (PT-BR gather-only architecture).
+- **Virtual Agent**: Sofia (AI-powered sales and support).
+- **Features**: Outbound calling, real-time PT-BR speech recognition, adaptive responses.
+- **Safety**: 8-second timeout fallback.
 
 ## External Dependencies
 
-### Core Framework Dependencies
-- **@neondatabase/serverless**: PostgreSQL database connectivity
-- **drizzle-orm & drizzle-kit**: Type-safe ORM with migration management
-- **@tanstack/react-query**: Server state management and caching
-- **react-hook-form & @hookform/resolvers**: Form handling with validation
-- **zod & drizzle-zod**: Schema validation and type safety
-- **node-fetch**: HTTP client for European Fulfillment Center API integration
-
-### UI and Styling
-- **@radix-ui/react-\***: Accessible component primitives
-- **tailwindcss**: Utility-first CSS framework
-- **class-variance-authority & clsx**: Dynamic className generation
-- **recharts**: Declarative chart library for data visualization
-- **lucide-react**: Modern icon library
-
-### Authentication & Security
-- **jsonwebtoken**: JWT token generation and verification
-- **bcryptjs**: Password hashing and comparison
-- **connect-pg-simple**: PostgreSQL session store for Express
-
-### Integrations
-- **European Fulfillment API**: Complete synchronization and smart sync capabilities.
-- **Facebook Ads API**: Account management, campaign synchronization, and dynamic marketing cost calculation based on actual advertising spend.
-- **OpenAI GPT-4**: For AI-powered automatic responses and the Sofia virtual agent.
+- **PostgreSQL**: Via `@neondatabase/serverless` for database connectivity.
+- **Drizzle ORM**: For type-safe ORM and migration management.
+- **TanStack Query**: For server state management and caching.
+- **Zod**: For schema validation and type safety.
+- **node-fetch**: For HTTP client operations, e.g., European Fulfillment Center API.
+- **Radix UI**: For accessible UI component primitives.
+- **Tailwind CSS**: For utility-first styling.
+- **Recharts**: For data visualization.
+- **Lucide React**: For icons.
+- **jsonwebtoken & bcryptjs**: For authentication and password security.
+- **connect-pg-simple**: For PostgreSQL session store.
+- **European Fulfillment API**: For complete synchronization and smart sync capabilities.
+- **Facebook Ads API**: For account management, campaign synchronization, and dynamic marketing cost calculation.
+- **OpenAI GPT-4**: For AI-powered automatic responses, Sofia virtual agent, and creative intelligence analysis.
+- **Telnyx Voice API**: For voice capabilities of the Sofia virtual agent.
