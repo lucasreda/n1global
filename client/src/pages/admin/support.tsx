@@ -944,6 +944,12 @@ export default function AdminSupport() {
                                   🤖 Sofia IA
                                 </Badge>
                               )}
+                              {ticket.linkedOrderId && (
+                                <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 text-xs flex items-center gap-1">
+                                  <Package className="h-3 w-3" />
+                                  Pedido: #{ticket.linkedOrderId}
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-slate-300 font-medium">{ticket.subject}</p>
                             <p className="text-xs text-slate-400 mt-1">
