@@ -4534,7 +4534,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/orders", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const {
-        storeId,
         operationId,
         customerName,
         customerEmail,
@@ -4553,8 +4552,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body;
       
       // Validation
-      if (!storeId || !customerName || !total) {
-        return res.status(400).json({ message: "Campos obrigatórios: storeId, customerName, total" });
+      if (!operationId || !customerName || !total) {
+        return res.status(400).json({ message: "Campos obrigatórios: operationId, customerName, total" });
+      }
+      
+      // Get operation to retrieve storeId
+      const operation = await storage.getOperationById(operationId);
+      if (!operation) {
+        return res.status(400).json({ message: "Operação não encontrada" });
       }
       
       // Create order in database
@@ -4562,8 +4567,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const [newOrder] = await db.insert(orders).values({
         id: orderId,
-        storeId,
-        operationId: operationId || null,
+        storeId: operation.storeId,
+        operationId: operationId,
         dataSource: "manual",
         customerName,
         customerEmail: customerEmail || null,
@@ -4585,7 +4590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date()
       }).returning();
 
-      console.log("✅ Order created manually:", orderId);
+      console.log("✅ Order created manually:", orderId, "for operation:", operation.name);
       res.status(201).json(newOrder);
     } catch (error) {
       console.error("Error creating manual order:", error);
