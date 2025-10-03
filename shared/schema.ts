@@ -1601,17 +1601,44 @@ export const reimbursementRequests = pgTable("reimbursement_requests", {
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone"),
   
-  // Refund details
+  // Order details
   orderNumber: text("order_number"), // Original order number
   productName: text("product_name"), // Product being refunded
+  purchaseDate: timestamp("purchase_date"), // Date of purchase
+  
+  // Billing address
+  billingAddressCountry: text("billing_address_country"),
+  billingAddressCity: text("billing_address_city"),
+  billingAddressStreet: text("billing_address_street"),
+  billingAddressNumber: text("billing_address_number"),
+  billingAddressComplement: text("billing_address_complement"),
+  billingAddressState: text("billing_address_state"),
+  billingAddressZip: text("billing_address_zip"),
+  
+  // Refund details
   refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
   currency: text("currency").default("EUR"),
   
-  // Banking information
+  // Banking information (IBAN only)
+  bankIban: text("bank_iban"), // International Bank Account Number
+  controlNumber: text("control_number"), // Número de controlo sem comprovativo de devolução
+  
+  // Legacy banking fields (kept for backward compatibility)
   bankAccountNumber: text("bank_account_number"),
   bankAccountHolder: text("bank_account_holder"),
   bankName: text("bank_name"),
   pixKey: text("pix_key"), // For Brazilian PIX payments
+  
+  // Required attachments (URLs from object storage)
+  orderProofUrl: text("order_proof_url"), // Comprovativo de encomenda
+  productPhotosUrl: text("product_photos_url"), // Fotos dos produtos
+  returnProofUrl: text("return_proof_url"), // Comprovante de devolução e pagamento da taxa
+  idDocumentUrl: text("id_document_url"), // Documento de identificação com fotografia
+  
+  // Customer declarations (checkboxes)
+  declarationFormCorrect: boolean("declaration_form_correct").default(false),
+  declarationAttachmentsProvided: boolean("declaration_attachments_provided").default(false),
+  declarationIbanCorrect: boolean("declaration_iban_correct").default(false),
   
   // Reason and details
   refundReason: text("refund_reason").notNull(), // Customer's stated reason
@@ -2120,19 +2147,52 @@ export type InsertReimbursementRequest = z.infer<typeof insertReimbursementReque
 
 // Public refund form schema (customer-facing, no admin fields)
 export const publicRefundFormSchema = z.object({
+  // Customer information
   customerName: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   customerEmail: z.string().email("Email inválido"),
   customerPhone: z.string().optional(),
-  orderNumber: z.string().optional(),
+  
+  // Order details
+  orderNumber: z.string().min(1, "Número do pedido é obrigatório"),
   productName: z.string().optional(),
+  purchaseDate: z.string().min(1, "Data da compra é obrigatória"), // Will be converted to date in backend
+  
+  // Billing address
+  billingAddressCountry: z.string().min(1, "País é obrigatório"),
+  billingAddressCity: z.string().min(1, "Cidade é obrigatória"),
+  billingAddressStreet: z.string().min(1, "Rua é obrigatória"),
+  billingAddressNumber: z.string().min(1, "Número é obrigatório"),
+  billingAddressComplement: z.string().optional(),
+  billingAddressState: z.string().min(1, "Estado/Região é obrigatório"),
+  billingAddressZip: z.string().min(1, "Código postal é obrigatório"),
+  
+  // Refund details
   refundAmount: z.string().optional(),
   currency: z.string().default("EUR"),
-  bankAccountNumber: z.string().min(1, "Número da conta é obrigatório"),
-  bankAccountHolder: z.string().min(3, "Titular da conta é obrigatório"),
-  bankName: z.string().min(1, "Nome do banco é obrigatório"),
-  pixKey: z.string().optional(),
+  
+  // Banking information (IBAN only)
+  bankIban: z.string()
+    .min(15, "IBAN deve ter no mínimo 15 caracteres")
+    .regex(/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/, "IBAN inválido - deve começar com 2 letras do país e 2 números"),
+  controlNumber: z.string().min(1, "Número de controlo é obrigatório"),
+  
+  // Reason and details
   refundReason: z.string().min(10, "Motivo deve ter no mínimo 10 caracteres"),
   additionalDetails: z.string().optional(),
+  
+  // Customer declarations (checkboxes) - all required
+  declarationFormCorrect: z.boolean().refine(val => val === true, {
+    message: "Você deve confirmar que leu e preencheu corretamente o formulário"
+  }),
+  declarationAttachmentsProvided: z.boolean().refine(val => val === true, {
+    message: "Você deve confirmar que anexou fotos dos produtos e comprovante de devolução"
+  }),
+  declarationIbanCorrect: z.boolean().refine(val => val === true, {
+    message: "Você deve confirmar que informou o IBAN corretamente"
+  }),
+  
+  // File attachments - handled separately in multipart form (not in this schema)
+  // orderProofFile, productPhotosFile, returnProofFile, idDocumentFile
 });
 
 export type PublicRefundForm = z.infer<typeof publicRefundFormSchema>;
