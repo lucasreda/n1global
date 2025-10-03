@@ -2112,6 +2112,25 @@ export const insertReimbursementRequestSchema = createInsertSchema(reimbursement
 export type ReimbursementRequest = typeof reimbursementRequests.$inferSelect;
 export type InsertReimbursementRequest = z.infer<typeof insertReimbursementRequestSchema>;
 
+// Public refund form schema (customer-facing, no admin fields)
+export const publicRefundFormSchema = z.object({
+  customerName: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
+  customerEmail: z.string().email("Email inválido"),
+  customerPhone: z.string().optional(),
+  orderNumber: z.string().optional(),
+  productName: z.string().optional(),
+  refundAmount: z.string().optional(),
+  currency: z.string().default("EUR"),
+  bankAccountNumber: z.string().min(1, "Número da conta é obrigatório"),
+  bankAccountHolder: z.string().min(3, "Titular da conta é obrigatório"),
+  bankName: z.string().min(1, "Nome do banco é obrigatório"),
+  pixKey: z.string().optional(),
+  refundReason: z.string().min(10, "Motivo deve ter no mínimo 10 caracteres"),
+  additionalDetails: z.string().optional(),
+});
+
+export type PublicRefundForm = z.infer<typeof publicRefundFormSchema>;
+
 // Admin Support Directives Schema and Types
 export const insertAdminSupportDirectiveSchema = createInsertSchema(adminSupportDirectives).omit({
   id: true,

@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { supportService } from "./support-service";
 import { db } from "./db";
-import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema } from "@shared/schema";
+import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema, publicRefundFormSchema, reimbursementRequests, supportTickets } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 // Use the SAME JWT_SECRET as the main routes
@@ -331,6 +331,90 @@ export function registerSupportRoutes(app: Express) {
       res.status(500).json({ 
         success: false, 
         message: "Failed to process email" 
+      });
+    }
+  });
+
+  /**
+   * PUBLIC: Submit refund request form
+   * /api/support/refund-request/:ticketNumber
+   */
+  app.post("/api/support/refund-request/:ticketNumber", async (req: Request, res: Response) => {
+    try {
+      const { ticketNumber } = req.params;
+      
+      console.log(`📝 Received refund form submission for ticket: ${ticketNumber}`);
+      
+      // Find ticket by ticket number
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.ticketNumber, ticketNumber))
+        .limit(1);
+      
+      if (!ticket) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Ticket não encontrado" 
+        });
+      }
+      
+      // Validate form data
+      const formData = publicRefundFormSchema.parse(req.body);
+      
+      // Create reimbursement request
+      const [reimbursementRequest] = await db
+        .insert(reimbursementRequests)
+        .values({
+          ticketId: ticket.id,
+          customerEmail: formData.customerEmail,
+          customerName: formData.customerName,
+          customerPhone: formData.customerPhone,
+          orderNumber: formData.orderNumber,
+          productName: formData.productName,
+          refundAmount: formData.refundAmount,
+          currency: formData.currency,
+          bankAccountNumber: formData.bankAccountNumber,
+          bankAccountHolder: formData.bankAccountHolder,
+          bankName: formData.bankName,
+          pixKey: formData.pixKey,
+          refundReason: formData.refundReason,
+          additionalDetails: formData.additionalDetails,
+          status: "pending",
+        })
+        .returning();
+      
+      // Update ticket timestamp (status is tracked in reimbursementRequests table)
+      await db
+        .update(supportTickets)
+        .set({
+          updatedAt: new Date(),
+        })
+        .where(eq(supportTickets.id, ticket.id));
+      
+      console.log(`✅ Refund request created: ${reimbursementRequest.id} for ticket ${ticketNumber}`);
+      
+      res.json({
+        success: true,
+        message: "Solicitação de reembolso enviada com sucesso!",
+        requestId: reimbursementRequest.id,
+        ticketNumber: ticket.ticketNumber,
+      });
+      
+    } catch (error) {
+      console.error("❌ Error processing refund form:", error);
+      
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({
+          success: false,
+          message: "Dados do formulário inválidos",
+          errors: error,
+        });
+      }
+      
+      res.status(500).json({
+        success: false,
+        message: "Erro ao processar solicitação de reembolso",
       });
     }
   });
@@ -874,6 +958,102 @@ export function registerSupportRoutes(app: Express) {
     } catch (error) {
       console.error('❌ Error deleting admin directive:', error);
       return res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
+    }
+  });
+
+  /**
+   * Get all refund requests with ticket information
+   */
+  app.get('/api/support/refund-requests', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const requests = await db
+        .select({
+          id: reimbursementRequests.id,
+          ticketId: reimbursementRequests.ticketId,
+          customerEmail: reimbursementRequests.customerEmail,
+          customerName: reimbursementRequests.customerName,
+          customerPhone: reimbursementRequests.customerPhone,
+          orderNumber: reimbursementRequests.orderNumber,
+          productName: reimbursementRequests.productName,
+          refundAmount: reimbursementRequests.refundAmount,
+          currency: reimbursementRequests.currency,
+          bankAccountNumber: reimbursementRequests.bankAccountNumber,
+          bankAccountHolder: reimbursementRequests.bankAccountHolder,
+          bankName: reimbursementRequests.bankName,
+          pixKey: reimbursementRequests.pixKey,
+          refundReason: reimbursementRequests.refundReason,
+          additionalDetails: reimbursementRequests.additionalDetails,
+          status: reimbursementRequests.status,
+          reviewNotes: reimbursementRequests.reviewNotes,
+          reviewedByUserId: reimbursementRequests.reviewedByUserId,
+          reviewedAt: reimbursementRequests.reviewedAt,
+          completedAt: reimbursementRequests.completedAt,
+          rejectionReason: reimbursementRequests.rejectionReason,
+          createdAt: reimbursementRequests.createdAt,
+          updatedAt: reimbursementRequests.updatedAt,
+          ticket: {
+            ticketNumber: supportTickets.ticketNumber,
+            subject: supportTickets.subject,
+          },
+        })
+        .from(reimbursementRequests)
+        .leftJoin(supportTickets, eq(reimbursementRequests.ticketId, supportTickets.id))
+        .orderBy(reimbursementRequests.createdAt);
+
+      res.json(requests);
+    } catch (error) {
+      console.error('❌ Error fetching refund requests:', error);
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : 'Erro interno do servidor'
+      });
+    }
+  });
+
+  /**
+   * Update refund request status (approve/reject)
+   */
+  app.patch('/api/support/refund-requests/:id/status', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status, reviewNotes } = req.body;
+
+      if (!status || !['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ message: 'Status inválido' });
+      }
+
+      if (status === 'rejected' && !reviewNotes) {
+        return res.status(400).json({ message: 'Notas de revisão são obrigatórias para rejeição' });
+      }
+
+      const [updated] = await db
+        .update(reimbursementRequests)
+        .set({
+          status,
+          reviewNotes,
+          reviewedByUserId: req.user.id,
+          reviewedAt: new Date(),
+          rejectionReason: status === 'rejected' ? reviewNotes : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(reimbursementRequests.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Solicitação não encontrada' });
+      }
+
+      console.log(`✅ Refund request ${id} updated to ${status} by user ${req.user.email}`);
+
+      res.json({ 
+        success: true, 
+        message: `Solicitação ${status === 'approved' ? 'aprovada' : 'rejeitada'} com sucesso`,
+        request: updated,
+      });
+    } catch (error) {
+      console.error('❌ Error updating refund request status:', error);
+      res.status(500).json({ 
         message: error instanceof Error ? error.message : 'Erro interno do servidor'
       });
     }

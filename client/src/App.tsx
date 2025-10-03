@@ -35,6 +35,7 @@ import AdminStores from "@/pages/admin/stores";
 import AdminGlobal from "@/pages/admin/global";
 import AdminSettings from "@/pages/admin/settings";
 import AdminSupport from "@/pages/admin/support";
+import AdminRefundRequests from "@/pages/admin/refund-requests";
 import CustomerSupport from "@/pages/customer-support";
 import CustomerSupportSettings from "@/pages/customer-support-settings";
 import { AdminLayout } from "@/components/admin/admin-layout";
@@ -62,6 +63,7 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import FunnelEditor from "@/pages/funnel-editor";
 import FunnelPreview from "@/pages/funnel-preview";
 import { AdvancedPageEditor } from "@/components/funnel/AdvancedPageEditor";
+import RefundFormPage from "@/pages/RefundFormPage";
 
 interface OnboardingStatus {
   onboardingCompleted: boolean;
@@ -218,12 +220,16 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/onboarding" component={Onboarding} />
         
+        {/* Public Routes */}
+        <Route path="/refund-form/:ticketNumber" component={RefundFormPage} />
+        
         {/* Admin Routes with Layout */}
         <Route path="/inside/orders" component={isSuperAdmin ? () => <AdminLayout><AdminOrders /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/users" component={isSuperAdmin ? () => <AdminLayout><AdminUsers /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/products" component={isSuperAdmin ? () => <AdminLayout><AdminProducts /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/stores" component={isSuperAdmin ? () => <AdminLayout><AdminStores /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/global" component={isSuperAdmin ? () => <AdminLayout><AdminGlobal /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/support/refunds" component={isSuperAdmin ? () => <AdminLayout><AdminRefundRequests /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/support" component={isSuperAdmin ? () => <AdminLayout><AdminSupport /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/hub-control" component={isSuperAdmin ? () => <AdminLayout><HubControl /></AdminLayout> : () => <NotFound />} />
         <Route path="/customer-support/settings" component={isAuthenticated ? CustomerSupportSettings : () => <NotFound />} />

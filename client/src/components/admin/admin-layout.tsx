@@ -10,7 +10,11 @@ import {
   Globe,
   Settings,
   MessageSquare,
-  Monitor
+  Monitor,
+  ChevronDown,
+  ChevronRight,
+  Ticket,
+  DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,7 +25,20 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const menuItems = [
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: any;
+  path?: string;
+  subitems?: {
+    id: string;
+    label: string;
+    icon: any;
+    path: string;
+  }[];
+}
+
+const menuItems: MenuItem[] = [
   { 
     id: 'dashboard', 
     label: 'Dashboard', 
@@ -61,8 +78,21 @@ const menuItems = [
   { 
     id: 'support', 
     label: 'Suporte', 
-    icon: MessageSquare, 
-    path: '/inside/support' 
+    icon: MessageSquare,
+    subitems: [
+      {
+        id: 'support-tickets',
+        label: 'Tickets',
+        icon: Ticket,
+        path: '/inside/support'
+      },
+      {
+        id: 'support-refunds',
+        label: 'Reembolsos',
+        icon: DollarSign,
+        path: '/inside/support/refunds'
+      }
+    ]
   },
   { 
     id: 'hub-control', 
@@ -81,6 +111,13 @@ const menuItems = [
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(() => {
+    // Auto-expand support menu if on support page
+    if (location.startsWith('/inside/support')) {
+      return ['support'];
+    }
+    return [];
+  });
   
   const handleLogout = () => {
     localStorage.removeItem("auth_token");
@@ -93,6 +130,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     }
     return location.startsWith(path);
   };
+
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(menuId) 
+        ? prev.filter(id => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
+
+  const isMenuExpanded = (menuId: string) => expandedMenus.includes(menuId);
 
   // Filter menu items based on user permissions
   const getFilteredMenuItems = () => {
@@ -127,20 +174,66 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <nav className="flex-1 px-3">
             <div className="space-y-1">
               {getFilteredMenuItems().map((item) => (
-                <Link key={item.id} href={item.path}>
-                  <div 
-                    className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2 ${
-                      isActive(item.path)
-                        ? 'bg-gray-700/60 text-white border border-gray-600' 
-                        : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {item.label}
-                    </span>
-                  </div>
-                </Link>
+                <div key={item.id}>
+                  {/* Main menu item */}
+                  {item.subitems ? (
+                    <div>
+                      <div 
+                        onClick={() => toggleMenu(item.id)}
+                        className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center justify-between ${
+                          location.startsWith(item.subitems[0].path.split('/').slice(0, -1).join('/'))
+                            ? 'bg-gray-700/60 text-white border border-gray-600' 
+                            : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
+                        }`}
+                        data-testid={`menu-${item.id}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <item.icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{item.label}</span>
+                        </div>
+                        {isMenuExpanded(item.id) ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </div>
+                      {/* Subitems */}
+                      {isMenuExpanded(item.id) && (
+                        <div className="ml-3 mt-1 space-y-1 border-l border-gray-700 pl-2">
+                          {item.subitems.map((subitem) => (
+                            <Link key={subitem.id} href={subitem.path}>
+                              <div 
+                                className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2 ${
+                                  isActive(subitem.path)
+                                    ? 'bg-gray-700/60 text-white border border-gray-600' 
+                                    : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
+                                }`}
+                                data-testid={`menu-${subitem.id}`}
+                              >
+                                <subitem.icon className="h-3 w-3" />
+                                <span className="text-xs font-medium">{subitem.label}</span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Link href={item.path!}>
+                      <div 
+                        className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center gap-2 ${
+                          isActive(item.path!)
+                            ? 'bg-gray-700/60 text-white border border-gray-600' 
+                            : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
+                        }`}
+                        data-testid={`menu-${item.id}`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{item.label}</span>
+                      </div>
+                    </Link>
+                  )}
+                </div>
               ))}
             </div>
           </nav>
