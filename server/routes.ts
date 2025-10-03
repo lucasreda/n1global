@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema, funnels, funnelPages } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema, funnels, funnelPages } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
@@ -4557,7 +4557,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get operation to retrieve storeId
-      const operation = await storage.getOperationById(operationId);
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+      
       if (!operation) {
         return res.status(400).json({ message: "Operação não encontrada" });
       }
