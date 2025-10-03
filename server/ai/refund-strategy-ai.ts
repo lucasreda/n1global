@@ -17,6 +17,26 @@ const CRITICAL_KEYWORDS = {
 };
 
 /**
+ * Keywords that indicate customer insists on refund
+ */
+const REFUND_INSISTENCE_KEYWORDS = [
+  'mesmo assim',
+  'ainda quero',
+  'continuo querendo',
+  'insisto',
+  'não muda',
+  'não mudou',
+  'nao muda',
+  'nao mudou',
+  'quero sim',
+  'quero o reembolso',
+  'quero meu dinheiro',
+  'devolva',
+  'devolver',
+  'estorno'
+];
+
+/**
  * Detects if message contains critical keywords that require immediate escalation
  */
 export function detectCriticalKeywords(text: string): {
@@ -50,6 +70,37 @@ export function detectCriticalKeywords(text: string): {
   }
   
   return { hasCritical: false, reason: null, keywords: [] };
+}
+
+/**
+ * Detects if customer reply insists on refund despite retention attempt
+ */
+export function detectRefundInsistence(text: string): {
+  insistsOnRefund: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  foundKeywords: string[];
+} {
+  const lowerText = text.toLowerCase();
+  const foundKeywords: string[] = [];
+  
+  for (const keyword of REFUND_INSISTENCE_KEYWORDS) {
+    if (lowerText.includes(keyword)) {
+      foundKeywords.push(keyword);
+    }
+  }
+  
+  // Check for explicit refund mentions even without keywords
+  const hasRefundWord = lowerText.includes('reembolso') || lowerText.includes('dinheiro de volta');
+  
+  if (foundKeywords.length >= 2 || (foundKeywords.length === 1 && hasRefundWord)) {
+    return { insistsOnRefund: true, confidence: 'high', foundKeywords };
+  }
+  
+  if (foundKeywords.length === 1 || hasRefundWord) {
+    return { insistsOnRefund: true, confidence: 'medium', foundKeywords };
+  }
+  
+  return { insistsOnRefund: false, confidence: 'low', foundKeywords: [] };
 }
 
 // ============================================================================

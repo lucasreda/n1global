@@ -856,6 +856,19 @@ REGRAS B2B:
       console.log(
         `✅ Reply attached to ticket: ${existingTicket.ticketNumber}`,
       );
+
+      // 🔄 PROGRESSIVE REFUND STRATEGY: Analyze customer reply for refund tickets
+      const category = await db
+        .select()
+        .from(supportCategories)
+        .where(eq(supportCategories.id, existingTicket.categoryId))
+        .limit(1);
+
+      if (category[0]?.name === 'solicitacao_reembolso' && text) {
+        console.log(`💰 Analyzing customer reply for refund progression...`);
+        await this.analyzeAndProgressRefundStrategy(savedEmail, existingTicket);
+      }
+
       return savedEmail;
     }
 
@@ -1697,6 +1710,37 @@ Equipe de Atendimento`;
       }
       
       throw error;
+    }
+  }
+
+  /**
+   * Analyze customer reply and progress refund strategy if they insist
+   */
+  async analyzeAndProgressRefundStrategy(
+    email: SupportEmail,
+    ticket: SupportTicket
+  ): Promise<void> {
+    const { detectRefundInsistence, detectCriticalKeywords } = await import("./ai/refund-strategy-ai.js");
+    
+    const messageText = email.textContent || '';
+    console.log(`🔍 Analyzing reply: "${messageText.substring(0, 100)}..."`);
+    
+    // Check for critical keywords (legal threats, etc.)
+    const criticalCheck = detectCriticalKeywords(messageText);
+    
+    // Check for refund insistence
+    const insistenceCheck = detectRefundInsistence(messageText);
+    
+    console.log(`📊 Critical: ${criticalCheck.hasCritical}, Insistence: ${insistenceCheck.insistsOnRefund} (${insistenceCheck.confidence})`);
+    
+    // If customer insists OR has critical keywords, progress to offering refund form
+    if (criticalCheck.hasCritical || insistenceCheck.insistsOnRefund) {
+      console.log(`💰 Customer insists on refund - progressing strategy to offer form`);
+      
+      // Call the full strategy processing
+      await this.processRefundWithStrategy(email, ticket);
+    } else {
+      console.log(`✋ Customer reply does not indicate strong insistence - no automatic progression`);
     }
   }
 
