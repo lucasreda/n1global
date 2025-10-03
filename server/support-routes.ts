@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { supportService } from "./support-service";
 import { db } from "./db";
-import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema, publicRefundFormSchema, reimbursementRequests, supportTickets } from "@shared/schema";
+import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema, publicRefundFormSchema, reimbursementRequests, supportTickets, supportConversations } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 // Use the SAME JWT_SECRET as the main routes
@@ -393,6 +393,42 @@ export function registerSupportRoutes(app: Express) {
         .where(eq(supportTickets.id, ticket.id));
       
       console.log(`✅ Refund request created: ${reimbursementRequest.id} for ticket ${ticketNumber}`);
+      
+      // Send confirmation email to customer
+      const confirmationMessage = `Recebemos sua solicitação de reembolso e ela está sendo analisada por nossa equipe.
+
+Você receberá uma resposta em breve com a decisão sobre o reembolso.
+
+Detalhes da solicitação:
+• Valor: ${formData.currency} ${formData.refundAmount}
+• Motivo: ${formData.refundReason}
+
+Agradecemos sua paciência.`;
+
+      try {
+        // Register the confirmation message in conversation history
+        await db.insert(supportConversations).values({
+          ticketId: ticket.id,
+          type: 'email_out',
+          from: `suporte@${process.env.MAILGUN_DOMAIN || 'n1global.app'}`,
+          to: formData.customerEmail,
+          subject: `Re: ${ticket.subject}`,
+          content: confirmationMessage,
+          isInternal: false,
+        });
+
+        // Send confirmation email via supportService
+        await supportService.replyToTicket(
+          ticket.id,
+          confirmationMessage,
+          'Equipe de Reembolsos'
+        );
+
+        console.log(`✅ Confirmation email sent to ${formData.customerEmail}`);
+      } catch (emailError) {
+        console.error('❌ Error sending confirmation email:', emailError);
+        // Don't fail the request if email fails
+      }
       
       res.json({
         success: true,
