@@ -522,22 +522,6 @@ export async function seedDatabase() {
         color: '#ef4444'
       },
       {
-        name: 'alteracao_endereco',
-        displayName: 'Alteração de Endereço',
-        description: 'Solicitações de mudança de endereço de entrega',
-        isAutomated: true,
-        priority: 3,
-        color: '#f59e0b'
-      },
-      {
-        name: 'cancelamento',
-        displayName: 'Cancelamento',
-        description: 'Solicitações de cancelamento de pedidos',
-        isAutomated: true,
-        priority: 4,
-        color: '#f97316'
-      },
-      {
         name: 'manual',
         displayName: 'Manual',
         description: 'Emails que requerem análise manual da equipe',
@@ -577,36 +561,6 @@ Recebemos sua mensagem e agradecemos por entrar em contato conosco.
 Para dúvidas sobre rastreamento, você pode consultar o status do seu pedido através do nosso sistema.
 
 Se precisar de mais informações, nossa equipe retornará em breve.
-
-Atenciosamente,
-Equipe de Suporte N1`,
-        isDefault: true,
-        isActive: true
-      },
-      {
-        categoryName: 'alteracao_endereco',
-        name: 'Resposta Automática - Alteração de Endereço',
-        subject: 'Re: {{original_subject}} - Alteração de Endereço',
-        textContent: `Olá {{customer_name}},
-
-Recebemos sua solicitação de alteração de endereço.
-
-Nossa equipe está analisando sua solicitação e retornará com as instruções necessárias em até 24 horas.
-
-Atenciosamente,
-Equipe de Suporte N1`,
-        isDefault: true,
-        isActive: true
-      },
-      {
-        categoryName: 'cancelamento',
-        name: 'Resposta Automática - Cancelamento',
-        subject: 'Re: {{original_subject}} - Solicitação de Cancelamento',
-        textContent: `Olá {{customer_name}},
-
-Recebemos sua solicitação de cancelamento.
-
-Nossa equipe está processando sua solicitação e retornará com os detalhes do processo em até 24 horas.
 
 Atenciosamente,
 Equipe de Suporte N1`,
