@@ -4463,6 +4463,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/clients", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const allUsers = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role
+        })
+        .from(users)
+        .where(eq(users.role, "user"));
+      
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Admin clients error:", error);
+      res.status(500).json({ message: "Erro ao buscar clientes" });
+    }
+  });
+
+  app.get("/api/admin/clients/:clientId/operations", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { clientId } = req.params;
+      
+      const clientOperations = await storage.getUserOperations(clientId);
+      
+      res.json(clientOperations);
+    } catch (error) {
+      console.error("Admin client operations error:", error);
+      res.status(500).json({ message: "Erro ao buscar operações do cliente" });
+    }
+  });
+
   app.get("/api/admin/orders", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const filters = {
