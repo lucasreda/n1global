@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { supportService } from "./support-service";
 import { db } from "./db";
-import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema, publicRefundFormSchema, reimbursementRequests, supportTickets, supportConversations } from "@shared/schema";
+import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema, publicRefundFormSchema, reimbursementRequests, supportTickets, supportConversations, supportEmails, orders } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 // Use the SAME JWT_SECRET as the main routes
@@ -835,6 +835,121 @@ Agradecemos sua paciência.`;
         success: false,
         error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
       });
+    }
+  });
+
+  /**
+   * Get suggested orders for a ticket (with relevance scores)
+   */
+  app.get('/api/support/tickets/:id/suggested-orders', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id: ticketId } = req.params;
+
+      // Get ticket details
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.id, ticketId))
+        .limit(1);
+
+      if (!ticket) {
+        return res.status(404).json({ message: 'Ticket não encontrado' });
+      }
+
+      // Get email details
+      const [email] = await db
+        .select()
+        .from(supportEmails)
+        .where(eq(supportEmails.id, ticket.emailId))
+        .limit(1);
+
+      if (!email) {
+        return res.status(404).json({ message: 'Email não encontrado' });
+      }
+
+      // Get suggested orders with scores
+      const { OrderMatcherService } = await import('./order-matcher-service');
+      const suggestedOrders = await OrderMatcherService.getSuggestedOrders({
+        customerEmail: ticket.customerEmail,
+        emailSubject: email.subject,
+        emailBody: email.textContent || email.htmlContent || '',
+        ticketCreatedAt: ticket.createdAt || new Date(),
+      });
+
+      res.json({ suggestedOrders });
+    } catch (error) {
+      console.error('❌ Error getting suggested orders:', error);
+      res.status(500).json({ message: 'Erro ao buscar pedidos sugeridos' });
+    }
+  });
+
+  /**
+   * Manually link an order to a ticket
+   */
+  app.post('/api/support/tickets/:id/link-order', authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id: ticketId } = req.params;
+      const { orderId } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ message: 'ID do pedido é obrigatório' });
+      }
+
+      // Verify ticket exists
+      const [ticket] = await db
+        .select()
+        .from(supportTickets)
+        .where(eq(supportTickets.id, ticketId))
+        .limit(1);
+
+      if (!ticket) {
+        return res.status(404).json({ message: 'Ticket não encontrado' });
+      }
+
+      // Verify order exists
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
+
+      if (!order) {
+        return res.status(404).json({ message: 'Pedido não encontrado' });
+      }
+
+      // SECURITY: Verify order belongs to the same customer
+      if (order.customerEmail !== ticket.customerEmail) {
+        console.error(`🚫 Security violation: Attempted to link order ${orderId} (customer: ${order.customerEmail}) to ticket ${ticketId} (customer: ${ticket.customerEmail})`);
+        return res.status(403).json({ 
+          message: 'Este pedido não pertence ao cliente do ticket',
+          error: 'Forbidden: Cross-customer order linking not allowed'
+        });
+      }
+
+      // Link order to ticket (manual linking)
+      await db
+        .update(supportTickets)
+        .set({
+          linkedOrderId: orderId,
+          orderMatchConfidence: 'manual',
+          orderMatchMethod: 'manual',
+          orderLinkedAt: new Date(),
+        })
+        .where(eq(supportTickets.id, ticketId));
+
+      console.log(`🔗 Manually linked order ${order.shopifyOrderNumber || order.id} to ticket ${ticket.ticketNumber}`);
+
+      res.json({ 
+        message: 'Pedido vinculado com sucesso',
+        success: true,
+        linkedOrder: {
+          id: order.id,
+          orderNumber: order.shopifyOrderNumber || order.id
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error linking order to ticket:', error);
+      res.status(500).json({ message: 'Erro ao vincular pedido' });
     }
   });
 
