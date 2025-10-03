@@ -1,6 +1,7 @@
 import { db } from './db';
 import { orders } from '@shared/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
+import { extractEmailAddress } from './utils/email-utils';
 
 type Order = typeof orders.$inferSelect;
 

@@ -3,6 +3,7 @@ import { orders, operations } from "@shared/schema";
 import { eq, and, or, desc, isNotNull, sql } from "drizzle-orm";
 import { like } from "drizzle-orm";
 import type { Order } from "@shared/schema";
+import { extractEmailAddress } from './utils/email-utils';
 
 export interface CustomerOrderMatch {
   order: Order;
@@ -62,20 +63,23 @@ export class CustomerOrderService {
     phone?: string,
     name?: string
   ): Promise<CustomerOrderMatch[]> {
-    console.log('🔍 CustomerOrderService: Searching orders for', { operationId, email, phone, name });
+    // Limpar email se fornecido (remover nome de "Name <email@example.com>")
+    const cleanEmail = email ? extractEmailAddress(email) : undefined;
+    
+    console.log('🔍 CustomerOrderService: Searching orders for', { operationId, email: cleanEmail, phone, name });
 
     const matches: CustomerOrderMatch[] = [];
 
     try {
       // 1. Busca exata por email (alta confiança)
-      if (email) {
+      if (cleanEmail) {
         const emailOrders = await db
           .select()
           .from(orders)
           .where(
             and(
               eq(orders.operationId, operationId),
-              eq(orders.customerEmail, email)
+              eq(orders.customerEmail, cleanEmail)
             )
           )
           .orderBy(desc(orders.orderDate));
