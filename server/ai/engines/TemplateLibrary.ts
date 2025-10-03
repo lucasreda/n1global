@@ -304,9 +304,13 @@ export class TemplateLibrary {
       if (criteria.framework && template.framework === criteria.framework) score += 6;
       
       // Target audience similarity (basic text matching)
-      if (criteria.targetAudience && template.targetAudience.toLowerCase().includes(
-        criteria.targetAudience.toLowerCase().split(' ')[0]
-      )) score += 4;
+      if (criteria.targetAudience && template.targetAudience && 
+          typeof template.targetAudience === 'string' &&
+          template.targetAudience.toLowerCase().includes(
+            criteria.targetAudience.toLowerCase().split(' ')[0]
+          )) {
+        score += 4;
+      }
 
       return { template, score };
     });
