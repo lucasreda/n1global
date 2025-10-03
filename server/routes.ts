@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema, funnels, funnelPages } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema, funnels, funnelPages } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
@@ -4496,6 +4496,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Admin orders count error:", error);
       res.status(500).json({ message: "Erro ao contar pedidos globais" });
+    }
+  });
+
+  app.post("/api/admin/orders", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const {
+        storeId,
+        operationId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerAddress,
+        customerCity,
+        customerState,
+        customerCountry,
+        customerZip,
+        status,
+        paymentMethod,
+        total,
+        currency,
+        products,
+        notes
+      } = req.body;
+      
+      // Validation
+      if (!storeId || !customerName || !total) {
+        return res.status(400).json({ message: "Campos obrigatórios: storeId, customerName, total" });
+      }
+      
+      // Create order in database
+      const orderId = `MANUAL-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      
+      const [newOrder] = await db.insert(orders).values({
+        id: orderId,
+        storeId,
+        operationId: operationId || null,
+        dataSource: "manual",
+        customerName,
+        customerEmail: customerEmail || null,
+        customerPhone: customerPhone || null,
+        customerAddress: customerAddress || null,
+        customerCity: customerCity || null,
+        customerState: customerState || null,
+        customerCountry: customerCountry || "PT",
+        customerZip: customerZip || null,
+        status: status || "pending",
+        paymentMethod: paymentMethod || "cod",
+        total: total.toString(),
+        currency: currency || "EUR",
+        products: products || [],
+        notes: notes || null,
+        provider: "manual",
+        orderDate: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      console.log("✅ Order created manually:", orderId);
+      res.status(201).json(newOrder);
+    } catch (error) {
+      console.error("Error creating manual order:", error);
+      res.status(500).json({ message: "Erro ao criar pedido manual" });
     }
   });
 
