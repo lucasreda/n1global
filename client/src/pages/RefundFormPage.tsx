@@ -354,6 +354,8 @@ export default function RefundFormPage() {
                             <Input
                               {...field}
                               placeholder="0.00"
+                              readOnly
+                              className="bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed"
                               data-testid="input-refund-amount"
                             />
                           </FormControl>
