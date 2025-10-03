@@ -25,6 +25,7 @@ import {
   type InsertSupportTicket,
   type InsertSupportConversation,
 } from "@shared/schema";
+import { processRefundRequest, type RefundDecision } from "./ai/refund-strategy-ai";
 
 // Interfaces for order integration
 export interface EmailOrderContext {
@@ -916,23 +917,24 @@ REGRAS B2B:
 
     // Always create ticket for proper tracking and history
     // Tickets should exist regardless of whether they get automatic responses
+    let createdTicket: SupportTicket | null = null;
     if (categoryId) {
-      const ticket = await this.createTicketFromEmail(savedEmail);
+      createdTicket = await this.createTicketFromEmail(savedEmail);
       console.log(
-        `📋 Ticket criado: ${ticket.ticketNumber} para ${savedEmail.from}`,
+        `📋 Ticket criado: ${createdTicket.ticketNumber} para ${savedEmail.from}`,
       );
 
       // If automatic response was sent, mark ticket as initially responded
       if (category[0]?.isAutomated && !categorization.requiresHuman) {
         const categoryName = category[0].name.toLowerCase();
         if (
-          ["duvidas", "alteracao_endereco", "cancelamento"].includes(
+          ["duvidas", "alteracao_endereco", "cancelamento", "solicitacao_reembolso"].includes(
             categoryName,
           )
         ) {
           // The AI will respond, so we'll update ticket status after response is sent
           console.log(
-            `📋 Ticket ${ticket.ticketNumber} will receive automatic response`,
+            `📋 Ticket ${createdTicket.ticketNumber} will receive automatic response`,
           );
         }
       }
@@ -942,13 +944,19 @@ REGRAS B2B:
     if (
       categoryId &&
       category[0]?.isAutomated &&
-      !categorization.requiresHuman
+      !categorization.requiresHuman &&
+      createdTicket
     ) {
       const categoryName = category[0].name.toLowerCase();
 
-      // Use AI responses for specific categories only
-      if (
-        ["duvidas", "alteracao_endereco", "cancelamento"].includes(categoryName)
+      // Use intelligent refund strategy for refund requests
+      if (categoryName === "solicitacao_reembolso" || categoryName === "cancelamento") {
+        console.log(`💰 Processing refund/cancellation with intelligent strategy: ${categoryName}`);
+        await this.processRefundWithStrategy(savedEmail, createdTicket);
+      }
+      // Use AI responses for other specific categories
+      else if (
+        ["duvidas", "alteracao_endereco"].includes(categoryName)
       ) {
         console.log(`🤖 Enviando resposta IA para categoria: ${categoryName}`);
         const sentimentData = {
@@ -1658,6 +1666,167 @@ Equipe de Atendimento`;
         }
       }
       
+      throw error;
+    }
+  }
+
+  /**
+   * Process refund request with intelligent retention strategy
+   */
+  async processRefundWithStrategy(
+    email: SupportEmail,
+    ticket: SupportTicket
+  ): Promise<void> {
+    console.log(`\n💰 Processing refund request for ticket ${ticket.ticketNumber}`);
+    
+    try {
+      // Get email history for this ticket
+      const conversations = await db
+        .select()
+        .from(supportConversations)
+        .where(eq(supportConversations.ticketId, ticket.id))
+        .orderBy(supportConversations.createdAt);
+      
+      // Convert conversations to SupportEmail format for AI processing
+      const emailHistory: SupportEmail[] = conversations.map(conv => ({
+        ...email,
+        id: conv.id,
+        messageId: conv.messageId || '',
+        from: conv.from || email.from,
+        to: conv.to || email.to,
+        subject: conv.subject || email.subject,
+        textContent: conv.content,
+        htmlContent: conv.content,
+        createdAt: conv.createdAt,
+        updatedAt: conv.createdAt,
+      }));
+      
+      // Process with refund AI strategy
+      const result = await processRefundRequest(ticket, email, emailHistory);
+      
+      console.log(`✅ Refund strategy: ${result.strategy}`);
+      console.log(`📝 Decision: ${result.decision.reason}`);
+      
+      // Update ticket progression
+      const updates: any = {
+        updatedAt: new Date(),
+      };
+      
+      if (result.decision.strategy !== 'immediate_escalation') {
+        // Increment retention attempts (except for immediate escalation)
+        updates.retentionAttempts = ticket.retentionAttempts + 1;
+      }
+      
+      if (result.decision.strategy === 'immediate_escalation') {
+        updates.escalationReason = result.decision.reason;
+        updates.refundOffered = true;
+        updates.refundOfferedAt = new Date();
+      } else if (result.shouldOfferForm) {
+        updates.refundOffered = true;
+        updates.refundOfferedAt = new Date();
+      }
+      
+      await db
+        .update(supportTickets)
+        .set(updates)
+        .where(eq(supportTickets.id, ticket.id));
+      
+      console.log(`📊 Ticket updated - Retention attempts: ${updates.retentionAttempts || ticket.retentionAttempts}, Form offered: ${updates.refundOffered || ticket.refundOffered}`);
+      
+      // Get design config for email
+      const designConfig = await this.getDesignConfigForEmail(email);
+      
+      // Load email template
+      const templatePath = path.join(process.cwd(), "email-templates", "ai-response-template.html");
+      let htmlTemplate = fs.readFileSync(templatePath, "utf-8");
+      
+      // Format response content
+      const formattedContent = this.formatAIResponseForEmail(result.responseText);
+      
+      // Detect base URL
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://n1global.app' 
+        : `https://${process.env.REPLIT_DEV_DOMAIN}`;
+      
+      // Apply design config
+      const logoUrl = designConfig.logo.startsWith('/') ? `${baseUrl}${designConfig.logo}` : designConfig.logo;
+      const cardOpacityHex = Math.round(designConfig.card.backgroundOpacity * 255).toString(16).padStart(2, '0');
+      const cardBackgroundWithOpacity = `${designConfig.card.backgroundColor}${cardOpacityHex}`;
+      
+      let htmlContent = htmlTemplate
+        .replace(/{{AI_RESPONSE_CONTENT}}/g, formattedContent)
+        .replace(/{{LOGO_URL}}/g, logoUrl)
+        .replace(/{{LOGO_ALIGNMENT}}/g, designConfig.logoAlignment)
+        .replace(/{{PRIMARY_COLOR}}/g, designConfig.primaryColor)
+        .replace(/{{BACKGROUND_COLOR}}/g, designConfig.backgroundColor)
+        .replace(/{{TEXT_COLOR}}/g, designConfig.textColor)
+        .replace(/{{SECONDARY_TEXT_COLOR}}/g, designConfig.secondaryTextColor)
+        .replace(/{{CARD_BACKGROUND_COLOR}}/g, cardBackgroundWithOpacity)
+        .replace(/{{BORDER_COLOR}}/g, designConfig.card.borderColor)
+        .replace(/{{BORDER_RADIUS}}/g, designConfig.card.borderRadius.toString())
+        .replace(/{{BORDER_WIDTH_TOP}}/g, designConfig.card.borderWidth.top.toString())
+        .replace(/{{BORDER_WIDTH_RIGHT}}/g, designConfig.card.borderWidth.right.toString())
+        .replace(/{{BORDER_WIDTH_BOTTOM}}/g, designConfig.card.borderWidth.bottom.toString())
+        .replace(/{{BORDER_WIDTH_LEFT}}/g, designConfig.card.borderWidth.left.toString());
+      
+      // Handle signature
+      const hasCustomSignature = !!(designConfig.signature?.name || designConfig.signature?.position);
+      if (hasCustomSignature) {
+        htmlContent = htmlContent.replace(/id="custom-signature" style="display: none;"/g, 'id="custom-signature" style="display: block;"');
+        htmlContent = htmlContent.replace(/id="sofia-signature"/g, 'id="sofia-signature" style="display: none;"');
+      }
+      
+      // Replace signature placeholders
+      htmlContent = htmlContent
+        .replace(/{{SIG_NAME}}/g, designConfig.signature?.name || '')
+        .replace(/{{SIG_POSITION}}/g, designConfig.signature?.position || '')
+        .replace(/{{SIG_PHONE}}/g, designConfig.signature?.phone || '')
+        .replace(/{{SIG_EMAIL}}/g, designConfig.signature?.email || '')
+        .replace(/{{SIG_WEBSITE}}/g, designConfig.signature?.website || '');
+      
+      // Send email via Mailgun
+      const mailgun = formData;
+      const mg = new Mailgun(mailgun);
+      mg.client({ username: "api", key: process.env.MAILGUN_API_KEY || "" });
+      
+      const subject = `Re: ${email.subject}`;
+      await mg.messages.create(process.env.MAILGUN_DOMAIN || "", {
+        from: `Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: email.from,
+        "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
+        "h:In-Reply-To": email.messageId,
+        "h:References": email.references || email.messageId,
+        subject: subject,
+        text: result.responseText,
+        html: htmlContent,
+      });
+      
+      console.log(`✅ Refund response email sent to ${email.from}`);
+      
+      // Update email status
+      await db
+        .update(supportEmails)
+        .set({
+          hasAutoResponse: true,
+          autoResponseSentAt: new Date(),
+          status: "responded",
+        })
+        .where(eq(supportEmails.id, email.id));
+      
+      // Add to conversation history
+      await this.addConversation(ticket.id, {
+        type: "email_out",
+        from: `suporte@${process.env.MAILGUN_DOMAIN}`,
+        to: email.from,
+        subject: subject,
+        content: result.responseText,
+        messageId: undefined,
+      });
+      
+      console.log(`✅ Refund process completed for ticket ${ticket.ticketNumber}`);
+      
+    } catch (error) {
+      console.error(`❌ Error processing refund strategy:`, error);
       throw error;
     }
   }

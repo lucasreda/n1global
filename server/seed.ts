@@ -522,6 +522,14 @@ export async function seedDatabase() {
         color: '#ef4444'
       },
       {
+        name: 'solicitacao_reembolso',
+        displayName: 'Solicitação de Reembolso',
+        description: 'Pedidos de reembolso de clientes com funil inteligente',
+        isAutomated: true,
+        priority: 6,
+        color: '#f97316'
+      },
+      {
         name: 'manual',
         displayName: 'Manual',
         description: 'Emails que requerem análise manual da equipe',

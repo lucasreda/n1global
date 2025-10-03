@@ -1528,6 +1528,12 @@ export const supportTickets = pgTable("support_tickets", {
   // Read status
   isRead: boolean("is_read").notNull().default(false),
   
+  // Refund progression tracking
+  retentionAttempts: integer("retention_attempts").notNull().default(0), // Counter for retention attempts
+  escalationReason: text("escalation_reason"), // Reason for immediate escalation if triggered
+  refundOffered: boolean("refund_offered").notNull().default(false), // If refund form was sent
+  refundOfferedAt: timestamp("refund_offered_at"), // When refund form was offered
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1577,6 +1583,46 @@ export const supportConversations = pgTable("support_conversations", {
   userId: varchar("user_id").references(() => users.id), // If from user action
   
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Reimbursement Requests - Customer refund requests linked to tickets
+export const reimbursementRequests = pgTable("reimbursement_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id),
+  
+  // Customer information (duplicated from ticket for data integrity)
+  customerEmail: text("customer_email").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone"),
+  
+  // Refund details
+  orderNumber: text("order_number"), // Original order number
+  productName: text("product_name"), // Product being refunded
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
+  currency: text("currency").default("EUR"),
+  
+  // Banking information
+  bankAccountNumber: text("bank_account_number"),
+  bankAccountHolder: text("bank_account_holder"),
+  bankName: text("bank_name"),
+  pixKey: text("pix_key"), // For Brazilian PIX payments
+  
+  // Reason and details
+  refundReason: text("refund_reason").notNull(), // Customer's stated reason
+  additionalDetails: text("additional_details"), // Extra context from customer
+  
+  // Status tracking
+  status: text("status").notNull().default("pending"), // 'pending', 'under_review', 'approved', 'rejected', 'completed'
+  reviewNotes: text("review_notes"), // Admin internal notes
+  reviewedByUserId: varchar("reviewed_by_user_id").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  // Completion
+  completedAt: timestamp("completed_at"),
+  rejectionReason: text("rejection_reason"), // If rejected, why
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // AI training directives for custom prompt enhancement per operation
@@ -2053,6 +2099,18 @@ export type InsertSupportConversation = z.infer<typeof insertSupportConversation
 
 export type SupportMetrics = typeof supportMetrics.$inferSelect;
 export type InsertSupportMetrics = z.infer<typeof insertSupportMetricsSchema>;
+
+// Reimbursement Requests Schema and Types
+export const insertReimbursementRequestSchema = createInsertSchema(reimbursementRequests).omit({
+  id: true,
+  reviewedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ReimbursementRequest = typeof reimbursementRequests.$inferSelect;
+export type InsertReimbursementRequest = z.infer<typeof insertReimbursementRequestSchema>;
 
 // Admin Support Directives Schema and Types
 export const insertAdminSupportDirectiveSchema = createInsertSchema(adminSupportDirectives).omit({
