@@ -787,15 +787,6 @@ REGRAS B2B:
       return existingEmail[0];
     }
 
-    // ✅ SEND IMMEDIATE RECEIPT CONFIRMATION (BEFORE ANY PROCESSING)
-    // This ensures ALL emails get a confirmation, regardless of category or processing
-    await this.sendReceiptConfirmation({
-      from,
-      to,
-      subject,
-      messageId
-    });
-
     // Check if this is a reply to existing conversation
     const isReply = this.isEmailReply(subject);
     console.log(`📧 Is reply: ${isReply}`);
@@ -1056,6 +1047,15 @@ REGRAS B2B:
           `⏸️ Categoria não elegível para resposta automática: ${categoryName}`,
         );
       }
+    } else if (categoryId && category[0]?.name === 'manual') {
+      // Send receipt confirmation ONLY for manual categories
+      console.log(`📨 Categoria manual detectada - enviando confirmação de recebimento`);
+      await this.sendReceiptConfirmation({
+        from: savedEmail.from,
+        to: savedEmail.to,
+        subject: savedEmail.subject,
+        messageId: savedEmail.messageId
+      });
     }
 
     return savedEmail;
