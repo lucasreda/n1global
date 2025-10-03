@@ -1886,11 +1886,7 @@ Equipe de Atendimento`;
         .replace(/{{SIG_EMAIL}}/g, designConfig.signature?.email || '')
         .replace(/{{SIG_WEBSITE}}/g, designConfig.signature?.website || '');
       
-      // Send email via Mailgun
-      const mailgun = formData;
-      const mg = new Mailgun(mailgun);
-      mg.client({ username: "api", key: process.env.MAILGUN_API_KEY || "" });
-      
+      // Send email via Mailgun (using global mg instance configured at top of file)
       const subject = `Re: ${email.subject}`;
       await mg.messages.create(process.env.MAILGUN_DOMAIN || "", {
         from: `Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
