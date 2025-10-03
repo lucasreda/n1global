@@ -401,6 +401,15 @@ function AppContent() {
   if (location === '/privacy-policy') {
     return <PrivacyPolicy />;
   }
+
+  // Public refund form (must be before authentication check)
+  if (location.startsWith('/refund-form/')) {
+    return (
+      <div className="min-h-screen">
+        <Router />
+      </div>
+    );
+  }
   
   // Show landing page if not authenticated
   if (!isAuthenticated) {
