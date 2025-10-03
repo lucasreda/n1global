@@ -57,6 +57,47 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
+   * Test endpoint to verify universal email confirmation
+   */
+  app.post("/api/support/test-confirmation", async (req: Request, res: Response) => {
+    try {
+      console.log("🧪 TESTANDO CONFIRMAÇÃO AUTOMÁTICA UNIVERSAL");
+      
+      const { from, subject } = req.body;
+      
+      if (!from || !subject) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "from e subject são obrigatórios" 
+        });
+      }
+      
+      // Test receipt confirmation
+      await supportService.sendReceiptConfirmation({
+        from: from,
+        to: "suporte@n1global.app",
+        subject: subject,
+        messageId: `test-${Date.now()}`
+      });
+      
+      console.log("✅ CONFIRMAÇÃO ENVIADA COM SUCESSO!");
+      
+      res.json({ 
+        success: true, 
+        message: `Confirmação de recebimento enviada para ${from}` 
+      });
+
+    } catch (error) {
+      console.error("❌ ERRO NO TESTE DE CONFIRMAÇÃO:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        message: "Erro ao testar confirmação!" 
+      });
+    }
+  });
+
+  /**
    * Test endpoint to verify AI categorization with admin directives
    */
   app.post("/api/support/test-categorization", async (req: Request, res: Response) => {

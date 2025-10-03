@@ -72,6 +72,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 3, 2025)
 
+### Universal Email Auto-Confirmation ✅
+- **NEW FEATURE**: Immediate confirmation for ALL incoming support emails
+- **IMPLEMENTATION**: Added `sendReceiptConfirmation` method that runs BEFORE any categorization/processing
+- **EMAIL CONTENT**:
+  - ✅ Generic confirmation message (NO AI/Sofia mention)
+  - 📋 States "setor competente e responsável" will analyze
+  - ⏱️ Promises response within 24 business hours
+  - 🎨 Uses branded design config per operation
+- **FLOW**: Email arrives → Immediate confirmation sent → Then categorization/AI processing
+- **ERROR HANDLING**: Confirmation failures don't block email processing
+- **TEST ENDPOINT**: `/api/support/test-confirmation` for testing
+
+## Previous Changes
+
 ### Visual Editor PageModelV2 Support ✅
 - **CRITICAL FIX**: Resolved visual editor incompatibility with AI-generated pages
 - **ROOT CAUSE**: PageVisualEditor used local `PageModel` interface (flat structure with `sections.content`) incompatible with PageModelV2 (hierarchical `sections→rows→columns→elements`)
