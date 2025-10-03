@@ -811,7 +811,7 @@ REGRAS B2B:
         `📧 Adding reply to existing ticket: ${existingTicket.ticketNumber}`,
       );
 
-      // Save email
+      // Save email with ON CONFLICT DO NOTHING to handle duplicate webhooks
       const emailData: InsertSupportEmail = {
         messageId: messageId,
         from,
@@ -828,10 +828,24 @@ REGRAS B2B:
         rawData: webhookData,
       };
 
-      const [savedEmail] = await db
+      const savedEmails = await db
         .insert(supportEmails)
         .values(emailData)
+        .onConflictDoNothing({ target: supportEmails.messageId })
         .returning();
+      
+      // If no email was inserted (duplicate), fetch the existing one
+      if (savedEmails.length === 0) {
+        console.log(`🔄 Duplicate reply webhook detected, fetching existing email`);
+        const existingEmail = await db
+          .select()
+          .from(supportEmails)
+          .where(eq(supportEmails.messageId, messageId))
+          .limit(1);
+        return existingEmail[0];
+      }
+      
+      const [savedEmail] = savedEmails;
 
       // Add conversation entry
       await this.addConversation(existingTicket.id, {
@@ -930,7 +944,7 @@ REGRAS B2B:
       console.log(`📦 Order context: ${orderContext.customerOrders.length} orders, ${orderContext.suggestedActions.length} actions`);
     }
 
-    // Save email
+    // Save email with ON CONFLICT DO NOTHING to handle duplicate webhooks
     const emailData: InsertSupportEmail = {
       messageId: messageId,
       from,
@@ -953,10 +967,24 @@ REGRAS B2B:
       escalationRisk: categorization.escalationRisk,
     };
 
-    const [savedEmail] = await db
+    const savedEmails = await db
       .insert(supportEmails)
       .values(emailData)
+      .onConflictDoNothing({ target: supportEmails.messageId })
       .returning();
+    
+    // If no email was inserted (duplicate), fetch the existing one
+    if (savedEmails.length === 0) {
+      console.log(`🔄 Duplicate webhook detected during insert, fetching existing email`);
+      const existingEmail = await db
+        .select()
+        .from(supportEmails)
+        .where(eq(supportEmails.messageId, messageId))
+        .limit(1);
+      return existingEmail[0];
+    }
+    
+    const [savedEmail] = savedEmails;
 
     // Always create ticket for proper tracking and history
     // Tickets should exist regardless of whether they get automatic responses
