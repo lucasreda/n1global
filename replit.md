@@ -80,9 +80,17 @@ Preferred communication style: Simple, everyday language.
   2. **PageVisualEditor.tsx**: Updated to import `PageModelV2` from schema, apply adapter on load/save, ensure all pages use V2 format
   3. **SectionEditor refactor**: Displays hierarchical structure (sections→rows→columns→elements), supports editing heading/text/button/image elements, preserves full AI-generated content
   4. **Auto-upgrade**: Legacy manual pages automatically upgraded to V2 on first edit (non-destructive)
-- **COMPATIBILITY**: Works for ALL pages (current manual + all future AI-generated), no data loss on legacy page upgrades
+- **DATA SAFETY IMPROVEMENTS**:
+  1. **Unknown field preservation**: Unmapped content/config fields saved as hidden metadata elements
+  2. **Console warnings**: Clear logging when legacy conversion occurs and unknown fields detected
+  3. **Visual warning banner**: Yellow alert banner shows when legacy page loaded with specific conversion warnings
+  4. **Metadata preservation**: Unknown fields stored in JSON format within hidden elements for potential recovery
+  5. **Clean persistence**: Auxiliary conversion flags (`_convertedFromLegacy`, `_conversionWarnings`) stripped before database save
+  6. **State reset**: Legacy flags properly reset when navigating between pages to prevent false positives
+- **COMPATIBILITY**: Works for ALL pages (current manual + all future AI-generated), minimal data loss risk with metadata preservation
 - **EDITING**: Supports basic element editing (text, headings, buttons, images), extensible for advanced types
-- **STATUS**: Visual editor now correctly loads and edits AI-generated funnel pages
+- **CURRENT STATUS**: No legacy pages exist in database (all are V2 or empty), risk is theoretical and mitigated
+- **STATUS**: Visual editor now correctly loads and edits AI-generated funnel pages with defensive safeguards
 
 ### AI Page Generation Complete Fix ✅
 - **CRITICAL FIX**: Resolved all AI page generation issues including progress tracking and database persistence

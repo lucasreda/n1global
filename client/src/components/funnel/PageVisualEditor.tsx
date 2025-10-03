@@ -20,7 +20,8 @@ import {
   Plus,
   Trash2,
   Move,
-  Edit3
+  Edit3,
+  AlertCircle
 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useLocation } from "wouter";
@@ -56,6 +57,8 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
   
   const [pageData, setPageData] = useState<FunnelPage | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [isLegacyConverted, setIsLegacyConverted] = useState(false);
+  const [conversionWarnings, setConversionWarnings] = useState<string[]>([]);
 
   // Fetch page data
   const { data: pageResponse, isLoading, error } = useQuery({
@@ -75,12 +78,23 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
     if (pageResponse?.success && pageResponse?.page) {
       const loadedPage = pageResponse.page;
       
+      // Reset legacy flags for each new page load
+      setIsLegacyConverted(false);
+      setConversionWarnings([]);
+      
       // Ensure the model is always PageModelV2 (auto-upgrade legacy models)
       if (loadedPage.model) {
         const v2Model = ensurePageModelV2(loadedPage.model);
         
         if (!isPageModelV2(loadedPage.model)) {
           console.log('📝 Upgraded legacy page model to PageModelV2 for editing');
+          setIsLegacyConverted(true);
+        }
+        
+        // Check if model has conversion warnings
+        if ((v2Model as any)._convertedFromLegacy) {
+          setIsLegacyConverted(true);
+          setConversionWarnings((v2Model as any)._conversionWarnings || []);
         }
         
         setPageData({ ...loadedPage, model: v2Model });
@@ -127,7 +141,12 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
 
   const handleSave = () => {
     if (pageData?.model) {
-      savePageMutation.mutate(pageData.model);
+      // Clean auxiliary conversion metadata before saving
+      const cleanModel = { ...pageData.model };
+      delete (cleanModel as any)._convertedFromLegacy;
+      delete (cleanModel as any)._conversionWarnings;
+      
+      savePageMutation.mutate(cleanModel);
     }
   };
 
@@ -192,6 +211,33 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
           </Button>
         </div>
       </div>
+
+      {/* Legacy Conversion Warning */}
+      {isLegacyConverted && (
+        <Card className="bg-yellow-900/20 border-yellow-700/50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-yellow-300 font-medium mb-1">Página Legacy Convertida</h4>
+                <p className="text-yellow-200/80 text-sm mb-2">
+                  Esta página foi automaticamente convertida do formato antigo para o novo formato PageModelV2.
+                </p>
+                {conversionWarnings.length > 0 && (
+                  <ul className="list-disc list-inside text-sm text-yellow-200/70 space-y-1">
+                    {conversionWarnings.map((warning, idx) => (
+                      <li key={idx}>{warning}</li>
+                    ))}
+                  </ul>
+                )}
+                <p className="text-yellow-200/60 text-xs mt-2">
+                  ⚠️ Revise o conteúdo cuidadosamente antes de salvar.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Editor */}
       <Tabs defaultValue="content" className="w-full">

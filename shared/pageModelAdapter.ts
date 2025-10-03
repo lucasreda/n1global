@@ -74,9 +74,16 @@ export function isLegacyPageModel(model: any): model is LegacyPageModel {
 
 // Upgrade a legacy model to PageModelV2
 export function upgradeLegacyModel(legacy: LegacyPageModel): PageModelV2 {
+  console.warn('⚠️ LEGACY PAGE DETECTED - Converting to V2 format');
+  console.warn('⚠️ Some custom fields may be preserved in metadata only');
+  
   const sections: BlockSection[] = (legacy.sections || []).map((legacySection, sectionIndex) => {
     // Create a single row with one column containing elements from legacy content
     const elements: BlockElement[] = [];
+    
+    // Track unknown/unmapped fields for preservation
+    const unknownContentFields: Record<string, any> = {};
+    const unknownConfigFields: Record<string, any> = {};
     
     // Convert legacy content to elements
     if (legacySection.content) {
@@ -150,6 +157,38 @@ export function upgradeLegacyModel(legacy: LegacyPageModel): PageModelV2 {
           }
         });
       }
+      
+      // Preserve unknown content fields
+      const knownFields = ['title', 'subtitle', 'ctaLabel', 'benefits'];
+      Object.keys(content).forEach(key => {
+        if (!knownFields.includes(key)) {
+          unknownContentFields[key] = content[key];
+        }
+      });
+    }
+    
+    // Preserve unknown config fields
+    if (legacySection.config) {
+      const knownConfigFields = ['backgroundColor', 'textAlign'];
+      Object.keys(legacySection.config).forEach(key => {
+        if (!knownConfigFields.includes(key)) {
+          unknownConfigFields[key] = legacySection.config[key];
+        }
+      });
+    }
+    
+    // If there are unknown fields, add them as metadata in a custom element
+    if (Object.keys(unknownContentFields).length > 0 || Object.keys(unknownConfigFields).length > 0) {
+      console.warn(`⚠️ Section ${sectionIndex} has unmapped fields:`, { unknownContentFields, unknownConfigFields });
+      elements.push({
+        id: `metadata_${sectionIndex}_${Date.now()}`,
+        type: 'text',
+        props: { isLegacyMetadata: true },
+        styles: { display: 'none' },
+        content: { 
+          text: `[LEGACY METADATA] ${JSON.stringify({ content: unknownContentFields, config: unknownConfigFields })}` 
+        }
+      });
     }
     
     // If no elements were created, add a placeholder
@@ -193,11 +232,17 @@ export function upgradeLegacyModel(legacy: LegacyPageModel): PageModelV2 {
     };
   });
   
-  // Build V2 model
-  const v2: PageModelV2 = {
+  // Build V2 model with legacy flag
+  const v2: PageModelV2 & { _convertedFromLegacy?: boolean; _conversionWarnings?: string[] } = {
     version: 2,
     layout: (legacy.layout as any) || 'single_page',
     sections: sections,
+    _convertedFromLegacy: true,
+    _conversionWarnings: [
+      'This page was automatically converted from legacy format',
+      'Some fields may have been preserved as metadata',
+      'Please review the content before saving'
+    ],
     
     theme: {
       colors: {
