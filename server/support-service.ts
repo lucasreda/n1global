@@ -775,6 +775,18 @@ REGRAS B2B:
 
     console.log(`📧 Processing email - From: ${from}, Subject: ${subject}`);
 
+    // 🔍 CHECK FOR DUPLICATE EMAIL (Mailgun sometimes sends webhooks twice)
+    const existingEmail = await db
+      .select()
+      .from(supportEmails)
+      .where(eq(supportEmails.messageId, messageId))
+      .limit(1);
+
+    if (existingEmail.length > 0) {
+      console.log(`🔄 Email duplicate detected (message_id: ${messageId}), skipping reprocessing`);
+      return existingEmail[0];
+    }
+
     // ✅ SEND IMMEDIATE RECEIPT CONFIRMATION (BEFORE ANY PROCESSING)
     // This ensures ALL emails get a confirmation, regardless of category or processing
     await this.sendReceiptConfirmation({
