@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { db } from "./db";
 import { customerOrderService, type CustomerOrderMatch, type OrderActionResult } from "./customer-order-service";
+import { OrderMatcherService } from "./order-matcher-service";
 import {
   supportCategories,
   supportEmails,
@@ -1100,6 +1101,36 @@ REGRAS B2B:
       content: email.textContent || email.htmlContent || "",
       messageId: email.messageId,
     });
+
+    // 🔗 AUTOMATIC ORDER LINKING: Try to match ticket with customer's orders
+    try {
+      const orderMatch = await OrderMatcherService.findBestMatchingOrder({
+        customerEmail: email.from,
+        emailSubject: email.subject,
+        emailBody: email.textContent || email.htmlContent || "",
+        ticketCreatedAt: new Date(),
+      });
+
+      // If found a match with medium+ confidence, link it
+      if (orderMatch && (orderMatch.confidence === 'high' || orderMatch.confidence === 'medium')) {
+        await db
+          .update(supportTickets)
+          .set({
+            linkedOrderId: orderMatch.orderId,
+            orderMatchConfidence: orderMatch.confidence,
+            orderMatchMethod: orderMatch.method,
+            orderLinkedAt: new Date(),
+          })
+          .where(eq(supportTickets.id, ticket.id));
+
+        console.log(`🔗 Auto-linked order ${orderMatch.orderNumber} to ticket ${ticketNumber} (${orderMatch.confidence} confidence via ${orderMatch.method})`);
+      } else if (orderMatch) {
+        console.log(`⚠️ Found order match but confidence too low (${orderMatch.confidence}): ${orderMatch.orderNumber}`);
+      }
+    } catch (error) {
+      console.error('❌ Error auto-linking order to ticket:', error);
+      // Don't fail ticket creation if order linking fails
+    }
 
     return ticket;
   }
