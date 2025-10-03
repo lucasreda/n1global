@@ -69,3 +69,19 @@ Preferred communication style: Simple, everyday language.
 - **Facebook Ads API**: For account management, campaign synchronization, and dynamic marketing cost calculation.
 - **OpenAI GPT-4**: For AI-powered automatic responses, Sofia virtual agent, and creative intelligence analysis.
 - **Telnyx Voice API**: For voice capabilities of the Sofia virtual agent.
+
+## Recent Changes (October 3, 2025)
+
+### AI Page Generation Complete Fix ✅
+- **CRITICAL FIX**: Resolved all AI page generation issues including progress tracking and database persistence
+- **BUG 1 - Authentication**: Fixed `useAIProgressStream` hook using wrong localStorage key (`token` → `auth_token`)
+- **BUG 2 - Timing/SSE**: POST endpoint was blocking for ~11 minutes before returning sessionId, causing client to miss all SSE progress events
+- **BUG 3 - Database**: Background execution wasn't persisting generated pages to database (missing INSERT after completion)
+- **SOLUTION**: Complete refactoring of generation flow:
+  1. POST endpoint returns sessionId IMMEDIATELY
+  2. Generation executes in background with EventEmitter-based SSE progress
+  3. Upon completion, page is saved to `funnelPages` table with proper error handling
+  4. Completion event includes generated pageId
+- **UI FIX**: Modal now controlled independently via `showProgressModal` state to properly display 3-second completion before auto-close
+- **ERROR HANDLING**: Separate error messages for generation failures vs database save failures
+- **COMPLETE FLOW**: Form submit → immediate sessionId response → SSE connection → real-time progress updates → database save → completion event with pageId → 3s completion display → modal auto-close

@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema, funnels } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, insertMarketplaceProductSchema, insertProductOperationLinkSchema, insertAnnouncementSchema, updateOperationTypeSchema, funnels, funnelPages } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { userOperationAccess } from "@shared/schema";
@@ -7443,20 +7443,51 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
       
       // Execute generation in background (don't await)
       generatePageWithProgress(requestData, sessionId, progressEmitter)
-        .then(result => {
-          // Send completion event
-          progressEmitter.emit('progress', {
-            type: 'completed',
-            sessionId,
-            step: 'completed',
-            stepIndex: 5,
-            totalSteps: 5,
-            progress: 100,
-            title: 'Página Criada',
-            description: 'Geração concluída com sucesso',
-            timestamp: new Date().toISOString(),
-            result
-          });
+        .then(async result => {
+          // Save the generated page to database
+          try {
+            const pageData = {
+              funnelId: requestData.funnelId,
+              name: requestData.briefData.productInfo.name || 'Página Gerada com IA',
+              pageType: requestData.briefData.pageInfo?.type || 'landing' as const,
+              path: `/${(requestData.briefData.productInfo.name || 'page').toLowerCase().replace(/\s+/g, '-')}`,
+              model: result.finalPage || {},
+              version: 1,
+              isActive: true,
+              aiCost: result.totalCost || 0
+            };
+            
+            const [savedPage] = await db.insert(funnelPages).values(pageData).returning();
+            console.log('✅ Page saved to database:', savedPage.id);
+            
+            // Send completion event with saved page ID
+            progressEmitter.emit('progress', {
+              type: 'completed',
+              sessionId,
+              step: 'completed',
+              stepIndex: 5,
+              totalSteps: 5,
+              progress: 100,
+              title: 'Página Criada',
+              description: 'Geração concluída com sucesso',
+              timestamp: new Date().toISOString(),
+              result: {
+                ...result,
+                pageId: savedPage.id
+              }
+            });
+          } catch (saveError) {
+            console.error('❌ Failed to save page to database:', saveError);
+            progressEmitter.emit('progress', {
+              type: 'error',
+              sessionId,
+              step: 'error',
+              progress: 0,
+              title: 'Erro ao Salvar',
+              description: 'Página gerada mas não foi possível salvar no banco de dados',
+              timestamp: new Date().toISOString()
+            });
+          }
         })
         .catch(error => {
           console.error('❌ AI Page Generation failed:', error);
