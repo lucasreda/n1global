@@ -48,6 +48,7 @@ export default function AdminOrders() {
   
   // Create order modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState("");
   const [newOrder, setNewOrder] = useState({
     storeId: "",
     operationId: "",
@@ -143,6 +144,33 @@ export default function AdminOrders() {
   const { data: operations } = useQuery<Array<{ id: string; name: string; storeId: string; storeName: string }>>({
     queryKey: ['/api/admin/operations', selectedStore],
     enabled: selectedStore !== "all"
+  });
+
+  // Clients query for order creation
+  const { data: clients } = useQuery<Array<{ id: string; name: string; email: string; role: string }>>({
+    queryKey: ['/api/admin/clients'],
+    enabled: isCreateModalOpen
+  });
+
+  // Client operations query for order creation
+  const { data: clientOperations } = useQuery<Array<{ id: string; name: string; storeId: string; storeName: string }>>({
+    queryKey: ['/api/admin/clients', selectedClientId, 'operations'],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/clients/${selectedClientId}/operations`, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch client operations');
+      }
+      
+      return response.json();
+    },
+    enabled: !!selectedClientId && isCreateModalOpen
   });
 
   // Create order mutation
@@ -500,20 +528,23 @@ export default function AdminOrders() {
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
-              {/* Store */}
+              {/* Client */}
               <div className="space-y-2">
-                <Label className="text-slate-300">Store *</Label>
+                <Label className="text-slate-300">Cliente *</Label>
                 <Select
-                  value={newOrder.storeId}
-                  onValueChange={(value) => setNewOrder({ ...newOrder, storeId: value, operationId: "" })}
+                  value={selectedClientId}
+                  onValueChange={(value) => {
+                    setSelectedClientId(value);
+                    setNewOrder({ ...newOrder, operationId: "", storeId: "" });
+                  }}
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
-                    <SelectValue placeholder="Selecione a store" />
+                    <SelectValue placeholder="Selecione o cliente" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {stores?.map((store) => (
-                      <SelectItem key={store.id} value={store.id} className="text-slate-200">
-                        {store.name}
+                    {clients?.map((client) => (
+                      <SelectItem key={client.id} value={client.id} className="text-slate-200">
+                        {client.name} ({client.email})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -522,19 +553,26 @@ export default function AdminOrders() {
 
               {/* Operation */}
               <div className="space-y-2">
-                <Label className="text-slate-300">Operação</Label>
+                <Label className="text-slate-300">Operação *</Label>
                 <Select
                   value={newOrder.operationId}
-                  onValueChange={(value) => setNewOrder({ ...newOrder, operationId: value })}
-                  disabled={!newOrder.storeId}
+                  onValueChange={(value) => {
+                    const selectedOp = clientOperations?.find(op => op.id === value);
+                    setNewOrder({ 
+                      ...newOrder, 
+                      operationId: value,
+                      storeId: selectedOp?.storeId || ""
+                    });
+                  }}
+                  disabled={!selectedClientId}
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
                     <SelectValue placeholder="Selecione a operação" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    {operations?.filter(op => op.storeId === newOrder.storeId).map((op) => (
+                    {clientOperations?.map((op) => (
                       <SelectItem key={op.id} value={op.id} className="text-slate-200">
-                        {op.name}
+                        {op.name} ({op.storeName})
                       </SelectItem>
                     ))}
                   </SelectContent>
