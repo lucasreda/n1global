@@ -1534,6 +1534,12 @@ export const supportTickets = pgTable("support_tickets", {
   refundOffered: boolean("refund_offered").notNull().default(false), // If refund form was sent
   refundOfferedAt: timestamp("refund_offered_at"), // When refund form was offered
   
+  // Order linking
+  linkedOrderId: text("linked_order_id").references(() => orders.id), // Linked order ID
+  orderMatchConfidence: text("order_match_confidence"), // 'high', 'medium', 'low', 'manual'
+  orderMatchMethod: text("order_match_method"), // 'explicit_mention', 'temporal', 'score', 'manual'
+  orderLinkedAt: timestamp("order_linked_at"), // When order was linked
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
