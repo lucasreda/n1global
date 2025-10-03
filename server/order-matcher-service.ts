@@ -160,6 +160,14 @@ export class OrderMatcherService {
   /**
    * Encontra o melhor pedido correspondente para um ticket
    */
+  /**
+   * Extrai apenas o email de strings no formato "Name <email@example.com>" ou "email@example.com"
+   */
+  private static extractEmailAddress(emailString: string): string {
+    const emailMatch = emailString.match(/<([^>]+)>/);
+    return emailMatch ? emailMatch[1] : emailString;
+  }
+
   static async findBestMatchingOrder(
     criteria: OrderMatchCriteria
   ): Promise<OrderMatch | null> {
@@ -168,11 +176,14 @@ export class OrderMatcherService {
       const fullText = `${criteria.emailSubject} ${criteria.emailBody}`;
       const mentionedIds = this.extractOrderIdsFromText(fullText);
 
-      // 2. Buscar pedidos do cliente
+      // 2. Extrair apenas o endereço de email (remove nome se houver)
+      const cleanEmail = this.extractEmailAddress(criteria.customerEmail);
+
+      // 3. Buscar pedidos do cliente
       const customerOrders = await db
         .select()
         .from(orders)
-        .where(eq(orders.customerEmail, criteria.customerEmail))
+        .where(eq(orders.customerEmail, cleanEmail))
         .orderBy(desc(orders.createdAt))
         .limit(50); // Limita aos últimos 50 pedidos
 
@@ -225,11 +236,14 @@ export class OrderMatcherService {
       const fullText = `${criteria.emailSubject} ${criteria.emailBody}`;
       const mentionedIds = this.extractOrderIdsFromText(fullText);
 
-      // 2. Buscar pedidos do cliente
+      // 2. Extrair apenas o endereço de email (remove nome se houver)
+      const cleanEmail = this.extractEmailAddress(criteria.customerEmail);
+
+      // 3. Buscar pedidos do cliente
       const customerOrders = await db
         .select()
         .from(orders)
-        .where(eq(orders.customerEmail, criteria.customerEmail))
+        .where(eq(orders.customerEmail, cleanEmail))
         .orderBy(desc(orders.createdAt))
         .limit(20); // Limita aos últimos 20 para UI
 
