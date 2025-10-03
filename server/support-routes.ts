@@ -98,6 +98,57 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
+   * Test endpoint to simulate Mailgun webhook with full email processing
+   */
+  app.post("/api/support/test-webhook-full", async (req: Request, res: Response) => {
+    try {
+      console.log("🧪 SIMULANDO WEBHOOK MAILGUN COMPLETO");
+      
+      const { from, subject } = req.body;
+      
+      if (!from || !subject) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "from e subject são obrigatórios" 
+        });
+      }
+      
+      // Simulate Mailgun webhook data
+      const webhookData = {
+        from: from,
+        to: "suporte@n1global.app",
+        subject: subject,
+        textContent: "Problema técnico com meu pedido",
+        htmlContent: "",
+        attachments: [],
+        messageId: `test-${Date.now()}`
+      };
+      
+      console.log("📧 Processando email simulado:", webhookData);
+      
+      // Process through the full pipeline
+      const processedEmail = await supportService.processIncomingEmail(webhookData);
+      
+      console.log("✅ EMAIL PROCESSADO:", processedEmail.id);
+      
+      res.json({ 
+        success: true, 
+        emailId: processedEmail.id,
+        status: processedEmail.status,
+        message: "Email processado com sucesso! Verifique se recebeu a confirmação."
+      });
+
+    } catch (error) {
+      console.error("❌ ERRO NO TESTE:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
+  });
+
+  /**
    * Test endpoint to verify AI categorization with admin directives
    */
   app.post("/api/support/test-categorization", async (req: Request, res: Response) => {
