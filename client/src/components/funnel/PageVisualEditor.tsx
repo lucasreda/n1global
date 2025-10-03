@@ -24,24 +24,8 @@ import {
 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useLocation } from "wouter";
-
-interface PageModel {
-  seo?: {
-    title: string;
-    description: string;
-  };
-  style?: {
-    theme: string;
-    primaryColor: string;
-  };
-  layout?: string;
-  sections?: Array<{
-    id: string;
-    type: string;
-    config?: Record<string, any>;
-    content?: Record<string, any>;
-  }>;
-}
+import { PageModelV2 } from "@shared/schema";
+import { ensurePageModelV2, isPageModelV2 } from "@shared/pageModelAdapter";
 
 interface FunnelPage {
   id: string;
@@ -49,7 +33,7 @@ interface FunnelPage {
   name: string;
   pageType: string;
   path: string;
-  model?: PageModel;
+  model?: PageModelV2;
   status: 'draft' | 'published' | 'archived';
   templateId?: string;
   version: number;
@@ -89,13 +73,26 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
   // Update local state when data loads
   useEffect(() => {
     if (pageResponse?.success && pageResponse?.page) {
-      setPageData(pageResponse.page);
+      const loadedPage = pageResponse.page;
+      
+      // Ensure the model is always PageModelV2 (auto-upgrade legacy models)
+      if (loadedPage.model) {
+        const v2Model = ensurePageModelV2(loadedPage.model);
+        
+        if (!isPageModelV2(loadedPage.model)) {
+          console.log('📝 Upgraded legacy page model to PageModelV2 for editing');
+        }
+        
+        setPageData({ ...loadedPage, model: v2Model });
+      } else {
+        setPageData(loadedPage);
+      }
     }
   }, [pageResponse]);
 
   // Save page mutation
   const savePageMutation = useMutation({
-    mutationFn: async (updatedModel: PageModel) => {
+    mutationFn: async (updatedModel: PageModelV2) => {
       const response = await authenticatedApiRequest('PUT', `/api/funnels/${funnelId}/pages/${pageId}?operationId=${selectedOperation}`, {
         model: updatedModel
       });
@@ -123,7 +120,7 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
     },
   });
 
-  const handleModelUpdate = (newModel: PageModel) => {
+  const handleModelUpdate = (newModel: PageModelV2) => {
     setPageData(prev => prev ? { ...prev, model: newModel } : null);
     setIsDirty(true);
   };
@@ -160,7 +157,8 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
     );
   }
 
-  const model = pageData.model || {};
+  // Ensure we always have a valid PageModelV2
+  const model: PageModelV2 = pageData.model || ensurePageModelV2(null);
 
   return (
     <div className="space-y-6">
@@ -231,8 +229,20 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
         {/* Style Tab */}
         <TabsContent value="style" className="mt-6">
           <StyleEditor 
-            style={model.style || { theme: 'modern', primaryColor: '#3b82f6' }}
-            onStyleChange={(style) => handleModelUpdate({ ...model, style })}
+            style={{ 
+              theme: 'modern', 
+              primaryColor: model.theme.colors.primary 
+            }}
+            onStyleChange={(style) => handleModelUpdate({ 
+              ...model, 
+              theme: {
+                ...model.theme,
+                colors: {
+                  ...model.theme.colors,
+                  primary: style.primaryColor
+                }
+              }
+            })}
           />
         </TabsContent>
       </Tabs>
