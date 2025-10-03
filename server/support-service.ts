@@ -2388,20 +2388,36 @@ Equipe de Atendimento`;
         throw new Error("Template HTML não encontrado");
       }
 
+      // Format message content for email
+      const formattedContent = this.formatAIResponseForEmail(message);
+
+      // Detect base URL for images
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://n1global.app' 
+        : 'https://ed22092a-b3ec-459c-966a-df5b32c8942a-00-261ipz4lh9ym0.spock.replit.dev';
+      
       // Apply design configurations to HTML template
+      const logoUrl = designConfig.logo.startsWith('/') ? `${baseUrl}${designConfig.logo}` : designConfig.logo;
+      const cardOpacityHex = Math.round(designConfig.card.backgroundOpacity * 255).toString(16).padStart(2, '0');
+      const cardBackgroundWithOpacity = `${designConfig.card.backgroundColor}${cardOpacityHex}`;
+      
+      // Check if has custom signature
+      const hasCustomSignature = !!(designConfig.signature?.name || designConfig.signature?.position || designConfig.signature?.phone || designConfig.signature?.email || designConfig.signature?.website);
+
       const processedHtml = htmlTemplate
-        .replace(/\{\{LOGO_URL\}\}/g, designConfig.logo || '')
-        .replace(/\{\{PRIMARY_COLOR\}\}/g, designConfig.primaryColor || '#0091ff')
-        .replace(/\{\{BACKGROUND_COLOR\}\}/g, designConfig.backgroundColor || '#ffffff')
-        .replace(/\{\{TEXT_COLOR\}\}/g, designConfig.textColor || '#000000')
-        .replace(/\{\{SECONDARY_TEXT_COLOR\}\}/g, designConfig.secondaryTextColor || '#666666')
-        .replace(/\{\{CUSTOMER_NAME\}\}/g, ticket.customerName || 'Cliente')
-        .replace(/\{\{AI_RESPONSE\}\}/g, message.replace(/\n/g, '<br>'))
-        .replace(/\{\{SIGNATURE_NAME\}\}/g, designConfig.signature?.name || senderName)
-        .replace(/\{\{SIGNATURE_POSITION\}\}/g, designConfig.signature?.position || 'Atendimento ao Cliente')
-        .replace(/\{\{SIGNATURE_PHONE\}\}/g, designConfig.signature?.phone || '')
-        .replace(/\{\{SIGNATURE_EMAIL\}\}/g, designConfig.signature?.email || '')
-        .replace(/\{\{SIGNATURE_WEBSITE\}\}/g, designConfig.signature?.website || '');
+        .replace(/{{AI_RESPONSE_CONTENT}}/g, formattedContent)
+        .replace(/{{LOGO_URL}}/g, logoUrl)
+        .replace(/{{LOGO_ALIGNMENT}}/g, designConfig.logoAlignment)
+        .replace(/{{PRIMARY_COLOR}}/g, designConfig.primaryColor)
+        .replace(/{{CARD_BACKGROUND_COLOR}}/g, cardBackgroundWithOpacity)
+        .replace(/{{TEXT_COLOR}}/g, designConfig.textColor)
+        .replace(/{{SIGNATURE_NAME}}/g, designConfig.signature?.name || '')
+        .replace(/{{SIGNATURE_POSITION}}/g, designConfig.signature?.position || '')
+        .replace(/{{SIGNATURE_PHONE}}/g, designConfig.signature?.phone || '')
+        .replace(/{{SIGNATURE_EMAIL}}/g, designConfig.signature?.email || '')
+        .replace(/{{SIGNATURE_WEBSITE}}/g, designConfig.signature?.website || '')
+        .replace(/{{HAS_CUSTOM_SIGNATURE}}/g, hasCustomSignature ? 'block' : 'none')
+        .replace(/{{HAS_SOFIA_SIGNATURE}}/g, !hasCustomSignature ? 'block' : 'none');
 
       const mailgunResponse = await mg.messages.create(
         process.env.MAILGUN_DOMAIN || "",
