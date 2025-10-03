@@ -161,6 +161,14 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // Allow public routes without authentication check
+  const publicRoutes = ['/refund-form/', '/login'];
+  const isPublicRoute = publicRoutes.some(route => location.startsWith(route));
+  
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
+
   // Show loading while checking auth or onboarding status
   if (!user || isLoading) {
     return (
@@ -402,8 +410,8 @@ function AppContent() {
   // Authenticated routes
   return (
     <>
-      {/* Fullscreen layout for onboarding, inside pages, and editor */}
-      {(location === '/onboarding' || location.startsWith('/inside') || location.startsWith('/editor/')) ? (
+      {/* Fullscreen layout for onboarding, inside pages, editor, and public refund form */}
+      {(location === '/onboarding' || location.startsWith('/inside') || location.startsWith('/editor/') || location.startsWith('/refund-form/')) ? (
         <div className="min-h-screen">
           <Router />
         </div>
