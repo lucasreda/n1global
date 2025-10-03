@@ -1,12 +1,22 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import multer from "multer";
 import { supportService } from "./support-service";
 import { db } from "./db";
 import { supportCategories, supportResponses, insertSupportCategorySchema, insertSupportResponseSchema, publicRefundFormSchema, reimbursementRequests, supportTickets, supportConversations, supportEmails, orders } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { uploadFileToStorage, validateFile } from "./utils/file-upload";
 
 // Use the SAME JWT_SECRET as the main routes
 const JWT_SECRET = process.env.JWT_SECRET || "cod-dashboard-secret-key-development-2025";
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
 
 interface AuthRequest extends Request {
   user?: any;
@@ -409,53 +419,133 @@ export function registerSupportRoutes(app: Express) {
   });
 
   /**
-   * PUBLIC: Submit refund request form
+   * PUBLIC: Submit refund request form with file attachments
    * /api/support/refund-request/:ticketNumber
    */
-  app.post("/api/support/refund-request/:ticketNumber", async (req: Request, res: Response) => {
-    try {
-      const { ticketNumber } = req.params;
-      
-      console.log(`📝 Received refund form submission for ticket: ${ticketNumber}`);
-      
-      // Find ticket by ticket number
-      const [ticket] = await db
-        .select()
-        .from(supportTickets)
-        .where(eq(supportTickets.ticketNumber, ticketNumber))
-        .limit(1);
-      
-      if (!ticket) {
-        return res.status(404).json({ 
-          success: false, 
-          message: "Ticket não encontrado" 
-        });
-      }
-      
-      // Validate form data
-      const formData = publicRefundFormSchema.parse(req.body);
-      
-      // Create reimbursement request
-      const [reimbursementRequest] = await db
-        .insert(reimbursementRequests)
-        .values({
-          ticketId: ticket.id,
-          customerEmail: formData.customerEmail,
-          customerName: formData.customerName,
-          customerPhone: formData.customerPhone,
-          orderNumber: formData.orderNumber,
-          productName: formData.productName,
-          refundAmount: formData.refundAmount,
-          currency: formData.currency,
-          bankAccountNumber: formData.bankAccountNumber,
-          bankAccountHolder: formData.bankAccountHolder,
-          bankName: formData.bankName,
-          pixKey: formData.pixKey,
-          refundReason: formData.refundReason,
-          additionalDetails: formData.additionalDetails,
-          status: "pending",
-        })
-        .returning();
+  app.post(
+    "/api/support/refund-request/:ticketNumber",
+    upload.fields([
+      { name: "orderProof", maxCount: 1 },
+      { name: "productPhotos", maxCount: 1 },
+      { name: "returnProof", maxCount: 1 },
+      { name: "idDocument", maxCount: 1 },
+    ]),
+    async (req: Request, res: Response) => {
+      try {
+        const { ticketNumber } = req.params;
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+        console.log(`📝 Received refund form submission for ticket: ${ticketNumber}`);
+        console.log(`📎 Files received:`, Object.keys(files || {}));
+
+        // Find ticket by ticket number
+        const [ticket] = await db
+          .select()
+          .from(supportTickets)
+          .where(eq(supportTickets.ticketNumber, ticketNumber))
+          .limit(1);
+
+        if (!ticket) {
+          return res.status(404).json({
+            success: false,
+            message: "Ticket não encontrado",
+          });
+        }
+
+        // Parse and validate form data from body
+        const formData = publicRefundFormSchema.parse(req.body);
+
+        // Validate required files
+        if (!files?.orderProof?.[0]) {
+          return res.status(400).json({
+            success: false,
+            message: "Comprovativo de encomenda é obrigatório",
+          });
+        }
+        if (!files?.productPhotos?.[0]) {
+          return res.status(400).json({
+            success: false,
+            message: "Fotos dos produtos são obrigatórias",
+          });
+        }
+        if (!files?.returnProof?.[0]) {
+          return res.status(400).json({
+            success: false,
+            message: "Comprovante de devolução é obrigatório",
+          });
+        }
+        if (!files?.idDocument?.[0]) {
+          return res.status(400).json({
+            success: false,
+            message: "Documento de identificação é obrigatório",
+          });
+        }
+
+        // Validate file types and sizes
+        const filesToValidate = [
+          files.orderProof[0],
+          files.productPhotos[0],
+          files.returnProof[0],
+          files.idDocument[0],
+        ];
+
+        for (const file of filesToValidate) {
+          const validation = validateFile(file);
+          if (!validation.valid) {
+            return res.status(400).json({
+              success: false,
+              message: validation.error,
+            });
+          }
+        }
+
+        // Upload files to object storage
+        console.log(`📤 Uploading files to object storage...`);
+
+        const [orderProofUpload, productPhotosUpload, returnProofUpload, idDocumentUpload] =
+          await Promise.all([
+            uploadFileToStorage(files.orderProof[0], "refund-order-proofs"),
+            uploadFileToStorage(files.productPhotos[0], "refund-product-photos"),
+            uploadFileToStorage(files.returnProof[0], "refund-return-proofs"),
+            uploadFileToStorage(files.idDocument[0], "refund-id-documents"),
+          ]);
+
+        console.log(`✅ All files uploaded successfully`);
+
+        // Create reimbursement request with file URLs
+        const [reimbursementRequest] = await db
+          .insert(reimbursementRequests)
+          .values({
+            ticketId: ticket.id,
+            customerEmail: formData.customerEmail,
+            customerName: formData.customerName,
+            customerPhone: formData.customerPhone,
+            orderNumber: formData.orderNumber,
+            productName: formData.productName,
+            purchaseDate: new Date(formData.purchaseDate),
+            billingAddressCountry: formData.billingAddressCountry,
+            billingAddressCity: formData.billingAddressCity,
+            billingAddressStreet: formData.billingAddressStreet,
+            billingAddressNumber: formData.billingAddressNumber,
+            billingAddressComplement: formData.billingAddressComplement,
+            billingAddressState: formData.billingAddressState,
+            billingAddressZip: formData.billingAddressZip,
+            refundAmount: formData.refundAmount,
+            currency: formData.currency,
+            bankIban: formData.bankIban,
+            controlNumber: formData.controlNumber,
+            refundReason: formData.refundReason,
+            additionalDetails: formData.additionalDetails,
+            orderProofUrl: orderProofUpload.url,
+            productPhotosUrl: productPhotosUpload.url,
+            returnProofUrl: returnProofUpload.url,
+            idDocumentUrl: idDocumentUpload.url,
+            declarationFormCorrect: formData.declarationFormCorrect,
+            declarationAttachmentsProvided: formData.declarationAttachmentsProvided,
+            declarationIbanCorrect: formData.declarationIbanCorrect,
+            status: "pending",
+          })
+          .returning();
       
       // Update ticket timestamp (status is tracked in reimbursementRequests table)
       await db
