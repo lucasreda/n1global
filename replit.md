@@ -72,6 +72,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 3, 2025)
 
+### Visual Editor PageModelV2 Support ✅
+- **CRITICAL FIX**: Resolved visual editor incompatibility with AI-generated pages
+- **ROOT CAUSE**: PageVisualEditor used local `PageModel` interface (flat structure with `sections.content`) incompatible with PageModelV2 (hierarchical `sections→rows→columns→elements`)
+- **SOLUTION**: Complete refactoring for universal compatibility:
+  1. **pageModelAdapter.ts**: Created adapter with type guards (`isPageModelV2`, `isLegacyPageModel`) and conversion functions (`upgradeLegacyModel`, `ensurePageModelV2`, `downgradeToLegacy`)
+  2. **PageVisualEditor.tsx**: Updated to import `PageModelV2` from schema, apply adapter on load/save, ensure all pages use V2 format
+  3. **SectionEditor refactor**: Displays hierarchical structure (sections→rows→columns→elements), supports editing heading/text/button/image elements, preserves full AI-generated content
+  4. **Auto-upgrade**: Legacy manual pages automatically upgraded to V2 on first edit (non-destructive)
+- **COMPATIBILITY**: Works for ALL pages (current manual + all future AI-generated), no data loss on legacy page upgrades
+- **EDITING**: Supports basic element editing (text, headings, buttons, images), extensible for advanced types
+- **STATUS**: Visual editor now correctly loads and edits AI-generated funnel pages
+
 ### AI Page Generation Complete Fix ✅
 - **CRITICAL FIX**: Resolved all AI page generation issues including progress tracking and database persistence
 - **BUG 1 - Authentication**: Fixed `useAIProgressStream` hook using wrong localStorage key (`token` → `auth_token`)

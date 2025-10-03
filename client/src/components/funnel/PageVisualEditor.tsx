@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useLocation } from "wouter";
-import { PageModelV2 } from "@shared/schema";
+import { PageModelV2, BlockSection, BlockElement } from "@shared/schema";
 import { ensurePageModelV2, isPageModelV2 } from "@shared/pageModelAdapter";
 
 interface FunnelPage {
@@ -252,66 +252,32 @@ export function PageVisualEditor({ funnelId, pageId }: PageVisualEditorProps) {
 
 // Section Editor Component
 interface SectionEditorProps {
-  sections: Array<{
-    id: string;
-    type: string;
-    config?: Record<string, any>;
-    content?: Record<string, any>;
-  }>;
-  onSectionsChange: (sections: any[]) => void;
+  sections: BlockSection[];
+  onSectionsChange: (sections: BlockSection[]) => void;
 }
 
 function SectionEditor({ sections, onSectionsChange }: SectionEditorProps) {
-  const addSection = (type: 'hero' | 'text' | 'cta' | 'benefits' | 'testimonials' = 'text') => {
-    const baseSection = {
-      id: `section_${Date.now()}`,
-      type,
-      config: { textAlign: 'center', backgroundColor: '#ffffff' }
-    };
-
-    let content;
-    switch (type) {
-      case 'hero':
-        content = { 
-          title: 'Título Principal', 
-          subtitle: 'Subtítulo impactante que converte visitantes', 
-          ctaLabel: 'Começar Agora' 
-        };
-        break;
-      case 'cta':
-        content = { 
-          title: 'Pronto para começar?', 
-          subtitle: 'Não perca esta oportunidade', 
-          ctaLabel: 'Quero Aproveitar' 
-        };
-        break;
-      case 'benefits':
-        content = { 
-          title: 'Benefícios', 
-          subtitle: 'Veja como podemos te ajudar',
-          benefits: [
-            { title: 'Benefício 1', description: 'Descrição do primeiro benefício' },
-            { title: 'Benefício 2', description: 'Descrição do segundo benefício' }
-          ]
-        };
-        break;
-      case 'testimonials':
-        content = { 
-          title: 'O que nossos clientes dizem', 
-          subtitle: 'Depoimentos reais de quem já teve resultado' 
-        };
-        break;
-      default:
-        content = { title: 'Nova Seção', subtitle: 'Edite o conteúdo aqui' };
+  // Helper: Extract editable text from an element
+  const getElementText = (element: BlockElement): string => {
+    if (!element.content) return '';
+    if (typeof element.content === 'string') return element.content;
+    if (typeof element.content === 'object' && 'text' in element.content) {
+      return element.content.text || '';
     }
-
-    const newSection = { ...baseSection, content };
-    onSectionsChange([...sections, newSection]);
+    return '';
   };
 
-  const updateSection = (index: number, updatedSection: any) => {
+  // Helper: Update element text
+  const updateElementText = (sectionIndex: number, rowIndex: number, colIndex: number, elemIndex: number, newText: string) => {
     const newSections = [...sections];
-    newSections[index] = updatedSection;
+    const element = newSections[sectionIndex].rows[rowIndex].columns[colIndex].elements[elemIndex];
+    
+    if (typeof element.content === 'object') {
+      element.content = { ...element.content, text: newText };
+    } else {
+      element.content = { text: newText };
+    }
+    
     onSectionsChange(newSections);
   };
 
@@ -323,107 +289,128 @@ function SectionEditor({ sections, onSectionsChange }: SectionEditorProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-lg font-medium text-white">Seções da Página</h4>
-        <div className="flex gap-2">
-          <Select onValueChange={(value) => addSection(value as any)} defaultValue="">
-            <SelectTrigger className="w-40 bg-gray-800 border-gray-600" data-testid="select-add-section-type">
-              <SelectValue placeholder="Tipo de seção" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="hero">Hero</SelectItem>
-              <SelectItem value="text">Texto</SelectItem>
-              <SelectItem value="cta">Call to Action</SelectItem>
-              <SelectItem value="benefits">Benefícios</SelectItem>
-              <SelectItem value="testimonials">Depoimentos</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => addSection()} size="sm" data-testid="button-add-section">
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar
-          </Button>
-        </div>
+        <h4 className="text-lg font-medium text-white">Conteúdo da Página</h4>
+        <Badge variant="secondary">{sections.length} seção{sections.length !== 1 ? 'ões' : ''}</Badge>
       </div>
 
       {sections.length === 0 ? (
         <Card className="bg-gray-900/50 border-gray-700">
           <CardContent className="p-8 text-center">
             <p className="text-gray-400 mb-4">Nenhuma seção encontrada</p>
-            <Button onClick={() => addSection('hero')} data-testid="button-add-first-section">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Seção Hero
-            </Button>
+            <p className="text-gray-500 text-sm">Esta página foi gerada com IA mas não tem conteúdo visível.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {sections.map((section, index) => (
+          {sections.map((section, sectionIndex) => (
             <Card key={section.id} className="bg-gray-900/50 border-gray-700">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Move className="w-4 h-4 text-gray-400" />
                     <CardTitle className="text-white text-sm">
-                      Seção {index + 1} - {section.type}
+                      {section.name || `Seção ${sectionIndex + 1}`} ({section.type})
                     </CardTitle>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => removeSection(index)}
-                    data-testid={`button-remove-section-${index}`}
+                    onClick={() => removeSection(sectionIndex)}
+                    data-testid={`button-remove-section-${sectionIndex}`}
                   >
                     <Trash2 className="w-4 h-4 text-red-400" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`section-title-${index}`}>Título</Label>
-                    <Input
-                      id={`section-title-${index}`}
-                      value={section.content?.title || ''}
-                      onChange={(e) => updateSection(index, {
-                        ...section,
-                        content: { ...section.content, title: e.target.value }
-                      })}
-                      className="bg-gray-800 border-gray-600"
-                      data-testid={`input-section-title-${index}`}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`section-type-${index}`}>Tipo</Label>
-                    <Select 
-                      value={section.type} 
-                      onValueChange={(value) => updateSection(index, { ...section, type: value })}
-                    >
-                      <SelectTrigger className="bg-gray-800 border-gray-600" data-testid={`select-section-type-${index}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hero">Hero</SelectItem>
-                        <SelectItem value="text">Texto</SelectItem>
-                        <SelectItem value="cta">Call to Action</SelectItem>
-                        <SelectItem value="benefits">Benefícios</SelectItem>
-                        <SelectItem value="testimonials">Depoimentos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor={`section-subtitle-${index}`}>Subtítulo</Label>
-                  <Textarea
-                    id={`section-subtitle-${index}`}
-                    value={section.content?.subtitle || ''}
-                    onChange={(e) => updateSection(index, {
-                      ...section,
-                      content: { ...section.content, subtitle: e.target.value }
-                    })}
-                    className="bg-gray-800 border-gray-600"
-                    rows={3}
-                    data-testid={`textarea-section-subtitle-${index}`}
-                  />
-                </div>
+              <CardContent className="space-y-3">
+                {/* Show elements from all rows/columns */}
+                {section.rows.map((row, rowIndex) => (
+                  row.columns.map((column, colIndex) => (
+                    column.elements.map((element, elemIndex) => (
+                      <div key={element.id} className="border-l-2 border-blue-500 pl-3 py-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="text-xs">
+                            {element.type}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            #{elemIndex + 1}
+                          </span>
+                        </div>
+                        {(element.type === 'heading' || element.type === 'text') && (
+                          <Textarea
+                            value={getElementText(element)}
+                            onChange={(e) => updateElementText(sectionIndex, rowIndex, colIndex, elemIndex, e.target.value)}
+                            className="bg-gray-800 border-gray-600 text-sm"
+                            rows={element.type === 'heading' ? 1 : 3}
+                            placeholder={`Editar ${element.type === 'heading' ? 'título' : 'texto'}...`}
+                            data-testid={`textarea-element-${sectionIndex}-${rowIndex}-${colIndex}-${elemIndex}`}
+                          />
+                        )}
+                        {element.type === 'button' && (
+                          <div className="space-y-2">
+                            <Input
+                              value={(element.content as any)?.label || ''}
+                              onChange={(e) => {
+                                const newSections = [...sections];
+                                const elem = newSections[sectionIndex].rows[rowIndex].columns[colIndex].elements[elemIndex];
+                                elem.content = { ...(elem.content as any), label: e.target.value };
+                                onSectionsChange(newSections);
+                              }}
+                              className="bg-gray-800 border-gray-600 text-sm"
+                              placeholder="Texto do botão"
+                              data-testid={`input-button-label-${elemIndex}`}
+                            />
+                            <Input
+                              value={(element.content as any)?.href || ''}
+                              onChange={(e) => {
+                                const newSections = [...sections];
+                                const elem = newSections[sectionIndex].rows[rowIndex].columns[colIndex].elements[elemIndex];
+                                elem.content = { ...(elem.content as any), href: e.target.value };
+                                onSectionsChange(newSections);
+                              }}
+                              className="bg-gray-800 border-gray-600 text-sm"
+                              placeholder="URL do botão"
+                              data-testid={`input-button-href-${elemIndex}`}
+                            />
+                          </div>
+                        )}
+                        {element.type === 'image' && (
+                          <div className="space-y-2">
+                            <Input
+                              value={(element.content as any)?.src || ''}
+                              onChange={(e) => {
+                                const newSections = [...sections];
+                                const elem = newSections[sectionIndex].rows[rowIndex].columns[colIndex].elements[elemIndex];
+                                elem.content = { ...(elem.content as any), src: e.target.value };
+                                onSectionsChange(newSections);
+                              }}
+                              className="bg-gray-800 border-gray-600 text-sm"
+                              placeholder="URL da imagem"
+                              data-testid={`input-image-src-${elemIndex}`}
+                            />
+                            <Input
+                              value={(element.content as any)?.alt || ''}
+                              onChange={(e) => {
+                                const newSections = [...sections];
+                                const elem = newSections[sectionIndex].rows[rowIndex].columns[colIndex].elements[elemIndex];
+                                elem.content = { ...(elem.content as any), alt: e.target.value };
+                                onSectionsChange(newSections);
+                              }}
+                              className="bg-gray-800 border-gray-600 text-sm"
+                              placeholder="Texto alternativo"
+                              data-testid={`input-image-alt-${elemIndex}`}
+                            />
+                          </div>
+                        )}
+                        {!['heading', 'text', 'button', 'image'].includes(element.type) && (
+                          <p className="text-xs text-gray-500 italic">
+                            Tipo "{element.type}" - edição avançada em breve
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  ))
+                ))}
               </CardContent>
             </Card>
           ))}
