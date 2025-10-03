@@ -756,6 +756,15 @@ REGRAS B2B:
 
     console.log(`📧 Processing email - From: ${from}, Subject: ${subject}`);
 
+    // ✅ SEND IMMEDIATE RECEIPT CONFIRMATION (BEFORE ANY PROCESSING)
+    // This ensures ALL emails get a confirmation, regardless of category or processing
+    await this.sendReceiptConfirmation({
+      from,
+      to,
+      subject,
+      messageId
+    });
+
     // Check if this is a reply to existing conversation
     const isReply = this.isEmailReply(subject);
     console.log(`📧 Is reply: ${isReply}`);
@@ -1300,6 +1309,131 @@ REGRAS B2B:
         }
       }
     };
+  }
+
+  /**
+   * Send immediate receipt confirmation for ANY incoming email
+   * This is sent BEFORE categorization to acknowledge receipt
+   */
+  async sendReceiptConfirmation(emailData: {
+    from: string;
+    to: string;
+    subject: string;
+    messageId: string;
+  }): Promise<void> {
+    try {
+      console.log(`📨 Enviando confirmação de recebimento para: ${emailData.from}`);
+      
+      const customerName = emailData.from.split("@")[0];
+      
+      // Get design configuration based on destination domain
+      const tempEmail: SupportEmail = {
+        id: '',
+        messageId: emailData.messageId,
+        from: emailData.from,
+        to: emailData.to,
+        subject: emailData.subject,
+        textContent: '',
+        htmlContent: '',
+        attachments: null,
+        categoryId: null,
+        aiConfidence: 0,
+        aiReasoning: '',
+        status: 'categorized',
+        requiresHuman: false,
+        rawData: {},
+        hasAutoResponse: false,
+        autoResponseSentAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const designConfig = await this.getDesignConfigForEmail(tempEmail);
+      
+      // Generic confirmation message (NO AI MENTION)
+      const subject = `Re: ${emailData.subject}`;
+      const textContent = `Olá ${customerName},
+
+✅ Confirmamos o recebimento de sua mensagem sobre "${emailData.subject}".
+
+Sua solicitação será analisada pelo setor competente e responsável. Retornaremos com uma resposta em até 24 horas úteis.
+
+Atenciosamente,
+Equipe de Atendimento`;
+
+      // HTML version
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: ${designConfig.backgroundColor};">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    
+    <!-- Logo -->
+    <div style="text-align: ${designConfig.logoAlignment}; margin-bottom: 30px;">
+      <img src="${designConfig.logo}" alt="Logo" style="max-width: 150px; height: auto;">
+    </div>
+    
+    <!-- Main Card -->
+    <div style="background-color: ${designConfig.card.backgroundColor}; border: ${designConfig.card.borderWidth.top}px solid ${designConfig.card.borderColor}; border-radius: ${designConfig.card.borderRadius}px; padding: 30px;">
+      
+      <!-- Title -->
+      <h2 style="color: ${designConfig.primaryColor}; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+        Confirmação de Recebimento
+      </h2>
+      
+      <!-- Message -->
+      <p style="color: ${designConfig.textColor}; line-height: 1.6; margin: 0 0 15px 0; font-size: 16px;">
+        Olá <strong>${customerName}</strong>,
+      </p>
+      
+      <p style="color: ${designConfig.textColor}; line-height: 1.6; margin: 0 0 15px 0; font-size: 16px;">
+        ✅ Confirmamos o recebimento de sua mensagem sobre <strong>"${emailData.subject}"</strong>.
+      </p>
+      
+      <div style="background-color: ${designConfig.backgroundColor}; border-left: 4px solid ${designConfig.primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+        <p style="color: ${designConfig.textColor}; margin: 0; font-size: 15px; line-height: 1.5;">
+          📋 Sua solicitação será analisada pelo setor competente e responsável.
+        </p>
+        <p style="color: ${designConfig.textColor}; margin: 10px 0 0 0; font-size: 15px; line-height: 1.5;">
+          ⏱️ Retornaremos com uma resposta em até <strong>24 horas úteis</strong>.
+        </p>
+      </div>
+      
+      <p style="color: ${designConfig.secondaryTextColor}; line-height: 1.6; margin: 20px 0 0 0; font-size: 14px;">
+        Atenciosamente,<br>
+        <strong>Equipe de Atendimento</strong>
+      </p>
+    </div>
+    
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: 20px; padding: 20px;">
+      <p style="color: ${designConfig.secondaryTextColor}; font-size: 12px; margin: 0;">
+        Este é um email automático de confirmação de recebimento.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      // Send email via Mailgun
+      await mg.messages.create(process.env.MAILGUN_DOMAIN || "", {
+        from: `Atendimento <suporte@${process.env.MAILGUN_DOMAIN}>`,
+        to: emailData.from,
+        "h:Reply-To": `suporte@${process.env.MAILGUN_DOMAIN}`,
+        subject: subject,
+        text: textContent,
+        html: htmlContent,
+      });
+
+      console.log(`✅ Confirmação de recebimento enviada para: ${emailData.from}`);
+    } catch (error) {
+      console.error(`❌ Erro ao enviar confirmação de recebimento:`, error);
+      // Don't throw - we don't want confirmation failures to stop email processing
+    }
   }
 
   /**
