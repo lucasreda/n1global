@@ -72,6 +72,39 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 3, 2025)
 
+### Intelligent Refund Management System ✅
+- **NEW FEATURE**: AI-powered customer retention system with progressive engagement strategy
+- **AI STRATEGY MODULE** (`server/ai/refund-strategy-ai.ts`):
+  - **Critical Keyword Detection**: Flags legal threats (polícia, justiça, advogado, denúncia, procon) for immediate escalation
+  - **State Machine**: Three-stage progression (retention → escalation → refund form)
+  - **Adaptive Responses**: OpenAI GPT-4 generates context-aware retention/escalation messages
+- **PROGRESSIVE ENGAGEMENT FLOW**:
+  1. **First Contact**: AI attempts persuasion/retention (NO refund form offered)
+  2. **Escalation Trigger**: Critical keywords detected → immediate escalation path
+  3. **Refund Form Offer**: Only after retention attempts or critical escalation
+- **TICKET PROGRESSION TRACKING**:
+  - New fields: `retentionAttempts`, `escalationReason`, `refundOffered`, `refundOfferedAt`
+  - AI analyzes message history and content to determine strategy
+- **PUBLIC REFUND FORM**:
+  - Unauthenticated page: `/refund-form/:ticketNumber`
+  - Zod validation via `publicRefundFormSchema`
+  - Endpoint: POST `/api/support/refund-request/:ticketNumber`
+  - Customer submits: Full name, email, PIX key, refund reason, documentation
+- **ADMIN DASHBOARD**:
+  - New page: `/inside/support/refunds`
+  - Overview metrics: Pending/approved/rejected counts
+  - Detailed review modal with approve/reject actions
+  - Endpoints: GET/PATCH `/api/support/refund-requests`
+- **SIDEBAR SUBMENU**:
+  - "Suporte" menu now expandable with:
+    - Tickets (`/inside/support`)
+    - Reembolsos (`/inside/support/refunds`)
+  - Auto-expands when on support pages
+- **DATABASE SCHEMA**:
+  - New table: `reimbursementRequests` (id, ticketId, customerName, email, pixKey, reason, status, reviewNotes, timestamps)
+  - Integration with `supportTickets` via foreign key
+- **ARCHITECT REVIEWED**: All components approved - no blocking defects, security issues, or critical improvements needed
+
 ### Universal Email Auto-Confirmation ✅
 - **NEW FEATURE**: Immediate confirmation for ALL incoming support emails
 - **IMPLEMENTATION**: Added `sendReceiptConfirmation` method that runs BEFORE any categorization/processing
