@@ -15,8 +15,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle, Loader2, Package } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FileUpload } from "@/components/ui/file-upload";
+import { CheckCircle2, AlertCircle, Loader2, Package, Info, ExternalLink } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface LinkedOrder {
   id: string;
@@ -47,6 +50,12 @@ export default function RefundFormPage() {
   const [refundInfo, setRefundInfo] = useState<RefundInfo | null>(null);
   const [isLoadingInfo, setIsLoadingInfo] = useState(true);
 
+  // File states
+  const [orderProofFile, setOrderProofFile] = useState<File | null>(null);
+  const [productPhotosFile, setProductPhotosFile] = useState<File | null>(null);
+  const [returnProofFile, setReturnProofFile] = useState<File | null>(null);
+  const [idDocumentFile, setIdDocumentFile] = useState<File | null>(null);
+
   const form = useForm<PublicRefundForm>({
     resolver: zodResolver(publicRefundFormSchema),
     defaultValues: {
@@ -55,14 +64,23 @@ export default function RefundFormPage() {
       customerPhone: "",
       orderNumber: "",
       productName: "",
+      purchaseDate: "",
+      billingAddressCountry: "",
+      billingAddressCity: "",
+      billingAddressStreet: "",
+      billingAddressNumber: "",
+      billingAddressComplement: "",
+      billingAddressState: "",
+      billingAddressZip: "",
       refundAmount: "",
       currency: "EUR",
-      bankAccountNumber: "",
-      bankAccountHolder: "",
-      bankName: "",
-      pixKey: "",
+      bankIban: "",
+      controlNumber: "",
       refundReason: "",
       additionalDetails: "",
+      declarationFormCorrect: false,
+      declarationAttachmentsProvided: false,
+      declarationIbanCorrect: false,
     },
   });
 
@@ -107,12 +125,32 @@ export default function RefundFormPage() {
     setErrorMessage('');
 
     try {
+      // Validate files
+      if (!orderProofFile || !productPhotosFile || !returnProofFile || !idDocumentFile) {
+        setErrorMessage('Todos os anexos obrigatórios devem ser enviados');
+        setSubmitStatus('error');
+        return;
+      }
+
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      
+      // Add all form fields
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
+        }
+      });
+
+      // Add files
+      formData.append('orderProof', orderProofFile);
+      formData.append('productPhotos', productPhotosFile);
+      formData.append('returnProof', returnProofFile);
+      formData.append('idDocument', idDocumentFile);
+
       const response = await fetch(`/api/support/refund-request/${ticketNumber}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: formData,
       });
 
       const result = await response.json();
@@ -122,64 +160,66 @@ export default function RefundFormPage() {
       }
 
       setSubmitStatus('success');
-      
-      // Reset form after 3 seconds and show success message
-      setTimeout(() => {
-        form.reset();
-      }, 3000);
-
     } catch (error) {
-      console.error('Error submitting refund request:', error);
-      setSubmitStatus('error');
+      console.error('Refund form error:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Erro ao processar solicitação');
+      setSubmitStatus('error');
     }
   };
 
   if (submitStatus === 'success') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="border-green-200 dark:border-green-800">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center text-center space-y-4">
                 <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-3">
                   <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
                 </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+                    Solicitação Enviada com Sucesso!
+                  </h2>
+                  <p className="text-zinc-600 dark:text-zinc-400">
+                    Sua solicitação de reembolso foi recebida e está sendo analisada.
+                    Você receberá uma resposta em breve por e-mail.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-                  Solicitação Enviada com Sucesso!
-                </h2>
-                <p className="text-zinc-600 dark:text-zinc-400">
-                  Sua solicitação de reembolso foi recebida e está sendo analisada.
-                  <br />
-                  Você receberá um email com atualizações em breve.
-                </p>
-              </div>
-              <div className="pt-4">
-                <p className="text-sm text-zinc-500 dark:text-zinc-500">
-                  Ticket: <span className="font-mono font-semibold">{ticketNumber}</span>
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Formulário de Solicitação de Reembolso</CardTitle>
             <CardDescription>
-              Preencha os dados abaixo para solicitar o reembolso referente ao ticket{" "}
-              <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">{ticketNumber}</span>
+              Ticket: <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">{ticketNumber}</span>
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Important Information Alert */}
+            <Alert className="mb-6 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20">
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <AlertTitle className="text-blue-900 dark:text-blue-100">Informações Importantes</AlertTitle>
+              <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm space-y-1 mt-2">
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Apenas clientes que preencherem este formulário corretamente terão direito ao reembolso</li>
+                  <li>Solicitações por e-mail sem o formulário não serão atendidas</li>
+                  <li>Obrigatório: fotos dos produtos, comprovante de devolução e de pagamento</li>
+                  <li>O reembolso será feito apenas por IBAN (não aceitamos dados bancários locais)</li>
+                  <li>O processo pode levar até 30 dias para ser concluído</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+
             {isLoadingInfo && (
               <div className="flex items-center justify-center py-8 mb-6">
                 <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
@@ -195,38 +235,14 @@ export default function RefundFormPage() {
                     Pedido Vinculado ao Ticket
                   </h4>
                   <div className="space-y-1 text-sm text-green-800 dark:text-green-200">
-                    <p>
-                      <span className="font-medium">Pedido:</span>{" "}
-                      <span className="font-mono">#{refundInfo.linkedOrder.id}</span>
-                    </p>
-                    <p>
-                      <span className="font-medium">Produto:</span> {refundInfo.linkedOrder.productName}
-                    </p>
-                    <p>
-                      <span className="font-medium">Valor:</span>{" "}
-                      {new Intl.NumberFormat('pt-BR', { 
-                        style: 'currency', 
-                        currency: 'BRL' 
-                      }).format(parseFloat(refundInfo.linkedOrder.totalPrice))}
-                    </p>
-                    <p>
-                      <span className="font-medium">Status:</span>{" "}
-                      <span className="capitalize">{refundInfo.linkedOrder.status}</span>
-                    </p>
+                    <p><span className="font-medium">Pedido:</span> <span className="font-mono">#{refundInfo.linkedOrder.id}</span></p>
+                    <p><span className="font-medium">Produto:</span> {refundInfo.linkedOrder.productName}</p>
+                    <p><span className="font-medium">Valor:</span> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(refundInfo.linkedOrder.totalPrice))}</p>
                   </div>
                   <p className="text-xs text-green-700 dark:text-green-300 mt-2">
-                    Os campos do formulário foram preenchidos automaticamente com as informações deste pedido.
+                    Os campos foram preenchidos automaticamente com as informações do pedido.
                   </p>
                 </div>
-              </Alert>
-            )}
-
-            {!isLoadingInfo && !refundInfo?.linkedOrder && (
-              <Alert className="mb-6 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
-                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                <AlertDescription className="text-amber-900 dark:text-amber-100">
-                  Este ticket não possui um pedido vinculado. Por favor, preencha todos os campos manualmente.
-                </AlertDescription>
               </Alert>
             )}
 
@@ -238,126 +254,26 @@ export default function RefundFormPage() {
             )}
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Customer Information */}
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                {/* Dados do Pedido */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                    Informações Pessoais
-                  </h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="customerName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome Completo *</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Seu nome completo"
-                            data-testid="input-customer-name"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">📝 Dados do Pedido</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                      Informações sobre sua compra e identificação
+                    </p>
+                  </div>
+                  <Separator />
 
-                  <FormField
-                    control={form.control}
-                    name="customerEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email *</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            type="email"
-                            placeholder="seu@email.com"
-                            data-testid="input-customer-email"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="customerPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefone</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="+55 11 99999-9999"
-                            data-testid="input-customer-phone"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Order Information */}
-                <div className="space-y-4 border-t pt-6">
-                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                    Informações do Pedido
-                  </h3>
-
-                  <FormField
-                    control={form.control}
-                    name="orderNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número do Pedido</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Ex: #1001"
-                            data-testid="input-order-number"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="productName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome do Produto</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Nome do produto"
-                            data-testid="input-product-name"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="refundAmount"
+                      name="orderNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Valor do Reembolso</FormLabel>
+                          <FormLabel>Número do Pedido *</FormLabel>
                           <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="0.00"
-                              readOnly
-                              className="bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed"
-                              data-testid="input-refund-amount"
-                            />
+                            <Input {...field} placeholder="Ex: NT-12345" readOnly className="bg-zinc-100 dark:bg-zinc-800" data-testid="input-order-number" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -366,122 +282,271 @@ export default function RefundFormPage() {
 
                     <FormField
                       control={form.control}
-                      name="currency"
+                      name="purchaseDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Moeda</FormLabel>
+                          <FormLabel>Data da Compra *</FormLabel>
                           <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="EUR"
-                              data-testid="input-currency"
-                            />
+                            <Input {...field} type="date" data-testid="input-purchase-date" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="customerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome (como cadastrado na compra) *</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-customer-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="customerEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>E-mail (como cadastrado na compra) *</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="email" data-testid="input-customer-email" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <FormLabel>Endereço de Faturação</FormLabel>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="billingAddressCountry"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="País *" data-testid="input-billing-country" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="billingAddressCity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="Cidade *" data-testid="input-billing-city" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="billingAddressStreet"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="Rua *" data-testid="input-billing-street" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="billingAddressNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="Número *" data-testid="input-billing-number" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="billingAddressComplement"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="Complemento (Apto, Andar...)" data-testid="input-billing-complement" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="billingAddressState"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="Estado/Região *" data-testid="input-billing-state" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="billingAddressZip"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} placeholder="Código Postal *" data-testid="input-billing-zip" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <FileUpload
+                    id="order-proof"
+                    label="Comprovativo de Encomenda"
+                    value={orderProofFile}
+                    onChange={setOrderProofFile}
+                    required
+                    helperText="Foto do comprovante com valor total pago e número do pedido"
+                    testId="upload-order-proof"
+                  />
                 </div>
 
-                {/* Banking Information */}
-                <div className="space-y-4 border-t pt-6">
-                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                    Dados Bancários
-                  </h3>
+                {/* Informações de Reembolso */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">💰 Informações de Reembolso</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                      Dados bancários e valor do reembolso
+                    </p>
+                  </div>
+                  <Separator />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="refundAmount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor Total a Reembolsar</FormLabel>
+                          <FormControl>
+                            <Input {...field} readOnly className="bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed" data-testid="input-refund-amount" />
+                          </FormControl>
+                          <p className="text-xs text-zinc-500">Valor do produto + custos de devolução</p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="controlNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número de Controlo *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Código de registo" data-testid="input-control-number" />
+                          </FormControl>
+                          <p className="text-xs text-zinc-500">Comprovativo de devolução</p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
-                    name="bankName"
+                    name="bankIban"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome do Banco *</FormLabel>
+                        <FormLabel>IBAN para Reembolso *</FormLabel>
                         <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Ex: Banco do Brasil"
-                            data-testid="input-bank-name"
-                          />
+                          <Input {...field} placeholder="Ex: PT50000201234567890154" className="font-mono" data-testid="input-bank-iban" />
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="bankAccountHolder"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Titular da Conta *</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Nome do titular"
-                            data-testid="input-bank-account-holder"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="bankAccountNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número da Conta *</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="Agência + Conta (Ex: 1234-5 / 67890-1)"
-                            data-testid="input-bank-account-number"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="pixKey"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Chave PIX (Opcional - Apenas Brasil)</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="CPF, email ou telefone"
-                            data-testid="input-pix-key"
-                          />
-                        </FormControl>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          ⚠️ Atenção: apenas via IBAN, não aceitamos contas locais.
+                          <a href="https://wise.com/br/iban/checker" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline hover:no-underline">
+                            Verificar IBAN <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                {/* Reason */}
-                <div className="space-y-4 border-t pt-6">
-                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                    Motivo do Reembolso
-                  </h3>
+                {/* Anexos Obrigatórios */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">📷 Anexos Obrigatórios</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                      Todos os anexos são necessários para processar o reembolso
+                    </p>
+                  </div>
+                  <Separator />
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FileUpload
+                      id="product-photos"
+                      label="Fotos dos Produtos"
+                      value={productPhotosFile}
+                      onChange={setProductPhotosFile}
+                      required
+                      testId="upload-product-photos"
+                    />
+
+                    <FileUpload
+                      id="return-proof"
+                      label="Comprovante de Devolução"
+                      value={returnProofFile}
+                      onChange={setReturnProofFile}
+                      required
+                      helperText="Foto do comprovante de devolução e pagamento da taxa"
+                      testId="upload-return-proof"
+                    />
+
+                    <FileUpload
+                      id="id-document"
+                      label="Documento de Identificação"
+                      value={idDocumentFile}
+                      onChange={setIdDocumentFile}
+                      required
+                      helperText="Documento com fotografia"
+                      testId="upload-id-document"
+                    />
+                  </div>
+                </div>
+
+                {/* Motivo */}
+                <div className="space-y-4">
                   <FormField
                     control={form.control}
                     name="refundReason"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Motivo *</FormLabel>
+                        <FormLabel>Motivo do Reembolso *</FormLabel>
                         <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Descreva o motivo do reembolso (mínimo 10 caracteres)"
-                            rows={4}
-                            data-testid="textarea-refund-reason"
-                          />
+                          <Textarea {...field} rows={4} placeholder="Descreva o motivo (mínimo 10 caracteres)" data-testid="textarea-refund-reason" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -493,19 +558,81 @@ export default function RefundFormPage() {
                     name="additionalDetails"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Detalhes Adicionais</FormLabel>
+                        <FormLabel>Detalhes Adicionais (Opcional)</FormLabel>
                         <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Informações adicionais (opcional)"
-                            rows={3}
-                            data-testid="textarea-additional-details"
-                          />
+                          <Textarea {...field} rows={3} placeholder="Informações adicionais" data-testid="textarea-additional-details" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                </div>
+
+                {/* Declarações */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">✅ Declarações do Cliente</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                      Confirme que você leu e concorda com as condições
+                    </p>
+                  </div>
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="declarationFormCorrect"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-declaration-form" />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-normal">
+                              Declaro que li atentamente e preenchi corretamente este formulário
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="declarationAttachmentsProvided"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-declaration-attachments" />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-normal">
+                              Anexei fotos dos produtos e do comprovante de devolução
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="declarationIbanCorrect"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} data-testid="checkbox-declaration-iban" />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-normal">
+                              Informei corretamente o IBAN e estou ciente de que só receberei o valor se o IBAN estiver correto
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-4">
@@ -518,7 +645,7 @@ export default function RefundFormPage() {
                     {submitStatus === 'loading' ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Enviando...
+                        Enviando Solicitação...
                       </>
                     ) : (
                       'Enviar Solicitação de Reembolso'

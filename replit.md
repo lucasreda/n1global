@@ -85,11 +85,37 @@ Preferred communication style: Simple, everyday language.
 - **TICKET PROGRESSION TRACKING**:
   - New fields: `retentionAttempts`, `escalationReason`, `refundOffered`, `refundOfferedAt`
   - AI analyzes message history and content to determine strategy
-- **PUBLIC REFUND FORM**:
-  - Unauthenticated page: `/refund-form/:ticketNumber`
-  - Zod validation via `publicRefundFormSchema`
-  - Endpoint: POST `/api/support/refund-request/:ticketNumber`
-  - Customer submits: Full name, email, PIX key, refund reason, documentation
+- **PUBLIC REFUND FORM V2** ✨:
+  - **Comprehensive Data Collection**:
+    - Order details: Number, purchase date, product name
+    - Full billing address (country, city, street, number, complement, state, zip)
+    - IBAN banking (international standard, no local accounts)
+    - Control number (return proof tracking)
+    - Refund reason and additional details
+  - **File Attachments** (Object Storage integration):
+    - Comprovativo de encomenda (order proof)
+    - Fotos dos produtos (product photos)
+    - Comprovante de devolução (return proof with payment)
+    - Documento de identificação (ID document with photo)
+    - All files uploaded to Replit Object Storage private directory
+  - **Customer Declarations** (mandatory checkboxes):
+    - Form completion acknowledgment
+    - Attachments provided confirmation
+    - IBAN correctness verification
+  - **Auto-filled from Linked Order**:
+    - Customer name, email, order number, product name
+    - Refund amount (read-only, from linked order total)
+  - **UI/UX**:
+    - Sectioned design: Dados do Pedido, Informações de Reembolso, Anexos Obrigatórios, Declarações
+    - Important information alert with requirements
+    - Drag-and-drop file upload with image preview
+    - IBAN validator link (wise.com)
+    - Success confirmation screen
+  - **Technical Implementation**:
+    - Multipart/form-data via Multer
+    - File validation (type, size limits)
+    - Object storage upload with unique filenames (nanoid)
+    - FormData submission from frontend
 - **ADMIN DASHBOARD**:
   - New page: `/inside/support/refunds`
   - Overview metrics: Pending/approved/rejected counts
@@ -101,7 +127,12 @@ Preferred communication style: Simple, everyday language.
     - Reembolsos (`/inside/support/refunds`)
   - Auto-expands when on support pages
 - **DATABASE SCHEMA**:
-  - New table: `reimbursementRequests` (id, ticketId, customerName, email, pixKey, reason, status, reviewNotes, timestamps)
+  - Extended `reimbursementRequests` table:
+    - Order fields: purchaseDate, billing address (7 fields)
+    - Banking: bankIban, controlNumber
+    - Attachments: orderProofUrl, productPhotosUrl, returnProofUrl, idDocumentUrl
+    - Declarations: 3 boolean fields
+    - Legacy fields preserved for backward compatibility
   - Integration with `supportTickets` via foreign key
 - **ARCHITECT REVIEWED**: All components approved - no blocking defects, security issues, or critical improvements needed
 

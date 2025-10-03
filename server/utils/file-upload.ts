@@ -1,7 +1,7 @@
-import { getClient } from "@replit/object-storage";
+import { Client } from "@replit/object-storage";
 import { nanoid } from "nanoid";
 
-const client = getClient();
+const client = new Client();
 
 export interface UploadedFile {
   url: string;
