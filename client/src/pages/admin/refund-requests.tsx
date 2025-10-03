@@ -386,7 +386,7 @@ export default function AdminRefundRequests() {
 
               <div className="space-y-2">
                 <Label className="text-xs text-zinc-500">Motivo</Label>
-                <div className="text-sm bg-zinc-50 dark:bg-zinc-900 p-3 rounded-md">
+                <div className="text-sm bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 p-3 rounded-md">
                   {selectedRequest.refundReason}
                 </div>
               </div>
@@ -394,7 +394,7 @@ export default function AdminRefundRequests() {
               {selectedRequest.additionalDetails && (
                 <div className="space-y-2">
                   <Label className="text-xs text-zinc-500">Detalhes Adicionais</Label>
-                  <div className="text-sm bg-zinc-50 dark:bg-zinc-900 p-3 rounded-md">
+                  <div className="text-sm bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 p-3 rounded-md">
                     {selectedRequest.additionalDetails}
                   </div>
                 </div>
