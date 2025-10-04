@@ -1912,6 +1912,44 @@ export const vercelDeploymentConfig = pgTable("vercel_deployment_config", {
   };
 });
 
+// Affiliate Landing Pages - Central storage for landing page templates
+export const affiliateLandingPages = pgTable("affiliate_landing_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Basic info
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Content (HTML/CSS/JS)
+  htmlContent: text("html_content").notNull(),
+  cssContent: text("css_content"),
+  jsContent: text("js_content"),
+  
+  // Preview metadata
+  thumbnailUrl: text("thumbnail_url"), // Screenshot/preview image
+  tags: text("tags").array(), // For categorization/filtering
+  
+  // Status
+  status: text("status").notNull().default("draft"), // 'draft', 'active', 'archived'
+  
+  // Vercel deployment info
+  vercelProjectId: text("vercel_project_id"), // Vercel project ID after deployment
+  vercelDeploymentUrl: text("vercel_deployment_url"), // Base deployment URL
+  lastDeployedAt: timestamp("last_deployed_at"),
+  
+  // Attribution
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    statusIdx: index().on(table.status),
+    createdByIdx: index().on(table.createdByUserId),
+  };
+});
+
 // =============================================
 // END AFFILIATE PROGRAM TABLES
 // =============================================
@@ -2474,6 +2512,16 @@ export const insertVercelDeploymentConfigSchema = createInsertSchema(vercelDeplo
 
 export type VercelDeploymentConfig = typeof vercelDeploymentConfig.$inferSelect;
 export type InsertVercelDeploymentConfig = z.infer<typeof insertVercelDeploymentConfigSchema>;
+
+// Affiliate Landing Pages
+export const insertAffiliateLandingPageSchema = createInsertSchema(affiliateLandingPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateLandingPage = typeof affiliateLandingPages.$inferSelect;
+export type InsertAffiliateLandingPage = z.infer<typeof insertAffiliateLandingPageSchema>;
 
 // =============================================
 // END AFFILIATE PROGRAM SCHEMAS AND TYPES
