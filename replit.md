@@ -108,6 +108,16 @@ Preferred communication style: Simple, everyday language.
    - Token verification API for checkout integrations
    - API routes registered at `/api/affiliate/tracking/*`
 
+5. **Phase 5 - Commission Engine (Complete)**:
+   - `AffiliateCommissionService` with automatic commission calculation
+   - Commission calculation based on hierarchy: custom membership % > commission rule % > default 10%
+   - Conversion approval/rejection workflow (admin only)
+   - Bulk approval support for multiple conversions
+   - Automatic payout generation grouping approved conversions
+   - Payout status management (pending → paid)
+   - Commission rules CRUD (operation-level and product-level rules)
+   - API routes registered at `/api/affiliate/commission/*`
+
 **Technical Implementation**:
 - JWT tokens with 90-day expiration for tracking links
 - Comprehensive metadata capture (IP, user agent, referer, landing URL)
@@ -116,7 +126,6 @@ Preferred communication style: Simple, everyday language.
 - Real-time statistics calculation with SQL aggregations
 
 **Next Phases** (Pending):
-- Phase 5: Commission Engine (automatic calculation and approval)
 - Phase 6: Vercel Integration (isolated landing page hosting)
 - Phase 7: External Checkout SDK (JavaScript SDK for external sites)
 - Phase 8: Vercel-hosted Checkout (Next.js template)
@@ -131,6 +140,8 @@ Preferred communication style: Simple, everyday language.
 - `server/affiliate-routes.ts`: Affiliate API endpoints
 - `server/affiliate-tracking-service.ts`: Tracking and link generation
 - `server/affiliate-tracking-routes.ts`: Tracking API endpoints (public + protected)
+- `server/affiliate-commission-service.ts`: Commission calculation engine
+- `server/affiliate-commission-routes.ts`: Commission management API endpoints
 - `server/auth-middleware.ts`: Affiliate role guards
 - `server/routes.ts`: Route registration
 - `client/src/lib/auth.ts`: Frontend role support
