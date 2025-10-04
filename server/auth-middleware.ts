@@ -68,3 +68,35 @@ export const authenticateTokenOrQuery = (req: AuthRequest, res: Response, next: 
     next();
   });
 };
+
+// Middleware to require specific role(s)
+export const requireRole = (...allowedRoles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Usuário não autenticado" });
+    }
+
+    const userRole = req.user.role;
+    
+    if (!allowedRoles.includes(userRole)) {
+      console.log(`❌ Access denied: user role '${userRole}' not in [${allowedRoles.join(', ')}]`);
+      return res.status(403).json({ 
+        message: "Acesso negado: você não tem permissão para acessar este recurso" 
+      });
+    }
+
+    console.log(`✅ Role check passed: ${userRole}`);
+    next();
+  };
+};
+
+// Specific guards for different roles
+export const requireAdmin = requireRole('super_admin', 'admin_financeiro', 'admin_investimento');
+export const requireStore = requireRole('store');
+export const requireAffiliate = requireRole('affiliate');
+export const requireInvestor = requireRole('investor');
+export const requireSupplier = requireRole('supplier');
+
+// Combined guards for flexibility
+export const requireAdminOrStore = requireRole('super_admin', 'admin_financeiro', 'admin_investimento', 'store');
+export const requireAffiliateOrAdmin = requireRole('affiliate', 'super_admin', 'admin_financeiro');
