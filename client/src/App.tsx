@@ -122,7 +122,7 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     const hasUser = !!user;
     const hasAuth = isAuthenticated;
     const hasData = !isLoading && onboardingStatus !== undefined;
-    const skipOnboarding = user?.role === 'supplier' || user?.role === 'super_admin' || user?.role === 'admin_financeiro' || user?.role === 'investor' || user?.role === 'admin_investimento';
+    const skipOnboarding = user?.role === 'supplier' || user?.role === 'super_admin' || user?.role === 'admin_financeiro' || user?.role === 'investor' || user?.role === 'admin_investimento' || user?.role === 'affiliate';
     const needsOnboarding = hasData && !onboardingStatus?.onboardingCompleted && !skipOnboarding;
     const notOnOnboardingPage = location !== '/onboarding';
     
@@ -181,8 +181,8 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If we have user and onboarding data but not completed (and not a supplier), ensure we're on onboarding
-  if (onboardingStatus && !onboardingStatus.onboardingCompleted && location !== '/onboarding' && user?.role !== 'supplier') {
+  // If we have user and onboarding data but not completed (and not a supplier/affiliate), ensure we're on onboarding
+  if (onboardingStatus && !onboardingStatus.onboardingCompleted && location !== '/onboarding' && user?.role !== 'supplier' && user?.role !== 'affiliate') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glassmorphism rounded-2xl p-8">
@@ -204,7 +204,7 @@ function Router() {
   const isSupplier = user?.role === 'supplier';
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
   const isInvestor = user?.role === 'investor';
-
+  const isAffiliate = user?.role === 'affiliate';
   const isAdminInvestimento = user?.role === 'admin_investimento';
 
   // Auto-redirect users based on role
@@ -219,8 +219,10 @@ function Router() {
       setLocation('/investment');
     } else if (isAdminInvestimento && location === '/') {
       setLocation('/admin-investment');
+    } else if (isAffiliate && location === '/') {
+      setLocation('/affiliate');
     }
-  }, [isSuperAdmin, isSupplier, isAdminFinanceiro, isInvestor, isAdminInvestimento, location, setLocation]);
+  }, [isSuperAdmin, isSupplier, isAdminFinanceiro, isInvestor, isAdminInvestimento, isAffiliate, location, setLocation]);
 
   return (
     <OnboardingGuard>
@@ -364,6 +366,7 @@ function AppContent() {
   const isSupplier = user?.role === 'supplier';
   const isAdminFinanceiro = user?.role === 'admin_financeiro';
   const isInvestor = user?.role === 'investor';
+  const isAffiliate = user?.role === 'affiliate';
   const isAdminInvestimento = user?.role === 'admin_investimento';
   useEffect(() => {
     checkAuth();
@@ -444,6 +447,11 @@ function AppContent() {
         </div>
       ) : isAdminInvestimento ? (
         /* Admin Investment layout - fullscreen with own layout */
+        <div className="min-h-screen">
+          <Router />
+        </div>
+      ) : isAffiliate ? (
+        /* Affiliate layout - fullscreen with own layout */
         <div className="min-h-screen">
           <Router />
         </div>
