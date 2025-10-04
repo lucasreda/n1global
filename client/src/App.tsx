@@ -54,6 +54,7 @@ import PaymentsPage from "@/pages/investment/payments";
 import AdminInvestmentDashboard from "@/pages/admin-investment/dashboard";
 import AdminInvestmentPools from "@/pages/admin-investment/pools";
 import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
+import AffiliateDashboard from "@/pages/affiliate";
 import Hub from "@/pages/hub";
 import HubControl from "@/pages/inside/hub-control";
 import NotFound from "@/pages/not-found";
@@ -268,6 +269,9 @@ function Router() {
         <Route path="/admin-investment/pools" component={isAdminInvestimento ? AdminInvestmentPools : () => <NotFound />} />
         <Route path="/admin-investment/investors" component={isAdminInvestimento ? AdminInvestmentInvestors : () => <NotFound />} />
         <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
+        
+        {/* Affiliate Routes */}
+        <Route path="/affiliate" component={isAffiliate ? AffiliateDashboard : () => <NotFound />} />
         
         {/* Default Routes */}
         <Route path="/" component={isSupplier ? SupplierDashboard : isProductSeller ? SellerDashboard : Dashboard} />
