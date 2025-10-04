@@ -25,6 +25,7 @@ import { registerCustomerSupportRoutes } from "./customer-support-routes";
 import voiceRoutes, { setupVoiceWebSocket } from "./voice-routes";
 import { cartpandaRoutes } from "./cartpanda-routes";
 import { funnelRoutes } from "./funnel-routes";
+import affiliateRoutes from "./affiliate-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -6404,6 +6405,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   // Register Analytics routes
   const analyticsRoutes = await import('./analytics-routes');
   app.use("/api/analytics", analyticsRoutes.default);
+
+  // Register Affiliate Program routes
+  app.use("/api/affiliate", affiliateRoutes);
 
   // Multi-Page Funnel Deploy Routes (PHASE 2.2)
   app.post("/api/funnels/multi-page/deploy", authenticateToken, async (req: AuthRequest, res: Response) => {
