@@ -1,5 +1,6 @@
 import express from "express";
 import { affiliateService } from "./affiliate-service";
+import { affiliateVercelDeployService } from "./affiliate-vercel-deploy-service";
 import { authenticateToken, requireAffiliate, requireAffiliateOrAdmin } from "./auth-middleware";
 import { insertAffiliateProfileSchema, insertAffiliateMembershipSchema } from "@shared/schema";
 import { z } from "zod";
@@ -311,6 +312,81 @@ router.patch(
       res.json(profile);
     } catch (error: any) {
       console.error("Error suspending affiliate:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/affiliate/admin/:id/assign-landing-page
+ * Deploy and assign landing page to affiliate (admin only)
+ */
+router.post(
+  "/admin/:id/assign-landing-page",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id: affiliateId } = req.params;
+      const { landingPageId } = req.body;
+
+      if (!landingPageId) {
+        return res.status(400).json({ message: "landingPageId é obrigatório" });
+      }
+
+      const profile = await affiliateService.getAffiliateProfile(affiliateId);
+      if (!profile) {
+        return res.status(404).json({ message: "Afiliado não encontrado" });
+      }
+
+      const deployment = await affiliateVercelDeployService.deployLandingPageForAffiliate(
+        landingPageId,
+        profile.trackingPixel || undefined
+      );
+
+      const updatedProfile = await affiliateService.assignLandingPageToAffiliate(
+        affiliateId,
+        landingPageId,
+        deployment.deploymentUrl
+      );
+
+      res.json({
+        success: true,
+        profile: updatedProfile,
+        deployment: {
+          url: deployment.deploymentUrl,
+          projectId: deployment.projectId,
+        },
+        message: "Landing page atribuída e deployada com sucesso",
+      });
+    } catch (error: any) {
+      console.error("Error assigning landing page to affiliate:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * DELETE /api/affiliate/admin/:id/landing-page
+ * Remove landing page assignment from affiliate (admin only)
+ */
+router.delete(
+  "/admin/:id/landing-page",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id: affiliateId } = req.params;
+
+      const updatedProfile = await affiliateService.unassignLandingPageFromAffiliate(affiliateId);
+
+      res.json({
+        success: true,
+        profile: updatedProfile,
+        message: "Landing page removida do afiliado com sucesso",
+      });
+    } catch (error: any) {
+      console.error("Error removing landing page from affiliate:", error);
       res.status(500).json({ message: error.message });
     }
   }

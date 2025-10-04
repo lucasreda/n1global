@@ -335,6 +335,48 @@ export class AffiliateService {
       paidCommissions: paidResult[0]?.sum || "0",
     };
   }
+
+  async assignLandingPageToAffiliate(
+    affiliateId: string,
+    landingPageId: string,
+    landingPageUrl: string
+  ): Promise<AffiliateProfile> {
+    const [updated] = await db
+      .update(affiliateProfiles)
+      .set({
+        landingPageId,
+        landingPageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliateProfiles.id, affiliateId))
+      .returning();
+
+    if (!updated) {
+      throw new Error("Afiliado não encontrado");
+    }
+
+    return updated;
+  }
+
+  async unassignLandingPageFromAffiliate(
+    affiliateId: string
+  ): Promise<AffiliateProfile> {
+    const [updated] = await db
+      .update(affiliateProfiles)
+      .set({
+        landingPageId: null,
+        landingPageUrl: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliateProfiles.id, affiliateId))
+      .returning();
+
+    if (!updated) {
+      throw new Error("Afiliado não encontrado");
+    }
+
+    return updated;
+  }
 }
 
 export const affiliateService = new AffiliateService();
