@@ -12,7 +12,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor', 'admin_investimento'
+  role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor', 'admin_investimento', 'affiliate'
   storeId: varchar("store_id"), // For product_seller role - links to parent store
   onboardingCompleted: boolean("onboarding_completed").default(false),
   onboardingSteps: jsonb("onboarding_steps").$type<{
@@ -111,6 +111,11 @@ export const orders = pgTable("orders", {
   // Timestamps - CRITICAL: Use real dates from provider history
   orderDate: timestamp("order_date"), // Real order creation date from provider
   lastStatusUpdate: timestamp("last_status_update"),
+  
+  // Affiliate tracking - for affiliate program
+  affiliateId: varchar("affiliate_id").references(() => users.id), // Which affiliate generated this sale
+  affiliateTrackingId: text("affiliate_tracking_id"), // Token from affiliate link
+  landingSource: text("landing_source"), // Where customer came from (URL, campaign, etc)
   
   // Metadata
   notes: text("notes"),
@@ -1658,6 +1663,254 @@ export const reimbursementRequests = pgTable("reimbursement_requests", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// =============================================
+// AFFILIATE PROGRAM TABLES
+// =============================================
+
+// Affiliate Profiles - Extended profile data for users with 'affiliate' role
+export const affiliateProfiles = pgTable("affiliate_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Which store this affiliate belongs to
+  
+  // Fiscal/Legal data
+  fiscalName: text("fiscal_name"), // Legal name or company name
+  fiscalId: text("fiscal_id"), // Tax ID / NIF / CPF / CNPJ
+  fiscalAddress: text("fiscal_address"),
+  fiscalCountry: text("fiscal_country"),
+  
+  // Banking information for payouts
+  bankAccountHolder: text("bank_account_holder"),
+  bankIban: text("bank_iban"),
+  pixKey: text("pix_key"), // For Brazilian affiliates
+  
+  // Status and approval
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'suspended', 'rejected'
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  suspendedReason: text("suspended_reason"),
+  
+  // Additional info
+  referralCode: text("referral_code").unique(), // Custom referral code for marketing
+  bio: text("bio"),
+  socialMedia: jsonb("social_media").$type<{
+    instagram?: string;
+    facebook?: string;
+    tiktok?: string;
+    website?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    userIdIdx: index().on(table.userId),
+    storeIdIdx: index().on(table.storeId),
+    statusIdx: index().on(table.status),
+  };
+});
+
+// Affiliate Memberships - Links affiliates to products/operations they can promote
+export const affiliateMemberships = pgTable("affiliate_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id, { onDelete: 'cascade' }),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  productId: varchar("product_id").references(() => products.id), // Specific product or null for all products in operation
+  
+  // Status
+  status: text("status").notNull().default("active"), // 'active', 'paused', 'terminated'
+  
+  // Approval
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  
+  // Terms
+  customCommissionPercent: decimal("custom_commission_percent", { precision: 5, scale: 2 }), // Override default rule if set
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    affiliateIdIdx: index().on(table.affiliateId),
+    operationIdIdx: index().on(table.operationId),
+    statusIdx: index().on(table.status),
+  };
+});
+
+// Affiliate Commission Rules - Defines commission percentages per product/operation
+export const affiliateCommissionRules = pgTable("affiliate_commission_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  productId: varchar("product_id").references(() => products.id), // Specific product or null for operation-wide rule
+  
+  // Commission structure
+  commissionPercent: decimal("commission_percent", { precision: 5, scale: 2 }).notNull(), // e.g., 10.50 for 10.5%
+  commissionType: text("commission_type").notNull().default("percentage"), // 'percentage', 'fixed_amount'
+  fixedAmount: decimal("fixed_amount", { precision: 10, scale: 2 }), // If commission_type is 'fixed_amount'
+  
+  // Bonus rules
+  bonusRules: jsonb("bonus_rules").$type<Array<{
+    condition: string; // 'first_sale', 'volume_milestone', 'time_limited'
+    threshold?: number;
+    bonusPercent?: number;
+    bonusAmount?: number;
+  }>>(),
+  
+  // Validity
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdIdx: index().on(table.operationId),
+    productIdIdx: index().on(table.productId),
+    activeIdx: index().on(table.isActive),
+  };
+});
+
+// Affiliate Conversions - Records of sales generated by affiliates
+export const affiliateConversions = pgTable("affiliate_conversions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id),
+  orderId: text("order_id").notNull().references(() => orders.id),
+  trackingId: text("tracking_id").notNull(), // From affiliate link token
+  
+  // Financial details
+  orderTotal: decimal("order_total", { precision: 10, scale: 2 }).notNull(),
+  commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
+  commissionPercent: decimal("commission_percent", { precision: 5, scale: 2 }),
+  currency: text("currency").notNull().default("EUR"),
+  
+  // Status and approval
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected', 'paid'
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Payout reference
+  payoutId: varchar("payout_id").references(() => affiliatePayouts.id),
+  
+  // Metadata
+  conversionSource: text("conversion_source"), // 'checkout_external', 'checkout_vercel', 'manual'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    affiliateIdIdx: index().on(table.affiliateId),
+    orderIdIdx: index().on(table.orderId),
+    trackingIdIdx: index().on(table.trackingId),
+    statusIdx: index().on(table.status),
+  };
+});
+
+// Affiliate Payouts - Consolidated payments to affiliates
+export const affiliatePayouts = pgTable("affiliate_payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id),
+  
+  // Period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Financial
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  conversionsCount: integer("conversions_count").notNull().default(0),
+  
+  // Payment details
+  paymentMethod: text("payment_method"), // 'bank_transfer', 'pix', 'paypal', 'stripe'
+  paymentReference: text("payment_reference"), // Transaction ID or reference
+  paymentProof: text("payment_proof"), // URL to payment receipt/proof
+  
+  // Status
+  status: text("status").notNull().default("pending"), // 'pending', 'processing', 'paid', 'failed'
+  paidByUserId: varchar("paid_by_user_id").references(() => users.id),
+  paidAt: timestamp("paid_at"),
+  
+  // Notes
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    affiliateIdIdx: index().on(table.affiliateId),
+    statusIdx: index().on(table.status),
+  };
+});
+
+// Affiliate Clicks - Tracks clicks on affiliate links
+export const affiliateClicks = pgTable("affiliate_clicks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trackingId: text("tracking_id").notNull(), // Decoded from affiliate link
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id),
+  
+  // Click metadata
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  referer: text("referer"), // Where they came from
+  landingPage: text("landing_page"), // Where they landed
+  
+  // Geolocation (if available)
+  country: text("country"),
+  city: text("city"),
+  
+  // Conversion tracking
+  converted: boolean("converted").notNull().default(false),
+  conversionId: varchar("conversion_id").references(() => affiliateConversions.id),
+  convertedAt: timestamp("converted_at"),
+  
+  clickedAt: timestamp("clicked_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    trackingIdIdx: index().on(table.trackingId),
+    affiliateIdIdx: index().on(table.affiliateId),
+    convertedIdx: index().on(table.converted),
+  };
+});
+
+// Vercel Deployment Config - Configuration for deploying pages to Vercel
+export const vercelDeploymentConfig = pgTable("vercel_deployment_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  
+  // Vercel credentials
+  teamId: text("team_id").notNull(),
+  projectId: text("project_id"),
+  apiToken: text("api_token").notNull(), // Encrypted in production
+  
+  // Deployment settings
+  domain: text("domain"), // Custom domain for affiliate pages
+  allowedDomains: text("allowed_domains").array(), // Additional allowed domains
+  
+  // Build settings
+  framework: text("framework").default("nextjs"), // 'nextjs', 'static', 'react'
+  buildCommand: text("build_command"),
+  outputDirectory: text("output_directory"),
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  lastDeploymentAt: timestamp("last_deployment_at"),
+  lastDeploymentStatus: text("last_deployment_status"), // 'success', 'failed', 'pending'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdIdx: index().on(table.operationId),
+    activeIdx: index().on(table.isActive),
+  };
+});
+
+// =============================================
+// END AFFILIATE PROGRAM TABLES
+// =============================================
+
 // AI training directives for custom prompt enhancement per operation
 export const aiDirectives = pgTable("ai_directives", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2144,6 +2397,82 @@ export const insertReimbursementRequestSchema = createInsertSchema(reimbursement
 
 export type ReimbursementRequest = typeof reimbursementRequests.$inferSelect;
 export type InsertReimbursementRequest = z.infer<typeof insertReimbursementRequestSchema>;
+
+// =============================================
+// AFFILIATE PROGRAM SCHEMAS AND TYPES
+// =============================================
+
+// Affiliate Profiles
+export const insertAffiliateProfileSchema = createInsertSchema(affiliateProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateProfile = typeof affiliateProfiles.$inferSelect;
+export type InsertAffiliateProfile = z.infer<typeof insertAffiliateProfileSchema>;
+
+// Affiliate Memberships
+export const insertAffiliateMembershipSchema = createInsertSchema(affiliateMemberships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateMembership = typeof affiliateMemberships.$inferSelect;
+export type InsertAffiliateMembership = z.infer<typeof insertAffiliateMembershipSchema>;
+
+// Affiliate Commission Rules
+export const insertAffiliateCommissionRuleSchema = createInsertSchema(affiliateCommissionRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateCommissionRule = typeof affiliateCommissionRules.$inferSelect;
+export type InsertAffiliateCommissionRule = z.infer<typeof insertAffiliateCommissionRuleSchema>;
+
+// Affiliate Conversions
+export const insertAffiliateConversionSchema = createInsertSchema(affiliateConversions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateConversion = typeof affiliateConversions.$inferSelect;
+export type InsertAffiliateConversion = z.infer<typeof insertAffiliateConversionSchema>;
+
+// Affiliate Payouts
+export const insertAffiliatePayoutSchema = createInsertSchema(affiliatePayouts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliatePayout = typeof affiliatePayouts.$inferSelect;
+export type InsertAffiliatePayout = z.infer<typeof insertAffiliatePayoutSchema>;
+
+// Affiliate Clicks
+export const insertAffiliateClickSchema = createInsertSchema(affiliateClicks).omit({
+  id: true,
+});
+
+export type AffiliateClick = typeof affiliateClicks.$inferSelect;
+export type InsertAffiliateClick = z.infer<typeof insertAffiliateClickSchema>;
+
+// Vercel Deployment Config
+export const insertVercelDeploymentConfigSchema = createInsertSchema(vercelDeploymentConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type VercelDeploymentConfig = typeof vercelDeploymentConfig.$inferSelect;
+export type InsertVercelDeploymentConfig = z.infer<typeof insertVercelDeploymentConfigSchema>;
+
+// =============================================
+// END AFFILIATE PROGRAM SCHEMAS AND TYPES
+// =============================================
 
 // Public refund form schema (customer-facing, no admin fields)
 export const publicRefundFormSchema = z.object({
