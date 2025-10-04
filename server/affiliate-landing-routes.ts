@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authenticateToken } from "./auth-middleware";
 import { requireAffiliateOrAdmin } from "./auth-middleware";
 import { affiliateLandingService } from "./affiliate-landing-service";
+import { affiliateVercelDeployService } from "./affiliate-vercel-deploy-service";
 import { insertAffiliateLandingPageSchema } from "@shared/schema";
 
 const router = Router();
@@ -157,6 +158,33 @@ router.delete(
       res.json({ success: true, message: "Landing page deletada com sucesso" });
     } catch (error: any) {
       console.error("Error deleting landing page:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+router.post(
+  "/:id/deploy",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { affiliatePixel } = req.body;
+      
+      const deployment = await affiliateVercelDeployService.deployLandingPageForAffiliate(
+        id,
+        affiliatePixel
+      );
+      
+      res.json({
+        success: true,
+        deploymentUrl: deployment.deploymentUrl,
+        projectId: deployment.projectId,
+        message: "Landing page deployada com sucesso na Vercel",
+      });
+    } catch (error: any) {
+      console.error("Error deploying landing page:", error);
       res.status(500).json({ message: error.message });
     }
   }
