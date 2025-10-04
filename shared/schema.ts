@@ -1700,6 +1700,11 @@ export const affiliateProfiles = pgTable("affiliate_profiles", {
     website?: string;
   }>(),
   
+  // Landing page and tracking
+  trackingPixel: text("tracking_pixel"), // Custom tracking pixel code (e.g., Facebook Pixel, Google Analytics)
+  landingPageUrl: text("landing_page_url"), // Assigned landing page URL on Vercel
+  landingPageId: varchar("landing_page_id"), // Reference to deployed landing page
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

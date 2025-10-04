@@ -200,6 +200,41 @@ router.get(
   }
 );
 
+/**
+ * PATCH /api/affiliate/tracking-pixel
+ * Update tracking pixel code for affiliate
+ */
+router.patch(
+  "/tracking-pixel",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      const schema = z.object({
+        trackingPixel: z.string().optional(),
+      });
+
+      const { trackingPixel } = schema.parse(req.body);
+
+      const profile = await affiliateService.upsertAffiliateProfile(userId, {
+        trackingPixel,
+      });
+
+      res.json({ success: true, trackingPixel: profile.trackingPixel });
+    } catch (error: any) {
+      console.error("Error updating tracking pixel:", error);
+
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: error.errors });
+      }
+
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
 // =============================================
 // ADMIN ENDPOINTS (Protected - Admin Role)
 // =============================================
