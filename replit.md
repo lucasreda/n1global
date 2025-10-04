@@ -48,11 +48,17 @@ Preferred communication style: Simple, everyday language.
 - **Virtual Agent**: Sofia (AI-powered sales and support) for outbound calling, real-time PT-BR speech recognition, and adaptive responses.
 
 ### Affiliate Program System
-- **Architecture**: Enterprise-grade affiliate marketing system with JWT-signed tracking links and anti-fraud protection.
-- **Database**: 7 dedicated tables for affiliate profiles, memberships, conversions, commission rules, payouts, clicks, and deployment configuration.
-- **Core Services**: AffiliateService for profiles/product catalog/membership/stats, and AffiliateTrackingService for JWT-signed link generation, click/conversion tracking, and fraud detection.
+- **Architecture**: Enterprise-grade affiliate marketing system with JWT-signed tracking links, centralized landing page hosting, and anti-fraud protection.
+- **Database**: 8 dedicated tables for affiliate profiles, memberships, conversions, commission rules, payouts, clicks, deployment configuration, and landing pages.
+- **Core Services**: 
+  - AffiliateService for profiles/product catalog/membership/stats/landing page assignment
+  - AffiliateTrackingService for JWT-signed link generation, click/conversion tracking, and fraud detection
+  - AffiliateCommissionService for commission calculation, approval workflow, and payout generation
+  - AffiliateLandingService for landing page CRUD operations
+  - AffiliateVercelDeployService for centralized Vercel deployments with automatic pixel injection
 - **Authentication**: "affiliate" role with dedicated route guards.
 - **Tracking System**: JWT tokens with 90-day expiration, IP-based deduplication, user agent tracking, referer capture, landing URL logging, order attribution, commission calculation, and duplicate prevention.
+- **Landing Pages**: Centralized Vercel hosting with single platform account, automatic tracking pixel injection, HTML/CSS/JS storage, draft/active/archived states, admin-controlled deployment and affiliate assignment.
 - **Anti-Fraud**: IP deduplication, membership verification, duplicate conversion prevention, JWT expiration.
 
 ### Visual Editor
@@ -79,8 +85,8 @@ Preferred communication style: Simple, everyday language.
 - **Telnyx Voice API**: For voice capabilities of the Sofia virtual agent.
 ## Recent Changes (October 4, 2025)
 
-### Affiliate Program System - Phase 3 & 4 Complete ✅
-**Status**: Core backend infrastructure complete, tracking system operational
+### Affiliate Program System - Phase 6 Complete ✅
+**Status**: Centralized landing page hosting system operational with Vercel deployment
 
 **Completed Work**:
 1. **Phase 1 - Database Schema (Complete)**:
@@ -118,15 +124,29 @@ Preferred communication style: Simple, everyday language.
    - Commission rules CRUD (operation-level and product-level rules)
    - API routes registered at `/api/affiliate/commission/*`
 
+6. **Phase 6 - Centralized Vercel Landing Pages (Complete)**:
+   - Centralized architecture: Single platform Vercel account hosts all affiliate landing pages
+   - `affiliate_landing_pages` table for HTML/CSS/JS storage with draft/active/archived states
+   - `AffiliateLandingService` for CRUD operations on landing page templates
+   - `AffiliateVercelDeployService` for automated deployment with pixel injection
+   - Automatic tracking pixel injection before `</body>` tag during deployment
+   - Landing page assignment system linking affiliates to deployed pages
+   - Admin endpoints for landing page management (create, update, activate, archive, deploy)
+   - Admin endpoints for affiliate assignment (deploy + assign, unassign)
+   - Affiliate pixel configuration endpoint (PATCH /api/affiliate/tracking-pixel)
+   - API routes registered at `/api/affiliate/landing-pages/*`
+
 **Technical Implementation**:
 - JWT tokens with 90-day expiration for tracking links
 - Comprehensive metadata capture (IP, user agent, referer, landing URL)
 - Membership verification for conversions
 - Duplicate prevention at both click and conversion levels
 - Real-time statistics calculation with SQL aggregations
+- Centralized Vercel deployment with pixel injection
+- Landing page versioning (draft → active → archived)
+- Affiliate profile fields: trackingPixel, landingPageUrl, landingPageId
 
 **Next Phases** (Pending):
-- Phase 6: Vercel Integration (isolated landing page hosting)
 - Phase 7: External Checkout SDK (JavaScript SDK for external sites)
 - Phase 8: Vercel-hosted Checkout (Next.js template)
 - Phase 9: Affiliate Dashboard UI (React frontend)
@@ -135,13 +155,16 @@ Preferred communication style: Simple, everyday language.
 - Phase 12: End-to-End Testing (seed data, full flow validation)
 
 **Files Modified/Created**:
-- `shared/schema.ts`: Affiliate tables and types
-- `server/affiliate-service.ts`: Core affiliate business logic
-- `server/affiliate-routes.ts`: Affiliate API endpoints
+- `shared/schema.ts`: Affiliate tables, types, and landing pages table
+- `server/affiliate-service.ts`: Core affiliate business logic + landing page assignment methods
+- `server/affiliate-routes.ts`: Affiliate API endpoints + pixel config + landing assignment
 - `server/affiliate-tracking-service.ts`: Tracking and link generation
 - `server/affiliate-tracking-routes.ts`: Tracking API endpoints (public + protected)
 - `server/affiliate-commission-service.ts`: Commission calculation engine
 - `server/affiliate-commission-routes.ts`: Commission management API endpoints
+- `server/affiliate-landing-service.ts`: Landing page CRUD operations
+- `server/affiliate-landing-routes.ts`: Landing page management endpoints
+- `server/affiliate-vercel-deploy-service.ts`: Vercel deployment with pixel injection
 - `server/auth-middleware.ts`: Affiliate role guards
 - `server/routes.ts`: Route registration
 - `client/src/lib/auth.ts`: Frontend role support
