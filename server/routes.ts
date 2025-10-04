@@ -28,6 +28,7 @@ import { funnelRoutes } from "./funnel-routes";
 import affiliateRoutes from "./affiliate-routes";
 import affiliateTrackingRoutes from "./affiliate-tracking-routes";
 import affiliateCommissionRoutes from "./affiliate-commission-routes";
+import affiliateLandingRoutes from "./affiliate-landing-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -6416,6 +6417,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register Affiliate Commission routes (admin only)
   app.use("/api/affiliate/commission", affiliateCommissionRoutes);
+
+  // Register Affiliate Landing Pages routes (admin only)
+  app.use("/api/affiliate/landing-pages", affiliateLandingRoutes);
 
   // Multi-Page Funnel Deploy Routes (PHASE 2.2)
   app.post("/api/funnels/multi-page/deploy", authenticateToken, async (req: AuthRequest, res: Response) => {
