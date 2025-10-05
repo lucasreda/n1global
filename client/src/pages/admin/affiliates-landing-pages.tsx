@@ -140,7 +140,7 @@ export default function AffiliatesLandingPages() {
 
   const activateMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      return await apiRequest(`/api/affiliate/landing-pages/${pageId}/activate`, 'POST', {});
+      return await apiRequest(`/api/affiliate/landing-pages/${pageId}/activate`, 'PATCH', {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
@@ -160,7 +160,7 @@ export default function AffiliatesLandingPages() {
 
   const archiveMutation = useMutation({
     mutationFn: async (pageId: string) => {
-      return await apiRequest(`/api/affiliate/landing-pages/${pageId}/archive`, 'POST', {});
+      return await apiRequest(`/api/affiliate/landing-pages/${pageId}/archive`, 'PATCH', {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
