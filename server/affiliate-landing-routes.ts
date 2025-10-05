@@ -244,6 +244,47 @@ router.patch(
   }
 );
 
+router.put(
+  "/:id",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { model } = req.body;
+      
+      if (!model) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Model is required for visual editor updates" 
+        });
+      }
+      
+      const landingPage = await affiliateLandingService.updateLandingPageModel(id, model);
+      
+      res.json({
+        success: true,
+        landingPage,
+      });
+    } catch (error: any) {
+      console.error("Error updating landing page model:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Dados inválidos", 
+          details: error.errors 
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
+  }
+);
+
 router.patch(
   "/:id/activate",
   authenticateToken,

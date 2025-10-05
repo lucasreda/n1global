@@ -7,6 +7,7 @@ import {
   type AffiliateLandingPage,
   type InsertAffiliateLandingPage,
   type Product,
+  type PageModelV2,
 } from "@shared/schema";
 
 export class AffiliateLandingService {
@@ -163,6 +164,26 @@ export class AffiliateLandingService {
       .where(eq(affiliateLandingPageProducts.productId, productId));
 
     return results.map((r) => r.landingPage);
+  }
+
+  async updateLandingPageModel(
+    id: string,
+    model: PageModelV2
+  ): Promise<AffiliateLandingPage> {
+    const [updated] = await db
+      .update(affiliateLandingPages)
+      .set({
+        model: model as any,
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliateLandingPages.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Landing page não encontrada");
+    }
+    
+    return updated;
   }
 }
 
