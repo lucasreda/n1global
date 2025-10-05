@@ -58,6 +58,8 @@ import AffiliateDashboard from "@/pages/affiliate";
 import AffiliateLinks from "@/pages/affiliate/links";
 import AffiliateLandingPages from "@/pages/affiliate/landing-pages";
 import AffiliateProducts from "@/pages/affiliate/products";
+import AffiliateAnalytics from "@/pages/affiliate/analytics";
+import AffiliatePayments from "@/pages/affiliate/payments";
 import Hub from "@/pages/hub";
 import HubControl from "@/pages/inside/hub-control";
 import NotFound from "@/pages/not-found";
@@ -274,6 +276,8 @@ function Router() {
         <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
         
         {/* Affiliate Routes */}
+        <Route path="/affiliate/analytics" component={isAffiliate ? AffiliateAnalytics : () => <NotFound />} />
+        <Route path="/affiliate/payments" component={isAffiliate ? AffiliatePayments : () => <NotFound />} />
         <Route path="/affiliate/products" component={isAffiliate ? AffiliateProducts : () => <NotFound />} />
         <Route path="/affiliate/landing-pages" component={isAffiliate ? AffiliateLandingPages : () => <NotFound />} />
         <Route path="/affiliate/links" component={isAffiliate ? AffiliateLinks : () => <NotFound />} />
