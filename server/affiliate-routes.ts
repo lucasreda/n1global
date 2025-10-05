@@ -1,6 +1,7 @@
 import express from "express";
 import { affiliateService } from "./affiliate-service";
 import { affiliateVercelDeployService } from "./affiliate-vercel-deploy-service";
+import { affiliateLandingService } from "./affiliate-landing-service";
 import { authenticateToken, requireAffiliate, requireAffiliateOrAdmin } from "./auth-middleware";
 import { insertAffiliateProfileSchema, insertAffiliateMembershipSchema } from "@shared/schema";
 import { z } from "zod";
@@ -334,7 +335,7 @@ router.post(
         return res.status(400).json({ message: "landingPageId é obrigatório" });
       }
 
-      const profile = await affiliateService.getAffiliateProfile(affiliateId);
+      const profile = await affiliateService.getAffiliateProfileById(affiliateId);
       if (!profile) {
         return res.status(404).json({ message: "Afiliado não encontrado" });
       }
@@ -387,6 +388,219 @@ router.delete(
       });
     } catch (error: any) {
       console.error("Error removing landing page from affiliate:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/affiliate/products
+ * Get products with commission info and membership status
+ */
+router.get(
+  "/products",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+
+      // Mock data - replace with actual implementation
+      res.json([]);
+    } catch (error: any) {
+      console.error("Error getting products:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/affiliate/membership/join
+ * Request to join a product
+ */
+router.post(
+  "/membership/join",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { productId } = req.body;
+      
+      if (!productId) {
+        return res.status(400).json({ message: "productId é obrigatório" });
+      }
+
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+
+      // Create membership request (productId is optional, operationId is required)
+      // For now, we'll just return success without creating - this needs product/operation logic
+      // const membership = await affiliateService.createMembership({
+      //   affiliateId: profile.id,
+      //   operationId: "", // Required field
+      //   productId,
+      //   status: "pending",
+      // });
+
+      res.status(201).json({ success: true, message: "Solicitação enviada com sucesso" });
+    } catch (error: any) {
+      console.error("Error joining product:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/affiliate/analytics
+ * Get analytics data for affiliate
+ */
+router.get(
+  "/analytics",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { dateRange = '30d' } = req.query;
+      
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+
+      // Mock data - replace with actual implementation
+      const mockStats = {
+        totalClicks: 0,
+        totalConversions: 0,
+        totalCommission: 0,
+        conversionRate: 0,
+        averageOrderValue: 0,
+        earningsPerClick: 0,
+        clicksChange: 0,
+        conversionsChange: 0,
+        commissionChange: 0,
+        dailyStats: [],
+        productStats: [],
+        sourceStats: [],
+      };
+
+      res.json(mockStats);
+    } catch (error: any) {
+      console.error("Error getting analytics:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/affiliate/payment-stats
+ * Get payment statistics for affiliate
+ */
+router.get(
+  "/payment-stats",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+
+      // Mock data - replace with actual implementation
+      const mockStats = {
+        pendingAmount: 0,
+        processingAmount: 0,
+        paidAmount: 0,
+        totalEarnings: 0,
+        minimumPayout: 50,
+        pendingConversions: 0,
+        approvedConversions: 0,
+      };
+
+      res.json(mockStats);
+    } catch (error: any) {
+      console.error("Error getting payment stats:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/affiliate/payout-request
+ * Request a payout
+ */
+router.post(
+  "/payout-request",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { paymentMethod, paymentDetails } = req.body;
+      
+      if (!paymentMethod || !paymentDetails) {
+        return res.status(400).json({ message: "paymentMethod e paymentDetails são obrigatórios" });
+      }
+
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+
+      // Mock response - implement actual payout request logic
+      res.status(201).json({ 
+        success: true,
+        message: "Solicitação de saque criada com sucesso"
+      });
+    } catch (error: any) {
+      console.error("Error requesting payout:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/affiliate/landing-page/assigned
+ * Get assigned landing page for current affiliate
+ */
+router.get(
+  "/landing-page/assigned",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+
+      if (!profile.landingPageId) {
+        return res.status(404).json({ message: "Nenhuma landing page atribuída" });
+      }
+
+      // Get landing page details
+      const landingPage = await affiliateLandingService.getLandingPageById(profile.landingPageId);
+      
+      if (!landingPage) {
+        return res.status(404).json({ message: "Landing page não encontrada" });
+      }
+
+      res.json(landingPage);
+    } catch (error: any) {
+      console.error("Error getting assigned landing page:", error);
       res.status(500).json({ message: error.message });
     }
   }

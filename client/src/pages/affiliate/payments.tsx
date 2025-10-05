@@ -58,20 +58,20 @@ export default function AffiliatePayments() {
   const [paymentDetails, setPaymentDetails] = useState("");
 
   const { data: stats, isLoading: isLoadingStats } = useQuery<PaymentStats>({
-    queryKey: ['/api/affiliate/payments/stats'],
+    queryKey: ['/api/affiliate/payment-stats'],
   });
 
   const { data: payouts = [], isLoading: isLoadingPayouts } = useQuery<Payout[]>({
-    queryKey: ['/api/affiliate/payouts'],
+    queryKey: ['/api/affiliate/commission/payouts'],
   });
 
   const requestPayoutMutation = useMutation({
     mutationFn: async (data: { paymentMethod: string; paymentDetails: string }) => {
-      return await apiRequest('/api/affiliate/payouts/request', 'POST', data);
+      return await apiRequest('/api/affiliate/payout-request', 'POST', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/payouts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/payments/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/commission/payouts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/payment-stats'] });
       toast({
         title: "Solicitação Enviada!",
         description: "Sua solicitação de saque foi enviada para processamento.",
