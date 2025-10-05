@@ -73,8 +73,21 @@ const menuItems: MenuItem[] = [
   { 
     id: 'affiliates', 
     label: 'Afiliados', 
-    icon: UserCog, 
-    path: '/inside/affiliates' 
+    icon: UserCog,
+    subitems: [
+      {
+        id: 'affiliates-dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        path: '/inside/affiliates'
+      },
+      {
+        id: 'affiliates-requests',
+        label: 'Solicitações',
+        icon: Ticket,
+        path: '/inside/affiliates/requests'
+      }
+    ]
   },
   { 
     id: 'global', 
@@ -122,6 +135,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     // Auto-expand support menu if on support page
     if (location.startsWith('/inside/support')) {
       return ['support'];
+    }
+    // Auto-expand affiliates menu if on affiliates page
+    if (location.startsWith('/inside/affiliates')) {
+      return ['affiliates'];
     }
     return [];
   });
