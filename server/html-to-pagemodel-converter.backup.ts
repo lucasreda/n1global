@@ -1,6 +1,4 @@
 import type { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
-import { parseDocument } from "htmlparser2";
-import type { Element, ChildNode, Text } from "domhandler";
 
 /**
  * Converts HTML to PageModelV2 structure
@@ -310,198 +308,54 @@ function parseHtmlToSections(html: string, cssRules: Record<string, Record<strin
 }
 
 /**
- * Parse HTML to elements using htmlparser2 (DOM tree)
+ * Parse HTML to elements
  */
 function parseHtmlElements(html: string, cssRules: Record<string, Record<string, string>>): BlockElement[] {
   console.log('🔍 parseHtmlElements called with HTML length:', html.length);
-  console.log('🔍 Using htmlparser2 for DOM parsing');
+  console.log('🔍 First 300 chars of HTML:', html.substring(0, 300).replace(/\n/g, ' '));
   
-  // Parse HTML fragment
-  const dom = parseDocument(html, {
-    lowerCaseTags: false, // Preserve case
-    lowerCaseAttributeNames: true,
-  });
-  
-  // Convert DOM nodes to BlockElements recursively
-  const elements = convertDOMNodesToElements(dom.children, cssRules);
-  
-  console.log(`🔍 Total elements created: ${elements.length}`);
-  
-  return elements;
-}
-
-/**
- * Recursively convert DOM nodes to BlockElements
- */
-function convertDOMNodesToElements(nodes: ChildNode[], cssRules: Record<string, Record<string, string>>): BlockElement[] {
   const elements: BlockElement[] = [];
   
-  for (const node of nodes) {
-    // Text node - skip standalone text (will be captured by parent tags)
-    if (node.type === 'text') {
-      continue;
+  // Remove script tags (keep style tags for context, they're already parsed)
+  html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  
+  // Extract all relevant tags
+  const tagRegex = /<(h[1-6]|p|a|img|button|div)[^>]*>([\s\S]*?)<\/\1>|<img[^>]*\/?>|<br\s*\/?>/gi;
+  let match;
+  let matchCount = 0;
+  
+  while ((match = tagRegex.exec(html)) !== null) {
+    matchCount++;
+    const fullTag = match[0];
+    
+    // Determine the tag name
+    let tag: string;
+    if (match[1]) {
+      // Regular tag with closing tag
+      tag = match[1].toLowerCase();
+    } else if (fullTag.toLowerCase().startsWith('<img')) {
+      // Self-closing img tag
+      tag = 'img';
+    } else {
+      // Default to br for <br /> tags
+      tag = 'br';
     }
     
-    // Element node
-    if (node.type === 'tag') {
-      const element = node as Element;
-      const converted = convertDOMElementToBlockElement(element, cssRules);
-      
-      if (converted) {
-        elements.push(converted);
-      } else {
-        // If element itself didn't convert (e.g., div, ul), try children
-        if (element.children && element.children.length > 0) {
-          const childElements = convertDOMNodesToElements(element.children, cssRules);
-          elements.push(...childElements);
-        }
-      }
+    const content = match[2] || '';
+    console.log(`🔍 Match #${matchCount}: tag=${tag}, contentLength=${content.length}, first50="${content.substring(0, 50).replace(/\n/g, ' ')}"`);
+    
+    const element = convertTagToElement(tag, content, fullTag, cssRules);
+    if (element) {
+      elements.push(element);
+      console.log(`  ✅ Element created: ${element.type}`);
+    } else {
+      console.log(`  ❌ Element NOT created`);
     }
   }
+  
+  console.log(`🔍 Total matches: ${matchCount}, Total elements created: ${elements.length}`);
   
   return elements;
-}
-
-/**
- * Convert a single DOM element to BlockElement
- */
-function convertDOMElementToBlockElement(element: Element, cssRules: Record<string, Record<string, string>>): BlockElement | null {
-  const tag = element.name.toLowerCase();
-  const id = generateId();
-  
-  // Extract attributes and compute styles
-  const classNames = element.attribs?.class?.split(/\s+/).filter(c => c) || [];
-  const elementId = element.attribs?.id;
-  const inlineStyleStr = element.attribs?.style || '';
-  
-  // Parse inline styles
-  const inlineStyles: Record<string, string> = {};
-  if (inlineStyleStr) {
-    inlineStyleStr.split(';').forEach(decl => {
-      const [prop, val] = decl.split(':').map(s => s.trim());
-      if (prop && val) {
-        inlineStyles[prop] = val;
-      }
-    });
-  }
-  
-  // Compute final styles
-  const computedStyles = getComputedStyles(tag, classNames, elementId, inlineStyles, cssRules);
-  
-  // Get text content
-  const textContent = getTextContentFromDOM(element);
-  
-  // Convert based on tag type
-  switch (tag) {
-    case 'h1':
-    case 'h2':
-    case 'h3':
-    case 'h4':
-    case 'h5':
-    case 'h6':
-      return {
-        id,
-        type: 'heading',
-        props: { level: tag as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' },
-        styles: computedStyles,
-        content: { text: textContent },
-      };
-    
-    case 'p':
-      return {
-        id,
-        type: 'text',
-        props: {},
-        styles: computedStyles,
-        content: { text: textContent },
-      };
-    
-    case 'button':
-      return {
-        id,
-        type: 'button',
-        props: {},
-        styles: computedStyles,
-        content: { text: textContent },
-      };
-    
-    case 'a':
-      const href = element.attribs?.href || '#';
-      const isButton = classNames.some(c => c.includes('btn') || c.includes('button'));
-      
-      if (isButton) {
-        return {
-          id,
-          type: 'button',
-          props: { href },
-          styles: computedStyles,
-          content: { text: textContent, href },
-        };
-      } else {
-        return {
-          id,
-          type: 'text',
-          props: { href },
-          styles: computedStyles,
-          content: { text: textContent, href },
-        };
-      }
-    
-    case 'img':
-      return {
-        id,
-        type: 'image',
-        props: {
-          src: element.attribs?.src || '',
-          alt: element.attribs?.alt || '',
-        },
-        styles: computedStyles,
-        content: {},
-      };
-    
-    case 'ul':
-    case 'ol':
-      // Convert list to text with bullets
-      const items: string[] = [];
-      if (element.children) {
-        for (const child of element.children) {
-          if (child.type === 'tag' && (child as Element).name === 'li') {
-            items.push(getTextContentFromDOM(child as Element));
-          }
-        }
-      }
-      
-      return {
-        id,
-        type: 'text',
-        props: {},
-        styles: computedStyles,
-        content: { text: items.map(item => `• ${item}`).join('\n') },
-      };
-    
-    // For other tags (div, span, etc.), return null so children are processed
-    default:
-      return null;
-  }
-}
-
-/**
- * Get text content from DOM element recursively
- */
-function getTextContentFromDOM(element: Element): string {
-  let text = '';
-  
-  if (element.children) {
-    for (const child of element.children) {
-      if (child.type === 'text') {
-        text += (child as Text).data;
-      } else if (child.type === 'tag') {
-        text += getTextContentFromDOM(child as Element);
-      }
-    }
-  }
-  
-  return text.trim();
 }
 
 /**
