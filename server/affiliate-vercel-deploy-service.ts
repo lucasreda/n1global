@@ -119,15 +119,10 @@ export class AffiliateVercelDeployService {
       throw new Error("Apenas landing pages ativas podem ser deployadas");
     }
 
-    // Inject universal tracking script
+    // Inject universal tracking script with dynamic pixel loading
     let htmlContent = this.injectUniversalTrackingScript(landingPage.htmlContent);
-
-    // Get and inject pixels configured for this landing page
-    const pixelCode = await this.getPixelsForLandingPage(landingPageId);
-    if (pixelCode) {
-      htmlContent = this.injectPixelCode(htmlContent, pixelCode);
-      console.log(`✅ Injected ${pixelCode.split('<!-- Meta Pixel Code -->').length - 1 + pixelCode.split('<!-- Google Ads').length - 1 + pixelCode.split('<!-- TikTok').length - 1 + pixelCode.split('<!-- Custom').length - 1} pixel(s) into landing page`);
-    }
+    
+    console.log(`✅ Landing page HTML prepared with dynamic pixel injection (pixels will load based on ?ref parameter)`);
 
     const files = this.prepareLandingPageFiles(
       htmlContent,
@@ -190,7 +185,7 @@ export class AffiliateVercelDeployService {
 
     // Get the current domain (will be set at runtime in the browser)
     const trackingScript = `
-<!-- Universal Affiliate Tracking Script -->
+<!-- Universal Affiliate Tracking Script with Dynamic Pixel Injection -->
 <script>
 (function() {
   'use strict';
@@ -248,6 +243,65 @@ export class AffiliateVercelDeployService {
   })
   .catch(function(error) {
     console.error('[Affiliate Tracking] Error sending tracking data:', error);
+  });
+  
+  // Dynamic Pixel Injection
+  console.log('[Affiliate Pixels] Loading pixels for ref:', affiliateRef);
+  
+  var pixelApiUrl = window.location.origin + '/api/affiliate/pixels/by-ref/' + encodeURIComponent(affiliateRef) + '/code';
+  
+  fetch(pixelApiUrl, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then(function(response) {
+    if (!response.ok) {
+      console.error('[Affiliate Pixels] Failed to load pixels:', response.status);
+      return null;
+    }
+    return response.json();
+  })
+  .then(function(data) {
+    if (!data || !data.pixelCodes || data.pixelCodes.length === 0) {
+      console.log('[Affiliate Pixels] No pixels configured for this affiliate');
+      return;
+    }
+    
+    console.log('[Affiliate Pixels] Injecting', data.pixelCodes.length, 'pixel(s)');
+    
+    // Inject each pixel code into the document head
+    data.pixelCodes.forEach(function(pixelCode, index) {
+      var container = document.createElement('div');
+      container.innerHTML = pixelCode.trim();
+      
+      // Extract and inject script tags
+      var scripts = container.querySelectorAll('script');
+      scripts.forEach(function(script) {
+        var newScript = document.createElement('script');
+        if (script.src) {
+          newScript.src = script.src;
+          newScript.async = script.async;
+        } else {
+          newScript.textContent = script.textContent;
+        }
+        document.head.appendChild(newScript);
+      });
+      
+      // Extract and inject noscript tags
+      var noscripts = container.querySelectorAll('noscript');
+      noscripts.forEach(function(noscript) {
+        document.head.appendChild(noscript.cloneNode(true));
+      });
+      
+      console.log('[Affiliate Pixels] Pixel', index + 1, 'injected successfully');
+    });
+    
+    console.log('[Affiliate Pixels] All pixels injected successfully');
+  })
+  .catch(function(error) {
+    console.error('[Affiliate Pixels] Error loading pixels:', error);
   });
 })();
 </script>

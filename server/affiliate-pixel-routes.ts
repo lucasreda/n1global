@@ -277,4 +277,98 @@ router.get("/:pixelId/preview", authenticateToken, requireAffiliate, async (req:
   }
 });
 
+router.get("/by-ref/:shortCode/code", async (req, res) => {
+  try {
+    const { shortCode } = req.params;
+    
+    const { affiliateMemberships, affiliateLandingPageProducts, affiliateLandingPages } = await import("@shared/schema");
+    
+    const membershipResult = await db
+      .select({
+        membership: affiliateMemberships,
+        product: products,
+      })
+      .from(affiliateMemberships)
+      .innerJoin(products, eq(affiliateMemberships.productId, products.id))
+      .where(eq(affiliateMemberships.shortCode, shortCode))
+      .limit(1);
+    
+    if (membershipResult.length === 0) {
+      return res.json({ pixelCodes: [] });
+    }
+    
+    const { membership, product } = membershipResult[0];
+    
+    const landingPageResult = await db
+      .select({
+        landingPage: affiliateLandingPages,
+      })
+      .from(affiliateLandingPageProducts)
+      .innerJoin(affiliateLandingPages, eq(affiliateLandingPageProducts.landingPageId, affiliateLandingPages.id))
+      .where(
+        and(
+          eq(affiliateLandingPageProducts.productId, product.id),
+          eq(affiliateLandingPages.status, "active")
+        )
+      )
+      .limit(1);
+    
+    const landingPageId = landingPageResult.length > 0 ? landingPageResult[0].landingPage.id : null;
+    
+    let pixels: AffiliateProductPixel[] = [];
+    
+    if (landingPageId) {
+      const specificPixels = await db
+        .select()
+        .from(affiliateProductPixels)
+        .where(
+          and(
+            eq(affiliateProductPixels.affiliateId, membership.affiliateId),
+            eq(affiliateProductPixels.landingPageId, landingPageId),
+            eq(affiliateProductPixels.isActive, true)
+          )
+        );
+      
+      pixels = specificPixels;
+    }
+    
+    const globalPixels = await db
+      .select()
+      .from(affiliateProductPixels)
+      .where(
+        and(
+          eq(affiliateProductPixels.affiliateId, membership.affiliateId),
+          eq(affiliateProductPixels.productId, product.id),
+          eq(affiliateProductPixels.landingPageId, null as any),
+          eq(affiliateProductPixels.isActive, true)
+        )
+      );
+    
+    pixels = [...pixels, ...globalPixels];
+    
+    const uniquePixels = pixels.reduce((acc, pixel) => {
+      const key = `${pixel.pixelType}-${pixel.pixelId}`;
+      if (!acc.has(key)) {
+        acc.set(key, pixel);
+      }
+      return acc;
+    }, new Map<string, AffiliateProductPixel>());
+    
+    const pixelCodes = Array.from(uniquePixels.values()).map(pixel => 
+      PixelCodeGenerator.generatePixelCode(pixel)
+    );
+    
+    console.log(`✅ Generated ${pixelCodes.length} pixel code(s) for ref: ${shortCode} (affiliate: ${membership.affiliateId})`);
+    
+    res.json({ 
+      pixelCodes,
+      affiliateId: membership.affiliateId,
+      productId: product.id,
+    });
+  } catch (error: any) {
+    console.error("Error fetching pixel codes by ref:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;
