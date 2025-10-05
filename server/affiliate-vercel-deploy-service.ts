@@ -36,10 +36,19 @@ export class AffiliateVercelDeployService {
   }
 
   private async getPixelsForLandingPage(landingPageId: string): Promise<string> {
-    const pixels = await db
-      .select({
-        pixel: affiliateProductPixels,
-      })
+    // First, get products associated with this landing page
+    const landingPageProducts = await db
+      .select({ productId: affiliateLandingPageProducts.productId })
+      .from(affiliateLandingPageProducts)
+      .where(eq(affiliateLandingPageProducts.landingPageId, landingPageId));
+    
+    const productIds = landingPageProducts.map(p => p.productId);
+
+    // Get pixels for this landing page:
+    // 1. Pixels specifically configured for this landing page (landingPageId = X)
+    // 2. Pixels configured for products but without specific landing page (landingPageId = NULL and productId in product list)
+    const specificPixels = await db
+      .select({ pixel: affiliateProductPixels })
       .from(affiliateProductPixels)
       .where(
         and(
@@ -48,13 +57,44 @@ export class AffiliateVercelDeployService {
         )
       );
 
-    if (pixels.length === 0) {
+    // Get global product pixels (pixels without specific landing page but for products in this landing page)
+    const globalPixelsPromises = productIds.map(productId =>
+      db
+        .select({ pixel: affiliateProductPixels })
+        .from(affiliateProductPixels)
+        .where(
+          and(
+            eq(affiliateProductPixels.productId, productId),
+            eq(affiliateProductPixels.isActive, true),
+            eq(affiliateProductPixels.landingPageId, null as any) // Global pixels have null landingPageId
+          )
+        )
+    );
+
+    const globalPixelsResults = await Promise.all(globalPixelsPromises);
+    const globalPixels = globalPixelsResults.flat();
+
+    // Combine both types of pixels
+    const allPixels = [...specificPixels, ...globalPixels];
+
+    if (allPixels.length === 0) {
       return '';
     }
 
-    const pixelCodes = pixels.map(({ pixel }) => 
+    // Remove duplicates based on pixel ID (in case same pixel appears multiple times)
+    const uniquePixels = allPixels.reduce((acc, { pixel }) => {
+      const key = `${pixel.pixelType}-${pixel.pixelId}`;
+      if (!acc.has(key)) {
+        acc.set(key, pixel);
+      }
+      return acc;
+    }, new Map());
+
+    const pixelCodes = Array.from(uniquePixels.values()).map(pixel => 
       PixelCodeGenerator.generatePixelCode(pixel)
     );
+
+    console.log(`✅ Found ${pixelCodes.length} pixel(s) for landing page ${landingPageId} (${specificPixels.length} specific + ${globalPixels.length} global)`);
 
     return pixelCodes.join('\n\n');
   }
