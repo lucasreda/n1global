@@ -103,7 +103,7 @@ export default function AffiliateProducts() {
 
     const variants: Record<string, { label: string; className: string; icon: any }> = {
       pending: { label: 'Pendente', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30', icon: AlertCircle },
-      approved: { label: 'Aprovado', className: 'bg-green-500/20 text-green-500 border-green-500/30', icon: CheckCircle },
+      active: { label: 'Aprovado', className: 'bg-green-500/20 text-green-500 border-green-500/30', icon: CheckCircle },
       rejected: { label: 'Rejeitado', className: 'bg-red-500/20 text-red-500 border-red-500/30', icon: XCircle },
     };
     
@@ -122,7 +122,7 @@ export default function AffiliateProducts() {
     joinProductMutation.mutate(productId);
   };
 
-  const memberProducts = filteredProducts.filter(p => p.isMember && p.membershipStatus === 'approved');
+  const memberProducts = filteredProducts.filter(p => p.isMember && p.membershipStatus === 'active');
   const pendingProducts = filteredProducts.filter(p => p.membershipStatus === 'pending');
   const availableProducts = filteredProducts.filter(p => !p.isMember);
 
