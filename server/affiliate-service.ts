@@ -751,8 +751,8 @@ export class AffiliateService {
         id: affiliateLandingPages.id,
         name: affiliateLandingPages.name,
         description: affiliateLandingPages.description,
-        previewUrl: affiliateLandingPages.previewUrl,
-        deployedUrl: affiliateLandingPages.deployedUrl,
+        thumbnailUrl: affiliateLandingPages.thumbnailUrl,
+        deployedUrl: affiliateLandingPages.vercelDeploymentUrl,
         status: affiliateLandingPages.status,
       })
       .from(affiliateLandingPages)
