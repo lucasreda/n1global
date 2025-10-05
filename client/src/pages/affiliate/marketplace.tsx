@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { Link } from "wouter";
 import {
   ShoppingBag,
   Search,
@@ -17,6 +18,7 @@ import {
   Package,
   DollarSign,
   TrendingUp,
+  Settings,
 } from "lucide-react";
 import {
   Tabs,
@@ -262,6 +264,19 @@ export default function AffiliateMarketplace() {
                 ✅ Aprovado em {new Date(product.approvedAt).toLocaleDateString('pt-BR')}
               </p>
             </div>
+          )}
+
+          {product.membershipStatus === 'active' && (
+            <Link href={`/affiliate/products/${product.productId}/pixels`}>
+              <Button
+                variant="outline"
+                className="w-full mt-3 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                data-testid={`button-configure-pixels-${product.productId}`}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configurar Pixels
+              </Button>
+            </Link>
           )}
         </div>
       </CardContent>
