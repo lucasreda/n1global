@@ -10,14 +10,17 @@ export function convertHtmlToPageModel(html: string): PageModelV2 {
   const description = extractMetaTag(html, 'description') || 'Descrição da página';
   const keywords = extractMetaTag(html, 'keywords')?.split(',').map(k => k.trim()) || [];
   
-  // Extract theme colors from style tags or inline styles
-  const theme = extractTheme(html);
+  // Extract and parse all CSS
+  const { rules: cssRules, cssText } = extractAllCSS(html);
+  
+  // Extract theme colors from parsed CSS
+  const theme = extractTheme(html, cssRules);
   
   // Extract body content
   const bodyContent = extractBodyContent(html);
   
-  // Parse HTML elements and group into sections
-  const sections = parseHtmlToSections(bodyContent);
+  // Parse HTML elements and group into sections (pass cssRules for style computation)
+  const sections = parseHtmlToSections(bodyContent, cssRules);
   
   // Create PageModelV2
   const pageModel: PageModelV2 = {
@@ -122,9 +125,96 @@ function extractBodyContent(html: string): string {
 }
 
 /**
- * Extract theme from HTML styles
+ * Extract and parse all CSS from HTML
  */
-function extractTheme(html: string): {
+function extractAllCSS(html: string): { rules: Record<string, Record<string, string>>, cssText: string } {
+  const cssRules: Record<string, Record<string, string>> = {};
+  let allCssText = '';
+  
+  // Extract all style tags
+  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  let match;
+  
+  while ((match = styleRegex.exec(html)) !== null) {
+    const cssText = match[1];
+    allCssText += cssText + '\n';
+    
+    // Parse CSS rules
+    // Match: selector { property: value; }
+    const ruleRegex = /([^{]+)\{([^}]+)\}/g;
+    let ruleMatch;
+    
+    while ((ruleMatch = ruleRegex.exec(cssText)) !== null) {
+      const selector = ruleMatch[1].trim();
+      const properties = ruleMatch[2].trim();
+      
+      // Parse properties
+      const styles: Record<string, string> = {};
+      const propRegex = /([^:]+):([^;]+)/g;
+      let propMatch;
+      
+      while ((propMatch = propRegex.exec(properties)) !== null) {
+        const property = propMatch[1].trim();
+        const value = propMatch[2].trim();
+        
+        // Convert kebab-case to camelCase
+        const camelProperty = property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+        styles[camelProperty] = value;
+      }
+      
+      // Store by selector (handle multiple selectors separated by comma)
+      selector.split(',').forEach(sel => {
+        const cleanSelector = sel.trim();
+        if (!cssRules[cleanSelector]) {
+          cssRules[cleanSelector] = {};
+        }
+        Object.assign(cssRules[cleanSelector], styles);
+      });
+    }
+  }
+  
+  return { rules: cssRules, cssText: allCssText };
+}
+
+/**
+ * Get computed styles for an element based on its tag, classes, and id
+ */
+function getComputedStyles(
+  tag: string,
+  classNames: string[],
+  id: string | null,
+  inlineStyles: Record<string, string>,
+  cssRules: Record<string, Record<string, string>>
+): Record<string, string> {
+  const computedStyles: Record<string, string> = {};
+  
+  // Apply tag styles
+  if (cssRules[tag]) {
+    Object.assign(computedStyles, cssRules[tag]);
+  }
+  
+  // Apply class styles (in order)
+  classNames.forEach(className => {
+    if (cssRules[`.${className}`]) {
+      Object.assign(computedStyles, cssRules[`.${className}`]);
+    }
+  });
+  
+  // Apply ID styles
+  if (id && cssRules[`#${id}`]) {
+    Object.assign(computedStyles, cssRules[`#${id}`]);
+  }
+  
+  // Apply inline styles (highest priority)
+  Object.assign(computedStyles, inlineStyles);
+  
+  return computedStyles;
+}
+
+/**
+ * Extract theme from HTML styles with improved CSS parsing
+ */
+function extractTheme(html: string, cssRules: Record<string, Record<string, string>>): {
   primaryColor?: string;
   secondaryColor?: string;
   backgroundColor?: string;
@@ -133,26 +223,31 @@ function extractTheme(html: string): {
 } {
   const theme: any = {};
   
-  // Extract from style tags
-  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-  if (styleMatch) {
-    const styles = styleMatch[1];
-    
-    // Look for common color patterns
-    const primaryMatch = styles.match(/--primary[^:]*:\s*([^;]+)/i);
-    if (primaryMatch) theme.primaryColor = primaryMatch[1].trim();
-    
-    const secondaryMatch = styles.match(/--secondary[^:]*:\s*([^;]+)/i);
-    if (secondaryMatch) theme.secondaryColor = secondaryMatch[1].trim();
-    
-    const bgMatch = styles.match(/background-color:\s*([^;]+)/i);
-    if (bgMatch) theme.backgroundColor = bgMatch[1].trim();
-    
-    const colorMatch = styles.match(/color:\s*([^;]+)/i);
-    if (colorMatch) theme.textColor = colorMatch[1].trim();
-    
-    const fontMatch = styles.match(/font-family:\s*([^;]+)/i);
-    if (fontMatch) theme.fontFamily = fontMatch[1].trim();
+  // Look for CSS variables in :root
+  if (cssRules[':root']) {
+    const rootVars = cssRules[':root'];
+    theme.primaryColor = rootVars['--primary'] || rootVars['--primary-color'] || rootVars['--color-primary'];
+    theme.secondaryColor = rootVars['--secondary'] || rootVars['--secondary-color'] || rootVars['--color-secondary'];
+    theme.backgroundColor = rootVars['--bg'] || rootVars['--background'] || rootVars['--background-color'];
+    theme.textColor = rootVars['--text'] || rootVars['--text-color'] || rootVars['--color-text'];
+    theme.fontFamily = rootVars['--font-family'] || rootVars['--body-font'];
+  }
+  
+  // Fallback to body styles
+  if (cssRules['body']) {
+    const bodyStyles = cssRules['body'];
+    theme.backgroundColor = theme.backgroundColor || bodyStyles.backgroundColor;
+    theme.textColor = theme.textColor || bodyStyles.color;
+    theme.fontFamily = theme.fontFamily || bodyStyles.fontFamily;
+  }
+  
+  // Look for common button/primary element styles
+  const buttonSelectors = ['.btn', '.button', '.btn-primary', 'button'];
+  for (const selector of buttonSelectors) {
+    if (cssRules[selector]?.backgroundColor) {
+      theme.primaryColor = theme.primaryColor || cssRules[selector].backgroundColor;
+      break;
+    }
   }
   
   return theme;
@@ -161,7 +256,7 @@ function extractTheme(html: string): {
 /**
  * Parse HTML to sections
  */
-function parseHtmlToSections(html: string): BlockSection[] {
+function parseHtmlToSections(html: string, cssRules: Record<string, Record<string, string>>): BlockSection[] {
   const sections: BlockSection[] = [];
   
   // Split by section tags if they exist
@@ -170,14 +265,14 @@ function parseHtmlToSections(html: string): BlockSection[] {
   if (sectionMatches && sectionMatches.length > 0) {
     // Has section tags - parse each section
     sectionMatches.forEach((sectionHtml, index) => {
-      const elements = parseHtmlElements(sectionHtml);
+      const elements = parseHtmlElements(sectionHtml, cssRules);
       if (elements.length > 0) {
         sections.push(createSection(elements, index));
       }
     });
   } else {
     // No section tags - group elements logically
-    const allElements = parseHtmlElements(html);
+    const allElements = parseHtmlElements(html, cssRules);
     
     if (allElements.length === 0) {
       return [createDefaultSection()];
@@ -196,12 +291,11 @@ function parseHtmlToSections(html: string): BlockSection[] {
 /**
  * Parse HTML to elements
  */
-function parseHtmlElements(html: string): BlockElement[] {
+function parseHtmlElements(html: string, cssRules: Record<string, Record<string, string>>): BlockElement[] {
   const elements: BlockElement[] = [];
   
-  // Remove script and style tags
+  // Remove script tags (keep style tags for context, they're already parsed)
   html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
   
   // Extract all relevant tags
   const tagRegex = /<(h[1-6]|p|a|img|button|div)[^>]*>([\s\S]*?)<\/\1>|<img[^>]*\/?>|<br\s*\/?>/gi;
@@ -212,7 +306,7 @@ function parseHtmlElements(html: string): BlockElement[] {
     const content = match[2] || '';
     const fullTag = match[0];
     
-    const element = convertTagToElement(tag, content, fullTag);
+    const element = convertTagToElement(tag, content, fullTag, cssRules);
     if (element) {
       elements.push(element);
     }
@@ -224,9 +318,16 @@ function parseHtmlElements(html: string): BlockElement[] {
 /**
  * Convert HTML tag to BlockElement
  */
-function convertTagToElement(tag: string, content: string, fullTag: string): BlockElement | null {
+function convertTagToElement(tag: string, content: string, fullTag: string, cssRules: Record<string, Record<string, string>>): BlockElement | null {
   const id = generateId();
-  const styles = extractInlineStyles(fullTag);
+  
+  // Extract attributes
+  const inlineStyles = extractInlineStyles(fullTag);
+  const classNames = extractAttribute(fullTag, 'class')?.split(/\s+/).filter(c => c) || [];
+  const elementId = extractAttribute(fullTag, 'id');
+  
+  // Compute final styles (tag + classes + id + inline)
+  const computedStyles = getComputedStyles(tag, classNames, elementId, inlineStyles, cssRules);
   
   switch (tag) {
     case 'h1':
@@ -235,16 +336,11 @@ function convertTagToElement(tag: string, content: string, fullTag: string): Blo
     case 'h4':
     case 'h5':
     case 'h6':
-      const levelNum = parseInt(tag.substring(1));
       return {
         id,
         type: 'heading',
         props: { level: tag as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' },
-        styles: {
-          ...styles,
-          fontSize: levelNum === 1 ? '2.5rem' : levelNum === 2 ? '2rem' : levelNum === 3 ? '1.75rem' : '1.5rem',
-          fontWeight: '700',
-        },
+        styles: computedStyles,
         content: { text: stripHtml(content) },
       };
     
@@ -253,29 +349,21 @@ function convertTagToElement(tag: string, content: string, fullTag: string): Blo
         id,
         type: 'text',
         props: {},
-        styles: {
-          ...styles,
-          marginBottom: '1rem',
-        },
+        styles: computedStyles,
         content: { text: stripHtml(content) },
       };
     
     case 'a':
       const href = extractAttribute(fullTag, 'href') || '#';
-      const isButton = fullTag.includes('button') || fullTag.includes('btn') || fullTag.includes('cta');
+      const isButton = classNames.some(c => c.includes('btn') || c.includes('button')) || 
+                       fullTag.includes('button');
       
       if (isButton) {
         return {
           id,
           type: 'button',
           props: { href },
-          styles: {
-            ...styles,
-            padding: '0.75rem 1.5rem',
-            backgroundColor: styles.backgroundColor || '#3b82f6',
-            color: styles.color || '#ffffff',
-            borderRadius: '0.5rem',
-          },
+          styles: computedStyles,
           content: { text: stripHtml(content), href },
         };
       } else {
@@ -283,11 +371,7 @@ function convertTagToElement(tag: string, content: string, fullTag: string): Blo
           id,
           type: 'text',
           props: { href },
-          styles: {
-            ...styles,
-            color: styles.color || '#3b82f6',
-            textDecoration: 'underline',
-          },
+          styles: computedStyles,
           content: { text: stripHtml(content), href },
         };
       }
@@ -297,13 +381,7 @@ function convertTagToElement(tag: string, content: string, fullTag: string): Blo
         id,
         type: 'button',
         props: {},
-        styles: {
-          ...styles,
-          padding: '0.75rem 1.5rem',
-          backgroundColor: styles.backgroundColor || '#3b82f6',
-          color: styles.color || '#ffffff',
-          borderRadius: '0.5rem',
-        },
+        styles: computedStyles,
         content: { text: stripHtml(content) },
       };
     
@@ -317,11 +395,7 @@ function convertTagToElement(tag: string, content: string, fullTag: string): Blo
         id,
         type: 'image',
         props: { src, alt },
-        styles: {
-          ...styles,
-          maxWidth: '100%',
-          height: 'auto',
-        },
+        styles: computedStyles,
         content: { src, alt },
       };
     
@@ -333,7 +407,7 @@ function convertTagToElement(tag: string, content: string, fullTag: string): Blo
         id,
         type: 'text',
         props: {},
-        styles,
+        styles: computedStyles,
         content: { text },
       };
     
