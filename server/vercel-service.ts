@@ -178,7 +178,6 @@ export class VercelService {
 
       const projectPayload: any = {
         name,
-        gitRepository: null, // We'll deploy without git
       };
 
       // Only add framework and build settings if framework is specified
