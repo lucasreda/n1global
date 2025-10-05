@@ -128,18 +128,30 @@ Preferred communication style: Simple, everyday language.
    - Centralized architecture: Single platform Vercel account hosts all affiliate landing pages
    - `affiliate_landing_pages` table for HTML/CSS/JS storage with draft/active/archived states
    - `AffiliateLandingService` for CRUD operations on landing page templates
-   - `AffiliateVercelDeployService` for automated deployment with pixel injection
-   - Automatic tracking pixel injection before `</body>` tag during deployment
+   - `AffiliateVercelDeployService` for automated deployment with universal tracking script injection
+   - **Universal Tracking Script**: Automatic injection before `</body>` tag during deployment
    - Landing page assignment system linking affiliates to deployed pages
    - Admin endpoints for landing page management (create, update, activate, archive, deploy)
    - Admin endpoints for affiliate assignment (deploy + assign, unassign)
-   - Affiliate pixel configuration endpoint (PATCH /api/affiliate/tracking-pixel)
    - API routes registered at `/api/affiliate/landing-pages/*`
    - **OAuth Integration**: Reuses existing Vercel OAuth from Funis de Vendas system
    - OAuth endpoints for secure account connection (`/vercel/oauth-url`, `/vercel/callback`)
    - Token storage in `funnelIntegrations` table (shared with Funis de Vendas)
    - Dynamic credential fetching from database (no manual env var configuration)
    - Frontend OAuth button with status display and reconnection support
+
+7. **Phase 7 - Universal Tracking System (Complete)**:
+   - **Architecture Change**: One landing page serves all affiliates via URL parameters (?ref=affiliateCode)
+   - Universal tracking script automatically injected into all deployed landing pages
+   - Script reads URL parameters (`ref` or `aff`) to identify affiliate
+   - Automatic click registration to backend endpoint without JWT tokens
+   - Click data stored in localStorage (trackingId, affiliateRef) for future conversions
+   - New public endpoint: `POST /api/affiliate/tracking/click/:affiliateRef`
+   - `getAffiliateByReferralCode()` method in AffiliateService for referral code lookups
+   - `registerSimpleClick()` method in AffiliateTrackingService for streamlined click tracking
+   - Anti-fraud protection: IP deduplication within 24h window (returns existing click)
+   - Comprehensive metadata capture: IP, user agent, referrer, landing URL, timestamp
+   - Zero configuration required per affiliate - works automatically after deployment
 
 **Technical Implementation**:
 - JWT tokens with 90-day expiration for tracking links
@@ -155,12 +167,12 @@ Preferred communication style: Simple, everyday language.
 - Shared Vercel integration infrastructure across systems
 
 **Next Phases** (Pending):
-- Phase 7: External Checkout SDK (JavaScript SDK for external sites)
-- Phase 8: Vercel-hosted Checkout (Next.js template)
-- Phase 9: Affiliate Dashboard UI (React frontend)
-- Phase 10: Admin Panel (affiliate approval, commission config, payout management)
-- Phase 11: Security & Anti-Fraud (rate limiting, advanced fraud detection)
-- Phase 12: End-to-End Testing (seed data, full flow validation)
+- Phase 8: External Checkout SDK (JavaScript SDK for external sites)
+- Phase 9: Vercel-hosted Checkout (Next.js template)
+- Phase 10: Affiliate Dashboard UI (React frontend)
+- Phase 11: Admin Panel (affiliate approval, commission config, payout management)
+- Phase 12: Security & Anti-Fraud (rate limiting, advanced fraud detection)
+- Phase 13: End-to-End Testing (seed data, full flow validation)
 
 **Files Modified/Created**:
 - `shared/schema.ts`: Affiliate tables, types, and landing pages table
