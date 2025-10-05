@@ -297,6 +297,26 @@ export default function AffiliatesLandingPages() {
     enabled: settingsDialogOpen,
   });
 
+  const deployMutation = useMutation({
+    mutationFn: async (landingPageId: string) => {
+      return await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/deploy`, 'POST', {});
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
+      toast({
+        title: "Deploy realizado!",
+        description: `Landing page deployada com sucesso: ${data.deploymentUrl}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao fazer deploy",
+        description: error.message || "Não foi possível fazer o deploy da landing page.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       name: "",
@@ -503,6 +523,21 @@ export default function AffiliatesLandingPages() {
                           className="text-gray-400 hover:text-white hover:bg-gray-500/10"
                         >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deployMutation.mutate(page.id)}
+                          disabled={deployMutation.isPending || page.status !== 'active'}
+                          className="text-green-400 hover:text-green-300 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={page.status !== 'active' ? 'Apenas landing pages ativas podem ser deployadas' : 'Fazer deploy no Vercel'}
+                          data-testid={`button-deploy-${page.id}`}
+                        >
+                          {deployMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
