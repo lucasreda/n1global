@@ -11,8 +11,70 @@ const router = express.Router();
 // =============================================
 
 /**
+ * POST /api/affiliate/tracking/click/:affiliateRef
+ * Register a click using affiliate reference (universal tracking)
+ * PUBLIC - No authentication required
+ * Used by universal tracking script on landing pages
+ */
+router.post("/click/:affiliateRef", async (req, res) => {
+  try {
+    const { affiliateRef } = req.params;
+    const { referrer, landingUrl, userAgent, timestamp } = req.body;
+
+    // Get IP from headers
+    const ipAddress =
+      req.headers["x-forwarded-for"]?.toString().split(",")[0] ||
+      req.headers["x-real-ip"]?.toString() ||
+      req.socket.remoteAddress;
+
+    // Find affiliate profile by referral code or email
+    const profile = await affiliateService.getAffiliateByReferralCode(affiliateRef);
+    
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Referência de afiliado não encontrada" 
+      });
+    }
+
+    // Generate unique tracking ID for this click
+    const trackingId = `trk_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Register click using the new simplified method
+    const click = await affiliateTrackingService.registerSimpleClick({
+      affiliateId: profile.id,
+      trackingId,
+      ipAddress,
+      userAgent: userAgent || req.headers["user-agent"]?.toString(),
+      referer: referrer || req.headers.referer?.toString(),
+      landingUrl,
+    });
+
+    if (!click) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Falha ao registrar clique" 
+      });
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      clickId: click.id,
+      trackingId: trackingId,
+      affiliateId: profile.id
+    });
+  } catch (error: any) {
+    console.error("Error registering universal affiliate click:", error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+});
+
+/**
  * POST /api/affiliate/tracking/click
- * Register a click when someone visits an affiliate link
+ * Register a click when someone visits an affiliate link (legacy JWT-based)
  * PUBLIC - No authentication required
  */
 router.post("/click", async (req, res) => {

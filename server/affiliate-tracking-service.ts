@@ -79,7 +79,74 @@ export class AffiliateTrackingService {
   }
 
   /**
-   * Register a click when someone visits an affiliate link
+   * Register a click using simplified affiliate reference (universal tracking)
+   * Used by landing pages with dynamic tracking
+   */
+  async registerSimpleClick(data: {
+    affiliateId: string;
+    trackingId: string;
+    ipAddress?: string;
+    userAgent?: string;
+    referer?: string;
+    landingUrl?: string;
+  }): Promise<AffiliateClick | null> {
+    try {
+      // Check if affiliate profile exists and is approved
+      const profile = await db
+        .select()
+        .from(affiliateProfiles)
+        .where(eq(affiliateProfiles.id, data.affiliateId))
+        .limit(1);
+
+      if (profile.length === 0 || profile[0].status !== "approved") {
+        console.error("Affiliate not found or not approved");
+        return null;
+      }
+
+      // Check for duplicate click from same IP within last 24 hours (basic fraud prevention)
+      if (data.ipAddress) {
+        const recentClick = await db
+          .select()
+          .from(affiliateClicks)
+          .where(
+            and(
+              eq(affiliateClicks.affiliateId, data.affiliateId),
+              eq(affiliateClicks.ipAddress, data.ipAddress),
+              sql`clicked_at > NOW() - INTERVAL '24 hours'`
+            )
+          )
+          .limit(1);
+
+        if (recentClick.length > 0) {
+          console.log(`Duplicate click from IP ${data.ipAddress} within 24 hours`);
+          // Return existing click instead of creating duplicate
+          return recentClick[0];
+        }
+      }
+
+      // Insert the click
+      const clickData: InsertAffiliateClick = {
+        affiliateId: data.affiliateId,
+        trackingId: data.trackingId,
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent,
+        referer: data.referer,
+        landingUrl: data.landingUrl,
+        clickedAt: new Date(),
+      };
+
+      const inserted = await db.insert(affiliateClicks).values(clickData).returning();
+
+      console.log(`✅ Affiliate click registered: ${inserted[0].id}`);
+      return inserted[0];
+    } catch (error) {
+      console.error("Error registering simple affiliate click:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Register a click when someone visits an affiliate link (JWT-based)
    */
   async registerClick(
     token: string,

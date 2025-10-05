@@ -83,6 +83,20 @@ export class AffiliateService {
   }
 
   /**
+   * Get affiliate profile by referral code
+   * Used for universal tracking via URL parameters
+   */
+  async getAffiliateByReferralCode(referralCode: string): Promise<AffiliateProfile | null> {
+    const result = await db
+      .select()
+      .from(affiliateProfiles)
+      .where(eq(affiliateProfiles.referralCode, referralCode))
+      .limit(1);
+    
+    return result[0] || null;
+  }
+
+  /**
    * List all affiliates (for admin)
    */
   async listAffiliates(filters?: {
