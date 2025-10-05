@@ -302,9 +302,22 @@ function parseHtmlElements(html: string, cssRules: Record<string, Record<string,
   let match;
   
   while ((match = tagRegex.exec(html)) !== null) {
-    const tag = match[1]?.toLowerCase() || 'br';
-    const content = match[2] || '';
     const fullTag = match[0];
+    
+    // Determine the tag name
+    let tag: string;
+    if (match[1]) {
+      // Regular tag with closing tag
+      tag = match[1].toLowerCase();
+    } else if (fullTag.toLowerCase().startsWith('<img')) {
+      // Self-closing img tag
+      tag = 'img';
+    } else {
+      // Default to br for <br /> tags
+      tag = 'br';
+    }
+    
+    const content = match[2] || '';
     
     const element = convertTagToElement(tag, content, fullTag, cssRules);
     if (element) {
