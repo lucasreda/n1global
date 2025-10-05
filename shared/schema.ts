@@ -1950,6 +1950,21 @@ export const affiliateLandingPages = pgTable("affiliate_landing_pages", {
   };
 });
 
+// Affiliate Landing Page - Product relationship (many-to-many)
+export const affiliateLandingPageProducts = pgTable("affiliate_landing_page_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  landingPageId: varchar("landing_page_id").notNull().references(() => affiliateLandingPages.id, { onDelete: 'cascade' }),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    landingPageIdx: index().on(table.landingPageId),
+    productIdx: index().on(table.productId),
+    uniqueLandingPageProduct: index().on(table.landingPageId, table.productId),
+  };
+});
+
 // =============================================
 // END AFFILIATE PROGRAM TABLES
 // =============================================
@@ -2522,6 +2537,15 @@ export const insertAffiliateLandingPageSchema = createInsertSchema(affiliateLand
 
 export type AffiliateLandingPage = typeof affiliateLandingPages.$inferSelect;
 export type InsertAffiliateLandingPage = z.infer<typeof insertAffiliateLandingPageSchema>;
+
+// Affiliate Landing Page Products Schema
+export const insertAffiliateLandingPageProductSchema = createInsertSchema(affiliateLandingPageProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AffiliateLandingPageProduct = typeof affiliateLandingPageProducts.$inferSelect;
+export type InsertAffiliateLandingPageProduct = z.infer<typeof insertAffiliateLandingPageProductSchema>;
 
 // =============================================
 // END AFFILIATE PROGRAM SCHEMAS AND TYPES
