@@ -1972,6 +1972,47 @@ export const affiliateLandingPageProducts = pgTable("affiliate_landing_page_prod
   };
 });
 
+// Affiliate Product Pixels - Structured pixel configuration per product/landing page
+export const affiliateProductPixels = pgTable("affiliate_product_pixels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id, { onDelete: 'cascade' }),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
+  landingPageId: varchar("landing_page_id").references(() => affiliateLandingPages.id, { onDelete: 'cascade' }), // Optional: specific landing page
+  
+  // Pixel type and configuration
+  pixelType: text("pixel_type").notNull(), // 'meta', 'google_ads', 'tiktok', 'custom'
+  pixelId: text("pixel_id").notNull(), // Meta Pixel ID, Google Ads ID, etc
+  accessToken: text("access_token"), // For Meta Conversions API, etc
+  
+  // Event configuration
+  events: jsonb("events").$type<{
+    pageView?: boolean;
+    purchase?: boolean;
+    lead?: boolean;
+    addToCart?: boolean;
+    initiateCheckout?: boolean;
+    custom?: string[];
+  }>().notNull().default(sql`'{"pageView":true,"purchase":true}'::jsonb`),
+  
+  // Custom code fallback (for backward compatibility)
+  customCode: text("custom_code"),
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    affiliateIdx: index().on(table.affiliateId),
+    productIdx: index().on(table.productId),
+    landingPageIdx: index().on(table.landingPageId),
+    activeIdx: index().on(table.isActive),
+    uniqueAffiliateProductLandingPage: index().on(table.affiliateId, table.productId, table.landingPageId),
+  };
+});
+
 // =============================================
 // END AFFILIATE PROGRAM TABLES
 // =============================================
@@ -2553,6 +2594,16 @@ export const insertAffiliateLandingPageProductSchema = createInsertSchema(affili
 
 export type AffiliateLandingPageProduct = typeof affiliateLandingPageProducts.$inferSelect;
 export type InsertAffiliateLandingPageProduct = z.infer<typeof insertAffiliateLandingPageProductSchema>;
+
+// Affiliate Product Pixels Schema
+export const insertAffiliateProductPixelSchema = createInsertSchema(affiliateProductPixels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateProductPixel = typeof affiliateProductPixels.$inferSelect;
+export type InsertAffiliateProductPixel = z.infer<typeof insertAffiliateProductPixelSchema>;
 
 // =============================================
 // END AFFILIATE PROGRAM SCHEMAS AND TYPES
