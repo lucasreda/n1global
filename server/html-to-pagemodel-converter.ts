@@ -301,12 +301,42 @@ function parseHtmlToSections(html: string, cssRules: Record<string, Record<strin
   console.log('📦 Found', sectionMatches?.length || 0, 'section tags');
   
   if (sectionMatches && sectionMatches.length > 0) {
-    // Has section tags - parse each section
+    // Has section tags - parse each section AND extract container styles
     sectionMatches.forEach((sectionHtml, index) => {
+      // Extract section tag attributes to get styles
+      const sectionTagMatch = sectionHtml.match(/<section([^>]*)>/i);
+      let sectionStyles: Record<string, string> = {};
+      
+      if (sectionTagMatch) {
+        const sectionTag = sectionTagMatch[0];
+        // Extract classes and id from section tag
+        const classMatch = sectionTag.match(/class=["']([^"']*)["']/i);
+        const idMatch = sectionTag.match(/id=["']([^"']*)["']/i);
+        const styleMatch = sectionTag.match(/style=["']([^"']*)["']/i);
+        
+        const classNames = classMatch ? classMatch[1].split(/\s+/).filter(c => c) : [];
+        const elementId = idMatch ? idMatch[1] : null;
+        const inlineStyles: Record<string, string> = {};
+        
+        if (styleMatch) {
+          styleMatch[1].split(';').forEach(decl => {
+            const [prop, val] = decl.split(':').map(s => s.trim());
+            if (prop && val) {
+              const camelProp = prop.replace(/-([a-z])/g, (_: string, g: string) => g.toUpperCase());
+              inlineStyles[camelProp] = val;
+            }
+          });
+        }
+        
+        // Compute styles for the section container
+        sectionStyles = getComputedStyles('section', classNames, elementId, inlineStyles, cssRules);
+        console.log(`📦 Section ${index + 1} container styles:`, Object.keys(sectionStyles).slice(0, 8));
+      }
+      
       const elements = parseHtmlElements(sectionHtml, cssRules);
       console.log(`📦 Section ${index + 1}: found ${elements.length} elements`);
       if (elements.length > 0) {
-        sections.push(createSection(elements, index));
+        sections.push(createSection(elements, index, sectionStyles));
       }
     });
   } else {
@@ -713,7 +743,7 @@ function groupElementsBySections(elements: BlockElement[]): BlockElement[][] {
 /**
  * Create a section from elements
  */
-function createSection(elements: BlockElement[], index: number): BlockSection {
+function createSection(elements: BlockElement[], index: number, containerStyles: Record<string, string> = {}): BlockSection {
   // Determine section type based on content
   const hasHeading = elements.some(el => el.type === 'heading');
   const hasButton = elements.some(el => el.type === 'button');
@@ -745,15 +775,21 @@ function createSection(elements: BlockElement[], index: number): BlockSection {
     styles: {},
   };
   
+  // Merge container styles with default padding
+  const defaultStyles = {
+    paddingTop: '3rem',
+    paddingBottom: '3rem',
+  };
+  
+  // Container styles override defaults
+  const mergedStyles = { ...defaultStyles, ...containerStyles };
+  
   return {
     id: generateId(),
     type: sectionType,
     name: sectionName,
     rows: [row],
-    styles: {
-      paddingTop: '3rem',
-      paddingBottom: '3rem',
-    },
+    styles: mergedStyles,
     settings: {
       containerWidth: 'container',
       textAlign: 'center',
