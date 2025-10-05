@@ -403,6 +403,35 @@ export class AffiliateService {
     };
   }
 
+  async getPendingConversions(filters?: {
+    limit?: number;
+    offset?: number;
+  }) {
+    const conversions = await db
+      .select({
+        id: affiliateConversions.id,
+        orderId: affiliateConversions.orderId,
+        affiliateId: affiliateConversions.affiliateId,
+        trackingId: affiliateConversions.trackingId,
+        orderValue: affiliateConversions.orderValue,
+        commissionAmount: affiliateConversions.commissionAmount,
+        commissionRate: affiliateConversions.commissionRate,
+        status: affiliateConversions.status,
+        createdAt: affiliateConversions.createdAt,
+        affiliateName: users.username,
+        affiliateEmail: users.email,
+      })
+      .from(affiliateConversions)
+      .leftJoin(affiliateProfiles, eq(affiliateConversions.affiliateId, affiliateProfiles.id))
+      .leftJoin(users, eq(affiliateProfiles.userId, users.id))
+      .where(eq(affiliateConversions.status, "pending"))
+      .orderBy(sql`${affiliateConversions.createdAt} DESC`)
+      .limit(filters?.limit || 50)
+      .offset(filters?.offset || 0);
+
+    return conversions;
+  }
+
   async assignLandingPageToAffiliate(
     affiliateId: string,
     landingPageId: string,

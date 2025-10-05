@@ -413,6 +413,31 @@ router.delete(
 );
 
 /**
+ * GET /api/affiliate/admin/conversions/pending
+ * Get pending conversions (admin only)
+ */
+router.get(
+  "/admin/conversions/pending",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { limit, offset } = req.query;
+      
+      const conversions = await affiliateService.getPendingConversions({
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+      });
+      
+      res.json(conversions);
+    } catch (error: any) {
+      console.error("Error getting pending conversions:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
  * GET /api/affiliate/products
  * Get products with commission info and membership status
  */
