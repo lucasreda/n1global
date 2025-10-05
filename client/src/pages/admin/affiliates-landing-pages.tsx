@@ -16,6 +16,8 @@ import {
   Eye,
   Globe,
   FileCode,
+  FileText,
+  Code,
   Upload,
   Check,
   X,
@@ -24,6 +26,7 @@ import {
   Copy,
   ExternalLink,
   Wand2,
+  ArrowLeft,
 } from "lucide-react";
 import {
   Dialog,
@@ -86,6 +89,10 @@ export default function AffiliatesLandingPages() {
     cssContent: "",
     jsContent: "",
   });
+  
+  const [currentStep, setCurrentStep] = useState(1);
+  const [creationMethod, setCreationMethod] = useState<'blank' | 'html' | null>(null);
+  const [htmlContent, setHtmlContent] = useState('');
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -129,21 +136,41 @@ export default function AffiliatesLandingPages() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('/api/affiliate/landing-pages', 'POST', data);
+      const response = await apiRequest('/api/affiliate/landing-pages', 'POST', data);
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       toast({
         title: "Landing page criada!",
         description: "A landing page foi criada com sucesso.",
       });
-      setCreateDialogOpen(false);
-      resetForm();
+      return data;
     },
     onError: (error: any) => {
       toast({
         title: "Erro ao criar landing page",
         description: error.message || "Não foi possível criar a landing page.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const convertToVisualMutation = useMutation({
+    mutationFn: async (landingPageId: string) => {
+      const response = await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/convert-to-visual`, 'POST', {});
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "HTML convertido!",
+        description: "O HTML foi convertido para o modelo visual com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao converter HTML",
+        description: error.message || "Não foi possível converter o HTML.",
         variant: "destructive",
       });
     },
@@ -362,10 +389,80 @@ export default function AffiliatesLandingPages() {
       cssContent: "",
       jsContent: "",
     });
+    setCurrentStep(1);
+    setCreationMethod(null);
+    setHtmlContent('');
   };
 
-  const handleCreate = () => {
-    createMutation.mutate(formData);
+  const handleCreateBlank = async () => {
+    const initialModel = {
+      sections: [
+        {
+          id: `section_${Date.now()}`,
+          type: 'content',
+          name: 'Nova Seção',
+          rows: [
+            {
+              id: `row_${Date.now()}`,
+              columns: [
+                {
+                  id: `column_${Date.now()}`,
+                  width: 'full',
+                  elements: [
+                    {
+                      id: `element_${Date.now()}`,
+                      type: 'heading',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    try {
+      const newPage = await createMutation.mutateAsync({
+        name: "Nova Landing Page",
+        description: "",
+        htmlContent: "",
+        model: initialModel,
+      });
+      
+      setCreateDialogOpen(false);
+      resetForm();
+      setLocation(`/inside/affiliates/landing-pages/${newPage.id}/edit`);
+    } catch (error) {
+      console.error("Error creating blank landing page:", error);
+    }
+  };
+
+  const handleCreateFromHTML = async () => {
+    if (!formData.name || !htmlContent) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha o nome e o conteúdo HTML.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const newPage = await createMutation.mutateAsync({
+        name: formData.name,
+        description: formData.description,
+        htmlContent: htmlContent,
+      });
+      
+      await convertToVisualMutation.mutateAsync(newPage.id);
+      
+      setCreateDialogOpen(false);
+      resetForm();
+      setLocation(`/inside/affiliates/landing-pages/${newPage.id}/edit`);
+    } catch (error) {
+      console.error("Error creating landing page from HTML:", error);
+    }
   };
 
   const handleEdit = () => {
@@ -612,99 +709,218 @@ export default function AffiliatesLandingPages() {
         </CardContent>
       </Card>
 
-      {/* Create Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-[#1a1a1a] border-[#252525] text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* Create Dialog - Multi-step Modal */}
+      <Dialog open={createDialogOpen} onOpenChange={(open) => {
+        setCreateDialogOpen(open);
+        if (!open) resetForm();
+      }}>
+        <DialogContent className="bg-[#1a1a1a] border-[#252525] text-white max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Nova Landing Page</DialogTitle>
+            <DialogTitle>
+              {currentStep === 1 ? 'Nova Landing Page' : 'Importar HTML'}
+            </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Crie uma nova landing page para seus afiliados
+              {currentStep === 1 
+                ? 'Escolha como você quer criar sua landing page'
+                : 'Configure sua landing page e cole o código HTML'
+              }
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="name" className="text-gray-300">Nome</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Landing Page Principal"
-                className="bg-[#0f0f0f] border-[#252525] text-white mb-4"
-              />
-            </div>
-            <div>
-              <Label htmlFor="description" className="text-gray-300">Descrição (Opcional)</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Ex: Landing page para produtos premium"
-                className="bg-[#0f0f0f] border-[#252525] text-white"
-              />
-            </div>
 
-            <Tabs defaultValue="html" className="w-full">
-              <TabsList className="bg-[#0f0f0f] border border-[#252525]">
-                <TabsTrigger value="html">HTML</TabsTrigger>
-                <TabsTrigger value="css">CSS</TabsTrigger>
-                <TabsTrigger value="js">JavaScript</TabsTrigger>
-              </TabsList>
-              <TabsContent value="html">
-                <div>
-                  <Label htmlFor="htmlContent" className="text-gray-300">HTML</Label>
-                  <Textarea
-                    id="htmlContent"
-                    value={formData.htmlContent}
-                    onChange={(e) => setFormData({ ...formData, htmlContent: e.target.value })}
-                    placeholder="Cole o código HTML da landing page"
-                    className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[300px]"
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value="css">
-                <div>
-                  <Label htmlFor="cssContent" className="text-gray-300">CSS (Opcional)</Label>
-                  <Textarea
-                    id="cssContent"
-                    value={formData.cssContent}
-                    onChange={(e) => setFormData({ ...formData, cssContent: e.target.value })}
-                    placeholder="Cole o código CSS"
-                    className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[300px]"
-                  />
-                </div>
-              </TabsContent>
-              <TabsContent value="js">
-                <div>
-                  <Label htmlFor="jsContent" className="text-gray-300">JavaScript (Opcional)</Label>
-                  <Textarea
-                    id="jsContent"
-                    value={formData.jsContent}
-                    onChange={(e) => setFormData({ ...formData, jsContent: e.target.value })}
-                    placeholder="Cole o código JavaScript"
-                    className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[300px]"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
+          {/* Step Indicator */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className={`flex items-center gap-2 ${currentStep === 1 ? 'text-blue-400' : 'text-gray-500'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                currentStep === 1 ? 'border-blue-400 bg-blue-400/20' : 'border-gray-600 bg-gray-600/20'
+              }`}>
+                1
+              </div>
+              <span className="text-sm font-medium">Método</span>
+            </div>
+            <div className={`flex-1 h-[2px] ${currentStep === 2 ? 'bg-blue-400' : 'bg-gray-600'}`} />
+            <div className={`flex items-center gap-2 ${currentStep === 2 ? 'text-blue-400' : 'text-gray-500'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                currentStep === 2 ? 'border-blue-400 bg-blue-400/20' : 'border-gray-600 bg-gray-600/20'
+              }`}>
+                2
+              </div>
+              <span className="text-sm font-medium">Configuração</span>
+            </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setCreateDialogOpen(false);
-                resetForm();
-              }}
-              className="text-gray-400 hover:text-white"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={!formData.name || !formData.htmlContent || createMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {createMutation.isPending ? "Criando..." : "Criar Landing Page"}
-            </Button>
+
+          {/* Step 1 - Choose Creation Method */}
+          {currentStep === 1 && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Card 1: Blank */}
+                <Card 
+                  className="bg-[#0f0f0f] border-[#252525] hover:border-blue-400/50 transition-all cursor-pointer group"
+                  onClick={() => {
+                    setCreationMethod('blank');
+                  }}
+                  data-testid="card-create-blank"
+                >
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                    <div className="h-16 w-16 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                      <FileText className="h-8 w-8 text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Começar do Zero</h3>
+                      <p className="text-sm text-gray-400">
+                        Crie sua landing page usando o editor visual
+                      </p>
+                    </div>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreateBlank();
+                      }}
+                      disabled={createMutation.isPending}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      data-testid="button-start-blank"
+                    >
+                      {createMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Criando...
+                        </>
+                      ) : (
+                        'Começar'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Card 2: From HTML */}
+                <Card 
+                  className="bg-[#0f0f0f] border-[#252525] hover:border-purple-400/50 transition-all cursor-pointer group"
+                  onClick={() => {
+                    setCreationMethod('html');
+                    setCurrentStep(2);
+                  }}
+                  data-testid="card-create-from-html"
+                >
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                    <div className="h-16 w-16 rounded-lg bg-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/30 transition-colors">
+                      <Code className="h-8 w-8 text-purple-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Importar HTML</h3>
+                      <p className="text-sm text-gray-400">
+                        Cole seu código HTML e converta para o editor visual
+                      </p>
+                    </div>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCreationMethod('html');
+                        setCurrentStep(2);
+                      }}
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      data-testid="button-continue-html"
+                    >
+                      Continuar
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 - HTML Configuration */}
+          {currentStep === 2 && creationMethod === 'html' && (
+            <div className="space-y-4 py-4">
+              <div>
+                <Label htmlFor="landing-page-name" className="text-gray-300">
+                  Nome da Landing Page
+                </Label>
+                <Input
+                  id="landing-page-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ex: Landing Page Principal"
+                  className="bg-[#0f0f0f] border-[#252525] text-white mt-2"
+                  data-testid="input-landing-page-name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="landing-page-description" className="text-gray-300">
+                  Descrição (Opcional)
+                </Label>
+                <Input
+                  id="landing-page-description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Ex: Landing page para produtos premium"
+                  className="bg-[#0f0f0f] border-[#252525] text-white mt-2"
+                  data-testid="input-landing-page-description"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="html-content" className="text-gray-300">
+                  Código HTML
+                </Label>
+                <Textarea
+                  id="html-content"
+                  value={htmlContent}
+                  onChange={(e) => setHtmlContent(e.target.value)}
+                  placeholder="Cole o código HTML da sua landing page aqui..."
+                  className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[300px] mt-2"
+                  data-testid="textarea-html-content"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex items-center justify-between">
+            <div>
+              {currentStep === 2 && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setCurrentStep(1);
+                    setCreationMethod(null);
+                  }}
+                  className="text-gray-400 hover:text-white"
+                  data-testid="button-back"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Voltar
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setCreateDialogOpen(false);
+                  resetForm();
+                }}
+                className="text-gray-400 hover:text-white"
+                data-testid="button-cancel"
+              >
+                Cancelar
+              </Button>
+              {currentStep === 2 && creationMethod === 'html' && (
+                <Button
+                  onClick={handleCreateFromHTML}
+                  disabled={!formData.name || !htmlContent || createMutation.isPending || convertToVisualMutation.isPending}
+                  className="bg-purple-600 hover:bg-purple-700"
+                  data-testid="button-create-landing-page"
+                >
+                  {createMutation.isPending || convertToVisualMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {createMutation.isPending ? 'Criando...' : 'Convertendo...'}
+                    </>
+                  ) : (
+                    'Criar Landing Page'
+                  )}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
