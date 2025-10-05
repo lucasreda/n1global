@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { eq, and, or, sql, desc, isNull } from "drizzle-orm";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import {
   affiliateProfiles,
   affiliateMemberships,
@@ -19,6 +20,36 @@ import {
   type InsertAffiliateProfile,
   type InsertAffiliateMembership,
 } from "@shared/schema";
+
+// Base62 character set for short code generation
+const BASE62_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+/**
+ * Generate a short tracking code using crypto random bytes and base62 encoding
+ * @param length Target length of the code (default 8)
+ * @returns A random base62 string of the specified length
+ */
+function generateShortCode(length: number = 8): string {
+  // Generate 6 random bytes (48 bits of entropy)
+  const bytes = crypto.randomBytes(6);
+  
+  // Convert bytes to base62
+  let result = '';
+  let num = BigInt('0x' + bytes.toString('hex'));
+  
+  while (num > 0n && result.length < length) {
+    const remainder = Number(num % 62n);
+    result = BASE62_CHARS[remainder] + result;
+    num = num / 62n;
+  }
+  
+  // Pad with leading zeros if needed
+  while (result.length < length) {
+    result = BASE62_CHARS[0] + result;
+  }
+  
+  return result;
+}
 
 export class AffiliateService {
   /**
@@ -97,6 +128,43 @@ export class AffiliateService {
       .limit(1);
     
     return result[0] || null;
+  }
+
+  /**
+   * Generate and assign a unique short code to a membership
+   * Uses collision detection to ensure uniqueness
+   */
+  async generateMembershipShortCode(membershipId: string): Promise<string> {
+    const maxRetries = 10;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      const shortCode = generateShortCode(8);
+      
+      // Check if this code already exists
+      const existing = await db
+        .select()
+        .from(affiliateMemberships)
+        .where(eq(affiliateMemberships.shortCode, shortCode))
+        .limit(1);
+      
+      if (existing.length === 0) {
+        // Code is unique, assign it to the membership
+        await db
+          .update(affiliateMemberships)
+          .set({ 
+            shortCode,
+            updatedAt: new Date(),
+          })
+          .where(eq(affiliateMemberships.id, membershipId));
+        
+        return shortCode;
+      }
+      
+      // Collision detected, try again
+      console.log(`Short code collision detected (${shortCode}), retrying...`);
+    }
+    
+    throw new Error('Failed to generate unique short code after maximum retries');
   }
 
   /**
