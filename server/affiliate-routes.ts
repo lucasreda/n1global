@@ -243,6 +243,7 @@ router.get(
 /**
  * GET /api/affiliate/products/:productId/tracking-link
  * Generate affiliate tracking link for a product
+ * Query params: landingPageId (optional) - specify which landing page to use
  */
 router.get(
   "/products/:productId/tracking-link",
@@ -251,6 +252,7 @@ router.get(
   async (req: any, res) => {
     try {
       const { productId } = req.params;
+      const { landingPageId } = req.query;
       const userId = req.user.id;
       
       // Get affiliate profile
@@ -260,7 +262,11 @@ router.get(
       }
       
       // Generate tracking link
-      const trackingLink = await affiliateService.generateTrackingLink(profile.id, productId);
+      const trackingLink = await affiliateService.generateTrackingLink(
+        profile.id, 
+        productId,
+        landingPageId as string | undefined
+      );
       
       res.json({ trackingLink });
     } catch (error: any) {

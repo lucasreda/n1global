@@ -877,8 +877,15 @@ export class AffiliateService {
 
   /**
    * Generate tracking link for affiliate and product
+   * @param affiliateId Affiliate ID
+   * @param productId Product ID
+   * @param landingPageId Optional landing page ID to use (if not specified, uses oldest active landing page)
    */
-  async generateTrackingLink(affiliateId: string, productId: string): Promise<string> {
+  async generateTrackingLink(
+    affiliateId: string, 
+    productId: string,
+    landingPageId?: string
+  ): Promise<string> {
     // Get affiliate profile
     const profile = await this.getAffiliateProfileById(affiliateId);
     
@@ -911,6 +918,17 @@ export class AffiliateService {
       shortCode = await this.generateMembershipShortCode(membership.id);
     }
 
+    // Build where conditions for landing page query
+    const whereConditions = [
+      eq(affiliateLandingPageProducts.productId, productId),
+      eq(affiliateLandingPages.status, 'active')
+    ];
+
+    // If a specific landing page is requested, add it to the filter
+    if (landingPageId) {
+      whereConditions.push(eq(affiliateLandingPages.id, landingPageId));
+    }
+
     // Get active landing page for this product (ordered by creation date for consistency)
     const landingPageResult = await db
       .select({
@@ -923,12 +941,7 @@ export class AffiliateService {
         affiliateLandingPageProducts,
         eq(affiliateLandingPageProducts.landingPageId, affiliateLandingPages.id)
       )
-      .where(
-        and(
-          eq(affiliateLandingPageProducts.productId, productId),
-          eq(affiliateLandingPages.status, 'active')
-        )
-      )
+      .where(and(...whereConditions))
       .orderBy(affiliateLandingPages.createdAt)
       .limit(1);
 

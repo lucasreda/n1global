@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
   Package,
@@ -66,26 +67,55 @@ interface ProductWithCommission extends Product {
   membershipStatus?: string;
 }
 
+interface LandingPage {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  deployedUrl?: string;
+}
+
+interface ProductDetails extends Product {
+  commissionRule?: CommissionRule;
+  membership?: AffiliateMembership;
+  landingPages?: LandingPage[];
+}
+
+interface TrackingLinkResponse {
+  trackingLink: string;
+}
+
 export default function AffiliateProducts() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedLandingPageId, setSelectedLandingPageId] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
   const { data: products = [], isLoading } = useQuery<ProductWithCommission[]>({
     queryKey: ['/api/affiliate/products'],
   });
 
-  // Fetch tracking link when modal opens
-  const { data: trackingLinkData, isLoading: isLoadingLink } = useQuery({
-    queryKey: ['/api/affiliate/products', selectedProductId, 'tracking-link'],
+  // Fetch product details when link modal opens (to get landing pages)
+  const { data: productForLink, isLoading: isLoadingProductForLink } = useQuery<ProductDetails>({
+    queryKey: ['/api/affiliate/products', selectedProductId, 'details'],
+    enabled: linkModalOpen && !!selectedProductId,
+  });
+
+  // Fetch tracking link when modal opens (with optional landing page selection)
+  const trackingLinkUrl = selectedLandingPageId 
+    ? `/api/affiliate/products/${selectedProductId}/tracking-link?landingPageId=${selectedLandingPageId}`
+    : `/api/affiliate/products/${selectedProductId}/tracking-link`;
+  
+  const { data: trackingLinkData, isLoading: isLoadingLink } = useQuery<TrackingLinkResponse>({
+    queryKey: [trackingLinkUrl],
     enabled: linkModalOpen && !!selectedProductId,
   });
 
   // Fetch product details when details modal opens
-  const { data: productDetails, isLoading: isLoadingDetails } = useQuery({
+  const { data: productDetails, isLoading: isLoadingDetails } = useQuery<ProductDetails>({
     queryKey: ['/api/affiliate/products', selectedProductId, 'details'],
     enabled: detailsModalOpen && !!selectedProductId,
   });
@@ -109,6 +139,13 @@ export default function AffiliateProducts() {
       });
     },
   });
+
+  // Auto-select first landing page when product data loads
+  useEffect(() => {
+    if (productForLink?.landingPages && productForLink.landingPages.length > 0 && !selectedLandingPageId) {
+      setSelectedLandingPageId(productForLink.landingPages[0].id);
+    }
+  }, [productForLink, selectedLandingPageId]);
 
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -148,6 +185,7 @@ export default function AffiliateProducts() {
 
   const handleGenerateLink = (productId: string) => {
     setSelectedProductId(productId);
+    setSelectedLandingPageId(null); // Reset landing page selection
     setCopiedLink(false);
     setLinkModalOpen(true);
   };
@@ -497,42 +535,81 @@ export default function AffiliateProducts() {
           <DialogHeader>
             <DialogTitle className="text-xl">Gerar Link de Afiliado</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Use este link para promover o produto e ganhar comissões
+              Escolha a landing page e copie seu link de rastreamento
             </DialogDescription>
           </DialogHeader>
 
-          {isLoadingLink ? (
-            <div className="py-8 text-center text-gray-400">Gerando link...</div>
-          ) : trackingLinkData?.trackingLink ? (
+          {isLoadingProductForLink ? (
+            <div className="py-8 text-center text-gray-400">Carregando opções...</div>
+          ) : (
             <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-400 mb-2 block">Seu Link de Referência</label>
-                <div className="flex gap-2">
-                  <Input
-                    value={trackingLinkData.trackingLink}
-                    readOnly
-                    className="flex-1 bg-[#0f0f0f] border-[#252525] text-white font-mono text-sm"
-                    data-testid="input-tracking-link"
-                  />
-                  <Button
-                    onClick={() => handleCopyLink(trackingLinkData.trackingLink)}
-                    className="bg-blue-600 hover:bg-blue-700"
-                    data-testid="button-copy-link"
-                  >
-                    {copiedLink ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Copiado!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4 mr-1" />
-                        Copiar
-                      </>
-                    )}
-                  </Button>
+              {/* Landing Page Selector - only show if multiple pages available */}
+              {productForLink?.landingPages && productForLink.landingPages.length > 1 && (
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Landing Page</label>
+                  <Select value={selectedLandingPageId || undefined} onValueChange={setSelectedLandingPageId}>
+                    <SelectTrigger className="bg-[#0f0f0f] border-[#252525] text-white" data-testid="select-landing-page">
+                      <SelectValue placeholder="Selecione a landing page" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-[#252525]">
+                      {productForLink.landingPages.map((lp: any) => (
+                        <SelectItem key={lp.id} value={lp.id} className="text-white">
+                          {lp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {productForLink.landingPages.length} landing pages disponíveis
+                  </p>
                 </div>
-              </div>
+              )}
+
+              {/* Info message for products with no landing pages */}
+              {productForLink && (!productForLink.landingPages || productForLink.landingPages.length === 0) && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-yellow-200">
+                      Este produto não possui landing pages configuradas. O link gerado usará a landing page padrão mais antiga.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Tracking Link Display */}
+              {isLoadingLink ? (
+                <div className="py-4 text-center text-gray-400">Gerando link...</div>
+              ) : trackingLinkData?.trackingLink ? (
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Seu Link de Referência</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={trackingLinkData.trackingLink}
+                      readOnly
+                      className="flex-1 bg-[#0f0f0f] border-[#252525] text-white font-mono text-sm"
+                      data-testid="input-tracking-link"
+                    />
+                    <Button
+                      onClick={() => handleCopyLink(trackingLinkData.trackingLink)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                      data-testid="button-copy-link"
+                    >
+                      {copiedLink ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-1" />
+                          Copiar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                 <div className="flex items-start gap-3">
@@ -549,8 +626,6 @@ export default function AffiliateProducts() {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="py-8 text-center text-gray-400">Erro ao gerar link</div>
           )}
 
           <DialogFooter>
