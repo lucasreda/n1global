@@ -311,7 +311,7 @@ router.post(
       const { id } = req.params;
       
       console.log(`🔄 Reconverting landing page ${id} with improved HTML converter...`);
-      const landingPage = await affiliateLandingService.convertHtmlToModel(id);
+      const landingPage = await affiliateLandingService.convertHtmlToModel(id, true);
       
       console.log(`✅ Landing page reconverted successfully`);
       res.json({

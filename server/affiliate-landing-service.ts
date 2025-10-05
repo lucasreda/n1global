@@ -192,14 +192,14 @@ export class AffiliateLandingService {
     return updated;
   }
 
-  async convertHtmlToModel(id: string): Promise<AffiliateLandingPage> {
+  async convertHtmlToModel(id: string, forceReconvert: boolean = false): Promise<AffiliateLandingPage> {
     const landingPage = await this.getLandingPageById(id);
     
     if (!landingPage) {
       throw new Error("Landing page não encontrada");
     }
     
-    if (landingPage.model) {
+    if (landingPage.model && !forceReconvert) {
       throw new Error("Landing page já possui um modelo visual. Conversão não é necessária.");
     }
     
