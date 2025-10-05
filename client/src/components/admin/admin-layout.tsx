@@ -14,7 +14,8 @@ import {
   ChevronDown,
   ChevronRight,
   Ticket,
-  DollarSign
+  DollarSign,
+  UserCog
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -68,6 +69,12 @@ const menuItems: MenuItem[] = [
     label: 'Produtos', 
     icon: Package, 
     path: '/inside/products' 
+  },
+  { 
+    id: 'affiliates', 
+    label: 'Afiliados', 
+    icon: UserCog, 
+    path: '/inside/affiliates' 
   },
   { 
     id: 'global', 
