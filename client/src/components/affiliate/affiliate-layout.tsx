@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import affiliateLogoUrl from "@assets/affiliate-logo_1759628196078.png";
+import affiliateLogoUrl from "@assets/affiliate-logo_1759628331018.png";
 
 interface AffiliateLayoutProps {
   children: ReactNode;
