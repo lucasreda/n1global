@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import affiliateLogoUrl from "@assets/affiliate-logo_1759628196078.png";
 
 interface AffiliateLayoutProps {
   children: ReactNode;
@@ -65,7 +66,11 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-black border-b border-gray-800 z-50 flex items-center justify-between px-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white">Dashboard de Afiliados</h1>
+          <img 
+            src={affiliateLogoUrl} 
+            alt="Logo" 
+            className="h-8 object-contain"
+          />
         </div>
         
         <div className="hidden md:flex items-center gap-3">
