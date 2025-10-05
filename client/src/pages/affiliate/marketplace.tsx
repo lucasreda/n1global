@@ -1,3 +1,4 @@
+import { AffiliateLayout } from "@/components/affiliate/affiliate-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +75,7 @@ export default function AffiliateMarketplace() {
       queryClient.invalidateQueries({ queryKey: ['/api/affiliate/marketplace/products'] });
       queryClient.invalidateQueries({ queryKey: ['/api/affiliate/marketplace/my-products'] });
       toast({
-        title: "✅ Solicitação enviada!",
+        title: "Solicitação enviada!",
         description: "Sua solicitação de afiliação foi enviada com sucesso. Aguarde aprovação.",
       });
     },
@@ -104,22 +105,22 @@ export default function AffiliateMarketplace() {
     const statusConfig: Record<string, { label: string; className: string; icon: any }> = {
       pending: { 
         label: "Pendente", 
-        className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
+        className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
         icon: Clock
       },
       active: { 
         label: "Ativo", 
-        className: "bg-green-500/20 text-green-400 border-green-500/50",
+        className: "bg-green-500/20 text-green-400 border-green-500/30",
         icon: Check
       },
       paused: { 
         label: "Pausado", 
-        className: "bg-gray-500/20 text-gray-400 border-gray-500/50",
+        className: "bg-gray-500/20 text-gray-400 border-gray-500/30",
         icon: X
       },
       terminated: { 
         label: "Terminado", 
-        className: "bg-red-500/20 text-red-400 border-red-500/50",
+        className: "bg-red-500/20 text-red-400 border-red-500/30",
         icon: X
       },
     };
@@ -130,15 +131,15 @@ export default function AffiliateMarketplace() {
     const Icon = config.icon;
 
     return (
-      <Badge className={`${config.className} border flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
+      <Badge className={config.className}>
+        <Icon className="h-3 w-3 mr-1" />
         {config.label}
       </Badge>
     );
   };
 
   const ProductCard = ({ product }: { product: MarketplaceProduct }) => (
-    <Card className="bg-gray-900/50 border-gray-800 hover:border-purple-500/50 transition-all duration-300">
+    <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -177,7 +178,7 @@ export default function AffiliateMarketplace() {
             <Button
               onClick={() => joinMutation.mutate(product.id)}
               disabled={joiningProductId === product.id}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid={`button-join-${product.id}`}
             >
               {joiningProductId === product.id ? (
@@ -193,7 +194,7 @@ export default function AffiliateMarketplace() {
               )}
             </Button>
           ) : (
-            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 border">
+            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
               Já solicitado
             </Badge>
           )}
@@ -203,7 +204,7 @@ export default function AffiliateMarketplace() {
   );
 
   const MyProductCard = ({ product }: { product: MyProduct }) => (
-    <Card className="bg-gray-900/50 border-gray-800">
+    <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -241,7 +242,7 @@ export default function AffiliateMarketplace() {
           {product.customCommissionPercent && (
             <div className="flex items-center justify-between">
               <span className="text-gray-400 text-sm">Comissão:</span>
-              <span className="text-purple-400 font-semibold">
+              <span className="text-blue-400 font-semibold">
                 {product.customCommissionPercent}%
               </span>
             </div>
@@ -268,39 +269,43 @@ export default function AffiliateMarketplace() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+    <AffiliateLayout>
+      <div className="space-y-6">
+        {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <ShoppingBag className="h-8 w-8 text-purple-400" />
+            <h1 className="font-bold tracking-tight text-gray-900 dark:text-gray-100" style={{ fontSize: '22px' }}>
               Marketplace de Produtos
             </h1>
-            <p className="text-gray-400 mt-2">
+            <p className="text-muted-foreground mt-2">
               Explore produtos disponíveis e solicite afiliação
             </p>
           </div>
-
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Buscar produtos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
-              data-testid="input-search-products"
-            />
-          </div>
         </div>
+
+        {/* Search Bar */}
+        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar produtos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-gray-900 border-gray-700 text-white"
+                data-testid="input-search-products"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="available" className="w-full">
-          <TabsList className="bg-gray-800 border-gray-700">
+          <TabsList className="bg-gray-900 border-gray-700">
             <TabsTrigger 
               value="available" 
-              className="data-[state=active]:bg-purple-600"
+              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               data-testid="tab-available"
             >
               <Package className="h-4 w-4 mr-2" />
@@ -308,7 +313,7 @@ export default function AffiliateMarketplace() {
             </TabsTrigger>
             <TabsTrigger 
               value="my-products" 
-              className="data-[state=active]:bg-purple-600"
+              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
               data-testid="tab-my-products"
             >
               <TrendingUp className="h-4 w-4 mr-2" />
@@ -319,10 +324,10 @@ export default function AffiliateMarketplace() {
           <TabsContent value="available" className="mt-6">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
               </div>
             ) : availableProducts.length === 0 ? (
-              <Card className="bg-gray-900/50 border-gray-800">
+              <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
                 <CardContent className="flex flex-col items-center justify-center h-64 text-center">
                   <Package className="h-16 w-16 text-gray-600 mb-4" />
                   <h3 className="text-xl font-semibold text-gray-400">
@@ -347,10 +352,10 @@ export default function AffiliateMarketplace() {
           <TabsContent value="my-products" className="mt-6">
             {isLoadingMyProducts ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
               </div>
             ) : myProducts.length === 0 ? (
-              <Card className="bg-gray-900/50 border-gray-800">
+              <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
                 <CardContent className="flex flex-col items-center justify-center h-64 text-center">
                   <TrendingUp className="h-16 w-16 text-gray-600 mb-4" />
                   <h3 className="text-xl font-semibold text-gray-400">
@@ -371,6 +376,6 @@ export default function AffiliateMarketplace() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </AffiliateLayout>
   );
 }

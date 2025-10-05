@@ -81,20 +81,12 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
         
         <div className="hidden md:flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-            {user?.profileImageUrl ? (
-              <img 
-                src={user.profileImageUrl} 
-                alt="Profile" 
-                className="w-8 h-8 rounded-full object-cover"
-              />
-            ) : (
-              <span>
-                {user?.email 
-                  ? user.email.substring(0, 2).toUpperCase()
-                  : 'A'
-                }
-              </span>
-            )}
+            <span>
+              {user?.email 
+                ? user.email.substring(0, 2).toUpperCase()
+                : 'A'
+              }
+            </span>
           </div>
           <span className="text-sm text-gray-300">{user?.email}</span>
         </div>
