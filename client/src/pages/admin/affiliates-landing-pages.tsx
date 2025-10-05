@@ -74,6 +74,7 @@ export default function AffiliatesLandingPages() {
   const [deploySuccessDialogOpen, setDeploySuccessDialogOpen] = useState(false);
   const [deployedUrl, setDeployedUrl] = useState<string>("");
   const [selectedPage, setSelectedPage] = useState<LandingPage | null>(null);
+  const [deployingLandingPageId, setDeployingLandingPageId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -325,6 +326,7 @@ export default function AffiliatesLandingPages() {
 
   const deployMutation = useMutation({
     mutationFn: async (landingPageId: string) => {
+      setDeployingLandingPageId(landingPageId);
       const response = await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/deploy`, 'POST', {});
       return await response.json();
     },
@@ -342,6 +344,9 @@ export default function AffiliatesLandingPages() {
         description: error.message || "Não foi possível fazer o deploy da landing page.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      setDeployingLandingPageId(null);
     },
   });
 
@@ -556,12 +561,12 @@ export default function AffiliatesLandingPages() {
                           variant="ghost"
                           size="sm"
                           onClick={() => deployMutation.mutate(page.id)}
-                          disabled={deployMutation.isPending || page.status !== 'active'}
+                          disabled={deployingLandingPageId === page.id || page.status !== 'active'}
                           className="text-green-400 hover:text-green-300 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
                           title={page.status !== 'active' ? 'Apenas landing pages ativas podem ser deployadas' : 'Fazer deploy no Vercel'}
                           data-testid={`button-deploy-${page.id}`}
                         >
-                          {deployMutation.isPending ? (
+                          {deployingLandingPageId === page.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Upload className="h-4 w-4" />
