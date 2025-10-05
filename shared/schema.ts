@@ -1723,7 +1723,7 @@ export const affiliateMemberships = pgTable("affiliate_memberships", {
   productId: varchar("product_id").references(() => products.id), // Specific product or null for all products in operation
   
   // Status
-  status: text("status").notNull().default("active"), // 'active', 'paused', 'terminated'
+  status: text("status").notNull().default("pending"), // 'pending', 'active', 'paused', 'terminated'
   
   // Approval
   approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
