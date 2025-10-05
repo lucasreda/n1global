@@ -18,6 +18,7 @@ import {
   Upload,
   Check,
   X,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
@@ -195,6 +196,82 @@ export default function AffiliatesLandingPages() {
       toast({
         title: "Erro ao excluir landing page",
         description: error.message || "Não foi possível excluir a landing page.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { data: linkedProducts = [], isLoading: isLoadingLinkedProducts } = useQuery({
+    queryKey: ['/api/affiliate/landing-pages', selectedPage?.id, 'products'],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`/api/affiliate/landing-pages/${selectedPage?.id}/products`, {
+        credentials: 'include',
+        headers
+      });
+      return await response.json();
+    },
+    enabled: !!selectedPage?.id && editDialogOpen,
+  });
+
+  const { data: allProducts = [], isLoading: isLoadingAllProducts } = useQuery({
+    queryKey: ['/api/products'],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/products', {
+        credentials: 'include',
+        headers
+      });
+      return await response.json();
+    },
+    enabled: editDialogOpen,
+  });
+
+  const linkProductMutation = useMutation({
+    mutationFn: async ({ landingPageId, productId }: { landingPageId: string; productId: string }) => {
+      return await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/products/${productId}`, 'POST', {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages', selectedPage?.id, 'products'] });
+      toast({
+        title: "Produto vinculado!",
+        description: "O produto foi vinculado à landing page com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao vincular produto",
+        description: error.message || "Não foi possível vincular o produto.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unlinkProductMutation = useMutation({
+    mutationFn: async ({ landingPageId, productId }: { landingPageId: string; productId: string }) => {
+      return await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/products/${productId}`, 'DELETE', {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages', selectedPage?.id, 'products'] });
+      toast({
+        title: "Produto desvinculado!",
+        description: "O produto foi desvinculado da landing page com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao desvincular produto",
+        description: error.message || "Não foi possível desvincular o produto.",
         variant: "destructive",
       });
     },
@@ -618,11 +695,69 @@ export default function AffiliatesLandingPages() {
                           Selecione os produtos que terão acesso a esta landing page. Afiliados que se filiarem a estes produtos receberão automaticamente esta landing page.
                         </p>
                         
-                        {/* Aqui vamos adicionar o componente de seleção de produtos */}
-                        <div className="text-gray-500 text-center py-12">
-                          <Layout className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>Funcionalidade de vinculação de produtos em implementação...</p>
-                        </div>
+                        {isLoadingAllProducts || isLoadingLinkedProducts ? (
+                          <div className="text-gray-500 text-center py-12">
+                            <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
+                            <p>Carregando produtos...</p>
+                          </div>
+                        ) : allProducts.length === 0 ? (
+                          <div className="text-gray-500 text-center py-12">
+                            <Layout className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>Nenhum produto cadastrado</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {allProducts.map((product: any) => {
+                              const isLinked = linkedProducts.some((p: any) => p.id === product.id);
+                              const isPending = linkProductMutation.isPending || unlinkProductMutation.isPending;
+                              
+                              return (
+                                <div
+                                  key={product.id}
+                                  className="flex items-center justify-between p-4 bg-[#1a1a1a] rounded-lg border border-[#252525] hover:border-[#333] transition-colors"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={isLinked}
+                                      disabled={isPending}
+                                      onChange={() => {
+                                        if (selectedPage) {
+                                          if (isLinked) {
+                                            unlinkProductMutation.mutate({
+                                              landingPageId: selectedPage.id,
+                                              productId: product.id,
+                                            });
+                                          } else {
+                                            linkProductMutation.mutate({
+                                              landingPageId: selectedPage.id,
+                                              productId: product.id,
+                                            });
+                                          }
+                                        }
+                                      }}
+                                      className="h-5 w-5 rounded border-[#333] bg-[#0f0f0f] text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 disabled:opacity-50"
+                                      data-testid={`checkbox-product-${product.id}`}
+                                    />
+                                    <div>
+                                      <p className="font-medium text-white">{product.name}</p>
+                                      {product.description && (
+                                        <p className="text-sm text-gray-400 mt-0.5">{product.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {isLinked && (
+                                      <Badge className="bg-green-500/20 text-green-400 border-green-500/50 border">
+                                        Vinculado
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </TabsContent>
                   </Tabs>
