@@ -514,97 +514,143 @@ export default function AffiliatesLandingPages() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog - Full Screen */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-[#1a1a1a] border-[#252525] text-white max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Landing Page</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Atualize o conteúdo da landing page
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="edit-name" className="text-gray-300">Nome</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-[#0f0f0f] border-[#252525] text-white mb-4"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-description" className="text-gray-300">Descrição (Opcional)</Label>
-              <Input
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Ex: Landing page para produtos premium"
-                className="bg-[#0f0f0f] border-[#252525] text-white"
-              />
-            </div>
+        <DialogContent className="bg-[#1a1a1a] border-none text-white w-screen h-screen max-w-none max-h-none p-0 m-0">
+          <div className="w-full h-full overflow-y-auto">
+            <div className="max-w-5xl mx-auto px-8 py-6">
+              <DialogHeader className="mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-2xl">Editar Landing Page</DialogTitle>
+                    <DialogDescription className="text-gray-400 mt-2">
+                      Atualize o conteúdo e configure os produtos vinculados
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+                <div className="space-y-6">
+                  {/* Informações Básicas */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-name" className="text-gray-300">Nome</Label>
+                      <Input
+                        id="edit-name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="bg-[#0f0f0f] border-[#252525] text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-description" className="text-gray-300">Descrição (Opcional)</Label>
+                      <Input
+                        id="edit-description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Ex: Landing page para produtos premium"
+                        className="bg-[#0f0f0f] border-[#252525] text-white"
+                      />
+                    </div>
+                  </div>
 
-            <Tabs defaultValue="html" className="w-full">
-              <TabsList className="bg-[#0f0f0f] border border-[#252525]">
-                <TabsTrigger value="html">HTML</TabsTrigger>
-                <TabsTrigger value="css">CSS</TabsTrigger>
-                <TabsTrigger value="js">JavaScript</TabsTrigger>
-              </TabsList>
-              <TabsContent value="html">
-                <div>
-                  <Label htmlFor="edit-htmlContent" className="text-gray-300">HTML</Label>
-                  <Textarea
-                    id="edit-htmlContent"
-                    value={formData.htmlContent}
-                    onChange={(e) => setFormData({ ...formData, htmlContent: e.target.value })}
-                    className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[300px]"
-                  />
+                  {/* Abas principais: Conteúdo e Produtos */}
+                  <Tabs defaultValue="content" className="w-full">
+                    <TabsList className="bg-[#0f0f0f] border border-[#252525] w-full justify-start">
+                      <TabsTrigger value="content" className="flex items-center gap-2">
+                        <FileCode className="h-4 w-4" />
+                        Conteúdo
+                      </TabsTrigger>
+                      <TabsTrigger value="products" className="flex items-center gap-2">
+                        <Layout className="h-4 w-4" />
+                        Produtos Vinculados
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    {/* Tab de Conteúdo (HTML/CSS/JS) */}
+                    <TabsContent value="content" className="space-y-4 mt-6">
+                      <Tabs defaultValue="html" className="w-full">
+                        <TabsList className="bg-[#0f0f0f] border border-[#252525]">
+                          <TabsTrigger value="html">HTML</TabsTrigger>
+                          <TabsTrigger value="css">CSS</TabsTrigger>
+                          <TabsTrigger value="js">JavaScript</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="html">
+                          <div>
+                            <Label htmlFor="edit-htmlContent" className="text-gray-300 mb-2 block">HTML</Label>
+                            <Textarea
+                              id="edit-htmlContent"
+                              value={formData.htmlContent}
+                              onChange={(e) => setFormData({ ...formData, htmlContent: e.target.value })}
+                              className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[400px]"
+                            />
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="css">
+                          <div>
+                            <Label htmlFor="edit-cssContent" className="text-gray-300 mb-2 block">CSS (Opcional)</Label>
+                            <Textarea
+                              id="edit-cssContent"
+                              value={formData.cssContent}
+                              onChange={(e) => setFormData({ ...formData, cssContent: e.target.value })}
+                              className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[400px]"
+                            />
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="js">
+                          <div>
+                            <Label htmlFor="edit-jsContent" className="text-gray-300 mb-2 block">JavaScript (Opcional)</Label>
+                            <Textarea
+                              id="edit-jsContent"
+                              value={formData.jsContent}
+                              onChange={(e) => setFormData({ ...formData, jsContent: e.target.value })}
+                              className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[400px]"
+                            />
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    </TabsContent>
+
+                    {/* Tab de Produtos */}
+                    <TabsContent value="products" className="mt-6">
+                      <div className="bg-[#0f0f0f] rounded-lg border border-[#252525] p-6">
+                        <h3 className="text-lg font-semibold mb-4">Vincular Produtos</h3>
+                        <p className="text-gray-400 text-sm mb-6">
+                          Selecione os produtos que terão acesso a esta landing page. Afiliados que se filiarem a estes produtos receberão automaticamente esta landing page.
+                        </p>
+                        
+                        {/* Aqui vamos adicionar o componente de seleção de produtos */}
+                        <div className="text-gray-500 text-center py-12">
+                          <Layout className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Funcionalidade de vinculação de produtos em implementação...</p>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
-              </TabsContent>
-              <TabsContent value="css">
-                <div>
-                  <Label htmlFor="edit-cssContent" className="text-gray-300">CSS (Opcional)</Label>
-                  <Textarea
-                    id="edit-cssContent"
-                    value={formData.cssContent}
-                    onChange={(e) => setFormData({ ...formData, cssContent: e.target.value })}
-                    className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[300px]"
-                  />
+
+                {/* Footer com botões */}
+                <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-[#252525]">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setEditDialogOpen(false);
+                      setSelectedPage(null);
+                      resetForm();
+                    }}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleEdit}
+                    disabled={!formData.name || !formData.htmlContent || updateMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                  </Button>
                 </div>
-              </TabsContent>
-              <TabsContent value="js">
-                <div>
-                  <Label htmlFor="edit-jsContent" className="text-gray-300">JavaScript (Opcional)</Label>
-                  <Textarea
-                    id="edit-jsContent"
-                    value={formData.jsContent}
-                    onChange={(e) => setFormData({ ...formData, jsContent: e.target.value })}
-                    className="bg-[#0f0f0f] border-[#252525] text-white font-mono min-h-[300px]"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setEditDialogOpen(false);
-                setSelectedPage(null);
-                resetForm();
-              }}
-              className="text-gray-400 hover:text-white"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleEdit}
-              disabled={!formData.name || !formData.htmlContent || updateMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </DialogFooter>
+              </div>
+            </div>
         </DialogContent>
       </Dialog>
 
