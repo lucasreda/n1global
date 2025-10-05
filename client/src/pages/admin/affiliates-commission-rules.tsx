@@ -60,10 +60,18 @@ export default function AffiliatesCommissionRules() {
   const { data: rules = [], isLoading } = useQuery<CommissionRule[]>({
     queryKey: ['/api/affiliate/commission/rules'],
     queryFn: async () => {
-      return fetch('/api/affiliate/commission/rules', {
+      const token = localStorage.getItem("auth_token");
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/affiliate/commission/rules', {
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.json());
+        headers
+      });
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 

@@ -72,10 +72,18 @@ export default function AffiliatesLandingPages() {
   const { data: pages = [], isLoading } = useQuery<LandingPage[]>({
     queryKey: ['/api/affiliate/landing-pages/list'],
     queryFn: async () => {
-      return fetch('/api/affiliate/landing-pages/list', {
+      const token = localStorage.getItem("auth_token");
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/affiliate/landing-pages/list', {
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      }).then(res => res.json());
+        headers
+      });
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
