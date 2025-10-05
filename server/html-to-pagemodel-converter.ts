@@ -406,6 +406,11 @@ function convertDOMElementToBlockElement(element: Element, cssRules: Record<stri
   // Compute final styles
   const computedStyles = getComputedStyles(tag, classNames, elementId, inlineStyles, cssRules);
   
+  // Debug: Log element conversion details
+  if (Object.keys(computedStyles).length > 0) {
+    console.log(`🔍 Element <${tag}> classes=[${classNames.join(', ')}] → styles:`, Object.keys(computedStyles).slice(0, 5));
+  }
+  
   // Get text content
   const textContent = getTextContentFromDOM(element);
   
