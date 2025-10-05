@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Layout,
   Plus,
@@ -77,6 +77,28 @@ export default function AffiliatesLandingPages() {
     cssContent: "",
     jsContent: "",
   });
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const vercelConnected = urlParams.get('vercel_connected');
+    const vercelError = urlParams.get('vercel_error');
+
+    if (vercelConnected === 'true') {
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages/vercel/status'] });
+      toast({
+        title: "✅ Conta Vercel conectada!",
+        description: "Sua integração com Vercel foi configurada com sucesso.",
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (vercelError === 'true') {
+      toast({
+        title: "❌ Erro ao conectar Vercel",
+        description: "Não foi possível conectar sua conta Vercel. Tente novamente.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [toast]);
 
   const { data: pages = [], isLoading } = useQuery<LandingPage[]>({
     queryKey: ['/api/affiliate/landing-pages'],
@@ -892,7 +914,7 @@ export default function AffiliatesLandingPages() {
           <DialogHeader>
             <DialogTitle>Configurações da Integração Vercel</DialogTitle>
             <DialogDescription className="text-gray-400">
-              Configure o token da plataforma Vercel para fazer deploy automático das landing pages.
+              Conecte sua conta Vercel para fazer deploy automático das landing pages.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
@@ -904,15 +926,27 @@ export default function AffiliatesLandingPages() {
                 ) : (
                   <X className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                 )}
-                <div className="space-y-1">
+                <div className="space-y-1 flex-1">
                   <p className={`text-sm font-medium ${vercelStatus?.configured ? 'text-green-300' : 'text-yellow-300'}`}>
-                    {vercelStatus?.configured ? 'Token Configurado ✓' : 'Token Não Configurado'}
+                    {vercelStatus?.configured ? 'Conta Vercel Conectada ✓' : 'Conta Não Conectada'}
                   </p>
                   <p className="text-sm text-gray-400">
                     {vercelStatus?.configured 
                       ? 'A integração com Vercel está ativa. Você pode fazer deploy de landing pages.'
-                      : 'Configure o token para habilitar deploys automáticos no Vercel.'}
+                      : 'Conecte sua conta Vercel para habilitar deploys automáticos.'}
                   </p>
+                  {vercelStatus?.integration && (
+                    <div className="mt-3 text-xs text-gray-500 space-y-1">
+                      <p>User ID: <span className="text-gray-400">{vercelStatus.integration.vercelUserId}</span></p>
+                      {vercelStatus.integration.vercelTeamId && (
+                        <p>Team ID: <span className="text-gray-400">{vercelStatus.integration.vercelTeamId}</span></p>
+                      )}
+                      <p>Conectado em: <span className="text-gray-400">{new Date(vercelStatus.integration.connectedAt).toLocaleString('pt-BR')}</span></p>
+                      {vercelStatus.integration.lastUsed && (
+                        <p>Último uso: <span className="text-gray-400">{new Date(vercelStatus.integration.lastUsed).toLocaleString('pt-BR')}</span></p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -930,34 +964,24 @@ export default function AffiliatesLandingPages() {
               </div>
             </div>
 
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
-              <div className="flex gap-3">
-                <Settings className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-3">
-                  <p className="text-sm text-purple-300 font-medium">Como configurar o token?</p>
-                  <div className="text-sm text-gray-400 space-y-2">
-                    <p className="font-medium text-gray-300">Passo 1: Obter o Token Vercel</p>
-                    <ol className="space-y-1 list-decimal list-inside ml-2">
-                      <li>Acesse <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Vercel Account Tokens</a></li>
-                      <li>Clique em "Create Token"</li>
-                      <li>Dê um nome (ex: "N1 Hub Landing Pages")</li>
-                      <li>Selecione o escopo "Full Account"</li>
-                      <li>Copie o token gerado</li>
-                    </ol>
-                    
-                    <p className="font-medium text-gray-300 mt-3">Passo 2: Adicionar como Secret no Replit</p>
-                    <ol className="space-y-1 list-decimal list-inside ml-2">
-                      <li>Abra a aba "Secrets" no menu lateral esquerdo do Replit</li>
-                      <li>Clique em "New Secret"</li>
-                      <li>Nome da chave: <code className="bg-[#0f0f0f] px-2 py-0.5 rounded text-blue-400">VERCEL_PLATFORM_TOKEN</code></li>
-                      <li>Cole o token da Vercel no campo de valor</li>
-                      <li>Clique em "Add Secret"</li>
-                      <li>Reinicie a aplicação para aplicar as mudanças</li>
-                    </ol>
+            {!vercelStatus?.configured && (
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <Settings className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-3">
+                    <p className="text-sm text-purple-300 font-medium">Como conectar?</p>
+                    <div className="text-sm text-gray-400 space-y-2">
+                      <p>
+                        Clique no botão "Conectar com Vercel" abaixo. Você será redirecionado para fazer login na sua conta Vercel e autorizar a integração.
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        A autorização é segura e permite que o sistema faça deploy de landing pages automaticamente na sua conta.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -969,18 +993,49 @@ export default function AffiliatesLandingPages() {
             >
               Fechar
             </Button>
-            {!vercelStatus?.configured && (
+            {!vercelStatus?.configured ? (
               <Button
-                onClick={() => {
-                  toast({
-                    title: "Instruções",
-                    description: "Siga os passos acima para adicionar o token VERCEL_PLATFORM_TOKEN nos Secrets do Replit.",
-                  });
+                onClick={async () => {
+                  try {
+                    const response = await apiRequest('/api/affiliate/landing-pages/vercel/oauth-url', 'GET');
+                    if (response.oauthUrl) {
+                      window.location.href = response.oauthUrl;
+                    }
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro ao gerar URL OAuth",
+                      description: error.message || "Não foi possível gerar a URL de autenticação.",
+                      variant: "destructive",
+                    });
+                  }
                 }}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-blue-600 hover:bg-blue-700"
+                data-testid="button-connect-vercel"
               >
-                <Settings className="h-4 w-4 mr-2" />
-                Abrir Secrets do Replit
+                <Globe className="h-4 w-4 mr-2" />
+                Conectar com Vercel
+              </Button>
+            ) : (
+              <Button
+                onClick={async () => {
+                  try {
+                    const response = await apiRequest('/api/affiliate/landing-pages/vercel/oauth-url', 'GET');
+                    if (response.oauthUrl) {
+                      window.location.href = response.oauthUrl;
+                    }
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro ao gerar URL OAuth",
+                      description: error.message || "Não foi possível gerar a URL de autenticação.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="bg-green-600 hover:bg-green-700"
+                data-testid="button-reconnect-vercel"
+              >
+                <Globe className="h-4 w-4 mr-2" />
+                Reconectar Vercel
               </Button>
             )}
           </DialogFooter>
