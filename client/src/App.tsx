@@ -278,10 +278,10 @@ function Router() {
         <Route path="/admin-investment/investors" component={isAdminInvestimento ? AdminInvestmentInvestors : () => <NotFound />} />
         <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
         
-        {/* Admin Affiliates Routes */}
-        <Route path="/admin/afiliados/conversoes" component={isSuperAdmin ? AffiliatesConversions : () => <NotFound />} />
-        <Route path="/admin/afiliados/gerenciar" component={isSuperAdmin ? AffiliatesManage : () => <NotFound />} />
-        <Route path="/admin/afiliados" component={isSuperAdmin ? AffiliatesHub : () => <NotFound />} />
+        {/* Admin Affiliates Routes (Inside Dashboard) */}
+        <Route path="/inside/affiliates/conversions" component={isSuperAdmin ? () => <AdminLayout><AffiliatesConversions /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/affiliates/manage" component={isSuperAdmin ? () => <AdminLayout><AffiliatesManage /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/affiliates" component={isSuperAdmin ? () => <AdminLayout><AffiliatesHub /></AdminLayout> : () => <NotFound />} />
         
         {/* Affiliate Routes */}
         <Route path="/affiliate/analytics" component={isAffiliate ? AffiliateAnalytics : () => <NotFound />} />

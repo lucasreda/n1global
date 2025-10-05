@@ -133,7 +133,7 @@ export default function AffiliatesManage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white p-6">
+    <div>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2" data-testid="page-title">Gerenciar Afiliados</h1>

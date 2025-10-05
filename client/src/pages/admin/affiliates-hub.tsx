@@ -34,7 +34,7 @@ export default function AffiliatesHub() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-white p-6">
+    <div>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2" data-testid="page-title">Hub de Afiliados</h1>
@@ -162,7 +162,7 @@ export default function AffiliatesHub() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Link href="/admin/afiliados/gerenciar">
+        <Link href="/inside/affiliates/manage">
           <Card className="bg-[#1a1a1a] border-[#252525] hover:border-blue-500/50 transition-all cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -176,7 +176,7 @@ export default function AffiliatesHub() {
           </Card>
         </Link>
 
-        <Link href="/admin/afiliados/conversoes">
+        <Link href="/inside/affiliates/conversions">
           <Card className="bg-[#1a1a1a] border-[#252525] hover:border-yellow-500/50 transition-all cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -192,7 +192,7 @@ export default function AffiliatesHub() {
           </Card>
         </Link>
 
-        <Link href="/admin/afiliados/comissoes">
+        <Link href="/inside/affiliates/comissoes">
           <Card className="bg-[#1a1a1a] border-[#252525] hover:border-green-500/50 transition-all cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -206,7 +206,7 @@ export default function AffiliatesHub() {
           </Card>
         </Link>
 
-        <Link href="/admin/afiliados/landing-pages">
+        <Link href="/inside/affiliates/landing-pages">
           <Card className="bg-[#1a1a1a] border-[#252525] hover:border-purple-500/50 transition-all cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -233,7 +233,7 @@ export default function AffiliatesHub() {
                   Você tem {stats?.pendingAffiliates} afiliados aguardando aprovação
                 </p>
               </div>
-              <Link href="/admin/afiliados/gerenciar?status=pending">
+              <Link href="/inside/affiliates/manage?status=pending">
                 <Button variant="outline" className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10">
                   Ver Afiliados Pendentes
                 </Button>
