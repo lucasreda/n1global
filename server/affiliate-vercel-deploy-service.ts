@@ -55,6 +55,10 @@ export class AffiliateVercelDeployService {
     }
 
     // Inject universal tracking script (replaces old static pixel approach)
+    console.log("📦 Deploying landing page:", landingPage.name);
+    console.log("📦 HTML Content length:", landingPage.htmlContent.length);
+    console.log("📦 HTML Preview:", landingPage.htmlContent.substring(0, 300));
+    
     let htmlContent = this.injectUniversalTrackingScript(landingPage.htmlContent);
 
     const files = this.prepareLandingPageFiles(

@@ -174,6 +174,9 @@ export class AffiliateLandingService {
     // Generate HTML from the model
     const generatedHtml = renderPageModelToHTML(model);
     
+    console.log("🎨 Generated HTML length:", generatedHtml.length);
+    console.log("🎨 HTML preview:", generatedHtml.substring(0, 500));
+    
     const [updated] = await db
       .update(affiliateLandingPages)
       .set({
@@ -187,6 +190,8 @@ export class AffiliateLandingService {
     if (!updated) {
       throw new Error("Landing page não encontrada");
     }
+    
+    console.log("✅ Updated landing page with generated HTML");
     
     return updated;
   }
