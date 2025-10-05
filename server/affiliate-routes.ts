@@ -467,6 +467,81 @@ router.get(
 );
 
 /**
+ * GET /api/affiliate/admin/membership-requests
+ * Get all membership requests (admin only)
+ */
+router.get(
+  "/admin/membership-requests",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { status, limit, offset } = req.query;
+      
+      const requests = await affiliateService.getMembershipRequests({
+        status: status as string,
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+      });
+      
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Error getting membership requests:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * PATCH /api/affiliate/admin/membership-requests/:id/approve
+ * Approve membership request (admin only)
+ */
+router.patch(
+  "/admin/membership-requests/:id/approve",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { customCommissionPercent } = req.body;
+      
+      const membership = await affiliateService.approveMembershipRequest(
+        id, 
+        customCommissionPercent ? Number(customCommissionPercent) : undefined
+      );
+      
+      res.json(membership);
+    } catch (error: any) {
+      console.error("Error approving membership request:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * PATCH /api/affiliate/admin/membership-requests/:id/reject
+ * Reject membership request (admin only)
+ */
+router.patch(
+  "/admin/membership-requests/:id/reject",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      const membership = await affiliateService.rejectMembershipRequest(id, reason);
+      
+      res.json(membership);
+    } catch (error: any) {
+      console.error("Error rejecting membership request:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
  * GET /api/affiliate/products
  * Get products with commission info and membership status
  */

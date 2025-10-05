@@ -517,6 +517,105 @@ export class AffiliateService {
     return conversions;
   }
 
+  /**
+   * Get membership requests (for admin)
+   */
+  async getMembershipRequests(filters?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    let query = db
+      .select({
+        id: affiliateMemberships.id,
+        affiliateId: affiliateMemberships.affiliateId,
+        operationId: affiliateMemberships.operationId,
+        productId: affiliateMemberships.productId,
+        status: affiliateMemberships.status,
+        customCommissionPercent: affiliateMemberships.customCommissionPercent,
+        approvedAt: affiliateMemberships.approvedAt,
+        createdAt: affiliateMemberships.createdAt,
+        updatedAt: affiliateMemberships.updatedAt,
+        affiliateName: users.name,
+        affiliateEmail: users.email,
+        operationName: operations.name,
+        productName: products.name,
+      })
+      .from(affiliateMemberships)
+      .leftJoin(affiliateProfiles, eq(affiliateMemberships.affiliateId, affiliateProfiles.id))
+      .leftJoin(users, eq(affiliateProfiles.userId, users.id))
+      .leftJoin(operations, eq(affiliateMemberships.operationId, operations.id))
+      .leftJoin(products, eq(affiliateMemberships.productId, products.id))
+      .orderBy(desc(affiliateMemberships.createdAt)) as any;
+
+    if (filters?.status) {
+      query = query.where(eq(affiliateMemberships.status, filters.status)) as any;
+    }
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as any;
+    }
+
+    return query;
+  }
+
+  /**
+   * Approve membership request
+   */
+  async approveMembershipRequest(
+    membershipId: string,
+    customCommissionPercent?: number
+  ): Promise<AffiliateMembership> {
+    const updateData: any = {
+      status: "active",
+      approvedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (customCommissionPercent !== undefined) {
+      updateData.customCommissionPercent = customCommissionPercent.toString();
+    }
+
+    const [updated] = await db
+      .update(affiliateMemberships)
+      .set(updateData)
+      .where(eq(affiliateMemberships.id, membershipId))
+      .returning();
+
+    if (!updated) {
+      throw new Error("Solicitação de afiliação não encontrada");
+    }
+
+    return updated;
+  }
+
+  /**
+   * Reject membership request
+   */
+  async rejectMembershipRequest(
+    membershipId: string,
+    reason?: string
+  ): Promise<AffiliateMembership> {
+    const [updated] = await db
+      .update(affiliateMemberships)
+      .set({
+        status: "terminated",
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliateMemberships.id, membershipId))
+      .returning();
+
+    if (!updated) {
+      throw new Error("Solicitação de afiliação não encontrada");
+    }
+
+    return updated;
+  }
+
   async assignLandingPageToAffiliate(
     affiliateId: string,
     landingPageId: string,
