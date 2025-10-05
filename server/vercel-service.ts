@@ -257,7 +257,6 @@ export class VercelService {
       }
 
       const deployment = await response.json() as any;
-      console.log('🔍 Full deployment response:', JSON.stringify(deployment, null, 2));
       console.log(`✅ Deployed to project: ${deployment.uid || deployment.id} - ${deployment.url}`);
       
       // Vercel API may return 'id' instead of 'uid'
