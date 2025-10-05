@@ -887,7 +887,7 @@ export class AffiliateService {
     }
 
     // Check if affiliate has membership for this product
-    const membership = await db
+    const membershipResult = await db
       .select()
       .from(affiliateMemberships)
       .where(
@@ -899,40 +899,43 @@ export class AffiliateService {
       )
       .limit(1);
 
-    if (!membership[0]) {
+    if (!membershipResult[0]) {
       throw new Error("Você precisa ter aprovação para este produto antes de gerar um link de rastreamento");
     }
 
-    // Get product info
-    const product = await db
-      .select({
-        id: products.id,
-        name: products.name,
-      })
-      .from(products)
-      .where(eq(products.id, productId))
-      .limit(1);
+    const membership = membershipResult[0];
 
-    if (!product[0]) {
-      throw new Error("Produto não encontrado");
+    // Get or generate short code for tracking
+    let shortCode = membership.shortCode;
+    if (!shortCode) {
+      shortCode = await this.generateMembershipShortCode(membership.id);
     }
 
-    // Generate JWT tracking token
-    const trackingToken = jwt.sign(
-      {
-        affiliateId,
-        productId,
-        type: 'affiliate_tracking',
-      },
-      process.env.JWT_SECRET || 'fallback-secret-key',
-      { expiresIn: '90d' }
-    );
+    // Get active landing page for this product
+    const landingPageResult = await db
+      .select({
+        deployedUrl: affiliateLandingPages.vercelDeploymentUrl,
+        name: affiliateLandingPages.name,
+      })
+      .from(affiliateLandingPages)
+      .innerJoin(
+        affiliateLandingPageProducts,
+        eq(affiliateLandingPageProducts.landingPageId, affiliateLandingPages.id)
+      )
+      .where(
+        and(
+          eq(affiliateLandingPageProducts.productId, productId),
+          eq(affiliateLandingPages.status, 'active')
+        )
+      )
+      .limit(1);
 
-    // Get landing page URL from affiliate profile or use default
-    const baseUrl = profile.landingPageUrl || `${process.env.BASE_URL || 'https://n1hub.com'}/lp/${productId}`;
-    
-    // Add tracking parameter
-    const trackingLink = `${baseUrl}?ref=${trackingToken}`;
+    if (!landingPageResult[0] || !landingPageResult[0].deployedUrl) {
+      throw new Error("Nenhuma landing page ativa encontrada para este produto");
+    }
+
+    // Build tracking link with short code
+    const trackingLink = `https://${landingPageResult[0].deployedUrl}?ref=${shortCode}`;
 
     return trackingLink;
   }
