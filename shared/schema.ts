@@ -1733,6 +1733,9 @@ export const affiliateMemberships = pgTable("affiliate_memberships", {
   customCommissionPercent: decimal("custom_commission_percent", { precision: 5, scale: 2 }), // Override default rule if set
   notes: text("notes"),
   
+  // Short tracking code for referral links (8-10 characters, base62)
+  shortCode: varchar("short_code", { length: 12 }).unique(),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
@@ -1740,6 +1743,7 @@ export const affiliateMemberships = pgTable("affiliate_memberships", {
     affiliateIdIdx: index().on(table.affiliateId),
     operationIdIdx: index().on(table.operationId),
     statusIdx: index().on(table.status),
+    shortCodeIdx: index().on(table.shortCode),
   };
 });
 
