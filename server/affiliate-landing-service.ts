@@ -175,9 +175,6 @@ export class AffiliateLandingService {
     // Generate HTML from the model
     const generatedHtml = renderPageModelToHTML(model);
     
-    console.log("🎨 Generated HTML length:", generatedHtml.length);
-    console.log("🎨 HTML preview:", generatedHtml.substring(0, 500));
-    
     const [updated] = await db
       .update(affiliateLandingPages)
       .set({
@@ -191,8 +188,6 @@ export class AffiliateLandingService {
     if (!updated) {
       throw new Error("Landing page não encontrada");
     }
-    
-    console.log("✅ Updated landing page with generated HTML");
     
     return updated;
   }
@@ -212,15 +207,8 @@ export class AffiliateLandingService {
       throw new Error("Landing page não possui conteúdo HTML para converter");
     }
     
-    console.log("🔄 Converting HTML to PageModelV2 for landing page:", id);
-    
     const model = convertHtmlToPageModel(landingPage.htmlContent);
-    
-    console.log("✅ HTML converted to model with", model.sections.length, "sections");
-    
     const generatedHtml = renderPageModelToHTML(model);
-    
-    console.log("🎨 Generated new HTML from model, length:", generatedHtml.length);
     
     const [updated] = await db
       .update(affiliateLandingPages)
@@ -235,8 +223,6 @@ export class AffiliateLandingService {
     if (!updated) {
       throw new Error("Falha ao atualizar landing page");
     }
-    
-    console.log("✅ Landing page converted successfully");
     
     return updated;
   }
