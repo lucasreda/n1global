@@ -169,7 +169,6 @@ export class AffiliateService {
         name: products.name,
         description: products.description,
         price: products.price,
-        currency: products.currency,
         imageUrl: products.imageUrl,
         operationId: products.operationId,
         operationName: operations.name,
@@ -333,6 +332,74 @@ export class AffiliateService {
       pendingCommissions: pendingResult[0]?.sum || "0",
       approvedCommissions: approvedResult[0]?.sum || "0",
       paidCommissions: paidResult[0]?.sum || "0",
+    };
+  }
+
+  /**
+   * Get admin program statistics
+   */
+  async getAdminProgramStats() {
+    // Total affiliates by status
+    const totalAffiliates = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(affiliateProfiles);
+
+    const activeAffiliates = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(affiliateProfiles)
+      .where(eq(affiliateProfiles.status, "active"));
+
+    const pendingAffiliates = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(affiliateProfiles)
+      .where(eq(affiliateProfiles.status, "pending"));
+
+    // Total conversions
+    const totalConversions = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(affiliateConversions);
+
+    const pendingConversions = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(affiliateConversions)
+      .where(eq(affiliateConversions.status, "pending"));
+
+    const approvedConversions = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(affiliateConversions)
+      .where(eq(affiliateConversions.status, "approved"));
+
+    // Total commissions
+    const totalCommissions = await db
+      .select({ sum: sql<string>`COALESCE(SUM(commission_amount), 0)::text` })
+      .from(affiliateConversions)
+      .where(eq(affiliateConversions.status, "approved"));
+
+    const pendingCommissions = await db
+      .select({ sum: sql<string>`COALESCE(SUM(commission_amount), 0)::text` })
+      .from(affiliateConversions)
+      .where(eq(affiliateConversions.status, "pending"));
+
+    // This month's conversions
+    const firstDayOfMonth = new Date();
+    firstDayOfMonth.setDate(1);
+    firstDayOfMonth.setHours(0, 0, 0, 0);
+
+    const monthConversions = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(affiliateConversions)
+      .where(sql`${affiliateConversions.createdAt} >= ${firstDayOfMonth}`);
+
+    return {
+      totalAffiliates: totalAffiliates[0]?.count || 0,
+      activeAffiliates: activeAffiliates[0]?.count || 0,
+      pendingAffiliates: pendingAffiliates[0]?.count || 0,
+      totalConversions: totalConversions[0]?.count || 0,
+      pendingConversions: pendingConversions[0]?.count || 0,
+      approvedConversions: approvedConversions[0]?.count || 0,
+      totalCommissions: parseFloat(totalCommissions[0]?.sum || "0"),
+      pendingCommissions: parseFloat(pendingCommissions[0]?.sum || "0"),
+      monthConversions: monthConversions[0]?.count || 0,
     };
   }
 

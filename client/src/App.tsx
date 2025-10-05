@@ -54,6 +54,9 @@ import PaymentsPage from "@/pages/investment/payments";
 import AdminInvestmentDashboard from "@/pages/admin-investment/dashboard";
 import AdminInvestmentPools from "@/pages/admin-investment/pools";
 import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
+import AffiliatesHub from "@/pages/admin/affiliates-hub";
+import AffiliatesManage from "@/pages/admin/affiliates-manage";
+import AffiliatesConversions from "@/pages/admin/affiliates-conversions";
 import AffiliateDashboard from "@/pages/affiliate";
 import AffiliateLinks from "@/pages/affiliate/links";
 import AffiliateLandingPages from "@/pages/affiliate/landing-pages";
@@ -274,6 +277,11 @@ function Router() {
         <Route path="/admin-investment/pools" component={isAdminInvestimento ? AdminInvestmentPools : () => <NotFound />} />
         <Route path="/admin-investment/investors" component={isAdminInvestimento ? AdminInvestmentInvestors : () => <NotFound />} />
         <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
+        
+        {/* Admin Affiliates Routes */}
+        <Route path="/admin/afiliados/conversoes" component={isSuperAdmin ? AffiliatesConversions : () => <NotFound />} />
+        <Route path="/admin/afiliados/gerenciar" component={isSuperAdmin ? AffiliatesManage : () => <NotFound />} />
+        <Route path="/admin/afiliados" component={isSuperAdmin ? AffiliatesHub : () => <NotFound />} />
         
         {/* Affiliate Routes */}
         <Route path="/affiliate/analytics" component={isAffiliate ? AffiliateAnalytics : () => <NotFound />} />

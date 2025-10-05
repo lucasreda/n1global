@@ -319,6 +319,25 @@ router.patch(
 );
 
 /**
+ * GET /api/affiliate/admin/stats
+ * Get overall affiliate program statistics (admin only)
+ */
+router.get(
+  "/admin/stats",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const stats = await affiliateService.getAdminProgramStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error getting admin stats:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
  * POST /api/affiliate/admin/:id/assign-landing-page
  * Deploy and assign landing page to affiliate (admin only)
  */
