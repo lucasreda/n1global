@@ -911,11 +911,12 @@ export class AffiliateService {
       shortCode = await this.generateMembershipShortCode(membership.id);
     }
 
-    // Get active landing page for this product
+    // Get active landing page for this product (ordered by creation date for consistency)
     const landingPageResult = await db
       .select({
         deployedUrl: affiliateLandingPages.vercelDeploymentUrl,
         name: affiliateLandingPages.name,
+        id: affiliateLandingPages.id,
       })
       .from(affiliateLandingPages)
       .innerJoin(
@@ -928,6 +929,7 @@ export class AffiliateService {
           eq(affiliateLandingPages.status, 'active')
         )
       )
+      .orderBy(affiliateLandingPages.createdAt)
       .limit(1);
 
     if (!landingPageResult[0] || !landingPageResult[0].deployedUrl) {
