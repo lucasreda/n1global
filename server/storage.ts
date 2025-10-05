@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, aiDirectives, marketplaceProducts, productOperationLinks, announcements, User, Order, Product, ShippingProvider, Operation, UserProduct, MarketplaceProduct, ProductOperationLink, Announcement, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, InsertMarketplaceProduct, InsertProductOperationLink, InsertAnnouncement, LinkProductBySku } from "@shared/schema";
+import { users, stores, orders, products, shippingProviders, operations, userOperationAccess, userProducts, marketplaceProducts, productOperationLinks, announcements, User, Order, Product, ShippingProvider, Operation, UserProduct, MarketplaceProduct, ProductOperationLink, Announcement, InsertUser, InsertOrder, InsertProduct, InsertShippingProvider, InsertUserProduct, InsertMarketplaceProduct, InsertProductOperationLink, InsertAnnouncement, LinkProductBySku } from "@shared/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 

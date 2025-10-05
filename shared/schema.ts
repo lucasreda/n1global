@@ -71,6 +71,16 @@ export const userOperations = pgTable("user_operations", {
   };
 });
 
+// User operation access with roles (alternative table)
+export const userOperationAccess = pgTable("user_operation_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
+  permissions: jsonb("permissions"), // Custom permissions
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Orders table
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -161,6 +171,69 @@ export const products = pgTable("products", {
     storeIdx: index().on(table.storeId),
     supplierIdx: index().on(table.supplierId),
   };
+});
+
+// User products (custom product linking)
+export const userProducts = pgTable("user_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  sku: text("sku").notNull(),
+  customCostPrice: decimal("custom_cost_price", { precision: 10, scale: 2 }),
+  customShippingCost: decimal("custom_shipping_cost", { precision: 10, scale: 2 }),
+  customHandlingFee: decimal("custom_handling_fee", { precision: 10, scale: 2 }),
+  linkedAt: timestamp("linked_at").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+// Marketplace products
+export const marketplaceProducts = pgTable("marketplace_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  baseCost: decimal("base_cost", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  images: jsonb("images").$type<string[]>().default([]),
+  category: text("category").notNull(),
+  tags: text("tags").array(),
+  supplier: text("supplier").notNull(),
+  status: text("status").notNull().default("active"),
+  specs: jsonb("specs").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Product operation links
+export const productOperationLinks = pgTable("product_operation_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  marketplaceProductId: varchar("marketplace_product_id").notNull().references(() => marketplaceProducts.id),
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  sku: text("sku"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Announcements
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  content: text("content").notNull(),
+  type: text("type").notNull().default("update"),
+  imageUrl: text("image_url"),
+  publishedAt: timestamp("published_at").defaultNow(),
+  isPinned: boolean("is_pinned").default(false),
+  audience: text("audience").notNull().default("all"),
+  roleTarget: text("role_target"),
+  operationId: varchar("operation_id").references(() => operations.id),
+  ctaLabel: text("cta_label"),
+  ctaUrl: text("cta_url"),
+  status: text("status").notNull().default("published"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Metrics table for dashboard
