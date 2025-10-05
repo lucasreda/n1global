@@ -250,6 +250,77 @@ export class AffiliateService {
   }
 
   /**
+   * Get products with membership and commission info for affiliate
+   */
+  async getProductsWithMembershipInfo(affiliateId: string): Promise<any[]> {
+    // Get all active products
+    const allProducts = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        imageUrl: products.imageUrl,
+        status: sql<string>`CASE WHEN ${products.isActive} THEN 'active' ELSE 'inactive' END`,
+        storeId: products.storeId,
+        operationId: products.operationId,
+        operationName: operations.name,
+      })
+      .from(products)
+      .leftJoin(operations, eq(products.operationId, operations.id))
+      .where(eq(products.isActive, true));
+
+    // Get memberships for this affiliate
+    const memberships = await db
+      .select()
+      .from(affiliateMemberships)
+      .where(eq(affiliateMemberships.affiliateId, affiliateId));
+
+    // Get commission rules
+    const commissionRules = await db.select().from(affiliateCommissionRules);
+
+    // Build membership and commission maps
+    const membershipMap = new Map();
+    memberships.forEach((m) => {
+      if (m.productId) {
+        membershipMap.set(m.productId, m);
+      }
+    });
+
+    const commissionMap = new Map();
+    commissionRules.forEach((rule) => {
+      if (rule.productId) {
+        commissionMap.set(rule.productId, rule);
+      }
+    });
+
+    // Combine data
+    return allProducts.map((product) => {
+      const membership = membershipMap.get(product.id);
+      const commissionRule = commissionMap.get(product.id);
+      
+      const commissionPercentage = membership?.customCommissionPercent 
+        ? Number(membership.customCommissionPercent)
+        : commissionRule?.commissionPercentage 
+        ? Number(commissionRule.commissionPercentage)
+        : 10; // default 10%
+
+      const price = Number(product.price) || 0;
+      const estimatedCommission = (price * commissionPercentage) / 100;
+
+      return {
+        ...product,
+        price: Number(product.price),
+        commissionRule: commissionRule || undefined,
+        membership: membership || undefined,
+        estimatedCommission,
+        isMember: !!membership,
+        membershipStatus: membership?.status || undefined,
+      };
+    });
+  }
+
+  /**
    * Check if affiliate has membership for operation/product
    */
   async hasMembership(

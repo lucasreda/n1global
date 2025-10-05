@@ -68,6 +68,35 @@ router.post(
 );
 
 /**
+ * GET /api/affiliate/products
+ * Get products with commission and membership info for the affiliate
+ */
+router.get(
+  "/products",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get affiliate profile
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+      
+      // Get all products with commission rules and membership status
+      const productsWithInfo = await affiliateService.getProductsWithMembershipInfo(profile.id);
+      
+      res.json(productsWithInfo);
+    } catch (error: any) {
+      console.error("Error getting products:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
  * GET /api/affiliate/catalog
  * Get product catalog available for affiliation
  */
