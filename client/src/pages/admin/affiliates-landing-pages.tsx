@@ -98,7 +98,7 @@ export default function AffiliatesLandingPages() {
       return await apiRequest('/api/affiliate/landing-pages', 'POST', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages/list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       toast({
         title: "Landing page criada!",
         description: "A landing page foi criada com sucesso.",
@@ -120,7 +120,7 @@ export default function AffiliatesLandingPages() {
       return await apiRequest(`/api/affiliate/landing-pages/${id}`, 'PATCH', data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages/list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       toast({
         title: "Landing page atualizada!",
         description: "A landing page foi atualizada com sucesso.",
@@ -143,7 +143,7 @@ export default function AffiliatesLandingPages() {
       return await apiRequest(`/api/affiliate/landing-pages/${pageId}/activate`, 'POST', {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages/list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       toast({
         title: "Landing page ativada!",
         description: "A landing page foi ativada com sucesso.",
@@ -163,7 +163,7 @@ export default function AffiliatesLandingPages() {
       return await apiRequest(`/api/affiliate/landing-pages/${pageId}/archive`, 'POST', {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages/list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       toast({
         title: "Landing page arquivada!",
         description: "A landing page foi arquivada com sucesso.",
@@ -183,7 +183,7 @@ export default function AffiliatesLandingPages() {
       return await apiRequest(`/api/affiliate/landing-pages/${pageId}`, 'DELETE', {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages/list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       toast({
         title: "Landing page excluída!",
         description: "A landing page foi excluída com sucesso.",
