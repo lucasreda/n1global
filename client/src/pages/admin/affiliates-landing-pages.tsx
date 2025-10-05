@@ -45,11 +45,17 @@ import {
 interface LandingPage {
   id: string;
   name: string;
-  slug: string;
+  description?: string;
   status: 'draft' | 'active' | 'archived';
   htmlContent: string;
   cssContent?: string;
   jsContent?: string;
+  thumbnailUrl?: string;
+  tags?: string[];
+  vercelProjectId?: string;
+  vercelDeploymentUrl?: string;
+  lastDeployedAt?: string;
+  createdByUserId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -63,7 +69,7 @@ export default function AffiliatesLandingPages() {
   const [selectedPage, setSelectedPage] = useState<LandingPage | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    slug: "",
+    description: "",
     htmlContent: "",
     cssContent: "",
     jsContent: "",
@@ -197,7 +203,7 @@ export default function AffiliatesLandingPages() {
   const resetForm = () => {
     setFormData({
       name: "",
-      slug: "",
+      description: "",
       htmlContent: "",
       cssContent: "",
       jsContent: "",
@@ -221,7 +227,7 @@ export default function AffiliatesLandingPages() {
     setSelectedPage(page);
     setFormData({
       name: page.name,
-      slug: page.slug,
+      description: page.description || "",
       htmlContent: page.htmlContent,
       cssContent: page.cssContent || "",
       jsContent: page.jsContent || "",
@@ -344,7 +350,7 @@ export default function AffiliatesLandingPages() {
                             <p className="font-medium">{page.name}</p>
                             {getStatusBadge(page.status)}
                           </div>
-                          <p className="text-sm text-gray-400">/{page.slug}</p>
+                          <p className="text-sm text-gray-400">{page.description || "Sem descrição"}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -421,27 +427,25 @@ export default function AffiliatesLandingPages() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name" className="text-gray-300">Nome</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Landing Page Principal"
-                  className="bg-[#0f0f0f] border-[#252525] text-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="slug" className="text-gray-300">Slug (URL)</Label>
-                <Input
-                  id="slug"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  placeholder="Ex: principal"
-                  className="bg-[#0f0f0f] border-[#252525] text-white"
-                />
-              </div>
+            <div>
+              <Label htmlFor="name" className="text-gray-300">Nome</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Landing Page Principal"
+                className="bg-[#0f0f0f] border-[#252525] text-white mb-4"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description" className="text-gray-300">Descrição (Opcional)</Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Ex: Landing page para produtos premium"
+                className="bg-[#0f0f0f] border-[#252525] text-white"
+              />
             </div>
 
             <Tabs defaultValue="html" className="w-full">
@@ -501,7 +505,7 @@ export default function AffiliatesLandingPages() {
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!formData.name || !formData.slug || !formData.htmlContent || createMutation.isPending}
+              disabled={!formData.name || !formData.htmlContent || createMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {createMutation.isPending ? "Criando..." : "Criar Landing Page"}
@@ -520,25 +524,24 @@ export default function AffiliatesLandingPages() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-name" className="text-gray-300">Nome</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-[#0f0f0f] border-[#252525] text-white"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-slug" className="text-gray-300">Slug (URL)</Label>
-                <Input
-                  id="edit-slug"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  className="bg-[#0f0f0f] border-[#252525] text-white"
-                />
-              </div>
+            <div>
+              <Label htmlFor="edit-name" className="text-gray-300">Nome</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-[#0f0f0f] border-[#252525] text-white mb-4"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-description" className="text-gray-300">Descrição (Opcional)</Label>
+              <Input
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Ex: Landing page para produtos premium"
+                className="bg-[#0f0f0f] border-[#252525] text-white"
+              />
             </div>
 
             <Tabs defaultValue="html" className="w-full">
@@ -596,7 +599,7 @@ export default function AffiliatesLandingPages() {
             </Button>
             <Button
               onClick={handleEdit}
-              disabled={!formData.name || !formData.slug || !formData.htmlContent || updateMutation.isPending}
+              disabled={!formData.name || !formData.htmlContent || updateMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
