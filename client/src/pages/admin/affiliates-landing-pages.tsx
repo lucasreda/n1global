@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   Layout,
   Plus,
@@ -22,6 +23,7 @@ import {
   Settings,
   Copy,
   ExternalLink,
+  Wand2,
 } from "lucide-react";
 import {
   Dialog,
@@ -54,6 +56,7 @@ interface LandingPage {
   htmlContent: string;
   cssContent?: string;
   jsContent?: string;
+  model?: any;
   thumbnailUrl?: string;
   tags?: string[];
   vercelProjectId?: string;
@@ -66,6 +69,7 @@ interface LandingPage {
 
 export default function AffiliatesLandingPages() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -549,14 +553,29 @@ export default function AffiliatesLandingPages() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(page)}
-                          className="text-gray-400 hover:text-white hover:bg-gray-500/10"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        {page.model ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setLocation(`/inside/affiliates/landing-pages/${page.id}/edit`)}
+                            className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                            title="Editar com Editor Visual"
+                            data-testid={`button-visual-edit-${page.id}`}
+                          >
+                            <Wand2 className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(page)}
+                            className="text-gray-400 hover:text-white hover:bg-gray-500/10"
+                            title="Editar HTML/CSS/JS"
+                            data-testid={`button-edit-${page.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
