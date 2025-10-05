@@ -163,6 +163,7 @@ router.get(
   authenticateToken,
   async (req: any, res) => {
     try {
+      console.log("🔍 GET /api/affiliate/commission/payouts called by:", req.user?.email, req.user?.role);
       const { affiliateId, status, limit, offset } = req.query;
 
       // If not admin, only show user's own payouts
@@ -180,6 +181,7 @@ router.get(
         offset: offset ? parseInt(offset as string) : 0,
       });
 
+      console.log("✅ Returning", payouts.length, "payouts");
       res.json(payouts);
     } catch (error: any) {
       console.error("Error getting payouts:", error);
