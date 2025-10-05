@@ -76,7 +76,7 @@ export default function AffiliatesLandingPages() {
   });
 
   const { data: pages = [], isLoading } = useQuery<LandingPage[]>({
-    queryKey: ['/api/affiliate/landing-pages/list'],
+    queryKey: ['/api/affiliate/landing-pages'],
     queryFn: async () => {
       const token = localStorage.getItem("auth_token");
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
