@@ -802,7 +802,7 @@ export class AffiliateService {
       );
 
     // Get membership info for this affiliate
-    const membership = await db
+    const membershipResult = await db
       .select()
       .from(affiliateMemberships)
       .where(
@@ -812,6 +812,8 @@ export class AffiliateService {
         )
       )
       .limit(1);
+
+    const membership = membershipResult[0] || null;
 
     // Get landing pages associated with this product
     const landingPages = await db
@@ -835,21 +837,20 @@ export class AffiliateService {
         )
       );
 
-    // Generate tracking token for this affiliate and product
-    const trackingToken = jwt.sign(
-      {
-        affiliateId,
-        productId,
-        type: 'affiliate_tracking',
-      },
-      process.env.JWT_SECRET || 'fallback-secret-key',
-      { expiresIn: '90d' }
-    );
+    // Get or generate short code for tracking
+    let trackingCode = membership?.shortCode;
+    
+    // If membership exists but doesn't have a short code yet, generate one
+    if (membership && !trackingCode && membership.status === 'active') {
+      trackingCode = await this.generateMembershipShortCode(membership.id);
+    }
 
     // Add tracking parameter to each landing page URL
     const landingPagesWithTracking = landingPages.map(lp => ({
       ...lp,
-      deployedUrl: lp.deployedUrl ? `https://${lp.deployedUrl}?ref=${trackingToken}` : null,
+      deployedUrl: lp.deployedUrl && trackingCode 
+        ? `https://${lp.deployedUrl}?ref=${trackingCode}` 
+        : lp.deployedUrl ? `https://${lp.deployedUrl}` : null,
     }));
 
     return {
