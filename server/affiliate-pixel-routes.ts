@@ -1,6 +1,6 @@
 import express from "express";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import {
   affiliateProductPixels,
   affiliateProfiles,
@@ -332,6 +332,8 @@ router.get("/by-ref/:shortCode/code", async (req, res) => {
       pixels = specificPixels;
     }
     
+    console.log(`🔍 Looking for global pixels - affiliateId: ${membership.affiliateId}, productId: ${product.id}`);
+    
     const globalPixels = await db
       .select()
       .from(affiliateProductPixels)
@@ -339,10 +341,12 @@ router.get("/by-ref/:shortCode/code", async (req, res) => {
         and(
           eq(affiliateProductPixels.affiliateId, membership.affiliateId),
           eq(affiliateProductPixels.productId, product.id),
-          eq(affiliateProductPixels.landingPageId, null as any),
+          isNull(affiliateProductPixels.landingPageId),
           eq(affiliateProductPixels.isActive, true)
         )
       );
+    
+    console.log(`🔍 Found ${globalPixels.length} global pixel(s)`);
     
     pixels = [...pixels, ...globalPixels];
     
