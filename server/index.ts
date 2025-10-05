@@ -1,10 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
 
 const app = express();
+
+// Enable CORS for all routes (allows requests from Vercel deployments)
+app.use(cors({
+  origin: true, // Allow all origins
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Raw body middleware for webhook signature verification (must come before JSON parsing)
 app.use('/api/voice/telnyx-incoming-call', express.raw({ type: 'application/json', limit: '10mb' }));
