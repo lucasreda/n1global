@@ -312,12 +312,18 @@ router.post(
         affiliatePixel
       );
       
-      res.json({
+      console.log('🔍 Deployment result from service:', deployment);
+      
+      const response = {
         success: true,
         deploymentUrl: deployment.deploymentUrl,
         projectId: deployment.projectId,
         message: "Landing page deployada com sucesso na Vercel",
-      });
+      };
+      
+      console.log('🔍 Response to frontend:', response);
+      
+      res.json(response);
     } catch (error: any) {
       console.error("Error deploying landing page:", error);
       res.status(500).json({ message: error.message });
