@@ -15,6 +15,8 @@ import {
   Package,
   User,
   Briefcase,
+  Eye,
+  DollarSign,
 } from "lucide-react";
 import {
   Select,

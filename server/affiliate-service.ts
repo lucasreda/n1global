@@ -239,6 +239,9 @@ export class AffiliateService {
         createdAt: affiliateMemberships.createdAt,
         operationName: operations.name,
         productName: products.name,
+        productImageUrl: products.imageUrl,
+        productPrice: products.price,
+        productDescription: products.description,
       })
       .from(affiliateMemberships)
       .leftJoin(operations, eq(affiliateMemberships.operationId, operations.id))
@@ -247,6 +250,39 @@ export class AffiliateService {
       .orderBy(desc(affiliateMemberships.createdAt));
 
     return memberships;
+  }
+
+  /**
+   * Get affiliate details with products
+   */
+  async getAffiliateDetailsWithProducts(affiliateId: string): Promise<any> {
+    // Get affiliate profile
+    const profile = await this.getAffiliateProfileById(affiliateId);
+    
+    if (!profile) {
+      throw new Error("Afiliado não encontrado");
+    }
+
+    // Get user info
+    const user = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      })
+      .from(users)
+      .where(eq(users.id, profile.userId))
+      .limit(1);
+
+    // Get memberships with product details
+    const memberships = await this.getAffiliateMemberships(affiliateId);
+
+    return {
+      ...profile,
+      userName: user[0]?.name,
+      userEmail: user[0]?.email,
+      memberships,
+    };
   }
 
   /**

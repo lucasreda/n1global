@@ -493,6 +493,28 @@ router.get(
 );
 
 /**
+ * GET /api/affiliate/admin/:id/details
+ * Get affiliate details with products (admin only)
+ */
+router.get(
+  "/admin/:id/details",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const details = await affiliateService.getAffiliateDetailsWithProducts(id);
+      
+      res.json(details);
+    } catch (error: any) {
+      console.error("Error getting affiliate details:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
  * PATCH /api/affiliate/admin/membership-requests/:id/approve
  * Approve membership request (admin only)
  */
