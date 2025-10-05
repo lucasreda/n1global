@@ -1,23 +1,18 @@
 import { AffiliateLayout } from "@/components/affiliate/affiliate-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   FileText,
   ExternalLink,
   Eye,
-  Code,
   CheckCircle,
   Clock,
   AlertCircle,
   Copy,
-  Settings
 } from "lucide-react";
 import {
   Dialog,
@@ -25,9 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Textarea
-} from "@/components/ui/textarea";
 
 interface AffiliateLandingPage {
   id: string;
@@ -51,8 +43,6 @@ interface AffiliateProfile {
 
 export default function AffiliateLandingPages() {
   const { toast } = useToast();
-  const [pixelDialogOpen, setPixelDialogOpen] = useState(false);
-  const [pixelCode, setPixelCode] = useState("");
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState<AffiliateLandingPage | null>(null);
 
@@ -65,50 +55,12 @@ export default function AffiliateLandingPages() {
     enabled: !!profile?.landingPageId,
   });
 
-  const updatePixelMutation = useMutation({
-    mutationFn: async (pixel: string) => {
-      return await apiRequest('/api/affiliate/tracking-pixel', 'PATCH', { trackingPixel: pixel });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/profile'] });
-      toast({
-        title: "Pixel Atualizado!",
-        description: "Seu código de rastreamento foi salvo com sucesso.",
-      });
-      setPixelDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Erro ao atualizar pixel",
-        description: error.message || "Não foi possível salvar o pixel.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleUpdatePixel = () => {
-    if (!pixelCode.trim()) {
-      toast({
-        title: "Pixel vazio",
-        description: "Por favor, insira o código do pixel de rastreamento.",
-        variant: "destructive",
-      });
-      return;
-    }
-    updatePixelMutation.mutate(pixelCode);
-  };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({
       title: "Copiado!",
       description: "URL copiada para a área de transferência.",
     });
-  };
-
-  const openPixelDialog = () => {
-    setPixelCode(profile?.trackingPixel || "");
-    setPixelDialogOpen(true);
   };
 
   const openPreview = (page: AffiliateLandingPage) => {
@@ -145,67 +97,9 @@ export default function AffiliateLandingPages() {
             Landing Pages
           </h1>
           <p className="text-muted-foreground mt-2">
-            Gerencie suas páginas de destino e código de rastreamento
+            Visualize sua página de destino assignada. Configure pixels por produto no Marketplace.
           </p>
         </div>
-
-        {/* Pixel Configuration */}
-        <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
-          <CardHeader>
-            <CardTitle className="text-white text-base flex items-center gap-2">
-              <Code className="h-5 w-5 text-purple-400" />
-              Pixel de Rastreamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {profile?.trackingPixel ? (
-                <div className="p-4 bg-gray-900 border border-gray-700 rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm font-medium text-green-500">Pixel Configurado</span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={openPixelDialog}
-                      className="text-gray-400 hover:text-white"
-                      data-testid="button-edit-pixel"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <code className="text-xs text-gray-400 break-all">
-                    {profile.trackingPixel.substring(0, 100)}...
-                  </code>
-                </div>
-              ) : (
-                <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-yellow-500 font-medium">Pixel Não Configurado</p>
-                      <p className="text-gray-400 text-sm mt-1">
-                        Configure seu pixel de rastreamento para monitorar conversões
-                      </p>
-                      <Button
-                        onClick={openPixelDialog}
-                        className="mt-3 bg-yellow-600 hover:bg-yellow-700 text-white"
-                        data-testid="button-add-pixel"
-                      >
-                        Adicionar Pixel
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <p className="text-xs text-gray-500">
-                O pixel será automaticamente injetado nas suas landing pages pelo sistema
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Assigned Landing Page */}
         {isLoading ? (
@@ -312,8 +206,8 @@ export default function AffiliateLandingPages() {
                 <p className="text-blue-400 font-medium mb-2">Como funciona?</p>
                 <ul className="text-sm text-gray-400 space-y-1">
                   <li>• A administração cria e atribui landing pages otimizadas para você</li>
-                  <li>• Seu pixel de rastreamento é automaticamente injetado em todas as páginas</li>
-                  <li>• As landing pages são hospedadas na Vercel com URLs personalizadas</li>
+                  <li>• Configure pixels de rastreamento por produto no Marketplace</li>
+                  <li>• Os pixels são automaticamente injetados nas landing pages durante o deploy</li>
                   <li>• Todas as conversões são rastreadas automaticamente para cálculo de comissões</li>
                 </ul>
               </div>
@@ -321,49 +215,6 @@ export default function AffiliateLandingPages() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Pixel Configuration Dialog */}
-      <Dialog open={pixelDialogOpen} onOpenChange={setPixelDialogOpen}>
-        <DialogContent className="bg-gray-900 border-gray-700">
-          <DialogHeader>
-            <DialogTitle className="text-white">Configurar Pixel de Rastreamento</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="pixel" className="text-gray-300">Código do Pixel</Label>
-              <Textarea
-                id="pixel"
-                placeholder="Cole aqui o código HTML/JavaScript do seu pixel de rastreamento..."
-                value={pixelCode}
-                onChange={(e) => setPixelCode(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white font-mono text-sm min-h-[200px]"
-                data-testid="textarea-pixel-code"
-              />
-              <p className="text-xs text-gray-500">
-                Exemplo: &lt;script&gt;...&lt;/script&gt; ou código de pixel do Facebook/Google
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={handleUpdatePixel}
-                disabled={updatePixelMutation.isPending}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                data-testid="button-save-pixel"
-              >
-                {updatePixelMutation.isPending ? 'Salvando...' : 'Salvar Pixel'}
-              </Button>
-              <Button
-                onClick={() => setPixelDialogOpen(false)}
-                variant="outline"
-                className="border-gray-700"
-                data-testid="button-cancel-pixel"
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Preview Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
