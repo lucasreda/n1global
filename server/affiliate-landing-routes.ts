@@ -253,4 +253,30 @@ router.delete(
   }
 );
 
+// =============================================
+// Vercel Configuration Endpoints
+// =============================================
+
+router.get(
+  "/vercel/status",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const isConfigured = !!process.env.VERCEL_PLATFORM_TOKEN;
+      
+      res.json({
+        configured: isConfigured,
+        hasToken: isConfigured,
+        message: isConfigured 
+          ? "Token Vercel configurado" 
+          : "Token Vercel não configurado",
+      });
+    } catch (error: any) {
+      console.error("Error checking Vercel status:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
 export default router;

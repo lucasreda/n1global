@@ -70,7 +70,6 @@ export default function AffiliatesLandingPages() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState<LandingPage | null>(null);
-  const [vercelToken, setVercelToken] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -278,6 +277,24 @@ export default function AffiliatesLandingPages() {
         variant: "destructive",
       });
     },
+  });
+
+  const { data: vercelStatus } = useQuery({
+    queryKey: ['/api/affiliate/landing-pages/vercel/status'],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/affiliate/landing-pages/vercel/status', {
+        credentials: 'include',
+        headers
+      });
+      return await response.json();
+    },
+    enabled: settingsDialogOpen,
   });
 
   const resetForm = () => {
@@ -844,6 +861,27 @@ export default function AffiliatesLandingPages() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
+            {/* Status atual */}
+            <div className={`${vercelStatus?.configured ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'} border rounded-lg p-4`}>
+              <div className="flex gap-3">
+                {vercelStatus?.configured ? (
+                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <X className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-1">
+                  <p className={`text-sm font-medium ${vercelStatus?.configured ? 'text-green-300' : 'text-yellow-300'}`}>
+                    {vercelStatus?.configured ? 'Token Configurado ✓' : 'Token Não Configurado'}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    {vercelStatus?.configured 
+                      ? 'A integração com Vercel está ativa. Você pode fazer deploy de landing pages.'
+                      : 'Configure o token para habilitar deploys automáticos no Vercel.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
               <div className="flex gap-3">
                 <Globe className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
@@ -857,36 +895,31 @@ export default function AffiliatesLandingPages() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="vercel-token" className="text-gray-300">
-                Token da Plataforma Vercel
-              </Label>
-              <Input
-                id="vercel-token"
-                type="password"
-                value={vercelToken}
-                onChange={(e) => setVercelToken(e.target.value)}
-                placeholder="vercel_xxx..."
-                className="bg-[#0f0f0f] border-[#252525] text-white"
-                data-testid="input-vercel-token"
-              />
-              <p className="text-xs text-gray-500">
-                O token será usado para criar projetos e fazer deploy de landing pages automaticamente.
-              </p>
-            </div>
-
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
               <div className="flex gap-3">
-                <Upload className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-sm text-yellow-300 font-medium">Como obter o token?</p>
-                  <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
-                    <li>Acesse <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Vercel Account Tokens</a></li>
-                    <li>Clique em "Create Token"</li>
-                    <li>Dê um nome (ex: "N1 Hub Landing Pages")</li>
-                    <li>Selecione o escopo "Full Account"</li>
-                    <li>Copie o token e cole aqui</li>
-                  </ol>
+                <Settings className="h-5 w-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-3">
+                  <p className="text-sm text-purple-300 font-medium">Como configurar o token?</p>
+                  <div className="text-sm text-gray-400 space-y-2">
+                    <p className="font-medium text-gray-300">Passo 1: Obter o Token Vercel</p>
+                    <ol className="space-y-1 list-decimal list-inside ml-2">
+                      <li>Acesse <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Vercel Account Tokens</a></li>
+                      <li>Clique em "Create Token"</li>
+                      <li>Dê um nome (ex: "N1 Hub Landing Pages")</li>
+                      <li>Selecione o escopo "Full Account"</li>
+                      <li>Copie o token gerado</li>
+                    </ol>
+                    
+                    <p className="font-medium text-gray-300 mt-3">Passo 2: Adicionar como Secret no Replit</p>
+                    <ol className="space-y-1 list-decimal list-inside ml-2">
+                      <li>Abra a aba "Secrets" no menu lateral esquerdo do Replit</li>
+                      <li>Clique em "New Secret"</li>
+                      <li>Nome da chave: <code className="bg-[#0f0f0f] px-2 py-0.5 rounded text-blue-400">VERCEL_PLATFORM_TOKEN</code></li>
+                      <li>Cole o token da Vercel no campo de valor</li>
+                      <li>Clique em "Add Secret"</li>
+                      <li>Reinicie a aplicação para aplicar as mudanças</li>
+                    </ol>
+                  </div>
                 </div>
               </div>
             </div>
@@ -896,26 +929,25 @@ export default function AffiliatesLandingPages() {
               variant="ghost"
               onClick={() => {
                 setSettingsDialogOpen(false);
-                setVercelToken("");
               }}
               className="text-gray-400 hover:text-white"
             >
-              Cancelar
+              Fechar
             </Button>
-            <Button
-              onClick={() => {
-                // TODO: Implementar salvamento do token
-                toast({
-                  title: "Token salvo!",
-                  description: "A integração com Vercel foi configurada com sucesso.",
-                });
-                setSettingsDialogOpen(false);
-              }}
-              disabled={!vercelToken.trim()}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Salvar Configurações
-            </Button>
+            {!vercelStatus?.configured && (
+              <Button
+                onClick={() => {
+                  toast({
+                    title: "Instruções",
+                    description: "Siga os passos acima para adicionar o token VERCEL_PLATFORM_TOKEN nos Secrets do Replit.",
+                  });
+                }}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Abrir Secrets do Replit
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
