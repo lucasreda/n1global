@@ -91,6 +91,7 @@ export const requireRole = (...allowedRoles: string[]) => {
 };
 
 // Specific guards for different roles
+export const requireSuperAdmin = requireRole('super_admin');
 export const requireAdmin = requireRole('super_admin', 'admin_financeiro', 'admin_investimento');
 export const requireStore = requireRole('store');
 export const requireAffiliate = requireRole('affiliate');

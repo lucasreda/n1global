@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticateToken } from "./auth-middleware";
-import { requireAffiliateOrAdmin } from "./auth-middleware";
+import { authenticateToken, requireAffiliateOrAdmin, requireSuperAdmin } from "./auth-middleware";
 import { affiliateLandingService } from "./affiliate-landing-service";
 import { affiliateVercelDeployService } from "./affiliate-vercel-deploy-service";
 import { vercelService } from "./vercel-service";
@@ -362,6 +361,56 @@ router.post(
     } catch (error: any) {
       console.error("Error deploying landing page:", error);
       res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+router.post(
+  "/:id/convert-to-visual",
+  authenticateToken,
+  requireSuperAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log("🔄 Converting landing page to visual model:", id);
+      
+      const convertedLandingPage = await affiliateLandingService.convertHtmlToModel(id);
+      
+      res.json({
+        success: true,
+        landingPage: convertedLandingPage,
+        message: "Landing page convertida para modelo visual com sucesso",
+      });
+    } catch (error: any) {
+      console.error("Error converting landing page to visual model:", error);
+      
+      if (error.message.includes("não encontrada")) {
+        return res.status(404).json({ 
+          success: false,
+          message: error.message 
+        });
+      }
+      
+      if (error.message.includes("já possui um modelo visual")) {
+        return res.status(400).json({ 
+          success: false,
+          message: error.message 
+        });
+      }
+      
+      if (error.message.includes("não possui conteúdo HTML")) {
+        return res.status(400).json({ 
+          success: false,
+          message: error.message 
+        });
+      }
+      
+      res.status(500).json({ 
+        success: false,
+        message: "Erro ao converter landing page para modelo visual",
+        error: error.message 
+      });
     }
   }
 );

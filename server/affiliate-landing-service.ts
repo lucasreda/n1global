@@ -10,6 +10,7 @@ import {
   type PageModelV2,
 } from "@shared/schema";
 import { renderPageModelToHTML } from "./page-model-renderer";
+import { convertHtmlToPageModel } from "./html-to-pagemodel-converter";
 
 export class AffiliateLandingService {
   async createLandingPage(
@@ -192,6 +193,50 @@ export class AffiliateLandingService {
     }
     
     console.log("✅ Updated landing page with generated HTML");
+    
+    return updated;
+  }
+
+  async convertHtmlToModel(id: string): Promise<AffiliateLandingPage> {
+    const landingPage = await this.getLandingPageById(id);
+    
+    if (!landingPage) {
+      throw new Error("Landing page não encontrada");
+    }
+    
+    if (landingPage.model) {
+      throw new Error("Landing page já possui um modelo visual. Conversão não é necessária.");
+    }
+    
+    if (!landingPage.htmlContent) {
+      throw new Error("Landing page não possui conteúdo HTML para converter");
+    }
+    
+    console.log("🔄 Converting HTML to PageModelV2 for landing page:", id);
+    
+    const model = convertHtmlToPageModel(landingPage.htmlContent);
+    
+    console.log("✅ HTML converted to model with", model.sections.length, "sections");
+    
+    const generatedHtml = renderPageModelToHTML(model);
+    
+    console.log("🎨 Generated new HTML from model, length:", generatedHtml.length);
+    
+    const [updated] = await db
+      .update(affiliateLandingPages)
+      .set({
+        model: model as any,
+        htmlContent: generatedHtml,
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliateLandingPages.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Falha ao atualizar landing page");
+    }
+    
+    console.log("✅ Landing page converted successfully");
     
     return updated;
   }
