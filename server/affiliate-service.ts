@@ -697,6 +697,20 @@ export class AffiliateService {
       throw new Error("Solicitação de afiliação não encontrada");
     }
 
+    // Generate short code for tracking if not already present
+    if (!updated.shortCode) {
+      await this.generateMembershipShortCode(membershipId);
+      
+      // Fetch the updated membership with the new short code
+      const [refreshed] = await db
+        .select()
+        .from(affiliateMemberships)
+        .where(eq(affiliateMemberships.id, membershipId))
+        .limit(1);
+      
+      return refreshed || updated;
+    }
+
     return updated;
   }
 
@@ -856,7 +870,7 @@ export class AffiliateService {
     return {
       ...product[0],
       commissionRule: commissionRules[0] || null,
-      membership: membership[0] || null,
+      membership: membership,
       landingPages: landingPagesWithTracking,
     };
   }
