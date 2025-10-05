@@ -220,9 +220,14 @@ export class VercelService {
     console.log(`🚀 Deploying landing page: ${projectName}`);
 
     try {
-      const url = teamId 
+      // Add skipAutoDetectionConfirmation=1 when framework is null (HTML static pages)
+      let url = teamId 
         ? `${this.baseUrl}/v13/deployments?teamId=${teamId}`
         : `${this.baseUrl}/v13/deployments`;
+      
+      if (!template.framework) {
+        url += (url.includes('?') ? '&' : '?') + 'skipAutoDetectionConfirmation=1';
+      }
 
       // Convert template files to Vercel deployment format
       const files = Object.entries(template.files).map(([path, content]) => ({
