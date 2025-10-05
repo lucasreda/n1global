@@ -42,9 +42,9 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
   // Fetch landing page data
   const { data: pageResponse, isLoading, error } = useQuery({
-    queryKey: ['/api/admin/affiliates/landing-pages', landingPageId],
+    queryKey: ['/api/affiliate/landing-pages', landingPageId],
     queryFn: async () => {
-      const response = await authenticatedApiRequest('GET', `/api/admin/affiliates/landing-pages/${landingPageId}`);
+      const response = await authenticatedApiRequest('GET', `/api/affiliate/landing-pages/${landingPageId}`);
       if (!response.ok) {
         throw new Error('Falha ao carregar dados da landing page');
       }
@@ -55,8 +55,9 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
   // Initialize model when data loads
   useEffect(() => {
-    if (pageResponse?.success && pageResponse?.landingPage) {
-      const loadedPage = pageResponse.landingPage;
+    if (pageResponse) {
+      // Handle both direct response and wrapped response
+      const loadedPage = pageResponse.landingPage || pageResponse;
       
       // If page has a model, use it; otherwise create a default one
       if (loadedPage.model) {
@@ -130,7 +131,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   // Save page mutation
   const savePageMutation = useMutation({
     mutationFn: async (updatedModel: PageModelV2) => {
-      const response = await authenticatedApiRequest('PUT', `/api/admin/affiliates/landing-pages/${landingPageId}`, {
+      const response = await authenticatedApiRequest('PUT', `/api/affiliate/landing-pages/${landingPageId}`, {
         model: updatedModel
       });
       if (!response.ok) {
@@ -145,8 +146,8 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
         description: "As alterações foram salvas com sucesso.",
       });
       setIsDirty(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/affiliates/landing-pages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/affiliates/landing-pages', landingPageId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages', landingPageId] });
     },
     onError: (error: Error) => {
       toast({
