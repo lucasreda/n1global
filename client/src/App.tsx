@@ -63,7 +63,6 @@ import AdminAffiliatesLandingPages from "@/pages/admin/affiliates-landing-pages"
 import { AffiliateLandingPageVisualEditor } from "@/pages/admin/affiliates-landing-page-visual-editor";
 import AffiliateDashboard from "@/pages/affiliate";
 import AffiliateLinks from "@/pages/affiliate/links";
-import AffiliateLandingPages from "@/pages/affiliate/landing-pages";
 import AffiliateProducts from "@/pages/affiliate/products";
 import AffiliateAnalytics from "@/pages/affiliate/analytics";
 import AffiliatePayments from "@/pages/affiliate/payments";
@@ -301,7 +300,6 @@ function Router() {
         <Route path="/affiliate/analytics" component={isAffiliate ? AffiliateAnalytics : () => <NotFound />} />
         <Route path="/affiliate/payments" component={isAffiliate ? AffiliatePayments : () => <NotFound />} />
         <Route path="/affiliate/products" component={isAffiliate ? AffiliateProducts : () => <NotFound />} />
-        <Route path="/affiliate/landing-pages" component={isAffiliate ? AffiliateLandingPages : () => <NotFound />} />
         <Route path="/affiliate/links" component={isAffiliate ? AffiliateLinks : () => <NotFound />} />
         <Route path="/affiliate" component={isAffiliate ? AffiliateDashboard : () => <NotFound />} />
         

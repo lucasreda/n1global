@@ -3,12 +3,10 @@ import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard,
   Link2,
-  FileText,
   Package,
   TrendingUp,
   DollarSign,
   Bell,
-  Settings,
   LogOut,
   ShoppingBag
 } from "lucide-react";
@@ -35,11 +33,6 @@ const navigationItems = [
     href: "/affiliate/links", 
     label: "Links de Rastreamento", 
     icon: Link2 
-  },
-  { 
-    href: "/affiliate/landing-pages", 
-    label: "Landing Pages", 
-    icon: FileText 
   },
   { 
     href: "/affiliate/products", 
