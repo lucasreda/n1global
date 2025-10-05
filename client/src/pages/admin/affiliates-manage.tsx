@@ -56,9 +56,16 @@ export default function AffiliatesManage() {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.append("status", statusFilter);
       const url = `/api/affiliate/admin/list${params.toString() ? `?${params.toString()}` : ''}`;
+      
+      const token = localStorage.getItem("auth_token");
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
       const response = await fetch(url, {
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
+        headers
       });
       const data = await response.json();
       return Array.isArray(data) ? data : [];
