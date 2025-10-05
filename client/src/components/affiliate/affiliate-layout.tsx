@@ -45,7 +45,7 @@ const navigationItems = [
     icon: TrendingUp 
   },
   { 
-    href: "/affiliate/payouts", 
+    href: "/affiliate/payments", 
     label: "Pagamentos", 
     icon: DollarSign 
   },
