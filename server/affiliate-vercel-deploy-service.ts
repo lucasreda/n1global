@@ -60,39 +60,58 @@ export class AffiliateVercelDeployService {
       htmlContent = this.injectTrackingPixel(htmlContent, affiliatePixel);
     }
 
-    const projectName = this.generateProjectName(landingPage);
-    
     const files = this.prepareLandingPageFiles(
       htmlContent,
       landingPage.cssContent || "",
       landingPage.jsContent || ""
     );
 
-    const template = {
-      name: projectName,
-      framework: null,
-      files,
-    };
+    let projectId: string;
+    let projectName: string;
 
+    // Check if landing page already has a Vercel project
+    if (landingPage.vercelProjectId) {
+      // Existing project - just deploy to it (this will update it)
+      console.log(`🔄 Updating existing Vercel project: ${landingPage.vercelProjectId}`);
+      projectId = landingPage.vercelProjectId;
+      projectName = landingPage.vercelProjectId; // Use the existing project name
+    } else {
+      // New project - create it first
+      projectName = this.generateProjectName(landingPage);
+      console.log(`🆕 Creating new Vercel project: ${projectName}`);
+      
+      const project = await vercelService.createProject(
+        credentials.token,
+        projectName,
+        null as any, // framework: null for HTML (auto-detect)
+        credentials.teamId
+      );
+      
+      projectId = project.id;
+      console.log(`✅ Project created: ${projectId}`);
+    }
+
+    // Deploy to the project
     console.log(`🚀 Deploying landing page "${landingPage.name}" to Vercel...`);
 
-    const deployment = await vercelService.deployLandingPage(
+    const deployment = await vercelService.deployToProject(
       credentials.token,
-      projectName,
-      template,
+      projectId,
+      files,
       credentials.teamId
     );
 
+    // Update database with project ID and deployment URL
     await affiliateLandingService.updateVercelDeployment(
       landingPageId,
-      deployment.uid,
+      projectId,
       deployment.url
     );
 
     console.log(`✅ Landing page deployed successfully: ${deployment.url}`);
 
     return {
-      projectId: deployment.uid,
+      projectId: projectId,
       deploymentUrl: deployment.url,
       deploymentId: deployment.uid,
     };

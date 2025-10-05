@@ -166,15 +166,29 @@ export class VercelService {
   async createProject(
     accessToken: string,
     name: string,
-    framework: 'nextjs' | 'react' | 'html' = 'nextjs',
+    framework: 'nextjs' | 'react' | 'html' | null = 'nextjs',
     teamId?: string
   ): Promise<VercelProject> {
-    console.log(`🏗️ Creating Vercel project: ${name}`);
+    console.log(`🏗️ Creating Vercel project: ${name} (framework: ${framework || 'auto-detect'})`);
 
     try {
       const url = teamId 
         ? `${this.baseUrl}/v9/projects?teamId=${teamId}`
         : `${this.baseUrl}/v9/projects`;
+
+      const projectPayload: any = {
+        name,
+        gitRepository: null, // We'll deploy without git
+      };
+
+      // Only add framework and build settings if framework is specified
+      if (framework) {
+        projectPayload.framework = framework;
+        projectPayload.buildCommand = framework === 'nextjs' ? 'npm run build' : 'npm run build';
+        projectPayload.outputDirectory = framework === 'nextjs' ? '.next' : 'dist';
+        projectPayload.installCommand = 'npm install';
+        projectPayload.devCommand = framework === 'nextjs' ? 'npm run dev' : 'npm start';
+      }
 
       const response = await fetch(url, {
         method: 'POST',
@@ -182,15 +196,7 @@ export class VercelService {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name,
-          framework,
-          gitRepository: null, // We'll deploy without git
-          buildCommand: framework === 'nextjs' ? 'npm run build' : 'npm run build',
-          outputDirectory: framework === 'nextjs' ? '.next' : 'dist',
-          installCommand: 'npm install',
-          devCommand: framework === 'nextjs' ? 'npm run dev' : 'npm start',
-        }),
+        body: JSON.stringify(projectPayload),
       });
 
       if (!response.ok) {
@@ -204,6 +210,58 @@ export class VercelService {
       return project;
     } catch (error) {
       console.error('❌ Create project error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Deploy files to an existing Vercel project
+   */
+  async deployToProject(
+    accessToken: string,
+    projectId: string,
+    files: Record<string, string>,
+    teamId?: string
+  ): Promise<VercelDeployment> {
+    console.log(`📦 Deploying to existing project: ${projectId}`);
+
+    try {
+      const url = teamId 
+        ? `${this.baseUrl}/v13/deployments?teamId=${teamId}`
+        : `${this.baseUrl}/v13/deployments`;
+
+      // Convert files to Vercel deployment format
+      const deploymentFiles = Object.entries(files).map(([path, content]) => ({
+        file: path,
+        data: Buffer.from(content).toString('base64'),
+        encoding: 'base64',
+      }));
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: projectId, // Use project ID as deployment name
+          project: projectId, // Link to existing project
+          files: deploymentFiles,
+          target: 'production',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json() as any;
+        console.error('❌ Deployment to project failed:', errorData);
+        throw new Error(`Failed to deploy to project: ${errorData.error?.message || response.statusText}`);
+      }
+
+      const deployment = await response.json() as VercelDeployment;
+      console.log(`✅ Deployed to project: ${deployment.uid} - ${deployment.url}`);
+      return deployment;
+    } catch (error) {
+      console.error('❌ Deploy to project error:', error);
       throw error;
     }
   }
