@@ -1,9 +1,12 @@
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import {
   affiliateLandingPages,
+  affiliateLandingPageProducts,
+  products,
   type AffiliateLandingPage,
   type InsertAffiliateLandingPage,
+  type Product,
 } from "@shared/schema";
 
 export class AffiliateLandingService {
@@ -91,6 +94,75 @@ export class AffiliateLandingService {
       vercelDeploymentUrl,
       lastDeployedAt: new Date(),
     });
+  }
+
+  async linkProductToLandingPage(
+    landingPageId: string,
+    productId: string
+  ): Promise<void> {
+    const existing = await db
+      .select()
+      .from(affiliateLandingPageProducts)
+      .where(
+        and(
+          eq(affiliateLandingPageProducts.landingPageId, landingPageId),
+          eq(affiliateLandingPageProducts.productId, productId)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error("Produto já vinculado a esta landing page");
+    }
+
+    await db.insert(affiliateLandingPageProducts).values({
+      landingPageId,
+      productId,
+    });
+  }
+
+  async unlinkProductFromLandingPage(
+    landingPageId: string,
+    productId: string
+  ): Promise<void> {
+    await db
+      .delete(affiliateLandingPageProducts)
+      .where(
+        and(
+          eq(affiliateLandingPageProducts.landingPageId, landingPageId),
+          eq(affiliateLandingPageProducts.productId, productId)
+        )
+      );
+  }
+
+  async getProductsByLandingPage(landingPageId: string): Promise<Product[]> {
+    const results = await db
+      .select({
+        product: products,
+      })
+      .from(affiliateLandingPageProducts)
+      .innerJoin(
+        products,
+        eq(affiliateLandingPageProducts.productId, products.id)
+      )
+      .where(eq(affiliateLandingPageProducts.landingPageId, landingPageId));
+
+    return results.map((r) => r.product);
+  }
+
+  async getLandingPagesByProduct(productId: string): Promise<AffiliateLandingPage[]> {
+    const results = await db
+      .select({
+        landingPage: affiliateLandingPages,
+      })
+      .from(affiliateLandingPageProducts)
+      .innerJoin(
+        affiliateLandingPages,
+        eq(affiliateLandingPageProducts.landingPageId, affiliateLandingPages.id)
+      )
+      .where(eq(affiliateLandingPageProducts.productId, productId));
+
+    return results.map((r) => r.landingPage);
   }
 }
 

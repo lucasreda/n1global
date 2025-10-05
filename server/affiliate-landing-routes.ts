@@ -190,4 +190,67 @@ router.post(
   }
 );
 
+// =============================================
+// Product Linking Endpoints
+// =============================================
+
+router.get(
+  "/:id/products",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const products = await affiliateLandingService.getProductsByLandingPage(id);
+      
+      res.json(products);
+    } catch (error: any) {
+      console.error("Error getting landing page products:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+router.post(
+  "/:id/products/:productId",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id, productId } = req.params;
+      
+      await affiliateLandingService.linkProductToLandingPage(id, productId);
+      
+      res.json({ success: true, message: "Produto vinculado com sucesso" });
+    } catch (error: any) {
+      console.error("Error linking product to landing page:", error);
+      
+      if (error.message.includes("já vinculado")) {
+        return res.status(400).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+router.delete(
+  "/:id/products/:productId",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id, productId } = req.params;
+      
+      await affiliateLandingService.unlinkProductFromLandingPage(id, productId);
+      
+      res.json({ success: true, message: "Produto desvinculado com sucesso" });
+    } catch (error: any) {
+      console.error("Error unlinking product from landing page:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
 export default router;
