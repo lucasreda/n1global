@@ -161,6 +161,20 @@ router.post("/join/:productId", authenticateToken, requireAffiliate, async (req:
       return res.status(400).json({ message: "Produto sem operação vinculada" });
     }
 
+    // Verify affiliate has access to this product's operation (multi-tenant security)
+    const userOperations = await db
+      .select({ operationId: userOperationAccess.operationId })
+      .from(userOperationAccess)
+      .where(eq(userOperationAccess.userId, userId));
+
+    const allowedOperationIds = userOperations.map(op => op.operationId);
+    
+    if (!allowedOperationIds.includes(product.operationId)) {
+      return res.status(403).json({ 
+        message: "Você não tem acesso a produtos desta operação" 
+      });
+    }
+
     // Check if membership already exists
     const existingMembership = await db
       .select()
