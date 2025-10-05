@@ -56,6 +56,7 @@ import AdminInvestmentPools from "@/pages/admin-investment/pools";
 import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
 import AffiliateDashboard from "@/pages/affiliate";
 import AffiliateLinks from "@/pages/affiliate/links";
+import AffiliateLandingPages from "@/pages/affiliate/landing-pages";
 import Hub from "@/pages/hub";
 import HubControl from "@/pages/inside/hub-control";
 import NotFound from "@/pages/not-found";
@@ -272,6 +273,7 @@ function Router() {
         <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
         
         {/* Affiliate Routes */}
+        <Route path="/affiliate/landing-pages" component={isAffiliate ? AffiliateLandingPages : () => <NotFound />} />
         <Route path="/affiliate/links" component={isAffiliate ? AffiliateLinks : () => <NotFound />} />
         <Route path="/affiliate" component={isAffiliate ? AffiliateDashboard : () => <NotFound />} />
         
