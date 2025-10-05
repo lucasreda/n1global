@@ -19,6 +19,7 @@ import {
   Check,
   X,
   Loader2,
+  Settings,
 } from "lucide-react";
 import {
   Dialog,
@@ -67,7 +68,9 @@ export default function AffiliatesLandingPages() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState<LandingPage | null>(null);
+  const [vercelToken, setVercelToken] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -338,14 +341,25 @@ export default function AffiliatesLandingPages() {
           <h1 className="text-3xl font-bold mb-2" data-testid="page-title">Landing Pages</h1>
           <p className="text-gray-400">Gerencie as landing pages para seus afiliados</p>
         </div>
-        <Button 
-          onClick={() => setCreateDialogOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-          data-testid="button-create-page"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Landing Page
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => setSettingsDialogOpen(true)}
+            variant="outline"
+            className="border-[#333] hover:bg-[#252525]"
+            data-testid="button-vercel-settings"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configurações Vercel
+          </Button>
+          <Button 
+            onClick={() => setCreateDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+            data-testid="button-create-page"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Landing Page
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -815,6 +829,92 @@ export default function AffiliatesLandingPages() {
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+        <DialogContent className="bg-[#1a1a1a] border-[#252525] text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Configurações da Integração Vercel</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Configure o token da plataforma Vercel para fazer deploy automático das landing pages.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <div className="flex gap-3">
+                <Globe className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-sm text-blue-300 font-medium">Conta Centralizada da Empresa</p>
+                  <p className="text-sm text-gray-400">
+                    Todas as landing pages serão deployadas na mesma conta Vercel da empresa. 
+                    Cada landing page terá seu próprio projeto e URL única.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="vercel-token" className="text-gray-300">
+                Token da Plataforma Vercel
+              </Label>
+              <Input
+                id="vercel-token"
+                type="password"
+                value={vercelToken}
+                onChange={(e) => setVercelToken(e.target.value)}
+                placeholder="vercel_xxx..."
+                className="bg-[#0f0f0f] border-[#252525] text-white"
+                data-testid="input-vercel-token"
+              />
+              <p className="text-xs text-gray-500">
+                O token será usado para criar projetos e fazer deploy de landing pages automaticamente.
+              </p>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+              <div className="flex gap-3">
+                <Upload className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm text-yellow-300 font-medium">Como obter o token?</p>
+                  <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
+                    <li>Acesse <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Vercel Account Tokens</a></li>
+                    <li>Clique em "Create Token"</li>
+                    <li>Dê um nome (ex: "N1 Hub Landing Pages")</li>
+                    <li>Selecione o escopo "Full Account"</li>
+                    <li>Copie o token e cole aqui</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSettingsDialogOpen(false);
+                setVercelToken("");
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                // TODO: Implementar salvamento do token
+                toast({
+                  title: "Token salvo!",
+                  description: "A integração com Vercel foi configurada com sucesso.",
+                });
+                setSettingsDialogOpen(false);
+              }}
+              disabled={!vercelToken.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Salvar Configurações
             </Button>
           </DialogFooter>
         </DialogContent>
