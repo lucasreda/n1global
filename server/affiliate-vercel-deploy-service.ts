@@ -183,12 +183,19 @@ export class AffiliateVercelDeployService {
       return html;
     }
 
-    // Get the current domain (will be set at runtime in the browser)
+    const apiBaseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      : (process.env.REPL_SLUG && process.env.REPL_OWNER 
+        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+        : 'https://workspace.seraphinetools.repl.co');
+
     const trackingScript = `
 <!-- Universal Affiliate Tracking Script with Dynamic Pixel Injection -->
 <script>
 (function() {
   'use strict';
+  
+  var API_BASE_URL = '${apiBaseUrl}';
   
   // Get affiliate reference from URL parameters
   var params = new URLSearchParams(window.location.search);
@@ -200,6 +207,7 @@ export class AffiliateVercelDeployService {
   }
   
   console.log('[Affiliate Tracking] Affiliate reference detected:', affiliateRef);
+  console.log('[Affiliate Tracking] API Base URL:', API_BASE_URL);
   
   // Save to localStorage for future conversion
   try {
@@ -219,7 +227,7 @@ export class AffiliateVercelDeployService {
   };
   
   // Send click tracking to backend
-  var apiUrl = window.location.origin + '/api/affiliate/tracking/click/' + encodeURIComponent(affiliateRef);
+  var apiUrl = API_BASE_URL + '/api/affiliate/tracking/click/' + encodeURIComponent(affiliateRef);
   
   fetch(apiUrl, {
     method: 'POST',
@@ -248,7 +256,9 @@ export class AffiliateVercelDeployService {
   // Dynamic Pixel Injection
   console.log('[Affiliate Pixels] Loading pixels for ref:', affiliateRef);
   
-  var pixelApiUrl = window.location.origin + '/api/affiliate/pixels/by-ref/' + encodeURIComponent(affiliateRef) + '/code';
+  var pixelApiUrl = API_BASE_URL + '/api/affiliate/pixels/by-ref/' + encodeURIComponent(affiliateRef) + '/code';
+  
+  console.log('[Affiliate Pixels] Fetching from:', pixelApiUrl);
   
   fetch(pixelApiUrl, {
     method: 'GET',
