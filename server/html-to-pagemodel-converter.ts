@@ -235,14 +235,14 @@ function convertTagToElement(tag: string, content: string, fullTag: string): Blo
     case 'h4':
     case 'h5':
     case 'h6':
-      const level = parseInt(tag.substring(1));
+      const levelNum = parseInt(tag.substring(1));
       return {
         id,
         type: 'heading',
-        props: { level },
+        props: { level: tag as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' },
         styles: {
           ...styles,
-          fontSize: level === 1 ? '2.5rem' : level === 2 ? '2rem' : level === 3 ? '1.75rem' : '1.5rem',
+          fontSize: levelNum === 1 ? '2.5rem' : levelNum === 2 ? '2rem' : levelNum === 3 ? '1.75rem' : '1.5rem',
           fontWeight: '700',
         },
         content: { text: stripHtml(content) },
