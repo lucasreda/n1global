@@ -68,7 +68,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
           <img 
             src={affiliateLogoUrl} 
             alt="Logo" 
-            className="h-[22px] object-contain"
+            className="h-[27px] object-contain"
           />
         </div>
         
