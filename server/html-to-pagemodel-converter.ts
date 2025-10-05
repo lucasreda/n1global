@@ -311,6 +311,9 @@ function parseHtmlToSections(html: string, cssRules: Record<string, Record<strin
  * Parse HTML to elements
  */
 function parseHtmlElements(html: string, cssRules: Record<string, Record<string, string>>): BlockElement[] {
+  console.log('🔍 parseHtmlElements called with HTML length:', html.length);
+  console.log('🔍 First 300 chars of HTML:', html.substring(0, 300).replace(/\n/g, ' '));
+  
   const elements: BlockElement[] = [];
   
   // Remove script tags (keep style tags for context, they're already parsed)
@@ -319,8 +322,10 @@ function parseHtmlElements(html: string, cssRules: Record<string, Record<string,
   // Extract all relevant tags
   const tagRegex = /<(h[1-6]|p|a|img|button|div)[^>]*>([\s\S]*?)<\/\1>|<img[^>]*\/?>|<br\s*\/?>/gi;
   let match;
+  let matchCount = 0;
   
   while ((match = tagRegex.exec(html)) !== null) {
+    matchCount++;
     const fullTag = match[0];
     
     // Determine the tag name
@@ -337,12 +342,18 @@ function parseHtmlElements(html: string, cssRules: Record<string, Record<string,
     }
     
     const content = match[2] || '';
+    console.log(`🔍 Match #${matchCount}: tag=${tag}, contentLength=${content.length}, first50="${content.substring(0, 50).replace(/\n/g, ' ')}"`);
     
     const element = convertTagToElement(tag, content, fullTag, cssRules);
     if (element) {
       elements.push(element);
+      console.log(`  ✅ Element created: ${element.type}`);
+    } else {
+      console.log(`  ❌ Element NOT created`);
     }
   }
+  
+  console.log(`🔍 Total matches: ${matchCount}, Total elements created: ${elements.length}`);
   
   return elements;
 }

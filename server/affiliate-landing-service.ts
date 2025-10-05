@@ -207,14 +207,16 @@ export class AffiliateLandingService {
       throw new Error("Landing page não possui conteúdo HTML para converter");
     }
     
+    console.log('🔄 Converting HTML to PageModel (preserving original HTML)...');
     const model = convertHtmlToPageModel(landingPage.htmlContent);
-    const generatedHtml = renderPageModelToHTML(model);
     
+    // IMPORTANT: We DON'T overwrite htmlContent to preserve the original HTML
+    // This allows us to reconvert with full fidelity
     const [updated] = await db
       .update(affiliateLandingPages)
       .set({
         model: model as any,
-        htmlContent: generatedHtml,
+        // Keep original htmlContent intact for future reconversions
         updatedAt: new Date(),
       })
       .where(eq(affiliateLandingPages.id, id))
@@ -224,6 +226,7 @@ export class AffiliateLandingService {
       throw new Error("Falha ao atualizar landing page");
     }
     
+    console.log('✅ Conversion completed. Original HTML preserved.');
     return updated;
   }
 }
