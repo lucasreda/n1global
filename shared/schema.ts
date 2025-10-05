@@ -1,519 +1,1427 @@
-import { pgTable, varchar, text, timestamp, boolean, integer, jsonb, decimal, serial, index, unique, uuid, AnyPgColumn, foreignKey } from "drizzle-orm/pg-core";
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, decimal, timestamp, integer, boolean, jsonb, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { sql } from "drizzle-orm";
 
-// Users table
+// Forward declare stores table for reference
+let stores: any;
+
+// Users table for authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  name: text("name").notNull(),
-  role: text("role").notNull().default("user"), // 'user', 'admin', 'super_admin', 'finance', 'investor', 'supplier', 'affiliate'
-  storeId: varchar("store_id"), // Make optional for global users like finance/super_admin
-  accessLevel: integer("access_level").notNull().default(1), // 1 = basic, 2 = advanced, 3 = admin
+  role: text("role").notNull().default("user"), // 'store', 'product_seller', 'supplier', 'super_admin', 'admin_financeiro', 'investor', 'admin_investimento', 'affiliate'
+  storeId: varchar("store_id"), // For product_seller role - links to parent store
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  onboardingSteps: jsonb("onboarding_steps").$type<{
+    step1_operation: boolean;
+    step2_shopify: boolean;
+    step3_shipping: boolean;
+    step4_ads: boolean;
+    step5_sync: boolean;
+  }>().default({
+    step1_operation: false,
+    step2_shopify: false,
+    step3_shipping: false,
+    step4_ads: false,
+    step5_sync: false
+  }),
+  permissions: jsonb("permissions").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  
-  onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
-  onboardingStep1Operation: boolean("onboarding_step1_operation").default(false).notNull(),
-  onboardingStep2Shopify: boolean("onboarding_step2_shopify").default(false).notNull(),
-  onboardingStep3Shipping: boolean("onboarding_step3_shipping").default(false).notNull(),
-  onboardingStep4Ads: boolean("onboarding_step4_ads").default(false).notNull(),
-  onboardingStep5Sync: boolean("onboarding_step5_sync").default(false).notNull(),
 });
 
-// Stores table
-export const stores = pgTable("stores", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  domain: text("domain"), // Shopify domain
-  accessToken: text("access_token"), // Shopify access token
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Operations table (campaigns/operations)
-export const operations = pgTable("operations", {
+// Stores table - main tenant entities
+stores = pgTable("stores", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
-  storeId: varchar("store_id").notNull().references(() => stores.id),
-  isActive: boolean("is_active").default(true),
+  ownerId: varchar("owner_id").notNull(), // Store owner (references users.id but not enforced here)
+  settings: jsonb("settings"), // Store-specific settings
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  
-  // Shopify configuration
-  shopifyCollectionId: text("shopify_collection_id"),
-  autoSync: boolean("auto_sync").default(false),
-  
-  // Instance-based fulfillment configuration
-  fulfillmentInstanceId: varchar("fulfillment_instance_id"),
-  warehouseCode: text("warehouse_code"),
-}, (table) => {
-  return {
-    storeIdx: index().on(table.storeId),
-  };
 });
 
-// User operations access table (many-to-many)
-export const userOperations = pgTable("user_operations", {
+export { stores };
+
+// Operations table - business operations within a store
+export const operations = pgTable("operations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(), // e.g., "PureDreams", "Operation Alpha"
+  description: text("description"),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links operation to store
+  country: text("country").notNull(), // Country code e.g., "ES", "IT", "FR"
+  currency: text("currency").notNull().default("EUR"), // Currency code e.g., "EUR", "PLN", "CZK"
+  operationType: text("operation_type").notNull().default("Cash on Delivery"), // 'Cash on Delivery', 'Pagamento no Cartão'
+  status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
+  settings: jsonb("settings"), // Operation-specific settings
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    userIdx: index().on(table.userId),
-    operationIdx: index().on(table.operationId),
-    uniqueUserOperation: unique().on(table.userId, table.operationId),
-  };
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User operation access with roles (alternative table)
+// Main orders table - unified for all providers
+export const orders = pgTable("orders", {
+  id: text("id").primaryKey(), // Lead number from provider (NT-xxxxx, etc) or Shopify order ID
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links order to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links order to operation
+  
+  // Source identification - NEW FIELDS FOR SHOPIFY-FIRST FLOW
+  dataSource: text("data_source").notNull().default("shopify"), // 'shopify', 'carrier', 'manual'
+  shopifyOrderId: text("shopify_order_id"), // Original Shopify order ID
+  shopifyOrderNumber: text("shopify_order_number"), // Shopify order number (#1001, etc)
+  carrierImported: boolean("carrier_imported").notNull().default(false), // If found in carrier API
+  carrierMatchedAt: timestamp("carrier_matched_at"), // When matched with carrier
+  carrierOrderId: text("carrier_order_id"), // ID from carrier when matched
+  
+  // Customer information
+  customerId: text("customer_id"),
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  customerAddress: text("customer_address"),
+  customerCity: text("customer_city"),
+  customerState: text("customer_state"),
+  customerCountry: text("customer_country"),
+  customerZip: text("customer_zip"),
+  
+  // Order details
+  status: text("status").notNull(), // 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled'
+  paymentStatus: text("payment_status"), // 'paid', 'unpaid', 'refunded'
+  paymentMethod: text("payment_method"), // 'cod', 'prepaid'
+  
+  // Financial
+  total: decimal("total", { precision: 10, scale: 2 }),
+  productCost: decimal("product_cost", { precision: 10, scale: 2 }).default("0"),
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }).default("0"),
+  currency: text("currency").default("EUR"),
+  
+  // Products
+  products: jsonb("products"), // Array of products with quantities and prices
+  
+  // Shipping provider info  
+  provider: text("provider").notNull().default("european_fulfillment"), // 'european_fulfillment', 'elogy'
+  providerOrderId: text("provider_order_id"), // Original ID from provider (legacy, use carrierOrderId)
+  trackingNumber: text("tracking_number"),
+  
+  // Provider specific data stored as JSON
+  providerData: jsonb("provider_data"),
+  shopifyData: jsonb("shopify_data"), // Complete Shopify order data
+  
+  // Timestamps - CRITICAL: Use real dates from provider history
+  orderDate: timestamp("order_date"), // Real order creation date from provider
+  lastStatusUpdate: timestamp("last_status_update"),
+  
+  // Affiliate tracking - for affiliate program
+  affiliateId: varchar("affiliate_id").references(() => users.id), // Which affiliate generated this sale
+  affiliateTrackingId: text("affiliate_tracking_id"), // Token from affiliate link
+  landingSource: text("landing_source"), // Where customer came from (URL, campaign, etc)
+  
+  // Metadata
+  notes: text("notes"),
+  tags: text("tags").array(),
+  
+  createdAt: timestamp("created_at").defaultNow(), // When we imported to our DB
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Currency Exchange History table - stores daily rates between currencies
+export const currencyHistory = pgTable("currency_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: text("date").notNull().unique(), // Format: YYYY-MM-DD - unique per date
+  
+  // Currency rates to BRL (1 CURRENCY = X BRL)
+  eurToBrl: decimal("eur_to_brl", { precision: 10, scale: 6 }),
+  usdToBrl: decimal("usd_to_brl", { precision: 10, scale: 6 }),
+  gbpToBrl: decimal("gbp_to_brl", { precision: 10, scale: 6 }),
+  arsToBrl: decimal("ars_to_brl", { precision: 10, scale: 6 }),
+  clpToBrl: decimal("clp_to_brl", { precision: 10, scale: 6 }),
+  cadToBrl: decimal("cad_to_brl", { precision: 10, scale: 6 }),
+  audToBrl: decimal("aud_to_brl", { precision: 10, scale: 6 }),
+  jpyToBrl: decimal("jpy_to_brl", { precision: 10, scale: 6 }),
+  
+  source: text("source").notNull().default("currencyapi"), // API source
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Currency Settings table - stores which currencies to import for each user/system
+export const currencySettings = pgTable("currency_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // null = global setting for all users
+  currency: text("currency").notNull(), // Currency code (EUR, USD, GBP, etc.)
+  enabled: boolean("enabled").notNull().default(true),
+  baseCurrency: text("base_currency").notNull().default("BRL"), // Always convert to BRL
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Order status history - track all status changes
+export const orderStatusHistory = pgTable("order_status_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: text("order_id").notNull().references(() => orders.id),
+  
+  previousStatus: text("previous_status"),
+  newStatus: text("new_status").notNull(),
+  comment: text("comment"),
+  
+  // Real timestamp from provider
+  changedAt: timestamp("changed_at").notNull(),
+  
+  // Provider specific data
+  providerData: jsonb("provider_data"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Dashboard metrics cache
+export const dashboardMetrics = pgTable("dashboard_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links metrics to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links metrics to operation
+  period: text("period").notNull(), // '1d', '7d', '30d', '90d'
+  provider: text("provider"), // null for all providers
+  
+  totalOrders: integer("total_orders").default(0),
+  deliveredOrders: integer("delivered_orders").default(0),
+  cancelledOrders: integer("cancelled_orders").default(0),
+  shippedOrders: integer("shipped_orders").default(0),
+  pendingOrders: integer("pending_orders").default(0),
+  returnedOrders: integer("returned_orders").default(0),
+  confirmedOrders: integer("confirmed_orders").default(0),
+  
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0"),
+  deliveredRevenue: decimal("delivered_revenue", { precision: 12, scale: 2 }).default("0"),
+  paidRevenue: decimal("paid_revenue", { precision: 12, scale: 2 }).default("0"),
+  averageOrderValue: decimal("average_order_value", { precision: 8, scale: 2 }).default("0"),
+  
+  // Cached costs to avoid recalculation
+  totalProductCosts: decimal("total_product_costs", { precision: 12, scale: 2 }).default("0"),
+  totalShippingCosts: decimal("total_shipping_costs", { precision: 12, scale: 2 }).default("0"),
+  totalCombinedCosts: decimal("total_combined_costs", { precision: 12, scale: 2 }).default("0"),
+  marketingCosts: decimal("marketing_costs", { precision: 12, scale: 2 }).default("0"),
+  
+  // Profit calculations
+  totalProfit: decimal("total_profit", { precision: 12, scale: 2 }).default("0"),
+  profitMargin: decimal("profit_margin", { precision: 8, scale: 2 }).default("0"),
+  roi: decimal("roi", { precision: 8, scale: 2 }).default("0"),
+  
+  // Customer analytics
+  uniqueCustomers: integer("unique_customers").default(0),
+  avgDeliveryTimeDays: decimal("avg_delivery_time_days", { precision: 8, scale: 2 }).default("0"),
+  
+  // CAC (Customer Acquisition Cost)
+  cacBRL: decimal("cac_brl", { precision: 12, scale: 2 }).default("0"),
+  cacEUR: decimal("cac_eur", { precision: 12, scale: 2 }).default("0"),
+  
+  // CPA Anúncios (Customer Per Acquisition - Ads)
+  cpaAdsBRL: decimal("cpa_ads_brl", { precision: 12, scale: 2 }).default("0"),
+  cpaAdsEUR: decimal("cpa_ads_eur", { precision: 12, scale: 2 }).default("0"),
+  
+  calculatedAt: timestamp("calculated_at").notNull(),
+  validUntil: timestamp("valid_until").notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sync jobs - track data imports from providers
+export const syncJobs = pgTable("sync_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links sync job to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links sync job to operation
+  provider: text("provider").notNull(),
+  type: text("type").notNull(), // 'full_sync', 'incremental_sync', 'details_sync'
+  
+  status: text("status").notNull(), // 'running', 'completed', 'failed'
+  
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  
+  ordersProcessed: integer("orders_processed").default(0),
+  ordersCreated: integer("orders_created").default(0),
+  ordersUpdated: integer("orders_updated").default(0),
+  errorCount: integer("error_count").default(0),
+  
+  lastProcessedId: text("last_processed_id"), // For incremental syncs
+  
+  logs: jsonb("logs"),
+  error: text("error"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Facebook Ads integrations - per operation
+export const facebookAdsIntegrations = pgTable("facebook_ads_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  accountId: text("account_id").notNull(), // Facebook Ad Account ID
+  accountName: text("account_name"),
+  accessToken: text("access_token").notNull(),
+  
+  selectedCampaignIds: text("selected_campaign_ids").array().default([]), // Array of campaign IDs
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// European Fulfillment integration - per operation 
+export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  provider: text("provider").notNull(), // 'european_fulfillment', 'elogy'
+  credentials: jsonb("credentials").notNull(), // Encrypted credentials
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Shopify integrations table
+export const shopifyIntegrations = pgTable("shopify_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  shopName: text("shop_name").notNull(), // e.g., "mystore.myshopify.com"
+  accessToken: text("access_token").notNull(), // Shopify Admin API access token
+  
+  status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  syncErrors: text("sync_errors"), // Error messages from last sync
+  
+  // Store metadata
+  metadata: jsonb("metadata").$type<{
+    storeName?: string;
+    storeEmail?: string;
+    plan?: string;
+    currency?: string;
+    timezone?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// CartPanda integrations table
+export const cartpandaIntegrations = pgTable("cartpanda_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  storeSlug: text("store_slug").notNull(), // CartPanda store slug (e.g., "example-test")
+  bearerToken: text("bearer_token").notNull(), // CartPanda API Bearer Token
+  
+  status: text("status").notNull().default("pending"), // 'active', 'pending', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  syncErrors: text("sync_errors"), // Error messages from last sync
+  
+  // Store metadata
+  metadata: jsonb("metadata").$type<{
+    storeName?: string;
+    storeUrl?: string;
+    currency?: string;
+    timezone?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User operation access - defines which operations a user can access
 export const userOperationAccess = pgTable("user_operation_access", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
   role: text("role").notNull().default("viewer"), // 'owner', 'admin', 'viewer'
   permissions: jsonb("permissions"), // Custom permissions
+  
   createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Orders table
-export const orders = pgTable("orders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Operation reference
-  operationId: varchar("operation_id").notNull().references(() => operations.id),
-  
-  // Customer info
-  customerName: text("customer_name").notNull(),
-  customerEmail: text("customer_email").notNull(),
-  customerPhone: text("customer_phone"),
-  
-  // Shipping address
-  shippingAddress: text("shipping_address").notNull(),
-  shippingCity: text("shipping_city").notNull(),
-  shippingState: text("shipping_state"),
-  shippingZip: text("shipping_zip").notNull(),
-  shippingCountry: text("shipping_country").notNull().default("BR"),
-  
-  // Order details
-  products: jsonb("products").notNull(), // Array of { productId, quantity, price }
-  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  shipping: decimal("shipping", { precision: 10, scale: 2 }).notNull(),
-  discount: decimal("discount", { precision: 10, scale: 2 }).default("0"),
-  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  
-  // Payment & Fulfillment
-  paymentMethod: text("payment_method").notNull().default("cod"), // 'cod', 'pix', 'credit_card'
-  paymentStatus: text("payment_status").notNull().default("pending"), // 'pending', 'paid', 'failed'
-  fulfillmentStatus: text("fulfillment_status").notNull().default("pending"), // 'pending', 'processing', 'shipped', 'delivered', 'cancelled'
-  
-  // Lead reference (if from European Fulfillment)
-  fulfillmentLeadId: text("fulfillment_lead_id"),
-  fulfillmentProviderCode: text("fulfillment_provider_code"),
-  
-  // Shopify sync
-  shopifyOrderId: text("shopify_order_id"),
-  shopifyOrderNumber: text("shopify_order_number"),
-  
-  // Timestamps
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  deliveredAt: timestamp("delivered_at"),
-}, (table) => {
-  return {
-    operationIdx: index().on(table.operationId),
-    statusIdx: index().on(table.fulfillmentStatus),
-    createdIdx: index().on(table.createdAt),
-  };
 });
 
 // Products table
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Basic info
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links product to store
+  operationId: varchar("operation_id").references(() => operations.id), // Links product to operation
+  sku: text("sku").unique().notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  sku: text("sku").unique(),
-  
-  // Pricing
+  type: text("type").notNull().default("fisico"), // 'fisico', 'nutraceutico'
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  compareAtPrice: decimal("compare_at_price", { precision: 10, scale: 2 }),
-  cost: decimal("cost", { precision: 10, scale: 2 }),
+  stock: integer("stock").notNull().default(0),
+  lowStock: integer("low_stock").notNull().default(10),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  productUrl: text("product_url"),
+  isActive: boolean("is_active").notNull().default(true),
   
-  // Inventory
-  stockQuantity: integer("stock_quantity").default(0),
-  trackInventory: boolean("track_inventory").default(true),
+  // Cost Configuration for Financial Analytics
+  costPrice: decimal("cost_price", { precision: 10, scale: 2 }), // Product purchase/manufacturing cost
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }), // Average shipping cost
+  handlingFee: decimal("handling_fee", { precision: 10, scale: 2 }), // Processing/handling fee
+  marketingCost: decimal("marketing_cost", { precision: 10, scale: 2 }), // Marketing attribution cost
+  operationalCost: decimal("operational_cost", { precision: 10, scale: 2 }), // Operational overhead
   
-  // Media
-  images: jsonb("images"), // Array of image URLs
+  // Calculated fields for dashboard analytics
+  profitMargin: decimal("profit_margin", { precision: 5, scale: 2 }), // Calculated profit margin %
+  lastCostUpdate: timestamp("last_cost_update"), // When costs were last updated
   
-  // Relationships
-  storeId: varchar("store_id").notNull().references(() => stores.id),
-  supplierId: varchar("supplier_id").references(() => users.id), // User with role 'supplier'
+  // Provider mapping
+  providers: jsonb("providers"), // Maps provider -> provider_product_id
   
-  // Shopify sync
-  shopifyProductId: text("shopify_product_id"),
-  shopifyVariantId: text("shopify_variant_id"),
-  
-  // Status
-  isActive: boolean("is_active").default(true),
+  // Supplier information - for products created by suppliers
+  supplierId: varchar("supplier_id").references(() => users.id), // Who created this global product
+  initialStock: integer("initial_stock").default(0), // Initial stock set by supplier
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, contract_sent, approved, rejected - for supplier approval workflow
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    storeIdx: index().on(table.storeId),
-    supplierIdx: index().on(table.supplierId),
-  };
 });
 
-// User products (custom product linking)
+// User Products - Links users to global products via SKU
 export const userProducts = pgTable("user_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   storeId: varchar("store_id").notNull().references(() => stores.id),
   productId: varchar("product_id").notNull().references(() => products.id),
-  sku: text("sku").notNull(),
+  sku: text("sku").notNull(), // Cached for quick access
+  
+  // User can override costs for their specific business
   customCostPrice: decimal("custom_cost_price", { precision: 10, scale: 2 }),
   customShippingCost: decimal("custom_shipping_cost", { precision: 10, scale: 2 }),
   customHandlingFee: decimal("custom_handling_fee", { precision: 10, scale: 2 }),
+  
+  // Track when product was linked and last updated
   linkedAt: timestamp("linked_at").defaultNow(),
   lastUpdated: timestamp("last_updated").defaultNow(),
+  
+  // Unique constraint to prevent duplicate user-product links
   isActive: boolean("is_active").notNull().default(true),
 });
 
-// Marketplace products
-export const marketplaceProducts = pgTable("marketplace_products", {
+// Product contracts for supplier approval workflow
+export const productContracts = pgTable("product_contracts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  description: text("description"),
-  baseCost: decimal("base_cost", { precision: 10, scale: 2 }).notNull(),
-  currency: text("currency").notNull().default("EUR"),
-  images: jsonb("images").$type<string[]>().default([]),
-  category: text("category").notNull(),
-  tags: text("tags").array(),
-  supplier: text("supplier").notNull(),
-  status: text("status").notNull().default("active"),
-  specs: jsonb("specs").$type<Record<string, any>>().default({}),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Product operation links
-export const productOperationLinks = pgTable("product_operation_links", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  operationId: varchar("operation_id").notNull().references(() => operations.id),
-  storeId: varchar("store_id").notNull().references(() => stores.id),
-  marketplaceProductId: varchar("marketplace_product_id").notNull().references(() => marketplaceProducts.id),
-  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull(),
-  currency: text("currency").notNull().default("EUR"),
-  sku: text("sku"),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Announcements
-export const announcements = pgTable("announcements", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  content: text("content").notNull(),
-  type: text("type").notNull().default("update"),
-  imageUrl: text("image_url"),
-  publishedAt: timestamp("published_at").defaultNow(),
-  isPinned: boolean("is_pinned").default(false),
-  audience: text("audience").notNull().default("all"),
-  roleTarget: text("role_target"),
-  operationId: varchar("operation_id").references(() => operations.id),
-  ctaLabel: text("cta_label"),
-  ctaUrl: text("cta_url"),
-  status: text("status").notNull().default("published"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Metrics table for dashboard
-export const metrics = pgTable("metrics", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  productId: varchar("product_id").notNull().references(() => products.id), // Links contract to product
+  supplierId: varchar("supplier_id").notNull().references(() => users.id), // Supplier who owns the product
+  adminId: varchar("admin_id").notNull().references(() => users.id), // Admin who sent the contract
   
-  date: timestamp("date").notNull(),
+  // Contract content
+  contractTitle: text("contract_title").notNull().default("Contrato de Fornecimento de Produto"),
+  contractContent: text("contract_content").notNull(), // Full contract text
+  contractTerms: jsonb("contract_terms"), // Structured terms and conditions
   
-  // Sales metrics
-  revenue: decimal("revenue", { precision: 10, scale: 2 }).notNull().default("0"),
-  orders: integer("orders").notNull().default(0),
-  averageOrderValue: decimal("average_order_value", { precision: 10, scale: 2 }).notNull().default("0"),
+  // Status tracking
+  status: varchar("status", { length: 50 }).notNull().default("sent"), // sent, viewed, signed, rejected
+  sentAt: timestamp("sent_at").defaultNow(),
+  viewedAt: timestamp("viewed_at"),
+  respondedAt: timestamp("responded_at"),
   
-  // Conversion metrics
-  visitors: integer("visitors").default(0),
-  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0"),
-  
-  // Fulfillment metrics
-  ordersShipped: integer("orders_shipped").default(0),
-  ordersDelivered: integer("orders_delivered").default(0),
-  ordersCancelled: integer("orders_cancelled").default(0),
+  // Contract details
+  deliveryDays: integer("delivery_days").default(30), // Expected delivery timeframe
+  minimumOrder: integer("minimum_order").default(1), // Minimum order quantity
+  commissionRate: decimal("commission_rate", { precision: 5, scale: 2 }).default('15.00'), // Commission percentage
   
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    operationDateIdx: index().on(table.operationId, table.date),
-  };
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Shipping Providers (European Fulfillment instances)
+// Shipping providers configuration
 export const shippingProviders = pgTable("shipping_providers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Links provider to store
+  operationId: varchar("operation_id").notNull().references(() => operations.id), // Links provider to specific operation
   name: text("name").notNull(),
-  code: text("code").notNull().unique(), // 'n1_warehouse_1', 'n1_warehouse_2', etc.
-  
-  // API Configuration
-  apiBaseUrl: text("api_base_url").notNull(),
-  apiUsername: text("api_username").notNull(),
-  apiPassword: text("api_password").notNull(),
-  
-  // Instance details
-  warehouseLocation: text("warehouse_location"), // 'Spain', 'Portugal', etc.
-  supportedCountries: jsonb("supported_countries"), // Array of country codes
-  
-  // Status
-  isActive: boolean("is_active").default(true),
-  
-  // Shopify Location
-  shopifyLocationId: text("shopify_location_id"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Fulfillment Leads (track requests to European Fulfillment API)
-export const fulfillmentLeads = pgTable("fulfillment_leads", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Provider reference
-  providerId: varchar("provider_id").notNull().references(() => shippingProviders.id),
-  
-  // European Fulfillment Lead ID
-  externalLeadId: text("external_lead_id"), // Lead ID returned by their API
-  
-  // Customer info
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  email: text("email").notNull(),
-  phone: text("phone").notNull(),
-  
-  // Address
-  address: text("address").notNull(),
-  city: text("city").notNull(),
-  state: text("state"),
-  zip: text("zip").notNull(),
-  country: text("country").notNull(),
-  
-  // Products (array of product codes and quantities)
-  products: jsonb("products").notNull(),
-  
-  // Lead status from European Fulfillment
-  status: text("status").notNull().default("pending"), // pending, confirmed, shipped, delivered, cancelled
-  trackingNumber: text("tracking_number"),
-  
-  // N1 Order reference
-  orderId: varchar("order_id").references(() => orders.id),
-  
-  // Sync info
-  lastSyncedAt: timestamp("last_synced_at"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    providerIdx: index().on(table.providerId),
-    orderIdx: index().on(table.orderId),
-    statusIdx: index().on(table.status),
-  };
-});
-
-// Fulfillment Products (master list from European Fulfillment)
-export const fulfillmentProducts = pgTable("fulfillment_products", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Provider reference
-  providerId: varchar("provider_id").notNull().references(() => shippingProviders.id),
-  
-  // Product info from European Fulfillment
-  externalProductCode: text("external_product_code").notNull(), // Their product code
-  name: text("name").notNull(),
+  type: text("type").notNull().default("custom"), // 'european_fulfillment', 'custom'
+  login: text("login"), // Login/Email for the provider
+  password: text("password"), // Password for the provider  
+  apiKey: text("api_key"),
+  apiUrl: text("api_url"),
   description: text("description"),
-  price: decimal("price", { precision: 10, scale: 2 }),
-  
-  // Stock info
-  stockQuantity: integer("stock_quantity").default(0),
-  isAvailable: boolean("is_available").default(true),
-  
-  // Mapping to N1 products
-  n1ProductId: varchar("n1_product_id").references(() => products.id),
-  
-  // Last sync
-  lastSyncedAt: timestamp("last_synced_at"),
-  
+  isActive: boolean("is_active").notNull().default(false),
+  lastTestAt: timestamp("last_test_at"), // When last test was performed
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    providerCodeIdx: unique().on(table.providerId, table.externalProductCode),
-  };
 });
 
-// Investment System Tables
-
-// Investment Pools (shared investment pools)
-export const investmentPools = pgTable("investment_pools", {
+// Manual Ad Spend - for tracking manual advertising costs
+export const manualAdSpend = pgTable("manual_ad_spend", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id), // Links to operation
   
-  // Basic info
-  name: text("name").notNull(),
+  // Spend details
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(), // Amount spent in BRL
+  currency: text("currency").notNull().default("BRL"), // Currency of the spend
+  platform: text("platform").notNull(), // 'facebook', 'google', 'taboola', 'tiktok', 'influencer', 'outro'
+  
+  // Date and description
+  spendDate: timestamp("spend_date").notNull(), // Date of the spend
+  description: text("description"), // Optional description
+  notes: text("notes"), // Additional notes
+  
+  // Metadata
+  createdBy: varchar("created_by").notNull().references(() => users.id), // Who added this spend
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Operation type validation
+export const operationTypeOptions = ["Cash on Delivery", "Pagamento no Cartão"] as const;
+export const operationTypeSchema = z.enum(operationTypeOptions);
+
+// Auth schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+});
+
+// Store schemas
+export const insertStoreSchema = createInsertSchema(stores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Operation schemas
+export const insertOperationSchema = createInsertSchema(operations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  operationType: operationTypeSchema,
+});
+
+// Operation update schema for API
+export const updateOperationTypeSchema = z.object({
+  operationType: operationTypeSchema,
+});
+
+// Facebook Ads integration schemas
+export const insertFacebookAdsIntegrationSchema = createInsertSchema(facebookAdsIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Fulfillment integration schemas
+export const insertFulfillmentIntegrationSchema = createInsertSchema(fulfillmentIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Shopify integration schemas
+export const insertShopifyIntegrationSchema = createInsertSchema(shopifyIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// CartPanda integration schemas
+export const insertCartpandaIntegrationSchema = createInsertSchema(cartpandaIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// User operation access schemas
+export const insertUserOperationAccessSchema = createInsertSchema(userOperationAccess).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Order schemas
+export const insertOrderSchema = createInsertSchema(orders).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOrderStatusHistorySchema = createInsertSchema(orderStatusHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDashboardMetricsSchema = createInsertSchema(dashboardMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSyncJobSchema = createInsertSchema(syncJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  profitMargin: true,
+  lastCostUpdate: true,
+});
+
+export const insertShippingProviderSchema = createInsertSchema(shippingProviders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertManualAdSpendSchema = createInsertSchema(manualAdSpend).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  spendDate: z.union([z.string(), z.date()]).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+});
+
+// User Products schemas
+export const insertUserProductSchema = createInsertSchema(userProducts).omit({
+  id: true,
+  linkedAt: true,
+  lastUpdated: true,
+});
+
+export const linkProductBySkuSchema = z.object({
+  sku: z.string().min(1, "SKU é obrigatório"),
+  customCostPrice: z.number().optional(),
+  customShippingCost: z.number().optional(),
+  customHandlingFee: z.number().optional(),
+});
+
+// Product contract schemas
+export const insertProductContractSchema = createInsertSchema(productContracts).omit({
+  id: true,
+  sentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+
+
+// Types
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type LoginUser = z.infer<typeof loginSchema>;
+export type User = typeof users.$inferSelect;
+
+export type Store = typeof stores.$inferSelect;
+export type InsertStore = z.infer<typeof insertStoreSchema>;
+
+export type Operation = typeof operations.$inferSelect;
+export type InsertOperation = z.infer<typeof insertOperationSchema>;
+
+export type FacebookAdsIntegration = typeof facebookAdsIntegrations.$inferSelect;
+export type InsertFacebookAdsIntegration = z.infer<typeof insertFacebookAdsIntegrationSchema>;
+
+export type FulfillmentIntegration = typeof fulfillmentIntegrations.$inferSelect;
+export type InsertFulfillmentIntegration = z.infer<typeof insertFulfillmentIntegrationSchema>;
+
+export type ShopifyIntegration = typeof shopifyIntegrations.$inferSelect;
+export type InsertShopifyIntegration = z.infer<typeof insertShopifyIntegrationSchema>;
+
+export type UserOperationAccess = typeof userOperationAccess.$inferSelect;
+export type InsertUserOperationAccess = z.infer<typeof insertUserOperationAccessSchema>;
+
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
+export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
+export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySchema>;
+
+export type DashboardMetrics = typeof dashboardMetrics.$inferSelect;
+export type InsertDashboardMetrics = z.infer<typeof insertDashboardMetricsSchema>;
+
+export type SyncJob = typeof syncJobs.$inferSelect;
+export type InsertSyncJob = z.infer<typeof insertSyncJobSchema>;
+
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+
+export type ShippingProvider = typeof shippingProviders.$inferSelect;
+export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema>;
+
+export type ManualAdSpend = typeof manualAdSpend.$inferSelect;
+export type InsertManualAdSpend = z.infer<typeof insertManualAdSpendSchema>;
+
+export type ProductContract = typeof productContracts.$inferSelect;
+export type InsertProductContract = z.infer<typeof insertProductContractSchema>;
+
+export type UserProduct = typeof userProducts.$inferSelect;
+export type InsertUserProduct = z.infer<typeof insertUserProductSchema>;
+export type LinkProductBySku = z.infer<typeof linkProductBySkuSchema>;
+
+export type SupplierPayment = typeof supplierPayments.$inferSelect;
+export type SupplierPaymentWithDetails = SupplierPayment & {
+  supplierName?: string;
+  amountBRL?: string;
+  exchangeRate?: string;
+};
+export type InsertSupplierPayment = z.infer<typeof insertSupplierPaymentSchema>;
+
+export type SupplierPaymentItem = typeof supplierPaymentItems.$inferSelect;
+export type InsertSupplierPaymentItem = z.infer<typeof insertSupplierPaymentItemSchema>;
+
+// Relations
+export const storesRelations = relations(stores, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [stores.ownerId],
+    references: [users.id],
+  }),
+  productSellers: many(users, {
+    relationName: "store_sellers"
+  }),
+  orders: many(orders),
+  products: many(products),
+  shippingProviders: many(shippingProviders),
+  dashboardMetrics: many(dashboardMetrics),
+  syncJobs: many(syncJobs),
+}));
+
+export const usersRelations = relations(users, ({ one }) => ({
+  ownedStore: one(stores, {
+    fields: [users.id],
+    references: [stores.ownerId],
+  }),
+  linkedStore: one(stores, {
+    fields: [users.storeId],
+    references: [stores.id],
+    relationName: "store_sellers"
+  }),
+}));
+
+export const ordersRelations = relations(orders, ({ one }) => ({
+  store: one(stores, {
+    fields: [orders.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const productsRelations = relations(products, ({ one }) => ({
+  store: one(stores, {
+    fields: [products.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const shippingProvidersRelations = relations(shippingProviders, ({ one }) => ({
+  store: one(stores, {
+    fields: [shippingProviders.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const dashboardMetricsRelations = relations(dashboardMetrics, ({ one }) => ({
+  store: one(stores, {
+    fields: [dashboardMetrics.storeId],
+    references: [stores.id],
+  }),
+}));
+
+export const syncJobsRelations = relations(syncJobs, ({ one }) => ({
+  store: one(stores, {
+    fields: [syncJobs.storeId],
+    references: [stores.id],
+  }),
+}));
+
+// Ad Creatives - Store creative assets from Facebook/Google Ads
+export const adCreatives = pgTable("ad_creatives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
+  accountId: varchar("account_id").notNull(),
+  campaignId: varchar("campaign_id").notNull(),
+  adId: varchar("ad_id").notNull().unique(),
+  creativeId: varchar("creative_id"),
+  name: text("name"),
+  status: text("status"), // 'active', 'paused', 'archived'
+  type: text("type"), // 'image', 'video', 'carousel', 'collection', 'unknown'
+  
+  // Visual assets
+  thumbnailUrl: text("thumbnail_url"),
+  imageUrl: text("image_url"),
+  videoUrl: text("video_url"),
+  
+  // Copy elements
+  primaryText: text("primary_text"),
+  headline: text("headline"),
   description: text("description"),
-  targetAmount: decimal("target_amount", { precision: 12, scale: 2 }).notNull(),
-  currentAmount: decimal("current_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-  minimumInvestment: decimal("minimum_investment", { precision: 12, scale: 2 }).notNull(),
+  linkUrl: text("link_url"),
+  ctaType: text("cta_type"), // 'LEARN_MORE', 'SHOP_NOW', etc.
   
-  // Status
-  status: text("status").notNull().default("open"), // 'open', 'closed', 'active', 'completed'
+  // Performance metrics
+  period: text("period"), // Date preset used for metrics
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  spend: decimal("spend", { precision: 12, scale: 2 }).default("0"),
+  cpm: decimal("cpm", { precision: 10, scale: 2 }).default("0"),
+  cpc: decimal("cpc", { precision: 10, scale: 2 }).default("0"),
+  ctr: decimal("ctr", { precision: 8, scale: 4 }).default("0"),
+  conversions: integer("conversions").default(0),
+  conversionRate: decimal("conversion_rate", { precision: 8, scale: 4 }).default("0"),
+  roas: decimal("roas", { precision: 10, scale: 2 }).default("0"),
   
-  // Returns configuration
-  expectedReturnPercentage: decimal("expected_return_percentage", { precision: 5, scale: 2 }),
-  returnPeriodMonths: integer("return_period_months"),
+  // Analysis tracking
+  isAnalyzed: boolean("is_analyzed").default(false),
+  isNew: boolean("is_new").default(true),
+  lastSync: timestamp("last_sync"),
   
-  // Associated operation (optional - pool can be for general investment)
-  operationId: varchar("operation_id").references(() => operations.id),
+  // Raw data from provider
+  providerData: jsonb("provider_data"),
   
-  // Timestamps
-  openedAt: timestamp("opened_at").defaultNow(),
-  closedAt: timestamp("closed_at"),
+  // Enhanced Creative Intelligence fields
+  // Real performance data from Meta Marketing API
+  metaInsightsData: jsonb("meta_insights_data").$type<{
+    reachBreakdown?: {
+      age?: { [key: string]: number };
+      gender?: { [key: string]: number };
+      placement?: { [key: string]: number };
+    };
+    frequencyDistribution?: { [key: string]: number };
+    actionBreakdowns?: {
+      actionType?: string;
+      value?: number;
+      costPerAction?: number;
+    }[];
+    timeBasedMetrics?: {
+      hourly?: { [key: string]: number };
+      daily?: { [key: string]: number };
+    };
+  }>(),
+  
+  // Performance predictions
+  performancePredictions: jsonb("performance_predictions").$type<{
+    predictedCTR?: number;
+    predictedCVR?: number;
+    predictedROAS?: number;
+    confidenceScore?: number; // 0-100
+    basedOnFeatures?: string[];
+    lastUpdated?: string; // ISO timestamp
+  }>(),
+  
+  // Benchmark comparison
+  benchmarkData: jsonb("benchmark_data").$type<{
+    industryPercentile?: number; // 0-100
+    categoryAverage?: {
+      ctr?: number;
+      cpc?: number;
+      cpm?: number;
+      roas?: number;
+    };
+    competitorComparison?: {
+      betterThan?: number; // percentage
+      similarTo?: string[];
+    };
+  }>(),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Investor Profiles (extended user info for investors)
-export const investorProfiles = pgTable("investor_profiles", {
+// Creative Analyses - Track AI analysis jobs and results
+export const creativeAnalyses = pgTable("creative_analyses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  creativeId: varchar("creative_id").references(() => adCreatives.id),
+  batchId: varchar("batch_id"), // For grouping multiple creatives in one analysis
   
-  // KYC info
-  fullName: text("full_name").notNull(),
-  cpf: text("cpf"),
-  phone: text("phone"),
+  // Analysis details
+  status: text("status").notNull(), // 'queued', 'running', 'completed', 'failed'
+  analysisType: text("analysis_type").notNull(), // 'audit', 'angles', 'copy', 'variants', 'performance'
+  provider: text("provider").notNull().default("hybrid"), // 'openai', 'hybrid' (whisper+gpt4o)
+  model: text("model"), // 'gpt-4o', 'whisper-1', etc.
   
-  // Banking
-  bankName: text("bank_name"),
-  bankAccountNumber: text("bank_account_number"),
+  // Cost tracking
+  costEstimate: decimal("cost_estimate", { precision: 10, scale: 4 }).default("0"),
+  actualCost: decimal("actual_cost", { precision: 10, scale: 4 }).default("0"),
+  inputTokens: integer("input_tokens").default(0),
+  outputTokens: integer("output_tokens").default(0),
   
-  // Investment preferences
-  riskTolerance: text("risk_tolerance"), // 'low', 'medium', 'high'
-  investmentGoals: text("investment_goals"),
+  // Audio analysis results (Whisper)
+  audioAnalysis: jsonb("audio_analysis").$type<{
+    transcript?: string;
+    audioQuality?: number;
+    voiceStyle?: string;
+    musicDetected?: boolean;
+    musicType?: string;
+    silencePercentage?: number;
+    speechRate?: number;
+    ctaAudio?: string[];
+    duration?: number;
+  }>(),
+  audioProcessingTime: integer("audio_processing_time"), // milliseconds
+  audioCost: decimal("audio_cost", { precision: 10, scale: 4 }).default("0"),
   
-  // Status
-  isVerified: boolean("is_verified").default(false),
+  // Visual analysis results (GPT-4o with keyframes)
+  visualAnalysis: jsonb("visual_analysis").$type<{
+    keyframes?: Array<{
+      timestamp: number;
+      url: string;
+      description: string;
+      objects: string[];
+      text: string[];
+    }>;
+    products?: string[];
+    people?: number;
+    logoVisibility?: number;
+    textOnScreen?: string[];
+    colors?: string[];
+    composition?: string;
+    visualQuality?: number;
+  }>(),
+  visualProcessingTime: integer("visual_processing_time"), // milliseconds
+  visualCost: decimal("visual_cost", { precision: 10, scale: 4 }).default("0"),
   
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Investments (individual investments in pools)
-export const investments = pgTable("investments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Fusion analysis results (Combined insights)
+  fusionAnalysis: jsonb("fusion_analysis").$type<{
+    overallScore?: number;
+    timeline?: Array<{
+      timeRange: string;
+      audioEvent?: string;
+      visualEvent?: string;
+      syncQuality?: number;
+    }>;
+    audioVisualSync?: string; // 'perfect', 'good', 'poor'
+    narrativeFlow?: string;
+    ctaAlignment?: string;
+    predictedPerformance?: {
+      ctr?: number;
+      cvr?: number;
+      engagement?: string;
+    };
+    keyStrengths?: string[];
+    improvements?: string[];
+  }>(),
   
-  // References
-  poolId: varchar("pool_id").notNull().references(() => investmentPools.id, { onDelete: 'cascade' }),
-  investorId: varchar("investor_id").notNull().references(() => investorProfiles.id, { onDelete: 'cascade' }),
+  // Legacy analysis results (for backward compatibility)
+  result: jsonb("result"), // Structured analysis output
+  insights: jsonb("insights"), // Key insights extracted
+  recommendations: jsonb("recommendations"), // Actionable recommendations
+  scores: jsonb("scores"), // Various scoring metrics
+  error: text("error"),
   
-  // Investment details
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"), // 'pending', 'confirmed', 'active', 'completed', 'cancelled'
+  // Progress tracking
+  progress: jsonb("progress"), // Store progress data as JSON
+  currentStep: integer("current_step").default(0), // Step number as integer
   
-  // Payment
-  paymentMethod: text("payment_method"),
-  paymentReference: text("payment_reference"),
-  paidAt: timestamp("paid_at"),
+  // Enhanced Creative Intelligence analysis results
+  // Copywriting analysis with enhanced structure
+  copyAnalysis: jsonb("copy_analysis").$type<{
+    persuasion?: {
+      score: number;
+      triggers: {
+        scarcity?: number;
+        urgency?: number;
+        socialProof?: number;
+        authority?: number;
+        reciprocity?: number;
+        emotion?: number;
+      };
+      examples: Array<{
+        trigger: string;
+        text: string;
+        timestamp: number;
+        strength: number;
+      }>;
+    };
+    narrative?: {
+      framework: string;
+      confidence: number;
+      completeness: number;
+      stages: Array<{
+        name: string;
+        present: boolean;
+        startSec: number;
+        endSec: number;
+        excerpt?: string;
+      }>;
+    };
+    performance?: {
+      wpm: number;
+      speechDensity: number;
+      clarity: number;
+      pauses: Array<{
+        startSec: number;
+        duration: number;
+        purpose: string;
+      }>;
+    };
+    personaTone?: {
+      tone: string;
+      audienceFit: number;
+      ageGroup: string;
+      characteristics: string[];
+      toneChanges: Array<{
+        timestamp: number;
+        fromTone: string;
+        toTone: string;
+        reason: string;
+      }>;
+    };
+    powerWords?: {
+      count: number;
+      categories: { [key: string]: string[] };
+      effectiveness: number;
+    };
+  }>(),
   
-  // Returns
-  expectedReturn: decimal("expected_return", { precision: 12, scale: 2 }),
-  actualReturn: decimal("actual_return", { precision: 12, scale: 2 }).default("0"),
+  // Scene-by-scene analysis for Creative Intelligence
+  sceneAnalysis: jsonb("scene_analysis").$type<{
+    scenes?: Array<{
+      id: number;
+      startSec: number;
+      endSec: number;
+      durationSec: number;
+      technicalDescription: string;
+      objects: Array<{
+        label: string;
+        count: number;
+        confidence?: number;
+      }>;
+      text: Array<{
+        content: string;
+        position?: string;
+        fontSize?: string;
+      }>;
+      peopleCount: number;
+      dominantColors: string[];
+      brandElements: string[];
+      composition: {
+        shotType: string;
+        cameraMovement: string;
+        cameraAngle: string;
+        lighting: string;
+      };
+      audio: {
+        transcriptSnippet: string;
+        voiceStyle?: string;
+        musicDetected: boolean;
+        musicType?: string;
+        volume: string;
+        ctas?: string[];
+      };
+      visualScore: number;
+      engagementScore: number;
+      syncQuality: number;
+    }>;
+    overallSummary?: string;
+    keyStrengths?: string[];
+    improvements?: string[];
+    recommendations?: string[];
+  }>(),
   
-  // Timestamps
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  // Timing
+  startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
-}, (table) => {
-  return {
-    poolIdx: index().on(table.poolId),
-    investorIdx: index().on(table.investorId),
-  };
-});
-
-// Investment Transactions (track all financial movements)
-export const investmentTransactions = pgTable("investment_transactions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // References
-  investmentId: varchar("investment_id").notNull().references(() => investments.id, { onDelete: 'cascade' }),
-  
-  // Transaction details
-  type: text("type").notNull(), // 'deposit', 'return', 'withdrawal', 'fee'
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  description: text("description"),
-  
-  // Status
-  status: text("status").notNull().default("pending"), // 'pending', 'completed', 'failed'
-  
-  // Processing
-  processedAt: timestamp("processed_at"),
-  
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    investmentIdx: index().on(table.investmentId),
-  };
 });
 
-// Investment Performance History (track pool performance over time)
-export const investmentPerformanceHistory = pgTable("investment_performance_history", {
+// Facebook Ads Campaigns table
+export const facebookCampaigns = pgTable("facebook_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  poolId: varchar("pool_id").notNull().references(() => investmentPools.id, { onDelete: 'cascade' }),
-  
-  // Snapshot data
-  date: timestamp("date").notNull(),
-  totalValue: decimal("total_value", { precision: 12, scale: 2 }).notNull(),
-  returnPercentage: decimal("return_percentage", { precision: 5, scale: 2 }).notNull(),
-  
-  // Metrics
-  activeInvestors: integer("active_investors").notNull().default(0),
-  totalReturnsDistributed: decimal("total_returns_distributed", { precision: 12, scale: 2 }).default("0"),
-  
+  campaignId: varchar("campaign_id", { length: 255 }).notNull().unique(),
+  accountId: varchar("account_id", { length: 255 }).notNull(), // ID da conta do Facebook Ads
+  name: varchar("name", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  objective: varchar("objective", { length: 100 }),
+  dailyBudget: decimal("daily_budget", { precision: 10, scale: 2 }),
+  lifetimeBudget: decimal("lifetime_budget", { precision: 10, scale: 2 }),
+  amountSpent: decimal("amount_spent", { precision: 10, scale: 2 }).default("0"), // Valor em BRL
+  originalAmountSpent: decimal("original_amount_spent", { precision: 10, scale: 2 }), // Valor original
+  originalCurrency: varchar("original_currency", { length: 10 }).default("USD"), // Moeda original
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  cpm: decimal("cpm", { precision: 10, scale: 2 }).default("0"),
+  cpc: decimal("cpc", { precision: 10, scale: 2 }).default("0"),
+  ctr: decimal("ctr", { precision: 10, scale: 4 }).default("0"),
+  isSelected: boolean("is_selected").default(false),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  lastSync: timestamp("last_sync").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    poolDateIdx: index().on(table.poolId, table.date),
-  };
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-// Facebook Ads Integration Tables
 
 // Facebook Business Managers
 export const facebookBusinessManagers = pgTable("facebook_business_managers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  businessManagerId: varchar("business_manager_id", { length: 255 }).notNull().unique(),
+  businessId: varchar("business_id", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   accessToken: text("access_token"),
   isActive: boolean("is_active").default(true),
+  lastSync: timestamp("last_sync"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Facebook Ad Accounts
+// Supplier Payments - Track payments to suppliers
+export const supplierPayments = pgTable("supplier_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supplierId: varchar("supplier_id").notNull().references(() => users.id), // Supplier receiving payment
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Store making payment
+  
+  // Payment details
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  amountBRL: decimal("amount_brl", { precision: 12, scale: 2 }), // Amount in Brazilian Real
+  currency: text("currency").notNull().default("EUR"),
+  exchangeRate: decimal("exchange_rate", { precision: 10, scale: 4 }), // EUR to BRL exchange rate
+  description: text("description"),
+  
+  // Status tracking
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'paid', 'rejected', 'cancelled'
+  paymentMethod: text("payment_method"), // 'bank_transfer', 'pix', 'paypal', 'other'
+  
+  // Date tracking
+  dueDate: timestamp("due_date"),
+  approvedAt: timestamp("approved_at"),
+  paidAt: timestamp("paid_at"),
+  
+  // Reference data
+  referenceId: text("reference_id"), // External payment reference
+  bankDetails: jsonb("bank_details"), // Bank account details for payment
+  notes: text("notes"),
+  
+  // Approval workflow
+  approvedBy: varchar("approved_by").references(() => users.id), // Finance admin who approved
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Supplier Payment Items - Track which orders/products are being paid
+export const supplierPaymentItems = pgTable("supplier_payment_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  paymentId: varchar("payment_id").notNull().references(() => supplierPayments.id),
+  orderId: text("order_id").references(() => orders.id),
+  productSku: text("product_sku"),
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Investment Pool - Main investment fund/pool
+export const investmentPools = pgTable("investment_pools", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "COD Operations Fund I"
+  slug: text("slug").notNull().unique(), // URL-friendly identifier, e.g., "cod-operations-fund-i"
+  description: text("description"),
+  totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull().default("0"), // Total pool value in BRL
+  totalInvested: decimal("total_invested", { precision: 15, scale: 2 }).notNull().default("0"), // Total invested by all investors
+  monthlyReturn: decimal("monthly_return", { precision: 5, scale: 4 }).default("0"), // Monthly return percentage
+  yearlyReturn: decimal("yearly_return", { precision: 5, scale: 4 }).default("0"), // Yearly return percentage
+  status: text("status").notNull().default("active"), // 'active', 'closed', 'paused'
+  minInvestment: decimal("min_investment", { precision: 10, scale: 2 }).notNull().default("1000"), // Minimum investment in BRL
+  currency: text("currency").notNull().default("BRL"),
+  
+  // Risk profile
+  riskLevel: text("risk_level").notNull().default("medium"), // 'low', 'medium', 'high'
+  investmentStrategy: text("investment_strategy"), // Description of investment strategy
+  
+  // Legal Documentation
+  cnpj: text("cnpj"), // CNPJ do fundo/pool
+  cvmRegistration: text("cvm_registration"), // Registro CVM se aplicável
+  auditReport: text("audit_report"), // URL do relatório de auditoria independente
+  
+  // Portfolio Composition
+  portfolioComposition: jsonb("portfolio_composition"), // Composição detalhada da carteira
+  
+  // Fiscal Performance
+  managementFeeRate: decimal("management_fee_rate", { precision: 5, scale: 4 }).default("0"), // Taxa de administração
+  administrativeExpenses: decimal("administrative_expenses", { precision: 10, scale: 2 }).default("0"), // Despesas administrativas
+  irRetentionHistory: jsonb("ir_retention_history"), // Histórico de retenção de IR
+  benchmarkIndex: text("benchmark_index").default("CDI"), // Índice de referência (CDI, IPCA, etc)
+  comeCotasRate: decimal("come_cotas_rate", { precision: 5, scale: 4 }).default("0"), // Taxa come-cotas
+  
+  // Operational Transparency
+  custodyProvider: text("custody_provider"), // Provedor de custódia dos ativos
+  liquidationProcess: text("liquidation_process"), // Descrição do processo de liquidação
+  monthlyReports: jsonb("monthly_reports"), // Relatórios mensais da pool
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investor Profiles - Extended profile information for investors
+export const investorProfiles = pgTable("investor_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  
+  // Personal information
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  birthDate: timestamp("birth_date"),
+  nationality: text("nationality"),
+  
+  // Contact information
+  phone: text("phone"),
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  country: text("country"),
+  
+  // Investment profile
+  riskTolerance: text("risk_tolerance").default("medium"), // 'conservative', 'medium', 'aggressive'
+  investmentExperience: text("investment_experience").default("beginner"), // 'beginner', 'intermediate', 'experienced'
+  investmentGoals: text("investment_goals"), // 'capital_growth', 'income', 'balanced'
+  monthlyIncomeRange: text("monthly_income_range"), // '0-2k', '2k-5k', '5k-10k', '10k+'
+  
+  // Bank information for payments
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  routingNumber: text("routing_number"),
+  accountHolderName: text("account_holder_name"),
+  
+  // Verification status
+  kycStatus: text("kyc_status").default("pending"), // 'pending', 'verified', 'rejected'
+  kycDocuments: jsonb("kyc_documents"), // Array of document URLs/references
+  verifiedAt: timestamp("verified_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investments - Individual investor positions in pools
+export const investments = pgTable("investments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  poolId: varchar("pool_id").notNull().references(() => investmentPools.id),
+  
+  // Investment details
+  totalInvested: decimal("total_invested", { precision: 12, scale: 2 }).notNull().default("0"), // Total amount invested
+  currentValue: decimal("current_value", { precision: 12, scale: 2 }).notNull().default("0"), // Current investment value
+  totalReturns: decimal("total_returns", { precision: 12, scale: 2 }).notNull().default("0"), // Total returns earned
+  totalPaidOut: decimal("total_paid_out", { precision: 12, scale: 2 }).notNull().default("0"), // Total paid out to investor
+  
+  // Performance metrics
+  returnRate: decimal("return_rate", { precision: 5, scale: 4 }).default("0"), // Overall return rate
+  monthlyReturn: decimal("monthly_return", { precision: 5, scale: 4 }).default("0"), // Last month return
+  
+  // Status
+  status: text("status").notNull().default("active"), // 'active', 'withdrawn', 'closed'
+  
+  // Investment dates
+  firstInvestmentDate: timestamp("first_investment_date"),
+  lastTransactionDate: timestamp("last_transaction_date"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investment Transactions - All deposits, withdrawals, and returns
+export const investmentTransactions = pgTable("investment_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investmentId: varchar("investment_id").notNull().references(() => investments.id),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  poolId: varchar("pool_id").notNull().references(() => investmentPools.id),
+  
+  // Transaction details
+  type: text("type").notNull(), // 'deposit', 'withdrawal', 'return_payment', 'fee'
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  
+  // Payment details
+  paymentMethod: text("payment_method"), // 'bank_transfer', 'pix', 'wire_transfer'
+  paymentReference: text("payment_reference"), // External reference from bank/payment provider
+  paymentStatus: text("payment_status").default("pending"), // 'pending', 'completed', 'failed', 'cancelled'
+  
+  // Description and metadata
+  description: text("description"),
+  metadata: jsonb("metadata"), // Additional transaction data
+  
+  // Processing information
+  processedAt: timestamp("processed_at"),
+  processedBy: varchar("processed_by").references(() => users.id), // Admin who processed
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Pool Performance History - Track pool performance over time
+export const poolPerformanceHistory = pgTable("pool_performance_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull().references(() => investmentPools.id),
+  
+  // Performance metrics for the period
+  period: text("period").notNull(), // 'daily', 'weekly', 'monthly'
+  periodDate: timestamp("period_date").notNull(), // Date of the performance record
+  
+  // Financial metrics
+  totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull(),
+  totalInvested: decimal("total_invested", { precision: 15, scale: 2 }).notNull(),
+  returnRate: decimal("return_rate", { precision: 5, scale: 4 }).notNull(),
+  benchmarkReturn: decimal("benchmark_return", { precision: 5, scale: 4 }), // CDI or other benchmark
+  
+  // Additional metrics
+  numberOfInvestors: integer("number_of_investors").default(0),
+  newInvestments: decimal("new_investments", { precision: 12, scale: 2 }).default("0"),
+  withdrawals: decimal("withdrawals", { precision: 12, scale: 2 }).default("0"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ==========================================
+// INVESTMENT PAYMENT & TAX TABLES
+// ==========================================
+
+// Tax calculations for investment returns
+export const investmentTaxCalculations = pgTable("investment_tax_calculations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  
+  // Tax period
+  taxYear: integer("tax_year").notNull(),
+  referenceMonth: integer("reference_month"), // For monthly calculations
+  
+  // Calculation details
+  totalGains: decimal("total_gains", { precision: 12, scale: 2 }).notNull().default("0"),
+  taxableAmount: decimal("taxable_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 4 }).notNull(), // E.g., 0.15 for 15%
+  taxDue: decimal("tax_due", { precision: 12, scale: 2 }).notNull().default("0"),
+  taxPaid: decimal("tax_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+  
+  // Status and dates
+  status: text("status").notNull().default("pending"), // 'pending', 'filed', 'paid', 'overdue'
+  dueDate: timestamp("due_date"),
+  paidDate: timestamp("paid_date"),
+  
+  // Supporting data
+  calculationDetails: jsonb("calculation_details"), // Detailed breakdown
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payment receipts and documentation
+export const paymentReceipts = pgTable("payment_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  transactionId: varchar("transaction_id").notNull().references(() => investmentTransactions.id),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  
+  // Receipt details
+  receiptNumber: text("receipt_number"),
+  receiptType: text("receipt_type").notNull(), // 'bank_transfer', 'pix_receipt', 'ted_receipt', 'wire_transfer'
+  
+  // File storage
+  fileUrl: text("file_url"), // URL to stored receipt file
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  fileMimeType: text("file_mime_type"),
+  
+  // Bank/Payment details
+  bankName: text("bank_name"),
+  accountNumber: text("account_number"),
+  routingNumber: text("routing_number"),
+  authenticationCode: text("authentication_code"), // Bank confirmation code
+  
+  // Fund source declaration
+  fundSource: text("fund_source").notNull(), // 'salary', 'savings', 'business_income', 'investment_returns', 'inheritance', 'loan', 'gift', 'other'
+  fundSourceDescription: text("fund_source_description"), // Additional details
+  fundSourceDocuments: jsonb("fund_source_documents"), // Array of supporting documents
+  
+  // Verification
+  isVerified: boolean("is_verified").default(false),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  verifiedAt: timestamp("verified_at"),
+  verificationNotes: text("verification_notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tax payment schedule/calendar
+export const taxPaymentSchedule = pgTable("tax_payment_schedule", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  investorId: varchar("investor_id").notNull().references(() => users.id),
+  calculationId: varchar("calculation_id").references(() => investmentTaxCalculations.id),
+  
+  // Schedule details
+  taxType: text("tax_type").notNull(), // 'income_tax', 'capital_gains', 'come_cotas'
+  paymentType: text("payment_type").notNull(), // 'monthly', 'quarterly', 'annual', 'on_demand'
+  
+  // Amount and dates
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  dueDate: timestamp("due_date").notNull(),
+  reminderDate: timestamp("reminder_date"),
+  
+  // Status
+  status: text("status").notNull().default("scheduled"), // 'scheduled', 'reminder_sent', 'paid', 'overdue', 'cancelled'
+  paidDate: timestamp("paid_date"),
+  paymentReference: text("payment_reference"),
+  
+  // Notifications
+  reminderSent: boolean("reminder_sent").default(false),
+  reminderSentAt: timestamp("reminder_sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Ad Accounts - Unified table for Facebook and Google Ads
+export const adAccounts = pgTable("ad_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // CRITICAL: Link to store for isolation
+  operationId: varchar("operation_id").references(() => operations.id), // Link to specific operation for isolation
+  network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
+  accountId: varchar("account_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  businessManagerId: varchar("business_manager_id", { length: 255 }), // For Facebook
+  managerId: varchar("manager_id", { length: 255 }), // For Google Ads (Customer ID)
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"), // For Google OAuth
+  appId: varchar("app_id", { length: 255 }), // For Facebook
+  appSecret: text("app_secret"), // For Facebook
+  clientId: varchar("client_id", { length: 255 }), // For Google
+  clientSecret: text("client_secret"), // For Google
+  isActive: boolean("is_active").default(true),
+  currency: varchar("currency", { length: 10 }).default("EUR"), // Currency returned by API
+  baseCurrency: varchar("base_currency", { length: 10 }).default("BRL"), // User configured currency
+  timezone: varchar("timezone", { length: 50 }).default("Europe/Rome"),
+  lastSync: timestamp("last_sync"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Campaigns - Unified table for Facebook and Google Ads
+export const campaigns = pgTable("campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  network: varchar("network", { length: 20 }).notNull(), // "facebook" or "google"
+  campaignId: varchar("campaign_id", { length: 255 }).notNull(),
+  accountId: varchar("account_id", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  objective: varchar("objective", { length: 100 }), // For Facebook
+  campaignType: varchar("campaign_type", { length: 100 }), // For Google
+  dailyBudget: decimal("daily_budget", { precision: 10, scale: 2 }),
+  lifetimeBudget: decimal("lifetime_budget", { precision: 10, scale: 2 }),
+  amountSpent: decimal("amount_spent", { precision: 10, scale: 2 }).default("0"), // Valor em BRL
+  originalAmountSpent: decimal("original_amount_spent", { precision: 10, scale: 2 }), // Valor original
+  originalCurrency: varchar("original_currency", { length: 10 }).default("USD"), // Moeda original
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  cpm: decimal("cpm", { precision: 10, scale: 2 }).default("0"),
+  cpc: decimal("cpc", { precision: 10, scale: 2 }).default("0"),
+  ctr: decimal("ctr", { precision: 10, scale: 4 }).default("0"),
+  isSelected: boolean("is_selected").default(false),
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  lastSync: timestamp("last_sync").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Facebook Ads Account Settings (Legacy - kept for backward compatibility)
 export const facebookAdAccounts = pgTable("facebook_ad_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   accountId: varchar("account_id", { length: 255 }).notNull().unique(),
@@ -614,9 +1522,28 @@ export const supportTickets = pgTable("support_tickets", {
   resolvedAt: timestamp("resolved_at"),
   resolvedByUserId: varchar("resolved_by_user_id").references(() => users.id),
   
-  // Tracking
-  firstResponseAt: timestamp("first_response_at"),
-  lastActivityAt: timestamp("last_activity_at"),
+  // Metrics
+  responseTime: integer("response_time"), // Minutes until first response
+  resolutionTime: integer("resolution_time"), // Minutes until resolution
+  
+  // Tags and notes
+  tags: text("tags").array().default([]),
+  internalNotes: text("internal_notes"),
+  
+  // Read status
+  isRead: boolean("is_read").notNull().default(false),
+  
+  // Refund progression tracking
+  retentionAttempts: integer("retention_attempts").notNull().default(0), // Counter for retention attempts
+  escalationReason: text("escalation_reason"), // Reason for immediate escalation if triggered
+  refundOffered: boolean("refund_offered").notNull().default(false), // If refund form was sent
+  refundOfferedAt: timestamp("refund_offered_at"), // When refund form was offered
+  
+  // Order linking
+  linkedOrderId: text("linked_order_id").references(() => orders.id), // Linked order ID
+  orderMatchConfidence: text("order_match_confidence"), // 'high', 'medium', 'low', 'manual'
+  orderMatchMethod: text("order_match_method"), // 'explicit_mention', 'temporal', 'score', 'manual'
+  orderLinkedAt: timestamp("order_linked_at"), // When order was linked
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -624,380 +1551,372 @@ export const supportTickets = pgTable("support_tickets", {
 
 export const supportResponses = pgTable("support_responses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
   categoryId: varchar("category_id").notNull().references(() => supportCategories.id),
   
   // Response template
-  title: text("title").notNull(),
-  responseText: text("response_text").notNull(), // Plain text response
-  responseHtml: text("response_html"), // HTML formatted response
+  name: text("name").notNull(), // Template name for admin reference
+  subject: text("subject").notNull(), // Email subject template
+  textContent: text("text_content").notNull(), // Plain text response
+  htmlContent: text("html_content"), // HTML response (optional)
   
-  // Usage
-  usageCount: integer("usage_count").default(0),
-  lastUsedAt: timestamp("last_used_at"),
+  // Template variables
+  variables: jsonb("variables"), // Available variables for personalization
   
-  // Status
-  isActive: boolean("is_active").default(true),
+  // Settings
+  isActive: boolean("is_active").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false), // Default response for category
+  delayMinutes: integer("delay_minutes").default(0), // Delay before sending (0 = immediate)
+  
+  // Usage tracking
+  timesUsed: integer("times_used").default(0),
+  lastUsed: timestamp("last_used"),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const supportTicketMessages = pgTable("support_ticket_messages", {
+export const supportConversations = pgTable("support_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id, { onDelete: 'cascade' }),
+  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id),
   
   // Message details
-  from: text("from").notNull(), // Email address
-  to: text("to").notNull(),
+  type: text("type").notNull(), // 'email_in', 'email_out', 'note', 'status_change'
+  from: text("from"), // Email address or 'system'
+  to: text("to"), // Email address or null for internal notes
+  
+  // Content
   subject: text("subject"),
-  textContent: text("text_content"),
-  htmlContent: text("html_content"),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").notNull().default(false), // Internal notes vs customer-facing
   
-  // Type
-  messageType: text("message_type").notNull().default("reply"), // 'initial', 'reply', 'internal_note', 'automated'
-  
-  // Sender info
-  sentByUserId: varchar("sent_by_user_id").references(() => users.id),
-  isFromCustomer: boolean("is_from_customer").default(false),
-  
-  // Email metadata
-  messageId: text("message_id").unique(),
-  inReplyTo: text("in_reply_to"),
+  // Metadata
+  messageId: text("message_id"), // If from email
+  userId: varchar("user_id").references(() => users.id), // If from user action
   
   createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    ticketIdx: index().on(table.ticketId),
-  };
 });
 
-// Sofia Virtual Agent Tables
-
-// Sofia Conversations (outbound call sessions)
-export const sofiaConversations = pgTable("sofia_conversations", {
+// Reimbursement Requests - Customer refund requests linked to tickets
+export const reimbursementRequests = pgTable("reimbursement_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketId: varchar("ticket_id").notNull().references(() => supportTickets.id),
   
-  // Customer info
-  customerName: text("customer_name").notNull(),
-  customerPhone: text("customer_phone").notNull(),
-  
-  // Call details
-  callSid: text("call_sid"), // Telnyx call SID
-  callStatus: text("call_status").notNull().default("initiated"), // 'initiated', 'in_progress', 'completed', 'failed', 'no_answer'
-  callDuration: integer("call_duration"), // Duration in seconds
-  
-  // Conversation context
-  orderId: varchar("order_id").references(() => orders.id),
-  supportTicketId: varchar("support_ticket_id").references(() => supportTickets.id),
-  conversationPurpose: text("conversation_purpose").notNull(), // 'order_confirmation', 'delivery_update', 'support_followup', 'feedback'
-  
-  // AI Analysis
-  emotionalContext: jsonb("emotional_context"), // Detected emotion, urgency, sentiment
-  conversationSummary: text("conversation_summary"),
-  keyTopics: jsonb("key_topics"), // Array of detected topics
-  actionItems: jsonb("action_items"), // Array of actions to take
-  
-  // Transcript
-  fullTranscript: text("full_transcript"),
-  
-  // Outcomes
-  wasSuccessful: boolean("was_successful"),
-  needsHumanFollowup: boolean("needs_human_followup").default(false),
-  
-  // Timestamps
-  startedAt: timestamp("started_at").defaultNow(),
-  endedAt: timestamp("ended_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    orderIdx: index().on(table.orderId),
-    ticketIdx: index().on(table.supportTicketId),
-    statusIdx: index().on(table.callStatus),
-  };
-});
-
-// Sofia Conversation Messages (individual exchanges during call)
-export const sofiaConversationMessages = pgTable("sofia_conversation_messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  conversationId: varchar("conversation_id").notNull().references(() => sofiaConversations.id, { onDelete: 'cascade' }),
-  
-  // Message details
-  speaker: text("speaker").notNull(), // 'sofia', 'customer'
-  message: text("message").notNull(),
-  
-  // Timing
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
-  
-  // Recognition metadata (for customer speech)
-  confidence: decimal("confidence", { precision: 3, scale: 2 }), // 0.00 - 1.00
-  language: text("language").default("pt-BR"),
-  
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => {
-  return {
-    conversationIdx: index().on(table.conversationId),
-  };
-});
-
-// Intelligent Refund System Tables
-
-// Intelligent Refund Requests
-export const intelligentRefundRequests = pgTable("intelligent_refund_requests", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  // Customer & Order
+  // Customer information (duplicated from ticket for data integrity)
   customerEmail: text("customer_email").notNull(),
-  customerName: text("customer_name"),
-  orderId: varchar("order_id").references(() => orders.id),
-  orderNumber: text("order_number"),
+  customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone"),
+  
+  // Order details
+  orderNumber: text("order_number"), // Original order number
+  productName: text("product_name"), // Product being refunded
+  purchaseDate: timestamp("purchase_date"), // Date of purchase
+  
+  // Billing address
+  billingAddressCountry: text("billing_address_country"),
+  billingAddressCity: text("billing_address_city"),
+  billingAddressStreet: text("billing_address_street"),
+  billingAddressNumber: text("billing_address_number"),
+  billingAddressComplement: text("billing_address_complement"),
+  billingAddressState: text("billing_address_state"),
+  billingAddressZip: text("billing_address_zip"),
   
   // Refund details
-  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }).notNull(),
-  refundReason: text("refund_reason").notNull(),
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }),
+  currency: text("currency").default("EUR"),
   
-  // AI Engagement
-  engagementStage: text("engagement_stage").notNull().default("initial"), // 'initial', 'alternative_offered', 'discount_offered', 'final_offer', 'approved', 'declined'
-  retentionAttempts: integer("retention_attempts").default(0),
+  // Banking information (IBAN only)
+  bankIban: text("bank_iban"), // International Bank Account Number
+  controlNumber: text("control_number"), // Número de controlo sem comprovativo de devolução
   
-  // Communication
-  lastAiResponse: text("last_ai_response"),
-  lastCustomerMessage: text("last_customer_message"),
-  conversationHistory: jsonb("conversation_history"), // Array of exchanges
+  // Legacy banking fields (kept for backward compatibility)
+  bankAccountNumber: text("bank_account_number"),
+  bankAccountHolder: text("bank_account_holder"),
+  bankName: text("bank_name"),
+  pixKey: text("pix_key"), // For Brazilian PIX payments
   
-  // Keywords & Sentiment
-  hasCriticalKeywords: boolean("has_critical_keywords").default(false),
-  criticalKeywords: jsonb("critical_keywords"), // Array of detected critical words
-  sentiment: text("sentiment"), // 'positive', 'neutral', 'negative', 'frustrated', 'angry'
-  urgencyLevel: integer("urgency_level").default(0), // 0-10
+  // Required attachments (URLs from object storage)
+  orderProofUrl: text("order_proof_url"), // Comprovativo de encomenda
+  productPhotosUrl: text("product_photos_url"), // Fotos dos produtos
+  returnProofUrl: text("return_proof_url"), // Comprovante de devolução e pagamento da taxa
+  idDocumentUrl: text("id_document_url"), // Documento de identificação com fotografia
   
-  // Offers made
-  alternativeProductOffered: text("alternative_product_offered"),
-  discountOffered: decimal("discount_offered", { precision: 10, scale: 2 }),
+  // Customer declarations (checkboxes)
+  declarationFormCorrect: boolean("declaration_form_correct").default(false),
+  declarationAttachmentsProvided: boolean("declaration_attachments_provided").default(false),
+  declarationIbanCorrect: boolean("declaration_iban_correct").default(false),
   
-  // Decision
-  status: text("status").notNull().default("pending"), // 'pending', 'retained', 'refunded', 'escalated', 'abandoned'
-  finalDecision: text("final_decision"),
-  decisionReason: text("decision_reason"),
+  // Reason and details
+  refundReason: text("refund_reason").notNull(), // Customer's stated reason
+  additionalDetails: text("additional_details"), // Extra context from customer
   
-  // Timestamps
-  requestedAt: timestamp("requested_at").defaultNow(),
-  respondedAt: timestamp("responded_at"),
-  resolvedAt: timestamp("resolved_at"),
+  // Status tracking
+  status: text("status").notNull().default("pending"), // 'pending', 'under_review', 'approved', 'rejected', 'completed'
+  reviewNotes: text("review_notes"), // Admin internal notes
+  reviewedByUserId: varchar("reviewed_by_user_id").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  
+  // Completion
+  completedAt: timestamp("completed_at"),
+  rejectionReason: text("rejection_reason"), // If rejected, why
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    orderIdx: index().on(table.orderId),
-    statusIdx: index().on(table.status),
-    emailIdx: index().on(table.customerEmail),
-  };
 });
 
-// Affiliate Program Tables
+// =============================================
+// AFFILIATE PROGRAM TABLES
+// =============================================
 
-// Affiliate Profiles
+// Affiliate Profiles - Extended profile data for users with 'affiliate' role
 export const affiliateProfiles = pgTable("affiliate_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  storeId: varchar("store_id").notNull().references(() => stores.id), // Which store this affiliate belongs to
   
-  // Profile info
-  businessName: text("business_name"),
-  website: text("website"),
-  socialMedia: jsonb("social_media"), // { instagram, tiktok, youtube, etc }
+  // Fiscal/Legal data
+  fiscalName: text("fiscal_name"), // Legal name or company name
+  fiscalId: text("fiscal_id"), // Tax ID / NIF / CPF / CNPJ
+  fiscalAddress: text("fiscal_address"),
+  fiscalCountry: text("fiscal_country"),
   
-  // Payment info
-  pixKey: text("pix_key"),
-  bankAccount: text("bank_account"),
+  // Banking information for payouts
+  bankAccountHolder: text("bank_account_holder"),
+  bankIban: text("bank_iban"),
+  pixKey: text("pix_key"), // For Brazilian affiliates
   
-  // Status
-  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'active', 'suspended'
+  // Status and approval
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'suspended', 'rejected'
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
   approvedAt: timestamp("approved_at"),
+  suspendedReason: text("suspended_reason"),
   
-  // Stats
-  totalEarnings: decimal("total_earnings", { precision: 12, scale: 2 }).default("0"),
-  totalClicks: integer("total_clicks").default(0),
-  totalConversions: integer("total_conversions").default(0),
+  // Additional info
+  referralCode: text("referral_code").unique(), // Custom referral code for marketing
+  bio: text("bio"),
+  socialMedia: jsonb("social_media").$type<{
+    instagram?: string;
+    facebook?: string;
+    tiktok?: string;
+    website?: string;
+  }>(),
+  
+  // Landing page and tracking
+  trackingPixel: text("tracking_pixel"), // Custom tracking pixel code (e.g., Facebook Pixel, Google Analytics)
+  landingPageUrl: text("landing_page_url"), // Assigned landing page URL on Vercel
+  landingPageId: varchar("landing_page_id"), // Reference to deployed landing page
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    userIdIdx: index().on(table.userId),
+    storeIdIdx: index().on(table.storeId),
+    statusIdx: index().on(table.status),
+  };
 });
 
-// Affiliate Memberships (many-to-many: affiliates can promote multiple products)
+// Affiliate Memberships - Links affiliates to products/operations they can promote
 export const affiliateMemberships = pgTable("affiliate_memberships", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
   affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id, { onDelete: 'cascade' }),
-  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: 'cascade' }),
-  
-  // Commission configuration
-  commissionType: text("commission_type").notNull().default("percentage"), // 'percentage', 'fixed'
-  commissionValue: decimal("commission_value", { precision: 10, scale: 2 }).notNull(),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  productId: varchar("product_id").references(() => products.id), // Specific product or null for all products in operation
   
   // Status
-  status: text("status").notNull().default("active"), // 'active', 'paused', 'terminated'
+  status: text("status").notNull().default("pending"), // 'pending', 'active', 'paused', 'terminated'
   
-  // Stats
-  clicks: integer("clicks").default(0),
-  conversions: integer("conversions").default(0),
-  earnings: decimal("earnings", { precision: 12, scale: 2 }).default("0"),
+  // Approval
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  
+  // Terms
+  customCommissionPercent: decimal("custom_commission_percent", { precision: 5, scale: 2 }), // Override default rule if set
+  notes: text("notes"),
+  
+  // Short tracking code for referral links (8-10 characters, base62)
+  shortCode: varchar("short_code", { length: 12 }).unique(),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
-    affiliateIdx: index().on(table.affiliateId),
-    productIdx: index().on(table.productId),
-    uniqueMembership: unique().on(table.affiliateId, table.productId),
+    affiliateIdIdx: index().on(table.affiliateId),
+    operationIdIdx: index().on(table.operationId),
+    statusIdx: index().on(table.status),
+    shortCodeIdx: index().on(table.shortCode),
   };
 });
 
-// Affiliate Conversions (track successful sales)
-export const affiliateConversions = pgTable("affiliate_conversions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id, { onDelete: 'cascade' }),
-  membershipId: varchar("membership_id").notNull().references(() => affiliateMemberships.id, { onDelete: 'cascade' }),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: 'cascade' }),
-  clickId: varchar("click_id").references((): AnyPgColumn => affiliateClicks.id), // Track which click led to conversion
-  
-  // Conversion details
-  orderValue: decimal("order_value", { precision: 10, scale: 2 }).notNull(),
-  commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
-  
-  // Status
-  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'paid', 'rejected'
-  
-  // Payment
-  payoutId: varchar("payout_id"),
-  paidAt: timestamp("paid_at"),
-  
-  convertedAt: timestamp("converted_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    affiliateIdx: index().on(table.affiliateId),
-    orderIdx: index().on(table.orderId),
-  };
-});
-
-// Affiliate Commission Rules (global commission rules)
+// Affiliate Commission Rules - Defines commission percentages per product/operation
 export const affiliateCommissionRules = pgTable("affiliate_commission_rules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  productId: varchar("product_id").references(() => products.id), // Specific product or null for operation-wide rule
   
-  // Rule details
-  name: text("name").notNull(),
-  description: text("description"),
+  // Commission structure
+  commissionPercent: decimal("commission_percent", { precision: 5, scale: 2 }).notNull(), // e.g., 10.50 for 10.5%
+  commissionType: text("commission_type").notNull().default("percentage"), // 'percentage', 'fixed_amount'
+  fixedAmount: decimal("fixed_amount", { precision: 10, scale: 2 }), // If commission_type is 'fixed_amount'
   
-  // Commission
-  commissionType: text("commission_type").notNull().default("percentage"), // 'percentage', 'fixed', 'tiered'
-  commissionValue: decimal("commission_value", { precision: 10, scale: 2 }).notNull(),
+  // Bonus rules
+  bonusRules: jsonb("bonus_rules").$type<Array<{
+    condition: string; // 'first_sale', 'volume_milestone', 'time_limited'
+    threshold?: number;
+    bonusPercent?: number;
+    bonusAmount?: number;
+  }>>(),
   
-  // Conditions
-  minOrderValue: decimal("min_order_value", { precision: 10, scale: 2 }),
-  maxOrderValue: decimal("max_order_value", { precision: 10, scale: 2 }),
-  productIds: jsonb("product_ids"), // Array of product IDs (null = all products)
-  
-  // Status
-  isActive: boolean("is_active").default(true),
-  priority: integer("priority").default(0), // Higher priority rules are evaluated first
+  // Validity
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  isActive: boolean("is_active").notNull().default(true),
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdIdx: index().on(table.operationId),
+    productIdIdx: index().on(table.productId),
+    activeIdx: index().on(table.isActive),
+  };
 });
 
-// Affiliate Payouts (bulk payouts to affiliates)
+// Affiliate Conversions - Records of sales generated by affiliates
+export const affiliateConversions = pgTable("affiliate_conversions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id),
+  orderId: text("order_id").notNull().references(() => orders.id),
+  trackingId: text("tracking_id").notNull(), // From affiliate link token
+  
+  // Financial details
+  orderTotal: decimal("order_total", { precision: 10, scale: 2 }).notNull(),
+  commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
+  commissionPercent: decimal("commission_percent", { precision: 5, scale: 2 }),
+  currency: text("currency").notNull().default("EUR"),
+  
+  // Status and approval
+  status: text("status").notNull().default("pending"), // 'pending', 'approved', 'rejected', 'paid'
+  approvedByUserId: varchar("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Payout reference
+  payoutId: varchar("payout_id").references(() => affiliatePayouts.id),
+  
+  // Metadata
+  conversionSource: text("conversion_source"), // 'checkout_external', 'checkout_vercel', 'manual'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    affiliateIdIdx: index().on(table.affiliateId),
+    orderIdIdx: index().on(table.orderId),
+    trackingIdIdx: index().on(table.trackingId),
+    statusIdx: index().on(table.status),
+  };
+});
+
+// Affiliate Payouts - Consolidated payments to affiliates
 export const affiliatePayouts = pgTable("affiliate_payouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id, { onDelete: 'cascade' }),
-  
-  // Payout details
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-  currency: text("currency").notNull().default("BRL"),
-  
-  // Payment method
-  paymentMethod: text("payment_method").notNull(), // 'pix', 'bank_transfer', 'paypal'
-  paymentReference: text("payment_reference"), // Transaction ID, receipt number, etc
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id),
   
   // Period
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
   
-  // Conversions included
-  conversionIds: jsonb("conversion_ids").notNull(), // Array of conversion IDs
+  // Financial
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  conversionsCount: integer("conversions_count").notNull().default(0),
+  
+  // Payment details
+  paymentMethod: text("payment_method"), // 'bank_transfer', 'pix', 'paypal', 'stripe'
+  paymentReference: text("payment_reference"), // Transaction ID or reference
+  paymentProof: text("payment_proof"), // URL to payment receipt/proof
   
   // Status
-  status: text("status").notNull().default("pending"), // 'pending', 'processing', 'completed', 'failed'
-  
-  // Timestamps
-  processedAt: timestamp("processed_at"),
+  status: text("status").notNull().default("pending"), // 'pending', 'processing', 'paid', 'failed'
+  paidByUserId: varchar("paid_by_user_id").references(() => users.id),
   paidAt: timestamp("paid_at"),
+  
+  // Notes
+  notes: text("notes"),
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
-    affiliateIdx: index().on(table.affiliateId),
+    affiliateIdIdx: index().on(table.affiliateId),
+    statusIdx: index().on(table.status),
   };
 });
 
-// Affiliate Clicks (track all clicks on affiliate links)
+// Affiliate Clicks - Tracks clicks on affiliate links
 export const affiliateClicks = pgTable("affiliate_clicks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  
-  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id, { onDelete: 'cascade' }),
-  membershipId: varchar("membership_id").references(() => affiliateMemberships.id, { onDelete: 'cascade' }),
-  landingPageId: varchar("landing_page_id"),
+  trackingId: text("tracking_id").notNull(), // Decoded from affiliate link
+  affiliateId: varchar("affiliate_id").notNull().references(() => affiliateProfiles.id),
   
   // Click metadata
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  referrer: text("referrer"),
-  landingUrl: text("landing_url"),
+  referer: text("referer"), // Where they came from
+  landingPage: text("landing_page"), // Where they landed
   
-  // Tracking token (JWT)
-  trackingToken: text("tracking_token").notNull().unique(),
+  // Geolocation (if available)
+  country: text("country"),
+  city: text("city"),
   
   // Conversion tracking
+  converted: boolean("converted").notNull().default(false),
+  conversionId: varchar("conversion_id").references(() => affiliateConversions.id),
   convertedAt: timestamp("converted_at"),
-  orderId: varchar("order_id").references(() => orders.id),
   
-  clickedAt: timestamp("clicked_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
+  clickedAt: timestamp("clicked_at").notNull().defaultNow(),
 }, (table) => {
   return {
-    affiliateIdx: index().on(table.affiliateId),
-    tokenIdx: index().on(table.trackingToken),
+    trackingIdIdx: index().on(table.trackingId),
+    affiliateIdIdx: index().on(table.affiliateId),
+    convertedIdx: index().on(table.converted),
   };
 });
 
-// Affiliate Landing Page Deployment Configuration
-export const affiliateLandingDeploymentConfig = pgTable("affiliate_landing_deployment_config", {
+// Vercel Deployment Config - Configuration for deploying pages to Vercel
+export const vercelDeploymentConfig = pgTable("vercel_deployment_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
   
-  // Vercel integration
-  vercelTeamId: text("vercel_team_id").notNull(),
-  vercelAccessToken: text("vercel_access_token").notNull(),
+  // Vercel credentials
+  teamId: text("team_id").notNull(),
+  projectId: text("project_id"),
+  apiToken: text("api_token").notNull(), // Encrypted in production
   
-  // Project configuration
-  vercelProjectName: text("vercel_project_name").notNull(), // Single project name for all landing pages
-  vercelProjectId: text("vercel_project_id"), // Will be set after first deployment
+  // Deployment settings
+  domain: text("domain"), // Custom domain for affiliate pages
+  allowedDomains: text("allowed_domains").array(), // Additional allowed domains
   
-  // Domain configuration
-  baseDomain: text("base_domain"), // e.g., "n1hub-pages.vercel.app" (optional custom domain)
+  // Build settings
+  framework: text("framework").default("nextjs"), // 'nextjs', 'static', 'react'
+  buildCommand: text("build_command"),
+  outputDirectory: text("output_directory"),
   
   // Status
-  isActive: boolean("is_active").default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  lastDeploymentAt: timestamp("last_deployment_at"),
+  lastDeploymentStatus: text("last_deployment_status"), // 'success', 'failed', 'pending'
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdIdx: index().on(table.operationId),
+    activeIdx: index().on(table.isActive),
+  };
 });
 
-// Affiliate Landing Pages (HTML/CSS/JS pages for affiliates)
+// Affiliate Landing Pages - Central storage for landing page templates
 export const affiliateLandingPages = pgTable("affiliate_landing_pages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   
@@ -1079,252 +1998,2181 @@ export const affiliateProductPixels = pgTable("affiliate_product_pixels", {
   customCode: text("custom_code"),
   
   // Status
-  isActive: boolean("is_active").default(true),
+  isActive: boolean("is_active").notNull().default(true),
   
+  // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {
   return {
     affiliateIdx: index().on(table.affiliateId),
     productIdx: index().on(table.productId),
+    landingPageIdx: index().on(table.landingPageId),
+    activeIdx: index().on(table.isActive),
+    uniqueAffiliateProductLandingPage: index().on(table.affiliateId, table.productId, table.landingPageId),
   };
 });
 
-// Zod schemas for validation
-export const insertUserSchema = createInsertSchema(users);
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// =============================================
+// END AFFILIATE PROGRAM TABLES
+// =============================================
 
-export const insertStoreSchema = createInsertSchema(stores);
-export type InsertStore = z.infer<typeof insertStoreSchema>;
-export type Store = typeof stores.$inferSelect;
+// AI training directives for custom prompt enhancement per operation
+export const aiDirectives = pgTable("ai_directives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  type: varchar("type", { length: 50 }).notNull(), // 'store_info', 'product_info', 'response_style', 'custom'
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0), // For custom ordering
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdx: index().on(table.operationId),
+    typeIdx: index().on(table.type),
+    activeIdx: index().on(table.isActive),
+  };
+});
 
-export const insertOperationSchema = createInsertSchema(operations);
-export type InsertOperation = z.infer<typeof insertOperationSchema>;
-export type Operation = typeof operations.$inferSelect;
+export const supportMetrics = pgTable("support_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Time period
+  date: text("date").notNull(), // YYYY-MM-DD
+  period: text("period").notNull(), // 'daily', 'weekly', 'monthly'
+  
+  // Volume metrics
+  emailsReceived: integer("emails_received").default(0),
+  ticketsCreated: integer("tickets_created").default(0),
+  ticketsResolved: integer("tickets_resolved").default(0),
+  ticketsClosed: integer("tickets_closed").default(0),
+  
+  // Category breakdown
+  categoryBreakdown: jsonb("category_breakdown"), // Count per category
+  
+  // Response metrics
+  avgResponseTimeMinutes: decimal("avg_response_time_minutes", { precision: 10, scale: 2 }).default("0"),
+  avgResolutionTimeMinutes: decimal("avg_resolution_time_minutes", { precision: 10, scale: 2 }).default("0"),
+  automationRate: decimal("automation_rate", { precision: 5, scale: 2 }).default("0"), // % of automated responses
+  
+  // Satisfaction (future)
+  customerSatisfactionScore: decimal("customer_satisfaction_score", { precision: 3, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
-export const insertOrderSchema = createInsertSchema(orders);
-export type InsertOrder = z.infer<typeof insertOrderSchema>;
-export type Order = typeof orders.$inferSelect;
+// AI training directives for N1 admin support (global, not per-operation)
+export const adminSupportDirectives = pgTable("admin_support_directives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type", { length: 50 }).notNull(), // 'n1_info', 'product_info', 'response_style', 'custom'
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0), // For custom ordering
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    typeIdx: index().on(table.type),
+    activeIdx: index().on(table.isActive),
+  };
+});
 
-export const insertProductSchema = createInsertSchema(products);
-export type InsertProduct = z.infer<typeof insertProductSchema>;
-export type Product = typeof products.$inferSelect;
+// ========================================
+// CREATIVE INTELLIGENCE ENHANCEMENT TABLES
+// ========================================
 
-export const insertMetricSchema = createInsertSchema(metrics);
-export type InsertMetric = z.infer<typeof insertMetricSchema>;
-export type Metric = typeof metrics.$inferSelect;
+// Creative Benchmarks - Proprietary benchmarking based on aggregated client data
+export const creativeBenchmarks = pgTable("creative_benchmarks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Categorization
+  industry: varchar("industry", { length: 100 }).notNull(), // 'ecommerce', 'saas', 'health', etc.
+  creativeType: varchar("creative_type", { length: 50 }).notNull(), // 'video', 'image', 'carousel'
+  countryCodes: text("country_codes").array().notNull().default(sql`'{}'`),
+  
+  // Performance benchmarks (aggregated from our client data)
+  avgCTR: decimal("avg_ctr", { precision: 8, scale: 4 }).notNull().default("0"),
+  avgCPC: decimal("avg_cpc", { precision: 10, scale: 2 }).notNull().default("0"),
+  avgCPM: decimal("avg_cpm", { precision: 10, scale: 2 }).notNull().default("0"),
+  avgROAS: decimal("avg_roas", { precision: 10, scale: 2 }).notNull().default("0"),
+  
+  // Percentile distribution
+  percentile25: jsonb("percentile_25"),
+  percentile50: jsonb("percentile_50"),
+  percentile75: jsonb("percentile_75"),
+  percentile90: jsonb("percentile_90"),
+  
+  // Sample size and confidence
+  sampleSize: integer("sample_size").notNull(),
+  lastUpdated: timestamp("last_updated").notNull(),
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }).notNull().default("0"), // 0-100
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    industryTypeIdx: index().on(table.industry, table.creativeType),
+    lastUpdatedIdx: index().on(table.lastUpdated),
+  };
+});
 
-export const insertShippingProviderSchema = createInsertSchema(shippingProviders);
-export type InsertShippingProvider = z.infer<typeof insertShippingProviderSchema>;
-export type ShippingProvider = typeof shippingProviders.$inferSelect;
+// Creative Edit Plans - Actionable insights with specific edit recommendations
+export const creativeEditPlans = pgTable("creative_edit_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creativeId: varchar("creative_id").notNull().references(() => adCreatives.id),
+  analysisId: varchar("analysis_id").notNull().references(() => creativeAnalyses.id),
+  
+  // Plan metadata
+  planName: varchar("plan_name", { length: 255 }).notNull(),
+  planDescription: text("plan_description"),
+  priorityLevel: varchar("priority_level", { length: 20 }).notNull().default("medium"),
+  
+  // Performance predictions
+  estimatedImpact: jsonb("estimated_impact"),
+  
+  // Action plans
+  visualActions: jsonb("visual_actions"),
+  audioActions: jsonb("audio_actions"),
+  copyActions: jsonb("copy_actions"),
+  targetingActions: jsonb("targeting_actions"),
+  
+  // Implementation guidance
+  implementationSteps: jsonb("implementation_steps").$type<Array<{
+    stepNumber: number;
+    description: string;
+    category: string; // 'design', 'copy', 'audio', 'targeting'
+    estimatedTime: string;
+    toolsNeeded?: string[];
+    skillLevel: string; // 'beginner', 'intermediate', 'advanced'
+  }>>(),
+  
+  // Success metrics and testing
+  successMetrics: jsonb("success_metrics").$type<{
+    primaryKPI: string;
+    targetImprovement: number;
+    testDuration: string;
+    significanceThreshold: number;
+    sampleSizeRequired?: number;
+  }>(),
+  
+  // Plan status
+  status: text("status").notNull().default("pending"), // 'pending', 'in_progress', 'implemented', 'tested', 'successful', 'failed'
+  implementedAt: timestamp("implemented_at"),
+  resultsValidatedAt: timestamp("results_validated_at"),
+  
+  // Actual results tracking
+  actualResults: jsonb("actual_results").$type<{
+    performance?: { [key: string]: number };
+    implementationNotes?: string;
+    successAchieved?: boolean;
+    learnings?: string[];
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    creativeIdx: index().on(table.creativeId),
+    analysisIdx: index().on(table.analysisId),
+    statusIdx: index().on(table.status),
+    createdAtIdx: index().on(table.createdAt),
+  };
+});
 
-export const insertFulfillmentLeadSchema = createInsertSchema(fulfillmentLeads);
-export type InsertFulfillmentLead = z.infer<typeof insertFulfillmentLeadSchema>;
-export type FulfillmentLead = typeof fulfillmentLeads.$inferSelect;
+// Creative Variations - Track relationships and performance of creative variations
+export const creativeVariations = pgTable("creative_variations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Relationship tracking
+  originalCreativeId: varchar("original_creative_id").notNull().references(() => adCreatives.id),
+  variationCreativeId: varchar("variation_creative_id").notNull().references(() => adCreatives.id),
+  parentVariationId: varchar("parent_variation_id"), // Self-reference - foreign key constraint added separately
+  editPlanId: varchar("edit_plan_id").references(() => creativeEditPlans.id),
+  
+  // Variation metadata
+  variationType: varchar("variation_type", { length: 50 }).notNull(),
+  changeDescription: text("change_description"),
+  generationMethod: varchar("generation_method", { length: 50 }).notNull().default("manual"),
+  generationCost: decimal("generation_cost", { precision: 10, scale: 2 }).default("0"),
+  
+  // Generation tracking
+  generationProvider: varchar("generation_provider", { length: 100 }),
+  generationPrompts: jsonb("generation_prompts"),
+  generationParameters: jsonb("generation_parameters"),
+  
+  // Asset information  
+  assetUrls: jsonb("asset_urls"),
+  assetMetadata: jsonb("asset_metadata"),
+  
+  // A/B Testing
+  testStatus: varchar("test_status", { length: 20 }).notNull().default("pending"),
+  testStartDate: timestamp("test_start_date"),
+  testEndDate: timestamp("test_end_date"),
+  
+  // Results and learnings
+  testResults: jsonb("test_results"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    originalCreativeIdx: index().on(table.originalCreativeId),
+    variationCreativeIdx: index().on(table.variationCreativeId),
+    editPlanIdx: index().on(table.editPlanId),
+    testStatusIdx: index().on(table.testStatus),
+    createdAtIdx: index().on(table.createdAt),
+  };
+});
 
-export const insertFulfillmentProductSchema = createInsertSchema(fulfillmentProducts);
-export type InsertFulfillmentProduct = z.infer<typeof insertFulfillmentProductSchema>;
-export type FulfillmentProduct = typeof fulfillmentProducts.$inferSelect;
+// Schema validations
+export const insertFacebookBusinessManagerSchema = createInsertSchema(facebookBusinessManagers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
 
-export const insertInvestmentPoolSchema = createInsertSchema(investmentPools).omit({ currentAmount: true });
-export type InsertInvestmentPool = z.infer<typeof insertInvestmentPoolSchema>;
+export const insertFacebookCampaignSchema = createInsertSchema(facebookCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+export const insertAdAccountSchema = createInsertSchema(adAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+export const insertAdCreativeSchema = createInsertSchema(adCreatives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+export const insertCreativeAnalysisSchema = createInsertSchema(creativeAnalyses).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+  completedAt: true,
+});
+
+export const insertCampaignSchema = createInsertSchema(campaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+export const insertFacebookAdAccountSchema = createInsertSchema(facebookAdAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
+});
+
+// Supplier payment schemas
+export const insertSupplierPaymentSchema = createInsertSchema(supplierPayments).omit({
+  id: true,
+  approvedAt: true,
+  paidAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplierPaymentItemSchema = createInsertSchema(supplierPaymentItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Investment schemas
+export const insertInvestmentPoolSchema = createInsertSchema(investmentPools).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvestorProfileSchema = createInsertSchema(investorProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  verifiedAt: true,
+});
+
+export const insertInvestmentSchema = createInsertSchema(investments).omit({
+  id: true,
+  firstInvestmentDate: true,
+  lastTransactionDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvestmentTransactionSchema = createInsertSchema(investmentTransactions).omit({
+  id: true,
+  processedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Creative Intelligence schemas
+export const insertCreativeBenchmarkSchema = createInsertSchema(creativeBenchmarks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCreativeEditPlanSchema = createInsertSchema(creativeEditPlans).omit({
+  id: true,
+  implementedAt: true,
+  resultsValidatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCreativeVariationSchema = createInsertSchema(creativeVariations).omit({
+  id: true,
+  testStartDate: true,
+  testEndDate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPoolPerformanceHistorySchema = createInsertSchema(poolPerformanceHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInvestmentTaxCalculationSchema = createInsertSchema(investmentTaxCalculations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentReceiptSchema = createInsertSchema(paymentReceipts).omit({
+  id: true,
+  verifiedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaxPaymentScheduleSchema = createInsertSchema(taxPaymentSchedule).omit({
+  id: true,
+  reminderSentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types
+export type FacebookBusinessManager = typeof facebookBusinessManagers.$inferSelect;
+export type InsertFacebookBusinessManager = z.infer<typeof insertFacebookBusinessManagerSchema>;
+
+export type AdAccount = typeof adAccounts.$inferSelect;
+export type InsertAdAccount = z.infer<typeof insertAdAccountSchema>;
+
+export type AdCreative = typeof adCreatives.$inferSelect;
+export type InsertAdCreative = z.infer<typeof insertAdCreativeSchema>;
+
+export type CreativeAnalysis = typeof creativeAnalyses.$inferSelect;
+export type InsertCreativeAnalysis = z.infer<typeof insertCreativeAnalysisSchema>;
+
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+
+export type FacebookCampaign = typeof facebookCampaigns.$inferSelect;
+export type InsertFacebookCampaign = z.infer<typeof insertFacebookCampaignSchema>;
+
+export type FacebookAdAccount = typeof facebookAdAccounts.$inferSelect;
+export type InsertFacebookAdAccount = z.infer<typeof insertFacebookAdAccountSchema>;
+
+// Investment types
 export type InvestmentPool = typeof investmentPools.$inferSelect;
+export type InsertInvestmentPool = z.infer<typeof insertInvestmentPoolSchema>;
 
-export const insertInvestorProfileSchema = createInsertSchema(investorProfiles);
-export type InsertInvestorProfile = z.infer<typeof insertInvestorProfileSchema>;
 export type InvestorProfile = typeof investorProfiles.$inferSelect;
+export type InsertInvestorProfile = z.infer<typeof insertInvestorProfileSchema>;
 
-export const insertInvestmentSchema = createInsertSchema(investments).omit({ actualReturn: true });
-export type InsertInvestment = z.infer<typeof insertInvestmentSchema>;
 export type Investment = typeof investments.$inferSelect;
+export type InsertInvestment = z.infer<typeof insertInvestmentSchema>;
 
-export const insertAffiliateProfileSchema = createInsertSchema(affiliateProfiles).omit({
-  totalEarnings: true,
-  totalClicks: true,
-  totalConversions: true,
+export type InvestmentTransaction = typeof investmentTransactions.$inferSelect;
+export type InsertInvestmentTransaction = z.infer<typeof insertInvestmentTransactionSchema>;
+
+export type PoolPerformanceHistory = typeof poolPerformanceHistory.$inferSelect;
+export type InsertPoolPerformanceHistory = z.infer<typeof insertPoolPerformanceHistorySchema>;
+
+export type InvestmentTaxCalculation = typeof investmentTaxCalculations.$inferSelect;
+export type InsertInvestmentTaxCalculation = z.infer<typeof insertInvestmentTaxCalculationSchema>;
+
+export type PaymentReceipt = typeof paymentReceipts.$inferSelect;
+export type InsertPaymentReceipt = z.infer<typeof insertPaymentReceiptSchema>;
+
+export type TaxPaymentSchedule = typeof taxPaymentSchedule.$inferSelect;
+export type InsertTaxPaymentSchedule = z.infer<typeof insertTaxPaymentScheduleSchema>;
+
+// Currency History schemas and types
+export const insertCurrencyHistorySchema = createInsertSchema(currencyHistory).omit({
+  id: true,
+  createdAt: true,
 });
-export type InsertAffiliateProfile = z.infer<typeof insertAffiliateProfileSchema>;
-export type AffiliateProfile = typeof affiliateProfiles.$inferSelect;
 
-export const insertAffiliateMembershipSchema = createInsertSchema(affiliateMemberships).omit({
-  clicks: true,
-  conversions: true,
-  earnings: true,
+export const insertCurrencySettingsSchema = createInsertSchema(currencySettings).omit({
+  id: true,
+  createdAt: true,
 });
-export type InsertAffiliateMembership = z.infer<typeof insertAffiliateMembershipSchema>;
-export type AffiliateMembership = typeof affiliateMemberships.$inferSelect;
 
-export const insertAffiliateConversionSchema = createInsertSchema(affiliateConversions);
-export type InsertAffiliateConversion = z.infer<typeof insertAffiliateConversionSchema>;
-export type AffiliateConversion = typeof affiliateConversions.$inferSelect;
+export type CurrencyHistory = typeof currencyHistory.$inferSelect;
+export type InsertCurrencyHistory = z.infer<typeof insertCurrencyHistorySchema>;
 
-export const insertAffiliateClickSchema = createInsertSchema(affiliateClicks);
-export type InsertAffiliateClick = z.infer<typeof insertAffiliateClickSchema>;
-export type AffiliateClick = typeof affiliateClicks.$inferSelect;
-
-export const insertAffiliateLandingPageSchema = createInsertSchema(affiliateLandingPages);
-export type InsertAffiliateLandingPage = z.infer<typeof insertAffiliateLandingPageSchema>;
-export type AffiliateLandingPage = typeof affiliateLandingPages.$inferSelect;
+export type CurrencySettings = typeof currencySettings.$inferSelect;
+export type InsertCurrencySettings = z.infer<typeof insertCurrencySettingsSchema>;
 
 // Support schemas
-export const insertSupportCategorySchema = createInsertSchema(supportCategories);
-export type InsertSupportCategory = z.infer<typeof insertSupportCategorySchema>;
+export const insertSupportCategorySchema = createInsertSchema(supportCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportEmailSchema = createInsertSchema(supportEmails).omit({
+  id: true,
+  receivedAt: true,
+  processedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  ticketNumber: true,
+  resolvedAt: true,
+  responseTime: true,
+  resolutionTime: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportResponseSchema = createInsertSchema(supportResponses).omit({
+  id: true,
+  timesUsed: true,
+  lastUsed: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupportMetricsSchema = createInsertSchema(supportMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Support types
 export type SupportCategory = typeof supportCategories.$inferSelect;
+export type InsertSupportCategory = z.infer<typeof insertSupportCategorySchema>;
 
-export const insertSupportEmailSchema = createInsertSchema(supportEmails);
-export type InsertSupportEmail = z.infer<typeof insertSupportEmailSchema>;
 export type SupportEmail = typeof supportEmails.$inferSelect;
+export type InsertSupportEmail = z.infer<typeof insertSupportEmailSchema>;
 
-export const insertSupportTicketSchema = createInsertSchema(supportTickets);
-export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type SupportTicket = typeof supportTickets.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 
-export const insertSupportResponseSchema = createInsertSchema(supportResponses).omit({ usageCount: true });
-export type InsertSupportResponse = z.infer<typeof insertSupportResponseSchema>;
 export type SupportResponse = typeof supportResponses.$inferSelect;
+export type InsertSupportResponse = z.infer<typeof insertSupportResponseSchema>;
 
-// Sofia schemas
-export const insertSofiaConversationSchema = createInsertSchema(sofiaConversations);
-export type InsertSofiaConversation = z.infer<typeof insertSofiaConversationSchema>;
-export type SofiaConversation = typeof sofiaConversations.$inferSelect;
+export type SupportConversation = typeof supportConversations.$inferSelect;
+export type InsertSupportConversation = z.infer<typeof insertSupportConversationSchema>;
 
-export const insertSofiaConversationMessageSchema = createInsertSchema(sofiaConversationMessages);
-export type InsertSofiaConversationMessage = z.infer<typeof insertSofiaConversationMessageSchema>;
-export type SofiaConversationMessage = typeof sofiaConversationMessages.$inferSelect;
+export type SupportMetrics = typeof supportMetrics.$inferSelect;
+export type InsertSupportMetrics = z.infer<typeof insertSupportMetricsSchema>;
 
-// Intelligent Refund schemas
-export const insertIntelligentRefundRequestSchema = createInsertSchema(intelligentRefundRequests).omit({ retentionAttempts: true, urgencyLevel: true });
-export type InsertIntelligentRefundRequest = z.infer<typeof insertIntelligentRefundRequestSchema>;
-export type IntelligentRefundRequest = typeof intelligentRefundRequests.$inferSelect;
+// Reimbursement Requests Schema and Types
+export const insertReimbursementRequestSchema = createInsertSchema(reimbursementRequests).omit({
+  id: true,
+  reviewedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
-// Campaign Analytics - Additional Types
-export type CampaignAnalytics = {
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  cpc: number;
-  cpm: number;
-  conversions: number;
-  conversionValue: number;
-  costPerConversion: number;
-  roas: number;
-};
+export type ReimbursementRequest = typeof reimbursementRequests.$inferSelect;
+export type InsertReimbursementRequest = z.infer<typeof insertReimbursementRequestSchema>;
 
-export type AdSetAnalytics = CampaignAnalytics & {
-  adSetId: string;
-  adSetName: string;
-};
+// =============================================
+// AFFILIATE PROGRAM SCHEMAS AND TYPES
+// =============================================
 
-export type AdAnalytics = CampaignAnalytics & {
-  adId: string;
-  adName: string;
-};
+// Affiliate Profiles
+export const insertAffiliateProfileSchema = createInsertSchema(affiliateProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
 
-// Analytics & Creative Performance
-export type AnalyticsDataPoint = {
-  date: string;
-  value: number;
-};
+export type AffiliateProfile = typeof affiliateProfiles.$inferSelect;
+export type InsertAffiliateProfile = z.infer<typeof insertAffiliateProfileSchema>;
+
+// Affiliate Memberships
+export const insertAffiliateMembershipSchema = createInsertSchema(affiliateMemberships).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateMembership = typeof affiliateMemberships.$inferSelect;
+export type InsertAffiliateMembership = z.infer<typeof insertAffiliateMembershipSchema>;
+
+// Affiliate Commission Rules
+export const insertAffiliateCommissionRuleSchema = createInsertSchema(affiliateCommissionRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateCommissionRule = typeof affiliateCommissionRules.$inferSelect;
+export type InsertAffiliateCommissionRule = z.infer<typeof insertAffiliateCommissionRuleSchema>;
+
+// Affiliate Conversions
+export const insertAffiliateConversionSchema = createInsertSchema(affiliateConversions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateConversion = typeof affiliateConversions.$inferSelect;
+export type InsertAffiliateConversion = z.infer<typeof insertAffiliateConversionSchema>;
+
+// Affiliate Payouts
+export const insertAffiliatePayoutSchema = createInsertSchema(affiliatePayouts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliatePayout = typeof affiliatePayouts.$inferSelect;
+export type InsertAffiliatePayout = z.infer<typeof insertAffiliatePayoutSchema>;
+
+// Affiliate Clicks
+export const insertAffiliateClickSchema = createInsertSchema(affiliateClicks).omit({
+  id: true,
+});
+
+export type AffiliateClick = typeof affiliateClicks.$inferSelect;
+export type InsertAffiliateClick = z.infer<typeof insertAffiliateClickSchema>;
+
+// Vercel Deployment Config
+export const insertVercelDeploymentConfigSchema = createInsertSchema(vercelDeploymentConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type VercelDeploymentConfig = typeof vercelDeploymentConfig.$inferSelect;
+export type InsertVercelDeploymentConfig = z.infer<typeof insertVercelDeploymentConfigSchema>;
+
+// Affiliate Landing Pages
+export const insertAffiliateLandingPageSchema = createInsertSchema(affiliateLandingPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateLandingPage = typeof affiliateLandingPages.$inferSelect;
+export type InsertAffiliateLandingPage = z.infer<typeof insertAffiliateLandingPageSchema>;
+
+// Affiliate Landing Page Products Schema
+export const insertAffiliateLandingPageProductSchema = createInsertSchema(affiliateLandingPageProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AffiliateLandingPageProduct = typeof affiliateLandingPageProducts.$inferSelect;
+export type InsertAffiliateLandingPageProduct = z.infer<typeof insertAffiliateLandingPageProductSchema>;
+
+// Affiliate Product Pixels Schema
+export const insertAffiliateProductPixelSchema = createInsertSchema(affiliateProductPixels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AffiliateProductPixel = typeof affiliateProductPixels.$inferSelect;
+export type InsertAffiliateProductPixel = z.infer<typeof insertAffiliateProductPixelSchema>;
+
+// =============================================
+// END AFFILIATE PROGRAM SCHEMAS AND TYPES
+// =============================================
+
+// Public refund form schema (customer-facing, no admin fields)
+export const publicRefundFormSchema = z.object({
+  // Customer information
+  customerName: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
+  customerEmail: z.string().email("Email inválido"),
+  customerPhone: z.string().optional(),
+  
+  // Order details
+  orderNumber: z.string().min(1, "Número do pedido é obrigatório"),
+  productName: z.string().optional(),
+  purchaseDate: z.string().min(1, "Data da compra é obrigatória"), // Will be converted to date in backend
+  
+  // Billing address
+  billingAddressCountry: z.string().min(1, "País é obrigatório"),
+  billingAddressCity: z.string().min(1, "Cidade é obrigatória"),
+  billingAddressStreet: z.string().min(1, "Rua é obrigatória"),
+  billingAddressNumber: z.string().min(1, "Número é obrigatório"),
+  billingAddressComplement: z.string().optional(),
+  billingAddressState: z.string().min(1, "Estado/Região é obrigatório"),
+  billingAddressZip: z.string().min(1, "Código postal é obrigatório"),
+  
+  // Refund details
+  refundAmount: z.string().optional(),
+  currency: z.string().default("EUR"),
+  
+  // Banking information (IBAN only)
+  bankIban: z.string()
+    .min(15, "IBAN deve ter no mínimo 15 caracteres")
+    .regex(/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/, "IBAN inválido - deve começar com 2 letras do país e 2 números"),
+  controlNumber: z.string().min(1, "Número de controlo é obrigatório"),
+  
+  // Reason and details
+  refundReason: z.string().min(10, "Motivo deve ter no mínimo 10 caracteres"),
+  additionalDetails: z.string().optional(),
+  
+  // Customer declarations (checkboxes) - all required
+  declarationFormCorrect: z.boolean().refine(val => val === true, {
+    message: "Você deve confirmar que leu e preencheu corretamente o formulário"
+  }),
+  declarationAttachmentsProvided: z.boolean().refine(val => val === true, {
+    message: "Você deve confirmar que anexou fotos dos produtos e comprovante de devolução"
+  }),
+  declarationIbanCorrect: z.boolean().refine(val => val === true, {
+    message: "Você deve confirmar que informou o IBAN corretamente"
+  }),
+  
+  // File attachments - handled separately in multipart form (not in this schema)
+  // orderProofFile, productPhotosFile, returnProofFile, idDocumentFile
+});
+
+export type PublicRefundForm = z.infer<typeof publicRefundFormSchema>;
+
+// Admin Support Directives Schema and Types
+export const insertAdminSupportDirectiveSchema = createInsertSchema(adminSupportDirectives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AdminSupportDirective = typeof adminSupportDirectives.$inferSelect;
+export type InsertAdminSupportDirective = z.infer<typeof insertAdminSupportDirectiveSchema>;
+
+// AI Directives Schema and Types
+export const insertAiDirectiveSchema = createInsertSchema(aiDirectives).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AiDirective = typeof aiDirectives.$inferSelect;
+export type InsertAiDirective = z.infer<typeof insertAiDirectiveSchema>;
+
+// ============================================================================
+// CUSTOMER SUPPORT TABLES (Multi-tenant for Operations)
+// ============================================================================
+
+export const customerSupportOperations = pgTable("customer_support_operations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  operationName: varchar("operation_name"),
+  
+  // Email configuration
+  emailDomain: varchar("email_domain"), // suporte@loja.com
+  emailPrefix: varchar("email_prefix").default("suporte"), // Email prefix (e.g., "suporte", "atendimento")
+  isCustomDomain: boolean("is_custom_domain").default(false),
+  mailgunDomainName: varchar("mailgun_domain_name"), // Mailgun domain name
+  mailgunApiKey: varchar("mailgun_api_key"), // Operation-specific Mailgun key
+  domainVerified: boolean("domain_verified").default(false),
+  
+  // AI Configuration
+  aiEnabled: boolean("ai_enabled").default(true),
+  aiCategories: jsonb("ai_categories"), // Categories that AI can handle
+  
+  // Branding
+  brandingConfig: jsonb("branding_config"), // Logo, colors, signature
+  emailTemplateId: varchar("email_template_id"),
+  
+  // Business settings
+  businessHours: jsonb("business_hours"),
+  timezone: varchar("timezone").default("America/Sao_Paulo"),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    uniqueOperation: unique().on(table.operationId),
+    emailDomainIdx: index().on(table.emailDomain),
+  };
+});
+
+export const customerSupportCategories = pgTable("customer_support_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  
+  name: text("name").notNull(), // 'duvidas', 'alteracao_endereco', 'cancelamento', etc.
+  displayName: text("display_name").notNull(), // 'Dúvidas', 'Alteração de Endereço', etc.
+  description: text("description"),
+  
+  // AI settings
+  isAutomated: boolean("is_automated").default(false),
+  aiEnabled: boolean("ai_enabled").default(false),
+  defaultResponse: text("default_response"),
+  
+  // UI settings
+  priority: integer("priority").default(0),
+  color: text("color").default("#6b7280"),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationCategoryIdx: index().on(table.operationId, table.name),
+    uniqueOperationCategory: unique().on(table.operationId, table.name),
+  };
+});
+
+export const customerSupportTickets = pgTable("customer_support_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  ticketNumber: text("ticket_number").notNull(),
+  
+  // Customer info
+  customerEmail: varchar("customer_email").notNull(),
+  customerName: varchar("customer_name"),
+  
+  // Ticket details
+  subject: varchar("subject").notNull(),
+  status: varchar("status").notNull().default("open"), // 'open', 'pending', 'resolved', 'closed'
+  priority: varchar("priority").default("medium"), // 'low', 'medium', 'high', 'urgent'
+  
+  // Classification
+  categoryId: varchar("category_id").references(() => customerSupportCategories.id),
+  categoryName: varchar("category_name"), // Cache for quick filtering
+  
+  // Assignment
+  assignedAgentId: varchar("assigned_agent_id").references(() => users.id),
+  assignedAgentName: varchar("assigned_agent_name"), // Cache
+  
+  // AI processing
+  isAutomated: boolean("is_automated").default(false),
+  requiresHuman: boolean("requires_human").default(false),
+  aiConfidence: integer("ai_confidence"), // 0-100
+  aiReasoning: text("ai_reasoning"),
+  
+  // Email tracking
+  originalEmailId: varchar("original_email_id"),
+  threadId: varchar("thread_id"), // For email threading
+  
+  // Resolution
+  resolvedAt: timestamp("resolved_at"),
+  resolutionTime: integer("resolution_time_minutes"),
+  customerSatisfaction: integer("customer_satisfaction"), // 1-5
+  
+  // Tags and metadata
+  tags: jsonb("tags"),
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  lastActivity: timestamp("last_activity").defaultNow(),
+}, (table) => {
+  return {
+    operationIdx: index().on(table.operationId),
+    customerEmailIdx: index().on(table.customerEmail),
+    statusIdx: index().on(table.status),
+    assignedIdx: index().on(table.assignedAgentId),
+    createdAtIdx: index().on(table.createdAt),
+    uniqueTicketNumber: unique().on(table.operationId, table.ticketNumber),
+  };
+});
+
+export const customerSupportMessages = pgTable("customer_support_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  ticketId: varchar("ticket_id").notNull().references(() => customerSupportTickets.id, { onDelete: 'cascade' }),
+  
+  // Sender info
+  sender: varchar("sender").notNull(), // 'customer', 'agent', 'ai', 'system'
+  senderName: varchar("sender_name"),
+  senderEmail: varchar("sender_email"),
+  senderUserId: varchar("sender_user_id").references(() => users.id),
+  
+  // Message content
+  subject: varchar("subject"),
+  content: text("content").notNull(),
+  htmlContent: text("html_content"),
+  
+  // Message type
+  messageType: varchar("message_type").default("email"), // 'email', 'internal_note', 'system'
+  isInternal: boolean("is_internal").default(false),
+  isPublic: boolean("is_public").default(true),
+  
+  // AI info
+  isAiGenerated: boolean("is_ai_generated").default(false),
+  aiModel: varchar("ai_model"), // 'gpt-4', etc.
+  aiPromptUsed: text("ai_prompt_used"),
+  
+  // Email tracking
+  emailMessageId: varchar("email_message_id"),
+  emailInReplyTo: varchar("email_in_reply_to"),
+  emailReferences: text("email_references"),
+  
+  // Attachments
+  attachments: jsonb("attachments"),
+  
+  // Tracking
+  sentViaEmail: boolean("sent_via_email").default(false),
+  emailSentAt: timestamp("email_sent_at"),
+  emailDelivered: boolean("email_delivered").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    ticketIdx: index().on(table.ticketId),
+    operationIdx: index().on(table.operationId),
+    senderIdx: index().on(table.sender),
+    createdAtIdx: index().on(table.createdAt),
+    emailMessageIdIdx: index().on(table.emailMessageId),
+  };
+});
+
+export const customerSupportEmails = pgTable("customer_support_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => customerSupportOperations.operationId, { onDelete: 'cascade' }),
+  
+  // Email identifiers
+  messageId: text("message_id").notNull(),
+  threadId: varchar("thread_id"),
+  
+  // Email details
+  fromEmail: varchar("from_email").notNull(),
+  fromName: varchar("from_name"),
+  toEmail: varchar("to_email").notNull(),
+  ccEmails: jsonb("cc_emails"),
+  bccEmails: jsonb("bcc_emails"),
+  
+  subject: varchar("subject").notNull(),
+  textContent: text("text_content"),
+  htmlContent: text("html_content"),
+  
+  // Processing
+  status: varchar("status").default("received"), // 'received', 'processing', 'processed', 'failed'
+  ticketId: varchar("ticket_id").references(() => customerSupportTickets.id),
+  
+  // Categorization
+  categoryId: varchar("category_id").references(() => customerSupportCategories.id),
+  aiConfidence: integer("ai_confidence"),
+  aiReasoning: text("ai_reasoning"),
+  
+  // Flags
+  isSpam: boolean("is_spam").default(false),
+  isAutoReply: boolean("is_auto_reply").default(false),
+  requiresHuman: boolean("requires_human").default(false),
+  hasAutoResponse: boolean("has_auto_response").default(false),
+  
+  // Metadata
+  attachments: jsonb("attachments"),
+  headers: jsonb("headers"),
+  rawData: jsonb("raw_data"),
+  
+  // Processing timestamps
+  receivedAt: timestamp("received_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    operationIdx: index().on(table.operationId),
+    messageIdIdx: index().on(table.messageId),
+    ticketIdx: index().on(table.ticketId),
+    statusIdx: index().on(table.status),
+    receivedAtIdx: index().on(table.receivedAt),
+    uniqueOperationMessage: unique().on(table.operationId, table.messageId),
+  };
+});
+
+// Customer Support Insert Schemas
+export const insertCustomerSupportOperationSchema = createInsertSchema(customerSupportOperations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSupportCategorySchema = createInsertSchema(customerSupportCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSupportTicketSchema = createInsertSchema(customerSupportTickets).omit({
+  id: true,
+  ticketNumber: true,
+  resolvedAt: true,
+  resolutionTime: true,
+  createdAt: true,
+  updatedAt: true,
+  lastActivity: true,
+});
+
+export const insertCustomerSupportMessageSchema = createInsertSchema(customerSupportMessages).omit({
+  id: true,
+  emailSentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSupportEmailSchema = createInsertSchema(customerSupportEmails).omit({
+  id: true,
+  receivedAt: true,
+  processedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Customer Support Types
+export type CustomerSupportOperation = typeof customerSupportOperations.$inferSelect;
+export type InsertCustomerSupportOperation = z.infer<typeof insertCustomerSupportOperationSchema>;
+
+export type CustomerSupportCategory = typeof customerSupportCategories.$inferSelect;
+export type InsertCustomerSupportCategory = z.infer<typeof insertCustomerSupportCategorySchema>;
+
+export type CustomerSupportTicket = typeof customerSupportTickets.$inferSelect;
+export type InsertCustomerSupportTicket = z.infer<typeof insertCustomerSupportTicketSchema>;
+
+export type CustomerSupportMessage = typeof customerSupportMessages.$inferSelect;
+export type InsertCustomerSupportMessage = z.infer<typeof insertCustomerSupportMessageSchema>;
+
+export type CustomerSupportEmail = typeof customerSupportEmails.$inferSelect;
+export type InsertCustomerSupportEmail = z.infer<typeof insertCustomerSupportEmailSchema>;
+
+// Voice Support System Tables
+export const voiceSettings = pgTable("voice_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id, { onDelete: 'cascade' }),
+  
+  // Basic settings
+  isActive: boolean("is_active").notNull().default(false),
+  telnyxPhoneNumber: text("telnyx_phone_number"), // Associated Telnyx phone number
+  
+  // Operating hours
+  operatingHours: jsonb("operating_hours").$type<{
+    monday: { enabled: boolean; start: string; end: string };
+    tuesday: { enabled: boolean; start: string; end: string };
+    wednesday: { enabled: boolean; start: string; end: string };
+    thursday: { enabled: boolean; start: string; end: string };
+    friday: { enabled: boolean; start: string; end: string };
+    saturday: { enabled: boolean; start: string; end: string };
+    sunday: { enabled: boolean; start: string; end: string };
+    timezone: string;
+  }>().default({
+    monday: { enabled: true, start: "09:00", end: "18:00" },
+    tuesday: { enabled: true, start: "09:00", end: "18:00" },
+    wednesday: { enabled: true, start: "09:00", end: "18:00" },
+    thursday: { enabled: true, start: "09:00", end: "18:00" },
+    friday: { enabled: true, start: "09:00", end: "18:00" },
+    saturday: { enabled: false, start: "09:00", end: "18:00" },
+    sunday: { enabled: false, start: "09:00", end: "18:00" },
+    timezone: "Europe/Madrid"
+  }),
+  
+  // Voice AI settings
+  voiceModel: text("voice_model").default("alloy"), // OpenAI voice model
+  language: text("language").default("pt"), // Primary language
+  maxCallDuration: integer("max_call_duration").default(600), // Max call duration in seconds
+  
+  // Call routing
+  fallbackToHuman: boolean("fallback_to_human").default(true), // Transfer to human if needed
+  humanFallbackNumber: text("human_fallback_number"), // Phone number for human fallback
+  
+  // Out of hours settings
+  outOfHoursMessage: text("out_of_hours_message").default("Nosso horário de atendimento é de segunda a sexta, das 9h às 18h. Deixe sua mensagem que retornaremos em breve."),
+  outOfHoursAction: text("out_of_hours_action").default("voicemail"), // 'voicemail', 'hangup', 'redirect'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const voiceCalls = pgTable("voice_calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  // Telnyx call data
+  telnyxCallControlId: text("telnyx_call_control_id").notNull().unique(),
+  telnyxCallLegId: text("telnyx_call_leg_id"),
+  
+  // Call details
+  direction: text("direction").notNull(), // 'inbound', 'outbound'
+  fromNumber: text("from_number").notNull(),
+  toNumber: text("to_number").notNull(),
+  status: text("status").notNull(), // 'queued', 'ringing', 'in-progress', 'completed', 'failed', 'busy', 'no-answer'
+  
+  // Legacy Twilio compatibility - required for database constraint
+  twilioCallSid: text("twilio_call_sid").notNull(),
+  twilioAccountSid: text("twilio_account_sid"),
+  
+  // Customer information
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"), // Normalized phone number
+  
+  // Call metrics
+  duration: integer("duration"), // Call duration in seconds
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
+  
+  // AI conversation data
+  aiResponseGenerated: boolean("ai_response_generated").default(false),
+  conversationSummary: text("conversation_summary"), // AI-generated summary
+  detectedIntent: text("detected_intent"), // What the customer wanted
+  satisfactionLevel: text("satisfaction_level"), // 'satisfied', 'neutral', 'unsatisfied'
+  
+  // Integration with support system
+  relatedTicketId: varchar("related_ticket_id").references(() => supportTickets.id), // Link to support ticket if created
+  categoryId: varchar("category_id").references(() => supportCategories.id), // Categorized call
+  
+  // Call recording and transcription
+  recordingUrl: text("recording_url"), // Telnyx recording URL
+  transcription: text("transcription"), // Full call transcription
+  
+  // Metadata
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata"), // Additional call data from Telnyx
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const voiceConversations = pgTable("voice_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  callId: varchar("call_id").notNull().references(() => voiceCalls.id, { onDelete: 'cascade' }),
+  
+  // Message details
+  type: text("type").notNull(), // 'customer_speech', 'ai_response', 'system_message'
+  speaker: text("speaker").notNull(), // 'customer', 'ai', 'system'
+  
+  // Content
+  content: text("content").notNull(), // Transcribed or AI response text
+  audioUrl: text("audio_url"), // URL to audio segment if available
+  
+  // Timing
+  timestamp: timestamp("timestamp").notNull(), // When in the call this occurred
+  duration: integer("duration"), // Duration of this segment in milliseconds
+  
+  // AI processing
+  confidence: decimal("confidence", { precision: 5, scale: 4 }), // Speech recognition confidence
+  sentiment: text("sentiment"), // 'positive', 'neutral', 'negative'
+  emotion: text("emotion"), // Detected emotion
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Zod schemas for voice tables
+export const insertVoiceSettingsSchema = createInsertSchema(voiceSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVoiceCallSchema = createInsertSchema(voiceCalls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVoiceConversationSchema = createInsertSchema(voiceConversations).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Voice Types
+export type VoiceSettings = typeof voiceSettings.$inferSelect;
+export type InsertVoiceSettings = z.infer<typeof insertVoiceSettingsSchema>;
+
+export type VoiceCall = typeof voiceCalls.$inferSelect;
+export type InsertVoiceCall = z.infer<typeof insertVoiceCallSchema>;
+
+export type VoiceConversation = typeof voiceConversations.$inferSelect;
+export type InsertVoiceConversation = z.infer<typeof insertVoiceConversationSchema>;
 
 // Creative Intelligence Types
-export type CreativeMetrics = {
-  impressions: number;
-  clicks: number;
-  ctr: number;
-  spend: number;
-  conversions: number;
-  cpc: number;
-  cpm: number;
-  roas: number;
-};
+export type CreativeBenchmark = typeof creativeBenchmarks.$inferSelect;
+export type InsertCreativeBenchmark = z.infer<typeof insertCreativeBenchmarkSchema>;
 
-export type CreativeInsight = {
-  category: 'headline' | 'visual' | 'cta' | 'targeting' | 'performance' | 'opportunity';
-  severity: 'positive' | 'neutral' | 'warning' | 'critical';
-  title: string;
-  description: string;
-  impact: 'high' | 'medium' | 'low';
-  recommendation?: string;
-};
+export type CreativeEditPlan = typeof creativeEditPlans.$inferSelect;
+export type InsertCreativeEditPlan = z.infer<typeof insertCreativeEditPlanSchema>;
 
-export type CreativeRecommendation = {
-  type: 'headline' | 'visual' | 'cta' | 'copy' | 'targeting' | 'budget';
-  priority: 'high' | 'medium' | 'low';
-  title: string;
-  description: string;
-  expectedImpact: string;
-  implementation: string;
-};
+export type CreativeVariation = typeof creativeVariations.$inferSelect;
+export type InsertCreativeVariation = z.infer<typeof insertCreativeVariationSchema>;
 
-export type CreativeVariant = {
-  id: string;
-  name: string;
-  type: 'headline' | 'description' | 'cta' | 'visual';
+// ========================================
+// Creative Intelligence Relations
+// ========================================
+
+// Creative Intelligence Relations
+export const creativeBenchmarksRelations = relations(creativeBenchmarks, ({ one }) => ({
+  // Note: creativeBenchmarks don't reference specific operations as they are industry-wide
+}));
+
+export const creativeEditPlansRelations = relations(creativeEditPlans, ({ one, many }) => ({
+  creative: one(adCreatives, {
+    fields: [creativeEditPlans.creativeId],
+    references: [adCreatives.id],
+  }),
+  analysis: one(creativeAnalyses, {
+    fields: [creativeEditPlans.analysisId],
+    references: [creativeAnalyses.id],
+  }),
+  variations: many(creativeVariations),
+}));
+
+export const creativeVariationsRelations = relations(creativeVariations, ({ one }) => ({
+  originalCreative: one(adCreatives, {
+    fields: [creativeVariations.originalCreativeId],
+    references: [adCreatives.id],
+    relationName: "original_creative",
+  }),
+  variationCreative: one(adCreatives, {
+    fields: [creativeVariations.variationCreativeId],
+    references: [adCreatives.id],
+    relationName: "variation_creative",
+  }),
+  editPlan: one(creativeEditPlans, {
+    fields: [creativeVariations.editPlanId],
+    references: [creativeEditPlans.id],
+  }),
+  parentVariation: one(creativeVariations, {
+    fields: [creativeVariations.parentVariationId],
+    references: [creativeVariations.id],
+    relationName: "parent_variation",
+  }),
+}));
+
+// Update existing adCreatives relations to include edit plans and variations
+export const adCreativesRelations = relations(adCreatives, ({ one, many }) => ({
+  operation: one(operations, {
+    fields: [adCreatives.operationId],
+    references: [operations.id],
+  }),
+  analyses: many(creativeAnalyses),
+  editPlans: many(creativeEditPlans),
+  originalVariations: many(creativeVariations, {
+    relationName: "original_creative",
+  }),
+  variations: many(creativeVariations, {
+    relationName: "variation_creative",
+  }),
+}));
+
+export const creativeAnalysesRelations = relations(creativeAnalyses, ({ one, many }) => ({
+  operation: one(operations, {
+    fields: [creativeAnalyses.operationId],
+    references: [operations.id],
+  }),
+  creative: one(adCreatives, {
+    fields: [creativeAnalyses.creativeId],
+    references: [adCreatives.id],
+  }),
+  editPlans: many(creativeEditPlans),
+}));
+
+// ========================================
+// Scene-by-Scene Technical Analysis Types
+// ========================================
+
+// Object detected in a scene with precision details
+export interface SceneObject {
+  label: string;
+  count: number;
+  confidence?: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+// Text elements found in a scene
+export interface SceneText {
   content: string;
-  rationale: string;
-  expectedImprovement: string;
-};
+  position?: 'top' | 'center' | 'bottom' | 'overlay';
+  fontSize?: 'small' | 'medium' | 'large';
+  fontStyle?: string;
+  color?: string;
+}
 
-export type CreativeAnalysis = {
-  adId: string;
-  adName: string;
-  insights: CreativeInsight[];
-  recommendations: CreativeRecommendation[];
-  variants: CreativeVariant[];
-  summary: {
-    overallScore: number;
-    strengths: string[];
-    weaknesses: string[];
-    opportunities: string[];
-  };
-  metrics: CreativeMetrics;
-};
+// Camera and visual composition details
+export interface SceneComposition {
+  shotType: 'extreme-close-up' | 'close-up' | 'medium' | 'wide' | 'extreme-wide' | 'over-shoulder';
+  cameraMovement: 'static' | 'pan' | 'tilt' | 'zoom-in' | 'zoom-out' | 'dolly' | 'handheld';
+  cameraAngle: 'eye-level' | 'high-angle' | 'low-angle' | 'dutch-angle';
+  lighting: 'natural' | 'artificial' | 'mixed' | 'dramatic' | 'soft' | 'harsh';
+  depth: 'shallow' | 'deep' | 'medium';
+}
 
-// Page Builder V2 Types for Visual Editor
+// Transition details between scenes
+export interface SceneTransition {
+  type: 'cut' | 'fade' | 'dissolve' | 'wipe' | 'zoom' | 'morph';
+  duration: number; // in seconds
+  effect?: string; // Additional effect description
+}
 
-// Color Palette - For brand consistency
-export type ColorPalette = {
-  primary: string;
-  secondary: string;
-  accent: string;
-  background: string;
-  text: string;
-  muted: string;
-  destructive: string;
-  success: string;
-  warning: string;
-};
+// Audio characteristics for this scene
+export interface SceneAudio {
+  transcriptSnippet: string;
+  voicePresent: boolean;
+  voiceStyle?: 'professional' | 'casual' | 'emotional' | 'energetic' | 'calm';
+  musicDetected: boolean;
+  musicType?: 'instrumental' | 'vocal' | 'electronic' | 'ambient' | 'upbeat';
+  soundEffects?: string[];
+  audioQuality: number; // 1-10 scale
+  volume: 'quiet' | 'normal' | 'loud';
+  ctas?: string[]; // Call-to-actions detected in audio
+}
 
-// Typography Scale
-export type TypographyScale = {
-  fontFamily: {
-    heading: string;
-    body: string;
-    mono: string;
-  };
-  fontSize: {
-    xs: string;
-    sm: string;
-    base: string;
-    lg: string;
-    xl: string;
-    '2xl': string;
-    '3xl': string;
-    '4xl': string;
-  };
-  fontWeight: {
-    light: string;
-    normal: string;
-    medium: string;
-    semibold: string;
-    bold: string;
-  };
-  lineHeight: {
-    tight: string;
-    normal: string;
-    relaxed: string;
-  };
+// Complete scene description with technical analysis
+export interface SceneDescription {
+  id: number;
+  startSec: number;
+  endSec: number;
+  durationSec: number;
+  
+  // Technical visual description
+  technicalDescription: string; // Detailed technical description like Google Vision
+  
+  // Visual elements breakdown
+  objects: SceneObject[];
+  text: SceneText[];
+  peopleCount: number;
+  dominantColors: string[]; // Hex color codes
+  brandElements: string[]; // Logos, brand colors, etc.
+  
+  // Composition and cinematography
+  composition: SceneComposition;
+  
+  // Scene transitions
+  transitionIn?: SceneTransition;
+  transitionOut?: SceneTransition;
+  
+  // Motion and dynamics
+  motionIntensity: number; // 1-10 scale
+  visualComplexity: number; // 1-10 scale
+  
+  // Audio synchronized to this scene
+  audio: SceneAudio;
+  
+  // Quality and engagement scores
+  visualScore: number; // 1-10 technical quality
+  engagementScore: number; // 1-10 predicted engagement
+  syncQuality: number; // 1-10 audio-visual synchronization
+  
+  // Keyframes representing this scene
+  keyframes: Array<{
+    timestamp: number;
+    url: string;
+    description: string;
+  }>;
+}
+
+// Complete timeline analysis result
+export interface SceneTimeline {
+  scenes: SceneDescription[];
+  totalDuration: number;
+  overallScore: number;
+  overallSummary: string;
+  
+  // Aggregated insights
+  totalObjects: SceneObject[];
+  allTextContent: string[];
+  dominantColorPalette: string[];
+  averageSceneLength: number;
+  
+  // Quality metrics
+  technicalQuality: number; // 1-10
+  narrativeFlow: number; // 1-10
+  audioVisualSync: number; // 1-10
+  brandConsistency: number; // 1-10
+  
+  // Actionable insights
+  keyStrengths: string[];
+  improvements: string[];
+  recommendations: string[];
+  
+  // Processing metadata
+  analysisVersion: string;
+  processingTime: number; // milliseconds
+  totalCost: number;
+}
+
+// ========================================
+// N1 Hub - Marketplace & Announcements
+// ========================================
+
+// Marketplace products offered by N1
+export const marketplaceProducts = pgTable("marketplace_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  baseCost: decimal("base_cost", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  images: jsonb("images").$type<string[]>().default([]),
+  category: text("category").notNull(),
+  tags: text("tags").array(),
+  supplier: text("supplier").notNull(),
+  status: text("status").notNull().default("active"), // 'active' | 'hidden'
+  specs: jsonb("specs").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Links products from marketplace to client operations
+export const productOperationLinks = pgTable("product_operation_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  marketplaceProductId: varchar("marketplace_product_id").notNull().references(() => marketplaceProducts.id),
+  sellingPrice: decimal("selling_price", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  sku: text("sku"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Global announcements from N1 to clients
+export const announcements = pgTable("announcements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(), // Brief description for cards
+  content: text("content").notNull(),
+  type: text("type").notNull().default("update"), // 'update' | 'tip' | 'maintenance' | 'promo'
+  imageUrl: text("image_url"), // Image for the announcement
+  publishedAt: timestamp("published_at").defaultNow(),
+  isPinned: boolean("is_pinned").default(false),
+  audience: text("audience").notNull().default("all"), // 'all' | 'role' | 'operation'
+  roleTarget: text("role_target"), // Target role if audience is 'role'
+  operationId: varchar("operation_id").references(() => operations.id), // Target operation if audience is 'operation'
+  ctaLabel: text("cta_label"), // Call-to-action button text
+  ctaUrl: text("cta_url"), // Call-to-action URL
+  status: text("status").notNull().default("published"), // 'published' | 'draft'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for N1 Hub entities
+export const insertMarketplaceProductSchema = createInsertSchema(marketplaceProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductOperationLinkSchema = createInsertSchema(productOperationLinks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
+  id: true,
+  createdAt: true,
+  publishedAt: true,
+});
+
+// Types for N1 Hub entities
+export type MarketplaceProduct = typeof marketplaceProducts.$inferSelect;
+export type InsertMarketplaceProduct = z.infer<typeof insertMarketplaceProductSchema>;
+
+export type ProductOperationLink = typeof productOperationLinks.$inferSelect;
+export type InsertProductOperationLink = z.infer<typeof insertProductOperationLinkSchema>;
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+
+// ========================================
+// Sales Funnels - AI Landing Page Builder
+// ========================================
+
+// Vercel integrations per operation
+export const funnelIntegrations = pgTable("funnel_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  
+  // Vercel OAuth credentials
+  vercelAccessToken: text("vercel_access_token").notNull(), // OAuth access token
+  vercelTeamId: text("vercel_team_id"), // Team ID if using teams
+  vercelUserId: text("vercel_user_id").notNull(), // User ID from Vercel
+  
+  // Connection metadata  
+  connectedAt: timestamp("connected_at").defaultNow(),
+  lastUsed: timestamp("last_used"),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Funnel templates for different use cases
+export const funnelTemplates = pgTable("funnel_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // 'ecommerce', 'lead_gen', 'webinar', 'app', 'service'
+  
+  // Template configuration
+  templateConfig: jsonb("template_config").$type<{
+    sections: string[]; // 'hero', 'benefits', 'testimonials', 'pricing', 'faq', 'cta'
+    colorScheme: string; // 'modern', 'vibrant', 'minimal', 'dark'
+    layout: string; // 'single_page', 'multi_section', 'video_first'
+    conversionGoal: string; // 'purchase', 'email', 'phone', 'appointment'
+  }>(),
+  
+  // AI prompts for content generation
+  aiPrompts: jsonb("ai_prompts").$type<{
+    heroPrompt: string;
+    benefitsPrompt: string;
+    testimonialsPrompt: string;
+    ctaPrompt: string;
+    faqPrompt: string;
+  }>(),
+  
+  // Preview settings
+  previewImage: text("preview_image"), // Template screenshot
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Sales funnels created by users
+export const funnels = pgTable("funnels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  storeId: varchar("store_id").notNull().references(() => stores.id),
+  
+  // Basic info
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull().default("ecommerce"), // 'ecommerce', 'nutraceutico', 'infoproduto'
+  language: text("language").notNull().default("pt-BR"), // 'pt-BR', 'en-US', 'es-ES'
+  currency: text("currency").notNull().default("EUR"), // 'EUR', 'USD', 'BRL'
+  
+  // Template and AI settings
+  templateId: varchar("template_id").references(() => funnelTemplates.id),
+  
+  // Product/service info for AI generation
+  productInfo: jsonb("product_info").$type<{
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    targetAudience: string;
+    mainBenefits: string[];
+    objections: string[];
+    testimonials?: string[];
+  }>(),
+  
+  // AI generated content
+  generatedContent: jsonb("generated_content").$type<{
+    hero: { title: string; subtitle: string; cta: string; };
+    benefits: Array<{ title: string; description: string; icon?: string; }>;
+    testimonials: Array<{ name: string; text: string; rating?: number; }>;
+    faq: Array<{ question: string; answer: string; }>;
+    cta: { title: string; subtitle: string; buttonText: string; };
+  }>(),
+  
+  // Tracking and analytics
+  trackingConfig: jsonb("tracking_config").$type<{
+    facebookPixelId?: string;
+    googleAnalyticsId?: string;
+    googleTagManagerId?: string;
+    tiktokPixelId?: string;
+    customTracking?: Array<{ name: string; code: string; }>;
+  }>(),
+  
+  // Status and metadata
+  status: text("status").notNull().default("draft"), // 'draft', 'generating', 'ready', 'deployed', 'error'
+  isActive: boolean("is_active").default(true),
+  
+  // Generation metadata
+  aiCost: decimal("ai_cost", { precision: 8, scale: 4 }).default("0"), // Cost of AI generation
+  generatedAt: timestamp("generated_at"),
+  lastRegeneratedAt: timestamp("last_regenerated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Vercel deployment history
+export const funnelDeployments = pgTable("funnel_deployments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id),
+  
+  // Vercel project info
+  vercelProjectId: text("vercel_project_id").notNull(),
+  vercelProjectName: text("vercel_project_name").notNull(),
+  vercelDeploymentId: text("vercel_deployment_id").notNull(),
+  vercelUrl: text("vercel_url").notNull(), // Generated Vercel URL
+  
+  // Custom domain (if configured)
+  customDomain: text("custom_domain"),
+  customDomainStatus: text("custom_domain_status"), // 'pending', 'active', 'error'
+  
+  // Deployment status
+  status: text("status").notNull(), // 'building', 'ready', 'error', 'canceled'
+  deploymentUrl: text("deployment_url").notNull(), // Final URL to access funnel
+  
+  // SSL and performance
+  sslEnabled: boolean("ssl_enabled").default(true),
+  performanceScore: integer("performance_score"), // Lighthouse score if available
+  
+  // Deployment metadata
+  buildTime: integer("build_time"), // Build time in seconds
+  deployedAt: timestamp("deployed_at"),
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Analytics for funnel performance
+export const funnelAnalytics = pgTable("funnel_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id),
+  deploymentId: varchar("deployment_id").references(() => funnelDeployments.id),
+  
+  // Time period
+  date: text("date").notNull(), // YYYY-MM-DD
+  period: text("period").notNull().default("daily"), // 'daily', 'weekly', 'monthly'
+  
+  // Traffic metrics
+  visits: integer("visits").default(0),
+  uniqueVisitors: integer("unique_visitors").default(0),
+  pageViews: integer("page_views").default(0),
+  bounceRate: decimal("bounce_rate", { precision: 5, scale: 2 }).default("0"),
+  avgSessionDuration: integer("avg_session_duration").default(0), // in seconds
+  
+  // Conversion metrics
+  conversions: integer("conversions").default(0),
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0"),
+  revenue: decimal("revenue", { precision: 12, scale: 2 }).default("0"),
+  avgOrderValue: decimal("avg_order_value", { precision: 8, scale: 2 }).default("0"),
+  
+  // Traffic sources
+  trafficSources: jsonb("traffic_sources").$type<{
+    direct: number;
+    organic: number;
+    social: number;
+    paid: number;
+    referral: number;
+    email: number;
+  }>().default({
+    direct: 0,
+    organic: 0,
+    social: 0,
+    paid: 0,
+    referral: 0,
+    email: 0,
+  }),
+  
+  // Device breakdown
+  deviceTypes: jsonb("device_types").$type<{
+    desktop: number;
+    mobile: number;
+    tablet: number;
+  }>().default({
+    desktop: 0,
+    mobile: 0,
+    tablet: 0,
+  }),
+  
+  // Location data (top 5 countries)
+  topCountries: jsonb("top_countries").$type<Array<{
+    country: string;
+    visits: number;
+  }>>().default([]),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Tracking events table for detailed user behavior analytics
+export const trackingEvents = pgTable("tracking_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session and user identification
+  sessionId: varchar("session_id").notNull(), // Unique session identifier
+  visitorId: varchar("visitor_id").notNull(), // Persistent visitor identifier
+  userId: varchar("user_id"), // If logged in user
+  
+  // Funnel and page context
+  funnelId: varchar("funnel_id").references(() => funnels.id),
+  pageId: varchar("page_id").references(() => funnelPages.id),
+  deploymentId: varchar("deployment_id").references(() => funnelDeployments.id),
+  
+  // Event details
+  eventType: text("event_type").notNull(), // 'page_view', 'click', 'form_submit', 'conversion', 'scroll', 'time_on_page'
+  eventName: text("event_name"), // Specific event name like 'add_to_cart', 'purchase', 'signup'
+  eventValue: decimal("event_value", { precision: 10, scale: 2 }), // Monetary value if applicable
+  
+  // Event metadata
+  metadata: jsonb("metadata").$type<{
+    element?: string; // CSS selector or element ID
+    text?: string; // Button text, form data, etc
+    url?: string; // Current page URL
+    referrer?: string; // Referrer URL
+    scroll_depth?: number; // Scroll percentage for scroll events
+    time_on_page?: number; // Time spent on page in seconds
+    form_data?: Record<string, any>; // Form submission data
+    custom_props?: Record<string, any>; // Custom tracking properties
+  }>(),
+  
+  // Technical details
+  deviceInfo: jsonb("device_info").$type<{
+    user_agent?: string;
+    device_type?: 'desktop' | 'mobile' | 'tablet';
+    browser?: string;
+    os?: string;
+    screen_resolution?: string;
+    viewport_size?: string;
+  }>(),
+  
+  // Location and traffic source
+  geoLocation: jsonb("geo_location").$type<{
+    country?: string;
+    region?: string;
+    city?: string;
+    timezone?: string;
+    ip?: string; // Hashed for privacy
+  }>(),
+  
+  trafficSource: jsonb("traffic_source").$type<{
+    source?: string; // 'direct', 'google', 'facebook', 'instagram'
+    medium?: string; // 'organic', 'paid', 'email', 'social'
+    campaign?: string; // Campaign name
+    term?: string; // Keyword
+    content?: string; // Ad content
+    utm_params?: Record<string, string>; // All UTM parameters
+  }>(),
+  
+  // Performance tracking
+  pageLoadTime: integer("page_load_time"), // Page load time in milliseconds
+  serverTime: timestamp("server_time").defaultNow(), // Server timestamp
+  clientTime: timestamp("client_time"), // Client timestamp when event occurred
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Conversion funnels tracking table
+export const conversionFunnels = pgTable("conversion_funnels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Funnel context
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  // Conversion path definition
+  name: text("name").notNull(), // "Main Purchase Flow", "Email Signup Flow"
+  description: text("description"),
+  
+  // Funnel steps (ordered sequence)
+  steps: jsonb("steps").$type<Array<{
+    id: string;
+    name: string;
+    event_type: string;
+    event_name?: string;
+    page_id?: string;
+    required: boolean;
+    order: number;
+  }>>().notNull(),
+  
+  // Funnel configuration
+  config: jsonb("config").$type<{
+    time_window_hours?: number; // Max time between steps (default 24h)
+    allow_skipped_steps?: boolean; // Allow non-linear progression
+    conversion_value?: number; // Expected conversion value
+    goal_event: string; // Final conversion event
+  }>().default({
+    time_window_hours: 24,
+    allow_skipped_steps: false,
+    goal_event: "purchase",
+  }),
+  
+  // Status and metrics
+  isActive: boolean("is_active").default(true),
+  totalSessions: integer("total_sessions").default(0),
+  totalConversions: integer("total_conversions").default(0),
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default("0"),
+  
+  // Last calculation
+  lastCalculatedAt: timestamp("last_calculated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User sessions for analytics
+export const analyticsSessions = pgTable("analytics_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session identification
+  sessionId: varchar("session_id").notNull().unique(), // Unique session ID
+  visitorId: varchar("visitor_id").notNull(), // Persistent visitor ID
+  userId: varchar("user_id"), // If logged in
+  
+  // Funnel context
+  funnelId: varchar("funnel_id").references(() => funnels.id),
+  operationId: varchar("operation_id").references(() => operations.id),
+  
+  // Session metrics
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // Session duration in seconds
+  pageViews: integer("page_views").default(0),
+  eventsCount: integer("events_count").default(0),
+  
+  // Conversion tracking
+  converted: boolean("converted").default(false),
+  conversionEvent: text("conversion_event"), // Which event led to conversion
+  conversionValue: decimal("conversion_value", { precision: 10, scale: 2 }),
+  conversionTime: timestamp("conversion_time"),
+  
+  // Technical and context data
+  entryPage: text("entry_page"), // First page visited
+  exitPage: text("exit_page"), // Last page before leaving
+  deviceInfo: jsonb("device_info").$type<{
+    device_type?: 'desktop' | 'mobile' | 'tablet';
+    browser?: string;
+    os?: string;
+  }>(),
+  
+  trafficSource: jsonb("traffic_source").$type<{
+    source?: string;
+    medium?: string;
+    campaign?: string;
+    utm_params?: Record<string, string>;
+  }>(),
+  
+  geoLocation: jsonb("geo_location").$type<{
+    country?: string;
+    region?: string;
+    city?: string;
+  }>(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Funnel page templates (landing, checkout, upsell, etc.)
+export const funnelPageTemplates = pgTable("funnel_page_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Template info
+  name: text("name").notNull(), // "Landing Page Moderna", "Checkout Simplificado"
+  pageType: text("page_type").notNull(), // 'landing', 'checkout', 'upsell', 'downsell', 'thankyou'
+  category: text("category").notNull().default("standard"), // 'standard', 'premium', 'custom'
+  
+  // Template structure
+  defaultModel: jsonb("default_model").$type<{
+    layout: string; // 'single_page', 'multi_step', 'scroll'
+    sections: Array<{
+      id: string;
+      type: string; // 'hero', 'benefits', 'testimonials', 'faq', 'cta', 'checkout'
+      config: Record<string, any>;
+      content: Record<string, any>;
+    }>;
+    style: {
+      theme: string;
+      primaryColor: string;
+      secondaryColor: string;
+      fontFamily: string;
+    };
+  }>().notNull(),
+  
+  // Template constraints
+  allowedSections: jsonb("allowed_sections").$type<string[]>().default([]),
+  requiredSections: jsonb("required_sections").$type<string[]>().default([]),
+  
+  // Preview and metadata
+  previewImageUrl: text("preview_image_url"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Individual pages within funnels
+export const funnelPages = pgTable("funnel_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull().references(() => funnels.id, { onDelete: 'cascade' }),
+  
+  // Page info
+  name: text("name").notNull(), // "Página Principal", "Checkout"
+  pageType: text("page_type").notNull(), // 'landing', 'checkout', 'upsell', 'downsell', 'thankyou'
+  path: text("path").notNull(), // '/', '/checkout', '/upsell'
+  
+  // Page structure (JSON model)
+  model: jsonb("model").$type<{
+    layout: string;
+    sections: Array<{
+      id: string;
+      type: string;
+      config: Record<string, any>;
+      content: Record<string, any>;
+    }>;
+    style: {
+      theme: string;
+      primaryColor: string;
+      secondaryColor: string;
+      fontFamily: string;
+    };
+    seo: {
+      title: string;
+      description: string;
+      keywords?: string[];
+    };
+  }>().notNull(),
+  
+  // Template reference
+  templateId: varchar("template_id").references(() => funnelPageTemplates.id),
+  
+  // Status and metadata
+  status: text("status").notNull().default("draft"), // 'draft', 'preview', 'published'
+  version: integer("version").notNull().default(1),
+  isActive: boolean("is_active").default(true),
+  
+  // Last editor info
+  lastEditedBy: varchar("last_edited_by").references(() => users.id),
+  lastAiPrompt: text("last_ai_prompt"), // Last AI prompt used for modification
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Revision history for pages (for rollback and diff)
+export const funnelPageRevisions = pgTable("funnel_page_revisions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pageId: varchar("page_id").notNull().references(() => funnelPages.id, { onDelete: 'cascade' }),
+  
+  // Revision info
+  version: integer("version").notNull(),
+  changeType: text("change_type").notNull(), // 'manual', 'ai_patch', 'template_apply', 'rollback'
+  
+  // Content snapshot
+  model: jsonb("model").$type<{
+    layout: string;
+    sections: Array<{
+      id: string;
+      type: string;
+      config: Record<string, any>;
+      content: Record<string, any>;
+    }>;
+    style: Record<string, any>;
+    seo: Record<string, any>;
+  }>().notNull(),
+  
+  // Change metadata
+  diff: jsonb("diff").$type<Array<{
+    op: string; // 'add', 'remove', 'replace'
+    path: string;
+    value?: any;
+    oldValue?: any;
+  }>>(), // JSON Patch format (RFC 6902)
+  
+  aiPrompt: text("ai_prompt"), // If change was made by AI
+  changeDescription: text("change_description"), // Human readable description
+  
+  // Author info
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// AI Page Generation System Tables - Professional AI page creation
+export const pageGenerationTemplates = pgTable("page_generation_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  industry: text("industry").notNull(), // 'ecommerce', 'saas', 'course', 'health', etc.
+  description: text("description"),
+  sectionsConfig: jsonb("sections_config").$type<{
+    sections: Array<{
+      id: string;
+      type: string;
+      required: boolean;
+      order: number;
+      mobileLayout?: any;
+      tabletLayout?: any;
+      desktopLayout?: any;
+    }>;
+    conversionFramework: 'PAS' | 'AIDA' | 'VSL' | 'BAB';
+    targetPersona: string;
+    industrySpecific: any;
+  }>().notNull(),
+  qualityMetrics: jsonb("quality_metrics").$type<{
+    expectedConversionRate: number;
+    averageScore: number;
+    usageCount: number;
+    successRate: number;
+  }>(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const pageGenerationDrafts = pgTable("page_generation_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  funnelId: varchar("funnel_id").notNull(),
+  pageId: varchar("page_id"),
+  templateId: varchar("template_id").references(() => pageGenerationTemplates.id),
+  operationId: varchar("operation_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  
+  // Generation Input
+  briefData: jsonb("brief_data").$type<{
+    productInfo: {
+      name: string;
+      description: string;
+      price: number;
+      currency: string;
+      targetAudience: string;
+      mainBenefits: string[];
+      objections: string[];
+      industry: string;
+    };
+    conversionGoal: string;
+    brandGuidelines?: any;
+  }>().notNull(),
+  
+  // Generation Output
+  generatedModel: jsonb("generated_model").$type<any>(), // Full PageModelV2
+  qualityScore: jsonb("quality_score").$type<{
+    overall: number;
+    contentQuality: number;
+    mobileOptimization: number;
+    conversionPotential: number;
+    brandCompliance: number;
+    mediaRichness: number;
+    breakdown: any;
+  }>(),
+  
+  // Generation Process
+  generationSteps: jsonb("generation_steps").$type<{
+    briefEnrichment: any;
+    templateSelection: any;
+    contentGeneration: any;
+    layoutOptimization: any;
+    mediaEnrichment: any;
+    qualityAssurance: any;
+  }>(),
+  
+  status: text("status").notNull().default("generating"), // generating, review_pending, approved, rejected
+  aiCost: decimal("ai_cost", { precision: 10, scale: 4 }).default("0"),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  publishedAt: timestamp("published_at"),
+});
+
+export const pageGenerationReviews = pgTable("page_generation_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  draftId: varchar("draft_id").notNull().references(() => pageGenerationDrafts.id),
+  reviewerId: varchar("reviewer_id").notNull(),
+  
+  reviewScore: jsonb("review_score").$type<{
+    overall: number;
+    contentQuality: number;
+    designQuality: number;
+    conversionPotential: number;
+    brandAlignment: number;
+    feedback: string;
+  }>().notNull(),
+  
+  suggestions: jsonb("suggestions").$type<Array<{
+    sectionId: string;
+    type: 'content' | 'design' | 'layout' | 'media';
+    description: string;
+    priority: 'low' | 'medium' | 'high';
+    suggestedFix: string;
+  }>>(),
+  
+  status: text("status").notNull(), // approved, rejected, needs_revision
+  comments: text("comments"),
+  reviewedAt: timestamp("reviewed_at").defaultNow(),
+});
+
+export const pageGenerationAnalytics = pgTable("page_generation_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  draftId: varchar("draft_id").notNull().references(() => pageGenerationDrafts.id),
+  pageId: varchar("page_id"),
+  
+  // Performance Metrics
+  conversionRate: decimal("conversion_rate", { precision: 8, scale: 4 }),
+  bounceRate: decimal("bounce_rate", { precision: 8, scale: 4 }),
+  timeOnPage: integer("time_on_page"), // seconds
+  clickThroughRate: decimal("click_through_rate", { precision: 8, scale: 4 }),
+  
+  // A/B Testing
+  variantType: text("variant_type"), // 'original', 'variant_a', 'variant_b'
+  testId: varchar("test_id"),
+  
+  // User Feedback
+  userRating: integer("user_rating"), // 1-5
+  userFeedback: text("user_feedback"),
+  
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+// Insert schemas for funnel entities
+export const insertFunnelIntegrationSchema = createInsertSchema(funnelIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  connectedAt: true,
+});
+
+export const insertFunnelTemplateSchema = createInsertSchema(funnelTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFunnelSchema = createInsertSchema(funnels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  generatedAt: true,
+  lastRegeneratedAt: true,
+});
+
+export const insertFunnelDeploymentSchema = createInsertSchema(funnelDeployments).omit({
+  id: true,
+  createdAt: true,
+  deployedAt: true,
+});
+
+export const insertFunnelAnalyticsSchema = createInsertSchema(funnelAnalytics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFunnelPageTemplateSchema = createInsertSchema(funnelPageTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFunnelPageSchema = createInsertSchema(funnelPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFunnelPageRevisionSchema = createInsertSchema(funnelPageRevisions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Schema for the simplified funnel creation modal
+export const createFunnelSchema = z.object({
+  name: z.string().min(1, "Nome do funil é obrigatório"),
+  type: z.enum(["ecommerce", "nutraceutico", "infoproduto"], {
+    required_error: "Tipo do funil é obrigatório"
+  }),
+  language: z.enum([
+    "pt-BR", "en-US", "es-ES", "fr-FR", "de-DE", "it-IT", "nl-NL", 
+    "ru-RU", "pl-PL", "sv-SE", "da-DK", "no-NO", "fi-FI", "el-GR", 
+    "hu-HU", "cs-CZ", "ar-SA"
+  ], {
+    required_error: "Idioma é obrigatório"
+  }),
+  currency: z.enum([
+    "EUR", "USD", "BRL", "GBP", "CHF", "SEK", "DKK", "NOK", "PLN", 
+    "CZK", "HUF", "RON", "BGN", "AED", "SAR"
+  ], {
+    required_error: "Moeda é obrigatória"
+  }),
+});
+
+export type CreateFunnelData = z.infer<typeof createFunnelSchema>;
+
+// Types for funnel entities
+export type FunnelIntegration = typeof funnelIntegrations.$inferSelect;
+export type InsertFunnelIntegration = z.infer<typeof insertFunnelIntegrationSchema>;
+
+export type FunnelTemplate = typeof funnelTemplates.$inferSelect;
+export type InsertFunnelTemplate = z.infer<typeof insertFunnelTemplateSchema>;
+
+export type Funnel = typeof funnels.$inferSelect;
+export type InsertFunnel = z.infer<typeof insertFunnelSchema>;
+
+export type FunnelDeployment = typeof funnelDeployments.$inferSelect;
+export type InsertFunnelDeployment = z.infer<typeof insertFunnelDeploymentSchema>;
+
+export type FunnelAnalytics = typeof funnelAnalytics.$inferSelect;
+export type InsertFunnelAnalytics = z.infer<typeof insertFunnelAnalyticsSchema>;
+
+export type FunnelPageTemplate = typeof funnelPageTemplates.$inferSelect;
+export type InsertFunnelPageTemplate = z.infer<typeof insertFunnelPageTemplateSchema>;
+
+export type FunnelPage = typeof funnelPages.$inferSelect;
+export type InsertFunnelPage = z.infer<typeof insertFunnelPageSchema>;
+
+export type FunnelPageRevision = typeof funnelPageRevisions.$inferSelect;
+export type InsertFunnelPageRevision = z.infer<typeof insertFunnelPageRevisionSchema>;
+
+// Analytics and tracking table schemas
+export const insertTrackingEventSchema = createInsertSchema(trackingEvents).omit({
+  id: true,
+  serverTime: true,
+  createdAt: true,
+});
+
+export const insertConversionFunnelSchema = createInsertSchema(conversionFunnels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastCalculatedAt: true,
+});
+
+export const insertAnalyticsSessionSchema = createInsertSchema(analyticsSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Analytics and tracking types
+export type TrackingEvent = typeof trackingEvents.$inferSelect;
+export type InsertTrackingEvent = z.infer<typeof insertTrackingEventSchema>;
+
+export type ConversionFunnel = typeof conversionFunnels.$inferSelect;
+export type InsertConversionFunnel = z.infer<typeof insertConversionFunnelSchema>;
+
+export type AnalyticsSession = typeof analyticsSessions.$inferSelect;
+export type InsertAnalyticsSession = z.infer<typeof insertAnalyticsSessionSchema>;
+
+// VercelIntegration type alias for backwards compatibility
+export type VercelIntegration = {
+  connected: boolean;
+  accessToken?: string;
+  teamId?: string;
+  userId?: string;
+  connectedAt?: string;
+  lastUsed?: string;
+  isActive?: boolean;
 };
 
 // Advanced Page Builder v2 - Enhanced Block System for Visual Editor
@@ -1491,136 +4339,803 @@ export type BlockSection = {
     borderBottomRightRadius?: string;
     borderBottomLeftRadius?: string;
     
-    // Size
-    minHeight?: string;
+    // Size & Layout
+    width?: string;
+    height?: string;
+    minWidth?: string;
     maxWidth?: string;
+    minHeight?: string;
+    maxHeight?: string;
     
-    // Layout
-    display?: 'block' | 'flex' | 'grid';
-    flexDirection?: 'row' | 'column';
-    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
-    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
-    gap?: string;
+    // Legacy support (will be deprecated)
+    padding?: string;
+    margin?: string;
+    border?: string;
     
     [key: string]: any;
   };
-  settings?: {
+  settings: {
     containerWidth?: 'full' | 'container' | 'narrow';
-    textAlign?: 'left' | 'center' | 'right';
     verticalAlign?: 'top' | 'center' | 'bottom';
+    animation?: string;
+    [key: string]: any;
   };
 };
 
-// Complete page model with metadata
 export type PageModelV2 = {
-  version: '2.0';
-  meta: {
-    title: string;
-    description: string;
-    keywords: string[];
-  };
-  theme: {
-    primaryColor?: string;
-    secondaryColor?: string;
-    backgroundColor?: string;
-    textColor?: string;
-    fontFamily?: string;
-  };
+  version: 2;
+  layout: 'single_page' | 'multi_step' | 'scroll';
   sections: BlockSection[];
   
-  // Original HTML content (for bidirectional conversion)
-  htmlContent?: string;
-  cssContent?: string;
-  jsContent?: string;
-};
-
-// Creative Asset Bundle (AI-generated landing page assets)
-export type GeneratedAssetBundle = {
-  // Hero/header images
-  hero: {
-    desktopUrl: string;
-    mobileUrl?: string;
-    alt: string;
+  // Global styles and theme
+  theme: {
+    colors: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      background: string;
+      text: string;
+      muted: string;
+    };
+    typography: {
+      headingFont: string;
+      bodyFont: string;
+      fontSize: {
+        xs: string;
+        sm: string;
+        base: string;
+        lg: string;
+        xl: string;
+        '2xl': string;
+        '3xl': string;
+        '4xl': string;
+      };
+    };
+    spacing: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+    };
+    borderRadius: {
+      sm: string;
+      md: string;
+      lg: string;
+    };
   };
   
-  // Product/feature images
-  features: Array<{
-    url: string;
-    alt: string;
+  // SEO settings
+  seo: {
     title: string;
-  }>;
-  
-  // Icons (SVG URLs or data URIs)
-  icons: Array<{
-    name: string;
-    url: string;
-    category: 'feature' | 'social' | 'ui';
-  }>;
-  
-  // Logo variations
-  logos: {
-    primary: string;
-    secondary?: string;
-    icon?: string;
+    description: string;
+    keywords?: string[];
+    ogImage?: string;
+    ogTitle?: string;
+    ogDescription?: string;
   };
   
-  // Background patterns/textures
-  backgrounds: Array<{
-    url: string;
-    usage: 'hero' | 'section' | 'card';
+  // Settings for the visual editor
+  settings: {
+    containerMaxWidth?: string;
+    showGrid?: boolean;
+    snapToGrid?: boolean;
+    enableAnimations?: boolean;
+    mobileFirst?: boolean;
+  };
+};
+
+// Legacy compatibility - extends existing model to work with v2
+export type EnhancedPageModel = {
+  // Legacy format (v1)
+  layout: string;
+  sections: Array<{
+    id: string;
+    type: string;
+    config: Record<string, any>;
+    content: Record<string, any>;
+  }>;
+  style: {
+    theme: string;
+    primaryColor: string;
+    secondaryColor: string;
+    fontFamily: string;
+  };
+  seo: {
+    title: string;
+    description: string;
+    keywords?: string[];
+  };
+} | PageModelV2; // OR new format (v2)
+
+// AI Integration types for content generation
+export type AIContentRequest = {
+  type: 'generate_section' | 'rewrite_text' | 'optimize_cta' | 'suggest_layout' | 'generate_copy';
+  context: {
+    sectionType?: string;
+    currentText?: string;
+    businessInfo?: {
+      name: string;
+      industry: string;
+      targetAudience: string;
+      valueProposition: string;
+    };
+    goal?: 'increase_conversion' | 'improve_clarity' | 'make_persuasive' | 'create_urgency';
+    tone?: 'professional' | 'friendly' | 'urgent' | 'trustworthy' | 'excited';
+    language?: string;
+  };
+  elementId?: string; // For targeted improvements
+};
+
+export type AIContentResponse = {
+  success: boolean;
+  content?: {
+    text?: string;
+    html?: string;
+    suggestions?: string[];
+    variants?: Array<{
+      text: string;
+      reason: string;
+    }>;
+  };
+  changes?: Array<{
+    elementId: string;
+    property: string;
+    newValue: any;
+    reason: string;
+  }>;
+  error?: string;
+};
+
+// ============================================================================
+// PageModelV3 - Professional Visual Editor (Enterprise-Grade)
+// ============================================================================
+
+export type ResponsiveStylesV3 = {
+  desktop?: Record<string, any>;
+  tablet?: Record<string, any>;
+  mobile?: Record<string, any>;
+};
+
+export type StateStylesV3 = {
+  default?: Record<string, any>;
+  hover?: Record<string, any>;
+  focus?: Record<string, any>;
+  active?: Record<string, any>;
+  disabled?: Record<string, any>;
+};
+
+export type PseudoElementsV3 = {
+  before?: {
+    content?: string;
+    styles?: Record<string, any>;
+  };
+  after?: {
+    content?: string;
+    styles?: Record<string, any>;
+  };
+};
+
+export type AnimationKeyframeV3 = {
+  offset: number; // 0-100
+  styles: Record<string, any>;
+};
+
+export type AnimationV3 = {
+  name: string;
+  duration?: string;
+  timingFunction?: string;
+  delay?: string;
+  iterationCount?: number | 'infinite';
+  direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+  fillMode?: 'none' | 'forwards' | 'backwards' | 'both';
+  keyframes: AnimationKeyframeV3[];
+};
+
+export type TransitionV3 = {
+  property: string;
+  duration?: string;
+  timingFunction?: string;
+  delay?: string;
+};
+
+export type DesignTokensV3 = {
+  colors?: Record<string, string>;
+  spacing?: Record<string, string>;
+  typography?: Record<string, string>;
+  shadows?: Record<string, string>;
+  borderRadius?: Record<string, string>;
+};
+
+export type ComponentDefinitionV3 = {
+  id: string;
+  name: string;
+  category: string;
+  element: BlockElementV3;
+  thumbnail?: string;
+};
+
+export type BlockElementV3 = {
+  id: string;
+  type: 'text' | 'image' | 'button' | 'input' | 'container' | 'spacer' | 'divider' | 'video' | 'form' | 'custom';
+  content?: string | { [key: string]: any };
+  
+  // Responsive styles
+  styles?: ResponsiveStylesV3;
+  
+  // State styles
+  states?: StateStylesV3;
+  
+  // Pseudo-elements
+  pseudoElements?: PseudoElementsV3;
+  
+  // Animations
+  animations?: AnimationV3[];
+  transitions?: TransitionV3[];
+  
+  // Layout & Children
+  children?: BlockElementV3[];
+  
+  // Settings
+  settings?: {
+    className?: string;
+    dataAttributes?: Record<string, string>;
+    [key: string]: any;
+  };
+  
+  // Component reference (if this is a component instance)
+  componentId?: string;
+};
+
+export type BlockColumnV3 = {
+  id: string;
+  width: number; // 1-12 (grid columns)
+  elements: BlockElementV3[];
+  
+  // Responsive overrides
+  styles?: ResponsiveStylesV3;
+  states?: StateStylesV3;
+};
+
+export type BlockRowV3 = {
+  id: string;
+  columns: BlockColumnV3[];
+  
+  // Row-level responsive styles
+  styles?: ResponsiveStylesV3;
+  states?: StateStylesV3;
+  
+  settings?: {
+    gap?: string;
+    alignment?: 'start' | 'center' | 'end' | 'stretch';
+    verticalAlignment?: 'top' | 'middle' | 'bottom';
+    reverseOnMobile?: boolean;
+    [key: string]: any;
+  };
+};
+
+export type BlockSectionV3 = {
+  id: string;
+  type: 'hero' | 'features' | 'pricing' | 'testimonials' | 'cta' | 'content' | 'footer' | 'custom';
+  rows: BlockRowV3[];
+  
+  // Section-level responsive styles
+  styles?: ResponsiveStylesV3;
+  states?: StateStylesV3;
+  animations?: AnimationV3[];
+  
+  settings?: {
+    containerWidth?: 'full' | 'container' | 'narrow';
+    spacing?: {
+      paddingTop?: string;
+      paddingBottom?: string;
+    };
+    background?: {
+      type?: 'color' | 'gradient' | 'image' | 'video';
+      value?: string;
+      overlay?: {
+        color?: string;
+        opacity?: number;
+      };
+    };
+    [key: string]: any;
+  };
+};
+
+export type PageModelV3 = {
+  version: 3;
+  layout: 'single_page' | 'multi_step' | 'scroll';
+  sections: BlockSectionV3[];
+  
+  // Design Tokens (CSS variables)
+  designTokens?: DesignTokensV3;
+  
+  // Reusable Components
+  components?: ComponentDefinitionV3[];
+  
+  // Global theme
+  theme: {
+    colors: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      background: string;
+      text: string;
+      muted: string;
+      [key: string]: string;
+    };
+    typography: {
+      headingFont: string;
+      bodyFont: string;
+      fontSize: {
+        xs: string;
+        sm: string;
+        base: string;
+        lg: string;
+        xl: string;
+        '2xl': string;
+        '3xl': string;
+        '4xl': string;
+        [key: string]: string;
+      };
+      fontWeight?: Record<string, number>;
+      lineHeight?: Record<string, string>;
+    };
+    spacing: {
+      xs: string;
+      sm: string;
+      md: string;
+      lg: string;
+      xl: string;
+      '2xl': string;
+      [key: string]: string;
+    };
+    borderRadius: {
+      sm: string;
+      md: string;
+      lg: string;
+      [key: string]: string;
+    };
+    shadows?: Record<string, string>;
+  };
+  
+  // Global animations
+  globalAnimations?: AnimationV3[];
+  
+  // Breakpoints
+  breakpoints?: {
+    mobile: number;
+    tablet: number;
+    desktop: number;
+  };
+  
+  // SEO
+  seo: {
+    title: string;
+    description: string;
+    keywords?: string[];
+    ogImage?: string;
+    ogTitle?: string;
+    ogDescription?: string;
+  };
+  
+  // Editor settings
+  settings: {
+    containerMaxWidth?: string;
+    showGrid?: boolean;
+    snapToGrid?: boolean;
+    enableAnimations?: boolean;
+    mobileFirst?: boolean;
+    darkMode?: boolean;
+  };
+  
+  // Metadata
+  metadata?: {
+    createdAt?: string;
+    updatedAt?: string;
+    author?: string;
+    tags?: string[];
+  };
+};
+
+// ============================================================================
+// PageModelV3 Zod Validation Schemas
+// ============================================================================
+
+const responsiveStylesV3Schema = z.object({
+  desktop: z.record(z.any()).optional(),
+  tablet: z.record(z.any()).optional(),
+  mobile: z.record(z.any()).optional(),
+});
+
+const stateStylesV3Schema = z.object({
+  default: z.record(z.any()).optional(),
+  hover: z.record(z.any()).optional(),
+  focus: z.record(z.any()).optional(),
+  active: z.record(z.any()).optional(),
+  disabled: z.record(z.any()).optional(),
+});
+
+const pseudoElementsV3Schema = z.object({
+  before: z.object({
+    content: z.string().optional(),
+    styles: z.record(z.any()).optional(),
+  }).optional(),
+  after: z.object({
+    content: z.string().optional(),
+    styles: z.record(z.any()).optional(),
+  }).optional(),
+});
+
+const animationKeyframeV3Schema = z.object({
+  offset: z.number().min(0).max(100),
+  styles: z.record(z.any()),
+});
+
+const animationV3Schema = z.object({
+  name: z.string(),
+  duration: z.string().optional(),
+  timingFunction: z.string().optional(),
+  delay: z.string().optional(),
+  iterationCount: z.union([z.number(), z.literal('infinite')]).optional(),
+  direction: z.enum(['normal', 'reverse', 'alternate', 'alternate-reverse']).optional(),
+  fillMode: z.enum(['none', 'forwards', 'backwards', 'both']).optional(),
+  keyframes: z.array(animationKeyframeV3Schema),
+});
+
+const transitionV3Schema = z.object({
+  property: z.string(),
+  duration: z.string().optional(),
+  timingFunction: z.string().optional(),
+  delay: z.string().optional(),
+});
+
+const designTokensV3Schema = z.object({
+  colors: z.record(z.string()).optional(),
+  spacing: z.record(z.string()).optional(),
+  typography: z.record(z.string()).optional(),
+  shadows: z.record(z.string()).optional(),
+  borderRadius: z.record(z.string()).optional(),
+});
+
+// Recursive schemas for nested structures
+const blockElementV3Schema: z.ZodType<BlockElementV3> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    type: z.enum(['text', 'image', 'button', 'input', 'container', 'spacer', 'divider', 'video', 'form', 'custom']),
+    content: z.union([z.string(), z.record(z.any())]).optional(),
+    styles: responsiveStylesV3Schema.optional(),
+    states: stateStylesV3Schema.optional(),
+    pseudoElements: pseudoElementsV3Schema.optional(),
+    animations: z.array(animationV3Schema).optional(),
+    transitions: z.array(transitionV3Schema).optional(),
+    children: z.array(blockElementV3Schema).optional(),
+    settings: z.object({
+      className: z.string().optional(),
+      dataAttributes: z.record(z.string()).optional(),
+    }).catchall(z.any()).optional(),
+    componentId: z.string().optional(),
+  })
+);
+
+const blockColumnV3Schema: z.ZodType<BlockColumnV3> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    width: z.number().min(1).max(12),
+    elements: z.array(blockElementV3Schema),
+    styles: responsiveStylesV3Schema.optional(),
+    states: stateStylesV3Schema.optional(),
+  })
+);
+
+const blockRowV3Schema: z.ZodType<BlockRowV3> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    columns: z.array(blockColumnV3Schema),
+    styles: responsiveStylesV3Schema.optional(),
+    states: stateStylesV3Schema.optional(),
+    settings: z.object({
+      gap: z.string().optional(),
+      alignment: z.enum(['start', 'center', 'end', 'stretch']).optional(),
+      verticalAlignment: z.enum(['top', 'middle', 'bottom']).optional(),
+      reverseOnMobile: z.boolean().optional(),
+    }).catchall(z.any()).optional(),
+  })
+);
+
+const blockSectionV3Schema: z.ZodType<BlockSectionV3> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    type: z.enum(['hero', 'features', 'pricing', 'testimonials', 'cta', 'content', 'footer', 'custom']),
+    rows: z.array(blockRowV3Schema),
+    styles: responsiveStylesV3Schema.optional(),
+    states: stateStylesV3Schema.optional(),
+    animations: z.array(animationV3Schema).optional(),
+    settings: z.object({
+      containerWidth: z.enum(['full', 'container', 'narrow']).optional(),
+      spacing: z.object({
+        paddingTop: z.string().optional(),
+        paddingBottom: z.string().optional(),
+      }).optional(),
+      background: z.object({
+        type: z.enum(['color', 'gradient', 'image', 'video']).optional(),
+        value: z.string().optional(),
+        overlay: z.object({
+          color: z.string().optional(),
+          opacity: z.number().optional(),
+        }).optional(),
+      }).optional(),
+    }).catchall(z.any()).optional(),
+  })
+);
+
+const componentDefinitionV3Schema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.string(),
+  element: blockElementV3Schema,
+  thumbnail: z.string().optional(),
+});
+
+export const pageModelV3Schema = z.object({
+  version: z.literal(3),
+  layout: z.enum(['single_page', 'multi_step', 'scroll']),
+  sections: z.array(blockSectionV3Schema),
+  designTokens: designTokensV3Schema.optional(),
+  components: z.array(componentDefinitionV3Schema).optional(),
+  theme: z.object({
+    colors: z.object({
+      primary: z.string(),
+      secondary: z.string(),
+      accent: z.string(),
+      background: z.string(),
+      text: z.string(),
+      muted: z.string(),
+    }).catchall(z.string()),
+    typography: z.object({
+      headingFont: z.string(),
+      bodyFont: z.string(),
+      fontSize: z.object({
+        xs: z.string(),
+        sm: z.string(),
+        base: z.string(),
+        lg: z.string(),
+        xl: z.string(),
+        '2xl': z.string(),
+        '3xl': z.string(),
+        '4xl': z.string(),
+      }).catchall(z.string()),
+      fontWeight: z.record(z.number()).optional(),
+      lineHeight: z.record(z.string()).optional(),
+    }),
+    spacing: z.object({
+      xs: z.string(),
+      sm: z.string(),
+      md: z.string(),
+      lg: z.string(),
+      xl: z.string(),
+      '2xl': z.string(),
+    }).catchall(z.string()),
+    borderRadius: z.object({
+      sm: z.string(),
+      md: z.string(),
+      lg: z.string(),
+    }).catchall(z.string()),
+    shadows: z.record(z.string()).optional(),
+  }),
+  globalAnimations: z.array(animationV3Schema).optional(),
+  breakpoints: z.object({
+    mobile: z.number(),
+    tablet: z.number(),
+    desktop: z.number(),
+  }).optional(),
+  seo: z.object({
+    title: z.string(),
+    description: z.string(),
+    keywords: z.array(z.string()).optional(),
+    ogImage: z.string().optional(),
+    ogTitle: z.string().optional(),
+    ogDescription: z.string().optional(),
+  }),
+  settings: z.object({
+    containerMaxWidth: z.string().optional(),
+    showGrid: z.boolean().optional(),
+    snapToGrid: z.boolean().optional(),
+    enableAnimations: z.boolean().optional(),
+    mobileFirst: z.boolean().optional(),
+    darkMode: z.boolean().optional(),
+  }),
+  metadata: z.object({
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+    author: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  }).optional(),
+});
+
+// Export individual schemas for partial validation
+export {
+  blockElementV3Schema,
+  blockColumnV3Schema,
+  blockRowV3Schema,
+  blockSectionV3Schema,
+  responsiveStylesV3Schema,
+  stateStylesV3Schema,
+  animationV3Schema,
+  designTokensV3Schema,
+};
+
+// Enterprise Visual Identity System - Phase 1 Implementation
+// Color Palette with psychological alignment and accessibility
+export type ColorPalette = {
+  id: string;
+  name: string;
+  primary: {
+    main: string;
+    light: string;
+    dark: string;
+    contrast: string;
+  };
+  secondary: {
+    main: string;
+    light: string;
+    dark: string;
+    contrast: string;
+  };
+  accent: {
+    main: string;
+    light: string;
+    dark: string;
+    contrast: string;
+  };
+  neutral: {
+    white: string;
+    light: string;
+    medium: string;
+    dark: string;
+    black: string;
+  };
+  semantic: {
+    success: string;
+    warning: string;
+    error: string;
+    info: string;
+  };
+  // Psychological and brand attributes
+  mood: 'premium' | 'trustworthy' | 'energetic' | 'calming' | 'professional' | 'playful';
+  industry: string; // e.g., 'luxury', 'health', 'tech', 'financial'
+  accessibility: {
+    wcagLevel: 'AA' | 'AAA';
+    contrastRatios: Record<string, number>;
+  };
+};
+
+// AI-Generated Asset Bundle for complete visual consistency
+export type GeneratedAssetBundle = {
+  id: string;
+  palette: string; // Reference to ColorPalette.id
+  style: 'photographic' | 'illustrated' | 'minimalist' | 'artistic' | 'corporate';
+  
+  // Images organized by section and purpose
+  hero: {
+    primary: GeneratedImage;
+    background?: GeneratedImage;
+    overlay?: GeneratedImage;
+  };
+  lifestyle: {
+    primary: GeneratedImage[];
+    gallery?: GeneratedImage[];
+  };
+  product: {
+    showcase: GeneratedImage[];
+    detail?: GeneratedImage[];
+    comparison?: GeneratedImage[];
+  };
+  social: {
+    avatars: GeneratedImage[];
+    testimonialBackgrounds?: GeneratedImage[];
+  };
+  backgrounds: {
+    section: GeneratedImage[];
+    patterns: GeneratedImage[];
+    textures: GeneratedImage[];
+  };
+  icons: {
+    benefits: GeneratedIcon[];
+    features: GeneratedIcon[];
+    social: GeneratedIcon[];
+    navigation: GeneratedIcon[];
+  };
+  
+  // Metadata for consistency
+  generatedAt: string;
+  totalSize: number; // In bytes
+  compressionApplied: boolean;
+  cacheKey: string;
+};
+
+// Individual generated image with metadata
+export type GeneratedImage = {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  format: 'webp' | 'avif' | 'jpg' | 'png';
+  size: number; // In bytes
+  alt: string;
+  prompt: string; // Original generation prompt
+  
+  // Responsive variants
+  variants: {
+    mobile: string;
+    tablet: string;
+    desktop: string;
+    thumbnail: string;
+  };
+  
+  // Technical metadata
+  dominantColors: string[];
+  aspectRatio: string;
+  generatedAt: string;
+  processingTime: number; // In milliseconds
+};
+
+// Generated icon with consistent styling
+export type GeneratedIcon = {
+  id: string;
+  url: string;
+  svg?: string; // Vector format when available
+  category: 'benefit' | 'feature' | 'social' | 'navigation' | 'action';
+  style: 'outline' | 'filled' | 'duotone' | 'branded';
+  size: '16' | '24' | '32' | '48' | '64';
+  prompt: string;
+  alt: string;
+};
+
+// Smart prompt templates for consistent image generation
+export type ImagePromptTemplate = {
+  id: string;
+  name: string;
+  category: 'hero' | 'lifestyle' | 'product' | 'social' | 'background' | 'icon';
+  
+  // Template with dynamic variables
+  template: string; // e.g., "Professional ${niche} ${style}, ${lighting}, ${colors}"
+  
+  // Required variables for this template
+  variables: Array<{
+    name: string; // e.g., 'niche', 'style', 'lighting'
+    type: 'text' | 'color' | 'enum';
+    required: boolean;
+    options?: string[]; // For enum type
+    description: string;
   }>;
   
-  // Social proof assets (testimonial avatars, company logos)
-  socialProof: Array<{
-    type: 'avatar' | 'company_logo';
-    url: string;
-    name: string;
+  // Style parameters
+  style: {
+    photographic: boolean;
+    illustrated: boolean;
+    minimalist: boolean;
+    artistic: boolean;
+  };
+  
+  // Technical parameters
+  aspectRatio: string; // e.g., '16:9', '1:1', '4:3'
+  quality: 'standard' | 'hd' | '4k';
+  
+  // Use cases and examples
+  examples: Array<{
+    input: Record<string, string>;
+    resultDescription: string;
   }>;
 };
 
-// Design Token System
+// Design tokens for consistent styling across components
 export type StyleTokens = {
-  // Color system with semantic meaning
-  colors: {
-    // Primary brand colors
-    primary: {
-      50: string;
-      100: string;
-      200: string;
-      300: string;
-      400: string;
-      500: string; // Base
-      600: string;
-      700: string;
-      800: string;
-      900: string;
-    };
-    
-    // Semantic colors
-    semantic: {
-      success: string;
-      warning: string;
-      error: string;
-      info: string;
-    };
-    
-    // Neutral/grayscale
-    neutral: {
-      50: string;
-      100: string;
-      200: string;
-      300: string;
-      400: string;
-      500: string;
-      600: string;
-      700: string;
-      800: string;
-      900: string;
-      950: string;
-    };
-  };
+  id: string;
+  name: string;
   
-  // Typography scale
+  // Typography scale with fluid sizing
   typography: {
     fontFamilies: {
       heading: string;
@@ -1639,14 +5154,6 @@ export type StyleTokens = {
       '5xl': string;
       '6xl': string;
     };
-    fontWeights: {
-      light: number;
-      normal: number;
-      medium: number;
-      semibold: number;
-      bold: number;
-      extrabold: number;
-    };
     lineHeights: {
       none: string;
       tight: string;
@@ -1655,56 +5162,41 @@ export type StyleTokens = {
       relaxed: string;
       loose: string;
     };
-    letterSpacings: {
-      tighter: string;
-      tight: string;
+    fontWeights: {
+      thin: string;
+      light: string;
       normal: string;
-      wide: string;
-      wider: string;
-      widest: string;
+      medium: string;
+      semibold: string;
+      bold: string;
+      extrabold: string;
     };
   };
   
-  // Spacing scale (for margin, padding, gap)
+  // Spacing system (8pt grid)
   spacing: {
-    0: string;
     px: string;
-    0.5: string;
-    1: string;
-    1.5: string;
-    2: string;
-    2.5: string;
-    3: string;
-    3.5: string;
-    4: string;
-    5: string;
-    6: string;
-    7: string;
-    8: string;
-    9: string;
-    10: string;
-    11: string;
-    12: string;
-    14: string;
-    16: string;
-    20: string;
-    24: string;
-    28: string;
-    32: string;
-    36: string;
-    40: string;
-    44: string;
-    48: string;
-    52: string;
-    56: string;
-    60: string;
-    64: string;
-    72: string;
-    80: string;
-    96: string;
+    '0': string;
+    '1': string;
+    '2': string;
+    '3': string;
+    '4': string;
+    '5': string;
+    '6': string;
+    '8': string;
+    '10': string;
+    '12': string;
+    '16': string;
+    '20': string;
+    '24': string;
+    '32': string;
+    '40': string;
+    '48': string;
+    '56': string;
+    '64': string;
   };
   
-  // Shadow scale
+  // Elevation system for depth
   shadows: {
     none: string;
     sm: string;
@@ -1796,635 +5288,3 @@ export type VisualIdentity = {
   lastUsed: string;
   usageCount: number;
 };
-
-// ============================================
-// PAGE MODEL V3 - PROFESSIONAL VISUAL EDITOR
-// ============================================
-
-/**
- * Responsive Styles - Styles for different breakpoints
- */
-export type ResponsiveStylesV3 = {
-  mobile?: CSSPropertiesV3;
-  tablet?: CSSPropertiesV3;
-  desktop?: CSSPropertiesV3;
-};
-
-/**
- * State Styles - Styles for different interaction states
- */
-export type StateStylesV3 = {
-  default: CSSPropertiesV3;
-  hover?: CSSPropertiesV3;
-  focus?: CSSPropertiesV3;
-  active?: CSSPropertiesV3;
-  disabled?: CSSPropertiesV3;
-  visited?: CSSPropertiesV3; // For links
-};
-
-/**
- * Pseudo Elements - Styles for ::before and ::after
- */
-export type PseudoElementsV3 = {
-  before?: {
-    content: string;
-    styles: ResponsiveStylesV3;
-  };
-  after?: {
-    content: string;
-    styles: ResponsiveStylesV3;
-  };
-};
-
-/**
- * Animation - Keyframes and transitions
- */
-export type AnimationV3 = {
-  id: string;
-  name: string;
-  type: 'keyframe' | 'transition';
-  
-  // For keyframes
-  keyframes?: Array<{
-    offset: number; // 0-100 (percentage)
-    styles: CSSPropertiesV3;
-  }>;
-  
-  // For transitions
-  transition?: {
-    property: string; // 'all', 'opacity', 'transform', etc
-    duration: string; // '0.3s', '500ms'
-    timingFunction: 'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' | string;
-    delay?: string;
-  };
-  
-  // Common
-  duration?: string;
-  iterationCount?: number | 'infinite';
-  direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
-  fillMode?: 'none' | 'forwards' | 'backwards' | 'both';
-  playState?: 'running' | 'paused';
-};
-
-/**
- * Extended CSS Properties with all modern CSS features
- */
-export type CSSPropertiesV3 = {
-  // Typography
-  fontSize?: string;
-  fontFamily?: string;
-  fontWeight?: string | number;
-  fontStyle?: string;
-  lineHeight?: string | number;
-  letterSpacing?: string;
-  textAlign?: 'left' | 'center' | 'right' | 'justify' | 'start' | 'end';
-  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
-  textDecoration?: string;
-  color?: string;
-  
-  // Spacing
-  padding?: string;
-  paddingTop?: string;
-  paddingRight?: string;
-  paddingBottom?: string;
-  paddingLeft?: string;
-  margin?: string;
-  marginTop?: string;
-  marginRight?: string;
-  marginBottom?: string;
-  marginLeft?: string;
-  
-  // Background
-  backgroundColor?: string;
-  backgroundImage?: string;
-  backgroundSize?: string;
-  backgroundPosition?: string;
-  backgroundRepeat?: string;
-  backgroundAttachment?: string;
-  backgroundClip?: string;
-  backgroundOrigin?: string;
-  background?: string; // Shorthand
-  
-  // Borders
-  border?: string;
-  borderWidth?: string;
-  borderStyle?: string;
-  borderColor?: string;
-  borderTop?: string;
-  borderRight?: string;
-  borderBottom?: string;
-  borderLeft?: string;
-  borderRadius?: string;
-  borderTopLeftRadius?: string;
-  borderTopRightRadius?: string;
-  borderBottomRightRadius?: string;
-  borderBottomLeftRadius?: string;
-  
-  // Size & Layout
-  width?: string;
-  height?: string;
-  minWidth?: string;
-  maxWidth?: string;
-  minHeight?: string;
-  maxHeight?: string;
-  
-  // Display & Position
-  display?: string;
-  position?: 'static' | 'relative' | 'absolute' | 'fixed' | 'sticky';
-  top?: string;
-  right?: string;
-  bottom?: string;
-  left?: string;
-  zIndex?: number | string;
-  
-  // Flexbox
-  flexDirection?: 'row' | 'row-reverse' | 'column' | 'column-reverse';
-  flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
-  flexFlow?: string;
-  justifyContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
-  alignItems?: 'flex-start' | 'flex-end' | 'center' | 'baseline' | 'stretch';
-  alignContent?: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'stretch';
-  flex?: string;
-  flexGrow?: number;
-  flexShrink?: number;
-  flexBasis?: string;
-  alignSelf?: 'auto' | 'flex-start' | 'flex-end' | 'center' | 'baseline' | 'stretch';
-  order?: number;
-  gap?: string;
-  rowGap?: string;
-  columnGap?: string;
-  
-  // Grid
-  gridTemplateColumns?: string;
-  gridTemplateRows?: string;
-  gridTemplateAreas?: string;
-  gridTemplate?: string;
-  gridAutoColumns?: string;
-  gridAutoRows?: string;
-  gridAutoFlow?: 'row' | 'column' | 'dense' | 'row dense' | 'column dense';
-  gridColumn?: string;
-  gridRow?: string;
-  gridArea?: string;
-  gridColumnStart?: string | number;
-  gridColumnEnd?: string | number;
-  gridRowStart?: string | number;
-  gridRowEnd?: string | number;
-  
-  // Visual Effects
-  opacity?: number | string;
-  boxShadow?: string;
-  textShadow?: string;
-  filter?: string;
-  backdropFilter?: string;
-  transform?: string;
-  transformOrigin?: string;
-  transformStyle?: 'flat' | 'preserve-3d';
-  perspective?: string;
-  perspectiveOrigin?: string;
-  
-  // Overflow & Visibility
-  overflow?: string;
-  overflowX?: string;
-  overflowY?: string;
-  visibility?: 'visible' | 'hidden' | 'collapse';
-  cursor?: string;
-  pointerEvents?: 'auto' | 'none';
-  
-  // Transitions & Animations
-  transition?: string;
-  transitionProperty?: string;
-  transitionDuration?: string;
-  transitionTimingFunction?: string;
-  transitionDelay?: string;
-  animation?: string;
-  animationName?: string;
-  animationDuration?: string;
-  animationTimingFunction?: string;
-  animationDelay?: string;
-  animationIterationCount?: string | number;
-  animationDirection?: string;
-  animationFillMode?: string;
-  animationPlayState?: string;
-  
-  // Allow any other CSS property
-  [key: string]: any;
-};
-
-/**
- * Layout Type - Determines how the element is positioned
- */
-export type LayoutTypeV3 = 'flex' | 'grid' | 'block' | 'inline' | 'inline-block' | 'absolute' | 'relative' | 'fixed' | 'sticky';
-
-/**
- * Semantic HTML Tag - For better SEO and accessibility
- */
-export type SemanticTagV3 = 'div' | 'section' | 'article' | 'aside' | 'header' | 'footer' | 'nav' | 'main' | 'figure';
-
-/**
- * Block Element V3 - Complete element definition
- */
-export type BlockElementV3 = {
-  id: string;
-  
-  // Element type
-  type: 'heading' | 'text' | 'button' | 'image' | 'video' | 'container' | 'spacer' | 'divider' | 'form' | 'input' | 'embed' | 'custom';
-  
-  // Props (element-specific configuration)
-  props: {
-    // For heading
-    level?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-    
-    // For links/buttons
-    href?: string;
-    target?: '_self' | '_blank' | '_parent' | '_top';
-    rel?: string;
-    
-    // For images/videos
-    src?: string;
-    alt?: string;
-    srcset?: string;
-    sizes?: string;
-    loading?: 'lazy' | 'eager';
-    
-    // For forms
-    name?: string;
-    placeholder?: string;
-    required?: boolean;
-    type?: string;
-    value?: string;
-    
-    // Custom attributes
-    [key: string]: any;
-  };
-  
-  // Styles (responsive + states)
-  styles: ResponsiveStylesV3;
-  states?: StateStylesV3;
-  pseudoElements?: PseudoElementsV3;
-  
-  // Layout configuration
-  layout?: LayoutTypeV3;
-  semanticTag?: SemanticTagV3;
-  
-  // Content
-  content?: {
-    text?: string;
-    html?: string;
-    lexicalState?: any; // Rich text editor state
-    [key: string]: any;
-  };
-  
-  // Animations
-  animations?: AnimationV3[];
-  
-  // Component reference (if this is a component instance)
-  componentRef?: string;
-  componentOverrides?: Record<string, any>;
-  
-  // Children (for container elements)
-  children?: BlockElementV3[];
-  
-  // Metadata
-  locked?: boolean;
-  hidden?: boolean;
-  name?: string; // User-defined name for layers panel
-};
-
-/**
- * Block Column V3
- */
-export type BlockColumnV3 = {
-  id: string;
-  width: string; // '1/2', '1/3', '2/3', '1/4', '3/4', 'full', 'auto', or CSS value
-  elements: BlockElementV3[];
-  styles: ResponsiveStylesV3;
-  states?: StateStylesV3;
-};
-
-/**
- * Block Row V3
- */
-export type BlockRowV3 = {
-  id: string;
-  columns: BlockColumnV3[];
-  styles: ResponsiveStylesV3;
-  states?: StateStylesV3;
-  layout?: 'flex' | 'grid';
-};
-
-/**
- * Block Section V3
- */
-export type BlockSectionV3 = {
-  id: string;
-  type: 'hero' | 'content' | 'cta' | 'benefits' | 'testimonials' | 'faq' | 'checkout' | 'custom';
-  name: string;
-  rows: BlockRowV3[];
-  styles: ResponsiveStylesV3;
-  states?: StateStylesV3;
-  settings?: {
-    containerWidth?: 'full' | 'container' | 'narrow' | string;
-    textAlign?: 'left' | 'center' | 'right';
-    verticalAlign?: 'top' | 'center' | 'bottom';
-  };
-  semanticTag?: SemanticTagV3;
-};
-
-/**
- * Design Tokens V3 - Reusable design values
- */
-export type DesignTokensV3 = {
-  colors: {
-    primary: Record<string, string>; // { 50: '#...', 100: '#...', ... }
-    secondary: Record<string, string>;
-    neutral: Record<string, string>;
-    semantic: {
-      success: string;
-      warning: string;
-      error: string;
-      info: string;
-    };
-    custom: Record<string, string>; // User-defined colors
-  };
-  
-  typography: {
-    fontFamilies: Record<string, string>;
-    fontSizes: Record<string, string>;
-    fontWeights: Record<string, number>;
-    lineHeights: Record<string, string>;
-    letterSpacings: Record<string, string>;
-  };
-  
-  spacing: Record<string, string>;
-  shadows: Record<string, string>;
-  borderRadius: Record<string, string>;
-  
-  breakpoints: {
-    mobile: string; // e.g., '768px'
-    tablet: string; // e.g., '1024px'
-    desktop: string; // e.g., '1280px'
-  };
-};
-
-/**
- * Component Definition - Reusable component
- */
-export type ComponentDefinitionV3 = {
-  id: string;
-  name: string;
-  description?: string;
-  category: 'button' | 'card' | 'header' | 'footer' | 'form' | 'custom';
-  
-  // The element structure
-  element: BlockElementV3;
-  
-  // Props that can be overridden
-  props: Record<string, {
-    type: 'string' | 'number' | 'boolean' | 'color' | 'image';
-    default: any;
-    label: string;
-  }>;
-  
-  // Variants
-  variants?: Record<string, {
-    label: string;
-    overrides: Partial<BlockElementV3>;
-  }>;
-  
-  createdAt: string;
-  updatedAt: string;
-};
-
-/**
- * Component Instance - Reference to a component with overrides
- */
-export type ComponentInstanceV3 = {
-  id: string;
-  componentId: string;
-  overrides: Record<string, any>;
-  variantId?: string;
-};
-
-/**
- * Page Model V3 - Complete page definition
- */
-export type PageModelV3 = {
-  version: '3.0';
-  
-  // Metadata
-  meta: {
-    title: string;
-    description: string;
-    keywords: string[];
-    ogImage?: string;
-    favicon?: string;
-  };
-  
-  // Design system
-  designTokens: DesignTokensV3;
-  
-  // Components library
-  components: ComponentDefinitionV3[];
-  
-  // Page structure
-  sections: BlockSectionV3[];
-  
-  // Global styles
-  globalStyles?: {
-    body?: CSSPropertiesV3;
-    links?: StateStylesV3;
-    [selector: string]: any;
-  };
-  
-  // Original HTML content (for bidirectional conversion)
-  htmlContent?: string;
-  cssContent?: string;
-  jsContent?: string;
-  
-  // Editor state
-  editorState?: {
-    selectedElementId?: string;
-    activeBreakpoint: 'mobile' | 'tablet' | 'desktop';
-    zoom: number; // 0.5 = 50%, 1 = 100%, 2 = 200%
-  };
-  
-  // Version control
-  createdAt: string;
-  updatedAt: string;
-};
-
-// Zod schemas for PageModelV3 validation
-export const cssPropertiesV3Schema = z.record(z.any());
-
-export const responsiveStylesV3Schema = z.object({
-  mobile: cssPropertiesV3Schema.optional(),
-  tablet: cssPropertiesV3Schema.optional(),
-  desktop: cssPropertiesV3Schema.optional(),
-});
-
-export const stateStylesV3Schema = z.object({
-  default: cssPropertiesV3Schema,
-  hover: cssPropertiesV3Schema.optional(),
-  focus: cssPropertiesV3Schema.optional(),
-  active: cssPropertiesV3Schema.optional(),
-  disabled: cssPropertiesV3Schema.optional(),
-  visited: cssPropertiesV3Schema.optional(),
-});
-
-export const animationV3Schema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.enum(['keyframe', 'transition']),
-  keyframes: z.array(z.object({
-    offset: z.number().min(0).max(100),
-    styles: cssPropertiesV3Schema,
-  })).optional(),
-  transition: z.object({
-    property: z.string(),
-    duration: z.string(),
-    timingFunction: z.string(),
-    delay: z.string().optional(),
-  }).optional(),
-  duration: z.string().optional(),
-  iterationCount: z.union([z.number(), z.literal('infinite')]).optional(),
-  direction: z.enum(['normal', 'reverse', 'alternate', 'alternate-reverse']).optional(),
-  fillMode: z.enum(['none', 'forwards', 'backwards', 'both']).optional(),
-  playState: z.enum(['running', 'paused']).optional(),
-});
-
-export const blockElementV3Schema: z.ZodType<BlockElementV3> = z.lazy(() => z.object({
-  id: z.string(),
-  type: z.enum(['heading', 'text', 'button', 'image', 'video', 'container', 'spacer', 'divider', 'form', 'input', 'embed', 'custom']),
-  props: z.record(z.any()),
-  styles: responsiveStylesV3Schema,
-  states: stateStylesV3Schema.optional(),
-  pseudoElements: z.object({
-    before: z.object({
-      content: z.string(),
-      styles: responsiveStylesV3Schema,
-    }).optional(),
-    after: z.object({
-      content: z.string(),
-      styles: responsiveStylesV3Schema,
-    }).optional(),
-  }).optional(),
-  layout: z.enum(['flex', 'grid', 'block', 'inline', 'inline-block', 'absolute', 'relative', 'fixed', 'sticky']).optional(),
-  semanticTag: z.enum(['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'main', 'figure']).optional(),
-  content: z.record(z.any()).optional(),
-  animations: z.array(animationV3Schema).optional(),
-  componentRef: z.string().optional(),
-  componentOverrides: z.record(z.any()).optional(),
-  children: z.array(blockElementV3Schema).optional(),
-  locked: z.boolean().optional(),
-  hidden: z.boolean().optional(),
-  name: z.string().optional(),
-}));
-
-// BlockColumn V3 Schema
-export const blockColumnV3Schema = z.object({
-  id: z.string(),
-  width: z.string(),
-  elements: z.array(blockElementV3Schema),
-  styles: responsiveStylesV3Schema,
-  states: stateStylesV3Schema.optional(),
-});
-
-// BlockRow V3 Schema
-export const blockRowV3Schema = z.object({
-  id: z.string(),
-  columns: z.array(blockColumnV3Schema),
-  styles: responsiveStylesV3Schema,
-  states: stateStylesV3Schema.optional(),
-  layout: z.enum(['flex', 'grid']).optional(),
-});
-
-// BlockSection V3 Schema
-export const blockSectionV3Schema = z.object({
-  id: z.string(),
-  type: z.enum(['hero', 'content', 'cta', 'benefits', 'testimonials', 'faq', 'checkout', 'custom']),
-  name: z.string(),
-  rows: z.array(blockRowV3Schema),
-  styles: responsiveStylesV3Schema,
-  states: stateStylesV3Schema.optional(),
-  settings: z.object({
-    containerWidth: z.union([z.literal('full'), z.literal('container'), z.literal('narrow'), z.string()]).optional(),
-    textAlign: z.enum(['left', 'center', 'right']).optional(),
-    verticalAlign: z.enum(['top', 'center', 'bottom']).optional(),
-  }).optional(),
-  semanticTag: z.enum(['div', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'main', 'figure']).optional(),
-});
-
-// ComponentDefinition V3 Schema
-export const componentDefinitionV3Schema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  category: z.enum(['button', 'card', 'header', 'footer', 'form', 'custom']),
-  element: blockElementV3Schema,
-  props: z.record(z.object({
-    type: z.enum(['string', 'number', 'boolean', 'color', 'image']),
-    default: z.any(),
-    label: z.string(),
-  })),
-  variants: z.record(z.object({
-    label: z.string(),
-    overrides: z.any(), // Partial<BlockElementV3>
-  })).optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-export const designTokensV3Schema = z.object({
-  colors: z.object({
-    primary: z.record(z.string()),
-    secondary: z.record(z.string()),
-    neutral: z.record(z.string()),
-    semantic: z.object({
-      success: z.string(),
-      warning: z.string(),
-      error: z.string(),
-      info: z.string(),
-    }),
-    custom: z.record(z.string()),
-  }),
-  typography: z.object({
-    fontFamilies: z.record(z.string()),
-    fontSizes: z.record(z.string()),
-    fontWeights: z.record(z.number()),
-    lineHeights: z.record(z.string()),
-    letterSpacings: z.record(z.string()),
-  }),
-  spacing: z.record(z.string()),
-  shadows: z.record(z.string()),
-  borderRadius: z.record(z.string()),
-  breakpoints: z.object({
-    mobile: z.string(),
-    tablet: z.string(),
-    desktop: z.string(),
-  }),
-});
-
-export const pageModelV3Schema = z.object({
-  version: z.literal('3.0'),
-  meta: z.object({
-    title: z.string(),
-    description: z.string(),
-    keywords: z.array(z.string()),
-    ogImage: z.string().optional(),
-    favicon: z.string().optional(),
-  }),
-  designTokens: designTokensV3Schema,
-  components: z.array(componentDefinitionV3Schema),
-  sections: z.array(blockSectionV3Schema),
-  globalStyles: z.record(z.any()).optional(),
-  htmlContent: z.string().optional(),
-  cssContent: z.string().optional(),
-  jsContent: z.string().optional(),
-  editorState: z.object({
-    selectedElementId: z.string().optional(),
-    activeBreakpoint: z.enum(['mobile', 'tablet', 'desktop']),
-    zoom: z.number(),
-  }).optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
