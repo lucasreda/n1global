@@ -9,6 +9,7 @@ import {
   type Product,
   type PageModelV2,
 } from "@shared/schema";
+import { renderPageModelToHTML } from "./page-model-renderer";
 
 export class AffiliateLandingService {
   async createLandingPage(
@@ -170,10 +171,14 @@ export class AffiliateLandingService {
     id: string,
     model: PageModelV2
   ): Promise<AffiliateLandingPage> {
+    // Generate HTML from the model
+    const generatedHtml = renderPageModelToHTML(model);
+    
     const [updated] = await db
       .update(affiliateLandingPages)
       .set({
         model: model as any,
+        htmlContent: generatedHtml, // Auto-generate HTML from model
         updatedAt: new Date(),
       })
       .where(eq(affiliateLandingPages.id, id))
