@@ -1924,10 +1924,13 @@ export const affiliateLandingPages = pgTable("affiliate_landing_pages", {
   name: text("name").notNull(),
   description: text("description"),
   
-  // Content (HTML/CSS/JS)
+  // Content (HTML/CSS/JS) - Legacy format for manual editing
   htmlContent: text("html_content").notNull(),
   cssContent: text("css_content"),
   jsContent: text("js_content"),
+  
+  // Visual Editor Model (PageModelV2) - For visual editor
+  model: jsonb("model").$type<PageModelV2>(), // Structured page model for visual editing
   
   // Preview metadata
   thumbnailUrl: text("thumbnail_url"), // Screenshot/preview image
