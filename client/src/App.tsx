@@ -57,6 +57,8 @@ import AdminInvestmentInvestors from "@/pages/admin-investment/investors";
 import AffiliatesHub from "@/pages/admin/affiliates-hub";
 import AffiliatesManage from "@/pages/admin/affiliates-manage";
 import AffiliatesConversions from "@/pages/admin/affiliates-conversions";
+import AffiliatesCommissionRules from "@/pages/admin/affiliates-commission-rules";
+import AdminAffiliatesLandingPages from "@/pages/admin/affiliates-landing-pages";
 import AffiliateDashboard from "@/pages/affiliate";
 import AffiliateLinks from "@/pages/affiliate/links";
 import AffiliateLandingPages from "@/pages/affiliate/landing-pages";
@@ -279,6 +281,8 @@ function Router() {
         <Route path="/admin-investment" component={isAdminInvestimento ? AdminInvestmentDashboard : () => <NotFound />} />
         
         {/* Admin Affiliates Routes (Inside Dashboard) */}
+        <Route path="/inside/affiliates/landing-pages" component={isSuperAdmin ? () => <AdminLayout><AdminAffiliatesLandingPages /></AdminLayout> : () => <NotFound />} />
+        <Route path="/inside/affiliates/commission-rules" component={isSuperAdmin ? () => <AdminLayout><AffiliatesCommissionRules /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/affiliates/conversions" component={isSuperAdmin ? () => <AdminLayout><AffiliatesConversions /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/affiliates/manage" component={isSuperAdmin ? () => <AdminLayout><AffiliatesManage /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside/affiliates" component={isSuperAdmin ? () => <AdminLayout><AffiliatesHub /></AdminLayout> : () => <NotFound />} />
