@@ -30,6 +30,7 @@ import affiliateTrackingRoutes from "./affiliate-tracking-routes";
 import affiliateCommissionRoutes from "./affiliate-commission-routes";
 import affiliateLandingRoutes from "./affiliate-landing-routes";
 import affiliateMarketplaceRoutes from "./affiliate-marketplace-routes";
+import affiliatePixelRoutes from "./affiliate-pixel-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -6424,6 +6425,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register Affiliate Marketplace routes (affiliate only)
   app.use("/api/affiliate/marketplace", affiliateMarketplaceRoutes);
+
+  // Register Affiliate Pixel routes (affiliate only)
+  app.use("/api/affiliate/pixels", affiliatePixelRoutes);
 
   // Multi-Page Funnel Deploy Routes (PHASE 2.2)
   app.post("/api/funnels/multi-page/deploy", authenticateToken, async (req: AuthRequest, res: Response) => {
