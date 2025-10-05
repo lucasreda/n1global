@@ -1,4 +1,7 @@
 import express from "express";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
+import { products, affiliateMemberships } from "@shared/schema";
 import { affiliateService } from "./affiliate-service";
 import { affiliateVercelDeployService } from "./affiliate-vercel-deploy-service";
 import { affiliateLandingService } from "./affiliate-landing-service";
@@ -675,16 +678,58 @@ router.post(
         return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
       }
 
-      // Create membership request (productId is optional, operationId is required)
-      // For now, we'll just return success without creating - this needs product/operation logic
-      // const membership = await affiliateService.createMembership({
-      //   affiliateId: profile.id,
-      //   operationId: "", // Required field
-      //   productId,
-      //   status: "pending",
-      // });
+      // Get product details
+      const productResult = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, productId))
+        .limit(1);
 
-      res.status(201).json({ success: true, message: "Solicitação enviada com sucesso" });
+      if (productResult.length === 0) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+
+      const product = productResult[0];
+
+      if (!product.operationId) {
+        return res.status(400).json({ message: "Este produto não está associado a uma operação" });
+      }
+
+      // Check if already has membership
+      const existingMembership = await db
+        .select()
+        .from(affiliateMemberships)
+        .where(
+          and(
+            eq(affiliateMemberships.affiliateId, profile.id),
+            eq(affiliateMemberships.productId, productId)
+          )
+        )
+        .limit(1);
+
+      if (existingMembership.length > 0) {
+        const currentStatus = existingMembership[0].status;
+        return res.status(400).json({ 
+          message: `Você já possui uma solicitação ${currentStatus === 'pending' ? 'pendente' : 'ativa'} para este produto` 
+        });
+      }
+
+      // Create pending membership
+      const newMembership = await db
+        .insert(affiliateMemberships)
+        .values({
+          affiliateId: profile.id,
+          operationId: product.operationId,
+          productId: productId,
+          status: "pending",
+        })
+        .returning();
+
+      res.status(201).json({
+        success: true,
+        message: "Solicitação enviada com sucesso",
+        membership: newMembership[0],
+      });
     } catch (error: any) {
       console.error("Error joining product:", error);
       res.status(500).json({ message: error.message });
