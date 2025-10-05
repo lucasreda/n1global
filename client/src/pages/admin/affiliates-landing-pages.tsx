@@ -20,6 +20,8 @@ import {
   X,
   Loader2,
   Settings,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import {
   Dialog,
@@ -69,6 +71,8 @@ export default function AffiliatesLandingPages() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [deploySuccessDialogOpen, setDeploySuccessDialogOpen] = useState(false);
+  const [deployedUrl, setDeployedUrl] = useState<string>("");
   const [selectedPage, setSelectedPage] = useState<LandingPage | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -325,10 +329,11 @@ export default function AffiliatesLandingPages() {
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
-      toast({
-        title: "Deploy realizado!",
-        description: `Landing page deployada com sucesso: ${data.deploymentUrl}`,
-      });
+      const fullUrl = data.deploymentUrl?.startsWith('http') 
+        ? data.deploymentUrl 
+        : `https://${data.deploymentUrl}`;
+      setDeployedUrl(fullUrl);
+      setDeploySuccessDialogOpen(true);
     },
     onError: (error: any) => {
       toast({
@@ -1038,6 +1043,80 @@ export default function AffiliatesLandingPages() {
                 Reconectar Vercel
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deploy Success Dialog */}
+      <Dialog open={deploySuccessDialogOpen} onOpenChange={setDeploySuccessDialogOpen}>
+        <DialogContent className="bg-[#1a1a1a] border-[#252525] text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-green-500" />
+              Deploy Realizado com Sucesso!
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Sua landing page foi deployada na Vercel e está disponível online.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* URL Section */}
+            <div className="bg-[#0f0f0f] border border-[#252525] rounded-lg p-4">
+              <Label className="text-sm text-gray-400 mb-2 block">URL da Landing Page</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={deployedUrl}
+                  readOnly
+                  className="bg-[#1a1a1a] border-[#252525] text-white flex-1 font-mono text-sm"
+                  data-testid="input-deployed-url"
+                />
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(deployedUrl);
+                    toast({
+                      title: "URL copiada!",
+                      description: "A URL foi copiada para a área de transferência.",
+                    });
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-copy-url"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => window.open(deployedUrl, '_blank')}
+                  className="bg-green-600 hover:bg-green-700"
+                  data-testid="button-open-url"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+              <div className="flex gap-3">
+                <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="text-sm text-green-300 font-medium">Landing Page Online</p>
+                  <p className="text-sm text-gray-400">
+                    Sua landing page está acessível publicamente na URL acima. Você pode compartilhar este link com seus afiliados.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setDeploySuccessDialogOpen(false);
+                setDeployedUrl("");
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              Fechar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
