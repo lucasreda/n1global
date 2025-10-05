@@ -1,18 +1,37 @@
 import { affiliateLandingService } from "./affiliate-landing-service";
 import { vercelService } from "./vercel-service";
+import { db } from "./db";
+import { funnelIntegrations } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 import type { AffiliateLandingPage } from "@shared/schema";
 
 export class AffiliateVercelDeployService {
-  private platformVercelToken: string;
-  private platformTeamId?: string;
+  private async getVercelCredentials(): Promise<{
+    token: string;
+    teamId?: string;
+  }> {
+    const activeIntegrations = await db
+      .select()
+      .from(funnelIntegrations)
+      .where(eq(funnelIntegrations.isActive, true))
+      .orderBy(desc(funnelIntegrations.connectedAt))
+      .limit(1);
 
-  constructor() {
-    this.platformVercelToken = process.env.VERCEL_PLATFORM_TOKEN || "";
-    this.platformTeamId = process.env.VERCEL_PLATFORM_TEAM_ID;
-
-    if (!this.platformVercelToken) {
-      console.warn("⚠️ VERCEL_PLATFORM_TOKEN não configurado - deploys de afiliados não funcionarão");
+    if (activeIntegrations.length === 0) {
+      throw new Error("Nenhuma conta Vercel conectada. Por favor, conecte sua conta primeiro.");
     }
+
+    const integration = activeIntegrations[0];
+
+    await db
+      .update(funnelIntegrations)
+      .set({ lastUsed: new Date() })
+      .where(eq(funnelIntegrations.id, integration.id));
+
+    return {
+      token: integration.vercelAccessToken,
+      teamId: integration.vercelTeamId || undefined,
+    };
   }
 
   async deployLandingPageForAffiliate(
@@ -23,9 +42,7 @@ export class AffiliateVercelDeployService {
     deploymentUrl: string;
     deploymentId: string;
   }> {
-    if (!this.platformVercelToken) {
-      throw new Error("Token da plataforma Vercel não configurado");
-    }
+    const credentials = await this.getVercelCredentials();
 
     const landingPage = await affiliateLandingService.getLandingPageById(landingPageId);
     
@@ -60,10 +77,10 @@ export class AffiliateVercelDeployService {
     console.log(`🚀 Deploying landing page "${landingPage.name}" to Vercel...`);
 
     const deployment = await vercelService.deployLandingPage(
-      this.platformVercelToken,
+      credentials.token,
       projectName,
       template,
-      this.platformTeamId
+      credentials.teamId
     );
 
     await affiliateLandingService.updateVercelDeployment(
