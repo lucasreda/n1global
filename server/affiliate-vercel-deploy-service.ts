@@ -70,7 +70,7 @@ export class AffiliateVercelDeployService {
 
     const template = {
       name: projectName,
-      framework: "html" as const,
+      framework: null,
       files,
     };
 

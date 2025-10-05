@@ -55,7 +55,7 @@ interface VercelDomain {
 // Landing page template interface (legacy)
 interface LandingPageTemplate {
   name: string;
-  framework: 'nextjs' | 'react' | 'html';
+  framework: 'nextjs' | 'react' | 'html' | null;
   files: {
     [path: string]: string;
   };
@@ -231,24 +231,30 @@ export class VercelService {
         encoding: 'base64',
       }));
 
+      const deploymentPayload: any = {
+        name: projectName,
+        files,
+        target: 'production',
+      };
+
+      // Only add projectSettings if framework is specified
+      if (template.framework) {
+        deploymentPayload.projectSettings = {
+          framework: template.framework,
+          buildCommand: template.framework === 'nextjs' ? 'npm run build' : 'npm run build',
+          outputDirectory: template.framework === 'nextjs' ? '.next' : 'dist',
+          installCommand: 'npm install',
+          devCommand: template.framework === 'nextjs' ? 'npm run dev' : 'npm start',
+        };
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: projectName,
-          files,
-          projectSettings: {
-            framework: template.framework,
-            buildCommand: template.framework === 'nextjs' ? 'npm run build' : 'npm run build',
-            outputDirectory: template.framework === 'nextjs' ? '.next' : 'dist',
-            installCommand: 'npm install',
-            devCommand: template.framework === 'nextjs' ? 'npm run dev' : 'npm start',
-          },
-          target: 'production',
-        }),
+        body: JSON.stringify(deploymentPayload),
       });
 
       if (!response.ok) {
