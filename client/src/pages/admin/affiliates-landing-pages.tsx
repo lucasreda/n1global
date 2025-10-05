@@ -328,10 +328,13 @@ export default function AffiliatesLandingPages() {
       return await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/deploy`, 'POST', {});
     },
     onSuccess: (data: any) => {
+      console.log('🔍 Deploy response received:', data);
+      console.log('🔍 deploymentUrl field:', data.deploymentUrl);
       queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       const fullUrl = data.deploymentUrl?.startsWith('http') 
         ? data.deploymentUrl 
         : `https://${data.deploymentUrl}`;
+      console.log('🔍 Full URL:', fullUrl);
       setDeployedUrl(fullUrl);
       setDeploySuccessDialogOpen(true);
     },
