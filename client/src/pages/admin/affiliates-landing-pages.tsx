@@ -84,7 +84,7 @@ export default function AffiliatesLandingPages() {
         headers["Authorization"] = `Bearer ${token}`;
       }
       
-      const response = await fetch('/api/affiliate/landing-pages/list', {
+      const response = await fetch('/api/affiliate/landing-pages', {
         credentials: 'include',
         headers
       });
