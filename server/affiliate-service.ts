@@ -1,11 +1,14 @@
 import { db } from "./db";
 import { eq, and, or, sql, desc, isNull } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 import {
   affiliateProfiles,
   affiliateMemberships,
   affiliateConversions,
   affiliateCommissionRules,
   affiliatePayouts,
+  affiliateLandingPages,
+  affiliateLandingPageProducts,
   users,
   products,
   operations,
@@ -692,6 +695,146 @@ export class AffiliateService {
     }
 
     return updated;
+  }
+
+  /**
+   * Get product details with landing pages
+   */
+  async getProductDetailsWithLandingPages(productId: string, affiliateId: string): Promise<any> {
+    // Get product info
+    const product = await db
+      .select({
+        id: products.id,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        imageUrl: products.imageUrl,
+        status: sql<string>`CASE WHEN ${products.isActive} THEN 'active' ELSE 'inactive' END`,
+        operationId: products.operationId,
+        operationName: operations.name,
+      })
+      .from(products)
+      .leftJoin(operations, eq(products.operationId, operations.id))
+      .where(eq(products.id, productId))
+      .limit(1);
+
+    if (!product[0]) {
+      return null;
+    }
+
+    // Get commission rules for this product
+    const commissionRules = await db
+      .select()
+      .from(affiliateCommissionRules)
+      .where(
+        and(
+          eq(affiliateCommissionRules.productId, productId),
+          eq(affiliateCommissionRules.isActive, true)
+        )
+      );
+
+    // Get membership info for this affiliate
+    const membership = await db
+      .select()
+      .from(affiliateMemberships)
+      .where(
+        and(
+          eq(affiliateMemberships.affiliateId, affiliateId),
+          eq(affiliateMemberships.productId, productId)
+        )
+      )
+      .limit(1);
+
+    // Get landing pages associated with this product
+    const landingPages = await db
+      .select({
+        id: affiliateLandingPages.id,
+        name: affiliateLandingPages.name,
+        description: affiliateLandingPages.description,
+        previewUrl: affiliateLandingPages.previewUrl,
+        deployedUrl: affiliateLandingPages.deployedUrl,
+        status: affiliateLandingPages.status,
+      })
+      .from(affiliateLandingPages)
+      .innerJoin(
+        affiliateLandingPageProducts,
+        eq(affiliateLandingPageProducts.landingPageId, affiliateLandingPages.id)
+      )
+      .where(
+        and(
+          eq(affiliateLandingPageProducts.productId, productId),
+          eq(affiliateLandingPages.status, 'active')
+        )
+      );
+
+    return {
+      ...product[0],
+      commissionRule: commissionRules[0] || null,
+      membership: membership[0] || null,
+      landingPages,
+    };
+  }
+
+  /**
+   * Generate tracking link for affiliate and product
+   */
+  async generateTrackingLink(affiliateId: string, productId: string): Promise<string> {
+    // Get affiliate profile
+    const profile = await this.getAffiliateProfileById(affiliateId);
+    
+    if (!profile) {
+      throw new Error("Perfil de afiliado não encontrado");
+    }
+
+    // Check if affiliate has membership for this product
+    const membership = await db
+      .select()
+      .from(affiliateMemberships)
+      .where(
+        and(
+          eq(affiliateMemberships.affiliateId, affiliateId),
+          eq(affiliateMemberships.productId, productId),
+          eq(affiliateMemberships.status, 'active')
+        )
+      )
+      .limit(1);
+
+    if (!membership[0]) {
+      throw new Error("Você precisa ter aprovação para este produto antes de gerar um link de rastreamento");
+    }
+
+    // Get product info
+    const product = await db
+      .select({
+        id: products.id,
+        name: products.name,
+      })
+      .from(products)
+      .where(eq(products.id, productId))
+      .limit(1);
+
+    if (!product[0]) {
+      throw new Error("Produto não encontrado");
+    }
+
+    // Generate JWT tracking token
+    const trackingToken = jwt.sign(
+      {
+        affiliateId,
+        productId,
+        type: 'affiliate_tracking',
+      },
+      process.env.JWT_SECRET || 'fallback-secret-key',
+      { expiresIn: '90d' }
+    );
+
+    // Get landing page URL from affiliate profile or use default
+    const baseUrl = profile.landingPageUrl || `${process.env.BASE_URL || 'https://n1hub.com'}/lp/${productId}`;
+    
+    // Add tracking parameter
+    const trackingLink = `${baseUrl}?ref=${trackingToken}`;
+
+    return trackingLink;
   }
 }
 

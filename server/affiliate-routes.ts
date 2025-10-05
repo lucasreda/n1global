@@ -204,6 +204,70 @@ router.post(
 );
 
 /**
+ * GET /api/affiliate/products/:productId/details
+ * Get detailed product information including landing pages
+ */
+router.get(
+  "/products/:productId/details",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = req.user.id;
+      
+      // Get affiliate profile
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+      
+      // Get product details with landing pages
+      const productDetails = await affiliateService.getProductDetailsWithLandingPages(productId, profile.id);
+      
+      if (!productDetails) {
+        return res.status(404).json({ message: "Produto não encontrado" });
+      }
+      
+      res.json(productDetails);
+    } catch (error: any) {
+      console.error("Error getting product details:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/affiliate/products/:productId/tracking-link
+ * Generate affiliate tracking link for a product
+ */
+router.get(
+  "/products/:productId/tracking-link",
+  authenticateToken,
+  requireAffiliate,
+  async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = req.user.id;
+      
+      // Get affiliate profile
+      const profile = await affiliateService.getAffiliateProfileByUserId(userId);
+      if (!profile) {
+        return res.status(404).json({ message: "Perfil de afiliado não encontrado" });
+      }
+      
+      // Generate tracking link
+      const trackingLink = await affiliateService.generateTrackingLink(profile.id, productId);
+      
+      res.json({ trackingLink });
+    } catch (error: any) {
+      console.error("Error generating tracking link:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+/**
  * GET /api/affiliate/stats
  * Get affiliate dashboard statistics
  */
