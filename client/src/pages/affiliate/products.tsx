@@ -607,7 +607,7 @@ export default function AffiliateProducts() {
                       <DollarSign className="h-5 w-5 text-green-400" />
                       <span className="text-sm text-gray-400">Preço</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">€{productDetails.price?.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-white">€{Number(productDetails.price || 0).toFixed(2)}</p>
                   </CardContent>
                 </Card>
 
@@ -631,7 +631,7 @@ export default function AffiliateProducts() {
                       <span className="text-sm text-gray-400">Ganho por venda</span>
                     </div>
                     <p className="text-2xl font-bold text-white">
-                      €{((productDetails.price || 0) * (productDetails.membership?.customCommissionPercentage || productDetails.commissionRule?.commissionPercentage || 10) / 100).toFixed(2)}
+                      €{(Number(productDetails.price || 0) * (Number(productDetails.membership?.customCommissionPercentage) || Number(productDetails.commissionRule?.commissionPercentage) || 10) / 100).toFixed(2)}
                     </p>
                   </CardContent>
                 </Card>
