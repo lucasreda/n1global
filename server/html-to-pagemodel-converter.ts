@@ -1,6 +1,7 @@
 import type { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
 import { parseDocument } from "htmlparser2";
 import type { Element, ChildNode, Text } from "domhandler";
+import * as csstree from "css-tree";
 
 /**
  * Converts HTML to PageModelV2 structure
@@ -140,7 +141,7 @@ function extractBodyContent(html: string): string {
 }
 
 /**
- * Extract and parse all CSS from HTML
+ * Extract and parse all CSS from HTML using css-tree
  */
 function extractAllCSS(html: string): { rules: Record<string, Record<string, string>>, cssText: string } {
   const cssRules: Record<string, Record<string, string>> = {};
@@ -154,39 +155,56 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
     const cssText = match[1];
     allCssText += cssText + '\n';
     
-    // Parse CSS rules
-    // Match: selector { property: value; }
-    const ruleRegex = /([^{]+)\{([^}]+)\}/g;
-    let ruleMatch;
-    
-    while ((ruleMatch = ruleRegex.exec(cssText)) !== null) {
-      const selector = ruleMatch[1].trim();
-      const properties = ruleMatch[2].trim();
+    try {
+      // Parse CSS using css-tree (removes comments automatically)
+      const ast = csstree.parse(cssText);
       
-      // Parse properties
-      const styles: Record<string, string> = {};
-      const propRegex = /([^:]+):([^;]+)/g;
-      let propMatch;
-      
-      while ((propMatch = propRegex.exec(properties)) !== null) {
-        const property = propMatch[1].trim();
-        const value = propMatch[2].trim();
-        
-        // Convert kebab-case to camelCase
-        const camelProperty = property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-        styles[camelProperty] = value;
-      }
-      
-      // Store by selector (handle multiple selectors separated by comma)
-      selector.split(',').forEach(sel => {
-        const cleanSelector = sel.trim();
-        if (!cssRules[cleanSelector]) {
-          cssRules[cleanSelector] = {};
+      // Walk through the AST and extract rules
+      csstree.walk(ast, {
+        visit: 'Rule',
+        enter(node: any) {
+          // Get selector text
+          const selectorText = csstree.generate(node.prelude);
+          
+          // Parse declarations
+          const styles: Record<string, string> = {};
+          
+          if (node.block && node.block.children) {
+            node.block.children.forEach((child: any) => {
+              if (child.type === 'Declaration') {
+                const property = child.property;
+                const value = csstree.generate(child.value);
+                
+                // Convert kebab-case to camelCase for React inline styles
+                const camelProperty = property.replace(/-([a-z])/g, (_: string, g: string) => g.toUpperCase());
+                styles[camelProperty] = value;
+              }
+            });
+          }
+          
+          // Store by selector (handle multiple selectors separated by comma)
+          selectorText.split(',').forEach(sel => {
+            const cleanSelector = sel.trim();
+            if (!cssRules[cleanSelector]) {
+              cssRules[cleanSelector] = {};
+            }
+            Object.assign(cssRules[cleanSelector], styles);
+          });
         }
-        Object.assign(cssRules[cleanSelector], styles);
       });
+    } catch (error) {
+      console.error('❌ CSS parsing error:', error);
     }
   }
+  
+  console.log('🎨 CSS Rules extracted:', {
+    totalSelectors: Object.keys(cssRules).length,
+    selectors: Object.keys(cssRules).slice(0, 10),
+    sampleRule: Object.keys(cssRules)[0] ? {
+      selector: Object.keys(cssRules)[0],
+      styles: cssRules[Object.keys(cssRules)[0]]
+    } : null
+  });
   
   return { rules: cssRules, cssText: allCssText };
 }
