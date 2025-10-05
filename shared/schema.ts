@@ -4490,6 +4490,7 @@ export type AIContentResponse = {
 
 // ============================================================================
 // PageModelV3 - Professional Visual Editor (Enterprise-Grade)
+// Compatible with HTML-to-PageModel Converter (1732 lines)
 // ============================================================================
 
 export type ResponsiveStylesV3 = {
@@ -4540,32 +4541,57 @@ export type TransitionV3 = {
   delay?: string;
 };
 
+// Design Tokens structure from converter
 export type DesignTokensV3 = {
-  colors?: Record<string, string>;
+  colors?: {
+    primary?: Record<string, string>;
+    secondary?: Record<string, string>;
+    neutral?: Record<string, string>;
+    semantic?: {
+      success?: string;
+      warning?: string;
+      error?: string;
+      info?: string;
+    };
+    custom?: Record<string, any>;
+  };
+  typography?: {
+    fontFamilies?: Record<string, string>;
+    fontSizes?: Record<string, string>;
+    fontWeights?: Record<string, number>;
+    lineHeights?: Record<string, string>;
+    letterSpacings?: Record<string, string>;
+  };
   spacing?: Record<string, string>;
-  typography?: Record<string, string>;
   shadows?: Record<string, string>;
   borderRadius?: Record<string, string>;
+  breakpoints?: Record<string, string>;
 };
 
 export type ComponentDefinitionV3 = {
   id: string;
   name: string;
-  category: string;
+  category?: string;
   element: BlockElementV3;
   thumbnail?: string;
 };
 
+// Element types from converter: heading, text, button, image, link, etc.
 export type BlockElementV3 = {
   id: string;
-  type: 'text' | 'image' | 'button' | 'input' | 'container' | 'spacer' | 'divider' | 'video' | 'form' | 'custom';
-  content?: string | { [key: string]: any };
+  type: string; // More flexible: heading, text, button, image, link, container, etc.
+  
+  // Props for element (text content, href, src, etc.)
+  props?: Record<string, any>;
   
   // Responsive styles
   styles?: ResponsiveStylesV3;
   
-  // State styles
+  // State styles (hover, focus, active, disabled)
   states?: StateStylesV3;
+  
+  // Layout type (block, inline-block, flex, grid, etc.)
+  layout?: string;
   
   // Pseudo-elements
   pseudoElements?: PseudoElementsV3;
@@ -4574,7 +4600,7 @@ export type BlockElementV3 = {
   animations?: AnimationV3[];
   transitions?: TransitionV3[];
   
-  // Layout & Children
+  // Child elements
   children?: BlockElementV3[];
   
   // Settings
@@ -4584,13 +4610,13 @@ export type BlockElementV3 = {
     [key: string]: any;
   };
   
-  // Component reference (if this is a component instance)
+  // Component reference
   componentId?: string;
 };
 
 export type BlockColumnV3 = {
   id: string;
-  width: number; // 1-12 (grid columns)
+  width: string | number; // 'full', 'half', 1-12 grid columns
   elements: BlockElementV3[];
   
   // Responsive overrides
@@ -4618,6 +4644,7 @@ export type BlockRowV3 = {
 export type BlockSectionV3 = {
   id: string;
   type: 'hero' | 'features' | 'pricing' | 'testimonials' | 'cta' | 'content' | 'footer' | 'custom';
+  name?: string;
   rows: BlockRowV3[];
   
   // Section-level responsive styles
@@ -4643,75 +4670,12 @@ export type BlockSectionV3 = {
   };
 };
 
+// PageModelV3 structure from converter
 export type PageModelV3 = {
-  version: 3;
-  layout: 'single_page' | 'multi_step' | 'scroll';
-  sections: BlockSectionV3[];
+  version: string; // "3.0"
   
-  // Design Tokens (CSS variables)
-  designTokens?: DesignTokensV3;
-  
-  // Reusable Components
-  components?: ComponentDefinitionV3[];
-  
-  // Global theme
-  theme: {
-    colors: {
-      primary: string;
-      secondary: string;
-      accent: string;
-      background: string;
-      text: string;
-      muted: string;
-      [key: string]: string;
-    };
-    typography: {
-      headingFont: string;
-      bodyFont: string;
-      fontSize: {
-        xs: string;
-        sm: string;
-        base: string;
-        lg: string;
-        xl: string;
-        '2xl': string;
-        '3xl': string;
-        '4xl': string;
-        [key: string]: string;
-      };
-      fontWeight?: Record<string, number>;
-      lineHeight?: Record<string, string>;
-    };
-    spacing: {
-      xs: string;
-      sm: string;
-      md: string;
-      lg: string;
-      xl: string;
-      '2xl': string;
-      [key: string]: string;
-    };
-    borderRadius: {
-      sm: string;
-      md: string;
-      lg: string;
-      [key: string]: string;
-    };
-    shadows?: Record<string, string>;
-  };
-  
-  // Global animations
-  globalAnimations?: AnimationV3[];
-  
-  // Breakpoints
-  breakpoints?: {
-    mobile: number;
-    tablet: number;
-    desktop: number;
-  };
-  
-  // SEO
-  seo: {
+  // Meta information (SEO)
+  meta: {
     title: string;
     description: string;
     keywords?: string[];
@@ -4720,27 +4684,29 @@ export type PageModelV3 = {
     ogDescription?: string;
   };
   
-  // Editor settings
-  settings: {
-    containerMaxWidth?: string;
-    showGrid?: boolean;
-    snapToGrid?: boolean;
-    enableAnimations?: boolean;
-    mobileFirst?: boolean;
-    darkMode?: boolean;
+  // Design Tokens extracted from CSS
+  designTokens?: DesignTokensV3;
+  
+  // Reusable Components
+  components?: ComponentDefinitionV3[];
+  
+  // Page sections
+  sections: BlockSectionV3[];
+  
+  // Editor state
+  editorState?: {
+    activeBreakpoint?: 'mobile' | 'tablet' | 'desktop';
+    zoom?: number;
+    selectedElementId?: string;
   };
   
-  // Metadata
-  metadata?: {
-    createdAt?: string;
-    updatedAt?: string;
-    author?: string;
-    tags?: string[];
-  };
+  // Timestamps
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 // ============================================================================
-// PageModelV3 Zod Validation Schemas
+// PageModelV3 Zod Validation Schemas (Compatible with Converter)
 // ============================================================================
 
 const responsiveStylesV3Schema = z.object({
@@ -4792,21 +4758,40 @@ const transitionV3Schema = z.object({
 });
 
 const designTokensV3Schema = z.object({
-  colors: z.record(z.string()).optional(),
+  colors: z.object({
+    primary: z.record(z.string()).optional(),
+    secondary: z.record(z.string()).optional(),
+    neutral: z.record(z.string()).optional(),
+    semantic: z.object({
+      success: z.string().optional(),
+      warning: z.string().optional(),
+      error: z.string().optional(),
+      info: z.string().optional(),
+    }).optional(),
+    custom: z.record(z.any()).optional(),
+  }).optional(),
+  typography: z.object({
+    fontFamilies: z.record(z.string()).optional(),
+    fontSizes: z.record(z.string()).optional(),
+    fontWeights: z.record(z.number()).optional(),
+    lineHeights: z.record(z.string()).optional(),
+    letterSpacings: z.record(z.string()).optional(),
+  }).optional(),
   spacing: z.record(z.string()).optional(),
-  typography: z.record(z.string()).optional(),
   shadows: z.record(z.string()).optional(),
   borderRadius: z.record(z.string()).optional(),
-});
+  breakpoints: z.record(z.string()).optional(),
+}).optional();
 
 // Recursive schemas for nested structures
 const blockElementV3Schema: z.ZodType<BlockElementV3> = z.lazy(() =>
   z.object({
     id: z.string(),
-    type: z.enum(['text', 'image', 'button', 'input', 'container', 'spacer', 'divider', 'video', 'form', 'custom']),
-    content: z.union([z.string(), z.record(z.any())]).optional(),
+    type: z.string(), // Flexible: heading, text, button, image, etc.
+    props: z.record(z.any()).optional(),
     styles: responsiveStylesV3Schema.optional(),
     states: stateStylesV3Schema.optional(),
+    layout: z.string().optional(),
     pseudoElements: pseudoElementsV3Schema.optional(),
     animations: z.array(animationV3Schema).optional(),
     transitions: z.array(transitionV3Schema).optional(),
@@ -4822,7 +4807,7 @@ const blockElementV3Schema: z.ZodType<BlockElementV3> = z.lazy(() =>
 const blockColumnV3Schema: z.ZodType<BlockColumnV3> = z.lazy(() =>
   z.object({
     id: z.string(),
-    width: z.number().min(1).max(12),
+    width: z.union([z.string(), z.number()]), // 'full', 'half', or 1-12
     elements: z.array(blockElementV3Schema),
     styles: responsiveStylesV3Schema.optional(),
     states: stateStylesV3Schema.optional(),
@@ -4848,6 +4833,7 @@ const blockSectionV3Schema: z.ZodType<BlockSectionV3> = z.lazy(() =>
   z.object({
     id: z.string(),
     type: z.enum(['hero', 'features', 'pricing', 'testimonials', 'cta', 'content', 'footer', 'custom']),
+    name: z.string().optional(),
     rows: z.array(blockRowV3Schema),
     styles: responsiveStylesV3Schema.optional(),
     states: stateStylesV3Schema.optional(),
@@ -4873,64 +4859,14 @@ const blockSectionV3Schema: z.ZodType<BlockSectionV3> = z.lazy(() =>
 const componentDefinitionV3Schema = z.object({
   id: z.string(),
   name: z.string(),
-  category: z.string(),
+  category: z.string().optional(),
   element: blockElementV3Schema,
   thumbnail: z.string().optional(),
 });
 
 export const pageModelV3Schema = z.object({
-  version: z.literal(3),
-  layout: z.enum(['single_page', 'multi_step', 'scroll']),
-  sections: z.array(blockSectionV3Schema),
-  designTokens: designTokensV3Schema.optional(),
-  components: z.array(componentDefinitionV3Schema).optional(),
-  theme: z.object({
-    colors: z.object({
-      primary: z.string(),
-      secondary: z.string(),
-      accent: z.string(),
-      background: z.string(),
-      text: z.string(),
-      muted: z.string(),
-    }).catchall(z.string()),
-    typography: z.object({
-      headingFont: z.string(),
-      bodyFont: z.string(),
-      fontSize: z.object({
-        xs: z.string(),
-        sm: z.string(),
-        base: z.string(),
-        lg: z.string(),
-        xl: z.string(),
-        '2xl': z.string(),
-        '3xl': z.string(),
-        '4xl': z.string(),
-      }).catchall(z.string()),
-      fontWeight: z.record(z.number()).optional(),
-      lineHeight: z.record(z.string()).optional(),
-    }),
-    spacing: z.object({
-      xs: z.string(),
-      sm: z.string(),
-      md: z.string(),
-      lg: z.string(),
-      xl: z.string(),
-      '2xl': z.string(),
-    }).catchall(z.string()),
-    borderRadius: z.object({
-      sm: z.string(),
-      md: z.string(),
-      lg: z.string(),
-    }).catchall(z.string()),
-    shadows: z.record(z.string()).optional(),
-  }),
-  globalAnimations: z.array(animationV3Schema).optional(),
-  breakpoints: z.object({
-    mobile: z.number(),
-    tablet: z.number(),
-    desktop: z.number(),
-  }).optional(),
-  seo: z.object({
+  version: z.string(), // "3.0"
+  meta: z.object({
     title: z.string(),
     description: z.string(),
     keywords: z.array(z.string()).optional(),
@@ -4938,20 +4874,16 @@ export const pageModelV3Schema = z.object({
     ogTitle: z.string().optional(),
     ogDescription: z.string().optional(),
   }),
-  settings: z.object({
-    containerMaxWidth: z.string().optional(),
-    showGrid: z.boolean().optional(),
-    snapToGrid: z.boolean().optional(),
-    enableAnimations: z.boolean().optional(),
-    mobileFirst: z.boolean().optional(),
-    darkMode: z.boolean().optional(),
-  }),
-  metadata: z.object({
-    createdAt: z.string().optional(),
-    updatedAt: z.string().optional(),
-    author: z.string().optional(),
-    tags: z.array(z.string()).optional(),
+  designTokens: designTokensV3Schema,
+  components: z.array(componentDefinitionV3Schema).optional(),
+  sections: z.array(blockSectionV3Schema),
+  editorState: z.object({
+    activeBreakpoint: z.enum(['mobile', 'tablet', 'desktop']).optional(),
+    zoom: z.number().optional(),
+    selectedElementId: z.string().optional(),
   }).optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 
 // Export individual schemas for partial validation
