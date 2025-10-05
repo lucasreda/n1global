@@ -1,11 +1,12 @@
 import express from "express";
 import { db } from "./db";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { eq, and, isNull, sql, inArray } from "drizzle-orm";
 import {
   products,
   affiliateMemberships,
   affiliateProfiles,
   operations,
+  userOperationAccess,
   type Product,
   type AffiliateMembership,
 } from "@shared/schema";
@@ -35,7 +36,20 @@ router.get("/products", authenticateToken, requireAffiliate, async (req: any, re
 
     const affiliateProfile = affiliateProfileResult[0];
 
-    // Get all active products with their operation info
+    // Get operations the user has access to
+    const userOperations = await db
+      .select({ operationId: userOperationAccess.operationId })
+      .from(userOperationAccess)
+      .where(eq(userOperationAccess.userId, userId));
+
+    // If user has no operation access, return empty array
+    if (userOperations.length === 0) {
+      return res.json([]);
+    }
+
+    const allowedOperationIds = userOperations.map(op => op.operationId);
+
+    // Get active products only from operations the affiliate has access to
     const productsWithStatus = await db
       .select({
         id: products.id,
@@ -50,7 +64,12 @@ router.get("/products", authenticateToken, requireAffiliate, async (req: any, re
       })
       .from(products)
       .leftJoin(operations, eq(products.operationId, operations.id))
-      .where(eq(products.isActive, true));
+      .where(
+        and(
+          eq(products.isActive, true),
+          inArray(products.operationId, allowedOperationIds)
+        )
+      );
 
     // Get existing memberships for this affiliate
     const existingMemberships = await db
@@ -67,11 +86,22 @@ router.get("/products", authenticateToken, requireAffiliate, async (req: any, re
     });
 
     // Enhance products with membership status
-    const enhancedProducts = productsWithStatus.map((product) => ({
-      ...product,
-      membershipStatus: membershipMap.get(product.id) || null,
-      canJoin: !membershipMap.has(product.id),
-    }));
+    const enhancedProducts = productsWithStatus.map((product) => {
+      const membershipStatus = membershipMap.get(product.id) || null;
+      
+      // Can join if:
+      // 1. No membership exists
+      // 2. Membership is terminated or paused (allow re-application)
+      const canJoin = !membershipStatus || 
+                     membershipStatus === 'terminated' || 
+                     membershipStatus === 'paused';
+      
+      return {
+        ...product,
+        membershipStatus,
+        canJoin,
+      };
+    });
 
     res.json(enhancedProducts);
   } catch (error: any) {
@@ -144,8 +174,29 @@ router.post("/join/:productId", authenticateToken, requireAffiliate, async (req:
       .limit(1);
 
     if (existingMembership.length > 0) {
+      const currentStatus = existingMembership[0].status;
+      
+      // Allow re-application if status is terminated or paused
+      if (currentStatus === 'terminated' || currentStatus === 'paused') {
+        // Update existing membership to pending instead of creating new one
+        await db
+          .update(affiliateMemberships)
+          .set({ 
+            status: 'pending',
+            approvedAt: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(affiliateMemberships.id, existingMembership[0].id));
+
+        return res.status(200).json({
+          message: "Solicitação de reativação enviada com sucesso!",
+          membership: { ...existingMembership[0], status: 'pending' },
+        });
+      }
+      
+      // Block if status is pending or active
       return res.status(400).json({ 
-        message: `Você já possui uma solicitação para este produto com status: ${existingMembership[0].status}` 
+        message: `Você já possui uma solicitação ${currentStatus === 'pending' ? 'pendente' : 'ativa'} para este produto` 
       });
     }
 
