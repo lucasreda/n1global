@@ -9,7 +9,8 @@ import {
   DollarSign,
   Bell,
   Settings,
-  LogOut
+  LogOut,
+  ShoppingBag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,6 +25,11 @@ const navigationItems = [
     href: "/affiliate", 
     label: "Visão Geral", 
     icon: LayoutDashboard 
+  },
+  { 
+    href: "/affiliate/marketplace", 
+    label: "Marketplace", 
+    icon: ShoppingBag 
   },
   { 
     href: "/affiliate/links", 
