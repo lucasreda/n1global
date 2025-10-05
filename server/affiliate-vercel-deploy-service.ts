@@ -54,11 +54,8 @@ export class AffiliateVercelDeployService {
       throw new Error("Apenas landing pages ativas podem ser deployadas");
     }
 
-    let htmlContent = landingPage.htmlContent;
-
-    if (affiliatePixel) {
-      htmlContent = this.injectTrackingPixel(htmlContent, affiliatePixel);
-    }
+    // Inject universal tracking script (replaces old static pixel approach)
+    let htmlContent = this.injectUniversalTrackingScript(landingPage.htmlContent);
 
     const files = this.prepareLandingPageFiles(
       htmlContent,
@@ -115,6 +112,86 @@ export class AffiliateVercelDeployService {
       deploymentUrl: deployment.url,
       deploymentId: deployment.uid,
     };
+  }
+
+  private injectUniversalTrackingScript(html: string): string {
+    const closingBodyTag = html.lastIndexOf("</body>");
+    
+    if (closingBodyTag === -1) {
+      console.warn("⚠️ Tag </body> não encontrada no HTML - tracking script não será injetado");
+      return html;
+    }
+
+    // Get the current domain (will be set at runtime in the browser)
+    const trackingScript = `
+<!-- Universal Affiliate Tracking Script -->
+<script>
+(function() {
+  'use strict';
+  
+  // Get affiliate reference from URL parameters
+  var params = new URLSearchParams(window.location.search);
+  var affiliateRef = params.get('ref') || params.get('aff') || params.get('affiliate');
+  
+  if (!affiliateRef) {
+    console.log('[Affiliate Tracking] No affiliate reference found in URL');
+    return;
+  }
+  
+  console.log('[Affiliate Tracking] Affiliate reference detected:', affiliateRef);
+  
+  // Save to localStorage for future conversion
+  try {
+    localStorage.setItem('affiliate_ref', affiliateRef);
+    localStorage.setItem('affiliate_ref_timestamp', new Date().toISOString());
+    console.log('[Affiliate Tracking] Reference saved to localStorage');
+  } catch (e) {
+    console.error('[Affiliate Tracking] Failed to save to localStorage:', e);
+  }
+  
+  // Prepare tracking data
+  var trackingData = {
+    referrer: document.referrer || '',
+    landingUrl: window.location.href,
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString()
+  };
+  
+  // Send click tracking to backend
+  var apiUrl = window.location.origin + '/api/affiliate/tracking/click/' + encodeURIComponent(affiliateRef);
+  
+  fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(trackingData)
+  })
+  .then(function(response) {
+    if (response.ok) {
+      console.log('[Affiliate Tracking] Click registered successfully');
+      return response.json();
+    } else {
+      console.error('[Affiliate Tracking] Failed to register click:', response.status);
+    }
+  })
+  .then(function(data) {
+    if (data) {
+      console.log('[Affiliate Tracking] Tracking ID:', data.trackingId);
+    }
+  })
+  .catch(function(error) {
+    console.error('[Affiliate Tracking] Error sending tracking data:', error);
+  });
+})();
+</script>
+`;
+
+    return (
+      html.substring(0, closingBodyTag) +
+      trackingScript +
+      html.substring(closingBodyTag)
+    );
   }
 
   private injectTrackingPixel(html: string, pixelCode: string): string {
