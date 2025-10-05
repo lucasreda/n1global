@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Wand2,
   ArrowLeft,
+  RefreshCw,
 } from "lucide-react";
 import {
   Dialog,
@@ -181,6 +182,32 @@ export default function AffiliatesLandingPages() {
       toast({
         title: "Erro ao converter HTML",
         description: error.message || "Não foi possível converter o HTML.",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setConvertingPageId(null);
+    },
+  });
+
+  const reconvertMutation = useMutation({
+    mutationFn: async (landingPageId: string) => {
+      setConvertingPageId(landingPageId);
+      const response = await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/reconvert`, 'POST', {});
+      return await response.json();
+    },
+    onSuccess: (data: any, landingPageId: string) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
+      toast({
+        title: "✅ Landing page reconvertida!",
+        description: "Os estilos CSS foram atualizados com sucesso.",
+      });
+      setLocation(`/inside/affiliates/landing-pages/${landingPageId}/edit`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao reconverter landing page",
+        description: error.message || "Não foi possível reconverter a landing page.",
         variant: "destructive",
       });
     },
@@ -697,16 +724,43 @@ export default function AffiliatesLandingPages() {
                           </TooltipProvider>
                         )}
                         {page.model ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setLocation(`/inside/affiliates/landing-pages/${page.id}/edit`)}
-                            className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
-                            title="Editar com Editor Visual"
-                            data-testid={`button-visual-edit-${page.id}`}
-                          >
-                            <Wand2 className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setLocation(`/inside/affiliates/landing-pages/${page.id}/edit`)}
+                              className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                              title="Editar com Editor Visual"
+                              data-testid={`button-visual-edit-${page.id}`}
+                            >
+                              <Wand2 className="h-4 w-4" />
+                            </Button>
+                            {page.htmlContent && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => reconvertMutation.mutate(page.id)}
+                                      disabled={convertingPageId === page.id}
+                                      className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      data-testid={`button-reconvert-${page.id}`}
+                                    >
+                                      {convertingPageId === page.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <RefreshCw className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Reconverter HTML com conversor melhorado</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </>
                         ) : (
                           <Button
                             variant="ghost"

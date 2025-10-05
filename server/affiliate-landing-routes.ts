@@ -302,6 +302,30 @@ router.patch(
   }
 );
 
+router.post(
+  "/:id/reconvert",
+  authenticateToken,
+  requireAffiliateOrAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log(`🔄 Reconverting landing page ${id} with improved HTML converter...`);
+      const landingPage = await affiliateLandingService.convertHtmlToModel(id);
+      
+      console.log(`✅ Landing page reconverted successfully`);
+      res.json({
+        success: true,
+        message: "Landing page reconvertida com sucesso",
+        landingPage,
+      });
+    } catch (error: any) {
+      console.error("Error reconverting landing page:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
 router.patch(
   "/:id/archive",
   authenticateToken,
