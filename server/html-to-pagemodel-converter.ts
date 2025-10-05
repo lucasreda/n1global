@@ -5,16 +5,29 @@ import type { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } f
  * Analyzes HTML content and extracts main elements to create a valid PageModelV2
  */
 export function convertHtmlToPageModel(html: string): PageModelV2 {
+  console.log('🔍 HTML-to-PageModel Converter - Starting...');
+  console.log('📄 HTML length:', html.length, 'characters');
+  
   // Extract meta information
   const title = extractMetaTag(html, 'title') || extractTag(html, 'title') || 'Nova Página';
   const description = extractMetaTag(html, 'description') || 'Descrição da página';
   const keywords = extractMetaTag(html, 'keywords')?.split(',').map(k => k.trim()) || [];
   
+  console.log('📋 Meta extracted:', { title, description, keywordsCount: keywords.length });
+  
   // Extract and parse all CSS
   const { rules: cssRules, cssText } = extractAllCSS(html);
   
+  console.log('🎨 CSS extracted:', {
+    rulesCount: Object.keys(cssRules).length,
+    cssTextLength: cssText.length,
+    sampleSelectors: Object.keys(cssRules).slice(0, 10)
+  });
+  
   // Extract theme colors from parsed CSS
   const theme = extractTheme(html, cssRules);
+  
+  console.log('🎨 Theme extracted:', theme);
   
   // Extract body content
   const bodyContent = extractBodyContent(html);
@@ -257,15 +270,21 @@ function extractTheme(html: string, cssRules: Record<string, Record<string, stri
  * Parse HTML to sections
  */
 function parseHtmlToSections(html: string, cssRules: Record<string, Record<string, string>>): BlockSection[] {
+  console.log('📦 Parsing sections from HTML...');
+  console.log('📦 CSS rules available:', Object.keys(cssRules).length);
+  
   const sections: BlockSection[] = [];
   
   // Split by section tags if they exist
   const sectionMatches = html.match(/<section[^>]*>([\s\S]*?)<\/section>/gi);
   
+  console.log('📦 Found', sectionMatches?.length || 0, 'section tags');
+  
   if (sectionMatches && sectionMatches.length > 0) {
     // Has section tags - parse each section
     sectionMatches.forEach((sectionHtml, index) => {
       const elements = parseHtmlElements(sectionHtml, cssRules);
+      console.log(`📦 Section ${index + 1}: found ${elements.length} elements`);
       if (elements.length > 0) {
         sections.push(createSection(elements, index));
       }
