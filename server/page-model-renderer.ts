@@ -126,23 +126,33 @@ function renderElement(element: any): string {
     .map(([key, value]) => `${camelToKebab(key)}: ${value}`)
     .join('; ') : '';
   
+  // Extract text from content (it can be a string or an object with 'text' property)
+  const getTextContent = (content: any): string => {
+    if (!content) return '';
+    if (typeof content === 'string') return content;
+    if (typeof content === 'object' && content.text) return content.text;
+    return '';
+  };
+  
   switch (type) {
     case 'heading':
       const level = props?.level || 2;
-      return `<h${level} style="${style}">${escapeHtml(content || '')}</h${level}>`;
+      const headingText = getTextContent(content);
+      return `<h${level} style="${style}">${escapeHtml(headingText)}</h${level}>`;
     
     case 'text':
     case 'paragraph':
-      return `<p style="${style}">${escapeHtml(content || '')}</p>`;
+      const paragraphText = getTextContent(content);
+      return `<p style="${style}">${escapeHtml(paragraphText)}</p>`;
     
     case 'button':
-      const href = props?.href || '#';
-      const buttonText = props?.text || content || 'Click Here';
+      const href = props?.href || content?.href || '#';
+      const buttonText = props?.text || content?.text || getTextContent(content) || 'Click Here';
       return `<a href="${href}" class="button" style="${style}">${escapeHtml(buttonText)}</a>`;
     
     case 'image':
-      const src = props?.src || '';
-      const alt = props?.alt || '';
+      const src = props?.src || content?.src || '';
+      const alt = props?.alt || content?.alt || '';
       return src ? `<img src="${src}" alt="${escapeHtml(alt)}" style="${style}">` : '';
     
     case 'spacer':
@@ -150,7 +160,8 @@ function renderElement(element: any): string {
       return `<div style="height: ${height}; ${style}"></div>`;
     
     default:
-      return content ? `<div style="${style}">${escapeHtml(content)}</div>` : '';
+      const defaultText = getTextContent(content);
+      return defaultText ? `<div style="${style}">${escapeHtml(defaultText)}</div>` : '';
   }
 }
 
@@ -158,7 +169,11 @@ function camelToKebab(str: string): string {
   return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-function escapeHtml(text: string): string {
+function escapeHtml(text: any): string {
+  if (!text) return '';
+  if (typeof text !== 'string') {
+    text = String(text);
+  }
   const map: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
