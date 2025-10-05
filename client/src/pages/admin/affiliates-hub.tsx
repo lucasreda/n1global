@@ -192,7 +192,7 @@ export default function AffiliatesHub() {
           </Card>
         </Link>
 
-        <Link href="/inside/affiliates/comissoes">
+        <Link href="/inside/affiliates/commission-rules">
           <Card className="bg-[#1a1a1a] border-[#252525] hover:border-green-500/50 transition-all cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
