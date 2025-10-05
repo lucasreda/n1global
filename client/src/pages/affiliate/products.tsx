@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useState } from "react";
+import { Link } from "wouter";
 import {
   Package,
   Search,
@@ -23,7 +24,8 @@ import {
   Eye,
   Copy,
   FileText,
-  Globe
+  Globe,
+  Settings
 } from "lucide-react";
 
 interface Product {
@@ -699,17 +701,32 @@ export default function AffiliateProducts() {
                               {lp.status}
                             </Badge>
                           </div>
-                          {lp.deployedUrl && (
-                            <a
-                              href={lp.deployedUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                              Visualizar Landing Page
-                            </a>
-                          )}
+                          
+                          <div className="space-y-2">
+                            {lp.deployedUrl && (
+                              <a
+                                href={lp.deployedUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                Visualizar Landing Page
+                              </a>
+                            )}
+                            
+                            <Link href={`/affiliate/products/${productDetails.id}/pixels?landingPageId=${lp.id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full mt-2 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                                data-testid={`button-configure-pixels-${lp.id}`}
+                              >
+                                <Settings className="h-4 w-4 mr-2" />
+                                Configurar Pixels
+                              </Button>
+                            </Link>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
