@@ -767,11 +767,28 @@ export class AffiliateService {
         )
       );
 
+    // Generate tracking token for this affiliate and product
+    const trackingToken = jwt.sign(
+      {
+        affiliateId,
+        productId,
+        type: 'affiliate_tracking',
+      },
+      process.env.JWT_SECRET || 'fallback-secret-key',
+      { expiresIn: '90d' }
+    );
+
+    // Add tracking parameter to each landing page URL
+    const landingPagesWithTracking = landingPages.map(lp => ({
+      ...lp,
+      deployedUrl: lp.deployedUrl ? `https://${lp.deployedUrl}?ref=${trackingToken}` : null,
+    }));
+
     return {
       ...product[0],
       commissionRule: commissionRules[0] || null,
       membership: membership[0] || null,
-      landingPages,
+      landingPages: landingPagesWithTracking,
     };
   }
 
