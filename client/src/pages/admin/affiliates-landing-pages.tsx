@@ -997,8 +997,8 @@ export default function AffiliatesLandingPages() {
               <Button
                 onClick={async () => {
                   try {
-                    const response = await apiRequest('/api/affiliate/landing-pages/vercel/oauth-url', 'GET');
-                    if (response.oauthUrl) {
+                    const response = await apiRequest('/api/affiliate/landing-pages/vercel/oauth-url', 'GET') as any;
+                    if (response?.oauthUrl) {
                       window.location.href = response.oauthUrl;
                     }
                   } catch (error: any) {
@@ -1019,8 +1019,8 @@ export default function AffiliatesLandingPages() {
               <Button
                 onClick={async () => {
                   try {
-                    const response = await apiRequest('/api/affiliate/landing-pages/vercel/oauth-url', 'GET');
-                    if (response.oauthUrl) {
+                    const response = await apiRequest('/api/affiliate/landing-pages/vercel/oauth-url', 'GET') as any;
+                    if (response?.oauthUrl) {
                       window.location.href = response.oauthUrl;
                     }
                   } catch (error: any) {

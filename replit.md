@@ -135,6 +135,11 @@ Preferred communication style: Simple, everyday language.
    - Admin endpoints for affiliate assignment (deploy + assign, unassign)
    - Affiliate pixel configuration endpoint (PATCH /api/affiliate/tracking-pixel)
    - API routes registered at `/api/affiliate/landing-pages/*`
+   - **OAuth Integration**: Reuses existing Vercel OAuth from Funis de Vendas system
+   - OAuth endpoints for secure account connection (`/vercel/oauth-url`, `/vercel/callback`)
+   - Token storage in `funnelIntegrations` table (shared with Funis de Vendas)
+   - Dynamic credential fetching from database (no manual env var configuration)
+   - Frontend OAuth button with status display and reconnection support
 
 **Technical Implementation**:
 - JWT tokens with 90-day expiration for tracking links
@@ -145,6 +150,9 @@ Preferred communication style: Simple, everyday language.
 - Centralized Vercel deployment with pixel injection
 - Landing page versioning (draft → active → archived)
 - Affiliate profile fields: trackingPixel, landingPageUrl, landingPageId
+- OAuth flow with CSRF protection (10-minute state expiry)
+- Automatic token refresh and last-used tracking
+- Shared Vercel integration infrastructure across systems
 
 **Next Phases** (Pending):
 - Phase 7: External Checkout SDK (JavaScript SDK for external sites)
