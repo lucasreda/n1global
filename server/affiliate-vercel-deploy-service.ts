@@ -1,9 +1,10 @@
 import { affiliateLandingService } from "./affiliate-landing-service";
 import { vercelService } from "./vercel-service";
 import { db } from "./db";
-import { funnelIntegrations } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { funnelIntegrations, affiliateProductPixels, affiliateLandingPageProducts } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 import type { AffiliateLandingPage } from "@shared/schema";
+import { PixelCodeGenerator } from "./pixel-code-generator";
 
 export class AffiliateVercelDeployService {
   private async getVercelCredentials(): Promise<{
@@ -34,6 +35,30 @@ export class AffiliateVercelDeployService {
     };
   }
 
+  private async getPixelsForLandingPage(landingPageId: string): Promise<string> {
+    const pixels = await db
+      .select({
+        pixel: affiliateProductPixels,
+      })
+      .from(affiliateProductPixels)
+      .where(
+        and(
+          eq(affiliateProductPixels.landingPageId, landingPageId),
+          eq(affiliateProductPixels.isActive, true)
+        )
+      );
+
+    if (pixels.length === 0) {
+      return '';
+    }
+
+    const pixelCodes = pixels.map(({ pixel }) => 
+      PixelCodeGenerator.generatePixelCode(pixel)
+    );
+
+    return pixelCodes.join('\n\n');
+  }
+
   async deployLandingPageForAffiliate(
     landingPageId: string,
     affiliatePixel?: string
@@ -54,8 +79,15 @@ export class AffiliateVercelDeployService {
       throw new Error("Apenas landing pages ativas podem ser deployadas");
     }
 
-    // Inject universal tracking script (replaces old static pixel approach)
+    // Inject universal tracking script
     let htmlContent = this.injectUniversalTrackingScript(landingPage.htmlContent);
+
+    // Get and inject pixels configured for this landing page
+    const pixelCode = await this.getPixelsForLandingPage(landingPageId);
+    if (pixelCode) {
+      htmlContent = this.injectPixelCode(htmlContent, pixelCode);
+      console.log(`✅ Injected ${pixelCode.split('<!-- Meta Pixel Code -->').length - 1 + pixelCode.split('<!-- Google Ads').length - 1 + pixelCode.split('<!-- TikTok').length - 1 + pixelCode.split('<!-- Custom').length - 1} pixel(s) into landing page`);
+    }
 
     const files = this.prepareLandingPageFiles(
       htmlContent,
@@ -188,25 +220,27 @@ export class AffiliateVercelDeployService {
     );
   }
 
-  private injectTrackingPixel(html: string, pixelCode: string): string {
-    const closingBodyTag = html.lastIndexOf("</body>");
+  private injectPixelCode(html: string, pixelCode: string): string {
+    const closingHeadTag = html.lastIndexOf("</head>");
     
-    if (closingBodyTag === -1) {
-      console.warn("⚠️ Tag </body> não encontrada no HTML - pixel não será injetado");
-      return html;
+    if (closingHeadTag === -1) {
+      console.warn("⚠️ Tag </head> não encontrada no HTML - pixels serão injetados antes do </body>");
+      const closingBodyTag = html.lastIndexOf("</body>");
+      if (closingBodyTag === -1) {
+        console.warn("⚠️ Tag </body> também não encontrada - pixels não serão injetados");
+        return html;
+      }
+      return (
+        html.substring(0, closingBodyTag) +
+        pixelCode +
+        html.substring(closingBodyTag)
+      );
     }
 
-    const pixelScript = `
-<!-- Affiliate Tracking Pixel -->
-<script>
-${pixelCode}
-</script>
-`;
-
     return (
-      html.substring(0, closingBodyTag) +
-      pixelScript +
-      html.substring(closingBodyTag)
+      html.substring(0, closingHeadTag) +
+      pixelCode +
+      html.substring(closingHeadTag)
     );
   }
 
