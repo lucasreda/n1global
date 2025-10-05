@@ -50,6 +50,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LandingPage {
   id: string;
@@ -82,6 +88,7 @@ export default function AffiliatesLandingPages() {
   const [deployedUrl, setDeployedUrl] = useState<string>("");
   const [selectedPage, setSelectedPage] = useState<LandingPage | null>(null);
   const [deployingLandingPageId, setDeployingLandingPageId] = useState<string | null>(null);
+  const [convertingPageId, setConvertingPageId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -158,14 +165,17 @@ export default function AffiliatesLandingPages() {
 
   const convertToVisualMutation = useMutation({
     mutationFn: async (landingPageId: string) => {
+      setConvertingPageId(landingPageId);
       const response = await apiRequest(`/api/affiliate/landing-pages/${landingPageId}/convert-to-visual`, 'POST', {});
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any, landingPageId: string) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
       toast({
-        title: "HTML convertido!",
-        description: "O HTML foi convertido para o modelo visual com sucesso.",
+        title: "Landing page convertida com sucesso!",
+        description: "Agora você pode editar com o editor visual.",
       });
+      setLocation(`/inside/affiliates/landing-pages/${landingPageId}/edit`);
     },
     onError: (error: any) => {
       toast({
@@ -173,6 +183,9 @@ export default function AffiliatesLandingPages() {
         description: error.message || "Não foi possível converter o HTML.",
         variant: "destructive",
       });
+    },
+    onSettled: () => {
+      setConvertingPageId(null);
     },
   });
 
@@ -611,6 +624,14 @@ export default function AffiliatesLandingPages() {
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-medium">{page.name}</p>
                             {getStatusBadge(page.status)}
+                            {!page.model && (
+                              <Badge 
+                                className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 text-xs"
+                                data-testid={`badge-legacy-html-${page.id}`}
+                              >
+                                HTML Legado
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-gray-400">{page.description || "Sem descrição"}</p>
                         </div>
@@ -650,6 +671,31 @@ export default function AffiliatesLandingPages() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        {!page.model && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => convertToVisualMutation.mutate(page.id)}
+                                  disabled={convertingPageId === page.id}
+                                  className="text-purple-400 hover:text-purple-300 border-purple-500/50 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  data-testid={`button-convert-to-visual-${page.id}`}
+                                >
+                                  {convertingPageId === page.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Wand2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Converte HTML legado para editor visual</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {page.model ? (
                           <Button
                             variant="ghost"
