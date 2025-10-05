@@ -65,6 +65,7 @@ import AffiliateLandingPages from "@/pages/affiliate/landing-pages";
 import AffiliateProducts from "@/pages/affiliate/products";
 import AffiliateAnalytics from "@/pages/affiliate/analytics";
 import AffiliatePayments from "@/pages/affiliate/payments";
+import AffiliateMarketplace from "@/pages/affiliate/marketplace";
 import Hub from "@/pages/hub";
 import HubControl from "@/pages/inside/hub-control";
 import NotFound from "@/pages/not-found";
@@ -288,6 +289,7 @@ function Router() {
         <Route path="/inside/affiliates" component={isSuperAdmin ? () => <AdminLayout><AffiliatesHub /></AdminLayout> : () => <NotFound />} />
         
         {/* Affiliate Routes */}
+        <Route path="/affiliate/marketplace" component={isAffiliate ? AffiliateMarketplace : () => <NotFound />} />
         <Route path="/affiliate/analytics" component={isAffiliate ? AffiliateAnalytics : () => <NotFound />} />
         <Route path="/affiliate/payments" component={isAffiliate ? AffiliatePayments : () => <NotFound />} />
         <Route path="/affiliate/products" component={isAffiliate ? AffiliateProducts : () => <NotFound />} />
