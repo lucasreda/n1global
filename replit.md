@@ -33,6 +33,7 @@ Preferred communication style: Simple, everyday language.
 - **Voice System**: Telnyx Voice API (PT-BR gather-only architecture) for Sofia's outbound calling and real-time PT-BR speech recognition.
 - **Affiliate Program System**: Enterprise-grade affiliate marketing with JWT-signed tracking links, centralized landing page hosting on Vercel, and anti-fraud protection. Includes dedicated database tables for profiles, memberships, conversions, commission rules, payouts, clicks, deployment configuration, and landing pages. Features include product discovery, affiliation requests, and a universal tracking system via URL parameters.
 - **Visual Editor**: Supports editing of AI-generated pages, ensures compatibility with `PageModelV2`, preserves unknown fields as hidden metadata, and handles AI page generation with real-time SSE progress tracking.
+- **HTML-to-PageModel Converter**: Advanced converter that preserves CSS styling from original HTML during landing page imports. Parses `<style>` tags, extracts CSS rules, matches classes/IDs to elements, and computes final styles using proper CSS cascade (tag → class → ID → inline). Extracts theme colors and typography from CSS variables. Handles self-closing tags correctly (img, br).
 
 ### System Design Choices
 - **Database Schema**: UUID primary keys, automatic timestamps, and decimal precision for financial data. Tables for users, orders, metrics, fulfillment leads, products, shipping providers, investment pools, investor profiles, investments, transactions, performance history, and intelligent refund requests.
