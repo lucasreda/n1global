@@ -256,9 +256,21 @@ export class VercelService {
         throw new Error(`Failed to deploy to project: ${errorData.error?.message || response.statusText}`);
       }
 
-      const deployment = await response.json() as VercelDeployment;
-      console.log(`✅ Deployed to project: ${deployment.uid} - ${deployment.url}`);
-      return deployment;
+      const deployment = await response.json() as any;
+      console.log('🔍 Full deployment response:', JSON.stringify(deployment, null, 2));
+      console.log(`✅ Deployed to project: ${deployment.uid || deployment.id} - ${deployment.url}`);
+      
+      // Vercel API may return 'id' instead of 'uid'
+      return {
+        uid: deployment.uid || deployment.id,
+        name: deployment.name,
+        url: deployment.url,
+        state: deployment.state,
+        type: deployment.type,
+        createdAt: deployment.createdAt,
+        buildingAt: deployment.buildingAt,
+        readyAt: deployment.readyAt,
+      };
     } catch (error) {
       console.error('❌ Deploy to project error:', error);
       throw error;
