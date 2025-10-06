@@ -308,25 +308,40 @@ function getComputedStyles(
 ): Record<string, string> {
   const computedStyles: Record<string, string> = {};
   
-  // Apply tag styles
+  // 1. Apply universal selector (*) as base
+  if (cssRules['*']) {
+    Object.assign(computedStyles, cssRules['*']);
+  }
+  
+  // 2. Apply body styles as global defaults (for text color, font, etc)
+  if (cssRules['body']) {
+    Object.assign(computedStyles, cssRules['body']);
+  }
+  
+  // 3. Apply tag styles
   if (cssRules[tag]) {
     Object.assign(computedStyles, cssRules[tag]);
   }
   
-  // Apply class styles (in order)
+  // 4. Apply class styles (in order)
   classNames.forEach(className => {
     if (cssRules[`.${className}`]) {
       Object.assign(computedStyles, cssRules[`.${className}`]);
     }
   });
   
-  // Apply ID styles
+  // 5. Apply ID styles
   if (id && cssRules[`#${id}`]) {
     Object.assign(computedStyles, cssRules[`#${id}`]);
   }
   
-  // Apply inline styles (highest priority)
+  // 6. Apply inline styles (highest priority)
   Object.assign(computedStyles, inlineStyles);
+  
+  // 7. CRITICAL: Default text color if not defined (prevents invisible text)
+  if (!computedStyles.color) {
+    computedStyles.color = '#000000'; // Black by default
+  }
   
   return computedStyles;
 }
