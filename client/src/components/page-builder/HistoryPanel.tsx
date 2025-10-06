@@ -2,7 +2,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Undo2, Redo2, RotateCcw } from 'lucide-react';
-import { Command } from '@/lib/history';
+import type { Command } from '@/lib/history';
 
 interface HistoryPanelProps {
   commands: Command[];
