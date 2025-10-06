@@ -29,13 +29,13 @@ import {
 import { 
   UnitSliderInput, 
   FourSidesInput, 
-  FourCornersInput, 
-  ColorPickerPopover 
+  FourCornersInput
 } from './AdvancedControls';
 import { FlexLayoutControls } from './FlexLayoutControls';
 import { GridLayoutControls } from './GridLayoutControls';
 import { PositionControls } from './PositionControls';
 import { BoxModelInspector } from './inspector/BoxModelInspector';
+import { ColorPickerProfessional } from './inspector/ColorPickerProfessional';
 import { BlockElement, BlockSection } from '@shared/schema';
 
 export type Breakpoint = 'desktop' | 'tablet' | 'mobile';
@@ -621,7 +621,7 @@ export function AdvancedPropertiesPanel({
                     </Select>
                   </div>
 
-                  <ColorPickerPopover
+                  <ColorPickerProfessional
                     label="Text Color"
                     value={getStyleValue('color', '#000000')}
                     onChange={(value) => handleStyleUpdate({ color: value })}
@@ -762,7 +762,7 @@ export function AdvancedPropertiesPanel({
                   data-testid={`${testId}-border-width`}
                 />
 
-                <ColorPickerPopover
+                <ColorPickerProfessional
                   label="Border Color"
                   value={getStyleValue('borderColor', '#000000')}
                   onChange={(value) => handleStyleUpdate({ borderColor: value })}
@@ -800,7 +800,7 @@ export function AdvancedPropertiesPanel({
             />
             <CollapsibleContent>
               <div className="px-3 pb-4 space-y-4">
-                <ColorPickerPopover
+                <ColorPickerProfessional
                   label="Background Color"
                   value={getStyleValue('backgroundColor', 'transparent')}
                   onChange={(value) => handleStyleUpdate({ backgroundColor: value })}
