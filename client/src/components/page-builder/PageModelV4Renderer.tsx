@@ -16,16 +16,19 @@ export function PageModelV4Renderer({
   breakpoint = 'desktop'
 }: PageModelV4RendererProps) {
   return (
-    <div className="page-frame w-full h-full overflow-auto page-renderer-reset">
-      {model.nodes.map(node => (
-        <PageNodeV4Renderer 
-          key={node.id} 
-          node={node}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={onSelectNode}
-          breakpoint={breakpoint}
-        />
-      ))}
+    <div className="page-frame w-full h-full overflow-auto page-renderer-reset" style={{ position: 'relative', zIndex: 0 }}>
+      {/* Isolate rendered HTML to prevent position:fixed from escaping */}
+      <div style={{ position: 'relative', isolation: 'isolate' }}>
+        {model.nodes.map(node => (
+          <PageNodeV4Renderer 
+            key={node.id} 
+            node={node}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={onSelectNode}
+            breakpoint={breakpoint}
+          />
+        ))}
+      </div>
     </div>
   );
 }
