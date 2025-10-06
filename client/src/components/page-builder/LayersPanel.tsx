@@ -111,7 +111,7 @@ export function LayersPanel({
     return iconMap[type] || Box;
   }, []);
 
-  // Filter sections and elements based on search
+  // Filter sections and elements based on search (returns filtered hierarchy)
   const filteredSections = useMemo(() => {
     if (!searchQuery.trim()) return sections;
 
@@ -119,8 +119,11 @@ export function LayersPanel({
     
     const matchesQuery = (text: string) => text.toLowerCase().includes(query);
     
+    // Recursively filter elements and preserve hierarchy
     const filterElements = (elements: BlockElement[]): BlockElement[] => {
-      return elements.filter(element => {
+      const filtered: BlockElement[] = [];
+      
+      for (const element of elements) {
         const nameMatch = element.config?.name && matchesQuery(element.config.name);
         const typeMatch = matchesQuery(element.type);
         
@@ -135,26 +138,49 @@ export function LayersPanel({
           }
         }
         
-        const hasMatchingChildren = element.children && filterElements(element.children).length > 0;
+        // Filter children recursively
+        const filteredChildren = element.children ? filterElements(element.children) : [];
+        const hasMatchingChildren = filteredChildren.length > 0;
         
-        return nameMatch || typeMatch || contentMatch || hasMatchingChildren;
-      });
+        // Include if element matches OR has matching children
+        if (nameMatch || typeMatch || contentMatch || hasMatchingChildren) {
+          filtered.push({
+            ...element,
+            children: hasMatchingChildren ? filteredChildren : element.children
+          });
+        }
+      }
+      
+      return filtered;
     };
 
-    return sections.filter(section => {
+    // Filter sections and return filtered copies
+    const filtered: BlockSection[] = [];
+    
+    for (const section of sections) {
       const nameMatch = section.name && matchesQuery(section.name);
       
-      let hasMatchingElements = false;
-      section.rows?.forEach(row => {
-        row.columns?.forEach(column => {
-          if (column.elements && filterElements(column.elements).length > 0) {
-            hasMatchingElements = true;
-          }
+      // Filter rows and columns
+      const filteredRows = section.rows?.map(row => ({
+        ...row,
+        columns: row.columns?.map(column => ({
+          ...column,
+          elements: column.elements ? filterElements(column.elements) : []
+        })).filter(column => column.elements.length > 0) // Remove empty columns
+      })).filter(row => row.columns && row.columns.length > 0); // Remove empty rows
+      
+      const hasMatchingElements = filteredRows && filteredRows.length > 0;
+      
+      // Include section if it matches OR has matching elements
+      if (nameMatch || hasMatchingElements) {
+        filtered.push({
+          ...section,
+          rows: hasMatchingElements ? filteredRows : section.rows
         });
-      });
-
-      return nameMatch || hasMatchingElements;
-    });
+      }
+    }
+    
+    return filtered;
   }, [sections, searchQuery]);
 
   // Render element tree recursively
