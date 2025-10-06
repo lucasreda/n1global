@@ -456,3 +456,32 @@ html, body {
 .page-renderer-reset * {
   color: inherit;
 }
+
+/* CRITICAL: Ensure Font Awesome icons render properly */
+.page-renderer-reset i.fas,
+.page-renderer-reset i.far,
+.page-renderer-reset i.fab,
+.page-renderer-reset i.fa {
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-family: "Font Awesome 6 Free" !important;
+}
+
+/* Font Awesome solid icons (fas) */
+.page-renderer-reset i.fas {
+  font-weight: 900;
+}
+
+/* Font Awesome regular icons (far) */
+.page-renderer-reset i.far {
+  font-weight: 400;
+}
+
+/* Font Awesome brand icons (fab) */
+.page-renderer-reset i.fab {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400;
+}
