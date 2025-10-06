@@ -141,12 +141,28 @@ function PageNodeV4Renderer({
   // Get styles for current breakpoint
   const styles = node.styles?.[breakpoint] || {};
   
+  // DEBUG: Log layout properties
+  if (node.layout && Object.keys(node.layout).length > 0) {
+    console.log(`🔍 Node ${node.tag}.${node.classNames?.join('.')} has layout:`, node.layout);
+  }
+  
   // Merge layout properties, inline styles, and responsive styles
   const finalStyles: React.CSSProperties = {
     ...(node.layout as React.CSSProperties),
     ...node.inlineStyles,
     ...styles,
   };
+  
+  // DEBUG: Log final styles if has display
+  if (finalStyles.display) {
+    console.log(`✨ Final styles for ${node.tag}.${node.classNames?.join('.')}:`, {
+      display: finalStyles.display,
+      flexDirection: finalStyles.flexDirection,
+      gap: finalStyles.gap,
+      alignItems: finalStyles.alignItems,
+      justifyContent: finalStyles.justifyContent
+    });
+  }
   
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
