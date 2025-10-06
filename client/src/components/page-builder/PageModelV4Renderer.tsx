@@ -17,6 +17,11 @@ export function PageModelV4Renderer({
 }: PageModelV4RendererProps) {
   return (
     <div className="page-frame w-full h-full overflow-auto page-renderer-reset" style={{ position: 'relative', zIndex: 0 }}>
+      {/* Inject global CSS (variables, resets, classes) */}
+      {model.globalStyles && (
+        <style dangerouslySetInnerHTML={{ __html: model.globalStyles }} />
+      )}
+      
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
       <div style={{ position: 'relative', isolation: 'isolate' }}>
         {model.nodes.map(node => (
