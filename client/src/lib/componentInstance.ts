@@ -512,3 +512,138 @@ export function hasOverride(
   
   return (elementOverrides as any)[key]?.isOverridden === true;
 }
+
+// ============================================================================
+// Props & Variants System
+// ============================================================================
+
+/**
+ * Get prop value with fallback to default
+ */
+export function getPropValue(
+  componentDef: ComponentDefinitionV3,
+  instanceData: ComponentInstanceData | undefined,
+  propKey: string
+): any {
+  // First check instance's propValues
+  if (instanceData?.propValues?.[propKey] !== undefined) {
+    return instanceData.propValues[propKey];
+  }
+  
+  // Fallback to component's default value
+  const prop = componentDef.props?.find(p => p.key === propKey);
+  return prop?.defaultValue;
+}
+
+/**
+ * Apply custom prop values to a resolved element tree
+ * This applies prop bindings defined in component definition
+ */
+export function applyPropsToElement(
+  element: BlockElementV3,
+  componentDef: ComponentDefinitionV3,
+  instanceData: ComponentInstanceData | undefined
+): void {
+  if (!componentDef.props) return;
+  
+  for (const prop of componentDef.props) {
+    if (!prop.bindTo) continue;
+    
+    const value = getPropValue(componentDef, instanceData, prop.key);
+    if (value === undefined) continue;
+    
+    const { elementId, property } = prop.bindTo;
+    
+    // Apply to element tree recursively
+    function applyToTree(el: BlockElementV3): void {
+      if (el.id === elementId) {
+        // Parse property path (e.g., "props.content", "styles.desktop.backgroundColor")
+        const parts = property.split('.');
+        let target: any = el;
+        
+        for (let i = 0; i < parts.length - 1; i++) {
+          const part = parts[i];
+          if (!target[part]) {
+            target[part] = {};
+          }
+          target = target[part];
+        }
+        
+        const lastPart = parts[parts.length - 1];
+        target[lastPart] = value;
+      }
+      
+      if (el.children) {
+        for (const child of el.children) {
+          applyToTree(child);
+        }
+      }
+    }
+    
+    applyToTree(element);
+  }
+}
+
+/**
+ * Resolve the variant element based on selected variant
+ * Returns the variant element if a match is found, otherwise returns base element
+ */
+export function resolveVariantElement(
+  componentDef: ComponentDefinitionV3,
+  instanceData: ComponentInstanceData | undefined
+): BlockElementV3 {
+  // No variant selected or no variants defined
+  if (!instanceData?.selectedVariant || !componentDef.variants || componentDef.variants.length === 0) {
+    return componentDef.element;
+  }
+  
+  // Find matching variant combination
+  const selectedProps = instanceData.selectedVariant;
+  const matchingVariant = componentDef.variants.find(v => {
+    // Check if all properties match
+    for (const [key, value] of Object.entries(selectedProps)) {
+      if (v.properties[key] !== value) {
+        return false;
+      }
+    }
+    return true;
+  });
+  
+  return matchingVariant ? matchingVariant.element : componentDef.element;
+}
+
+/**
+ * Enhanced resolveComponentInstance that supports props and variants
+ */
+export function resolveComponentInstanceWithPropsAndVariants(
+  instanceElement: BlockElementV3,
+  components: ComponentDefinitionV3[]
+): BlockElementV3 | null {
+  if (!instanceElement.instanceData) {
+    console.warn('resolveComponentInstance: element has no instanceData');
+    return null;
+  }
+
+  const { componentId, overrides } = instanceElement.instanceData;
+  
+  // Find base component
+  const baseComponent = components.find(c => c.id === componentId);
+  if (!baseComponent) {
+    console.warn(`resolveComponentInstance: component not found: ${componentId}`);
+    return null;
+  }
+
+  // Step 1: Resolve variant (if any)
+  const variantElement = resolveVariantElement(baseComponent, instanceElement.instanceData);
+  
+  // Step 2: Deep clone variant element
+  const resolved = deepCloneElement(variantElement);
+  
+  // Step 3: Apply custom props
+  applyPropsToElement(resolved, baseComponent, instanceElement.instanceData);
+  
+  // Step 4: Apply overrides recursively
+  applyOverridesToTree(resolved, overrides);
+  
+  return resolved;
+}

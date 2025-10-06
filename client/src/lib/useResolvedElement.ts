@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import type { BlockElement, ComponentDefinitionV3 } from '@shared/schema';
-import { resolveComponentInstance, isComponentInstance } from './componentInstance';
+import { 
+  resolveComponentInstance, 
+  resolveComponentInstanceWithPropsAndVariants,
+  isComponentInstance 
+} from './componentInstance';
 
 /**
  * Hook to resolve component instances at render time
@@ -16,9 +20,9 @@ export function useResolvedElement(
   return useMemo(() => {
     if (!element) return null;
     
-    // If it's a component instance, resolve it
+    // If it's a component instance, resolve it (with props & variants support)
     if (isComponentInstance(element as any)) {
-      const resolved = resolveComponentInstance(element as any, components);
+      const resolved = resolveComponentInstanceWithPropsAndVariants(element as any, components);
       if (resolved) {
         // Preserve the original element ID for selection tracking
         resolved.id = element.id;
@@ -49,7 +53,7 @@ export function useResolvedElements(
     
     return elements.map(element => {
       if (isComponentInstance(element as any)) {
-        const resolved = resolveComponentInstance(element as any, components);
+        const resolved = resolveComponentInstanceWithPropsAndVariants(element as any, components);
         if (resolved) {
           // Preserve original ID and instanceData
           resolved.id = element.id;
@@ -73,7 +77,7 @@ export function hasUnresolvedInstances(
   components: ComponentDefinitionV3[]
 ): boolean {
   if (isComponentInstance(element as any)) {
-    const resolved = resolveComponentInstance(element as any, components);
+    const resolved = resolveComponentInstanceWithPropsAndVariants(element as any, components);
     if (!resolved) return true;
   }
   
