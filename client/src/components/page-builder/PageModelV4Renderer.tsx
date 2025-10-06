@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { HoverTooltip } from './HoverTooltip';
+import { SelectionToolbar } from './SelectionToolbar';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { canAcceptChild } from './tree-helpers';
 
@@ -9,6 +10,8 @@ interface PageModelV4RendererProps {
   model: PageModelV4;
   selectedNodeId?: string | null;
   onSelectNode?: (nodeId: string) => void;
+  onDuplicateNode?: () => void;
+  onDeleteNode?: () => void;
   breakpoint?: 'desktop' | 'tablet' | 'mobile';
 }
 
@@ -16,6 +19,8 @@ export function PageModelV4Renderer({
   model, 
   selectedNodeId, 
   onSelectNode,
+  onDuplicateNode,
+  onDeleteNode,
   breakpoint = 'desktop'
 }: PageModelV4RendererProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -59,6 +64,8 @@ export function PageModelV4Renderer({
             onSelectNode={onSelectNode}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onDuplicateNode={onDuplicateNode}
+            onDeleteNode={onDeleteNode}
             breakpoint={breakpoint}
           />
         ))}
@@ -85,6 +92,8 @@ interface PageNodeV4RendererProps {
   onSelectNode?: (nodeId: string) => void;
   onMouseEnter?: (nodeId: string, tag: string, classNames: string[], dimensions?: { width: number; height: number }) => void;
   onMouseLeave?: () => void;
+  onDuplicateNode?: () => void;
+  onDeleteNode?: () => void;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
 }
 
@@ -95,6 +104,8 @@ function PageNodeV4Renderer({
   onSelectNode,
   onMouseEnter,
   onMouseLeave,
+  onDuplicateNode,
+  onDeleteNode,
   breakpoint 
 }: PageNodeV4RendererProps) {
   const isSelected = selectedNodeId === node.id;
@@ -223,15 +234,6 @@ function PageNodeV4Renderer({
   // Check if node is a self-closing tag
   const isSelfClosing = ['img', 'input', 'br', 'hr', 'meta', 'link'].includes(node.tag);
   
-  // DEBUG: Log img nodes with children
-  if (node.tag === 'img' && node.children && node.children.length > 0) {
-    console.error('❌ IMG NODE HAS CHILDREN (THIS SHOULD NEVER HAPPEN):', {
-      nodeId: node.id,
-      childrenCount: node.children.length,
-      children: node.children
-    });
-  }
-  
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
   if (isSelfClosing) {
     return (
@@ -286,9 +288,22 @@ function PageNodeV4Renderer({
           onSelectNode={onSelectNode}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
+          onDuplicateNode={onDuplicateNode}
+          onDeleteNode={onDeleteNode}
           breakpoint={breakpoint}
         />
       ))}
+      
+      {/* Render toolbar for selected node */}
+      {isSelected && onDuplicateNode && onDeleteNode && (
+        <SelectionToolbar
+          nodeId={node.id}
+          onDuplicate={onDuplicateNode}
+          onDelete={onDeleteNode}
+          dragListeners={draggableListeners}
+          dragAttributes={draggableAttributes}
+        />
+      )}
     </Tag>
   );
 }

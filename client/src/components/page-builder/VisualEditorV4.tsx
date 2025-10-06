@@ -341,7 +341,7 @@ export function VisualEditorV4({
       )}
 
       {/* Center - Canvas */}
-      <div className="flex-1 p-4 bg-gray-100 dark:bg-gray-900 overflow-auto relative">
+      <div id="visual-editor-canvas" className="flex-1 p-4 bg-gray-100 dark:bg-gray-900 overflow-auto relative">
         <div 
           className="mx-auto bg-white shadow-lg"
           style={{
@@ -353,24 +353,11 @@ export function VisualEditorV4({
             model={model}
             selectedNodeId={selectedNodeId}
             onSelectNode={handleSelectNode}
+            onDuplicateNode={handleDuplicateNode}
+            onDeleteNode={handleDeleteNode}
             breakpoint={viewport}
           />
         </div>
-
-        {/* Floating Toolbar */}
-        {selectedNode && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-            <FloatingToolbarV4
-              node={selectedNode}
-              position={{ x: 0, y: 0 }}
-              breakpoint={viewport}
-              onUpdateNode={handleUpdateNode}
-              onDeleteNode={handleDeleteNode}
-              onDuplicateNode={handleDuplicateNode}
-              onMoveNode={() => {}}
-            />
-          </div>
-        )}
       </div>
 
       {/* Right Sidebar - Properties Panel */}
