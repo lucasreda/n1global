@@ -43,8 +43,9 @@ Preferred communication style: Simple, everyday language.
     - **Advanced Features**: Pseudo-elements (::before, ::after), transitions, shadows
     - **HTML Conversion**: Complete HTML→PageModelV3 converter (1732 lines) with CSSOM parsing, specificity calculation, media query parsing, and layout detection
     - **Validation**: Full Zod schemas with recursive validation for nested structures
-    - **Test Coverage**: 10 conversion tests (100% pass rate), 100% style preservation rate (exceeds 95% target), bijective testing implemented with 5/5 tests passing, descendant selector support
-    - **Files**: `server/html-to-pagemodel-converter.ts`, `server/pagemodel-to-html-renderer.ts`, `server/__tests__/run-converter-tests.ts`, `server/__tests__/bijective-tests.ts`
+    - **Bidirectional Migration**: V2↔V3 adapter with auto-conversion (284 lines) in `shared/pageModelAdapter.ts`
+    - **Test Coverage**: 10 conversion tests (100% pass rate), 100% style preservation rate (exceeds 95% target), bijective testing implemented with 5/5 tests passing, descendant selector support, 9 adapter tests
+    - **Files**: `server/html-to-pagemodel-converter.ts`, `server/pagemodel-to-html-renderer.ts`, `server/__tests__/run-converter-tests.ts`, `server/__tests__/bijective-tests.ts`, `shared/pageModelAdapter.ts`, `shared/__tests__/pageModelAdapter.test.ts`
 
 ### System Design Choices
 - **Database Schema**: UUID primary keys, automatic timestamps, and decimal precision for financial data. Tables for users, orders, metrics, fulfillment leads, products, shipping providers, investment pools, investor profiles, investments, transactions, performance history, and intelligent refund requests.
