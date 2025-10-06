@@ -1,5 +1,5 @@
 import { PageNodeV4 } from '@shared/schema';
-import { canAcceptChildSemantic } from './semantic-rules';
+import { canAcceptChildSemantic, canAcceptChild as semanticCanAcceptChild, ValidationResult } from './semantic-rules';
 
 export type NodePath = number[];
 
@@ -38,17 +38,13 @@ export function getNodeByPath(nodes: PageNodeV4[], path: NodePath): PageNodeV4 |
 
 export function getParentNode(nodes: PageNodeV4[], targetId: string): PageNodeV4 | null {
   const path = findNodePath(nodes, targetId);
-  console.log('🔍 getParentNode:', { targetId, path, hasPath: !!path, pathLength: path?.length });
   
   if (!path || path.length <= 1) {
-    console.log('❌ No parent (root level or invalid path)');
     return null; // Root level has no parent
   }
   
   const parentPath = path.slice(0, -1);
-  const parent = getNodeByPath(nodes, parentPath);
-  console.log('✅ Found parent:', parent ? { id: parent.id, tag: parent.tag } : null);
-  return parent;
+  return getNodeByPath(nodes, parentPath);
 }
 
 export function removeNodeByPath(nodes: PageNodeV4[], path: NodePath): PageNodeV4[] {
@@ -174,4 +170,45 @@ export function canAcceptChild(node: PageNodeV4): boolean {
 // New semantic validation function with parent-child context
 export function canAcceptChildWithContext(parentNode: PageNodeV4, childNode: PageNodeV4): boolean {
   return canAcceptChildSemantic(parentNode, childNode);
+}
+
+// Validate drop operation considering position and parent context
+export function validateDrop(
+  nodes: PageNodeV4[],
+  draggedNode: PageNodeV4,
+  targetNodeId: string,
+  position: 'before' | 'after' | 'child'
+): ValidationResult {
+  const targetNode = findNodePath(nodes, targetNodeId);
+  if (!targetNode) {
+    return { allowed: false, reason: 'Elemento alvo não encontrado' };
+  }
+
+  const target = getNodeByPath(nodes, targetNode);
+  if (!target) {
+    return { allowed: false, reason: 'Elemento alvo não encontrado' };
+  }
+
+  // For "child" position, validate directly with target as parent
+  if (position === 'child') {
+    return semanticCanAcceptChild(target, draggedNode);
+  }
+
+  // For "before" or "after", validate against target's parent
+  const parentNode = getParentNode(nodes, targetNodeId);
+  
+  // If no parent (root level), allow structural elements only
+  if (!parentNode) {
+    const parentCategory = semanticCanAcceptChild({
+      id: 'root',
+      tag: 'div',
+      type: 'container',
+      classNames: [],
+      attributes: {},
+    }, draggedNode);
+    return parentCategory;
+  }
+
+  // Validate sibling placement against parent
+  return semanticCanAcceptChild(parentNode, draggedNode);
 }
