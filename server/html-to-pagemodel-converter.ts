@@ -2248,11 +2248,15 @@ function computeElementStylesV4(
     const tabletStyles: Record<string, string> = {};
     const mobileStyles: Record<string, string> = {};
     
-    // Sort by specificity
+    // STEP 1: Apply global styles first (*, body) to all elements
     const sortedRules = [...enhancedRules].sort((a, b) => a.specificity - b.specificity);
     
     for (const rule of sortedRules) {
-      if (matchesSelector(element, rule.selector, tag, classes, id)) {
+      // Global selectors (* and body) apply to ALL elements
+      const isGlobalSelector = rule.selector === '*' || rule.selector === 'body';
+      const matchesElement = matchesSelector(element, rule.selector, tag, classes, id);
+      
+      if (isGlobalSelector || matchesElement) {
         // Determine breakpoint from media query
         if (!rule.mediaQuery) {
           // No media query = applies to all
@@ -2274,6 +2278,11 @@ function computeElementStylesV4(
     if (element.attribs?.style) {
       const inlineStyles = parseInlineStyles(element.attribs.style);
       Object.assign(desktopStyles, inlineStyles);
+    }
+    
+    // CRITICAL: Default text color if not defined (prevents invisible text)
+    if (!desktopStyles.color) {
+      desktopStyles.color = '#000000';
     }
     
     if (Object.keys(desktopStyles).length > 0) styles.desktop = desktopStyles;
