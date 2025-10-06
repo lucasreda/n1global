@@ -21,7 +21,7 @@ import {
 import { useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement, DesignTokensV3 } from "@shared/schema";
+import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement, DesignTokensV3, ComponentDefinitionV3 } from "@shared/schema";
 import { createDefaultTheme, ElementRenderer } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
@@ -29,7 +29,8 @@ import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
 import { BreakpointSelector, Breakpoint } from './BreakpointSelector';
 import { LayersPanel } from './LayersPanel';
 import { DesignTokensDialog } from './DesignTokensDialog';
-import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images } from 'lucide-react';
+import { ComponentLibraryPanel } from './ComponentLibraryPanel';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package } from 'lucide-react';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -48,6 +49,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const [selectedElement, setSelectedElement] = useState<BlockElement | null>(null);
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
   const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
+  const [showComponentLibrary, setShowComponentLibrary] = useState(false);
 
 
   const sensors = useSensors(
@@ -332,6 +334,103 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     });
   }, [model, onChange]);
 
+  // Deep clone element without changing IDs (for saving immutable snapshots)
+  const deepCloneElement = useCallback((element: BlockElement): BlockElement => {
+    // Use JSON serialization for complete deep clone of all nested objects
+    return JSON.parse(JSON.stringify(element));
+  }, []);
+
+  // Component Library handlers
+  const handleSaveComponent = useCallback((name: string, category: string) => {
+    if (!selectedElement) return;
+    
+    // Deep clone to create immutable snapshot
+    const elementSnapshot = deepCloneElement(selectedElement);
+    
+    const newComponent: ComponentDefinitionV3 = {
+      id: `component_${Date.now()}`,
+      name,
+      category,
+      element: elementSnapshot as any, // Type compatibility between V2 and V3
+    };
+    
+    const components = model.components || [];
+    onChange({
+      ...model,
+      components: [...components, newComponent],
+    });
+  }, [selectedElement, model, onChange, deepCloneElement]);
+
+  const handleDeleteComponent = useCallback((componentId: string) => {
+    const components = model.components || [];
+    onChange({
+      ...model,
+      components: components.filter(c => c.id !== componentId),
+    });
+  }, [model, onChange]);
+
+  // Deep clone element with fresh IDs for all nested children
+  const cloneElementWithNewIds = useCallback((element: BlockElement): BlockElement => {
+    // First deep clone entire structure to avoid shared references
+    const deepCloned: BlockElement = JSON.parse(JSON.stringify(element));
+    
+    // Then recursively regenerate IDs
+    const regenerateIds = (el: BlockElement): BlockElement => {
+      el.id = `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      if (el.children && el.children.length > 0) {
+        el.children = el.children.map(child => regenerateIds(child));
+      }
+      
+      return el;
+    };
+
+    return regenerateIds(deepCloned);
+  }, []);
+
+  const handleInsertComponent = useCallback((component: ComponentDefinitionV3) => {
+    if (!selectedSectionId) return;
+    
+    // Deep clone the component element with fresh IDs for all nested children
+    const newElement: BlockElement = cloneElementWithNewIds(component.element as any);
+    
+    // Deep clone sections array to avoid mutations
+    const newSections: BlockSection[] = JSON.parse(JSON.stringify(model.sections));
+    const section = newSections.find(s => s.id === selectedSectionId);
+    if (!section) return;
+    
+    if (section.rows.length === 0) {
+      section.rows.push({
+        id: `row_${Date.now()}`,
+        columns: [{
+          id: `column_${Date.now()}`,
+          width: '12' as any, // Type compatibility
+          elements: [newElement],
+          styles: {},
+        }],
+        styles: {},
+      });
+    } else {
+      const lastRow = section.rows[section.rows.length - 1];
+      if (lastRow.columns.length === 0) {
+        lastRow.columns.push({
+          id: `column_${Date.now()}`,
+          width: '12' as any, // Type compatibility
+          elements: [newElement],
+          styles: {},
+        });
+      } else {
+        lastRow.columns[0].elements.push(newElement);
+      }
+    }
+    
+    onChange({
+      ...model,
+      sections: newSections,
+    });
+    setSelectedElementId(newElement.id);
+  }, [selectedSectionId, model, onChange, cloneElementWithNewIds]);
+
   // Update selected element and toolbar position when selection changes
   useEffect(() => {
     if (selectedElementId) {
@@ -489,11 +588,25 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 onChange={(bp) => onViewportChange(bp)}
                 data-testid="visual-editor-breakpoint-selector"
               />
-              <DesignTokensDialog
-                tokens={model.designTokens}
-                onUpdate={handleUpdateDesignTokens}
-                data-testid="visual-editor-design-tokens"
-              />
+              <div className="flex items-center gap-2">
+                <DesignTokensDialog
+                  tokens={model.designTokens}
+                  onUpdate={handleUpdateDesignTokens}
+                  data-testid="visual-editor-design-tokens"
+                />
+                <button
+                  onClick={() => setShowComponentLibrary(!showComponentLibrary)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    showComponentLibrary
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
+                  }`}
+                  data-testid="button-toggle-component-library"
+                >
+                  <Package className="w-4 h-4 inline-block mr-1" />
+                  Components
+                </button>
+              </div>
             </div>
             
             {/* Page Frame */}
@@ -525,6 +638,19 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
             onUpdateSection={updateSection}
             data-testid="visual-editor-properties-panel"
           />
+
+          {/* Component Library Panel */}
+          {showComponentLibrary && (
+            <div className="w-80 border-l">
+              <ComponentLibraryPanel
+                components={model.components || []}
+                selectedElement={selectedElement as any}
+                onSaveComponent={handleSaveComponent}
+                onDeleteComponent={handleDeleteComponent}
+                onInsertComponent={handleInsertComponent}
+              />
+            </div>
+          )}
         </div>
 
         <DragOverlay>
@@ -803,7 +929,6 @@ const ModernElement = React.memo(function ModernElement({
         theme={theme} 
         editorMode={true}
         isSelected={isSelected}
-        isHovered={element.id === hoveredElementId}
         onUpdate={handleUpdate}
         viewport={viewport}
       />
@@ -991,7 +1116,6 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate, viewp
         theme={theme} 
         editorMode={true}
         isSelected={isSelected}
-        isHovered={element.id === hoveredElementId}
         onUpdate={onUpdate}
         viewport={viewport}
       />
