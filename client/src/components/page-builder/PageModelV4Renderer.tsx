@@ -17,6 +17,13 @@ export function PageModelV4Renderer({
 }: PageModelV4RendererProps) {
   return (
     <div className="page-frame w-full h-full overflow-auto page-renderer-reset" style={{ position: 'relative', zIndex: 0 }}>
+      {/* Load Font Awesome for icons support */}
+      <link 
+        rel="stylesheet" 
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossOrigin="anonymous"
+      />
+      
       {/* Inject global CSS (variables, resets, classes) */}
       {model.globalStyles && (
         <style dangerouslySetInnerHTML={{ __html: model.globalStyles }} />

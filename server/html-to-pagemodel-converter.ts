@@ -2331,8 +2331,13 @@ function computeElementStylesV4(
       desktopStyles.fontWeight = 'bold';
     }
     
-    // Apply default italic for <em> and <i>
-    if ((tag === 'em' || tag === 'i') && !desktopStyles.fontStyle) {
+    // Apply default italic for <em> and <i> (but NOT for Font Awesome icons)
+    // Font Awesome uses <i> with classes like "fas fa-icon-name"
+    const isFontAwesomeIcon = tag === 'i' && classes.some(c => 
+      c === 'fa' || c.startsWith('fa-') || c === 'fas' || c === 'far' || c === 'fab' || c === 'fal' || c === 'fad' || c === 'fat'
+    );
+    
+    if ((tag === 'em' || (tag === 'i' && !isFontAwesomeIcon)) && !desktopStyles.fontStyle) {
       desktopStyles.fontStyle = 'italic';
     }
     
