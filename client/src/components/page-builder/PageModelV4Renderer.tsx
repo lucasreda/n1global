@@ -16,7 +16,7 @@ export function PageModelV4Renderer({
   breakpoint = 'desktop'
 }: PageModelV4RendererProps) {
   return (
-    <div className="page-frame w-full h-full overflow-auto">
+    <div className="page-frame w-full h-full overflow-auto" style={{ color: 'initial' }}>
       {model.nodes.map(node => (
         <PageNodeV4Renderer 
           key={node.id} 
@@ -53,12 +53,6 @@ function PageNodeV4Renderer({
     ...node.inlineStyles,
     ...styles,
   };
-  
-  // CRITICAL: Force color styles to override Tailwind global text-foreground
-  // This ensures explicit colors from HTML/CSS are preserved
-  if (finalStyles.color) {
-    finalStyles.color = `${finalStyles.color} !important` as any;
-  }
   
   // Handle click to select node
   const handleClick = (e: React.MouseEvent) => {
