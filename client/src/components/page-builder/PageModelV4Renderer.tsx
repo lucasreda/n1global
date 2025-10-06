@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { HoverTooltip } from './HoverTooltip';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { canAcceptChild } from './tree-helpers';
 
 interface PageModelV4RendererProps {
   model: PageModelV4;
@@ -98,6 +100,30 @@ function PageNodeV4Renderer({
   const isSelected = selectedNodeId === node.id;
   const isHovered = hoveredNodeId === node.id && !isSelected;
   
+  // Drag and drop
+  const { attributes: draggableAttributes, listeners: draggableListeners, setNodeRef: setDraggableRef, isDragging } = useDraggable({
+    id: `node-${node.id}`,
+    data: {
+      kind: 'node',
+      nodeId: node.id,
+    },
+  });
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: `drop-${node.id}`,
+    data: {
+      kind: 'node',
+      nodeId: node.id,
+      position: canAcceptChild(node) ? 'child' : 'after',
+    },
+  });
+
+  // Combine refs
+  const setRefs = useCallback((el: Element | null) => {
+    setDraggableRef(el as HTMLElement | null);
+    setDroppableRef(el as HTMLElement | null);
+  }, [setDraggableRef, setDroppableRef]);
+  
   // Get styles for current breakpoint
   const styles = node.styles?.[breakpoint] || {};
   
@@ -146,12 +172,17 @@ function PageNodeV4Renderer({
   if (node.tag === 'text' || node.type === 'text') {
     return (
       <span
+        ref={setRefs}
+        {...draggableAttributes}
+        {...draggableListeners}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
           isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0'
+          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
+          isDragging && 'opacity-30',
+          isOver && 'ring-2 ring-green-500 ring-offset-2'
         )}
         style={finalStyles}
         onClick={handleClick}
@@ -182,12 +213,17 @@ function PageNodeV4Renderer({
   if (isSelfClosing) {
     return (
       <Tag
+        ref={setRefs}
+        {...draggableAttributes}
+        {...draggableListeners}
         data-node-id={node.id}
         data-testid={`node-${node.tag}-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
           isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0'
+          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
+          isDragging && 'opacity-30',
+          isOver && 'ring-2 ring-green-500 ring-offset-2'
         )}
         style={{ ...finalStyles, pointerEvents: 'auto' }}
         onClick={handleClick}
@@ -201,12 +237,17 @@ function PageNodeV4Renderer({
   // Regular elements with children/text
   return (
     <Tag
+      ref={setRefs}
+      {...draggableAttributes}
+      {...draggableListeners}
       data-node-id={node.id}
       data-testid={`node-${node.tag}-${node.id}`}
       className={cn(
         node.classNames?.join(' '),
         isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-        isHovered && 'outline outline-2 outline-blue-400 outline-offset-0'
+        isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
+        isDragging && 'opacity-30',
+        isOver && 'ring-2 ring-green-500 ring-offset-2'
       )}
       style={{ ...finalStyles, pointerEvents: 'auto' }}
       onClick={handleClick}

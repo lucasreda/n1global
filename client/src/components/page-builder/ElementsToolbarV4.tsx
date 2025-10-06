@@ -18,6 +18,7 @@ import {
   Divide
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { useDraggable } from '@dnd-kit/core';
 
 interface ElementsToolbarV4Props {
   onInsertElement: (node: PageNodeV4) => void;
@@ -368,6 +369,41 @@ const CATEGORIES = [
   { id: 'interactive', name: 'Interactive' },
 ] as const;
 
+interface DraggableElementProps {
+  template: ElementTemplate;
+  onInsert: (template: ElementTemplate) => void;
+}
+
+function DraggableElement({ template, onInsert }: DraggableElementProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `template-${template.id}`,
+    data: {
+      kind: 'template',
+      template: template.createNode(),
+    },
+  });
+
+  return (
+    <Button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      variant="ghost"
+      size="sm"
+      onClick={() => onInsert(template)}
+      className={`w-full justify-start h-auto py-2 px-3 ${
+        isDragging ? 'opacity-50' : ''
+      }`}
+      data-testid={`element-${template.id}`}
+    >
+      <div className="flex items-center gap-2 w-full">
+        <div className="text-muted-foreground dark:text-gray-400">{template.icon}</div>
+        <span className="text-sm text-foreground dark:text-gray-200">{template.name}</span>
+      </div>
+    </Button>
+  );
+}
+
 export function ElementsToolbarV4({ onInsertElement }: ElementsToolbarV4Props) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -407,19 +443,11 @@ export function ElementsToolbarV4({ onInsertElement }: ElementsToolbarV4Props) {
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {filteredElements.map(template => (
-            <Button
+            <DraggableElement
               key={template.id}
-              variant="ghost"
-              size="sm"
-              onClick={() => handleInsert(template)}
-              className="w-full justify-start h-auto py-2 px-3"
-              data-testid={`element-${template.id}`}
-            >
-              <div className="flex items-center gap-2 w-full">
-                <div className="text-muted-foreground dark:text-gray-400">{template.icon}</div>
-                <span className="text-sm text-foreground dark:text-gray-200">{template.name}</span>
-              </div>
-            </Button>
+              template={template}
+              onInsert={handleInsert}
+            />
           ))}
         </div>
       </ScrollArea>

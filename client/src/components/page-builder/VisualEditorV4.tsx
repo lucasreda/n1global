@@ -6,6 +6,19 @@ import { PropertiesPanelV4 } from './PropertiesPanelV4';
 import { ElementsToolbarV4 } from './ElementsToolbarV4';
 import { FloatingToolbarV4 } from './FloatingToolbarV4';
 import { nanoid } from 'nanoid';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+} from '@dnd-kit/core';
+import { findNodePath, removeNodeByPath, insertNodeAtPath, canAcceptChild } from './tree-helpers';
 
 interface VisualEditorV4Props {
   model: PageModelV4;
@@ -29,6 +42,18 @@ export function VisualEditorV4({
   className = "" 
 }: VisualEditorV4Props) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
 
   const handleSelectNode = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
@@ -195,9 +220,109 @@ export function VisualEditorV4({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, handleDeleteNode, handleDuplicateNode]);
 
+  // Drag and drop handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    setOverId(event.over?.id as string | null);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    setActiveId(null);
+    setOverId(null);
+    
+    if (!over) return;
+    
+    const activeData = active.data.current;
+    const overData = over.data.current;
+    
+    // Case 1: Dragging a template from toolbar
+    if (activeData?.kind === 'template') {
+      const newNode = activeData.template as PageNodeV4;
+      
+      // Drop on canvas root
+      if (!overData) {
+        onChange({
+          ...model,
+          nodes: [...model.nodes, newNode],
+        });
+        return;
+      }
+      
+      // Drop on a node
+      if (overData.kind === 'node') {
+        const targetPath = findNodePath(model.nodes, overData.nodeId);
+        if (!targetPath) return;
+        
+        const targetNode = findNodeInTree(model.nodes, overData.nodeId);
+        
+        // If target can accept children and position is 'child', insert as child
+        if (overData.position === 'child' && targetNode && canAcceptChild(targetNode)) {
+          const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, 'child');
+          onChange({ ...model, nodes: newNodes });
+        } else {
+          // Otherwise insert before/after
+          const position = overData.position || 'after';
+          const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, position);
+          onChange({ ...model, nodes: newNodes });
+        }
+      }
+      return;
+    }
+    
+    // Case 2: Moving an existing node
+    if (activeData?.kind === 'node') {
+      const sourcePath = findNodePath(model.nodes, activeData.nodeId);
+      if (!sourcePath) return;
+      
+      const sourceNode = findNodeInTree(model.nodes, activeData.nodeId);
+      if (!sourceNode) return;
+      
+      // Remove from original position
+      let newNodes = removeNodeByPath(model.nodes, sourcePath);
+      
+      if (!overData) {
+        // Drop on canvas root
+        newNodes = [...newNodes, JSON.parse(JSON.stringify(sourceNode))];
+        onChange({ ...model, nodes: newNodes });
+        return;
+      }
+      
+      if (overData.kind === 'node') {
+        // Find new target path after removal
+        const targetPath = findNodePath(newNodes, overData.nodeId);
+        if (!targetPath) return;
+        
+        const targetNode = findNodeInTree(newNodes, overData.nodeId);
+        
+        // Insert at new position
+        if (overData.position === 'child' && targetNode && canAcceptChild(targetNode)) {
+          newNodes = insertNodeAtPath(newNodes, targetPath, JSON.parse(JSON.stringify(sourceNode)), 'child');
+        } else {
+          const position = overData.position || 'after';
+          newNodes = insertNodeAtPath(newNodes, targetPath, JSON.parse(JSON.stringify(sourceNode)), position);
+        }
+        
+        onChange({ ...model, nodes: newNodes });
+      }
+    }
+  }, [model, onChange]);
+
   const selectedNode = selectedNodeId ? findNodeInTree(model.nodes, selectedNodeId) : null;
+  const activeNode = activeId ? findNodeInTree(model.nodes, activeId) : null;
 
   return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
     <div className={`flex h-full ${className}`}>
       {/* Elements Toolbar */}
       {showElements && (
@@ -260,5 +385,15 @@ export function VisualEditorV4({
         </div>
       )}
     </div>
+    
+    {/* Drag Overlay */}
+    <DragOverlay>
+      {activeNode ? (
+        <div className="bg-primary/10 border-2 border-primary rounded px-3 py-2">
+          <span className="text-sm font-medium">{activeNode.tag}</span>
+        </div>
+      ) : null}
+    </DragOverlay>
+    </DndContext>
   );
 }
