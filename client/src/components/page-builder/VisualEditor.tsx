@@ -35,10 +35,11 @@ import { TemplateGallery } from './TemplateGallery';
 import { Template } from './templates/predefinedTemplates';
 import { AIGenerationDialog } from './AIGenerationDialog';
 import { useHistoryManager } from '@/lib/history';
-import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2 } from 'lucide-react';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2, Layers } from 'lucide-react';
 import { createComponentInstance, setOverridesFromElementUpdates } from '@/lib/componentInstance';
 import { useResolvedElement } from '@/lib/useResolvedElement';
 import { deduplicateComponentIds } from '@/lib/componentExport';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -62,6 +63,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const [generationProgress, setGenerationProgress] = useState<string>('');
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showLayers, setShowLayers] = useState(false);
 
   const history = useHistoryManager(model, onChange);
 
@@ -707,48 +709,6 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
           {/* Elements Toolbar */}
           <ElementsToolbar />
 
-          {/* Layers Panel */}
-          <LayersPanel
-            sections={model.sections}
-            selectedElementId={selectedElementId}
-            selectedSectionId={selectedSectionId}
-            onSelectElement={handleSelectElement}
-            onSelectSection={handleSelectSection}
-            onUpdateSection={updateSection}
-            onUpdateElement={updateElement}
-            onDeleteElement={(elementId) => {
-              const newModel = deleteElementInModel(model, elementId);
-              updateModel(newModel, "Delete element");
-              if (selectedElementId === elementId) {
-                setSelectedElementId(null);
-              }
-            }}
-            onDeleteSection={deleteSection}
-            onDuplicateElement={(elementId) => {
-              const element = findElementById(model, elementId);
-              if (element) {
-                const newElement = {
-                  ...element,
-                  id: `element_${Date.now()}`,
-                };
-                const newModel = duplicateElementInModel(model, elementId, newElement);
-                updateModel(newModel, "Duplicate element");
-              }
-            }}
-            onDuplicateSection={duplicateSection}
-            onReorderSections={(oldIndex, newIndex) => {
-              const newSections = arrayMove(model.sections, oldIndex, newIndex);
-              updateModel({
-                ...model,
-                sections: newSections,
-              }, "Reorder sections");
-            }}
-            onHoverElement={(elementId) => {
-              setHoveredElementId(elementId);
-            }}
-            data-testid="visual-editor-layers-panel"
-          />
-
           {/* Main Editor Canvas */}
           <div 
             className="flex-1 flex flex-col bg-background overflow-hidden"
@@ -777,6 +737,18 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                   onUpdate={handleUpdateDesignTokens}
                   data-testid="visual-editor-design-tokens"
                 />
+                <button
+                  onClick={() => setShowLayers(!showLayers)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    showLayers
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
+                  }`}
+                  data-testid="button-toggle-layers"
+                >
+                  <Layers className="w-4 h-4 inline-block mr-1" />
+                  Layers
+                </button>
                 <button
                   onClick={() => setShowComponentLibrary(!showComponentLibrary)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
@@ -872,6 +844,57 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
           {draggedItem && <DragOverlayContent item={draggedItem} />}
         </DragOverlay>
       </DndContext>
+
+      {/* Layers Dialog */}
+      <Dialog open={showLayers} onOpenChange={setShowLayers}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Layers</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            <LayersPanel
+              sections={model.sections}
+              selectedElementId={selectedElementId}
+              selectedSectionId={selectedSectionId}
+              onSelectElement={handleSelectElement}
+              onSelectSection={handleSelectSection}
+              onUpdateSection={updateSection}
+              onUpdateElement={updateElement}
+              onDeleteElement={(elementId) => {
+                const newModel = deleteElementInModel(model, elementId);
+                updateModel(newModel, "Delete element");
+                if (selectedElementId === elementId) {
+                  setSelectedElementId(null);
+                }
+              }}
+              onDeleteSection={deleteSection}
+              onDuplicateElement={(elementId) => {
+                const element = findElementById(model, elementId);
+                if (element) {
+                  const newElement = {
+                    ...element,
+                    id: `element_${Date.now()}`,
+                  };
+                  const newModel = duplicateElementInModel(model, elementId, newElement);
+                  updateModel(newModel, "Duplicate element");
+                }
+              }}
+              onDuplicateSection={duplicateSection}
+              onReorderSections={(oldIndex, newIndex) => {
+                const newSections = arrayMove(model.sections, oldIndex, newIndex);
+                updateModel({
+                  ...model,
+                  sections: newSections,
+                }, "Reorder sections");
+              }}
+              onHoverElement={(elementId) => {
+                setHoveredElementId(elementId);
+              }}
+              data-testid="visual-editor-layers-panel"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Floating Toolbar */}
       <FloatingToolbar
