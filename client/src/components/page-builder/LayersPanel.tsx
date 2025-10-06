@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   ContextMenu,
@@ -49,7 +50,8 @@ import {
   Box,
   Container,
   FileText,
-  GripVertical
+  GripVertical,
+  Link2
 } from 'lucide-react';
 import { BlockSection, BlockElement } from '@shared/schema';
 import { cn } from '@/lib/utils';
@@ -354,13 +356,25 @@ export function LayersPanel({
                   data-testid={`${testId}-element-rename-input`}
                 />
               ) : (
-                <span 
-                  className="text-sm truncate flex-1 cursor-text"
-                  onDoubleClick={() => handleStartEditing(element.id, elementName)}
-                  data-testid={`${testId}-element-name`}
-                >
-                  {elementName}
-                </span>
+                <div className="flex items-center gap-1 flex-1">
+                  <span 
+                    className="text-sm truncate cursor-text"
+                    onDoubleClick={() => handleStartEditing(element.id, elementName)}
+                    data-testid={`${testId}-element-name`}
+                  >
+                    {elementName}
+                  </span>
+                  {element.instanceData && (
+                    <Badge 
+                      variant="outline" 
+                      className="text-[10px] px-1 py-0 h-4 bg-purple-500/10 text-purple-500 border-purple-500/20"
+                      data-testid={`${testId}-instance-badge`}
+                    >
+                      <Link2 className="h-2.5 w-2.5 mr-0.5" />
+                      Instance
+                    </Badge>
+                  )}
+                </div>
               )}
 
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -408,6 +422,19 @@ export function LayersPanel({
               <Copy className="h-3 w-3 mr-2" />
               Duplicate
             </ContextMenuItem>
+            {element.instanceData && (
+              <ContextMenuItem
+                onClick={() => {
+                  // Detach instance: remove instanceData, keep resolved properties
+                  const { instanceData, ...elementWithoutInstance } = element;
+                  onUpdateElement?.(element.id, elementWithoutInstance);
+                }}
+                data-testid={`${testId}-context-detach-${element.id}`}
+              >
+                <Link2 className="h-3 w-3 mr-2" />
+                Detach Instance
+              </ContextMenuItem>
+            )}
             <ContextMenuItem
               onClick={() => onDeleteElement?.(element.id)}
               className="text-destructive"
