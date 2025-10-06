@@ -8,9 +8,10 @@ import {
   type InsertAffiliateLandingPage,
   type Product,
   type PageModelV2,
+  type PageModelV4,
 } from "@shared/schema";
 import { renderPageModelToHTML } from "./page-model-renderer";
-import { convertHtmlToPageModel } from "./html-to-pagemodel-converter";
+import { convertHtmlToPageModel, convertHtmlToPageModelV4 } from "./html-to-pagemodel-converter";
 
 export class AffiliateLandingService {
   async createLandingPage(
@@ -192,7 +193,7 @@ export class AffiliateLandingService {
     return updated;
   }
 
-  async convertHtmlToModel(id: string, forceReconvert: boolean = false): Promise<AffiliateLandingPage> {
+  async convertHtmlToModel(id: string, forceReconvert: boolean = false, version: '2' | '4' = '4'): Promise<AffiliateLandingPage> {
     const landingPage = await this.getLandingPageById(id);
     
     if (!landingPage) {
@@ -207,8 +208,10 @@ export class AffiliateLandingService {
       throw new Error("Landing page não possui conteúdo HTML para converter");
     }
     
-    console.log('🔄 Converting HTML to PageModel (preserving original HTML)...');
-    const model = convertHtmlToPageModel(landingPage.htmlContent);
+    console.log(`🔄 Converting HTML to PageModelV${version} (preserving original HTML)...`);
+    const model = version === '4' 
+      ? convertHtmlToPageModelV4(landingPage.htmlContent)
+      : convertHtmlToPageModel(landingPage.htmlContent);
     
     // IMPORTANT: We DON'T overwrite htmlContent to preserve the original HTML
     // This allows us to reconvert with full fidelity
