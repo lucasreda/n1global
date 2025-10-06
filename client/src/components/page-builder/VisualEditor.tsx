@@ -30,6 +30,8 @@ import { BreakpointSelector, Breakpoint } from './BreakpointSelector';
 import { LayersPanel } from './LayersPanel';
 import { DesignTokensDialog } from './DesignTokensDialog';
 import { ComponentLibraryPanel } from './ComponentLibraryPanel';
+import { TemplateGallery } from './TemplateGallery';
+import { Template } from './templates/predefinedTemplates';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package } from 'lucide-react';
 
 interface VisualEditorProps {
@@ -388,6 +390,37 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     return regenerateIds(deepCloned);
   }, []);
 
+  // Template handlers
+  const handleInsertTemplate = useCallback((template: Template) => {
+    // Deep clone the template section with fresh IDs for all nested elements
+    const clonedSection: BlockSection = JSON.parse(JSON.stringify(template.section));
+    
+    // Regenerate all IDs recursively
+    const regenerateIds = (section: BlockSection): BlockSection => {
+      section.id = `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      section.rows.forEach(row => {
+        row.id = `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        row.columns.forEach(col => {
+          col.id = `column_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          col.elements.forEach(el => {
+            el.id = `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            if (el.children) {
+              el.children = el.children.map(child => cloneElementWithNewIds(child));
+            }
+          });
+        });
+      });
+      return section;
+    };
+    
+    const newSection = regenerateIds(clonedSection);
+    
+    onChange({
+      ...model,
+      sections: [...model.sections, newSection],
+    });
+  }, [model, onChange, cloneElementWithNewIds]);
+
   const handleInsertComponent = useCallback((component: ComponentDefinitionV3) => {
     if (!selectedSectionId) return;
     
@@ -589,6 +622,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 data-testid="visual-editor-breakpoint-selector"
               />
               <div className="flex items-center gap-2">
+                <TemplateGallery onInsertTemplate={handleInsertTemplate} />
                 <DesignTokensDialog
                   tokens={model.designTokens}
                   onUpdate={handleUpdateDesignTokens}
