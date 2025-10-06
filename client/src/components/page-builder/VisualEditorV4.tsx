@@ -41,28 +41,50 @@ export function VisualEditorV4({
     return null;
   };
 
+  const deepMergeStyles = (
+    existing: ResponsiveStylesV4 | undefined,
+    updates: Partial<ResponsiveStylesV4> | undefined
+  ): ResponsiveStylesV4 => {
+    if (!updates) return existing || { desktop: {}, tablet: {}, mobile: {} };
+    
+    const result: ResponsiveStylesV4 = {
+      desktop: { ...(existing?.desktop || {}) },
+      tablet: { ...(existing?.tablet || {}) },
+      mobile: { ...(existing?.mobile || {}) },
+    };
+    
+    // Apenas merge breakpoints que vêm no update
+    if (updates.desktop) {
+      result.desktop = { ...result.desktop, ...updates.desktop };
+    }
+    if (updates.tablet) {
+      result.tablet = { ...result.tablet, ...updates.tablet };
+    }
+    if (updates.mobile) {
+      result.mobile = { ...result.mobile, ...updates.mobile };
+    }
+    
+    return result;
+  };
+
   const updateNodeInTree = (nodes: PageNodeV4[], id: string, updates: Partial<PageNodeV4>): PageNodeV4[] => {
     return nodes.map(node => {
       if (node.id === id) {
-        // Deep merge para preservar dados nested (attributes, styles)
+        // Deep merge para preservar dados nested
         const updated: PageNodeV4 = { ...node };
         
         // Merge attributes preservando existentes
-        if (updates.attributes) {
+        if (updates.attributes !== undefined) {
           updated.attributes = { ...node.attributes, ...updates.attributes };
         }
         
-        // Merge styles preservando outros breakpoints
-        if (updates.styles) {
-          updated.styles = {
-            desktop: { ...node.styles?.desktop, ...updates.styles.desktop },
-            tablet: { ...node.styles?.tablet, ...updates.styles.tablet },
-            mobile: { ...node.styles?.mobile, ...updates.styles.mobile },
-          };
+        // Merge styles com lógica de breakpoint inteligente
+        if (updates.styles !== undefined) {
+          updated.styles = deepMergeStyles(node.styles, updates.styles);
         }
         
         // Merge inlineStyles
-        if (updates.inlineStyles) {
+        if (updates.inlineStyles !== undefined) {
           updated.inlineStyles = { ...node.inlineStyles, ...updates.inlineStyles };
         }
         
