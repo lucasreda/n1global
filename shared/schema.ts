@@ -4715,6 +4715,7 @@ export type ComponentInstanceData = {
   overrides: InstanceOverridesMap; // Overridden properties per element
   propValues?: Record<string, any>; // Custom prop values (key -> value)
   selectedVariant?: Record<string, string>; // Selected variant combination (property -> value)
+  slotContents?: ComponentInstanceSlotContent[]; // Custom content for each slot
   detachedFrom?: string; // If detached, original componentId
   lastSyncedAt?: string; // ISO timestamp of last sync
 };
@@ -4755,6 +4756,23 @@ export type ComponentVariantCombination = {
   element: BlockElementV3;   // The variant's element tree
 };
 
+// Component Slots System (for nested content areas like Vue slots or React children)
+export type ComponentSlot = {
+  id: string;
+  name: string;              // Display name (e.g., "Header")
+  slotName: string;          // Slot identifier (e.g., "header", "content", "footer")
+  description?: string;      // Help text for users
+  defaultContent?: BlockElementV3[]; // Default elements if slot is empty
+  allowedTypes?: string[];   // Restrict which element types can be placed in slot
+  maxChildren?: number;      // Limit number of children (e.g., 1 for single element slots)
+};
+
+// Slot content in a component instance
+export type ComponentInstanceSlotContent = {
+  slotName: string;          // Which slot this content fills
+  elements: BlockElementV3[]; // The custom elements for this slot
+};
+
 export type ComponentDefinitionV3 = {
   id: string;
   name: string;
@@ -4767,12 +4785,15 @@ export type ComponentDefinitionV3 = {
   props?: ComponentProp[];                      // Custom props
   variantProperties?: ComponentVariantProperty[]; // Variant axes (Size, State, etc.)
   variants?: ComponentVariantCombination[];       // Specific variant combinations
+  
+  // Slots
+  slots?: ComponentSlot[];                        // Defined slots for nested content
 };
 
 // Element types from converter: heading, text, button, image, link, etc.
 export type BlockElementV3 = {
   id: string;
-  type: string; // More flexible: heading, text, button, image, link, container, componentInstance, etc.
+  type: string; // More flexible: heading, text, button, image, link, container, componentInstance, slot, etc.
   
   // Props for element (text content, href, src, etc.)
   props?: Record<string, any>;
@@ -4808,6 +4829,9 @@ export type BlockElementV3 = {
   
   // Component Instance metadata (when type === 'componentInstance')
   instanceData?: ComponentInstanceData;
+  
+  // Slot metadata (when type === 'slot')
+  slotName?: string; // Name of the slot this element represents
 };
 
 export type BlockColumnV3 = {
