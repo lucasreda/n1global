@@ -699,105 +699,102 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
         flexDirection: 'column'
       }}
     >
+      {/* Top Bar - Consolidated Controls */}
+      <div className="border-b border-border bg-background">
+        <div className="px-4 py-2.5 flex items-center justify-between gap-4">
+          {/* Left: Breakpoint Selector */}
+          <BreakpointSelector
+            activeBreakpoint={viewport as Breakpoint}
+            onChange={(bp) => onViewportChange(bp)}
+            data-testid="visual-editor-breakpoint-selector"
+          />
+
+          {/* Right: Action Buttons */}
+          <div className="flex items-center gap-2">
+            <AIGenerationDialog
+              onGenerate={handleAIGeneration}
+              isGenerating={isGeneratingAI}
+              generationProgress={generationProgress}
+              error={generationError}
+            />
+            <TemplateGallery onInsertTemplate={handleInsertTemplate} />
+            <DesignTokensDialog
+              tokens={model.designTokens}
+              onUpdate={handleUpdateDesignTokens}
+              data-testid="visual-editor-design-tokens"
+            />
+            <button
+              onClick={() => setShowLayers(!showLayers)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                showLayers
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+              data-testid="button-toggle-layers"
+            >
+              <Layers className="w-4 h-4 inline-block mr-1" />
+              Layers
+            </button>
+            <button
+              onClick={() => setShowComponentLibrary(!showComponentLibrary)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                showComponentLibrary
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+              data-testid="button-toggle-component-library"
+            >
+              <Package className="w-4 h-4 inline-block mr-1" />
+              Components
+            </button>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                showHistory
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-muted/80'
+              }`}
+              data-testid="button-toggle-history"
+              title={history.canUndo ? `Undo: ${history.undoDescription}` : 'History (Ctrl+Z)'}
+            >
+              <Undo2 className="w-4 h-4 inline-block mr-1" />
+              History
+            </button>
+          </div>
+        </div>
+      </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={customCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex flex-1" style={{ height: '100%', minHeight: '100%' }}>
-          {/* Elements Toolbar */}
+        {/* Main Layout: Left Sidebar | Center Canvas | Right Properties */}
+        <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100% - 57px)' }}>
+          {/* Left: Elements Toolbar */}
           <ElementsToolbar />
 
-          {/* Main Editor Canvas */}
-          <div 
-            className="flex-1 flex flex-col bg-background overflow-hidden"
-            style={{ 
-              height: '100%', 
-              minHeight: '100%'
-            }}
-          >
-            {/* Breakpoint Selector and Design Tokens */}
-            <div className="border-b border-border p-3 flex items-center justify-between gap-4">
-              <BreakpointSelector
-                activeBreakpoint={viewport as Breakpoint}
-                onChange={(bp) => onViewportChange(bp)}
-                data-testid="visual-editor-breakpoint-selector"
-              />
-              <div className="flex items-center gap-2">
-                <AIGenerationDialog
-                  onGenerate={handleAIGeneration}
-                  isGenerating={isGeneratingAI}
-                  generationProgress={generationProgress}
-                  error={generationError}
-                />
-                <TemplateGallery onInsertTemplate={handleInsertTemplate} />
-                <DesignTokensDialog
-                  tokens={model.designTokens}
-                  onUpdate={handleUpdateDesignTokens}
-                  data-testid="visual-editor-design-tokens"
-                />
-                <button
-                  onClick={() => setShowLayers(!showLayers)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    showLayers
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted hover:bg-muted/80'
-                  }`}
-                  data-testid="button-toggle-layers"
-                >
-                  <Layers className="w-4 h-4 inline-block mr-1" />
-                  Layers
-                </button>
-                <button
-                  onClick={() => setShowComponentLibrary(!showComponentLibrary)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    showComponentLibrary
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted hover:bg-muted/80'
-                  }`}
-                  data-testid="button-toggle-component-library"
-                >
-                  <Package className="w-4 h-4 inline-block mr-1" />
-                  Components
-                </button>
-                <button
-                  onClick={() => setShowHistory(!showHistory)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    showHistory
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted hover:bg-muted/80'
-                  }`}
-                  data-testid="button-toggle-history"
-                  title={history.canUndo ? `Undo: ${history.undoDescription}` : 'History (Ctrl+Z)'}
-                >
-                  <Undo2 className="w-4 h-4 inline-block mr-1" />
-                  History
-                </button>
-              </div>
-            </div>
-            
-            {/* Page Frame */}
-            <div className="flex-1 overflow-auto p-6">
-              <PageFrame 
-                viewport={viewport}
-                model={model}
-                selectedElementId={selectedElementId}
-                selectedSectionId={selectedSectionId}
-                hoveredSectionId={hoveredSectionId}
-                onSelectElement={handleSelectElement}
-                onSelectSection={handleSelectSection}
-                onHoverSection={handleHoverSection}
-                onUpdateElement={updateElement}
-                onDeleteSection={deleteSection}
-                onDuplicateSection={duplicateSection}
-                onAddSection={addSection}
-                draggedItem={draggedItem}
-              />
-            </div>
+          {/* Center: Page Preview */}
+          <div className="flex-1 overflow-auto bg-background p-6">
+            <PageFrame 
+              viewport={viewport}
+              model={model}
+              selectedElementId={selectedElementId}
+              selectedSectionId={selectedSectionId}
+              hoveredSectionId={hoveredSectionId}
+              onSelectElement={handleSelectElement}
+              onSelectSection={handleSelectSection}
+              onHoverSection={handleHoverSection}
+              onUpdateElement={updateElement}
+              onDeleteSection={deleteSection}
+              onDuplicateSection={duplicateSection}
+              onAddSection={addSection}
+              draggedItem={draggedItem}
+            />
           </div>
 
-          {/* Advanced Properties Panel */}
+          {/* Right: Properties Panel (always visible) */}
           <AdvancedPropertiesPanel
             selectedElement={resolvedSelectedElement}
             selectedSection={selectedSectionId ? model.sections.find(s => s.id === selectedSectionId) : null}
@@ -808,9 +805,9 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
             data-testid="visual-editor-properties-panel"
           />
 
-          {/* Component Library Panel */}
+          {/* Component Library Panel (overlay on right side) */}
           {showComponentLibrary && (
-            <div className="w-80 border-l">
+            <div className="w-80 border-l bg-background">
               <ComponentLibraryPanel
                 components={model.components || []}
                 selectedElement={selectedElement as any}
@@ -822,9 +819,9 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
             </div>
           )}
 
-          {/* History Panel */}
+          {/* History Panel (overlay on right side) */}
           {showHistory && (
-            <div className="w-80 border-l">
+            <div className="w-80 border-l bg-background">
               <HistoryPanel
                 commands={history.getHistory().commands}
                 currentIndex={history.getHistory().currentIndex}
