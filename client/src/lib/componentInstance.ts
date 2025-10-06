@@ -191,6 +191,89 @@ export function createComponentInstance(
 // ============================================================================
 
 /**
+ * Apply element updates as overrides to an instance
+ * Converts Partial<BlockElement> updates into override structure
+ */
+export function setOverridesFromElementUpdates(
+  element: BlockElement | BlockElementV3,
+  updates: Partial<BlockElement>
+): BlockElement | BlockElementV3 {
+  if (!element.instanceData) {
+    // Not an instance - return element with updates directly merged
+    return { ...element, ...updates };
+  }
+  
+  const instanceData = { ...element.instanceData };
+  const elementId = element.id;
+  
+  // Initialize overrides if needed
+  if (!instanceData.overrides[elementId]) {
+    instanceData.overrides[elementId] = {};
+  }
+  
+  const elementOverrides = { ...instanceData.overrides[elementId] };
+  
+  // Handle styles updates
+  if (updates.styles) {
+    if (!elementOverrides.styles) {
+      elementOverrides.styles = {};
+    }
+    
+    const stylesOverrides = { ...elementOverrides.styles };
+    
+    // Check if responsive or flat styles
+    const hasBreakpoints = Object.keys(updates.styles).some(k => 
+      ['desktop', 'tablet', 'mobile'].includes(k)
+    );
+    
+    if (hasBreakpoints) {
+      // Responsive styles
+      for (const [breakpoint, bpStyles] of Object.entries(updates.styles)) {
+        if (['desktop', 'tablet', 'mobile'].includes(breakpoint) && bpStyles) {
+          if (!stylesOverrides[breakpoint]) {
+            stylesOverrides[breakpoint] = {};
+          }
+          
+          for (const [key, value] of Object.entries(bpStyles)) {
+            stylesOverrides[breakpoint][key] = { value, isOverridden: true };
+          }
+        }
+      }
+    } else {
+      // Flat styles - assume desktop
+      if (!stylesOverrides.desktop) {
+        stylesOverrides.desktop = {};
+      }
+      
+      for (const [key, value] of Object.entries(updates.styles)) {
+        stylesOverrides.desktop[key] = { value, isOverridden: true };
+      }
+    }
+    
+    elementOverrides.styles = stylesOverrides;
+  }
+  
+  // Handle props updates
+  if (updates.props) {
+    if (!elementOverrides.props) {
+      elementOverrides.props = {};
+    }
+    
+    for (const [key, value] of Object.entries(updates.props)) {
+      elementOverrides.props[key] = { value, isOverridden: true };
+    }
+  }
+  
+  // Update instance data
+  instanceData.overrides[elementId] = elementOverrides;
+  
+  return {
+    ...element,
+    instanceData,
+  };
+}
+
+/**
  * Set an override on a specific element within an instance
  */
 export function setOverride(

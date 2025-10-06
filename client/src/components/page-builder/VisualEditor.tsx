@@ -36,7 +36,7 @@ import { Template } from './templates/predefinedTemplates';
 import { AIGenerationDialog } from './AIGenerationDialog';
 import { useHistoryManager } from '@/lib/history';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2 } from 'lucide-react';
-import { createComponentInstance } from '@/lib/componentInstance';
+import { createComponentInstance, setOverridesFromElementUpdates } from '@/lib/componentInstance';
 import { useResolvedElement } from '@/lib/useResolvedElement';
 
 interface VisualEditorProps {
@@ -339,8 +339,18 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   }, []);
 
   const updateElement = useCallback((elementId: string, updates: Partial<BlockElement>) => {
-    const newModel = updateElementInModel(model, elementId, updates);
-    updateModel(newModel, "Update element");
+    // Check if element is an instance - if so, create overrides instead of direct updates
+    const element = findElementById(model, elementId);
+    if (element?.instanceData) {
+      // For instances: intercept updates and convert to overrides
+      const newElement = setOverridesFromElementUpdates(element, updates);
+      const newModel = updateElementInModel(model, elementId, newElement);
+      updateModel(newModel, "Override instance property");
+    } else {
+      // For regular elements: normal update
+      const newModel = updateElementInModel(model, elementId, updates);
+      updateModel(newModel, "Update element");
+    }
   }, [model, updateModel]);
 
   const updateSection = useCallback((sectionId: string, updates: Partial<BlockSection>) => {
