@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { PageModelV4Renderer } from './PageModelV4Renderer';
 import { LayersPanelV4 } from './LayersPanelV4';
+import { PropertiesPanelV4 } from './PropertiesPanelV4';
 import { Button } from '@/components/ui/button';
 import { Plus, Layers, Settings } from 'lucide-react';
 
@@ -39,6 +40,31 @@ export function VisualEditorV4({
     }
     return null;
   };
+
+  const updateNodeInTree = (nodes: PageNodeV4[], id: string, updates: Partial<PageNodeV4>): PageNodeV4[] => {
+    return nodes.map(node => {
+      if (node.id === id) {
+        return { ...node, ...updates };
+      }
+      if (node.children) {
+        return {
+          ...node,
+          children: updateNodeInTree(node.children, id, updates),
+        };
+      }
+      return node;
+    });
+  };
+
+  const handleUpdateNode = useCallback((updates: Partial<PageNodeV4>) => {
+    if (!selectedNodeId) return;
+    
+    const updatedNodes = updateNodeInTree(model.nodes, selectedNodeId, updates);
+    onChange({
+      ...model,
+      nodes: updatedNodes,
+    });
+  }, [selectedNodeId, model, onChange]);
 
   const selectedNode = selectedNodeId ? findNodeInTree(model.nodes, selectedNodeId) : null;
 
@@ -97,58 +123,11 @@ export function VisualEditorV4({
 
       {/* Right Sidebar - Properties Panel */}
       {showProperties && (
-        <div className="w-80 border-l bg-background p-4 overflow-auto">
-          <h3 className="font-semibold mb-4">Propriedades</h3>
-          
-          {selectedNode ? (
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Tag HTML</label>
-                <div className="text-sm text-muted-foreground mt-1">
-                  &lt;{selectedNode.tag}&gt;
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">ID do Elemento</label>
-                <div className="text-sm text-muted-foreground mt-1 font-mono">
-                  {selectedNode.id}
-                </div>
-              </div>
-
-              {selectedNode.textContent && (
-                <div>
-                  <label className="text-sm font-medium">Conteúdo de Texto</label>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {selectedNode.textContent.substring(0, 100)}
-                    {selectedNode.textContent.length > 100 && '...'}
-                  </div>
-                </div>
-              )}
-
-              {selectedNode.classNames && selectedNode.classNames.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium">Classes CSS</label>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {selectedNode.classNames.join(', ')}
-                  </div>
-                </div>
-              )}
-
-              {selectedNode.styles && (
-                <div>
-                  <label className="text-sm font-medium">Estilos ({viewport})</label>
-                  <div className="text-xs text-muted-foreground mt-1 font-mono bg-gray-50 p-2 rounded max-h-40 overflow-auto">
-                    <pre>{JSON.stringify(selectedNode.styles[viewport] || {}, null, 2)}</pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground text-center py-8">
-              Selecione um elemento para editar suas propriedades
-            </div>
-          )}
+        <div className="w-80 border-l bg-background overflow-auto">
+          <PropertiesPanelV4
+            node={selectedNode}
+            onUpdateNode={handleUpdateNode}
+          />
         </div>
       )}
     </div>
