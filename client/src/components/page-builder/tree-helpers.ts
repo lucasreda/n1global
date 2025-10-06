@@ -36,6 +36,14 @@ export function getNodeByPath(nodes: PageNodeV4[], path: NodePath): PageNodeV4 |
   return node;
 }
 
+export function getParentNode(nodes: PageNodeV4[], targetId: string): PageNodeV4 | null {
+  const path = findNodePath(nodes, targetId);
+  if (!path || path.length <= 1) return null; // Root level has no parent
+  
+  const parentPath = path.slice(0, -1);
+  return getNodeByPath(nodes, parentPath);
+}
+
 export function removeNodeByPath(nodes: PageNodeV4[], path: NodePath): PageNodeV4[] {
   if (path.length === 0) return nodes;
   

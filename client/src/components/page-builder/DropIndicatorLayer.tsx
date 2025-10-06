@@ -2,12 +2,13 @@ import { useDndMonitor } from '@dnd-kit/core';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { PageNodeV4 } from '@shared/schema';
-import { canAcceptChildWithContext } from './tree-helpers';
+import { canAcceptChildWithContext, getParentNode } from './tree-helpers';
 
 interface DropIndicatorLayerProps {
   canvasContainerId?: string;
   activeNode?: PageNodeV4 | null;
   findNode?: (nodeId: string) => PageNodeV4 | null;
+  nodes?: PageNodeV4[];
 }
 
 type DropPosition = 'before' | 'after' | 'child' | null;
@@ -16,6 +17,7 @@ export function DropIndicatorLayer({
   canvasContainerId = 'visual-editor-canvas',
   activeNode = null,
   findNode = () => null,
+  nodes = [],
 }: DropIndicatorLayerProps) {
   const [activeDropZone, setActiveDropZone] = useState<{
     position: DropPosition;
@@ -63,12 +65,22 @@ export function DropIndicatorLayer({
   const width = rect.width;
   const height = rect.height;
 
-  // Check if drop is valid for 'child' position
+  // Check if drop is valid
   let isValidDrop = true;
-  if (activeDropZone.position === 'child' && activeNode) {
-    const targetNode = findNode(activeDropZone.nodeId);
-    if (targetNode) {
-      isValidDrop = canAcceptChildWithContext(targetNode, activeNode);
+  if (activeNode) {
+    if (activeDropZone.position === 'child') {
+      // For 'child' position, validate against target node
+      const targetNode = findNode(activeDropZone.nodeId);
+      if (targetNode) {
+        isValidDrop = canAcceptChildWithContext(targetNode, activeNode);
+      }
+    } else if (activeDropZone.position === 'before' || activeDropZone.position === 'after') {
+      // For 'before'/'after' position, validate against parent node
+      const parentNode = getParentNode(nodes, activeDropZone.nodeId);
+      if (parentNode) {
+        isValidDrop = canAcceptChildWithContext(parentNode, activeNode);
+      }
+      // If no parent (root level), always allow
     }
   }
 
@@ -77,7 +89,9 @@ export function DropIndicatorLayer({
   const invalidColor = '#ef4444'; // red-500
 
   if (activeDropZone.position === 'before') {
-    // Line before element (always allowed)
+    // Line before element
+    const color = isValidDrop ? validColor : invalidColor;
+    const shadowColor = isValidDrop ? 'rgba(59, 130, 246, 0.6)' : 'rgba(239, 68, 68, 0.6)';
     indicator = (
       <div
         className="absolute z-[100] pointer-events-none"
@@ -86,13 +100,15 @@ export function DropIndicatorLayer({
           left: `${left}px`,
           width: `${width}px`,
           height: '3px',
-          backgroundColor: validColor,
-          boxShadow: `0 0 8px rgba(59, 130, 246, 0.6)`,
+          backgroundColor: color,
+          boxShadow: `0 0 8px ${shadowColor}`,
         }}
       />
     );
   } else if (activeDropZone.position === 'after') {
-    // Line after element (always allowed)
+    // Line after element
+    const color = isValidDrop ? validColor : invalidColor;
+    const shadowColor = isValidDrop ? 'rgba(59, 130, 246, 0.6)' : 'rgba(239, 68, 68, 0.6)';
     indicator = (
       <div
         className="absolute z-[100] pointer-events-none"
@@ -101,8 +117,8 @@ export function DropIndicatorLayer({
           left: `${left}px`,
           width: `${width}px`,
           height: '3px',
-          backgroundColor: validColor,
-          boxShadow: `0 0 8px rgba(59, 130, 246, 0.6)`,
+          backgroundColor: color,
+          boxShadow: `0 0 8px ${shadowColor}`,
         }}
       />
     );

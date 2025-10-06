@@ -18,7 +18,7 @@ import {
   DragEndEvent,
   DragOverEvent,
 } from '@dnd-kit/core';
-import { findNodePath, removeNodeByPathWithReturn, insertNodeAtPath, canAcceptChild, canAcceptChildWithContext } from './tree-helpers';
+import { findNodePath, removeNodeByPathWithReturn, insertNodeAtPath, canAcceptChild, canAcceptChildWithContext, getParentNode } from './tree-helpers';
 import { getDropErrorMessage } from './semantic-rules';
 import { useToast } from '@/hooks/use-toast';
 
@@ -287,8 +287,20 @@ export function VisualEditorV4({
           const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, 'child');
           onChange({ ...model, nodes: newNodes });
         } else {
-          // Otherwise insert before/after
+          // Insert before/after - validate against parent
           const position = overData.position || 'after';
+          const parentNode = getParentNode(model.nodes, overData.nodeId);
+          
+          // If has parent, validate semantic relationship
+          if (parentNode && !canAcceptChildWithContext(parentNode, newNode)) {
+            toast({
+              title: "Drop não permitido",
+              description: getDropErrorMessage(parentNode, newNode),
+              variant: "destructive",
+            });
+            return;
+          }
+          
           const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, position);
           onChange({ ...model, nodes: newNodes });
         }
@@ -334,7 +346,22 @@ export function VisualEditorV4({
           }
           finalNodes = insertNodeAtPath(updatedTree, targetPath, removedNode, 'child');
         } else {
+          // Insert before/after - validate against parent
           const position = overData.position || 'after';
+          const parentNode = getParentNode(updatedTree, overData.nodeId);
+          
+          // If has parent, validate semantic relationship
+          if (parentNode && !canAcceptChildWithContext(parentNode, removedNode)) {
+            toast({
+              title: "Drop não permitido",
+              description: getDropErrorMessage(parentNode, removedNode),
+              variant: "destructive",
+            });
+            // Restore node to original position
+            onChange({ ...model, nodes: model.nodes });
+            return;
+          }
+          
           finalNodes = insertNodeAtPath(updatedTree, targetPath, removedNode, position);
         }
         
@@ -412,6 +439,7 @@ export function VisualEditorV4({
       canvasContainerId="visual-editor-canvas"
       activeNode={dropIndicatorNode}
       findNode={(nodeId) => findNodeInTree(model.nodes, nodeId)}
+      nodes={model.nodes}
     />
     
     {/* Drag Overlay */}
