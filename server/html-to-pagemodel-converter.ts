@@ -2260,19 +2260,28 @@ function computeElementStylesV4(
       const matchesElement = matchesSelector(element, rule.selector, tag, classes, id);
       
       if (isGlobalSelector || matchesElement) {
+        // CRITICAL: For global selectors, exclude inheritable properties (color, font-*)
+        // These should be inherited naturally through DOM, not forced on every element
+        let stylesToApply = rule.styles;
+        if (isGlobalSelector) {
+          stylesToApply = { ...rule.styles };
+          // Remove properties that should be inherited, not forced
+          delete stylesToApply.color; // Let color inherit from parent naturally
+        }
+        
         // Determine breakpoint from media query
         if (!rule.mediaQuery) {
           // No media query = applies to all
-          Object.assign(desktopStyles, rule.styles);
+          Object.assign(desktopStyles, stylesToApply);
         } else if (rule.mediaQuery.includes('768px') && rule.mediaQuery.includes('max-width')) {
           // Tablet/Mobile breakpoint
-          Object.assign(mobileStyles, rule.styles);
+          Object.assign(mobileStyles, stylesToApply);
         } else if (rule.mediaQuery.includes('1024px') && rule.mediaQuery.includes('max-width')) {
           // Tablet breakpoint
-          Object.assign(tabletStyles, rule.styles);
+          Object.assign(tabletStyles, stylesToApply);
         } else if (rule.mediaQuery.includes('min-width')) {
           // Desktop and up
-          Object.assign(desktopStyles, rule.styles);
+          Object.assign(desktopStyles, stylesToApply);
         }
       }
     }

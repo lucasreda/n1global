@@ -737,4 +737,34 @@ router.get(
   }
 );
 
+// =============================================
+// TEMPORARY: Reconvert Landing Page
+// =============================================
+router.post(
+  "/:id/reconvert",
+  authenticateToken,
+  requireSuperAdmin,
+  async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      console.log(`🔄 Reconverting landing page: ${id}`);
+      
+      const result = await affiliateLandingService.reconvertLandingPage(id);
+      
+      res.json({
+        success: true,
+        message: "Landing page reconverted successfully",
+        ...result,
+      });
+    } catch (error: any) {
+      console.error("Error reconverting landing page:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
+
 export default router;

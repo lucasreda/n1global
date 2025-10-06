@@ -232,6 +232,40 @@ export class AffiliateLandingService {
     console.log('✅ Conversion completed. Original HTML preserved.');
     return updated;
   }
+
+  async reconvertLandingPage(id: string): Promise<{ nodesCount: number, model: PageModelV4 }> {
+    const landingPage = await this.getLandingPageById(id);
+    
+    if (!landingPage) {
+      throw new Error("Landing page não encontrada");
+    }
+    
+    if (!landingPage.originalHtml) {
+      throw new Error("Landing page não possui HTML original para reconverter");
+    }
+    
+    console.log(`🔄 Reconverting landing page with fixed converter: ${id}`);
+    const model = convertHtmlToPageModelV4(landingPage.originalHtml);
+    
+    const [updated] = await db
+      .update(affiliateLandingPages)
+      .set({
+        model: model as any,
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliateLandingPages.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Falha ao atualizar landing page");
+    }
+    
+    console.log('✅ Reconversion completed successfully!');
+    return {
+      nodesCount: model.nodes.length,
+      model,
+    };
+  }
 }
 
 export const affiliateLandingService = new AffiliateLandingService();
