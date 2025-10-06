@@ -37,6 +37,7 @@ import { AIGenerationDialog } from './AIGenerationDialog';
 import { useHistoryManager } from '@/lib/history';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2 } from 'lucide-react';
 import { createComponentInstance } from '@/lib/componentInstance';
+import { useResolvedElement } from '@/lib/useResolvedElement';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -66,6 +67,11 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const updateModel = useCallback((newModel: PageModelV2, description: string) => {
     history.executeUpdate(newModel, description);
   }, [history]);
+
+  // Resolve component instances for rendering
+  // If selectedElement is an instance, this returns the resolved element with overrides applied
+  // Otherwise returns the element as-is
+  const resolvedSelectedElement = useResolvedElement(selectedElement, model.components || []);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -605,15 +611,17 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   }, [selectedElementId, model, updateModel]);
 
   const handleDuplicateElement = useCallback(() => {
-    if (selectedElement) {
+    if (resolvedSelectedElement) {
+      // Use resolved element to duplicate with overrides applied
       const newElement = {
-        ...selectedElement,
+        ...resolvedSelectedElement,
         id: `element_${Date.now()}`,
+        instanceData: undefined, // Remove instance data - duplicate becomes standalone
       };
       const newModel = duplicateElementInModel(model, selectedElementId!, newElement);
       updateModel(newModel, "Duplicate element");
     }
-  }, [selectedElement, selectedElementId, model, updateModel]);
+  }, [resolvedSelectedElement, selectedElementId, model, updateModel]);
 
   const handleMoveElement = useCallback((direction: 'up' | 'down') => {
     if (selectedElementId) {
@@ -623,8 +631,9 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   }, [selectedElementId, model, updateModel]);
 
   const handleToggleFormat = useCallback((format: 'bold' | 'italic' | 'underline') => {
-    if (selectedElement) {
-      const currentStyles = selectedElement.styles || {};
+    if (resolvedSelectedElement) {
+      // Use resolved element to read current styles (with overrides applied)
+      const currentStyles = resolvedSelectedElement.styles || {};
       const updates: Partial<BlockElement> = {
         styles: {
           ...currentStyles,
@@ -635,19 +644,20 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       };
       updateElement(selectedElementId!, updates);
     }
-  }, [selectedElement, selectedElementId, updateElement]);
+  }, [resolvedSelectedElement, selectedElementId, updateElement]);
 
   const handleAlignText = useCallback((alignment: 'left' | 'center' | 'right') => {
-    if (selectedElement) {
+    if (resolvedSelectedElement) {
+      // Use resolved element to read current styles (with overrides applied)
       const updates: Partial<BlockElement> = {
         styles: {
-          ...selectedElement.styles,
+          ...resolvedSelectedElement.styles,
           textAlign: alignment,
         }
       };
       updateElement(selectedElementId!, updates);
     }
-  }, [selectedElement, selectedElementId, updateElement]);
+  }, [resolvedSelectedElement, selectedElementId, updateElement]);
 
   return (
     <div 
@@ -790,7 +800,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
 
           {/* Advanced Properties Panel */}
           <AdvancedPropertiesPanel
-            selectedElement={selectedElementId ? findElementById(model, selectedElementId) : null}
+            selectedElement={resolvedSelectedElement}
             selectedSection={selectedSectionId ? model.sections.find(s => s.id === selectedSectionId) : null}
             activeBreakpoint={viewport as Breakpoint}
             onUpdateElement={updateElement}
