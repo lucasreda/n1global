@@ -1,4 +1,4 @@
-import { PageModelV2, BlockSection, BlockElement, PageModelV3, BlockSectionV3, BlockElementV3, ResponsiveStylesV3 } from './schema';
+import { PageModelV2, BlockSection, BlockElement, PageModelV3, BlockSectionV3, BlockElementV3, ResponsiveStylesV3, PageModelV4, PageNodeV4 } from './schema';
 
 // Legacy PageModel interface (what old manual pages use)
 export interface LegacyPageModel {
@@ -19,6 +19,31 @@ export interface LegacyPageModel {
     config?: Record<string, any>;
     content?: Record<string, any>;
   }>;
+}
+
+// Type guard to check if a model is PageModelV4
+export function isPageModelV4(model: any): model is PageModelV4 {
+  if (!model || typeof model !== 'object') return false;
+  
+  // Check for V4-specific structure
+  if (model.version === '4.0' || model.version === 4) return true;
+  
+  // Check for V4-specific nodes structure (recursive tree)
+  if (Array.isArray(model.nodes) && model.nodes.length > 0) {
+    const firstNode = model.nodes[0];
+    // V4 nodes have 'tag' property and may have recursive 'children'
+    if (firstNode && 'tag' in firstNode && 'type' in firstNode) {
+      return true;
+    }
+  }
+  
+  // Check for V4-specific meta structure
+  if (model.meta && typeof model.meta === 'object') {
+    // V4 has a simpler meta structure compared to V2/V3
+    return !('ogTitle' in model.meta) || model.globalStyles !== undefined;
+  }
+  
+  return false;
 }
 
 // Type guard to check if a model is PageModelV2
@@ -301,6 +326,233 @@ export function upgradeLegacyModel(legacy: LegacyPageModel): PageModelV2 {
   return v2;
 }
 
+// Convert PageModelV4 to PageModelV2
+export function convertV4toV2(v4: PageModelV4): PageModelV2 {
+  console.log('🔄 Converting PageModelV4 → PageModelV2');
+  
+  // Convert V4 nodes tree to V2 sections structure
+  const sections: BlockSection[] = convertNodesV4toSectionsV2(v4.nodes);
+  
+  return {
+    version: 2,
+    layout: 'single_page',
+    sections,
+    theme: {
+      colors: {
+        primary: '#3b82f6',
+        secondary: '#64748b',
+        accent: '#8b5cf6',
+        background: '#ffffff',
+        text: '#1e293b',
+        muted: '#94a3b8',
+      },
+      typography: {
+        headingFont: 'Inter, system-ui, sans-serif',
+        bodyFont: 'Inter, system-ui, sans-serif',
+        fontSize: {
+          xs: '0.75rem',
+          sm: '0.875rem',
+          base: '1rem',
+          lg: '1.125rem',
+          xl: '1.25rem',
+          '2xl': '1.5rem',
+          '3xl': '1.875rem',
+          '4xl': '2.25rem',
+        },
+      },
+      spacing: {
+        xs: '0.5rem',
+        sm: '1rem',
+        md: '1.5rem',
+        lg: '2rem',
+        xl: '3rem',
+        '2xl': '4rem',
+      },
+      borderRadius: {
+        sm: '0.375rem',
+        md: '0.5rem',
+        lg: '0.75rem',
+      },
+    },
+    seo: {
+      title: v4.meta?.title || 'Nova Página',
+      description: v4.meta?.description || '',
+      keywords: v4.meta?.keywords || [],
+      ogImage: v4.meta?.ogImage,
+      ogTitle: v4.meta?.ogTitle,
+      ogDescription: v4.meta?.ogDescription,
+    },
+    settings: {
+      containerMaxWidth: '1200px',
+      showGrid: false,
+      snapToGrid: true,
+      enableAnimations: true,
+      mobileFirst: true,
+    },
+  };
+}
+
+// Helper: Convert V4 nodes array to V2 sections
+function convertNodesV4toSectionsV2(nodes: PageNodeV4[]): BlockSection[] {
+  const sections: BlockSection[] = [];
+  
+  for (const node of nodes) {
+    // Group container nodes as sections
+    if (node.type === 'container' && (node.tag === 'section' || node.tag === 'header' || node.tag === 'footer')) {
+      const elements = convertNodeChildrenToElements(node.children || []);
+      
+      sections.push({
+        id: node.id,
+        type: node.tag === 'header' ? 'hero' : 'content',
+        name: node.tag === 'header' ? 'Hero' : node.tag === 'footer' ? 'Footer' : 'Section',
+        rows: [{
+          id: `row_${node.id}`,
+          columns: [{
+            id: `col_${node.id}`,
+            width: '100%',
+            elements,
+            styles: node.styles?.desktop || {},
+          }],
+          styles: {},
+        }],
+        styles: node.styles?.desktop || {},
+        settings: {
+          containerWidth: 'container',
+        },
+      });
+    } else {
+      // Convert non-section containers to elements in a generic section
+      const elements = convertNodeToElements(node);
+      if (elements.length > 0) {
+        sections.push({
+          id: `section_${node.id}`,
+          type: 'content',
+          name: 'Content',
+          rows: [{
+            id: `row_${node.id}`,
+            columns: [{
+              id: `col_${node.id}`,
+              width: '100%',
+              elements,
+              styles: {},
+            }],
+            styles: {},
+          }],
+          styles: {},
+          settings: {
+            containerWidth: 'container',
+          },
+        });
+      }
+    }
+  }
+  
+  return sections;
+}
+
+// Helper: Convert V4 node children to V2 elements
+function convertNodeChildrenToElements(children: PageNodeV4[]): BlockElement[] {
+  const elements: BlockElement[] = [];
+  
+  for (const child of children) {
+    elements.push(...convertNodeToElements(child));
+  }
+  
+  return elements;
+}
+
+// Helper: Convert a single V4 node to V2 elements
+function convertNodeToElements(node: PageNodeV4): BlockElement[] {
+  const elements: BlockElement[] = [];
+  
+  // Handle text nodes
+  if (node.type === 'text' && node.textContent) {
+    elements.push({
+      id: node.id,
+      type: 'text',
+      props: {},
+      content: { text: node.textContent },
+      styles: node.styles?.desktop || {},
+    });
+    return elements;
+  }
+  
+  // Handle headings
+  if (node.type === 'heading') {
+    elements.push({
+      id: node.id,
+      type: 'heading',
+      props: { level: node.tag === 'h1' ? 1 : node.tag === 'h2' ? 2 : 3 },
+      content: { text: node.textContent || extractTextFromChildren(node.children) },
+      styles: node.styles?.desktop || {},
+    });
+    return elements;
+  }
+  
+  // Handle paragraphs
+  if (node.type === 'paragraph') {
+    elements.push({
+      id: node.id,
+      type: 'text',
+      props: {},
+      content: { text: node.textContent || extractTextFromChildren(node.children) },
+      styles: node.styles?.desktop || {},
+    });
+    return elements;
+  }
+  
+  // Handle buttons
+  if (node.type === 'button') {
+    elements.push({
+      id: node.id,
+      type: 'button',
+      props: {},
+      content: { 
+        label: node.textContent || extractTextFromChildren(node.children),
+        href: node.attributes?.href || '#'
+      },
+      styles: node.styles?.desktop || {},
+    });
+    return elements;
+  }
+  
+  // Handle images
+  if (node.type === 'image') {
+    elements.push({
+      id: node.id,
+      type: 'image',
+      props: {},
+      content: { 
+        src: node.attributes?.src || '',
+        alt: node.attributes?.alt || ''
+      },
+      styles: node.styles?.desktop || {},
+    });
+    return elements;
+  }
+  
+  // Handle containers with children
+  if (node.children && node.children.length > 0) {
+    elements.push(...convertNodeChildrenToElements(node.children));
+  }
+  
+  return elements;
+}
+
+// Helper: Extract text from node children
+function extractTextFromChildren(children?: PageNodeV4[]): string {
+  if (!children || children.length === 0) return '';
+  
+  return children
+    .map(child => {
+      if (child.textContent) return child.textContent;
+      if (child.children) return extractTextFromChildren(child.children);
+      return '';
+    })
+    .filter(text => text)
+    .join(' ');
+}
+
 // Ensure a model is PageModelV2, upgrading if necessary
 export function ensurePageModelV2(model: any): PageModelV2 {
   if (!model) {
@@ -310,6 +562,11 @@ export function ensurePageModelV2(model: any): PageModelV2 {
   
   if (isPageModelV2(model)) {
     return model as PageModelV2;
+  }
+  
+  if (isPageModelV4(model)) {
+    console.log('🔄 Converting PageModelV4 to V2 for editor');
+    return convertV4toV2(model as PageModelV4);
   }
   
   if (isLegacyPageModel(model)) {
