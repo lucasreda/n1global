@@ -28,12 +28,14 @@ import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './Floati
 import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
 import { BreakpointSelector, Breakpoint } from './BreakpointSelector';
 import { LayersPanel } from './LayersPanel';
+import { HistoryPanel } from './HistoryPanel';
 import { DesignTokensDialog } from './DesignTokensDialog';
 import { ComponentLibraryPanel } from './ComponentLibraryPanel';
 import { TemplateGallery } from './TemplateGallery';
 import { Template } from './templates/predefinedTemplates';
 import { AIGenerationDialog } from './AIGenerationDialog';
-import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package } from 'lucide-react';
+import { useHistoryManager } from '@/lib/history';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2 } from 'lucide-react';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -56,7 +58,13 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string>('');
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
+  const history = useHistoryManager(model, onChange);
+
+  const updateModel = useCallback((newModel: PageModelV2, description: string) => {
+    history.executeUpdate(newModel, description);
+  }, [history]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -139,101 +147,101 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
 
       if (activeIndex !== -1 && overIndex !== -1) {
         const newSections = arrayMove(model.sections, activeIndex, overIndex);
-        onChange({
+        updateModel({
           ...model,
           sections: newSections,
-        });
+        }, "Reorder sections");
       }
     }
 
     // Handle element reordering within columns
     if (activeData?.type === 'element' && overData?.type === 'element') {
       const newModel = moveElement(model, active.id as string, overData.columnId);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
 
     // Handle moving existing element to block columns
     if (activeData?.type === 'element' && overData?.type === 'block-column-zone') {
       const newModel = moveElementToBlockColumn(model, active.id as string, overData.elementId, overData.columnIndex, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
 
     // Handle moving existing element to structural elements (blocks/containers)
     if (activeData?.type === 'element' && overData?.type === 'element-zone') {
       const newModel = moveElementToStructuralElement(model, active.id as string, overData.elementId, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
 
     // Handle moving existing element to containers
     if (activeData?.type === 'element' && overData?.type === 'container') {
       const newModel = moveElementToContainer(model, active.id as string, overData.containerId);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
 
     // Handle adding new element to block columns
     if (activeData?.type === 'new-element' && overData?.type === 'block-column-zone') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToBlockColumn(model, newElement, overData.elementId, overData.columnIndex, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Add element");
     }
 
     // Handle adding new element to structural elements (blocks/containers)
     if (activeData?.type === 'new-element' && overData?.type === 'element-zone') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToStructuralElement(model, newElement, overData.elementId, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Add element");
     }
 
     // Handle adding new element from toolbar to drop zones (precise positioning)
     if (activeData?.type === 'new-element' && overData?.type === 'drop-zone') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToColumn(model, newElement, overData.columnId, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Add element");
     }
 
     // Handle adding new element from toolbar to columns (fallback)
     if (activeData?.type === 'new-element' && overData?.type === 'column') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToColumn(model, newElement, overData.columnId);
-      onChange(newModel);
+      updateModel(newModel, "Add element");
     }
 
     // Handle moving element to structural elements
     if (activeData?.type === 'element' && overData?.type === 'element-zone') {
       const newModel = moveElementToStructuralElement(model, active.id as string, overData.elementId, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
 
     // Handle adding new element from toolbar to containers/blocks
     if (activeData?.type === 'new-element' && overData?.type === 'container') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToContainer(model, newElement, overData.containerId);
-      onChange(newModel);
+      updateModel(newModel, "Add element");
     }
 
     // Handle element reordering within containers/blocks
     if (activeData?.type === 'element' && overData?.type === 'container') {
       const newModel = moveElementToContainer(model, active.id as string, overData.containerId);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
 
     // Handle moving existing element to section drop zones
     if (activeData?.type === 'element' && overData?.type === 'section-drop-zone') {
       const newModel = moveElementToSectionDropZone(model, active.id as string, overData.columnId, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
 
     // Handle adding new element to section drop zones
     if (activeData?.type === 'new-element' && overData?.type === 'section-drop-zone') {
       const newElement = createDefaultElement(activeData.elementType);
       const newModel = addElementToColumn(model, newElement, overData.columnId, overData.position);
-      onChange(newModel);
+      updateModel(newModel, "Add element");
     }
 
     // Handle moving existing element to section (fallback)
     if (activeData?.type === 'element' && overData?.type === 'section') {
       const newModel = moveElementToSection(model, active.id as string, over.id as string);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
   };
 
@@ -260,18 +268,18 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       },
     };
 
-    onChange({
+    updateModel({
       ...model,
       sections: [...model.sections, newSection],
-    });
-  }, [model, onChange]);
+    }, "Add section");
+  }, [model, updateModel]);
 
   const deleteSection = useCallback((sectionId: string) => {
-    onChange({
+    updateModel({
       ...model,
       sections: model.sections.filter(s => s.id !== sectionId),
-    });
-  }, [model, onChange]);
+    }, "Delete section");
+  }, [model, updateModel]);
 
   const duplicateSection = useCallback((sectionId: string) => {
     const sectionIndex = model.sections.findIndex(s => s.id === sectionId);
@@ -302,11 +310,11 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     const newSections = [...model.sections];
     newSections.splice(sectionIndex + 1, 0, duplicatedSection);
     
-    onChange({
+    updateModel({
       ...model,
       sections: newSections,
-    });
-  }, [model, onChange]);
+    }, "Duplicate section");
+  }, [model, updateModel]);
 
   // Memoize hover handlers to prevent infinite loops
   const handleHoverSection = useCallback((sectionId: string | null) => {
@@ -325,20 +333,20 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
 
   const updateElement = useCallback((elementId: string, updates: Partial<BlockElement>) => {
     const newModel = updateElementInModel(model, elementId, updates);
-    onChange(newModel);
-  }, [model, onChange]);
+    updateModel(newModel, "Update element");
+  }, [model, updateModel]);
 
   const updateSection = useCallback((sectionId: string, updates: Partial<BlockSection>) => {
     const newModel = updateSectionInModel(model, sectionId, updates);
-    onChange(newModel);
-  }, [model, onChange]);
+    updateModel(newModel, "Update section");
+  }, [model, updateModel]);
 
   const handleUpdateDesignTokens = useCallback((tokens: DesignTokensV3) => {
-    onChange({
+    updateModel({
       ...model,
       designTokens: tokens,
-    });
-  }, [model, onChange]);
+    }, "Update design tokens");
+  }, [model, updateModel]);
 
   // Deep clone element without changing IDs (for saving immutable snapshots)
   const deepCloneElement = useCallback((element: BlockElement): BlockElement => {
@@ -361,19 +369,19 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     };
     
     const components = model.components || [];
-    onChange({
+    updateModel({
       ...model,
       components: [...components, newComponent],
-    });
-  }, [selectedElement, model, onChange, deepCloneElement]);
+    }, "Save component");
+  }, [selectedElement, model, updateModel, deepCloneElement]);
 
   const handleDeleteComponent = useCallback((componentId: string) => {
     const components = model.components || [];
-    onChange({
+    updateModel({
       ...model,
       components: components.filter(c => c.id !== componentId),
-    });
-  }, [model, onChange]);
+    }, "Delete component");
+  }, [model, updateModel]);
 
   // Deep clone element with fresh IDs for all nested children
   const cloneElementWithNewIds = useCallback((element: BlockElement): BlockElement => {
@@ -464,7 +472,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
 
       // Apply generated model
       if (generatedModel) {
-        onChange(generatedModel);
+        updateModel(generatedModel, "AI generate page");
         didSucceed = true;
       }
       
@@ -512,11 +520,11 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     
     const newSection = regenerateIds(clonedSection);
     
-    onChange({
+    updateModel({
       ...model,
       sections: [...model.sections, newSection],
-    });
-  }, [model, onChange, cloneElementWithNewIds]);
+    }, "Insert template");
+  }, [model, updateModel, cloneElementWithNewIds]);
 
   const handleInsertComponent = useCallback((component: ComponentDefinitionV3) => {
     if (!selectedSectionId) return;
@@ -554,12 +562,12 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       }
     }
     
-    onChange({
+    updateModel({
       ...model,
       sections: newSections,
-    });
+    }, "Insert component");
     setSelectedElementId(newElement.id);
-  }, [selectedSectionId, model, onChange, cloneElementWithNewIds]);
+  }, [selectedSectionId, model, updateModel, cloneElementWithNewIds]);
 
   // Update selected element and toolbar position when selection changes
   useEffect(() => {
@@ -590,10 +598,10 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const handleDeleteElement = useCallback(() => {
     if (selectedElementId) {
       const newModel = deleteElementInModel(model, selectedElementId);
-      onChange(newModel);
+      updateModel(newModel, "Delete element");
       setSelectedElementId(null);
     }
-  }, [selectedElementId, model, onChange]);
+  }, [selectedElementId, model, updateModel]);
 
   const handleDuplicateElement = useCallback(() => {
     if (selectedElement) {
@@ -602,16 +610,16 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
         id: `element_${Date.now()}`,
       };
       const newModel = duplicateElementInModel(model, selectedElementId!, newElement);
-      onChange(newModel);
+      updateModel(newModel, "Duplicate element");
     }
-  }, [selectedElement, selectedElementId, model, onChange]);
+  }, [selectedElement, selectedElementId, model, updateModel]);
 
   const handleMoveElement = useCallback((direction: 'up' | 'down') => {
     if (selectedElementId) {
       const newModel = moveElementInColumn(model, selectedElementId, direction);
-      onChange(newModel);
+      updateModel(newModel, "Move element");
     }
-  }, [selectedElementId, model, onChange]);
+  }, [selectedElementId, model, updateModel]);
 
   const handleToggleFormat = useCallback((format: 'bold' | 'italic' | 'underline') => {
     if (selectedElement) {
@@ -672,7 +680,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
             onUpdateElement={updateElement}
             onDeleteElement={(elementId) => {
               const newModel = deleteElementInModel(model, elementId);
-              onChange(newModel);
+              updateModel(newModel, "Delete element");
               if (selectedElementId === elementId) {
                 setSelectedElementId(null);
               }
@@ -686,16 +694,16 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                   id: `element_${Date.now()}`,
                 };
                 const newModel = duplicateElementInModel(model, elementId, newElement);
-                onChange(newModel);
+                updateModel(newModel, "Duplicate element");
               }
             }}
             onDuplicateSection={duplicateSection}
             onReorderSections={(oldIndex, newIndex) => {
               const newSections = arrayMove(model.sections, oldIndex, newIndex);
-              onChange({
+              updateModel({
                 ...model,
                 sections: newSections,
-              });
+              }, "Reorder sections");
             }}
             onHoverElement={(elementId) => {
               setHoveredElementId(elementId);
@@ -743,6 +751,19 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                   <Package className="w-4 h-4 inline-block mr-1" />
                   Components
                 </button>
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    showHistory
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80'
+                  }`}
+                  data-testid="button-toggle-history"
+                  title={history.canUndo ? `Undo: ${history.undoDescription}` : 'History (Ctrl+Z)'}
+                >
+                  <Undo2 className="w-4 h-4 inline-block mr-1" />
+                  History
+                </button>
               </div>
             </div>
             
@@ -785,6 +806,23 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 onSaveComponent={handleSaveComponent}
                 onDeleteComponent={handleDeleteComponent}
                 onInsertComponent={handleInsertComponent}
+              />
+            </div>
+          )}
+
+          {/* History Panel */}
+          {showHistory && (
+            <div className="w-80 border-l">
+              <HistoryPanel
+                commands={history.getHistory().commands}
+                currentIndex={history.getHistory().currentIndex}
+                canUndo={history.canUndo}
+                canRedo={history.canRedo}
+                onUndo={history.undo}
+                onRedo={history.redo}
+                onClear={history.clearHistory}
+                undoDescription={history.undoDescription}
+                redoDescription={history.redoDescription}
               />
             </div>
           )}
