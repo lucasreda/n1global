@@ -36,6 +36,7 @@ import { GridLayoutControls } from './GridLayoutControls';
 import { PositionControls } from './PositionControls';
 import { BoxModelInspector } from './inspector/BoxModelInspector';
 import { ColorPickerProfessional } from './inspector/ColorPickerProfessional';
+import { FontFamilySelectorProfessional } from './inspector/FontFamilySelectorProfessional';
 import { BlockElement, BlockSection } from '@shared/schema';
 
 export type Breakpoint = 'desktop' | 'tablet' | 'mobile';
@@ -281,7 +282,7 @@ export function AdvancedPropertiesPanel({
     
     switch (section) {
       case 'typography':
-        keysToRemove.push('fontSize', 'lineHeight', 'letterSpacing', 'fontWeight', 'fontStyle', 'textTransform', 'color');
+        keysToRemove.push('fontFamily', 'fontSize', 'lineHeight', 'letterSpacing', 'fontWeight', 'fontStyle', 'textTransform', 'color');
         break;
       case 'spacing':
         keysToRemove.push('paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft');
@@ -544,10 +545,16 @@ export function AdvancedPropertiesPanel({
                 title="Typography" 
                 icon={Type} 
                 section="typography"
-                hasChanges={!!(targetStyles.fontSize || targetStyles.fontWeight || targetStyles.color)}
+                hasChanges={!!(targetStyles.fontFamily || targetStyles.fontSize || targetStyles.fontWeight || targetStyles.color)}
               />
               <CollapsibleContent>
                 <div className="px-3 pb-4 space-y-4">
+                  <FontFamilySelectorProfessional
+                    value={getStyleValue('fontFamily', 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif')}
+                    onChange={(value) => handleStyleUpdate({ fontFamily: value })}
+                    data-testid={`${testId}-font-family`}
+                  />
+                  
                   <UnitSliderInput
                     label="Font Size"
                     value={getStyleValue('fontSize', '16px')}
