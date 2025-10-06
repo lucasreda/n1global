@@ -1,4 +1,5 @@
 import { PageNodeV4 } from '@shared/schema';
+import { canAcceptChildSemantic } from './semantic-rules';
 
 export type NodePath = number[];
 
@@ -139,20 +140,23 @@ export function insertNodeAtPath(
   return newNodes;
 }
 
+// Legacy function - kept for backward compatibility but using semantic rules internally
 export function canAcceptChild(node: PageNodeV4): boolean {
-  // Allowlist: Only true containers can accept children
-  const containerTypes = ['container', 'section', 'column', 'block', 'row'];
-  const containerTags = ['div', 'section', 'header', 'footer', 'nav', 'main', 'aside', 'article', 'ul', 'ol'];
+  // Simple check: just verify if the node category generally accepts children
+  // This is used by droppable disabled prop
+  const dummyTextChild: PageNodeV4 = {
+    id: 'dummy',
+    tag: 'span',
+    type: 'text',
+    textContent: 'test',
+    classNames: [],
+    attributes: {},
+  };
   
-  // Denylist: Leaf elements that should never accept children
-  const leafTypes = ['text', 'button', 'link', 'image', 'video', 'input'];
-  const leafTags = ['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'button', 'a', 'img', 'video', 'input', 'textarea', 'hr', 'br'];
-  
-  // Explicitly deny leaf elements
-  if (leafTypes.includes(node.type) || leafTags.includes(node.tag)) {
-    return false;
-  }
-  
-  // Accept only if it's a known container
-  return containerTypes.includes(node.type) || containerTags.includes(node.tag);
+  return canAcceptChildSemantic(node, dummyTextChild);
+}
+
+// New semantic validation function with parent-child context
+export function canAcceptChildWithContext(parentNode: PageNodeV4, childNode: PageNodeV4): boolean {
+  return canAcceptChildSemantic(parentNode, childNode);
 }

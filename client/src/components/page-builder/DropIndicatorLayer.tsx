@@ -1,14 +1,22 @@
 import { useDndMonitor } from '@dnd-kit/core';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { PageNodeV4 } from '@shared/schema';
+import { canAcceptChildWithContext } from './tree-helpers';
 
 interface DropIndicatorLayerProps {
   canvasContainerId?: string;
+  activeNode?: PageNodeV4 | null;
+  findNode?: (nodeId: string) => PageNodeV4 | null;
 }
 
 type DropPosition = 'before' | 'after' | 'child' | null;
 
-export function DropIndicatorLayer({ canvasContainerId = 'visual-editor-canvas' }: DropIndicatorLayerProps) {
+export function DropIndicatorLayer({ 
+  canvasContainerId = 'visual-editor-canvas',
+  activeNode = null,
+  findNode = () => null,
+}: DropIndicatorLayerProps) {
   const [activeDropZone, setActiveDropZone] = useState<{
     position: DropPosition;
     nodeId: string | null;
@@ -55,10 +63,21 @@ export function DropIndicatorLayer({ canvasContainerId = 'visual-editor-canvas' 
   const width = rect.width;
   const height = rect.height;
 
+  // Check if drop is valid for 'child' position
+  let isValidDrop = true;
+  if (activeDropZone.position === 'child' && activeNode) {
+    const targetNode = findNode(activeDropZone.nodeId);
+    if (targetNode) {
+      isValidDrop = canAcceptChildWithContext(targetNode, activeNode);
+    }
+  }
+
   let indicator: JSX.Element | null = null;
+  const validColor = '#3b82f6'; // blue-500
+  const invalidColor = '#ef4444'; // red-500
 
   if (activeDropZone.position === 'before') {
-    // Blue line before element
+    // Line before element (always allowed)
     indicator = (
       <div
         className="absolute z-[100] pointer-events-none"
@@ -67,13 +86,13 @@ export function DropIndicatorLayer({ canvasContainerId = 'visual-editor-canvas' 
           left: `${left}px`,
           width: `${width}px`,
           height: '3px',
-          backgroundColor: '#3b82f6',
-          boxShadow: '0 0 8px rgba(59, 130, 246, 0.6)',
+          backgroundColor: validColor,
+          boxShadow: `0 0 8px rgba(59, 130, 246, 0.6)`,
         }}
       />
     );
   } else if (activeDropZone.position === 'after') {
-    // Blue line after element
+    // Line after element (always allowed)
     indicator = (
       <div
         className="absolute z-[100] pointer-events-none"
@@ -82,23 +101,28 @@ export function DropIndicatorLayer({ canvasContainerId = 'visual-editor-canvas' 
           left: `${left}px`,
           width: `${width}px`,
           height: '3px',
-          backgroundColor: '#3b82f6',
-          boxShadow: '0 0 8px rgba(59, 130, 246, 0.6)',
+          backgroundColor: validColor,
+          boxShadow: `0 0 8px rgba(59, 130, 246, 0.6)`,
         }}
       />
     );
   } else if (activeDropZone.position === 'child') {
-    // Semi-transparent overlay for container
+    // Semi-transparent overlay for container - red if invalid
+    const color = isValidDrop ? validColor : invalidColor;
+    const bgColor = isValidDrop ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+    const shadowColor = isValidDrop ? 'rgba(59, 130, 246, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+    
     indicator = (
       <div
-        className="absolute z-[100] pointer-events-none border-2 border-blue-500"
+        className="absolute z-[100] pointer-events-none border-2"
         style={{
           top: `${top}px`,
           left: `${left}px`,
           width: `${width}px`,
           height: `${height}px`,
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          boxShadow: '0 0 12px rgba(59, 130, 246, 0.4)',
+          borderColor: color,
+          backgroundColor: bgColor,
+          boxShadow: `0 0 12px ${shadowColor}`,
         }}
       />
     );

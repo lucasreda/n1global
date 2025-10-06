@@ -18,7 +18,9 @@ import {
   DragEndEvent,
   DragOverEvent,
 } from '@dnd-kit/core';
-import { findNodePath, removeNodeByPathWithReturn, insertNodeAtPath, canAcceptChild } from './tree-helpers';
+import { findNodePath, removeNodeByPathWithReturn, insertNodeAtPath, canAcceptChild, canAcceptChildWithContext } from './tree-helpers';
+import { getDropErrorMessage } from './semantic-rules';
+import { useToast } from '@/hooks/use-toast';
 
 interface VisualEditorV4Props {
   model: PageModelV4;
@@ -41,9 +43,11 @@ export function VisualEditorV4({
   showProperties = true,
   className = "" 
 }: VisualEditorV4Props) {
+  const { toast } = useToast();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [draggedTemplate, setDraggedTemplate] = useState<PageNodeV4 | null>(null);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -223,6 +227,14 @@ export function VisualEditorV4({
   // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+    
+    // Capture template being dragged
+    const activeData = event.active.data.current;
+    if (activeData?.kind === 'template') {
+      setDraggedTemplate(activeData.template as PageNodeV4);
+    } else {
+      setDraggedTemplate(null);
+    }
   }, []);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -234,6 +246,7 @@ export function VisualEditorV4({
     
     setActiveId(null);
     setOverId(null);
+    setDraggedTemplate(null);
     
     if (!over) return;
     
@@ -262,6 +275,15 @@ export function VisualEditorV4({
         
         // If target can accept children and position is 'child', insert as child
         if (overData.position === 'child' && targetNode && canAcceptChild(targetNode)) {
+          // Validate semantic relationship
+          if (!canAcceptChildWithContext(targetNode, newNode)) {
+            toast({
+              title: "Drop não permitido",
+              description: getDropErrorMessage(targetNode, newNode),
+              variant: "destructive",
+            });
+            return;
+          }
           const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, 'child');
           onChange({ ...model, nodes: newNodes });
         } else {
@@ -299,6 +321,17 @@ export function VisualEditorV4({
         // Insert at new position - reuse removed node directly
         let finalNodes: PageNodeV4[];
         if (overData.position === 'child' && targetNode && canAcceptChild(targetNode)) {
+          // Validate semantic relationship
+          if (!canAcceptChildWithContext(targetNode, removedNode)) {
+            toast({
+              title: "Drop não permitido",
+              description: getDropErrorMessage(targetNode, removedNode),
+              variant: "destructive",
+            });
+            // Restore node to original position
+            onChange({ ...model, nodes: model.nodes });
+            return;
+          }
           finalNodes = insertNodeAtPath(updatedTree, targetPath, removedNode, 'child');
         } else {
           const position = overData.position || 'after';
@@ -312,6 +345,9 @@ export function VisualEditorV4({
 
   const selectedNode = selectedNodeId ? findNodeInTree(model.nodes, selectedNodeId) : null;
   const activeNode = activeId ? findNodeInTree(model.nodes, activeId) : null;
+  
+  // Active node for drop indicator (either existing node or template being dragged)
+  const dropIndicatorNode = draggedTemplate || activeNode;
 
   return (
     <DndContext
@@ -372,7 +408,11 @@ export function VisualEditorV4({
     </div>
     
     {/* Drop Indicator Layer */}
-    <DropIndicatorLayer canvasContainerId="visual-editor-canvas" />
+    <DropIndicatorLayer 
+      canvasContainerId="visual-editor-canvas"
+      activeNode={dropIndicatorNode}
+      findNode={(nodeId) => findNodeInTree(model.nodes, nodeId)}
+    />
     
     {/* Drag Overlay */}
     <DragOverlay>
