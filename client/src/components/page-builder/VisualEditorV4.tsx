@@ -49,12 +49,12 @@ export function VisualEditorV4({
     existing: ResponsiveStylesV4 | undefined,
     updates: Partial<ResponsiveStylesV4> | undefined
   ): ResponsiveStylesV4 => {
-    if (!updates) return existing || { desktop: {}, tablet: {}, mobile: {} };
+    if (!updates) return JSON.parse(JSON.stringify(existing || { desktop: {}, tablet: {}, mobile: {} }));
     
     const result: ResponsiveStylesV4 = {
-      desktop: { ...(existing?.desktop || {}) },
-      tablet: { ...(existing?.tablet || {}) },
-      mobile: { ...(existing?.mobile || {}) },
+      desktop: JSON.parse(JSON.stringify(existing?.desktop || {})),
+      tablet: JSON.parse(JSON.stringify(existing?.tablet || {})),
+      mobile: JSON.parse(JSON.stringify(existing?.mobile || {})),
     };
     
     if (updates.desktop) {
@@ -73,10 +73,10 @@ export function VisualEditorV4({
   const updateNodeInTree = (nodes: PageNodeV4[], id: string, updates: Partial<PageNodeV4>): PageNodeV4[] => {
     return nodes.map(node => {
       if (node.id === id) {
-        const updated: PageNodeV4 = { ...node };
+        const updated: PageNodeV4 = JSON.parse(JSON.stringify(node));
         
         if (updates.attributes !== undefined) {
-          updated.attributes = { ...node.attributes, ...updates.attributes };
+          updated.attributes = { ...updated.attributes, ...updates.attributes };
         }
         
         if (updates.styles !== undefined) {
@@ -84,24 +84,23 @@ export function VisualEditorV4({
         }
         
         if (updates.inlineStyles !== undefined) {
-          updated.inlineStyles = { ...node.inlineStyles, ...updates.inlineStyles };
+          updated.inlineStyles = { ...updated.inlineStyles, ...updates.inlineStyles };
         }
         
         if (updates.textContent !== undefined) updated.textContent = updates.textContent;
         if (updates.tag) updated.tag = updates.tag;
-        if (updates.classNames) updated.classNames = updates.classNames;
-        if (updates.children) updated.children = updates.children;
-        if (updates.states) updated.states = updates.states;
+        if (updates.classNames) updated.classNames = [...(updates.classNames || [])];
+        if (updates.children) updated.children = JSON.parse(JSON.stringify(updates.children));
+        if (updates.states) updated.states = JSON.parse(JSON.stringify(updates.states));
         
         return updated;
       }
       if (node.children) {
-        return {
-          ...node,
-          children: updateNodeInTree(node.children, id, updates),
-        };
+        const updatedNode = JSON.parse(JSON.stringify(node));
+        updatedNode.children = updateNodeInTree(node.children, id, updates);
+        return updatedNode;
       }
-      return node;
+      return JSON.parse(JSON.stringify(node));
     });
   };
 
