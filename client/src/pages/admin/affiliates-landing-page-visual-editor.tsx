@@ -210,9 +210,9 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
               Voltar
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">{pageData.name}</h1>
+              <h1 className="text-lg font-semibold text-foreground">{pageData.name}</h1>
               {pageData.description && (
-                <p className="text-sm text-muted-foreground">{pageData.description}</p>
+                <p className="text-sm text-muted-foreground dark:text-gray-400">{pageData.description}</p>
               )}
             </div>
           </div>

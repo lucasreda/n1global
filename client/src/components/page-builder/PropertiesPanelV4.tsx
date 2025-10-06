@@ -45,13 +45,13 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
   };
 
   return (
-    <div className="properties-panel-v4 flex flex-col h-full">
+    <div className="properties-panel-v4 flex flex-col h-full bg-background text-foreground">
       {/* Header with Breakpoint Selector */}
       <div className="p-4 border-b bg-muted/30">
         <div className="space-y-3">
           <div>
-            <h3 className="font-semibold text-sm">Properties</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h3 className="font-semibold text-sm text-foreground">Properties</h3>
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mt-0.5">
               &lt;{node.tag}&gt;
             </p>
           </div>
@@ -119,14 +119,14 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
               {/* Text Content */}
               {node.textContent !== undefined && (
                 <div className="space-y-2">
-                  <Label htmlFor="text-content" className="text-sm font-medium">Text Content</Label>
+                  <Label htmlFor="text-content" className="text-sm font-medium text-foreground">Text Content</Label>
                   <Textarea
                     id="text-content"
                     value={node.textContent}
                     onChange={(e) => handleTextContentChange(e.target.value)}
                     placeholder="Enter text content..."
                     rows={4}
-                    className="text-sm"
+                    className="text-sm bg-background text-foreground"
                     data-testid="textarea-content"
                   />
                 </div>
@@ -134,7 +134,7 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
 
               {/* Attributes */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">HTML Attributes</Label>
+                <Label className="text-sm font-medium text-foreground">HTML Attributes</Label>
                 {node.attributes && Object.keys(node.attributes).length > 0 ? (
                   <div className="space-y-2">
                     {Object.entries(node.attributes).map(([key, value]) => (
@@ -155,7 +155,7 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
                     ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground italic bg-muted/30 p-3 rounded">
+                  <div className="text-xs text-muted-foreground dark:text-gray-400 italic bg-muted/30 p-3 rounded">
                     No attributes defined
                   </div>
                 )}
@@ -164,7 +164,7 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
               {/* CSS Classes */}
               {node.classNames && node.classNames.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">CSS Classes</Label>
+                  <Label className="text-sm font-medium text-foreground">CSS Classes</Label>
                   <div className="flex flex-wrap gap-1.5">
                     {node.classNames.map((className, index) => (
                       <span

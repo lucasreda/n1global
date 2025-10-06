@@ -61,7 +61,7 @@ export function BreakpointSelector({
               data-testid={`${testId}-${bp}`}
             >
               <Icon className="h-4 w-4" />
-              <span className="text-xs font-medium">{config.label}</span>
+              <span className={`text-xs font-medium ${isActive ? 'text-primary-foreground' : 'text-foreground dark:text-gray-200'}`}>{config.label}</span>
             </Button>
           );
         })}

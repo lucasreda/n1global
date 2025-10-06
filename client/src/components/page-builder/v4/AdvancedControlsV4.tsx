@@ -70,7 +70,7 @@ export function PseudoClassEditorV4({ node, breakpoint, onUpdateNode }: PseudoCl
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-sm font-medium mb-2 block">Element State</Label>
+        <Label className="text-sm font-medium text-foreground mb-2 block">Element State</Label>
         <div className="grid grid-cols-2 gap-2">
           {pseudoClassOptions.map(({ value, label, desc }) => (
             <button
@@ -92,13 +92,13 @@ export function PseudoClassEditorV4({ node, breakpoint, onUpdateNode }: PseudoCl
 
       {activeState !== 'default' && (
         <div className="bg-muted/50 rounded-lg p-3 space-y-3">
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground dark:text-gray-400">
             Define styles for <span className="font-semibold">:{activeState}</span> state
           </div>
 
           {/* Common interactive properties */}
           <div className="space-y-2">
-            <Label className="text-xs">Background Color</Label>
+            <Label className="text-xs text-foreground">Background Color</Label>
             <input
               type="color"
               value={currentStateStyles.backgroundColor || '#ffffff'}
@@ -109,7 +109,7 @@ export function PseudoClassEditorV4({ node, breakpoint, onUpdateNode }: PseudoCl
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs">Text Color</Label>
+            <Label className="text-xs text-foreground">Text Color</Label>
             <input
               type="color"
               value={currentStateStyles.color || '#000000'}
@@ -120,7 +120,7 @@ export function PseudoClassEditorV4({ node, breakpoint, onUpdateNode }: PseudoCl
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs">Transform</Label>
+            <Label className="text-xs text-foreground">Transform</Label>
             <input
               type="text"
               value={currentStateStyles.transform || ''}
@@ -132,7 +132,7 @@ export function PseudoClassEditorV4({ node, breakpoint, onUpdateNode }: PseudoCl
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs">Transition</Label>
+            <Label className="text-xs text-foreground">Transition</Label>
             <input
               type="text"
               value={currentStateStyles.transition || ''}

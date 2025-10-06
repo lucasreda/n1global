@@ -12,7 +12,7 @@ interface LayersPanelV4Props {
 export function LayersPanelV4({ nodes, selectedNodeId, onSelectNode }: LayersPanelV4Props) {
   return (
     <div className="layers-panel-v4 p-4 overflow-auto">
-      <h3 className="font-semibold mb-3 text-sm uppercase text-muted-foreground">
+      <h3 className="font-semibold mb-3 text-sm uppercase text-muted-foreground dark:text-gray-300">
         Camadas
       </h3>
       <div className="space-y-1">
@@ -81,20 +81,20 @@ function LayerNodeV4({ node, depth, selectedNodeId, onSelectNode }: LayerNodeV4P
         )}
 
         {/* Tag Name */}
-        <span className="text-purple-600 text-sm font-mono">
+        <span className="text-purple-600 dark:text-purple-400 text-sm font-mono">
           &lt;{node.tag}&gt;
         </span>
 
         {/* Text Preview */}
         {node.textContent && (
-          <span className="text-xs text-muted-foreground truncate ml-2">
+          <span className="text-xs text-muted-foreground dark:text-gray-400 truncate ml-2">
             {node.textContent.substring(0, 30)}
             {node.textContent.length > 30 && '...'}
           </span>
         )}
 
         {/* ID Badge */}
-        <span className="text-xs text-muted-foreground ml-auto font-mono">
+        <span className="text-xs text-muted-foreground dark:text-gray-400 ml-auto font-mono">
           #{node.id.substring(0, 6)}
         </span>
       </div>

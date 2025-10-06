@@ -98,10 +98,10 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
 
       {/* Width & Height */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">Dimensions</Label>
+        <Label className="text-sm font-medium text-foreground">Dimensions</Label>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs">Width</Label>
+            <Label className="text-xs text-foreground">Width</Label>
             <Input
               value={currentStyles.width || ''}
               onChange={(e) => handleStyleChange({ width: e.target.value })}
@@ -111,7 +111,7 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
             />
           </div>
           <div>
-            <Label className="text-xs">Height</Label>
+            <Label className="text-xs text-foreground">Height</Label>
             <Input
               value={currentStyles.height || ''}
               onChange={(e) => handleStyleChange({ height: e.target.value })}
@@ -181,7 +181,7 @@ export function TypographyControlsV4({ node, breakpoint, onUpdateNode }: Styling
 
       {/* Font Weight */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Font Weight</Label>
+        <Label className="text-sm font-medium text-foreground">Font Weight</Label>
         <Input
           type="number"
           value={currentStyles.fontWeight || '400'}
@@ -220,7 +220,7 @@ export function TypographyControlsV4({ node, breakpoint, onUpdateNode }: Styling
 
       {/* Text Align */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Text Align</Label>
+        <Label className="text-sm font-medium text-foreground">Text Align</Label>
         <div className="grid grid-cols-4 gap-2">
           {['left', 'center', 'right', 'justify'].map((align) => (
             <button
@@ -241,7 +241,7 @@ export function TypographyControlsV4({ node, breakpoint, onUpdateNode }: Styling
 
       {/* Text Transform */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Text Transform</Label>
+        <Label className="text-sm font-medium text-foreground">Text Transform</Label>
         <div className="grid grid-cols-3 gap-2">
           {['none', 'uppercase', 'lowercase', 'capitalize'].map((transform) => (
             <button
