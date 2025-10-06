@@ -4,7 +4,7 @@ import { PageModelV4Renderer } from './PageModelV4Renderer';
 import { LayersPanelV4 } from './LayersPanelV4';
 import { PropertiesPanelV4 } from './PropertiesPanelV4';
 import { ElementsToolbarV4 } from './ElementsToolbarV4';
-import { FloatingToolbarV4 } from './FloatingToolbarV4';
+import { DropIndicatorLayer } from './DropIndicatorLayer';
 import { nanoid } from 'nanoid';
 import {
   DndContext,
@@ -371,11 +371,19 @@ export function VisualEditorV4({
       )}
     </div>
     
+    {/* Drop Indicator Layer */}
+    <DropIndicatorLayer canvasContainerId="visual-editor-canvas" />
+    
     {/* Drag Overlay */}
     <DragOverlay>
       {activeNode ? (
-        <div className="bg-primary/10 border-2 border-primary rounded px-3 py-2">
-          <span className="text-sm font-medium">{activeNode.tag}</span>
+        <div className="bg-blue-600 text-white border-2 border-blue-700 rounded-md shadow-lg px-4 py-2">
+          <span className="text-sm font-semibold flex items-center gap-2">
+            <span className="text-xs opacity-75">{activeNode.tag}</span>
+            {activeNode.classNames && activeNode.classNames.length > 0 && (
+              <span className="text-xs opacity-60">.{activeNode.classNames[0]}</span>
+            )}
+          </span>
         </div>
       ) : null}
     </DragOverlay>
