@@ -9,6 +9,7 @@ import { useLocation } from "wouter";
 import { PageModelV2 } from "@shared/schema";
 import { ensurePageModelV2, isPageModelV2 } from "@shared/pageModelAdapter";
 import { VisualEditor } from "@/components/page-builder/VisualEditor";
+import { BreakpointSelector } from "@/components/page-builder/BreakpointSelector";
 
 interface AffiliateLandingPage {
   id: string;
@@ -232,6 +233,12 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
           </div>
           
           <div className="flex items-center gap-2">
+            <BreakpointSelector
+              activeBreakpoint={viewport as 'desktop' | 'tablet' | 'mobile'}
+              onChange={setViewport}
+              data-testid="page-breakpoint-selector"
+            />
+            
             {pageData.vercelDeploymentUrl && (
               <Button
                 variant="outline"

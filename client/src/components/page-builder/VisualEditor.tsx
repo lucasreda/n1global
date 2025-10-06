@@ -701,15 +701,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     >
       {/* Top Bar - Consolidated Controls */}
       <div className="border-b border-border bg-background">
-        <div className="px-4 py-2.5 flex items-center justify-between gap-4">
-          {/* Breakpoint Selector - Left */}
-          <BreakpointSelector
-            activeBreakpoint={viewport as Breakpoint}
-            onChange={(bp) => onViewportChange(bp)}
-            data-testid="visual-editor-breakpoint-selector"
-          />
-
-          {/* Action Buttons - Right */}
+        <div className="px-4 py-2.5 flex items-center justify-end gap-4">
+          {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <AIGenerationDialog
               onGenerate={handleAIGeneration}
