@@ -141,8 +141,9 @@ function PageNodeV4Renderer({
   // Get styles for current breakpoint
   const styles = node.styles?.[breakpoint] || {};
   
-  // Merge inline styles with responsive styles
+  // Merge layout properties, inline styles, and responsive styles
   const finalStyles: React.CSSProperties = {
+    ...node.layout,
     ...node.inlineStyles,
     ...styles,
   };
