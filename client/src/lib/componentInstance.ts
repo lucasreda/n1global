@@ -613,7 +613,53 @@ export function resolveVariantElement(
 }
 
 /**
- * Enhanced resolveComponentInstance that supports props and variants
+ * Inject slot content into the element tree
+ * Replaces elements with type='slot' with custom or default content
+ */
+function injectSlotContent(
+  element: BlockElementV3,
+  componentDef: ComponentDefinitionV3,
+  instanceData: ComponentInstanceData
+): void {
+  if (!element.children) return;
+
+  // Process children to replace slot elements
+  const processedChildren: BlockElementV3[] = [];
+  
+  for (const child of element.children) {
+    // Check if this is a slot element
+    if (child.type === 'slot' && child.slotName) {
+      const slotName = child.slotName;
+      
+      // Find custom slot content from instance
+      const customContent = instanceData.slotContents?.find(
+        sc => sc.slotName === slotName
+      );
+      
+      if (customContent && customContent.elements.length > 0) {
+        // Use custom content
+        processedChildren.push(...customContent.elements);
+      } else {
+        // Try to use default content from component definition
+        const slotDef = componentDef.slots?.find(s => s.slotName === slotName);
+        if (slotDef?.defaultContent && slotDef.defaultContent.length > 0) {
+          processedChildren.push(...slotDef.defaultContent);
+        }
+        // If no custom or default content, slot is empty (don't add anything)
+      }
+    } else {
+      // Not a slot, keep as is
+      processedChildren.push(child);
+      // Recursively process this child's children
+      injectSlotContent(child, componentDef, instanceData);
+    }
+  }
+  
+  element.children = processedChildren;
+}
+
+/**
+ * Enhanced resolveComponentInstance that supports props, variants, and slots
  */
 export function resolveComponentInstanceWithPropsAndVariants(
   instanceElement: BlockElementV3,
@@ -639,10 +685,13 @@ export function resolveComponentInstanceWithPropsAndVariants(
   // Step 2: Deep clone variant element
   const resolved = deepCloneElement(variantElement);
   
-  // Step 3: Apply custom props
+  // Step 3: Inject slot content (before props, so props can override slot content if needed)
+  injectSlotContent(resolved, baseComponent, instanceElement.instanceData);
+  
+  // Step 4: Apply custom props
   applyPropsToElement(resolved, baseComponent, instanceElement.instanceData);
   
-  // Step 4: Apply overrides recursively
+  // Step 5: Apply overrides recursively
   applyOverridesToTree(resolved, overrides);
   
   return resolved;
