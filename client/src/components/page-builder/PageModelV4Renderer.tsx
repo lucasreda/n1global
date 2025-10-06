@@ -202,6 +202,8 @@ function PageNodeV4Renderer({
         data-testid={`node-text-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
+          isSelected && 'editor-node-selected',
+          isHovered && 'editor-node-hovered',
           isDragging && 'opacity-30'
         )}
         style={finalStyles}
@@ -240,6 +242,8 @@ function PageNodeV4Renderer({
         data-testid={`node-${node.tag}-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
+          isSelected && 'editor-node-selected',
+          isHovered && 'editor-node-hovered',
           isDragging && 'opacity-30'
         )}
         style={finalStyles}
@@ -261,6 +265,8 @@ function PageNodeV4Renderer({
       data-testid={`node-${node.tag}-${node.id}`}
       className={cn(
         node.classNames?.join(' '),
+        isSelected && 'editor-node-selected',
+        isHovered && 'editor-node-hovered',
         isDragging && 'opacity-30'
       )}
       style={finalStyles}
