@@ -4322,6 +4322,10 @@ export type BlockElement = {
   
   // Child elements for structural elements (containers and blocks)
   children?: BlockElement[];
+  
+  // Component Instance support (V3 compatibility)
+  componentId?: string; // Reference to ComponentDefinitionV3.id (legacy)
+  instanceData?: ComponentInstanceData; // Full instance metadata with overrides
 };
 
 export type BlockColumn = {
