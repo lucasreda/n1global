@@ -446,3 +446,11 @@ html, body {
   overflow: hidden;
 }
 
+/* PageModelV4 Renderer - Prevent text-foreground inheritance but allow inline color styles */
+.page-renderer-reset {
+  /* Reset the text-foreground inheritance from body, but don't force it on children */
+  color: #000000;
+}
+
+/* Inline styles in React have specificity 1,0,0,0 - they will override this automatically */
+/* Elements with explicit color in their style attribute will display correctly */

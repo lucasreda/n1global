@@ -16,7 +16,7 @@ export function PageModelV4Renderer({
   breakpoint = 'desktop'
 }: PageModelV4RendererProps) {
   return (
-    <div className="page-frame w-full h-full overflow-auto" style={{ color: 'initial' }}>
+    <div className="page-frame w-full h-full overflow-auto page-renderer-reset">
       {model.nodes.map(node => (
         <PageNodeV4Renderer 
           key={node.id} 
