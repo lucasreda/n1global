@@ -44,14 +44,15 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   const [showLayers, setShowLayers] = useState(false);
   const [showProperties, setShowProperties] = useState(true);
   const [showElements, setShowElements] = useState(true);
+  const [historyInitialized, setHistoryInitialized] = useState(false);
 
-  // History/Undo-Redo
+  // History/Undo-Redo - Initialize with a stable default, will be reset when model loads
   const defaultModel: PageModelV4 = { 
     version: "4.0", 
     nodes: [], 
     meta: { title: "", description: "" } 
   };
-  const { addToHistory, undo, redo, canUndo, canRedo } = useHistoryV4(currentModel || defaultModel);
+  const { addToHistory, undo, redo, canUndo, canRedo, history } = useHistoryV4(defaultModel);
 
   // Fetch landing page data
   const { data: pageResponse, isLoading, error } = useQuery({
@@ -68,7 +69,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
   // Initialize model when data loads
   useEffect(() => {
-    if (pageResponse) {
+    if (pageResponse && !historyInitialized) {
       const loadedPage = pageResponse.landingPage || pageResponse;
       
       if (loadedPage.model) {
@@ -83,6 +84,9 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
         }
         
         setCurrentModel(loadedPage.model);
+        // Initialize history with the loaded model
+        addToHistory(loadedPage.model, 'Initial load');
+        setHistoryInitialized(true);
         console.log('✅ Loaded PageModelV4 for editing');
       } else {
         toast({
@@ -95,7 +99,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
       
       setPageData(loadedPage);
     }
-  }, [pageResponse, toast]);
+  }, [pageResponse, toast, historyInitialized, addToHistory]);
 
   // Save page mutation
   const savePageMutation = useMutation({
@@ -141,7 +145,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
   const handleUndo = () => {
     const previousModel = undo();
-    if (previousModel && currentModel) {
+    if (previousModel) {
       setCurrentModel(previousModel);
       setIsDirty(true);
     }
@@ -149,7 +153,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
   const handleRedo = () => {
     const nextModel = redo();
-    if (nextModel && currentModel) {
+    if (nextModel) {
       setCurrentModel(nextModel);
       setIsDirty(true);
     }
