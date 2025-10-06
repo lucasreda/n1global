@@ -202,8 +202,6 @@ function PageNodeV4Renderer({
         data-testid={`node-text-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
-          isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
           isDragging && 'opacity-30'
         )}
         style={finalStyles}
@@ -242,8 +240,6 @@ function PageNodeV4Renderer({
         data-testid={`node-${node.tag}-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
-          isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
           isDragging && 'opacity-30'
         )}
         style={finalStyles}
@@ -265,8 +261,6 @@ function PageNodeV4Renderer({
       data-testid={`node-${node.tag}-${node.id}`}
       className={cn(
         node.classNames?.join(' '),
-        isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-        isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
         isDragging && 'opacity-30'
       )}
       style={finalStyles}
