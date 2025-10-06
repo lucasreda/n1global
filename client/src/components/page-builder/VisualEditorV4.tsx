@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { PageModelV4Renderer } from './PageModelV4Renderer';
+import { LayersPanelV4 } from './LayersPanelV4';
 import { Button } from '@/components/ui/button';
 import { Plus, Layers, Settings } from 'lucide-react';
 
@@ -46,7 +47,7 @@ export function VisualEditorV4({
       {/* Left Sidebar - Elements Toolbar */}
       <div className="w-16 border-r bg-background flex flex-col items-center py-4 gap-2">
         <Button
-          variant="ghost"
+          variant={showLayers ? "default" : "ghost"}
           size="icon"
           onClick={() => setShowLayers(!showLayers)}
           title="Camadas"
@@ -55,7 +56,7 @@ export function VisualEditorV4({
           <Layers className="h-5 w-5" />
         </Button>
         <Button
-          variant="ghost"
+          variant={showProperties ? "default" : "ghost"}
           size="icon"
           onClick={() => setShowProperties(!showProperties)}
           title="Propriedades"
@@ -64,6 +65,17 @@ export function VisualEditorV4({
           <Settings className="h-5 w-5" />
         </Button>
       </div>
+
+      {/* Layers Panel */}
+      {showLayers && (
+        <div className="w-64 border-r bg-background overflow-auto">
+          <LayersPanelV4
+            nodes={model.nodes}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={handleSelectNode}
+          />
+        </div>
+      )}
 
       {/* Center - Canvas */}
       <div className="flex-1 p-4 bg-gray-50 overflow-auto">
