@@ -46,6 +46,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const [isStylesPanelOpen, setIsStylesPanelOpen] = useState(false);
   const [selectedElement, setSelectedElement] = useState<BlockElement | null>(null);
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
+  const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
 
 
   const sensors = useSensors(
@@ -460,8 +461,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
               });
             }}
             onHoverElement={(elementId) => {
-              // TODO: Highlight element on canvas when hovering in layers panel
-              console.log('Hover element:', elementId);
+              setHoveredElementId(elementId);
             }}
             data-testid="visual-editor-layers-panel"
           />
@@ -790,6 +790,7 @@ const ModernElement = React.memo(function ModernElement({
         theme={theme} 
         editorMode={true}
         isSelected={isSelected}
+        isHovered={element.id === hoveredElementId}
         onUpdate={handleUpdate}
         viewport={viewport}
       />
@@ -977,6 +978,7 @@ function StructuralElementRenderer({ element, theme, isSelected, onUpdate, viewp
         theme={theme} 
         editorMode={true}
         isSelected={isSelected}
+        isHovered={element.id === hoveredElementId}
         onUpdate={onUpdate}
         viewport={viewport}
       />

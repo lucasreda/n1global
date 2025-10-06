@@ -236,11 +236,12 @@ interface ElementRendererProps {
   theme: PageModelV2['theme'];
   editorMode: boolean;
   isSelected?: boolean;
+  isHovered?: boolean;
   onUpdate?: (updates: Partial<BlockElement>) => void;
   viewport?: 'desktop' | 'tablet' | 'mobile';
 }
 
-export function ElementRenderer({ element, theme, editorMode, isSelected, onUpdate, viewport }: ElementRendererProps) {
+export function ElementRenderer({ element, theme, editorMode, isSelected, isHovered, onUpdate, viewport }: ElementRendererProps) {
   const finalStyles = buildFinalStyles(element.styles);
   
   const baseStyles = {
@@ -259,6 +260,8 @@ export function ElementRenderer({ element, theme, editorMode, isSelected, onUpda
     border: finalStyles.border || 'none',
     width: finalStyles.width || 'auto',
     height: finalStyles.height || 'auto',
+    outline: isHovered && !isSelected ? '2px solid rgba(59, 130, 246, 0.5)' : undefined,
+    outlineOffset: isHovered && !isSelected ? '2px' : undefined,
   };
 
   switch (element.type) {
