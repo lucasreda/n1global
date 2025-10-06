@@ -493,22 +493,16 @@ function convertDOMElementToBlockElement(element: Element, cssRules: Record<stri
     
     // For container tags (div, span, etc.)
     case 'div':
-      // Check if div has important layout or styling that should be preserved
-      const hasImportantStyles = computedStyles.display === 'grid' || 
-                                 computedStyles.display === 'flex' ||
-                                 computedStyles.gridTemplateColumns ||
-                                 computedStyles.flexDirection ||
-                                 computedStyles.gap ||
-                                 computedStyles.backgroundColor ||
-                                 computedStyles.backgroundImage ||
-                                 computedStyles.background ||
-                                 computedStyles.padding ||
-                                 computedStyles.margin ||
-                                 computedStyles.border ||
-                                 computedStyles.borderRadius;
+      // Check if div has important visual/background styling that should be preserved
+      const hasVisualStyles = computedStyles.backgroundColor ||
+                             computedStyles.backgroundImage ||
+                             computedStyles.background ||
+                             computedStyles.border ||
+                             computedStyles.borderRadius ||
+                             computedStyles.boxShadow;
       
-      if (hasImportantStyles && textContent.trim().length > 0) {
-        // Div with text content and styles - create as spacer
+      // If div has visual styling AND text content, preserve it as spacer
+      if (hasVisualStyles && textContent.trim().length > 0) {
         return {
           id,
           type: 'spacer',
@@ -518,7 +512,20 @@ function convertDOMElementToBlockElement(element: Element, cssRules: Record<stri
         };
       }
       
-      // Otherwise, process children (grid/flex containers will be handled at Row level)
+      // For layout containers (grid/flex), we need to preserve them differently
+      // Instead of discarding, we'll process children but log the layout styles
+      const hasLayoutStyles = computedStyles.display === 'grid' || 
+                             computedStyles.display === 'flex' ||
+                             computedStyles.gridTemplateColumns ||
+                             computedStyles.flexDirection ||
+                             computedStyles.gap;
+      
+      if (hasLayoutStyles) {
+        console.log(`📐 Layout container detected: display=${computedStyles.display}, grid-template-columns=${computedStyles.gridTemplateColumns}, gap=${computedStyles.gap}`);
+        // Note: Layout will need to be applied at Row/Column level
+      }
+      
+      // Process children (layout styling will need manual adjustment in editor)
       return null;
     
     // For other tags, return null so children are processed
