@@ -17,7 +17,8 @@ import {
   ChevronDown,
   RotateCcw,
   Settings,
-  Grid3X3
+  Grid3X3,
+  LayoutGrid
 } from 'lucide-react';
 import { 
   UnitSliderInput, 
@@ -25,6 +26,7 @@ import {
   FourCornersInput, 
   ColorPickerPopover 
 } from './AdvancedControls';
+import { FlexLayoutControls } from './FlexLayoutControls';
 import { BlockElement, BlockSection } from '@shared/schema';
 
 interface AdvancedPropertiesPanelProps {
@@ -48,6 +50,7 @@ export function AdvancedPropertiesPanel({
     border: false,
     background: true,
     layout: false,
+    flexbox: false,
     structure: true
   });
 
@@ -139,6 +142,14 @@ export function AdvancedPropertiesPanel({
         resetUpdates.maxWidth = undefined;
         resetUpdates.minHeight = undefined;
         resetUpdates.maxHeight = undefined;
+        break;
+      case 'flexbox':
+        resetUpdates.display = undefined;
+        resetUpdates.flexDirection = undefined;
+        resetUpdates.justifyContent = undefined;
+        resetUpdates.alignItems = undefined;
+        resetUpdates.gap = undefined;
+        resetUpdates.flexWrap = undefined;
         break;
       case 'structure':
         // Reset config properties for structural elements
@@ -540,6 +551,35 @@ export function AdvancedPropertiesPanel({
                   max={800}
                   units={['px', '%', 'rem', 'vh']}
                   data-testid={`${testId}-min-height`}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Separator />
+
+          {/* Flexbox Section */}
+          <Collapsible 
+            open={openSections.flexbox}
+            onOpenChange={() => toggleSection('flexbox')}
+          >
+            <SectionHeader 
+              title="Flexbox Layout" 
+              icon={LayoutGrid} 
+              section="flexbox"
+              hasChanges={!!(targetStyles.display === 'flex')}
+            />
+            <CollapsibleContent>
+              <div className="px-3 pb-4">
+                <FlexLayoutControls
+                  display={getStyleValue('display', 'block')}
+                  flexDirection={getStyleValue('flexDirection', 'row')}
+                  justifyContent={getStyleValue('justifyContent', 'flex-start')}
+                  alignItems={getStyleValue('alignItems', 'stretch')}
+                  gap={getStyleValue('gap', '0px')}
+                  flexWrap={getStyleValue('flexWrap', 'nowrap')}
+                  onChange={handleStyleUpdate}
+                  data-testid={`${testId}-flexbox`}
                 />
               </div>
             </CollapsibleContent>
