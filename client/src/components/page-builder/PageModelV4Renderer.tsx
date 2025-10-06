@@ -16,7 +16,7 @@ export function PageModelV4Renderer({
   breakpoint = 'desktop'
 }: PageModelV4RendererProps) {
   return (
-    <div className="page-frame w-full h-full overflow-auto bg-white">
+    <div className="page-frame w-full h-full overflow-auto">
       {model.nodes.map(node => (
         <PageNodeV4Renderer 
           key={node.id} 
@@ -61,6 +61,24 @@ function PageNodeV4Renderer({
       onSelectNode(node.id);
     }
   };
+  
+  // Handle text-only nodes (convert 'text' tag to span)
+  if (node.tag === 'text' || node.type === 'text') {
+    return (
+      <span
+        data-node-id={node.id}
+        data-testid={`node-text-${node.id}`}
+        className={cn(
+          node.classNames?.join(' '),
+          isSelected && 'ring-2 ring-blue-500 ring-offset-2'
+        )}
+        style={finalStyles}
+        onClick={handleClick}
+      >
+        {node.textContent}
+      </span>
+    );
+  }
   
   // Get the tag name (default to div if not specified)
   const Tag = (node.tag || 'div') as keyof JSX.IntrinsicElements;
