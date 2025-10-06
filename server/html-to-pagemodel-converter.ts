@@ -1646,8 +1646,69 @@ function getMatchingRules(element: Element, cssom: CSSOMV3): CSSRuleV3[] {
     // ID selector
     if (selector.startsWith('#') && id === selector.substring(1)) return true;
     
+    // Descendant selector (e.g., ".hero h1", ".container p")
+    if (selector.includes(' ') && !selector.includes(':')) {
+      const parts = selector.split(' ').map(s => s.trim()).filter(s => s);
+      if (parts.length >= 2) {
+        const lastPart = parts[parts.length - 1];
+        
+        // Check if last part matches current element
+        const matchesLast = 
+          lastPart === tag ||
+          (lastPart.startsWith('.') && classes.includes(lastPart.substring(1))) ||
+          (lastPart.startsWith('#') && id === lastPart.substring(1));
+        
+        if (matchesLast) {
+          // Check if any ancestor matches the first part(s)
+          const ancestorSelector = parts.slice(0, -1).join(' ');
+          if (hasMatchingAncestor(element, ancestorSelector)) {
+            return true;
+          }
+        }
+      }
+    }
+    
     return false;
   });
+}
+
+/**
+ * Check if element has an ancestor that matches the selector
+ */
+function hasMatchingAncestor(element: Element, selector: string): boolean {
+  let current = element.parent;
+  
+  while (current && current.type === 'tag') {
+    const parentElement = current as Element;
+    const parentTag = parentElement.name?.toLowerCase();
+    const parentClasses = parentElement.attribs?.class?.split(/\s+/) || [];
+    const parentId = parentElement.attribs?.id;
+    
+    // Simple selector match
+    const selectorParts = selector.split(' ').filter(s => s);
+    const lastSelector = selectorParts[selectorParts.length - 1];
+    
+    const matches =
+      lastSelector === parentTag ||
+      (lastSelector.startsWith('.') && parentClasses.includes(lastSelector.substring(1))) ||
+      (lastSelector.startsWith('#') && parentId === lastSelector.substring(1));
+    
+    if (matches) {
+      // If this is the only part, we found a match
+      if (selectorParts.length === 1) {
+        return true;
+      }
+      // If there are more parts, recursively check ancestors
+      const remainingSelector = selectorParts.slice(0, -1).join(' ');
+      if (hasMatchingAncestor(parentElement, remainingSelector)) {
+        return true;
+      }
+    }
+    
+    current = current.parent;
+  }
+  
+  return false;
 }
 
 /**

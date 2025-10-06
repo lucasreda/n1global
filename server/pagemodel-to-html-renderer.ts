@@ -109,6 +109,16 @@ function renderGlobalStyles(pageModel: PageModelV3): string {
           if (el.styles?.desktop) {
             cssRules.push(renderCssRule(`.${elClass}`, el.styles.desktop));
           }
+          if (el.styles?.tablet) {
+            cssRules.push(`@media (min-width: 769px) and (max-width: 1024px) {`);
+            cssRules.push(renderCssRule(`.${elClass}`, el.styles.tablet));
+            cssRules.push('}');
+          }
+          if (el.styles?.mobile) {
+            cssRules.push(`@media (max-width: 768px) {`);
+            cssRules.push(renderCssRule(`.${elClass}`, el.styles.mobile));
+            cssRules.push('}');
+          }
           if (el.states?.hover) {
             cssRules.push(renderCssRule(`.${elClass}:hover`, el.states.hover));
           }
@@ -118,12 +128,58 @@ function renderGlobalStyles(pageModel: PageModelV3): string {
           if (el.states?.active) {
             cssRules.push(renderCssRule(`.${elClass}:active`, el.states.active));
           }
+          
+          // Render children recursively with unique identifiers
+          if (el.children && el.children.length > 0) {
+            renderChildrenStyles(el.children, elClass, cssRules);
+          }
         });
       });
     });
   });
   
   return `<style>\n${cssRules.filter(r => r).join('\n')}\n</style>`;
+}
+
+/**
+ * Recursively render styles for children elements with unique identifiers
+ */
+function renderChildrenStyles(
+  children: BlockElementV3[],
+  parentClass: string,
+  cssRules: string[]
+): void {
+  children.forEach((child, childIndex) => {
+    const childClass = `${parentClass}-c${childIndex}`;
+    
+    if (child.styles?.desktop) {
+      cssRules.push(renderCssRule(`.${childClass}`, child.styles.desktop));
+    }
+    if (child.styles?.tablet) {
+      cssRules.push(`@media (min-width: 769px) and (max-width: 1024px) {`);
+      cssRules.push(renderCssRule(`.${childClass}`, child.styles.tablet));
+      cssRules.push('}');
+    }
+    if (child.styles?.mobile) {
+      cssRules.push(`@media (max-width: 768px) {`);
+      cssRules.push(renderCssRule(`.${childClass}`, child.styles.mobile));
+      cssRules.push('}');
+    }
+    if (child.states?.hover) {
+      cssRules.push(renderCssRule(`.${childClass}:hover`, child.states.hover));
+    }
+    if (child.states?.focus) {
+      cssRules.push(renderCssRule(`.${childClass}:focus`, child.states.focus));
+    }
+    if (child.states?.active) {
+      cssRules.push(renderCssRule(`.${childClass}:active`, child.states.active));
+    }
+    
+    // Recursively render grandchildren
+    if (child.children && child.children.length > 0) {
+      renderChildrenStyles(child.children, childClass, cssRules);
+    }
+  });
 }
 
 function renderCssRule(selector: string, styles: Record<string, any>): string {
@@ -187,9 +243,10 @@ function renderElement(
   sectionIndex: number, 
   rowIndex: number, 
   colIndex: number, 
-  elIndex: number
+  elIndex: number,
+  parentClass?: string
 ): string {
-  const className = `el-${sectionIndex}-${rowIndex}-${colIndex}-${elIndex}`;
+  const className = parentClass ? `${parentClass}-c${elIndex}` : `el-${sectionIndex}-${rowIndex}-${colIndex}-${elIndex}`;
   
   switch (el.type) {
     case 'heading':
@@ -224,7 +281,7 @@ function renderElement(
     case 'container':
       if (el.children && el.children.length > 0) {
         const childrenHtml = el.children
-          .map((child, childIndex) => renderElement(child, sectionIndex, rowIndex, colIndex, elIndex + childIndex + 1))
+          .map((child, childIndex) => renderElement(child, sectionIndex, rowIndex, colIndex, childIndex, className))
           .join('\n');
         return `<div class="${className}">
 ${childrenHtml}
