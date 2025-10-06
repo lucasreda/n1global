@@ -38,10 +38,17 @@ export function getNodeByPath(nodes: PageNodeV4[], path: NodePath): PageNodeV4 |
 
 export function getParentNode(nodes: PageNodeV4[], targetId: string): PageNodeV4 | null {
   const path = findNodePath(nodes, targetId);
-  if (!path || path.length <= 1) return null; // Root level has no parent
+  console.log('🔍 getParentNode:', { targetId, path, hasPath: !!path, pathLength: path?.length });
+  
+  if (!path || path.length <= 1) {
+    console.log('❌ No parent (root level or invalid path)');
+    return null; // Root level has no parent
+  }
   
   const parentPath = path.slice(0, -1);
-  return getNodeByPath(nodes, parentPath);
+  const parent = getNodeByPath(nodes, parentPath);
+  console.log('✅ Found parent:', parent ? { id: parent.id, tag: parent.tag } : null);
+  return parent;
 }
 
 export function removeNodeByPath(nodes: PageNodeV4[], path: NodePath): PageNodeV4[] {

@@ -199,8 +199,22 @@ export function canAcceptChildSemantic(parentNode: PageNodeV4, childNode: PageNo
   const parentCategory = getElementCategory(parentNode);
   const childCategory = getElementCategory(childNode);
   
+  console.log('🔍 canAcceptChildSemantic:', {
+    parentTag: parentNode.tag,
+    parentCategory,
+    childTag: childNode.tag,
+    childCategory,
+  });
+  
   const allowedChildren = acceptanceRules[parentCategory] || [];
-  return allowedChildren.includes(childCategory);
+  const isAllowed = allowedChildren.includes(childCategory);
+  
+  console.log(isAllowed ? '✅ ALLOWED' : '❌ BLOCKED', {
+    allowedChildren,
+    isAllowed
+  });
+  
+  return isAllowed;
 }
 
 export function getDropErrorMessage(parentNode: PageNodeV4, childNode: PageNodeV4): string {
