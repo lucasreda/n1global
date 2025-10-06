@@ -503,6 +503,201 @@ router.delete(
 );
 
 // =============================================
+// AI Generation Endpoints
+// =============================================
+
+router.post(
+  "/generate-ai",
+  authenticateToken,
+  async (req: any, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt || typeof prompt !== 'string') {
+        return res.status(400).json({ error: 'Prompt is required' });
+      }
+
+      // Set up SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.flushHeaders();
+
+      const sendProgress = (message: string) => {
+        res.write(`data: ${JSON.stringify({ type: 'progress', message })}\n\n`);
+      };
+
+      const sendComplete = (data: any) => {
+        res.write(`data: ${JSON.stringify({ type: 'complete', data })}\n\n`);
+      };
+
+      const sendError = (message: string) => {
+        res.write(`data: ${JSON.stringify({ type: 'error', message })}\n\n`);
+      };
+
+      try {
+        sendProgress('Analyzing your requirements...');
+
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
+
+        sendProgress('Generating page structure...');
+
+        const systemPrompt = `You are a landing page expert. Generate a complete PageModelV2 structure based on the user's prompt.
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "version": 2,
+  "layout": "single_page",
+  "sections": [
+    {
+      "id": "unique_section_id",
+      "type": "hero" | "content" | "cta" | "custom",
+      "name": "Section Name",
+      "rows": [
+        {
+          "id": "unique_row_id",
+          "columns": [
+            {
+              "id": "unique_column_id",
+              "width": "12",
+              "elements": [
+                {
+                  "id": "unique_element_id",
+                  "type": "heading" | "text" | "button" | "image",
+                  "props": {},
+                  "content": { "text": "Content here" },
+                  "styles": {
+                    "fontSize": "2rem",
+                    "fontWeight": "700",
+                    "textAlign": "center",
+                    "marginBottom": "1rem",
+                    "color": "#1a1a1a"
+                  }
+                }
+              ],
+              "styles": {}
+            }
+          ],
+          "styles": {}
+        }
+      ],
+      "styles": {
+        "padding": "4rem 2rem",
+        "backgroundColor": "#ffffff"
+      },
+      "settings": {
+        "containerWidth": "container"
+      }
+    }
+  ],
+  "theme": {
+    "colors": {
+      "primary": "#3b82f6",
+      "secondary": "#8b5cf6",
+      "accent": "#f59e0b",
+      "background": "#ffffff",
+      "text": "#1a1a1a",
+      "muted": "#6b7280"
+    },
+    "typography": {
+      "headingFont": "Inter",
+      "bodyFont": "Inter",
+      "fontSize": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+        "4xl": "2.25rem"
+      }
+    },
+    "spacing": {
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "borderRadius": {
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "1rem"
+    }
+  }
+}
+
+IMPORTANT:
+- Use descriptive IDs (e.g., "section_hero_main", "row_features_1", "col_left", "heading_main_title")
+- Include realistic content based on the user's prompt
+- Use appropriate colors from the theme
+- Set appropriate styles for responsive design
+- Column widths must add up to 12 in each row
+- Button elements should have content.text, not just text
+- All elements must have a "props" object (can be empty {})
+- All elements must have "content" as an object with "text" property`;
+
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        });
+
+        sendProgress('Processing AI response...');
+
+        const generatedText = response.choices[0].message.content?.trim();
+        
+        if (!generatedText) {
+          throw new Error('No content generated');
+        }
+
+        // Extract JSON from potential markdown code blocks
+        let jsonText = generatedText;
+        if (generatedText.includes('```')) {
+          const match = generatedText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+          if (match) {
+            jsonText = match[1];
+          }
+        }
+
+        sendProgress('Validating generated structure...');
+
+        const pageModel = JSON.parse(jsonText);
+
+        // Basic validation
+        if (!pageModel.version || !pageModel.sections || !pageModel.theme) {
+          throw new Error('Invalid page model structure');
+        }
+
+        sendProgress('Page generated successfully!');
+        sendComplete({ pageModel });
+
+        res.write('data: [DONE]\n\n');
+        res.end();
+
+      } catch (error: any) {
+        console.error('AI generation error:', error);
+        sendError(error.message || 'Generation failed');
+        res.end();
+      }
+
+    } catch (error: any) {
+      console.error('AI generation setup error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// =============================================
 // Vercel Configuration Endpoints
 // =============================================
 

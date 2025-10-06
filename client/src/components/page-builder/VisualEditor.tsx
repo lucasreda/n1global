@@ -32,6 +32,7 @@ import { DesignTokensDialog } from './DesignTokensDialog';
 import { ComponentLibraryPanel } from './ComponentLibraryPanel';
 import { TemplateGallery } from './TemplateGallery';
 import { Template } from './templates/predefinedTemplates';
+import { AIGenerationDialog } from './AIGenerationDialog';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package } from 'lucide-react';
 
 interface VisualEditorProps {
@@ -52,6 +53,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const [hoveredSectionId, setHoveredSectionId] = useState<string | null>(null);
   const [hoveredElementId, setHoveredElementId] = useState<string | null>(null);
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState<string>('');
 
 
   const sensors = useSensors(
@@ -390,6 +393,88 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     return regenerateIds(deepCloned);
   }, []);
 
+  // AI Generation handler
+  const handleAIGeneration = useCallback(async (prompt: string) => {
+    setIsGeneratingAI(true);
+    setGenerationProgress('Starting AI generation...');
+    
+    try {
+      const response = await fetch('/api/landing-pages/generate-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error('AI generation failed');
+      }
+
+      // Handle SSE stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let buffer = '';
+      let generatedModel: PageModelV2 | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            
+            if (data === '[DONE]') {
+              setGenerationProgress('Generation complete!');
+              break;
+            }
+            
+            try {
+              const parsed = JSON.parse(data);
+              
+              if (parsed.type === 'progress') {
+                setGenerationProgress(parsed.message);
+              } else if (parsed.type === 'complete') {
+                generatedModel = parsed.data.pageModel;
+                setGenerationProgress('Page generated successfully!');
+              } else if (parsed.type === 'error') {
+                throw new Error(parsed.message);
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e);
+            }
+          }
+        }
+      }
+
+      // Apply generated model
+      if (generatedModel) {
+        onChange(generatedModel);
+      }
+      
+    } catch (error) {
+      console.error('AI generation error:', error);
+      setGenerationProgress('Generation failed. Please try again.');
+      throw error;
+    } finally {
+      setTimeout(() => {
+        setIsGeneratingAI(false);
+        setGenerationProgress('');
+      }, 2000);
+    }
+  }, [onChange]);
+
   // Template handlers
   const handleInsertTemplate = useCallback((template: Template) => {
     // Deep clone the template section with fresh IDs for all nested elements
@@ -622,6 +707,11 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 data-testid="visual-editor-breakpoint-selector"
               />
               <div className="flex items-center gap-2">
+                <AIGenerationDialog
+                  onGenerate={handleAIGeneration}
+                  isGenerating={isGeneratingAI}
+                  generationProgress={generationProgress}
+                />
                 <TemplateGallery onInsertTemplate={handleInsertTemplate} />
                 <DesignTokensDialog
                   tokens={model.designTokens}
