@@ -246,7 +246,7 @@ function PageNodeV4Renderer({
           isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
           isDragging && 'opacity-30'
         )}
-        style={{ ...finalStyles, pointerEvents: 'auto' }}
+        style={finalStyles}
         onClick={handleClick}
         onMouseEnter={handleMouseEnterNode}
         onMouseLeave={handleMouseLeaveNode}
@@ -269,7 +269,7 @@ function PageNodeV4Renderer({
         isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
         isDragging && 'opacity-30'
       )}
-      style={{ ...finalStyles, pointerEvents: 'auto' }}
+      style={finalStyles}
       onClick={handleClick}
       onMouseEnter={handleMouseEnterNode}
       onMouseLeave={handleMouseLeaveNode}
