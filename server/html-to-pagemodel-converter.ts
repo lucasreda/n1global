@@ -151,14 +151,17 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
                     const cleanSelector = sel.trim();
                     const { baseSelector, pseudoClass, pseudoElement } = parsePseudoSelectors(cleanSelector);
                     
-                    enhancedRules.push({
-                      selector: baseSelector,
-                      styles,
-                      specificity: calculateSpecificity(baseSelector) + (ruleOrder++ * 0.0001),
-                      mediaQuery,
-                      pseudoClass,
-                      pseudoElement,
-                    });
+                    // Only add to enhanced rules if NOT a pseudo-class (they go to states)
+                    if (!pseudoClass) {
+                      enhancedRules.push({
+                        selector: baseSelector,
+                        styles,
+                        specificity: calculateSpecificity(baseSelector) + (ruleOrder++ * 0.0001),
+                        mediaQuery,
+                        pseudoClass,
+                        pseudoElement,
+                      });
+                    }
                   });
                 }
               });
@@ -191,14 +194,17 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
             }
             Object.assign(cssRules[cleanSelector], styles);
             
-            // Also store in enhanced rules
-            enhancedRules.push({
-              selector: baseSelector,
-              styles,
-              specificity: calculateSpecificity(baseSelector) + (ruleOrder++ * 0.0001),
-              pseudoClass,
-              pseudoElement,
-            });
+            // Only store in enhanced rules if NOT a pseudo-class
+            // Pseudo-classes should be handled separately via states
+            if (!pseudoClass) {
+              enhancedRules.push({
+                selector: baseSelector,
+                styles,
+                specificity: calculateSpecificity(baseSelector) + (ruleOrder++ * 0.0001),
+                pseudoClass,
+                pseudoElement,
+              });
+            }
           });
         }
       });
