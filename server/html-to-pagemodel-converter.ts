@@ -1,5 +1,6 @@
 import type { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
 import type { PageModelV3, BlockSectionV3, BlockRowV3, BlockColumnV3, BlockElementV3, ResponsiveStylesV3, StateStylesV3, DesignTokensV3, AnimationV3, CSSPropertiesV3, LayoutTypeV3, SemanticTagV3, PseudoElementsV3 } from "@shared/schema";
+import type { PageModelV4, PageNodeV4, NodeType, ResponsiveStylesV4, StateStylesV4 } from "@shared/schema";
 import { parseDocument } from "htmlparser2";
 import type { Element, ChildNode, Text } from "domhandler";
 import * as csstree from "css-tree";
@@ -1827,4 +1828,397 @@ function createDefaultSectionV3(): BlockSectionV3 {
     }],
     styles: {},
   };
+}
+
+// ============================================================================
+// PageModelV4 Converter - Universal HTML to Node Tree
+// ============================================================================
+
+/**
+ * Converts HTML to PageModelV4 with perfect fidelity
+ * Preserves all nested structures, styles, and attributes
+ */
+export function convertHtmlToPageModelV4(html: string): PageModelV4 {
+  console.log('🔍 HTML-to-PageModelV4 Converter - Starting...');
+  console.log('📄 HTML length:', html.length, 'characters');
+  
+  // Extract meta information
+  const title = extractMetaTag(html, 'title') || extractTag(html, 'title') || 'Nova Página';
+  const description = extractMetaTag(html, 'description') || 'Descrição da página';
+  const keywords = extractMetaTag(html, 'keywords')?.split(',').map(k => k.trim()) || [];
+  const ogImage = extractMetaTag(html, 'og:image');
+  const ogTitle = extractMetaTag(html, 'og:title');
+  const ogDescription = extractMetaTag(html, 'og:description');
+  
+  console.log('📋 Meta extracted:', { title, description, keywordsCount: keywords.length });
+  
+  // Extract and parse all CSS
+  const { rules: cssRules, cssText } = extractAllCSS(html);
+  
+  console.log('🎨 CSS extracted:', {
+    rulesCount: Object.keys(cssRules).length,
+    cssTextLength: cssText.length
+  });
+  
+  // Extract design tokens from CSS
+  const designTokens = extractDesignTokensV3(html, cssRules);
+  
+  // Parse HTML document
+  const doc = parseDocument(html);
+  
+  // Find body element
+  const bodyElements = findElementsByTag(doc.children, 'body');
+  const bodyElement = bodyElements[0];
+  
+  if (!bodyElement) {
+    console.warn('⚠️ No body element found, using entire document');
+  }
+  
+  const rootNodes = bodyElement ? bodyElement.children : doc.children;
+  
+  // Convert DOM tree to PageNodeV4 tree
+  const nodes = convertDomNodesToPageNodesV4(rootNodes, cssRules);
+  
+  console.log('✅ Converted to', nodes.length, 'root nodes');
+  
+  // Create PageModelV4
+  const pageModel: PageModelV4 = {
+    version: '4.0',
+    meta: {
+      title,
+      description,
+      keywords,
+      ogImage: ogImage || undefined,
+      ogTitle: ogTitle || undefined,
+      ogDescription: ogDescription || undefined,
+    },
+    designTokens,
+    globalStyles: cssText || undefined,
+    cssClasses: convertCssRulesToClasses(cssRules),
+    nodes: nodes.length > 0 ? nodes : [],
+    editorState: {
+      activeBreakpoint: 'desktop',
+      zoom: 1,
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  
+  return pageModel;
+}
+
+/**
+ * Convert DOM nodes to PageNodeV4 recursively
+ */
+function convertDomNodesToPageNodesV4(
+  domNodes: ChildNode[],
+  cssRules: Record<string, Record<string, string>>
+): PageNodeV4[] {
+  const nodes: PageNodeV4[] = [];
+  
+  for (const domNode of domNodes) {
+    // Skip script, style, and comment nodes
+    if (domNode.type === 'script' || domNode.type === 'style' || domNode.type === 'comment') {
+      continue;
+    }
+    
+    // Handle text nodes
+    if (domNode.type === 'text') {
+      const textNode = domNode as Text;
+      const text = textNode.data.trim();
+      if (text) {
+        nodes.push({
+          id: generateId(),
+          type: 'text',
+          tag: 'text',
+          textContent: text,
+        });
+      }
+      continue;
+    }
+    
+    // Handle element nodes
+    if (domNode.type === 'tag') {
+      const element = domNode as Element;
+      const node = convertElementToPageNodeV4(element, cssRules);
+      if (node) {
+        nodes.push(node);
+      }
+    }
+  }
+  
+  return nodes;
+}
+
+/**
+ * Convert a single DOM element to PageNodeV4
+ */
+function convertElementToPageNodeV4(
+  element: Element,
+  cssRules: Record<string, Record<string, string>>
+): PageNodeV4 | null {
+  const tag = element.name.toLowerCase();
+  
+  // Skip script and style elements
+  if (tag === 'script' || tag === 'style') {
+    return null;
+  }
+  
+  // Determine node type
+  const nodeType = getNodeType(tag);
+  
+  // Extract attributes
+  const attributes: Record<string, string> = {};
+  if (element.attribs) {
+    Object.entries(element.attribs).forEach(([key, value]) => {
+      if (key !== 'class' && key !== 'style') {
+        attributes[key] = value;
+      }
+    });
+  }
+  
+  // Extract classes
+  const classNames = element.attribs?.class?.split(' ').filter(c => c) || [];
+  
+  // Extract inline styles
+  const inlineStyles = parseInlineStyles(element.attribs?.style || '');
+  
+  // Compute styles from CSS rules
+  const computedStyles = computeElementStylesV4(element, cssRules);
+  
+  // Extract layout properties
+  const layout = extractLayoutProperties(computedStyles.desktop || {}, inlineStyles);
+  
+  // Convert children recursively
+  const children = element.children.length > 0
+    ? convertDomNodesToPageNodesV4(element.children, cssRules)
+    : undefined;
+  
+  // Extract text content (for leaf elements without children)
+  const textContent = !children || children.length === 0
+    ? getElementText(element)
+    : undefined;
+  
+  const node: PageNodeV4 = {
+    id: generateId(),
+    type: nodeType,
+    tag,
+    attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
+    classNames: classNames.length > 0 ? classNames : undefined,
+    inlineStyles: Object.keys(inlineStyles).length > 0 ? inlineStyles : undefined,
+    textContent,
+    styles: computedStyles,
+    layout,
+    children,
+    metadata: {
+      convertedFrom: 'html-v4-converter',
+    },
+  };
+  
+  return node;
+}
+
+/**
+ * Determine NodeType from HTML tag
+ */
+function getNodeType(tag: string): NodeType {
+  const typeMap: Record<string, NodeType> = {
+    'div': 'container',
+    'section': 'container',
+    'article': 'container',
+    'aside': 'container',
+    'header': 'container',
+    'footer': 'container',
+    'nav': 'container',
+    'main': 'container',
+    'span': 'container',
+    'h1': 'heading',
+    'h2': 'heading',
+    'h3': 'heading',
+    'h4': 'heading',
+    'h5': 'heading',
+    'h6': 'heading',
+    'p': 'paragraph',
+    'a': 'link',
+    'button': 'button',
+    'img': 'image',
+    'video': 'video',
+    'input': 'input',
+    'textarea': 'input',
+    'select': 'input',
+    'form': 'form',
+    'ul': 'list',
+    'ol': 'list',
+    'li': 'listItem',
+    'table': 'table',
+    'thead': 'table',
+    'tbody': 'table',
+    'tr': 'table',
+    'td': 'table',
+    'th': 'table',
+    'svg': 'svg',
+  };
+  
+  return typeMap[tag] || 'custom';
+}
+
+/**
+ * Parse inline styles
+ */
+function parseInlineStyles(styleAttr: string): Record<string, string> {
+  const styles: Record<string, string> = {};
+  if (!styleAttr) return styles;
+  
+  const declarations = styleAttr.split(';').filter(d => d.trim());
+  for (const decl of declarations) {
+    const [property, value] = decl.split(':').map(s => s.trim());
+    if (property && value) {
+      // Convert to camelCase
+      const camelProperty = property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+      styles[camelProperty] = value;
+    }
+  }
+  
+  return styles;
+}
+
+/**
+ * Compute styles for an element from CSS rules
+ */
+function computeElementStylesV4(
+  element: Element,
+  cssRules: Record<string, Record<string, string>>
+): ResponsiveStylesV4 {
+  const styles: ResponsiveStylesV4 = {};
+  
+  // For V4, we apply all matched CSS rules to desktop by default
+  const matchedStyles: Record<string, string> = {};
+  
+  // Get element identifiers
+  const tag = element.name.toLowerCase();
+  const classes = element.attribs?.class?.split(' ').filter(c => c) || [];
+  const id = element.attribs?.id;
+  
+  // Match CSS rules
+  for (const [selector, ruleStyles] of Object.entries(cssRules)) {
+    if (matchesSelector(element, selector, tag, classes, id)) {
+      Object.assign(matchedStyles, ruleStyles);
+    }
+  }
+  
+  // Add inline styles
+  if (element.attribs?.style) {
+    const inlineStyles = parseInlineStyles(element.attribs.style);
+    Object.assign(matchedStyles, inlineStyles);
+  }
+  
+  if (Object.keys(matchedStyles).length > 0) {
+    styles.desktop = matchedStyles;
+  }
+  
+  return styles;
+}
+
+/**
+ * Check if element matches CSS selector
+ */
+function matchesSelector(
+  element: Element,
+  selector: string,
+  tag: string,
+  classes: string[],
+  id?: string
+): boolean {
+  // Remove pseudo-classes and pseudo-elements
+  const cleanSelector = selector.replace(/:(hover|focus|active|visited|before|after|first-child|last-child|nth-child\([^)]+\))/g, '');
+  
+  // Simple tag selector
+  if (cleanSelector === tag) return true;
+  
+  // Class selector
+  if (cleanSelector.startsWith('.')) {
+    const className = cleanSelector.substring(1);
+    return classes.includes(className);
+  }
+  
+  // ID selector
+  if (cleanSelector.startsWith('#')) {
+    const idName = cleanSelector.substring(1);
+    return id === idName;
+  }
+  
+  // Compound selector (e.g., "div.className")
+  if (cleanSelector.includes('.')) {
+    const parts = cleanSelector.split('.');
+    const selectorTag = parts[0];
+    const selectorClass = parts[1];
+    return (selectorTag === tag || selectorTag === '') && classes.includes(selectorClass);
+  }
+  
+  return false;
+}
+
+/**
+ * Extract layout properties from styles
+ */
+function extractLayoutProperties(
+  styles: Record<string, any>,
+  inlineStyles: Record<string, string>
+): PageNodeV4['layout'] | undefined {
+  const allStyles = { ...styles, ...inlineStyles };
+  
+  const layout: PageNodeV4['layout'] = {};
+  
+  if (allStyles.display) layout.display = allStyles.display;
+  if (allStyles.position) layout.position = allStyles.position;
+  if (allStyles.flexDirection) layout.flexDirection = allStyles.flexDirection;
+  if (allStyles.justifyContent) layout.justifyContent = allStyles.justifyContent;
+  if (allStyles.alignItems) layout.alignItems = allStyles.alignItems;
+  if (allStyles.gridTemplateColumns) layout.gridTemplateColumns = allStyles.gridTemplateColumns;
+  if (allStyles.gridTemplateRows) layout.gridTemplateRows = allStyles.gridTemplateRows;
+  if (allStyles.gap) layout.gap = allStyles.gap;
+  
+  return Object.keys(layout).length > 0 ? layout : undefined;
+}
+
+/**
+ * Get text content from element
+ */
+function getElementText(element: Element): string | undefined {
+  let text = '';
+  
+  for (const child of element.children) {
+    if (child.type === 'text') {
+      text += (child as Text).data;
+    }
+  }
+  
+  return text.trim() || undefined;
+}
+
+/**
+ * Convert CSS rules to class definitions
+ */
+function convertCssRulesToClasses(
+  cssRules: Record<string, Record<string, string>>
+): Record<string, { styles: Record<string, any>; responsive?: ResponsiveStylesV4; states?: StateStylesV4 }> {
+  const classes: Record<string, any> = {};
+  
+  for (const [selector, styles] of Object.entries(cssRules)) {
+    // Only process class selectors
+    if (selector.startsWith('.')) {
+      const className = selector.substring(1).split(':')[0]; // Remove pseudo-classes
+      
+      if (!classes[className]) {
+        classes[className] = {
+          styles: {},
+        };
+      }
+      
+      // Merge styles
+      Object.assign(classes[className].styles, styles);
+    }
+  }
+  
+  return classes;
 }
