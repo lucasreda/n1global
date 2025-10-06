@@ -35,6 +35,7 @@ import {
 import { FlexLayoutControls } from './FlexLayoutControls';
 import { GridLayoutControls } from './GridLayoutControls';
 import { PositionControls } from './PositionControls';
+import { BoxModelInspector } from './inspector/BoxModelInspector';
 import { BlockElement, BlockSection } from '@shared/schema';
 
 export type Breakpoint = 'desktop' | 'tablet' | 'mobile';
@@ -62,6 +63,7 @@ export function AdvancedPropertiesPanel({
   const [openSections, setOpenSections] = useState({
     states: true,
     typography: true,
+    boxModel: true,
     spacing: true,
     border: false,
     background: true,
@@ -629,6 +631,50 @@ export function AdvancedPropertiesPanel({
               </CollapsibleContent>
             </Collapsible>
           )}
+
+          <Separator />
+
+          {/* Box Model Section - Chrome DevTools Style */}
+          <Collapsible 
+            open={openSections.boxModel}
+            onOpenChange={() => toggleSection('boxModel')}
+          >
+            <SectionHeader 
+              title="Box Model" 
+              icon={Frame} 
+              section="boxModel"
+              hasChanges={!!(targetStyles.marginTop || targetStyles.paddingTop || targetStyles.borderWidth)}
+            />
+            <CollapsibleContent>
+              <div className="px-3 pb-4">
+                <BoxModelInspector
+                  margin={{
+                    top: getStyleValue('marginTop', '0px'),
+                    right: getStyleValue('marginRight', '0px'),
+                    bottom: getStyleValue('marginBottom', '0px'),
+                    left: getStyleValue('marginLeft', '0px')
+                  }}
+                  padding={{
+                    top: getStyleValue('paddingTop', '0px'),
+                    right: getStyleValue('paddingRight', '0px'),
+                    bottom: getStyleValue('paddingBottom', '0px'),
+                    left: getStyleValue('paddingLeft', '0px')
+                  }}
+                  border={{
+                    width: getStyleValue('borderWidth', '0px'),
+                    topWidth: getStyleValue('borderTopWidth', '0px'),
+                    rightWidth: getStyleValue('borderRightWidth', '0px'),
+                    bottomWidth: getStyleValue('borderBottomWidth', '0px'),
+                    leftWidth: getStyleValue('borderLeftWidth', '0px'),
+                    style: getStyleValue('borderStyle', 'solid'),
+                    color: getStyleValue('borderColor', '#000000')
+                  }}
+                  onChange={handleStyleUpdate}
+                  data-testid={`${testId}-box-model`}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <Separator />
 
