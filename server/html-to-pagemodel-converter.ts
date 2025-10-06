@@ -2134,13 +2134,16 @@ function convertElementToPageNodeV4(
   // Extract layout properties
   const layout = extractLayoutProperties(computedStyles.desktop || {}, inlineStyles);
   
-  // Convert children recursively
-  const children = element.children.length > 0
+  // CRITICAL: Void elements (self-closing tags) CANNOT have children in React
+  const isVoidElement = ['img', 'input', 'br', 'hr', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr'].includes(tag);
+  
+  // Convert children recursively (but NOT for void elements)
+  const children = !isVoidElement && element.children.length > 0
     ? convertDomNodesToPageNodesV4(element.children, cssRules, enhancedRules)
     : undefined;
   
-  // Extract text content (for leaf elements without children)
-  const textContent = !children || children.length === 0
+  // Extract text content (for leaf elements without children, and NOT for void elements)
+  const textContent = !isVoidElement && (!children || children.length === 0)
     ? getElementText(element)
     : undefined;
   
