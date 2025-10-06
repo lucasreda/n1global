@@ -101,24 +101,25 @@ export function getElementCategory(node: PageNodeV4): ElementCategory {
 }
 
 const acceptanceRules: Record<ElementCategory, ElementCategory[]> = {
+  // Containers aceitam apenas elementos estruturais (não inline direto)
   [ElementCategory.Container]: [
     ElementCategory.Container,
     ElementCategory.List,
     ElementCategory.Table,
     ElementCategory.Form,
     ElementCategory.TextBlock,
-    ElementCategory.TextInline,
     ElementCategory.Media,
     ElementCategory.Button,
-    ElementCategory.Link,
     ElementCategory.Input,
     ElementCategory.FormField,
   ],
   
+  // Listas aceitam apenas list items
   [ElementCategory.List]: [
     ElementCategory.ListItem,
   ],
   
+  // List items aceitam conteúdo variado
   [ElementCategory.ListItem]: [
     ElementCategory.Container,
     ElementCategory.List,
@@ -129,18 +130,22 @@ const acceptanceRules: Record<ElementCategory, ElementCategory[]> = {
     ElementCategory.Link,
   ],
   
+  // Table só aceita thead/tbody/tfoot
   [ElementCategory.Table]: [
     ElementCategory.TableSection,
   ],
   
+  // Table section só aceita tr
   [ElementCategory.TableSection]: [
     ElementCategory.TableRow,
   ],
   
+  // Table row só aceita td/th
   [ElementCategory.TableRow]: [
     ElementCategory.TableCell,
   ],
   
+  // Table cell aceita conteúdo variado
   [ElementCategory.TableCell]: [
     ElementCategory.Container,
     ElementCategory.TextBlock,
@@ -150,6 +155,7 @@ const acceptanceRules: Record<ElementCategory, ElementCategory[]> = {
     ElementCategory.Link,
   ],
   
+  // Form aceita campos e containers
   [ElementCategory.Form]: [
     ElementCategory.Container,
     ElementCategory.FormField,
@@ -158,63 +164,88 @@ const acceptanceRules: Record<ElementCategory, ElementCategory[]> = {
     ElementCategory.TextBlock,
   ],
   
+  // Form field aceita inputs e labels
   [ElementCategory.FormField]: [
     ElementCategory.Input,
     ElementCategory.TextBlock,
     ElementCategory.TextInline,
   ],
   
+  // Text blocks aceitam APENAS inline (CRÍTICO)
   [ElementCategory.TextBlock]: [
     ElementCategory.TextInline,
     ElementCategory.Link,
   ],
   
+  // Text inline aceita outros inline
   [ElementCategory.TextInline]: [
     ElementCategory.TextInline,
   ],
   
+  // Media não aceita filhos
   [ElementCategory.Media]: [],
   
+  // Input não aceita filhos
   [ElementCategory.Input]: [],
   
+  // Button aceita APENAS inline e media (CRÍTICO)
   [ElementCategory.Button]: [
     ElementCategory.TextInline,
     ElementCategory.Media,
   ],
   
+  // Link aceita inline e media
   [ElementCategory.Link]: [
     ElementCategory.TextInline,
     ElementCategory.Media,
   ],
   
+  // Unknown aceita estruturais básicos
   [ElementCategory.Unknown]: [
     ElementCategory.Container,
     ElementCategory.TextBlock,
-    ElementCategory.TextInline,
     ElementCategory.Media,
   ],
 };
 
-export function canAcceptChildSemantic(parentNode: PageNodeV4, childNode: PageNodeV4): boolean {
+export interface ValidationResult {
+  allowed: boolean;
+  reason?: string;
+}
+
+export function canAcceptChild(parentNode: PageNodeV4, childNode: PageNodeV4): ValidationResult {
   const parentCategory = getElementCategory(parentNode);
   const childCategory = getElementCategory(childNode);
   
-  console.log('🔍 canAcceptChildSemantic:', {
-    parentTag: parentNode.tag,
-    parentCategory,
-    childTag: childNode.tag,
-    childCategory,
-  });
-  
   const allowedChildren = acceptanceRules[parentCategory] || [];
-  const isAllowed = allowedChildren.includes(childCategory);
+  const allowed = allowedChildren.includes(childCategory);
   
-  console.log(isAllowed ? '✅ ALLOWED' : '❌ BLOCKED', {
-    allowedChildren,
-    isAllowed
-  });
+  if (!allowed) {
+    return {
+      allowed: false,
+      reason: getDropErrorMessage(parentNode, childNode),
+    };
+  }
   
-  return isAllowed;
+  return { allowed: true };
+}
+
+export function canAcceptSiblingPlacement(
+  parentNode: PageNodeV4,
+  newSiblingNode: PageNodeV4
+): ValidationResult {
+  return canAcceptChild(parentNode, newSiblingNode);
+}
+
+export function canNestWithinParent(
+  childNode: PageNodeV4,
+  parentNode: PageNodeV4
+): ValidationResult {
+  return canAcceptChild(parentNode, childNode);
+}
+
+export function canAcceptChildSemantic(parentNode: PageNodeV4, childNode: PageNodeV4): boolean {
+  return canAcceptChild(parentNode, childNode).allowed;
 }
 
 export function getDropErrorMessage(parentNode: PageNodeV4, childNode: PageNodeV4): string {
@@ -222,11 +253,23 @@ export function getDropErrorMessage(parentNode: PageNodeV4, childNode: PageNodeV
   const childCategory = getElementCategory(childNode);
   
   const messages: Record<string, string> = {
+    [`${ElementCategory.Container}-${ElementCategory.TextInline}`]: 'Texto inline (span, strong, etc) deve estar dentro de um elemento de texto (p, h1-h6)',
+    [`${ElementCategory.Container}-${ElementCategory.Link}`]: 'Links devem estar dentro de um elemento de texto ou botão',
     [`${ElementCategory.TextBlock}-${ElementCategory.TextBlock}`]: 'Elementos de texto (p, h1-h6) não podem conter outros elementos de texto',
-    [`${ElementCategory.TextBlock}-${ElementCategory.Container}`]: 'Parágrafos e títulos só podem conter texto e links',
-    [`${ElementCategory.TextInline}-${ElementCategory.TextBlock}`]: 'Texto inline não pode conter elementos block',
+    [`${ElementCategory.TextBlock}-${ElementCategory.Container}`]: 'Parágrafos e títulos só podem conter texto inline e links',
+    [`${ElementCategory.TextBlock}-${ElementCategory.Button}`]: 'Botões não podem estar dentro de texto - coloque ao lado',
+    [`${ElementCategory.TextBlock}-${ElementCategory.Media}`]: 'Imagens devem estar fora do texto - use um container',
+    [`${ElementCategory.TextInline}-${ElementCategory.TextBlock}`]: 'Texto inline não pode conter elementos de bloco',
+    [`${ElementCategory.TextInline}-${ElementCategory.Container}`]: 'Texto inline não pode conter containers',
+    [`${ElementCategory.TextInline}-${ElementCategory.Button}`]: 'Texto inline não pode conter botões',
+    [`${ElementCategory.Button}-${ElementCategory.TextBlock}`]: 'Botões só podem conter texto inline (span, strong) ou ícones',
+    [`${ElementCategory.Button}-${ElementCategory.Container}`]: 'Botões só podem conter texto inline (span, strong) ou ícones',
+    [`${ElementCategory.Button}-${ElementCategory.Button}`]: 'Botões não podem conter outros botões',
+    [`${ElementCategory.Link}-${ElementCategory.TextBlock}`]: 'Links só podem conter texto inline ou ícones',
+    [`${ElementCategory.Link}-${ElementCategory.Container}`]: 'Links só podem conter texto inline ou ícones',
     [`${ElementCategory.List}-${ElementCategory.Container}`]: 'Listas (ul/ol) só podem conter itens de lista (li)',
     [`${ElementCategory.List}-${ElementCategory.TextBlock}`]: 'Listas (ul/ol) só podem conter itens de lista (li)',
+    [`${ElementCategory.List}-${ElementCategory.Button}`]: 'Listas (ul/ol) só podem conter itens de lista (li)',
     [`${ElementCategory.Table}-${ElementCategory.Container}`]: 'Tabelas só podem conter thead, tbody ou tfoot',
     [`${ElementCategory.TableSection}-${ElementCategory.Container}`]: 'thead/tbody só podem conter linhas (tr)',
     [`${ElementCategory.TableRow}-${ElementCategory.Container}`]: 'Linhas de tabela (tr) só podem conter células (td/th)',
