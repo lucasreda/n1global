@@ -3,16 +3,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { PageModelV2 } from '@shared/schema';
 
 interface AIGenerationDialogProps {
   onGenerate: (prompt: string) => Promise<void>;
   isGenerating: boolean;
   generationProgress?: string;
+  error?: string | null;
 }
 
-export function AIGenerationDialog({ onGenerate, isGenerating, generationProgress }: AIGenerationDialogProps) {
+export function AIGenerationDialog({ onGenerate, isGenerating, generationProgress, error }: AIGenerationDialogProps) {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
 
@@ -81,6 +82,22 @@ export function AIGenerationDialog({ onGenerate, isGenerating, generationProgres
                   </p>
                   <p className="text-xs text-muted-foreground">
                     This may take a few moments...
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && !isGenerating && (
+            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                <div className="space-y-1 flex-1">
+                  <p className="text-sm font-medium text-destructive" data-testid="text-generation-error">
+                    Generation Failed
+                  </p>
+                  <p className="text-xs text-destructive/80">
+                    {error}
                   </p>
                 </div>
               </div>

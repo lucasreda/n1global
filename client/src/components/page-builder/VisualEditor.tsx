@@ -55,6 +55,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [generationProgress, setGenerationProgress] = useState<string>('');
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
 
   const sensors = useSensors(
@@ -397,6 +398,9 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const handleAIGeneration = useCallback(async (prompt: string) => {
     setIsGeneratingAI(true);
     setGenerationProgress('Starting AI generation...');
+    setGenerationError(null);
+    
+    let didSucceed = false;
     
     try {
       const response = await fetch('/api/landing-pages/generate-ai', {
@@ -461,17 +465,25 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       // Apply generated model
       if (generatedModel) {
         onChange(generatedModel);
+        didSucceed = true;
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('AI generation error:', error);
-      setGenerationProgress('Generation failed. Please try again.');
+      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
+      setGenerationError(errorMessage);
+      setGenerationProgress('');
+      didSucceed = false;
       throw error;
     } finally {
-      setTimeout(() => {
-        setIsGeneratingAI(false);
-        setGenerationProgress('');
-      }, 2000);
+      setIsGeneratingAI(false);
+      
+      // Clear success message after 2 seconds only if generation succeeded
+      if (didSucceed) {
+        setTimeout(() => {
+          setGenerationProgress('');
+        }, 2000);
+      }
     }
   }, [onChange]);
 
@@ -711,6 +723,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                   onGenerate={handleAIGeneration}
                   isGenerating={isGeneratingAI}
                   generationProgress={generationProgress}
+                  error={generationError}
                 />
                 <TemplateGallery onInsertTemplate={handleInsertTemplate} />
                 <DesignTokensDialog
