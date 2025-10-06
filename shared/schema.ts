@@ -5443,3 +5443,230 @@ export type VisualIdentity = {
   lastUsed: string;
   usageCount: number;
 };
+
+// ============================================================================
+// PageModelV4 - Universal HTML Node System
+// Supports arbitrary HTML structures with perfect fidelity
+// ============================================================================
+
+// Node types for flexible HTML representation
+export type NodeType = 
+  | 'container'       // Generic container (div, section, article, etc.)
+  | 'text'           // Text node
+  | 'heading'        // h1-h6
+  | 'paragraph'      // p
+  | 'link'           // a
+  | 'button'         // button
+  | 'image'          // img
+  | 'video'          // video
+  | 'input'          // form input
+  | 'form'           // form
+  | 'list'           // ul, ol
+  | 'listItem'       // li
+  | 'table'          // table elements
+  | 'svg'            // SVG elements
+  | 'custom';        // Custom elements
+
+// Responsive styles per breakpoint
+export type ResponsiveStylesV4 = {
+  desktop?: Record<string, any>;
+  tablet?: Record<string, any>;
+  mobile?: Record<string, any>;
+};
+
+// State styles (hover, focus, active, etc.)
+export type StateStylesV4 = {
+  default?: ResponsiveStylesV4;
+  hover?: ResponsiveStylesV4;
+  focus?: ResponsiveStylesV4;
+  active?: ResponsiveStylesV4;
+  disabled?: ResponsiveStylesV4;
+  visited?: ResponsiveStylesV4;
+};
+
+// Universal Node - can represent any HTML element
+export type PageNodeV4 = {
+  id: string;
+  type: NodeType;
+  
+  // Original HTML information
+  tag: string;                    // Original HTML tag (div, span, button, etc.)
+  
+  // Attributes (href, src, alt, data-*, etc.)
+  attributes?: Record<string, string>;
+  
+  // Text content (for text nodes)
+  textContent?: string;
+  
+  // Computed styles from HTML
+  styles?: ResponsiveStylesV4;
+  
+  // State styles (hover, focus, etc.)
+  states?: StateStylesV4;
+  
+  // CSS classes from original HTML
+  classNames?: string[];
+  
+  // Inline styles from HTML
+  inlineStyles?: Record<string, string>;
+  
+  // Children nodes (recursive)
+  children?: PageNodeV4[];
+  
+  // Layout metadata (for editor tools)
+  layout?: {
+    display?: string;           // block, flex, grid, inline-block, etc.
+    position?: string;          // static, relative, absolute, fixed, sticky
+    flexDirection?: string;
+    justifyContent?: string;
+    alignItems?: string;
+    gridTemplateColumns?: string;
+    gridTemplateRows?: string;
+    gap?: string;
+  };
+  
+  // Animations and transitions
+  animations?: AnimationV3[];
+  transitions?: TransitionV3[];
+  
+  // Pseudo-elements
+  pseudoElements?: PseudoElementsV3;
+  
+  // Custom CSS
+  customCSS?: string;
+  
+  // Metadata
+  metadata?: {
+    sourceHTML?: string;        // Original HTML snippet
+    convertedFrom?: string;     // Conversion source
+    editorNotes?: string;
+  };
+};
+
+// PageModelV4 structure
+export type PageModelV4 = {
+  version: string; // "4.0"
+  
+  // Meta information (SEO)
+  meta: {
+    title: string;
+    description: string;
+    keywords?: string[];
+    ogImage?: string;
+    ogTitle?: string;
+    ogDescription?: string;
+    favicon?: string;
+    lang?: string;
+  };
+  
+  // Design tokens extracted from CSS
+  designTokens?: DesignTokensV3;
+  
+  // Global styles (from <style> tags)
+  globalStyles?: string;
+  
+  // CSS class definitions (className -> styles)
+  cssClasses?: Record<string, {
+    styles: Record<string, any>;
+    responsive?: ResponsiveStylesV4;
+    states?: StateStylesV4;
+  }>;
+  
+  // Root nodes (body children)
+  nodes: PageNodeV4[];
+  
+  // Reusable components (optional, for editor)
+  components?: ComponentDefinitionV3[];
+  
+  // Editor state
+  editorState?: {
+    activeBreakpoint?: 'mobile' | 'tablet' | 'desktop';
+    zoom?: number;
+    selectedNodeId?: string;
+  };
+  
+  // Timestamps
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// ============================================================================
+// PageModelV4 Zod Validation Schemas
+// ============================================================================
+
+const responsiveStylesV4Schema = z.object({
+  desktop: z.record(z.any()).optional(),
+  tablet: z.record(z.any()).optional(),
+  mobile: z.record(z.any()).optional(),
+});
+
+const stateStylesV4Schema = z.object({
+  default: responsiveStylesV4Schema.optional(),
+  hover: responsiveStylesV4Schema.optional(),
+  focus: responsiveStylesV4Schema.optional(),
+  active: responsiveStylesV4Schema.optional(),
+  disabled: responsiveStylesV4Schema.optional(),
+  visited: responsiveStylesV4Schema.optional(),
+});
+
+const pageNodeV4Schema: z.ZodType<PageNodeV4> = z.lazy(() => z.object({
+  id: z.string(),
+  type: z.enum(['container', 'text', 'heading', 'paragraph', 'link', 'button', 'image', 'video', 'input', 'form', 'list', 'listItem', 'table', 'svg', 'custom']),
+  tag: z.string(),
+  attributes: z.record(z.string()).optional(),
+  textContent: z.string().optional(),
+  styles: responsiveStylesV4Schema.optional(),
+  states: stateStylesV4Schema.optional(),
+  classNames: z.array(z.string()).optional(),
+  inlineStyles: z.record(z.string()).optional(),
+  children: z.array(pageNodeV4Schema).optional(),
+  layout: z.object({
+    display: z.string().optional(),
+    position: z.string().optional(),
+    flexDirection: z.string().optional(),
+    justifyContent: z.string().optional(),
+    alignItems: z.string().optional(),
+    gridTemplateColumns: z.string().optional(),
+    gridTemplateRows: z.string().optional(),
+    gap: z.string().optional(),
+  }).optional(),
+  animations: z.array(animationV3Schema).optional(),
+  transitions: z.array(transitionV3Schema).optional(),
+  pseudoElements: pseudoElementsV3Schema.optional(),
+  customCSS: z.string().optional(),
+  metadata: z.object({
+    sourceHTML: z.string().optional(),
+    convertedFrom: z.string().optional(),
+    editorNotes: z.string().optional(),
+  }).optional(),
+}));
+
+export const pageModelV4Schema = z.object({
+  version: z.string(),
+  meta: z.object({
+    title: z.string(),
+    description: z.string(),
+    keywords: z.array(z.string()).optional(),
+    ogImage: z.string().optional(),
+    ogTitle: z.string().optional(),
+    ogDescription: z.string().optional(),
+    favicon: z.string().optional(),
+    lang: z.string().optional(),
+  }),
+  designTokens: z.any().optional(),
+  globalStyles: z.string().optional(),
+  cssClasses: z.record(z.object({
+    styles: z.record(z.any()),
+    responsive: responsiveStylesV4Schema.optional(),
+    states: stateStylesV4Schema.optional(),
+  })).optional(),
+  nodes: z.array(pageNodeV4Schema),
+  components: z.array(z.any()).optional(),
+  editorState: z.object({
+    activeBreakpoint: z.enum(['mobile', 'tablet', 'desktop']).optional(),
+    zoom: z.number().optional(),
+    selectedNodeId: z.string().optional(),
+  }).optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});;
