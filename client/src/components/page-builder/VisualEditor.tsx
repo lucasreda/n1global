@@ -36,6 +36,7 @@ import { Template } from './templates/predefinedTemplates';
 import { AIGenerationDialog } from './AIGenerationDialog';
 import { useHistoryManager } from '@/lib/history';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2 } from 'lucide-react';
+import { createComponentInstance } from '@/lib/componentInstance';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -529,8 +530,8 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
   const handleInsertComponent = useCallback((component: ComponentDefinitionV3) => {
     if (!selectedSectionId) return;
     
-    // Deep clone the component element with fresh IDs for all nested children
-    const newElement: BlockElement = cloneElementWithNewIds(component.element as any);
+    // Create component instance (not a clone) to maintain sync with base component
+    const instanceElement = createComponentInstance(component) as BlockElement;
     
     // Deep clone sections array to avoid mutations
     const newSections: BlockSection[] = JSON.parse(JSON.stringify(model.sections));
@@ -543,7 +544,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
         columns: [{
           id: `column_${Date.now()}`,
           width: '12' as any, // Type compatibility
-          elements: [newElement],
+          elements: [instanceElement],
           styles: {},
         }],
         styles: {},
@@ -554,20 +555,20 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
         lastRow.columns.push({
           id: `column_${Date.now()}`,
           width: '12' as any, // Type compatibility
-          elements: [newElement],
+          elements: [instanceElement],
           styles: {},
         });
       } else {
-        lastRow.columns[0].elements.push(newElement);
+        lastRow.columns[0].elements.push(instanceElement);
       }
     }
     
     updateModel({
       ...model,
       sections: newSections,
-    }, "Insert component");
-    setSelectedElementId(newElement.id);
-  }, [selectedSectionId, model, updateModel, cloneElementWithNewIds]);
+    }, "Insert component instance");
+    setSelectedElementId(instanceElement.id);
+  }, [selectedSectionId, model, updateModel]);
 
   // Update selected element and toolbar position when selection changes
   useEffect(() => {
