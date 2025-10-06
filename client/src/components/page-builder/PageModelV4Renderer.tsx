@@ -182,48 +182,39 @@ function PageNodeV4Renderer({
     }
   };
   
+  // Combine draggable and before drop refs
+  const setDraggableAndBeforeRefs = useCallback((el: Element | null) => {
+    setDraggableRef(el as HTMLElement | null);
+    setBeforeDropRef(el as HTMLElement | null);
+  }, [setDraggableRef, setBeforeDropRef]);
+
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
     return (
-      <div className="relative">
-        {/* Before drop zone */}
-        <div 
-          ref={setBeforeDropRef}
-          className={cn(
-            "absolute top-0 left-0 right-0 h-1 -translate-y-1/2 z-10",
-            isOverBefore && "bg-blue-500 h-0.5"
-          )}
-        />
-        
-        <span
-          ref={setDraggableRef}
-          {...draggableAttributes}
-          {...draggableListeners}
-          data-node-id={node.id}
-          data-testid={`node-text-${node.id}`}
-          className={cn(
-            node.classNames?.join(' '),
-            isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-            isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
-            isDragging && 'opacity-30'
-          )}
-          style={finalStyles}
-          onClick={handleClick}
-          onMouseEnter={handleMouseEnterNode}
-          onMouseLeave={handleMouseLeaveNode}
-        >
-          {node.textContent}
-        </span>
-        
-        {/* After drop zone */}
-        <div 
-          ref={setAfterDropRef}
-          className={cn(
-            "absolute bottom-0 left-0 right-0 h-1 translate-y-1/2 z-10",
-            isOverAfter && "bg-blue-500 h-0.5"
-          )}
-        />
-      </div>
+      <span
+        ref={setDraggableAndBeforeRefs}
+        {...draggableAttributes}
+        {...draggableListeners}
+        data-node-id={node.id}
+        data-testid={`node-text-${node.id}`}
+        className={cn(
+          node.classNames?.join(' '),
+          isSelected && 'ring-2 ring-blue-500 ring-offset-2',
+          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
+          isDragging && 'opacity-30',
+          // Visual indicators for drop zones
+          isOverBefore && 'before:content-[""] before:absolute before:top-0 before:left-0 before:right-0 before:h-0.5 before:bg-blue-500 before:-translate-y-1',
+          isOverAfter && 'after:content-[""] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-blue-500 after:translate-y-1'
+        )}
+        style={finalStyles}
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnterNode}
+        onMouseLeave={handleMouseLeaveNode}
+      >
+        {node.textContent}
+        {/* After drop zone (hidden element for ref) */}
+        <span ref={setAfterDropRef} className="hidden" />
+      </span>
     );
   }
   
@@ -243,65 +234,11 @@ function PageNodeV4Renderer({
   }
   
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
+  // Self-closing tags don't support ::before/::after, so we skip visual indicators
   if (isSelfClosing) {
     return (
-      <div className="relative">
-        {/* Before drop zone */}
-        <div 
-          ref={setBeforeDropRef}
-          className={cn(
-            "absolute top-0 left-0 right-0 h-1 -translate-y-1/2 z-10",
-            isOverBefore && "bg-blue-500 h-0.5"
-          )}
-        />
-        
-        <Tag
-          ref={setDraggableRef}
-          {...draggableAttributes}
-          {...draggableListeners}
-          data-node-id={node.id}
-          data-testid={`node-${node.tag}-${node.id}`}
-          className={cn(
-            node.classNames?.join(' '),
-            isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-            isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
-            isDragging && 'opacity-30'
-          )}
-          style={{ ...finalStyles, pointerEvents: 'auto' }}
-          onClick={handleClick}
-          onMouseEnter={handleMouseEnterNode}
-          onMouseLeave={handleMouseLeaveNode}
-          {...node.attributes}
-        />
-        
-        {/* After drop zone */}
-        <div 
-          ref={setAfterDropRef}
-          className={cn(
-            "absolute bottom-0 left-0 right-0 h-1 translate-y-1/2 z-10",
-            isOverAfter && "bg-blue-500 h-0.5"
-          )}
-        />
-      </div>
-    );
-  }
-  
-  // Regular elements with children/text
-  const isContainer = canAcceptChild(node);
-  
-  return (
-    <div className="relative">
-      {/* Before drop zone */}
-      <div 
-        ref={setBeforeDropRef}
-        className={cn(
-          "absolute top-0 left-0 right-0 h-1 -translate-y-1/2 z-10",
-          isOverBefore && "bg-blue-500 h-0.5"
-        )}
-      />
-      
       <Tag
-        ref={setDraggableRef}
+        ref={setDraggableAndBeforeRefs}
         {...draggableAttributes}
         {...draggableListeners}
         data-node-id={node.id}
@@ -310,49 +247,72 @@ function PageNodeV4Renderer({
           node.classNames?.join(' '),
           isSelected && 'ring-2 ring-blue-500 ring-offset-2',
           isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
-          isDragging && 'opacity-30',
-          'relative' // Needed for inner drop zone positioning
+          isDragging && 'opacity-30'
         )}
         style={{ ...finalStyles, pointerEvents: 'auto' }}
         onClick={handleClick}
         onMouseEnter={handleMouseEnterNode}
         onMouseLeave={handleMouseLeaveNode}
         {...node.attributes}
-      >
-        {/* Inner drop zone overlay (only for containers) */}
-        {isContainer && (
-          <div 
-            ref={setInnerDropRef}
-            className={cn(
-              "absolute inset-0 pointer-events-none",
-              isOverInner && "bg-blue-500/20 pointer-events-auto"
-            )}
-          />
-        )}
-        
-        {node.textContent}
-        {node.children?.map(child => (
-          <PageNodeV4Renderer 
-            key={child.id} 
-            node={child}
-            selectedNodeId={selectedNodeId}
-            hoveredNodeId={hoveredNodeId}
-            onSelectNode={onSelectNode}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
-            breakpoint={breakpoint}
-          />
-        ))}
-      </Tag>
-      
-      {/* After drop zone */}
-      <div 
-        ref={setAfterDropRef}
-        className={cn(
-          "absolute bottom-0 left-0 right-0 h-1 translate-y-1/2 z-10",
-          isOverAfter && "bg-blue-500 h-0.5"
-        )}
       />
-    </div>
+    );
+  }
+  
+  // Regular elements with children/text
+  const isContainer = canAcceptChild(node);
+  
+  return (
+    <Tag
+      ref={setDraggableAndBeforeRefs}
+      {...draggableAttributes}
+      {...draggableListeners}
+      data-node-id={node.id}
+      data-testid={`node-${node.tag}-${node.id}`}
+      className={cn(
+        node.classNames?.join(' '),
+        isSelected && 'ring-2 ring-blue-500 ring-offset-2',
+        isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
+        isDragging && 'opacity-30',
+        // Visual indicators for drop zones using pseudo-elements
+        isOverBefore && 'before:content-[""] before:absolute before:top-0 before:left-0 before:right-0 before:h-0.5 before:bg-blue-500 before:-translate-y-1 before:z-50',
+        isOverAfter && 'after:content-[""] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-blue-500 after:translate-y-1 after:z-50'
+      )}
+      style={{ ...finalStyles, pointerEvents: 'auto' }}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnterNode}
+      onMouseLeave={handleMouseLeaveNode}
+      {...node.attributes}
+    >
+      {/* Inner drop zone overlay (only for containers) - placed first so it's behind content */}
+      {isContainer && isOverInner && (
+        <div 
+          ref={setInnerDropRef}
+          className="absolute inset-0 bg-blue-500/20 pointer-events-auto z-40"
+        />
+      )}
+      {isContainer && !isOverInner && (
+        <div 
+          ref={setInnerDropRef}
+          className="absolute inset-0 pointer-events-none opacity-0"
+        />
+      )}
+      
+      {node.textContent}
+      {node.children?.map(child => (
+        <PageNodeV4Renderer 
+          key={child.id} 
+          node={child}
+          selectedNodeId={selectedNodeId}
+          hoveredNodeId={hoveredNodeId}
+          onSelectNode={onSelectNode}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
+          breakpoint={breakpoint}
+        />
+      ))}
+      
+      {/* Hidden element for after drop zone ref */}
+      {!isContainer && <span ref={setAfterDropRef} className="hidden" />}
+    </Tag>
   );
 }
