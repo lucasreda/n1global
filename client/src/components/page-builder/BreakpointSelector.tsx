@@ -66,15 +66,6 @@ export function BreakpointSelector({
           );
         })}
       </div>
-
-      <div className="ml-2 flex items-center gap-2">
-        <Badge variant="outline" className="text-xs font-mono">
-          {breakpointConfig[activeBreakpoint].width}
-        </Badge>
-        <span className="text-xs text-muted-foreground">
-          {breakpointConfig[activeBreakpoint].description}
-        </span>
-      </div>
     </div>
   );
 }
