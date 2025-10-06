@@ -37,6 +37,7 @@ import { PositionControls } from './PositionControls';
 import { BoxModelInspector } from './inspector/BoxModelInspector';
 import { ColorPickerProfessional } from './inspector/ColorPickerProfessional';
 import { FontFamilySelectorProfessional } from './inspector/FontFamilySelectorProfessional';
+import { AnimationsEditor } from './AnimationsEditor';
 import { BlockElement, BlockSection, ComponentDefinitionV3, ComponentProp } from '@shared/schema';
 import { resetOverride, isComponentInstance } from '@/lib/componentInstance';
 import { Input } from '@/components/ui/input';
@@ -1544,13 +1545,17 @@ export function AdvancedPropertiesPanel({
                   ))}
                 </div>
 
-                {/* Animations placeholder for future expansion */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-muted-foreground">Keyframe Animations</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Keyframe animation editor coming soon.
-                  </p>
-                </div>
+                {/* Keyframe Animations */}
+                <AnimationsEditor
+                  animations={target.animations || []}
+                  onChange={(animations) => {
+                    if (selectedElement && onUpdateElement) {
+                      onUpdateElement(selectedElement.id, { animations });
+                    } else if (selectedSection && onUpdateSection) {
+                      onUpdateSection(selectedSection.id, { animations });
+                    }
+                  }}
+                />
               </div>
             </CollapsibleContent>
           </Collapsible>
