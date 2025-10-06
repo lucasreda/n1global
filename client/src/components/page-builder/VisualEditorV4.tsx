@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PageModelV4, PageNodeV4, ResponsiveStylesV4 } from '@shared/schema';
 import { PageModelV4Renderer } from './PageModelV4Renderer';
 import { LayersPanelV4 } from './LayersPanelV4';
@@ -162,6 +162,38 @@ export function VisualEditorV4({
       nodes: [...model.nodes, duplicated],
     });
   }, [selectedNodeId, model, onChange]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      // Delete/Backspace - delete selected node
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNodeId) {
+        e.preventDefault();
+        handleDeleteNode();
+      }
+
+      // Ctrl+D or Cmd+D - duplicate selected node
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedNodeId) {
+        e.preventDefault();
+        handleDuplicateNode();
+      }
+
+      // Escape - deselect
+      if (e.key === 'Escape' && selectedNodeId) {
+        e.preventDefault();
+        setSelectedNodeId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, handleDeleteNode, handleDuplicateNode]);
 
   const selectedNode = selectedNodeId ? findNodeInTree(model.nodes, selectedNodeId) : null;
 
