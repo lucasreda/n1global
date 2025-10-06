@@ -22,15 +22,6 @@ export enum ElementCategory {
 export function getElementCategory(node: PageNodeV4): ElementCategory {
   const tag = node.tag.toLowerCase();
   const type = node.type?.toLowerCase();
-  
-  // DEBUG: Log para entender classificação
-  if (tag.startsWith('h') || type === 'text' || type === 'heading') {
-    console.log('🔍 getElementCategory DEBUG:', {
-      tag,
-      type,
-      id: node.id
-    });
-  }
 
   // Container elements
   if (['div', 'section', 'article', 'main', 'aside', 'header', 'footer', 'nav'].includes(tag)) {
@@ -72,6 +63,9 @@ export function getElementCategory(node: PageNodeV4): ElementCategory {
 
   // Text block elements
   if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre'].includes(tag)) {
+    return ElementCategory.TextBlock;
+  }
+  if (type === 'heading') {
     return ElementCategory.TextBlock;
   }
 
@@ -225,11 +219,6 @@ export interface ValidationResult {
 export function canAcceptChild(parentNode: PageNodeV4, childNode: PageNodeV4): ValidationResult {
   const parentCategory = getElementCategory(parentNode);
   const childCategory = getElementCategory(childNode);
-  
-  console.log('🔍 canAcceptChild:', {
-    parent: { tag: parentNode.tag, type: parentNode.type, category: parentCategory },
-    child: { tag: childNode.tag, type: childNode.type, category: childCategory }
-  });
   
   const allowedChildren = acceptanceRules[parentCategory] || [];
   const allowed = allowedChildren.includes(childCategory);

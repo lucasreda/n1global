@@ -59,7 +59,7 @@ const ELEMENT_TEMPLATES: ElementTemplate[] = [
     category: 'text',
     createNode: () => ({
       id: nanoid(),
-      type: 'text',
+      type: 'heading',
       tag: 'h1',
       textContent: 'Heading 1',
       classNames: [],
@@ -85,7 +85,7 @@ const ELEMENT_TEMPLATES: ElementTemplate[] = [
     category: 'text',
     createNode: () => ({
       id: nanoid(),
-      type: 'text',
+      type: 'heading',
       tag: 'h2',
       textContent: 'Heading 2',
       classNames: [],
@@ -111,7 +111,7 @@ const ELEMENT_TEMPLATES: ElementTemplate[] = [
     category: 'text',
     createNode: () => ({
       id: nanoid(),
-      type: 'text',
+      type: 'heading',
       tag: 'h3',
       textContent: 'Heading 3',
       classNames: [],

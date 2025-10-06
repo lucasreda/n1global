@@ -89,14 +89,17 @@ export function DropIndicatorLayer({
     }
   }
 
+  // Não mostrar indicador se o drop for inválido
+  if (!isValidDrop) {
+    return null;
+  }
+
   let indicator: JSX.Element | null = null;
-  const validColor = '#3b82f6'; // blue-500
-  const invalidColor = '#ef4444'; // red-500
+  const color = '#3b82f6'; // blue-500
+  const shadowColor = 'rgba(59, 130, 246, 0.6)';
 
   if (activeDropZone.position === 'before') {
     // Line before element
-    const color = isValidDrop ? validColor : invalidColor;
-    const shadowColor = isValidDrop ? 'rgba(59, 130, 246, 0.6)' : 'rgba(239, 68, 68, 0.6)';
     indicator = (
       <div
         className="absolute z-[100] pointer-events-none"
@@ -112,8 +115,6 @@ export function DropIndicatorLayer({
     );
   } else if (activeDropZone.position === 'after') {
     // Line after element
-    const color = isValidDrop ? validColor : invalidColor;
-    const shadowColor = isValidDrop ? 'rgba(59, 130, 246, 0.6)' : 'rgba(239, 68, 68, 0.6)';
     indicator = (
       <div
         className="absolute z-[100] pointer-events-none"
@@ -128,10 +129,9 @@ export function DropIndicatorLayer({
       />
     );
   } else if (activeDropZone.position === 'child') {
-    // Semi-transparent overlay for container - red if invalid
-    const color = isValidDrop ? validColor : invalidColor;
-    const bgColor = isValidDrop ? 'rgba(59, 130, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-    const shadowColor = isValidDrop ? 'rgba(59, 130, 246, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+    // Semi-transparent overlay for container
+    const bgColor = 'rgba(59, 130, 246, 0.1)';
+    const boxShadowColor = 'rgba(59, 130, 246, 0.4)';
     
     indicator = (
       <div
@@ -143,7 +143,7 @@ export function DropIndicatorLayer({
           height: `${height}px`,
           borderColor: color,
           backgroundColor: bgColor,
-          boxShadow: `0 0 12px ${shadowColor}`,
+          boxShadow: `0 0 12px ${boxShadowColor}`,
         }}
       />
     );
