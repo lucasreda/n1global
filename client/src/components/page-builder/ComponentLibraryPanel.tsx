@@ -21,8 +21,9 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
-import type { ComponentDefinitionV3, BlockElementV3, ComponentProp } from '@shared/schema';
+import type { ComponentDefinitionV3, BlockElementV3, ComponentProp, ComponentSlot } from '@shared/schema';
 import { ComponentPropsEditor } from './ComponentPropsEditor';
+import { ComponentSlotsEditor } from './ComponentSlotsEditor';
 
 interface ComponentLibraryPanelProps {
   components: ComponentDefinitionV3[];
@@ -55,6 +56,7 @@ export function ComponentLibraryPanel({
   const [componentName, setComponentName] = useState('');
   const [componentCategory, setComponentCategory] = useState<string>('Other');
   const [componentProps, setComponentProps] = useState<ComponentProp[]>([]);
+  const [componentSlots, setComponentSlots] = useState<ComponentSlot[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const handleSave = () => {
@@ -63,6 +65,7 @@ export function ComponentLibraryPanel({
       setComponentName('');
       setComponentCategory('Other');
       setComponentProps([]);
+      setComponentSlots([]);
       setSaveDialogOpen(false);
     }
   };
@@ -182,9 +185,10 @@ export function ComponentLibraryPanel({
           </DialogHeader>
 
           <Tabs defaultValue="basic" className="py-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="props">Props</TabsTrigger>
+              <TabsTrigger value="slots">Slots</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4 pt-4">
@@ -220,6 +224,13 @@ export function ComponentLibraryPanel({
               <ComponentPropsEditor
                 props={componentProps}
                 onChange={setComponentProps}
+              />
+            </TabsContent>
+
+            <TabsContent value="slots" className="pt-4">
+              <ComponentSlotsEditor
+                slots={componentSlots}
+                onChange={setComponentSlots}
               />
             </TabsContent>
           </Tabs>
