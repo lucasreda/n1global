@@ -143,7 +143,7 @@ function PageNodeV4Renderer({
   
   // Merge layout properties, inline styles, and responsive styles
   const finalStyles: React.CSSProperties = {
-    ...node.layout,
+    ...(node.layout as React.CSSProperties),
     ...node.inlineStyles,
     ...styles,
   };
