@@ -9,6 +9,7 @@ interface DropIndicatorLayerProps {
   activeNode?: PageNodeV4 | null;
   findNode?: (nodeId: string) => PageNodeV4 | null;
   nodes?: PageNodeV4[];
+  validation?: { allowed: boolean; reason?: string } | null;
 }
 
 type DropPosition = 'before' | 'after' | 'child' | null;
@@ -18,6 +19,7 @@ export function DropIndicatorLayer({
   activeNode = null,
   findNode = () => null,
   nodes = [],
+  validation = null,
 }: DropIndicatorLayerProps) {
   const [activeDropZone, setActiveDropZone] = useState<{
     position: DropPosition;
@@ -65,9 +67,12 @@ export function DropIndicatorLayer({
   const width = rect.width;
   const height = rect.height;
 
-  // Check if drop is valid
+  // Use validation from parent if available, otherwise calculate locally
   let isValidDrop = true;
-  if (activeNode) {
+  if (validation !== null) {
+    isValidDrop = validation.allowed;
+  } else if (activeNode) {
+    // Fallback to local validation
     if (activeDropZone.position === 'child') {
       // For 'child' position, validate against target node
       const targetNode = findNode(activeDropZone.nodeId);

@@ -18,7 +18,7 @@ import {
   DragEndEvent,
   DragOverEvent,
 } from '@dnd-kit/core';
-import { findNodePath, removeNodeByPathWithReturn, insertNodeAtPath, canAcceptChild, canAcceptChildWithContext, getParentNode } from './tree-helpers';
+import { findNodePath, removeNodeByPathWithReturn, insertNodeAtPath, canAcceptChild, canAcceptChildWithContext, getParentNode, validateDrop } from './tree-helpers';
 import { getDropErrorMessage } from './semantic-rules';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,6 +48,7 @@ export function VisualEditorV4({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [draggedTemplate, setDraggedTemplate] = useState<PageNodeV4 | null>(null);
+  const [dropValidation, setDropValidation] = useState<{ allowed: boolean; reason?: string } | null>(null);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -238,15 +239,59 @@ export function VisualEditorV4({
   }, []);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
-    setOverId(event.over?.id as string | null);
-  }, []);
+    const { active, over } = event;
+    setOverId(over?.id as string | null);
+    
+    if (!over) {
+      setDropValidation(null);
+      return;
+    }
+    
+    const activeData = active.data.current;
+    const overData = over.data.current;
+    
+    // Get the dragged node (either template or existing node)
+    let draggedNode: PageNodeV4 | null = null;
+    
+    if (activeData?.kind === 'template') {
+      draggedNode = activeData.template as PageNodeV4;
+    } else if (activeData?.kind === 'node') {
+      draggedNode = findNodeInTree(model.nodes, activeData.nodeId);
+    }
+    
+    if (!draggedNode || !overData || overData.kind !== 'node') {
+      setDropValidation(null);
+      return;
+    }
+    
+    // Validate drop in real-time
+    const position = overData.position || 'after';
+    const validation = validateDrop(model.nodes, draggedNode, overData.nodeId, position);
+    setDropValidation(validation);
+  }, [model.nodes]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     
+    // Block drop if validation failed
+    if (dropValidation && !dropValidation.allowed) {
+      toast({
+        title: "Drop não permitido",
+        description: dropValidation.reason || "Esta operação não é permitida",
+        variant: "destructive",
+      });
+      
+      setActiveId(null);
+      setOverId(null);
+      setDraggedTemplate(null);
+      setDropValidation(null);
+      return;
+    }
+    
     setActiveId(null);
     setOverId(null);
     setDraggedTemplate(null);
+    setDropValidation(null);
     
     if (!over) return;
     
@@ -455,6 +500,7 @@ export function VisualEditorV4({
       activeNode={dropIndicatorNode}
       findNode={(nodeId) => findNodeInTree(model.nodes, nodeId)}
       nodes={model.nodes}
+      validation={dropValidation}
     />
     
     {/* Drag Overlay */}
