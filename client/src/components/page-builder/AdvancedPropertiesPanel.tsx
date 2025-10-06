@@ -123,6 +123,7 @@ export function AdvancedPropertiesPanel({
   const [openSections, setOpenSections] = useState({
     states: true,
     componentProps: true,
+    componentVariants: true,
     typography: true,
     boxModel: true,
     spacing: true,
@@ -622,8 +623,8 @@ export function AdvancedPropertiesPanel({
               const currentPropValues = (selectedElement as any).instanceData?.propValues || {};
               const updatedPropValues = { ...currentPropValues, [propKey]: value };
               
+              // Only update instanceData, don't spread the resolved element
               onUpdateElement(selectedElement.id, {
-                ...selectedElement,
                 instanceData: {
                   ...(selectedElement as any).instanceData,
                   propValues: updatedPropValues
@@ -722,6 +723,89 @@ export function AdvancedPropertiesPanel({
                           </div>
                         );
                       })}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </>
+            );
+          })()}
+
+          {/* Component Variants Section - Only show for component instances with variants */}
+          {targetType === 'element' && isComponentInstance(selectedElement as any) && (() => {
+            const componentDef = components.find(c => c.id === (selectedElement as any).instanceData?.componentId);
+            const hasVariants = componentDef?.variantProperties && componentDef.variantProperties.length > 0;
+            
+            if (!hasVariants) return null;
+            
+            const handleVariantUpdate = (propertyName: string, value: string) => {
+              if (!selectedElement || !onUpdateElement) return;
+              
+              const currentVariant = (selectedElement as any).instanceData?.selectedVariant || {};
+              const updatedVariant = { ...currentVariant, [propertyName]: value };
+              
+              // Only update instanceData, don't spread the resolved element
+              onUpdateElement(selectedElement.id, {
+                instanceData: {
+                  ...(selectedElement as any).instanceData,
+                  selectedVariant: updatedVariant
+                }
+              } as any);
+            };
+            
+            return (
+              <>
+                <Separator />
+                <Collapsible 
+                  open={openSections.componentVariants}
+                  onOpenChange={() => toggleSection('componentVariants')}
+                >
+                  <SectionHeader 
+                    title="Component Variants" 
+                    icon={Grid3X3} 
+                    section="componentVariants"
+                    hasChanges={!!((selectedElement as any).instanceData?.selectedVariant && Object.keys((selectedElement as any).instanceData.selectedVariant).length > 0)}
+                  />
+                  <CollapsibleContent>
+                    <div className="px-3 pb-4 space-y-3">
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Switch between component variants
+                      </p>
+                      {componentDef?.variantProperties?.map(variantProp => {
+                        const currentValue = (selectedElement as any).instanceData?.selectedVariant?.[variantProp.name] ?? variantProp.values[0];
+                        
+                        return (
+                          <div key={variantProp.name} className="space-y-1.5">
+                            <Label className="text-sm">{variantProp.name}</Label>
+                            <Select
+                              value={currentValue}
+                              onValueChange={value => handleVariantUpdate(variantProp.name, value)}
+                            >
+                              <SelectTrigger className="h-8" data-testid={`variant-select-${variantProp.name}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {variantProp.values.map(value => (
+                                  <SelectItem key={value} value={value}>
+                                    {value}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Show current variant combination info */}
+                      {componentDef?.variants && (selectedElement as any).instanceData?.selectedVariant && (
+                        <div className="mt-4 p-2 bg-muted rounded text-xs">
+                          <p className="font-medium mb-1">Current Variant:</p>
+                          <p className="text-muted-foreground">
+                            {Object.entries((selectedElement as any).instanceData.selectedVariant)
+                              .map(([key, value]) => `${key}: ${value}`)
+                              .join(' / ')}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
