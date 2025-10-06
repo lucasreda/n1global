@@ -18,7 +18,8 @@ import {
   RotateCcw,
   Settings,
   Grid3X3,
-  LayoutGrid
+  LayoutGrid,
+  Anchor
 } from 'lucide-react';
 import { 
   UnitSliderInput, 
@@ -28,6 +29,7 @@ import {
 } from './AdvancedControls';
 import { FlexLayoutControls } from './FlexLayoutControls';
 import { GridLayoutControls } from './GridLayoutControls';
+import { PositionControls } from './PositionControls';
 import { BlockElement, BlockSection } from '@shared/schema';
 
 interface AdvancedPropertiesPanelProps {
@@ -53,6 +55,7 @@ export function AdvancedPropertiesPanel({
     layout: false,
     flexbox: false,
     grid: false,
+    position: false,
     structure: true
   });
 
@@ -161,6 +164,14 @@ export function AdvancedPropertiesPanel({
         resetUpdates.gridAutoFlow = undefined;
         resetUpdates.gridAutoColumns = undefined;
         resetUpdates.gridAutoRows = undefined;
+        break;
+      case 'position':
+        resetUpdates.position = undefined;
+        resetUpdates.top = undefined;
+        resetUpdates.right = undefined;
+        resetUpdates.bottom = undefined;
+        resetUpdates.left = undefined;
+        resetUpdates.zIndex = undefined;
         break;
       case 'structure':
         // Reset config properties for structural elements
@@ -621,6 +632,35 @@ export function AdvancedPropertiesPanel({
                   gridAutoRows={getStyleValue('gridAutoRows', 'auto')}
                   onChange={handleStyleUpdate}
                   data-testid={`${testId}-grid`}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Separator />
+
+          {/* Position Section */}
+          <Collapsible 
+            open={openSections.position}
+            onOpenChange={() => toggleSection('position')}
+          >
+            <SectionHeader 
+              title="Position & Z-Index" 
+              icon={Anchor} 
+              section="position"
+              hasChanges={!!(targetStyles.position && targetStyles.position !== 'static')}
+            />
+            <CollapsibleContent>
+              <div className="px-3 pb-4">
+                <PositionControls
+                  position={getStyleValue('position', 'static')}
+                  top={getStyleValue('top', 'auto')}
+                  right={getStyleValue('right', 'auto')}
+                  bottom={getStyleValue('bottom', 'auto')}
+                  left={getStyleValue('left', 'auto')}
+                  zIndex={getStyleValue('zIndex', 'auto')}
+                  onChange={handleStyleUpdate}
+                  data-testid={`${testId}-position`}
                 />
               </div>
             </CollapsibleContent>
