@@ -86,6 +86,33 @@ function PageNodeV4Renderer({
   // Check if node is a self-closing tag
   const isSelfClosing = ['img', 'input', 'br', 'hr', 'meta', 'link'].includes(node.tag);
   
+  // DEBUG: Log img nodes with children
+  if (node.tag === 'img' && node.children && node.children.length > 0) {
+    console.error('❌ IMG NODE HAS CHILDREN (THIS SHOULD NEVER HAPPEN):', {
+      nodeId: node.id,
+      childrenCount: node.children.length,
+      children: node.children
+    });
+  }
+  
+  // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
+  if (isSelfClosing) {
+    return (
+      <Tag
+        data-node-id={node.id}
+        data-testid={`node-${node.tag}-${node.id}`}
+        className={cn(
+          node.classNames?.join(' '),
+          isSelected && 'ring-2 ring-blue-500 ring-offset-2'
+        )}
+        style={finalStyles}
+        onClick={handleClick}
+        {...node.attributes}
+      />
+    );
+  }
+  
+  // Regular elements with children/text
   return (
     <Tag
       data-node-id={node.id}
@@ -98,11 +125,8 @@ function PageNodeV4Renderer({
       onClick={handleClick}
       {...node.attributes}
     >
-      {/* Render text content if exists */}
-      {!isSelfClosing && node.textContent}
-      
-      {/* Recursively render children */}
-      {!isSelfClosing && node.children?.map(child => (
+      {node.textContent}
+      {node.children?.map(child => (
         <PageNodeV4Renderer 
           key={child.id} 
           node={child}
