@@ -383,7 +383,7 @@ export function ElementsToolbarV4({ onInsertElement }: ElementsToolbarV4Props) {
   return (
     <div className="w-full h-full flex flex-col bg-background border-r">
       <div className="p-3 border-b">
-        <h3 className="font-semibold text-sm mb-3">Elements</h3>
+        <h3 className="font-semibold text-sm mb-3 text-foreground">Elements</h3>
         
         {/* Category Tabs */}
         <div className="flex flex-wrap gap-1">
@@ -394,7 +394,7 @@ export function ElementsToolbarV4({ onInsertElement }: ElementsToolbarV4Props) {
               className={`px-2 py-1 text-xs rounded transition-colors ${
                 selectedCategory === cat.id
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
+                  : 'bg-muted hover:bg-muted/80 text-foreground dark:text-gray-200'
               }`}
               data-testid={`category-${cat.id}`}
             >
@@ -416,8 +416,8 @@ export function ElementsToolbarV4({ onInsertElement }: ElementsToolbarV4Props) {
               data-testid={`element-${template.id}`}
             >
               <div className="flex items-center gap-2 w-full">
-                <div className="text-muted-foreground">{template.icon}</div>
-                <span className="text-sm">{template.name}</span>
+                <div className="text-muted-foreground dark:text-gray-400">{template.icon}</div>
+                <span className="text-sm text-foreground dark:text-gray-200">{template.name}</span>
               </div>
             </Button>
           ))}
