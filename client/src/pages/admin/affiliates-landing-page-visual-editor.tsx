@@ -216,32 +216,35 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
                 <p className="text-sm text-muted-foreground dark:text-gray-400">{pageData.description}</p>
               )}
             </div>
+            
+            {/* Undo/Redo Controls - Logo após o nome */}
+            <div className="flex items-center gap-1 ml-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                title="Desfazer (Ctrl+Z)"
+                data-testid="button-undo-header"
+                className="text-foreground dark:text-gray-200"
+              >
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                title="Refazer (Ctrl+Y)"
+                data-testid="button-redo-header"
+                className="text-foreground dark:text-gray-200"
+              >
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Undo/Redo Controls */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleUndo}
-              disabled={!canUndo}
-              title="Undo (Ctrl+Z)"
-              data-testid="button-undo-header"
-            >
-              <Undo2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRedo}
-              disabled={!canRedo}
-              title="Redo (Ctrl+Y)"
-              data-testid="button-redo-header"
-            >
-              <Redo2 className="h-4 w-4" />
-            </Button>
-
-            <div className="w-px h-6 bg-border mx-1" />
 
             {/* Panel Toggles */}
             <Button
