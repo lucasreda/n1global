@@ -813,6 +813,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
             selectedElement={resolvedSelectedElement}
             selectedSection={selectedSectionId ? model.sections.find(s => s.id === selectedSectionId) : null}
             activeBreakpoint={viewport as Breakpoint}
+            components={model.components || []}
             onUpdateElement={updateElement}
             onUpdateSection={updateSection}
             data-testid="visual-editor-properties-panel"

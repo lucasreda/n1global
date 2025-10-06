@@ -37,8 +37,10 @@ import { PositionControls } from './PositionControls';
 import { BoxModelInspector } from './inspector/BoxModelInspector';
 import { ColorPickerProfessional } from './inspector/ColorPickerProfessional';
 import { FontFamilySelectorProfessional } from './inspector/FontFamilySelectorProfessional';
-import { BlockElement, BlockSection } from '@shared/schema';
-import { resetOverride } from '@/lib/componentInstance';
+import { BlockElement, BlockSection, ComponentDefinitionV3, ComponentProp } from '@shared/schema';
+import { resetOverride, isComponentInstance } from '@/lib/componentInstance';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export type Breakpoint = 'desktop' | 'tablet' | 'mobile';
 
@@ -46,6 +48,7 @@ interface AdvancedPropertiesPanelProps {
   selectedElement?: BlockElement | null;
   selectedSection?: BlockSection | null;
   activeBreakpoint?: Breakpoint;
+  components?: ComponentDefinitionV3[];
   onUpdateElement?: (elementId: string, updates: Partial<BlockElement>) => void;
   onUpdateSection?: (sectionId: string, updates: Partial<BlockSection>) => void;
   'data-testid'?: string;
@@ -111,6 +114,7 @@ export function AdvancedPropertiesPanel({
   selectedElement,
   selectedSection,
   activeBreakpoint = 'desktop',
+  components = [],
   onUpdateElement,
   onUpdateSection,
   'data-testid': testId = 'advanced-properties-panel'
@@ -118,6 +122,7 @@ export function AdvancedPropertiesPanel({
   const [activePseudoClass, setActivePseudoClass] = useState<PseudoClass>('default');
   const [openSections, setOpenSections] = useState({
     states: true,
+    componentProps: true,
     typography: true,
     boxModel: true,
     spacing: true,
@@ -603,6 +608,126 @@ export function AdvancedPropertiesPanel({
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Component Props Section - Only show for component instances */}
+          {targetType === 'element' && isComponentInstance(selectedElement as any) && (() => {
+            const componentDef = components.find(c => c.id === (selectedElement as any).instanceData?.componentId);
+            const hasProps = componentDef?.props && componentDef.props.length > 0;
+            
+            if (!hasProps) return null;
+            
+            const handlePropUpdate = (propKey: string, value: any) => {
+              if (!selectedElement || !onUpdateElement) return;
+              
+              const currentPropValues = (selectedElement as any).instanceData?.propValues || {};
+              const updatedPropValues = { ...currentPropValues, [propKey]: value };
+              
+              onUpdateElement(selectedElement.id, {
+                ...selectedElement,
+                instanceData: {
+                  ...(selectedElement as any).instanceData,
+                  propValues: updatedPropValues
+                }
+              } as any);
+            };
+            
+            return (
+              <>
+                <Separator />
+                <Collapsible 
+                  open={openSections.componentProps}
+                  onOpenChange={() => toggleSection('componentProps')}
+                >
+                  <SectionHeader 
+                    title="Component Props" 
+                    icon={Settings} 
+                    section="componentProps"
+                    hasChanges={!!((selectedElement as any).instanceData?.propValues && Object.keys((selectedElement as any).instanceData.propValues).length > 0)}
+                  />
+                  <CollapsibleContent>
+                    <div className="px-3 pb-4 space-y-3">
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Customize this instance's properties
+                      </p>
+                      {componentDef?.props?.map(prop => {
+                        const currentValue = (selectedElement as any).instanceData?.propValues?.[prop.key] ?? prop.defaultValue;
+                        
+                        return (
+                          <div key={prop.id} className="space-y-1.5">
+                            <Label className="text-sm">{prop.name}</Label>
+                            {prop.type === 'text' && (
+                              <Input
+                                value={currentValue || ''}
+                                onChange={e => handlePropUpdate(prop.key, e.target.value)}
+                                placeholder={prop.defaultValue}
+                                className="h-8"
+                                data-testid={`prop-input-${prop.key}`}
+                              />
+                            )}
+                            {prop.type === 'number' && (
+                              <Input
+                                type="number"
+                                value={currentValue ?? 0}
+                                onChange={e => handlePropUpdate(prop.key, parseFloat(e.target.value) || 0)}
+                                className="h-8"
+                                data-testid={`prop-input-${prop.key}`}
+                              />
+                            )}
+                            {prop.type === 'boolean' && (
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={!!currentValue}
+                                  onCheckedChange={checked => handlePropUpdate(prop.key, checked)}
+                                  data-testid={`prop-checkbox-${prop.key}`}
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  {currentValue ? 'Enabled' : 'Disabled'}
+                                </span>
+                              </div>
+                            )}
+                            {prop.type === 'select' && prop.options && (
+                              <Select
+                                value={currentValue}
+                                onValueChange={value => handlePropUpdate(prop.key, value)}
+                              >
+                                <SelectTrigger className="h-8" data-testid={`prop-select-${prop.key}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {prop.options.map(option => (
+                                    <SelectItem key={option} value={option}>
+                                      {option}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {prop.type === 'color' && (
+                              <ColorPickerProfessional
+                                label=""
+                                value={currentValue || '#000000'}
+                                onChange={value => handlePropUpdate(prop.key, value)}
+                                data-testid={`prop-color-${prop.key}`}
+                              />
+                            )}
+                            {prop.type === 'image' && (
+                              <Input
+                                value={currentValue || ''}
+                                onChange={e => handlePropUpdate(prop.key, e.target.value)}
+                                placeholder="Image URL"
+                                className="h-8"
+                                data-testid={`prop-input-${prop.key}`}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </>
+            );
+          })()}
 
           <Separator />
 
