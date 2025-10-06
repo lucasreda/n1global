@@ -4713,8 +4713,46 @@ export type ComponentInstanceData = {
   componentId: string; // Reference to ComponentDefinitionV3.id
   instanceId: string; // Unique ID for this instance
   overrides: InstanceOverridesMap; // Overridden properties per element
+  propValues?: Record<string, any>; // Custom prop values (key -> value)
+  selectedVariant?: Record<string, string>; // Selected variant combination (property -> value)
   detachedFrom?: string; // If detached, original componentId
   lastSyncedAt?: string; // ISO timestamp of last sync
+};
+
+// Component Props System (Figma-style customizable properties)
+export type ComponentPropType = 
+  | 'text'        // String input
+  | 'number'      // Numeric input
+  | 'boolean'     // Toggle/checkbox
+  | 'select'      // Dropdown with options
+  | 'color'       // Color picker
+  | 'image';      // Image URL input
+
+export type ComponentProp = {
+  id: string;
+  name: string;              // Display name (e.g., "Button Text")
+  key: string;               // Property key (e.g., "buttonText")
+  type: ComponentPropType;
+  defaultValue: any;         // Default value for this prop
+  options?: string[];        // Options for 'select' type
+  bindTo?: {                 // Which element and property this affects
+    elementId: string;
+    property: string;        // e.g., "props.content", "styles.desktop.backgroundColor"
+  };
+  description?: string;
+};
+
+// Component Variants System (Figma-style variant combinations)
+export type ComponentVariantProperty = {
+  name: string;              // e.g., "Size", "State", "Type"
+  values: string[];          // e.g., ["Small", "Medium", "Large"]
+};
+
+export type ComponentVariantCombination = {
+  id: string;
+  name: string;              // e.g., "Large / Primary"
+  properties: Record<string, string>; // e.g., { Size: "Large", Type: "Primary" }
+  element: BlockElementV3;   // The variant's element tree
 };
 
 export type ComponentDefinitionV3 = {
@@ -4724,6 +4762,11 @@ export type ComponentDefinitionV3 = {
   element: BlockElementV3;
   thumbnail?: string;
   updatedAt?: string; // ISO timestamp for sync detection
+  
+  // Props & Variants
+  props?: ComponentProp[];                      // Custom props
+  variantProperties?: ComponentVariantProperty[]; // Variant axes (Size, State, etc.)
+  variants?: ComponentVariantCombination[];       // Specific variant combinations
 };
 
 // Element types from converter: heading, text, button, image, link, etc.

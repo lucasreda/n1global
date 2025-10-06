@@ -11,7 +11,7 @@ import { Link, Unlink, CornerUpLeft, CornerUpRight, CornerDownLeft, CornerDownRi
 // Interface for value with unit
 interface ValueWithUnit {
   value: number;
-  unit: 'px' | 'rem' | '%' | 'em' | 'auto' | '' | 'none' | 'vh' | 'vw';
+  unit: 'px' | 'rem' | '%' | 'em' | 'auto' | '' | 'none' | 'vh' | 'vw' | 'ms' | 's';
 }
 
 // Helper function to parse value with unit
@@ -19,7 +19,7 @@ const parseValueWithUnit = (value: string = '0'): ValueWithUnit => {
   if (value === 'auto') return { value: 0, unit: 'auto' };
   if (value === 'none') return { value: 0, unit: 'none' };
   if (value === 'transparent') return { value: 0, unit: '' };
-  const match = value.match(/^(-?\d*\.?\d+)(px|rem|%|em|vh|vw)?$/);
+  const match = value.match(/^(-?\d*\.?\d+)(px|rem|%|em|vh|vw|ms|s)?$/);
   return {
     value: match ? parseFloat(match[1]) : 0,
     unit: (match?.[2] as ValueWithUnit['unit']) || 'px'
