@@ -2281,9 +2281,8 @@ function computeElementStylesV4(
     }
     
     // CRITICAL: Apply browser-like defaults for common elements
-    if (!desktopStyles.color) {
-      desktopStyles.color = '#000000'; // Default text color
-    }
+    // NOTE: We DON'T force color: #000000 here because that would prevent CSS inheritance!
+    // Elements without explicit color should inherit from their parents naturally
     
     // Apply default heading styles (browser defaults)
     if (tag === 'h1' && !desktopStyles.fontSize) {
