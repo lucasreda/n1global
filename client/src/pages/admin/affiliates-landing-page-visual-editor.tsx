@@ -232,34 +232,6 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Viewport selector */}
-            <div className="flex items-center gap-1 px-2 py-1 rounded-md border bg-background">
-              <Button
-                variant={viewport === 'desktop' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewport('desktop')}
-                data-testid="button-viewport-desktop"
-              >
-                Desktop
-              </Button>
-              <Button
-                variant={viewport === 'tablet' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewport('tablet')}
-                data-testid="button-viewport-tablet"
-              >
-                Tablet
-              </Button>
-              <Button
-                variant={viewport === 'mobile' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewport('mobile')}
-                data-testid="button-viewport-mobile"
-              >
-                Mobile
-              </Button>
-            </div>
-
             {pageData.vercelDeploymentUrl && (
               <Button
                 variant="outline"
