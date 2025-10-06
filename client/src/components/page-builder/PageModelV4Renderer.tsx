@@ -182,22 +182,24 @@ function PageNodeV4Renderer({
     }
   };
   
-  // Combine draggable and before drop refs
-  const setDraggableAndBeforeRefs = useCallback((el: Element | null) => {
-    setDraggableRef(el as HTMLElement | null);
-    setBeforeDropRef(el as HTMLElement | null);
-  }, [setDraggableRef, setBeforeDropRef]);
+  // Combine ALL refs into a single callback
+  const setCombinedRefs = useCallback((el: Element | null) => {
+    const htmlEl = el as HTMLElement | null;
+    setDraggableRef(htmlEl);
+    setBeforeDropRef(htmlEl);
+    setAfterDropRef(htmlEl);
+    setInnerDropRef(htmlEl);
+  }, [setDraggableRef, setBeforeDropRef, setAfterDropRef, setInnerDropRef]);
 
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
     return (
       <span
-        ref={setDraggableAndBeforeRefs}
+        ref={setCombinedRefs}
         {...draggableAttributes}
         {...draggableListeners}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
-        data-drop-after={setAfterDropRef}
         className={cn(
           node.classNames?.join(' '),
           isSelected && 'ring-2 ring-blue-500 ring-offset-2',
@@ -230,11 +232,10 @@ function PageNodeV4Renderer({
   }
   
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
-  // Self-closing tags don't support ::before/::after, so we skip visual indicators
   if (isSelfClosing) {
     return (
       <Tag
-        ref={setDraggableAndBeforeRefs}
+        ref={setCombinedRefs}
         {...draggableAttributes}
         {...draggableListeners}
         data-node-id={node.id}
@@ -255,21 +256,9 @@ function PageNodeV4Renderer({
   }
   
   // Regular elements with children/text
-  const isContainer = canAcceptChild(node);
-  
-  // Combine refs for inner drop zone (for containers)
-  const setAllRefs = useCallback((el: Element | null) => {
-    setDraggableRef(el as HTMLElement | null);
-    setBeforeDropRef(el as HTMLElement | null);
-    setAfterDropRef(el as HTMLElement | null);
-    if (isContainer) {
-      setInnerDropRef(el as HTMLElement | null);
-    }
-  }, [setDraggableRef, setBeforeDropRef, setAfterDropRef, setInnerDropRef, isContainer]);
-  
   return (
     <Tag
-      ref={setAllRefs}
+      ref={setCombinedRefs}
       {...draggableAttributes}
       {...draggableListeners}
       data-node-id={node.id}
