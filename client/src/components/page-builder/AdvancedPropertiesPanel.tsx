@@ -45,6 +45,8 @@ interface AdvancedPropertiesPanelProps {
   'data-testid'?: string;
 }
 
+export type PseudoClass = 'default' | 'hover' | 'focus' | 'active' | 'disabled';
+
 export function AdvancedPropertiesPanel({
   selectedElement,
   selectedSection,
@@ -53,7 +55,9 @@ export function AdvancedPropertiesPanel({
   onUpdateSection,
   'data-testid': testId = 'advanced-properties-panel'
 }: AdvancedPropertiesPanelProps) {
+  const [activePseudoClass, setActivePseudoClass] = useState<PseudoClass>('default');
   const [openSections, setOpenSections] = useState({
+    states: true,
     typography: true,
     spacing: true,
     border: false,
@@ -70,33 +74,93 @@ export function AdvancedPropertiesPanel({
   const targetType = selectedElement ? 'element' : 'section';
   
   // Get styles for active breakpoint with cascading (V3: mobile→tablet→desktop fallback)
+  // AND pseudo-class (default → hover/focus/active/disabled)
   const targetStyles = useMemo(() => {
     if (!target?.styles) return {};
     
     // Check if styles object has breakpoint keys (V3 format)
     const hasBreakpoints = target.styles.desktop || target.styles.tablet || target.styles.mobile;
     
+    let baseStyles: any = {};
+    
     if (hasBreakpoints) {
       // V3 format: Cascade from desktop → tablet → mobile
-      // Each breakpoint inherits from larger breakpoints
-      const baseStyles = target.styles.desktop || {};
+      const desktopStyles = target.styles.desktop || {};
       const tabletStyles = target.styles.tablet || {};
       const mobileStyles = target.styles.mobile || {};
       
       if (activeBreakpoint === 'desktop') {
-        return baseStyles;
+        baseStyles = desktopStyles;
       } else if (activeBreakpoint === 'tablet') {
         // Tablet inherits from desktop
-        return { ...baseStyles, ...tabletStyles };
+        baseStyles = { ...desktopStyles, ...tabletStyles };
       } else {
         // Mobile inherits from desktop + tablet
-        return { ...baseStyles, ...tabletStyles, ...mobileStyles };
+        baseStyles = { ...desktopStyles, ...tabletStyles, ...mobileStyles };
+      }
+    } else {
+      // V2 format: use styles directly
+      baseStyles = target.styles;
+    }
+    
+    // Apply default state styles first (if exists)
+    let stylesWithDefault = baseStyles;
+    if (target.states?.default) {
+      const defaultState = target.states.default;
+      const hasDefaultBreakpoints = defaultState.desktop || defaultState.tablet || defaultState.mobile;
+      
+      if (hasDefaultBreakpoints) {
+        const desktopDefault = defaultState.desktop || {};
+        const tabletDefault = defaultState.tablet || {};
+        const mobileDefault = defaultState.mobile || {};
+        
+        let defaultStyles: any = {};
+        if (activeBreakpoint === 'desktop') {
+          defaultStyles = desktopDefault;
+        } else if (activeBreakpoint === 'tablet') {
+          defaultStyles = { ...desktopDefault, ...tabletDefault };
+        } else {
+          defaultStyles = { ...desktopDefault, ...tabletDefault, ...mobileDefault };
+        }
+        
+        stylesWithDefault = { ...baseStyles, ...defaultStyles };
+      } else {
+        // Legacy: default state is a flat object
+        stylesWithDefault = { ...baseStyles, ...defaultState };
       }
     }
     
-    // Otherwise, use styles directly (V2 format)
-    return target.styles;
-  }, [target?.styles, activeBreakpoint]);
+    // Apply pseudo-class styles with breakpoint cascade (if not default)
+    if (activePseudoClass !== 'default' && target.states?.[activePseudoClass]) {
+      const stateObject = target.states[activePseudoClass];
+      
+      // Check if state has breakpoint structure
+      const hasStateBreakpoints = stateObject.desktop || stateObject.tablet || stateObject.mobile;
+      
+      if (hasStateBreakpoints) {
+        // Apply breakpoint cascade for state styles
+        const desktopState = stateObject.desktop || {};
+        const tabletState = stateObject.tablet || {};
+        const mobileState = stateObject.mobile || {};
+        
+        let stateStyles: any = {};
+        if (activeBreakpoint === 'desktop') {
+          stateStyles = desktopState;
+        } else if (activeBreakpoint === 'tablet') {
+          stateStyles = { ...desktopState, ...tabletState };
+        } else {
+          stateStyles = { ...desktopState, ...tabletState, ...mobileState };
+        }
+        
+        return { ...stylesWithDefault, ...stateStyles };
+      } else {
+        // Legacy: state is a flat object
+        return { ...stylesWithDefault, ...stateObject };
+      }
+    }
+    
+    return stylesWithDefault;
+  }, [target?.styles, target?.states, activeBreakpoint, activePseudoClass]);
 
   // Toggle section collapse
   const toggleSection = useCallback((section: string) => {
@@ -111,10 +175,56 @@ export function AdvancedPropertiesPanel({
     return targetStyles[key] || fallback;
   }, [targetStyles]);
 
-  // Update handler (breakpoint-aware)
+  // Update handler (breakpoint-aware AND pseudo-class-aware)
   const handleStyleUpdate = useCallback((updates: Record<string, any>) => {
     if (!target) return;
 
+    // Check if we should use states structure
+    // Use states if: (1) editing non-default pseudo-class, OR (2) any states already exist, OR (3) using V3 responsive structure
+    const hasStatesStructure = target.states?.default || target.states?.hover || target.states?.focus || target.states?.active || target.states?.disabled;
+    const hasResponsiveStructure = target.styles?.desktop || target.styles?.tablet || target.styles?.mobile;
+    const useStates = activePseudoClass !== 'default' || hasStatesStructure || hasResponsiveStructure;
+
+    // If editing states (default or other pseudo-classes), update states with breakpoints
+    if (useStates) {
+      const currentStates = target.states || {};
+      const currentStateObject = currentStates[activePseudoClass] || {};
+      
+      // Check if using breakpoint structure
+      const hasStateBreakpoints = currentStateObject.desktop || currentStateObject.tablet || currentStateObject.mobile;
+      
+      let newStateObject: any;
+      if (hasStateBreakpoints || target.styles?.desktop || target.styles?.tablet || target.styles?.mobile) {
+        // Use breakpoint structure (align with styles structure)
+        newStateObject = {
+          ...currentStateObject,
+          [activeBreakpoint]: {
+            ...(currentStateObject[activeBreakpoint] || {}),
+            ...updates
+          }
+        };
+      } else {
+        // Legacy: flat object (backwards compatibility)
+        newStateObject = {
+          ...currentStateObject,
+          ...updates
+        };
+      }
+      
+      const newStates = {
+        ...currentStates,
+        [activePseudoClass]: newStateObject
+      };
+      
+      if (selectedElement && onUpdateElement) {
+        onUpdateElement(selectedElement.id, { states: newStates });
+      } else if (selectedSection && onUpdateSection) {
+        onUpdateSection(selectedSection.id, { states: newStates });
+      }
+      return;
+    }
+
+    // Otherwise, update styles as usual
     const currentStyles = target.styles || {};
     
     // Check if using V3-style responsive breakpoints
@@ -143,7 +253,7 @@ export function AdvancedPropertiesPanel({
     } else if (selectedSection && onUpdateSection) {
       onUpdateSection(selectedSection.id, { styles: newStyles });
     }
-  }, [target, selectedElement, selectedSection, activeBreakpoint, onUpdateElement, onUpdateSection]);
+  }, [target, selectedElement, selectedSection, activeBreakpoint, activePseudoClass, onUpdateElement, onUpdateSection]);
 
   // Config update handler for structural elements
   const handleConfigUpdate = useCallback((updates: Record<string, any>) => {
@@ -346,6 +456,78 @@ export function AdvancedPropertiesPanel({
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="space-y-1">
+          {/* Pseudo-Classes States Section */}
+          <Collapsible 
+            open={openSections.states}
+            onOpenChange={() => toggleSection('states')}
+          >
+            <SectionHeader 
+              title="States" 
+              icon={Settings} 
+              section="states"
+              hasChanges={activePseudoClass !== 'default'}
+            />
+            <CollapsibleContent>
+              <div className="px-3 pb-4">
+                <Label className="text-sm font-medium mb-2 block">Pseudo-Class State</Label>
+                <div className="grid grid-cols-5 gap-1">
+                  <Button
+                    variant={activePseudoClass === 'default' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActivePseudoClass('default')}
+                    className="text-xs"
+                    data-testid={`${testId}-state-default`}
+                  >
+                    Default
+                  </Button>
+                  <Button
+                    variant={activePseudoClass === 'hover' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActivePseudoClass('hover')}
+                    className="text-xs"
+                    data-testid={`${testId}-state-hover`}
+                  >
+                    Hover
+                  </Button>
+                  <Button
+                    variant={activePseudoClass === 'focus' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActivePseudoClass('focus')}
+                    className="text-xs"
+                    data-testid={`${testId}-state-focus`}
+                  >
+                    Focus
+                  </Button>
+                  <Button
+                    variant={activePseudoClass === 'active' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActivePseudoClass('active')}
+                    className="text-xs"
+                    data-testid={`${testId}-state-active`}
+                  >
+                    Active
+                  </Button>
+                  <Button
+                    variant={activePseudoClass === 'disabled' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActivePseudoClass('disabled')}
+                    className="text-xs"
+                    data-testid={`${testId}-state-disabled`}
+                  >
+                    Disabled
+                  </Button>
+                </div>
+                {activePseudoClass !== 'default' && (
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Editing <span className="font-medium text-foreground">{activePseudoClass}</span> state styles. Changes apply only when element is in this state.
+                  </p>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Separator />
+
           {/* Typography Section - Only show for elements */}
           {targetType === 'element' && (
             <Collapsible 

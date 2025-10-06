@@ -4258,6 +4258,35 @@ export type BlockElement = {
     [key: string]: any;
   };
   
+  // V3 compatibility: State styles with responsive breakpoints
+  states?: {
+    default?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    hover?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    focus?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    active?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    disabled?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+  };
+  
   // Configuration for structural elements (container & block)
   config?: {
     // For block type - number of columns
@@ -4353,6 +4382,33 @@ export type BlockSection = {
     border?: string;
     
     [key: string]: any;
+  };
+  states?: {
+    default?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    hover?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    focus?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    active?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
+    disabled?: {
+      desktop?: Record<string, any>;
+      tablet?: Record<string, any>;
+      mobile?: Record<string, any>;
+    };
   };
   settings: {
     containerWidth?: 'full' | 'container' | 'narrow';
@@ -4499,12 +4555,14 @@ export type ResponsiveStylesV3 = {
   mobile?: Record<string, any>;
 };
 
+// State styles with responsive breakpoints
+// Each state (hover, focus, etc.) can have different styles per breakpoint
 export type StateStylesV3 = {
-  default?: Record<string, any>;
-  hover?: Record<string, any>;
-  focus?: Record<string, any>;
-  active?: Record<string, any>;
-  disabled?: Record<string, any>;
+  default?: ResponsiveStylesV3;
+  hover?: ResponsiveStylesV3;
+  focus?: ResponsiveStylesV3;
+  active?: ResponsiveStylesV3;
+  disabled?: ResponsiveStylesV3;
 };
 
 export type PseudoElementsV3 = {
