@@ -28,6 +28,7 @@ import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
 import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
 import { BreakpointSelector, Breakpoint } from './BreakpointSelector';
+import { LayersPanel } from './LayersPanel';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images } from 'lucide-react';
 
 interface VisualEditorProps {
@@ -422,6 +423,38 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
         <div className="flex flex-1" style={{ height: '100%', minHeight: '100%' }}>
           {/* Elements Toolbar */}
           <ElementsToolbar />
+
+          {/* Layers Panel */}
+          <LayersPanel
+            sections={model.sections}
+            selectedElementId={selectedElementId}
+            selectedSectionId={selectedSectionId}
+            onSelectElement={handleSelectElement}
+            onSelectSection={handleSelectSection}
+            onUpdateSection={updateSection}
+            onUpdateElement={updateElement}
+            onDeleteElement={(elementId) => {
+              const newModel = deleteElementInModel(model, elementId);
+              onChange(newModel);
+              if (selectedElementId === elementId) {
+                setSelectedElementId(null);
+              }
+            }}
+            onDeleteSection={deleteSection}
+            onDuplicateElement={(elementId) => {
+              const element = findElementById(model, elementId);
+              if (element) {
+                const newElement = {
+                  ...element,
+                  id: `element_${Date.now()}`,
+                };
+                const newModel = duplicateElementInModel(model, elementId, newElement);
+                onChange(newModel);
+              }
+            }}
+            onDuplicateSection={duplicateSection}
+            data-testid="visual-editor-layers-panel"
+          />
 
           {/* Main Editor Canvas */}
           <div 
