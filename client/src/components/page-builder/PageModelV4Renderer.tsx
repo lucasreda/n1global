@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { cn } from '@/lib/utils';
+import { HoverTooltip } from './HoverTooltip';
 
 interface PageModelV4RendererProps {
   model: PageModelV4;
@@ -15,8 +16,30 @@ export function PageModelV4Renderer({
   onSelectNode,
   breakpoint = 'desktop'
 }: PageModelV4RendererProps) {
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [hoveredNodeInfo, setHoveredNodeInfo] = useState<{ tag: string; classNames: string[]; dimensions?: { width: number; height: number } } | null>(null);
+
+  const handleMouseEnter = useCallback((nodeId: string, tag: string, classNames: string[], dimensions?: { width: number; height: number }) => {
+    setHoveredNodeId(nodeId);
+    setHoveredNodeInfo({ tag, classNames, dimensions });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoveredNodeId(null);
+    setHoveredNodeInfo(null);
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    setMousePosition({ x: e.clientX, y: e.clientY });
+  }, []);
+
   return (
-    <div className="page-frame w-full h-full overflow-auto page-renderer-reset" style={{ position: 'relative', zIndex: 0 }}>
+    <div 
+      className="page-frame w-full h-full overflow-auto page-renderer-reset" 
+      style={{ position: 'relative', zIndex: 0 }}
+      onMouseMove={handleMouseMove}
+    >
       {/* Inject global CSS (variables, resets, classes) */}
       {/* Font Awesome is loaded globally in index.html */}
       {model.globalStyles && (
@@ -30,11 +53,25 @@ export function PageModelV4Renderer({
             key={node.id} 
             node={node}
             selectedNodeId={selectedNodeId}
+            hoveredNodeId={hoveredNodeId}
             onSelectNode={onSelectNode}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             breakpoint={breakpoint}
           />
         ))}
       </div>
+
+      {/* Hover Tooltip */}
+      {hoveredNodeInfo && hoveredNodeId !== selectedNodeId && (
+        <HoverTooltip
+          tag={hoveredNodeInfo.tag}
+          classNames={hoveredNodeInfo.classNames}
+          dimensions={hoveredNodeInfo.dimensions}
+          position={mousePosition}
+          visible={true}
+        />
+      )}
     </div>
   );
 }
@@ -42,17 +79,24 @@ export function PageModelV4Renderer({
 interface PageNodeV4RendererProps {
   node: PageNodeV4;
   selectedNodeId?: string | null;
+  hoveredNodeId?: string | null;
   onSelectNode?: (nodeId: string) => void;
+  onMouseEnter?: (nodeId: string, tag: string, classNames: string[], dimensions?: { width: number; height: number }) => void;
+  onMouseLeave?: () => void;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
 }
 
 function PageNodeV4Renderer({ 
   node, 
-  selectedNodeId, 
+  selectedNodeId,
+  hoveredNodeId,
   onSelectNode,
+  onMouseEnter,
+  onMouseLeave,
   breakpoint 
 }: PageNodeV4RendererProps) {
   const isSelected = selectedNodeId === node.id;
+  const isHovered = hoveredNodeId === node.id && !isSelected;
   
   // Get styles for current breakpoint
   const styles = node.styles?.[breakpoint] || {};
@@ -76,6 +120,27 @@ function PageNodeV4Renderer({
       onSelectNode(node.id);
     }
   };
+
+  // Handle hover events
+  const handleMouseEnterNode = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    if (onMouseEnter) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      onMouseEnter(
+        node.id, 
+        node.tag, 
+        node.classNames || [],
+        { width: rect.width, height: rect.height }
+      );
+    }
+  };
+
+  const handleMouseLeaveNode = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onMouseLeave) {
+      onMouseLeave();
+    }
+  };
   
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
@@ -85,10 +150,13 @@ function PageNodeV4Renderer({
         data-testid={`node-text-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
-          isSelected && 'ring-2 ring-blue-500 ring-offset-2'
+          isSelected && 'ring-2 ring-blue-500 ring-offset-2',
+          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0'
         )}
         style={finalStyles}
         onClick={handleClick}
+        onMouseEnter={handleMouseEnterNode}
+        onMouseLeave={handleMouseLeaveNode}
       >
         {node.textContent}
       </span>
@@ -118,10 +186,13 @@ function PageNodeV4Renderer({
         data-testid={`node-${node.tag}-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
-          isSelected && 'ring-2 ring-blue-500 ring-offset-2'
+          isSelected && 'ring-2 ring-blue-500 ring-offset-2',
+          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0'
         )}
-        style={finalStyles}
+        style={{ ...finalStyles, pointerEvents: 'auto' }}
         onClick={handleClick}
+        onMouseEnter={handleMouseEnterNode}
+        onMouseLeave={handleMouseLeaveNode}
         {...node.attributes}
       />
     );
@@ -134,10 +205,13 @@ function PageNodeV4Renderer({
       data-testid={`node-${node.tag}-${node.id}`}
       className={cn(
         node.classNames?.join(' '),
-        isSelected && 'ring-2 ring-blue-500 ring-offset-2'
+        isSelected && 'ring-2 ring-blue-500 ring-offset-2',
+        isHovered && 'outline outline-2 outline-blue-400 outline-offset-0'
       )}
-      style={finalStyles}
+      style={{ ...finalStyles, pointerEvents: 'auto' }}
       onClick={handleClick}
+      onMouseEnter={handleMouseEnterNode}
+      onMouseLeave={handleMouseLeaveNode}
       {...node.attributes}
     >
       {node.textContent}
@@ -146,7 +220,10 @@ function PageNodeV4Renderer({
           key={child.id} 
           node={child}
           selectedNodeId={selectedNodeId}
+          hoveredNodeId={hoveredNodeId}
           onSelectNode={onSelectNode}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
           breakpoint={breakpoint}
         />
       ))}
