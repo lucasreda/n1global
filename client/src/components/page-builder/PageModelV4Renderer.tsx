@@ -57,6 +57,12 @@ function PageNodeV4Renderer({
     ...styles,
   };
   
+  // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
+  // This prevents HTML content from escaping the preview area and overlaying editor controls
+  if (finalStyles.position === 'fixed') {
+    finalStyles.position = 'absolute';
+  }
+  
   // Handle click to select node
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
