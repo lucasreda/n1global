@@ -19,7 +19,9 @@ import {
   Settings,
   Grid3X3,
   LayoutGrid,
-  Anchor
+  Anchor,
+  Tablet,
+  Smartphone
 } from 'lucide-react';
 import { 
   UnitSliderInput, 
@@ -32,9 +34,12 @@ import { GridLayoutControls } from './GridLayoutControls';
 import { PositionControls } from './PositionControls';
 import { BlockElement, BlockSection } from '@shared/schema';
 
+export type Breakpoint = 'desktop' | 'tablet' | 'mobile';
+
 interface AdvancedPropertiesPanelProps {
   selectedElement?: BlockElement | null;
   selectedSection?: BlockSection | null;
+  activeBreakpoint?: Breakpoint;
   onUpdateElement?: (elementId: string, updates: Partial<BlockElement>) => void;
   onUpdateSection?: (sectionId: string, updates: Partial<BlockSection>) => void;
   'data-testid'?: string;
@@ -43,6 +48,7 @@ interface AdvancedPropertiesPanelProps {
 export function AdvancedPropertiesPanel({
   selectedElement,
   selectedSection,
+  activeBreakpoint = 'desktop',
   onUpdateElement,
   onUpdateSection,
   'data-testid': testId = 'advanced-properties-panel'
@@ -62,7 +68,35 @@ export function AdvancedPropertiesPanel({
   // Determine current target (element or section)
   const target = selectedElement || selectedSection;
   const targetType = selectedElement ? 'element' : 'section';
-  const targetStyles = target?.styles || {};
+  
+  // Get styles for active breakpoint with cascading (V3: mobile→tablet→desktop fallback)
+  const targetStyles = useMemo(() => {
+    if (!target?.styles) return {};
+    
+    // Check if styles object has breakpoint keys (V3 format)
+    const hasBreakpoints = target.styles.desktop || target.styles.tablet || target.styles.mobile;
+    
+    if (hasBreakpoints) {
+      // V3 format: Cascade from desktop → tablet → mobile
+      // Each breakpoint inherits from larger breakpoints
+      const baseStyles = target.styles.desktop || {};
+      const tabletStyles = target.styles.tablet || {};
+      const mobileStyles = target.styles.mobile || {};
+      
+      if (activeBreakpoint === 'desktop') {
+        return baseStyles;
+      } else if (activeBreakpoint === 'tablet') {
+        // Tablet inherits from desktop
+        return { ...baseStyles, ...tabletStyles };
+      } else {
+        // Mobile inherits from desktop + tablet
+        return { ...baseStyles, ...tabletStyles, ...mobileStyles };
+      }
+    }
+    
+    // Otherwise, use styles directly (V2 format)
+    return target.styles;
+  }, [target?.styles, activeBreakpoint]);
 
   // Toggle section collapse
   const toggleSection = useCallback((section: string) => {
@@ -77,18 +111,39 @@ export function AdvancedPropertiesPanel({
     return targetStyles[key] || fallback;
   }, [targetStyles]);
 
-  // Update handler
+  // Update handler (breakpoint-aware)
   const handleStyleUpdate = useCallback((updates: Record<string, any>) => {
     if (!target) return;
 
-    const newStyles = { ...target.styles, ...updates };
+    const currentStyles = target.styles || {};
+    
+    // Check if using V3-style responsive breakpoints
+    const hasBreakpoints = currentStyles.desktop || currentStyles.tablet || currentStyles.mobile;
+    
+    let newStyles: any;
+    if (hasBreakpoints) {
+      // Update specific breakpoint
+      newStyles = {
+        ...currentStyles,
+        [activeBreakpoint]: {
+          ...(currentStyles[activeBreakpoint] || {}),
+          ...updates
+        }
+      };
+    } else {
+      // V2 format: update styles directly
+      newStyles = {
+        ...currentStyles,
+        ...updates
+      };
+    }
     
     if (selectedElement && onUpdateElement) {
       onUpdateElement(selectedElement.id, { styles: newStyles });
     } else if (selectedSection && onUpdateSection) {
       onUpdateSection(selectedSection.id, { styles: newStyles });
     }
-  }, [target, selectedElement, selectedSection, onUpdateElement, onUpdateSection]);
+  }, [target, selectedElement, selectedSection, activeBreakpoint, onUpdateElement, onUpdateSection]);
 
   // Config update handler for structural elements
   const handleConfigUpdate = useCallback((updates: Record<string, any>) => {
@@ -98,83 +153,43 @@ export function AdvancedPropertiesPanel({
     onUpdateElement(selectedElement.id, { config: newConfig });
   }, [selectedElement, onUpdateElement]);
 
-  // Reset styles for current section
+  // Reset styles for current section (breakpoint-aware)
   const resetSection = useCallback((section: string) => {
-    const resetUpdates: Record<string, any> = {};
+    if (!target) return;
+    
+    const currentStyles = target.styles || {};
+    const hasBreakpoints = currentStyles.desktop || currentStyles.tablet || currentStyles.mobile;
+    
+    // List of keys to remove based on section
+    const keysToRemove: string[] = [];
     
     switch (section) {
       case 'typography':
-        resetUpdates.fontSize = undefined;
-        resetUpdates.lineHeight = undefined;
-        resetUpdates.letterSpacing = undefined;
-        resetUpdates.fontWeight = undefined;
-        resetUpdates.fontStyle = undefined;
-        resetUpdates.textTransform = undefined;
-        resetUpdates.color = undefined;
+        keysToRemove.push('fontSize', 'lineHeight', 'letterSpacing', 'fontWeight', 'fontStyle', 'textTransform', 'color');
         break;
       case 'spacing':
-        resetUpdates.paddingTop = undefined;
-        resetUpdates.paddingRight = undefined;
-        resetUpdates.paddingBottom = undefined;
-        resetUpdates.paddingLeft = undefined;
-        resetUpdates.marginTop = undefined;
-        resetUpdates.marginRight = undefined;
-        resetUpdates.marginBottom = undefined;
-        resetUpdates.marginLeft = undefined;
+        keysToRemove.push('paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft');
         break;
       case 'border':
-        resetUpdates.borderStyle = undefined;
-        resetUpdates.borderColor = undefined;
-        resetUpdates.borderWidth = undefined;
-        resetUpdates.borderTopWidth = undefined;
-        resetUpdates.borderRightWidth = undefined;
-        resetUpdates.borderBottomWidth = undefined;
-        resetUpdates.borderLeftWidth = undefined;
-        resetUpdates.borderRadius = undefined;
-        resetUpdates.borderTopLeftRadius = undefined;
-        resetUpdates.borderTopRightRadius = undefined;
-        resetUpdates.borderBottomRightRadius = undefined;
-        resetUpdates.borderBottomLeftRadius = undefined;
+        keysToRemove.push('borderStyle', 'borderColor', 'borderWidth', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderRadius', 'borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomRightRadius', 'borderBottomLeftRadius');
         break;
       case 'background':
-        resetUpdates.backgroundColor = undefined;
-        resetUpdates.backgroundImage = undefined;
+        keysToRemove.push('backgroundColor', 'backgroundImage', 'backgroundSize', 'backgroundPosition', 'backgroundRepeat');
         break;
       case 'layout':
-        resetUpdates.width = undefined;
-        resetUpdates.height = undefined;
-        resetUpdates.minWidth = undefined;
-        resetUpdates.maxWidth = undefined;
-        resetUpdates.minHeight = undefined;
-        resetUpdates.maxHeight = undefined;
+        keysToRemove.push('width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight');
         break;
       case 'flexbox':
-        resetUpdates.display = undefined;
-        resetUpdates.flexDirection = undefined;
-        resetUpdates.justifyContent = undefined;
-        resetUpdates.alignItems = undefined;
-        resetUpdates.gap = undefined;
-        resetUpdates.flexWrap = undefined;
+        keysToRemove.push('display', 'flexDirection', 'justifyContent', 'alignItems', 'gap', 'flexWrap');
         break;
       case 'grid':
-        resetUpdates.display = undefined;
-        resetUpdates.gridTemplateColumns = undefined;
-        resetUpdates.gridTemplateRows = undefined;
-        resetUpdates.gap = undefined;
-        resetUpdates.gridAutoFlow = undefined;
-        resetUpdates.gridAutoColumns = undefined;
-        resetUpdates.gridAutoRows = undefined;
+        keysToRemove.push('display', 'gridTemplateColumns', 'gridTemplateRows', 'gap', 'gridAutoFlow', 'gridAutoColumns', 'gridAutoRows');
         break;
       case 'position':
-        resetUpdates.position = undefined;
-        resetUpdates.top = undefined;
-        resetUpdates.right = undefined;
-        resetUpdates.bottom = undefined;
-        resetUpdates.left = undefined;
-        resetUpdates.zIndex = undefined;
+        keysToRemove.push('position', 'top', 'right', 'bottom', 'left', 'zIndex');
         break;
       case 'structure':
-        // Reset config properties for structural elements
+        // Reset config properties for structural elements (not style-related)
         if (selectedElement && onUpdateElement) {
           onUpdateElement(selectedElement.id, { 
             config: {
@@ -186,11 +201,41 @@ export function AdvancedPropertiesPanel({
           });
         }
         return;
-        break;
     }
     
-    handleStyleUpdate(resetUpdates);
-  }, [handleStyleUpdate]);
+    // Remove keys from styles (preserves all unknown metadata fields)
+    if (hasBreakpoints) {
+      // V3 format: Clone entire styles object to preserve unknown fields
+      const newStyles = { ...currentStyles };
+      
+      // Remove keys from active breakpoint only
+      const newBreakpointStyles = { ...(currentStyles[activeBreakpoint] || {}) };
+      keysToRemove.forEach(key => delete newBreakpointStyles[key]);
+      
+      // Update or delete breakpoint key if empty
+      if (Object.keys(newBreakpointStyles).length > 0) {
+        newStyles[activeBreakpoint] = newBreakpointStyles;
+      } else {
+        delete newStyles[activeBreakpoint];
+      }
+      
+      if (selectedElement && onUpdateElement) {
+        onUpdateElement(selectedElement.id, { styles: newStyles });
+      } else if (selectedSection && onUpdateSection) {
+        onUpdateSection(selectedSection.id, { styles: newStyles });
+      }
+    } else {
+      // V2 format: Remove keys from flat styles (preserves unknown fields)
+      const newStyles = { ...currentStyles };
+      keysToRemove.forEach(key => delete newStyles[key]);
+      
+      if (selectedElement && onUpdateElement) {
+        onUpdateElement(selectedElement.id, { styles: newStyles });
+      } else if (selectedSection && onUpdateSection) {
+        onUpdateSection(selectedSection.id, { styles: newStyles });
+      }
+    }
+  }, [target, selectedElement, selectedSection, activeBreakpoint, onUpdateElement, onUpdateSection]);
 
   // Helper to get four-sides values
   const getFourSidesValue = useCallback((prefix: 'padding' | 'margin') => ({
@@ -269,7 +314,7 @@ export function AdvancedPropertiesPanel({
   return (
     <Card className="w-80 h-full flex flex-col" data-testid={testId}>
       {/* Header */}
-      <CardHeader className="pb-3 border-b">
+      <CardHeader className="pb-3 border-b space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -287,6 +332,15 @@ export function AdvancedPropertiesPanel({
             }
           </p>
         )}
+        {/* Active Breakpoint Indicator */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+          <Monitor className={`h-3.5 w-3.5 ${activeBreakpoint === 'desktop' ? 'text-primary' : ''}`} />
+          <Tablet className={`h-3.5 w-3.5 ${activeBreakpoint === 'tablet' ? 'text-primary' : ''}`} />
+          <Smartphone className={`h-3.5 w-3.5 ${activeBreakpoint === 'mobile' ? 'text-primary' : ''}`} />
+          <span className="ml-auto">
+            <span className="font-medium text-foreground capitalize">{activeBreakpoint}</span> styles
+          </span>
+        </div>
       </CardHeader>
 
       {/* Content */}
