@@ -174,30 +174,27 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
       csstree.walk(ast, {
         visit: 'Rule',
         enter(node: any) {
-          // Skip if inside media query (already handled above)
-          if (node.parentNode && node.parentNode.type === 'Block' && 
-              node.parentNode.parentNode && node.parentNode.parentNode.type === 'Atrule') {
-            // DEBUG: Log skipped media query rules
-            const selectorText = csstree.generate(node.prelude);
-            if (selectorText.includes('hero-features') || selectorText.includes('cta-group')) {
-              console.log(`✅ Correctly SKIPPING media query rule: ${selectorText}`);
+          // Skip if inside ANY Atrule (media query, keyframes, etc.)
+          // Walk up the parent chain to check if ANY ancestor is an Atrule
+          let currentNode = node;
+          let isInsideAtrule = false;
+          
+          while (currentNode.parentNode) {
+            currentNode = currentNode.parentNode;
+            if (currentNode.type === 'Atrule') {
+              isInsideAtrule = true;
+              break;
             }
+          }
+          
+          if (isInsideAtrule) {
+            // Skip rules inside @media, @keyframes, etc.
             return;
           }
           
           // Get selector text
           const selectorText = csstree.generate(node.prelude);
           const styles = extractStylesFromRule(node);
-          
-          // DEBUG: Log if this is a problematic rule
-          if ((selectorText.includes('hero-features') || selectorText.includes('cta-group')) && styles.flexDirection) {
-            console.log(`⚠️  Processing rule as GLOBAL (should this be in media query?):`, {
-              selector: selectorText,
-              flexDirection: styles.flexDirection,
-              parentType: node.parentNode?.type,
-              grandparentType: node.parentNode?.parentNode?.type,
-            });
-          }
           
           // Store by selector (handle multiple selectors separated by comma)
           selectorText.split(',').forEach(sel => {
@@ -2282,18 +2279,6 @@ function computeElementStylesV4(
           stylesToApply = { ...rule.styles };
           // Remove properties that should be inherited, not forced
           delete stylesToApply.color; // Let color inherit from parent naturally
-        }
-        
-        // DEBUG: Log media query classification for flex-related rules
-        if (stylesToApply.flexDirection && (classes.includes('hero-features') || classes.includes('cta-group'))) {
-          console.log(`🔍 Media Query Classification for ${rule.selector}:`, {
-            mediaQuery: rule.mediaQuery,
-            flexDirection: stylesToApply.flexDirection,
-            willGoTo: !rule.mediaQuery ? 'desktop' : 
-                      (rule.mediaQuery.includes('768px') && rule.mediaQuery.includes('max-width')) ? 'mobile' :
-                      (rule.mediaQuery.includes('1024px') && rule.mediaQuery.includes('max-width')) ? 'tablet' :
-                      rule.mediaQuery.includes('min-width') ? 'desktop' : 'unknown'
-          });
         }
         
         // Determine breakpoint from media query
