@@ -44,7 +44,35 @@ export function VisualEditorV4({
   const updateNodeInTree = (nodes: PageNodeV4[], id: string, updates: Partial<PageNodeV4>): PageNodeV4[] => {
     return nodes.map(node => {
       if (node.id === id) {
-        return { ...node, ...updates };
+        // Deep merge para preservar dados nested (attributes, styles)
+        const updated: PageNodeV4 = { ...node };
+        
+        // Merge attributes preservando existentes
+        if (updates.attributes) {
+          updated.attributes = { ...node.attributes, ...updates.attributes };
+        }
+        
+        // Merge styles preservando outros breakpoints
+        if (updates.styles) {
+          updated.styles = {
+            desktop: { ...node.styles?.desktop, ...updates.styles.desktop },
+            tablet: { ...node.styles?.tablet, ...updates.styles.tablet },
+            mobile: { ...node.styles?.mobile, ...updates.styles.mobile },
+          };
+        }
+        
+        // Merge inlineStyles
+        if (updates.inlineStyles) {
+          updated.inlineStyles = { ...node.inlineStyles, ...updates.inlineStyles };
+        }
+        
+        // Outros campos podem ser substituídos diretamente
+        if (updates.textContent !== undefined) updated.textContent = updates.textContent;
+        if (updates.tag) updated.tag = updates.tag;
+        if (updates.classNames) updated.classNames = updates.classNames;
+        if (updates.children) updated.children = updates.children;
+        
+        return updated;
       }
       if (node.children) {
         return {
