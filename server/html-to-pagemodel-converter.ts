@@ -189,14 +189,13 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
             const cleanSelector = sel.trim();
             const { baseSelector, pseudoClass, pseudoElement } = parsePseudoSelectors(cleanSelector);
             
-            if (!cssRules[cleanSelector]) {
-              cssRules[cleanSelector] = {};
-            }
-            Object.assign(cssRules[cleanSelector], styles);
-            
-            // Only store in enhanced rules if NOT a pseudo-class
-            // Pseudo-classes should be handled separately via states
+            // CRITICAL: Skip pseudo-classes entirely - they should go to node.states, not base styles
             if (!pseudoClass) {
+              if (!cssRules[cleanSelector]) {
+                cssRules[cleanSelector] = {};
+              }
+              Object.assign(cssRules[cleanSelector], styles);
+              
               enhancedRules.push({
                 selector: baseSelector,
                 styles,
