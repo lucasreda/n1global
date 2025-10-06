@@ -122,6 +122,18 @@ export function FloatingToolbarV4({
     }
   };
 
+  const getTagBadgeColor = (tag: string) => {
+    const semanticTags = ['header', 'nav', 'main', 'footer', 'section', 'article', 'aside'];
+    const textTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'text'];
+    const mediaTags = ['img', 'video', 'audio', 'picture'];
+    
+    if (semanticTags.includes(tag)) return 'bg-blue-500 text-white';
+    if (textTags.includes(tag)) return 'bg-green-500 text-white';
+    if (mediaTags.includes(tag)) return 'bg-purple-500 text-white';
+    if (tag === 'a') return 'bg-orange-500 text-white';
+    return 'bg-gray-500 text-white';
+  };
+
   return createPortal(
     <div 
       ref={toolbarRef}
@@ -133,6 +145,12 @@ export function FloatingToolbarV4({
       }}
       data-testid="floating-toolbar-v4"
     >
+      {/* Element Badge */}
+      <div className={`px-2 py-1 rounded text-xs font-mono font-semibold ${getTagBadgeColor(node.tag)} mr-1`}>
+        &lt;{node.tag}&gt;
+      </div>
+      <div className="w-px h-6 bg-border mx-1" />
+
       {/* Text Formatting (only for text elements) */}
       {hasTextContent && (
         <>
