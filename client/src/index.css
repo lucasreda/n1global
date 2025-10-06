@@ -446,26 +446,13 @@ html, body {
   overflow: hidden;
 }
 
-/* PageModelV4 Renderer - Default text color with specific overrides */
-/* Set default text color to black to prevent inheriting light text-foreground from body */
+/* PageModelV4 Renderer - Reset only, let CSS variables and classes control colors */
+/* IMPORTANT: Do NOT force colors here - let the HTML's CSS variables and classes work naturally */
 .page-renderer-reset {
-  color: #000000;
+  /* Only reset Tailwind interference, don't force colors */
 }
 
-/* Override for containers with white text (lowest specificity, so inline styles override) */
-.page-renderer-reset .header,
-.page-renderer-reset .header * {
-  color: white;
+/* Remove Tailwind's text-foreground that interferes with CSS variables */
+.page-renderer-reset * {
+  color: inherit;
 }
-
-.page-renderer-reset .hero,
-.page-renderer-reset .hero * {
-  color: white;
-}
-
-.page-renderer-reset .footer,
-.page-renderer-reset .footer * {
-  color: white;
-}
-
-/* Elements with inline style="color: ..." will automatically override all these rules */
