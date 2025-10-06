@@ -16,10 +16,9 @@ import {
 } from '@dnd-kit/core';
 import { 
   SortableContext, 
-  verticalListSortingStrategy,
-  arrayMove
+  verticalListSortingStrategy
 } from '@dnd-kit/sortable';
-import { useSortable } from '@dnd-kit/sortable';
+import { useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
@@ -453,6 +452,17 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
               }
             }}
             onDuplicateSection={duplicateSection}
+            onReorderSections={(oldIndex, newIndex) => {
+              const newSections = arrayMove(model.sections, oldIndex, newIndex);
+              onChange({
+                ...model,
+                sections: newSections,
+              });
+            }}
+            onHoverElement={(elementId) => {
+              // TODO: Highlight element on canvas when hovering in layers panel
+              console.log('Hover element:', elementId);
+            }}
             data-testid="visual-editor-layers-panel"
           />
 
