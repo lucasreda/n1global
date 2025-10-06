@@ -49,10 +49,16 @@ function PageNodeV4Renderer({
   const styles = node.styles?.[breakpoint] || {};
   
   // Merge inline styles with responsive styles
-  const finalStyles = {
+  const finalStyles: React.CSSProperties = {
     ...node.inlineStyles,
     ...styles,
   };
+  
+  // CRITICAL: Force color styles to override Tailwind global text-foreground
+  // This ensures explicit colors from HTML/CSS are preserved
+  if (finalStyles.color) {
+    finalStyles.color = `${finalStyles.color} !important` as any;
+  }
   
   // Handle click to select node
   const handleClick = (e: React.MouseEvent) => {
