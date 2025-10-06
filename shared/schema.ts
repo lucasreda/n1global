@@ -4502,6 +4502,9 @@ export type PageModelV2 = {
     };
   };
   
+  // V3 Design Tokens (optional for V3 compatibility)
+  designTokens?: DesignTokensV3;
+  
   // SEO settings
   seo: {
     title: string;

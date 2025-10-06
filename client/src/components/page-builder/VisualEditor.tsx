@@ -21,13 +21,14 @@ import {
 import { useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement } from "@shared/schema";
+import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement, DesignTokensV3 } from "@shared/schema";
 import { createDefaultTheme, ElementRenderer } from './PageRenderer';
 import { createDefaultElement, getElementIcon } from './elements/utils';
 import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
 import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
 import { BreakpointSelector, Breakpoint } from './BreakpointSelector';
 import { LayersPanel } from './LayersPanel';
+import { DesignTokensDialog } from './DesignTokensDialog';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images } from 'lucide-react';
 
 interface VisualEditorProps {
@@ -324,6 +325,13 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
     onChange(newModel);
   }, [model, onChange]);
 
+  const handleUpdateDesignTokens = useCallback((tokens: DesignTokensV3) => {
+    onChange({
+      ...model,
+      designTokens: tokens,
+    });
+  }, [model, onChange]);
+
   // Update selected element and toolbar position when selection changes
   useEffect(() => {
     if (selectedElementId) {
@@ -474,12 +482,17 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
               minHeight: '100%'
             }}
           >
-            {/* Breakpoint Selector */}
-            <div className="border-b border-border p-3">
+            {/* Breakpoint Selector and Design Tokens */}
+            <div className="border-b border-border p-3 flex items-center justify-between gap-4">
               <BreakpointSelector
                 activeBreakpoint={viewport as Breakpoint}
                 onChange={(bp) => onViewportChange(bp)}
                 data-testid="visual-editor-breakpoint-selector"
+              />
+              <DesignTokensDialog
+                tokens={model.designTokens}
+                onUpdate={handleUpdateDesignTokens}
+                data-testid="visual-editor-design-tokens"
               />
             </div>
             
