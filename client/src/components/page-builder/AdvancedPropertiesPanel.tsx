@@ -27,6 +27,7 @@ import {
   ColorPickerPopover 
 } from './AdvancedControls';
 import { FlexLayoutControls } from './FlexLayoutControls';
+import { GridLayoutControls } from './GridLayoutControls';
 import { BlockElement, BlockSection } from '@shared/schema';
 
 interface AdvancedPropertiesPanelProps {
@@ -51,6 +52,7 @@ export function AdvancedPropertiesPanel({
     background: true,
     layout: false,
     flexbox: false,
+    grid: false,
     structure: true
   });
 
@@ -150,6 +152,15 @@ export function AdvancedPropertiesPanel({
         resetUpdates.alignItems = undefined;
         resetUpdates.gap = undefined;
         resetUpdates.flexWrap = undefined;
+        break;
+      case 'grid':
+        resetUpdates.display = undefined;
+        resetUpdates.gridTemplateColumns = undefined;
+        resetUpdates.gridTemplateRows = undefined;
+        resetUpdates.gap = undefined;
+        resetUpdates.gridAutoFlow = undefined;
+        resetUpdates.gridAutoColumns = undefined;
+        resetUpdates.gridAutoRows = undefined;
         break;
       case 'structure':
         // Reset config properties for structural elements
@@ -580,6 +591,36 @@ export function AdvancedPropertiesPanel({
                   flexWrap={getStyleValue('flexWrap', 'nowrap')}
                   onChange={handleStyleUpdate}
                   data-testid={`${testId}-flexbox`}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Separator />
+
+          {/* Grid Section */}
+          <Collapsible 
+            open={openSections.grid}
+            onOpenChange={() => toggleSection('grid')}
+          >
+            <SectionHeader 
+              title="Grid Layout" 
+              icon={Grid3X3} 
+              section="grid"
+              hasChanges={!!(targetStyles.display === 'grid')}
+            />
+            <CollapsibleContent>
+              <div className="px-3 pb-4">
+                <GridLayoutControls
+                  display={getStyleValue('display', 'block')}
+                  gridTemplateColumns={getStyleValue('gridTemplateColumns', 'none')}
+                  gridTemplateRows={getStyleValue('gridTemplateRows', 'none')}
+                  gap={getStyleValue('gap', '0px')}
+                  gridAutoFlow={getStyleValue('gridAutoFlow', 'row')}
+                  gridAutoColumns={getStyleValue('gridAutoColumns', 'auto')}
+                  gridAutoRows={getStyleValue('gridAutoRows', 'auto')}
+                  onChange={handleStyleUpdate}
+                  data-testid={`${testId}-grid`}
                 />
               </div>
             </CollapsibleContent>
