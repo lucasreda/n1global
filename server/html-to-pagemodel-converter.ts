@@ -1860,8 +1860,8 @@ export function convertHtmlToPageModelV4(html: string): PageModelV4 {
     cssTextLength: cssText.length
   });
   
-  // Extract design tokens from CSS
-  const designTokens = extractDesignTokensV3(html, cssRules);
+  // Extract design tokens from CSS (skip for now in V4)
+  const designTokens = undefined; // TODO: Implement extractDesignTokensV3 or create V4 version
   
   // Parse HTML document
   const doc = parseDocument(html);
