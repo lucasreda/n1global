@@ -383,6 +383,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       name,
       category,
       element: elementSnapshot as any, // Type compatibility between V2 and V3
+      updatedAt: new Date().toISOString(), // Track creation/update time for auto-sync
     };
     
     const components = model.components || [];

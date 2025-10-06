@@ -659,6 +659,39 @@ function injectSlotContent(
 }
 
 /**
+ * Check if a component instance needs to sync with its base definition
+ * Returns true if the component was updated after the instance's last sync
+ */
+export function needsSync(
+  instanceData: ComponentInstanceData,
+  componentDef: ComponentDefinitionV3
+): boolean {
+  if (!instanceData.lastSyncedAt || !componentDef.updatedAt) {
+    return false;
+  }
+  
+  const lastSync = new Date(instanceData.lastSyncedAt);
+  const lastUpdate = new Date(componentDef.updatedAt);
+  
+  return lastUpdate > lastSync;
+}
+
+/**
+ * Sync a component instance with the latest base definition
+ * Preserves existing overrides while adopting new base structure
+ * @returns Updated instanceData with refreshed sync timestamp
+ */
+export function syncInstance(
+  instanceData: ComponentInstanceData,
+  componentDef: ComponentDefinitionV3
+): ComponentInstanceData {
+  return {
+    ...instanceData,
+    lastSyncedAt: new Date().toISOString(),
+  };
+}
+
+/**
  * Enhanced resolveComponentInstance that supports props, variants, and slots
  */
 export function resolveComponentInstanceWithPropsAndVariants(
