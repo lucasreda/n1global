@@ -4832,6 +4832,9 @@ export type BlockElementV3 = {
   
   // Slot metadata (when type === 'slot')
   slotName?: string; // Name of the slot this element represents
+  
+  // Custom CSS (for advanced users)
+  customCSS?: string; // Raw CSS rules applied to this element
 };
 
 export type BlockColumnV3 = {

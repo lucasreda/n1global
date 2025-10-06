@@ -24,7 +24,8 @@ import {
   Smartphone,
   Zap,
   Plus,
-  Trash2
+  Trash2,
+  Code
 } from 'lucide-react';
 import { 
   UnitSliderInput, 
@@ -38,6 +39,7 @@ import { BoxModelInspector } from './inspector/BoxModelInspector';
 import { ColorPickerProfessional } from './inspector/ColorPickerProfessional';
 import { FontFamilySelectorProfessional } from './inspector/FontFamilySelectorProfessional';
 import { AnimationsEditor } from './AnimationsEditor';
+import { CustomCSSEditor } from './CustomCSSEditor';
 import { BlockElement, BlockSection, ComponentDefinitionV3, ComponentProp } from '@shared/schema';
 import { resetOverride, isComponentInstance } from '@/lib/componentInstance';
 import { Input } from '@/components/ui/input';
@@ -135,7 +137,8 @@ export function AdvancedPropertiesPanel({
     grid: false,
     position: false,
     structure: true,
-    animations: false
+    animations: false,
+    customCSS: false
   });
 
   // Determine current target (element or section)
@@ -1559,6 +1562,36 @@ export function AdvancedPropertiesPanel({
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Custom CSS Section - Only for elements */}
+          {targetType === 'element' && (
+            <>
+              <Separator />
+              <Collapsible 
+                open={openSections.customCSS}
+                onOpenChange={() => toggleSection('customCSS')}
+              >
+                <SectionHeader 
+                  title="Custom CSS" 
+                  icon={Code} 
+                  section="customCSS"
+                  hasChanges={!!(selectedElement?.customCSS?.trim())}
+                />
+                <CollapsibleContent>
+                  <div className="px-3 pb-4">
+                    <CustomCSSEditor
+                      css={selectedElement?.customCSS || ''}
+                      onChange={(css) => {
+                        if (selectedElement && onUpdateElement) {
+                          onUpdateElement(selectedElement.id, { customCSS: css });
+                        }
+                      }}
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </>
+          )}
         </div>
       </ScrollArea>
     </Card>
