@@ -76,80 +76,15 @@ export function PageNodeRenderer({
     />
   ));
   
-  // Render specific elements
-  switch (node.tag) {
-    case 'img':
-      return <img {...attributes} src={node.attributes?.src} alt={node.attributes?.alt} />;
-    
-    case 'a':
-      return <a {...attributes} href={node.attributes?.href}>{children || node.textContent}</a>;
-    
-    case 'button':
-      return <button {...attributes}>{children || node.textContent}</button>;
-    
-    case 'input':
-      return <input {...attributes} />;
-    
-    case 'textarea':
-      return <textarea {...attributes}>{node.textContent}</textarea>;
-    
-    case 'h1':
-      return <h1 {...attributes}>{children || node.textContent}</h1>;
-    
-    case 'h2':
-      return <h2 {...attributes}>{children || node.textContent}</h2>;
-    
-    case 'h3':
-      return <h3 {...attributes}>{children || node.textContent}</h3>;
-    
-    case 'h4':
-      return <h4 {...attributes}>{children || node.textContent}</h4>;
-    
-    case 'h5':
-      return <h5 {...attributes}>{children || node.textContent}</h5>;
-    
-    case 'h6':
-      return <h6 {...attributes}>{children || node.textContent}</h6>;
-    
-    case 'p':
-      return <p {...attributes}>{children || node.textContent}</p>;
-    
-    case 'ul':
-      return <ul {...attributes}>{children}</ul>;
-    
-    case 'ol':
-      return <ol {...attributes}>{children}</ol>;
-    
-    case 'li':
-      return <li {...attributes}>{children || node.textContent}</li>;
-    
-    case 'section':
-      return <section {...attributes}>{children}</section>;
-    
-    case 'article':
-      return <article {...attributes}>{children}</article>;
-    
-    case 'header':
-      return <header {...attributes}>{children}</header>;
-    
-    case 'footer':
-      return <footer {...attributes}>{children}</footer>;
-    
-    case 'nav':
-      return <nav {...attributes}>{children}</nav>;
-    
-    case 'main':
-      return <main {...attributes}>{children}</main>;
-    
-    case 'aside':
-      return <aside {...attributes}>{children}</aside>;
-    
-    case 'div':
-    case 'span':
-    default:
-      // Generic container - use div
-      return <div {...attributes}>{children || node.textContent}</div>;
-  }
+  // Render element with exact tag preservation
+  const content = children || node.textContent;
+  
+  // Use React.createElement to preserve exact HTML tag
+  return React.createElement(
+    node.tag,
+    attributes,
+    content
+  );
 }
 
 /**

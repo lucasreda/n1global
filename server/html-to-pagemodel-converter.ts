@@ -100,12 +100,24 @@ function extractBodyContent(html: string): string {
   return bodyMatch ? bodyMatch[1] : html;
 }
 
+// Enhanced CSS Rule structure with specificity and media query support
+interface CSSRuleEnhanced {
+  selector: string;
+  styles: Record<string, string>;
+  specificity: number;
+  mediaQuery?: string; // e.g., "(max-width: 768px)"
+  pseudoClass?: string; // e.g., "hover", "focus"
+  pseudoElement?: string; // e.g., "before", "after"
+}
+
 /**
- * Extract and parse all CSS from HTML using css-tree
+ * Extract and parse all CSS from HTML using css-tree with enhanced support
  */
-function extractAllCSS(html: string): { rules: Record<string, Record<string, string>>, cssText: string } {
+function extractAllCSS(html: string): { rules: Record<string, Record<string, string>>, cssText: string, enhancedRules: CSSRuleEnhanced[] } {
   const cssRules: Record<string, Record<string, string>> = {};
+  const enhancedRules: CSSRuleEnhanced[] = [];
   let allCssText = '';
+  let ruleOrder = 0;
   
   // Extract all style tags
   const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
@@ -119,36 +131,74 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
       // Parse CSS using css-tree (removes comments automatically)
       const ast = csstree.parse(cssText);
       
-      // Walk through the AST and extract rules
+      // Walk through the AST and extract rules including media queries
+      csstree.walk(ast, {
+        visit: 'Atrule',
+        enter(node: any) {
+          // Handle @media queries
+          if (node.name === 'media') {
+            const mediaQuery = csstree.generate(node.prelude);
+            
+            // Process rules inside media query
+            if (node.block) {
+              csstree.walk(node.block, {
+                visit: 'Rule',
+                enter(ruleNode: any) {
+                  const selectorText = csstree.generate(ruleNode.prelude);
+                  const styles = extractStylesFromRule(ruleNode);
+                  
+                  selectorText.split(',').forEach(sel => {
+                    const cleanSelector = sel.trim();
+                    const { baseSelector, pseudoClass, pseudoElement } = parsePseudoSelectors(cleanSelector);
+                    
+                    enhancedRules.push({
+                      selector: baseSelector,
+                      styles,
+                      specificity: calculateSpecificity(baseSelector) + (ruleOrder++ * 0.0001),
+                      mediaQuery,
+                      pseudoClass,
+                      pseudoElement,
+                    });
+                  });
+                }
+              });
+            }
+          }
+        }
+      });
+      
+      // Walk through regular rules (non-media)
       csstree.walk(ast, {
         visit: 'Rule',
         enter(node: any) {
+          // Skip if inside media query (already handled above)
+          if (node.parentNode && node.parentNode.type === 'Block' && 
+              node.parentNode.parentNode && node.parentNode.parentNode.type === 'Atrule') {
+            return;
+          }
+          
           // Get selector text
           const selectorText = csstree.generate(node.prelude);
-          
-          // Parse declarations
-          const styles: Record<string, string> = {};
-          
-          if (node.block && node.block.children) {
-            node.block.children.forEach((child: any) => {
-              if (child.type === 'Declaration') {
-                const property = child.property;
-                const value = csstree.generate(child.value);
-                
-                // Convert kebab-case to camelCase for React inline styles
-                const camelProperty = property.replace(/-([a-z])/g, (_: string, g: string) => g.toUpperCase());
-                styles[camelProperty] = value;
-              }
-            });
-          }
+          const styles = extractStylesFromRule(node);
           
           // Store by selector (handle multiple selectors separated by comma)
           selectorText.split(',').forEach(sel => {
             const cleanSelector = sel.trim();
+            const { baseSelector, pseudoClass, pseudoElement } = parsePseudoSelectors(cleanSelector);
+            
             if (!cssRules[cleanSelector]) {
               cssRules[cleanSelector] = {};
             }
             Object.assign(cssRules[cleanSelector], styles);
+            
+            // Also store in enhanced rules
+            enhancedRules.push({
+              selector: baseSelector,
+              styles,
+              specificity: calculateSpecificity(baseSelector) + (ruleOrder++ * 0.0001),
+              pseudoClass,
+              pseudoElement,
+            });
           });
         }
       });
@@ -159,6 +209,7 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
   
   console.log('🎨 CSS Rules extracted:', {
     totalSelectors: Object.keys(cssRules).length,
+    enhancedRulesCount: enhancedRules.length,
     selectors: Object.keys(cssRules).slice(0, 10),
     sampleRule: Object.keys(cssRules)[0] ? {
       selector: Object.keys(cssRules)[0],
@@ -166,7 +217,78 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
     } : null
   });
   
-  return { rules: cssRules, cssText: allCssText };
+  return { rules: cssRules, cssText: allCssText, enhancedRules };
+}
+
+/**
+ * Extract styles from CSS rule node
+ */
+function extractStylesFromRule(ruleNode: any): Record<string, string> {
+  const styles: Record<string, string> = {};
+  
+  if (ruleNode.block && ruleNode.block.children) {
+    ruleNode.block.children.forEach((child: any) => {
+      if (child.type === 'Declaration') {
+        const property = child.property;
+        const value = csstree.generate(child.value);
+        
+        // Convert kebab-case to camelCase for React inline styles
+        const camelProperty = property.replace(/-([a-z])/g, (_: string, g: string) => g.toUpperCase());
+        styles[camelProperty] = value;
+      }
+    });
+  }
+  
+  return styles;
+}
+
+/**
+ * Parse pseudo-selectors from selector string
+ */
+function parsePseudoSelectors(selector: string): {
+  baseSelector: string;
+  pseudoClass?: string;
+  pseudoElement?: string;
+} {
+  // Match pseudo-elements (::before, ::after)
+  const pseudoElementMatch = selector.match(/::(before|after|first-line|first-letter)/);
+  const pseudoElement = pseudoElementMatch ? pseudoElementMatch[1] : undefined;
+  
+  // Match pseudo-classes (:hover, :focus, :nth-child, etc.)
+  const pseudoClassMatch = selector.match(/:([a-z-]+(\([^)]*\))?)/);
+  const pseudoClass = pseudoClassMatch && !pseudoElementMatch ? pseudoClassMatch[1] : undefined;
+  
+  // Remove pseudo-selectors to get base selector
+  const baseSelector = selector
+    .replace(/::(before|after|first-line|first-letter)/, '')
+    .replace(/:[a-z-]+(\([^)]*\))?/, '')
+    .trim();
+  
+  return { baseSelector, pseudoClass, pseudoElement };
+}
+
+/**
+ * Calculate CSS specificity (simplified version)
+ * Returns number: IDs=100, Classes/Attrs/Pseudo=10, Elements=1
+ */
+function calculateSpecificity(selector: string): number {
+  let specificity = 0;
+  
+  // Count IDs
+  const idCount = (selector.match(/#/g) || []).length;
+  specificity += idCount * 100;
+  
+  // Count classes, attributes, pseudo-classes
+  const classCount = (selector.match(/\./g) || []).length;
+  const attrCount = (selector.match(/\[/g) || []).length;
+  const pseudoCount = (selector.match(/:/g) || []).length;
+  specificity += (classCount + attrCount + pseudoCount) * 10;
+  
+  // Count elements
+  const elementCount = selector.split(/[\s>+~]/).filter(s => s && !s.match(/[.#:\[]/)). length;
+  specificity += elementCount;
+  
+  return specificity;
 }
 
 /**
@@ -1852,11 +1974,12 @@ export function convertHtmlToPageModelV4(html: string): PageModelV4 {
   
   console.log('📋 Meta extracted:', { title, description, keywordsCount: keywords.length });
   
-  // Extract and parse all CSS
-  const { rules: cssRules, cssText } = extractAllCSS(html);
+  // Extract and parse all CSS with enhanced rules
+  const { rules: cssRules, cssText, enhancedRules } = extractAllCSS(html);
   
   console.log('🎨 CSS extracted:', {
     rulesCount: Object.keys(cssRules).length,
+    enhancedRulesCount: enhancedRules.length,
     cssTextLength: cssText.length
   });
   
@@ -1876,8 +1999,8 @@ export function convertHtmlToPageModelV4(html: string): PageModelV4 {
   
   const rootNodes = bodyElement ? bodyElement.children : doc.children;
   
-  // Convert DOM tree to PageNodeV4 tree
-  const nodes = convertDomNodesToPageNodesV4(rootNodes, cssRules);
+  // Convert DOM tree to PageNodeV4 tree with enhanced rules
+  const nodes = convertDomNodesToPageNodesV4(rootNodes, cssRules, enhancedRules);
   
   console.log('✅ Converted to', nodes.length, 'root nodes');
   
@@ -1912,7 +2035,8 @@ export function convertHtmlToPageModelV4(html: string): PageModelV4 {
  */
 function convertDomNodesToPageNodesV4(
   domNodes: ChildNode[],
-  cssRules: Record<string, Record<string, string>>
+  cssRules: Record<string, Record<string, string>>,
+  enhancedRules?: CSSRuleEnhanced[]
 ): PageNodeV4[] {
   const nodes: PageNodeV4[] = [];
   
@@ -1940,7 +2064,7 @@ function convertDomNodesToPageNodesV4(
     // Handle element nodes
     if (domNode.type === 'tag') {
       const element = domNode as Element;
-      const node = convertElementToPageNodeV4(element, cssRules);
+      const node = convertElementToPageNodeV4(element, cssRules, enhancedRules);
       if (node) {
         nodes.push(node);
       }
@@ -1955,7 +2079,8 @@ function convertDomNodesToPageNodesV4(
  */
 function convertElementToPageNodeV4(
   element: Element,
-  cssRules: Record<string, Record<string, string>>
+  cssRules: Record<string, Record<string, string>>,
+  enhancedRules?: CSSRuleEnhanced[]
 ): PageNodeV4 | null {
   const tag = element.name.toLowerCase();
   
@@ -1983,15 +2108,15 @@ function convertElementToPageNodeV4(
   // Extract inline styles
   const inlineStyles = parseInlineStyles(element.attribs?.style || '');
   
-  // Compute styles from CSS rules
-  const computedStyles = computeElementStylesV4(element, cssRules);
+  // Compute styles from CSS rules with enhanced rules support
+  const computedStyles = computeElementStylesV4(element, cssRules, enhancedRules);
   
   // Extract layout properties
   const layout = extractLayoutProperties(computedStyles.desktop || {}, inlineStyles);
   
   // Convert children recursively
   const children = element.children.length > 0
-    ? convertDomNodesToPageNodesV4(element.children, cssRules)
+    ? convertDomNodesToPageNodesV4(element.children, cssRules, enhancedRules)
     : undefined;
   
   // Extract text content (for leaf elements without children)
@@ -2083,44 +2208,84 @@ function parseInlineStyles(styleAttr: string): Record<string, string> {
 }
 
 /**
- * Compute styles for an element from CSS rules
+ * Compute styles for an element from CSS rules with media query support
  */
 function computeElementStylesV4(
   element: Element,
-  cssRules: Record<string, Record<string, string>>
+  cssRules: Record<string, Record<string, string>>,
+  enhancedRules?: CSSRuleEnhanced[]
 ): ResponsiveStylesV4 {
   const styles: ResponsiveStylesV4 = {};
-  
-  // For V4, we apply all matched CSS rules to desktop by default
-  const matchedStyles: Record<string, string> = {};
   
   // Get element identifiers
   const tag = element.name.toLowerCase();
   const classes = element.attribs?.class?.split(' ').filter(c => c) || [];
   const id = element.attribs?.id;
   
-  // Match CSS rules
-  for (const [selector, ruleStyles] of Object.entries(cssRules)) {
-    if (matchesSelector(element, selector, tag, classes, id)) {
-      Object.assign(matchedStyles, ruleStyles);
+  if (enhancedRules) {
+    // Use enhanced rules with media query and specificity support
+    const desktopStyles: Record<string, string> = {};
+    const tabletStyles: Record<string, string> = {};
+    const mobileStyles: Record<string, string> = {};
+    
+    // Sort by specificity
+    const sortedRules = [...enhancedRules].sort((a, b) => a.specificity - b.specificity);
+    
+    for (const rule of sortedRules) {
+      if (matchesSelector(element, rule.selector, tag, classes, id)) {
+        // Determine breakpoint from media query
+        if (!rule.mediaQuery) {
+          // No media query = applies to all
+          Object.assign(desktopStyles, rule.styles);
+        } else if (rule.mediaQuery.includes('768px') && rule.mediaQuery.includes('max-width')) {
+          // Tablet/Mobile breakpoint
+          Object.assign(mobileStyles, rule.styles);
+        } else if (rule.mediaQuery.includes('1024px') && rule.mediaQuery.includes('max-width')) {
+          // Tablet breakpoint
+          Object.assign(tabletStyles, rule.styles);
+        } else if (rule.mediaQuery.includes('min-width')) {
+          // Desktop and up
+          Object.assign(desktopStyles, rule.styles);
+        }
+      }
     }
-  }
-  
-  // Add inline styles
-  if (element.attribs?.style) {
-    const inlineStyles = parseInlineStyles(element.attribs.style);
-    Object.assign(matchedStyles, inlineStyles);
-  }
-  
-  if (Object.keys(matchedStyles).length > 0) {
-    styles.desktop = matchedStyles;
+    
+    // Add inline styles (highest priority)
+    if (element.attribs?.style) {
+      const inlineStyles = parseInlineStyles(element.attribs.style);
+      Object.assign(desktopStyles, inlineStyles);
+    }
+    
+    if (Object.keys(desktopStyles).length > 0) styles.desktop = desktopStyles;
+    if (Object.keys(tabletStyles).length > 0) styles.tablet = tabletStyles;
+    if (Object.keys(mobileStyles).length > 0) styles.mobile = mobileStyles;
+  } else {
+    // Fallback to simple matching
+    const matchedStyles: Record<string, string> = {};
+    
+    // Match CSS rules
+    for (const [selector, ruleStyles] of Object.entries(cssRules)) {
+      if (matchesSelector(element, selector, tag, classes, id)) {
+        Object.assign(matchedStyles, ruleStyles);
+      }
+    }
+    
+    // Add inline styles
+    if (element.attribs?.style) {
+      const inlineStyles = parseInlineStyles(element.attribs.style);
+      Object.assign(matchedStyles, inlineStyles);
+    }
+    
+    if (Object.keys(matchedStyles).length > 0) {
+      styles.desktop = matchedStyles;
+    }
   }
   
   return styles;
 }
 
 /**
- * Check if element matches CSS selector
+ * Check if element matches CSS selector with full combinator support
  */
 function matchesSelector(
   element: Element,
@@ -2129,37 +2294,170 @@ function matchesSelector(
   classes: string[],
   id?: string
 ): boolean {
-  // Remove pseudo-classes and pseudo-elements
-  const cleanSelector = selector.replace(/:(hover|focus|active|visited|before|after|first-child|last-child|nth-child\([^)]+\))/g, '');
+  // Remove pseudo-classes and pseudo-elements for base matching
+  const cleanSelector = selector.replace(/:(hover|focus|active|visited|before|after|first-child|last-child|nth-child\([^)]+\))/g, '').trim();
   
-  // Simple tag selector
-  if (cleanSelector === tag) return true;
+  // Handle combinator selectors (descendant, child, adjacent, sibling)
+  if (cleanSelector.includes(' ') || cleanSelector.includes('>') || cleanSelector.includes('+') || cleanSelector.includes('~')) {
+    return matchesCombinatorSelector(element, cleanSelector, tag, classes, id);
+  }
+  
+  // Simple selectors
+  return matchesSimpleSelector(cleanSelector, tag, classes, id);
+}
+
+/**
+ * Match simple selector (no combinators)
+ */
+function matchesSimpleSelector(
+  selector: string,
+  tag: string,
+  classes: string[],
+  id?: string
+): boolean {
+  // Universal selector
+  if (selector === '*') return true;
+  
+  // Tag selector
+  if (selector === tag) return true;
   
   // Class selector
-  if (cleanSelector.startsWith('.')) {
-    const className = cleanSelector.substring(1);
+  if (selector.startsWith('.')) {
+    const className = selector.substring(1);
     return classes.includes(className);
   }
   
   // ID selector
-  if (cleanSelector.startsWith('#')) {
-    const idName = cleanSelector.substring(1);
+  if (selector.startsWith('#')) {
+    const idName = selector.substring(1);
     return id === idName;
   }
   
-  // Compound selector (e.g., "div.className")
-  if (cleanSelector.includes('.')) {
-    const parts = cleanSelector.split('.');
-    const selectorTag = parts[0];
-    const selectorClass = parts[1];
-    return (selectorTag === tag || selectorTag === '') && classes.includes(selectorClass);
+  // Attribute selector
+  if (selector.includes('[') && selector.includes(']')) {
+    // Simplified attribute matching
+    return false; // TODO: Implement full attribute matching
+  }
+  
+  // Compound selector (e.g., "div.className", "div#id", "div.class1.class2")
+  if (selector.includes('.') || selector.includes('#')) {
+    // Parse compound selector
+    let currentSelector = selector;
+    let tagMatch = true;
+    
+    // Check tag
+    const tagPart = currentSelector.match(/^[a-z0-9-]+/i);
+    if (tagPart && tagPart[0] !== tag) {
+      tagMatch = false;
+    }
+    currentSelector = currentSelector.replace(/^[a-z0-9-]+/i, '');
+    
+    // Check classes
+    const classMatches = currentSelector.match(/\.[a-z0-9-_]+/gi);
+    if (classMatches) {
+      for (const classMatch of classMatches) {
+        const className = classMatch.substring(1);
+        if (!classes.includes(className)) {
+          return false;
+        }
+      }
+    }
+    
+    // Check ID
+    const idMatch = currentSelector.match(/#[a-z0-9-_]+/i);
+    if (idMatch) {
+      const idName = idMatch[0].substring(1);
+      if (id !== idName) {
+        return false;
+      }
+    }
+    
+    return tagMatch;
   }
   
   return false;
 }
 
 /**
- * Extract layout properties from styles
+ * Match combinator selector (descendant, child, adjacent, sibling)
+ */
+function matchesCombinatorSelector(
+  element: Element,
+  selector: string,
+  tag: string,
+  classes: string[],
+  id?: string
+): boolean {
+  // Parse combinator
+  let parts: string[] = [];
+  let combinator: string = ' '; // default to descendant
+  
+  if (selector.includes('>')) {
+    parts = selector.split('>').map(s => s.trim());
+    combinator = '>';
+  } else if (selector.includes('+')) {
+    parts = selector.split('+').map(s => s.trim());
+    combinator = '+';
+  } else if (selector.includes('~')) {
+    parts = selector.split('~').map(s => s.trim());
+    combinator = '~';
+  } else {
+    // Descendant combinator (space)
+    parts = selector.split(/\s+/).filter(s => s);
+    combinator = ' ';
+  }
+  
+  if (parts.length < 2) return false;
+  
+  // The last part should match current element
+  const lastPart = parts[parts.length - 1];
+  if (!matchesSimpleSelector(lastPart, tag, classes, id)) {
+    return false;
+  }
+  
+  // Check combinator relationship
+  const parentPart = parts[parts.length - 2];
+  
+  if (combinator === '>') {
+    // Child combinator - direct parent must match
+    if (!element.parent || element.parent.type !== 'tag') return false;
+    const parent = element.parent as Element;
+    const parentTag = parent.name.toLowerCase();
+    const parentClasses = parent.attribs?.class?.split(' ').filter(c => c) || [];
+    const parentId = parent.attribs?.id;
+    return matchesSimpleSelector(parentPart, parentTag, parentClasses, parentId);
+  }
+  
+  if (combinator === ' ') {
+    // Descendant combinator - any ancestor must match
+    let current = element.parent;
+    while (current) {
+      if (current.type === 'tag') {
+        const currentEl = current as Element;
+        const currentTag = currentEl.name.toLowerCase();
+        const currentClasses = currentEl.attribs?.class?.split(' ').filter(c => c) || [];
+        const currentId = currentEl.attribs?.id;
+        if (matchesSimpleSelector(parentPart, currentTag, currentClasses, currentId)) {
+          // If we have more parts, check recursively
+          if (parts.length > 2) {
+            const remainingSelector = parts.slice(0, -1).join(' ');
+            return matchesCombinatorSelector(currentEl, remainingSelector, currentTag, currentClasses, currentId);
+          }
+          return true;
+        }
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+  
+  // Adjacent and sibling combinators would require sibling traversal
+  // Simplified implementation - return false for now
+  return false;
+}
+
+/**
+ * Extract layout properties from styles - COMPLETE flex/grid support
  */
 function extractLayoutProperties(
   styles: Record<string, any>,
@@ -2169,14 +2467,46 @@ function extractLayoutProperties(
   
   const layout: PageNodeV4['layout'] = {};
   
+  // Display & Position
   if (allStyles.display) layout.display = allStyles.display;
   if (allStyles.position) layout.position = allStyles.position;
+  
+  // Flexbox properties
   if (allStyles.flexDirection) layout.flexDirection = allStyles.flexDirection;
+  if (allStyles.flexWrap) layout.flexWrap = allStyles.flexWrap;
   if (allStyles.justifyContent) layout.justifyContent = allStyles.justifyContent;
   if (allStyles.alignItems) layout.alignItems = allStyles.alignItems;
+  if (allStyles.alignContent) layout.alignContent = allStyles.alignContent;
+  if (allStyles.flex) layout.flex = allStyles.flex;
+  if (allStyles.flexGrow) layout.flexGrow = allStyles.flexGrow;
+  if (allStyles.flexShrink) layout.flexShrink = allStyles.flexShrink;
+  if (allStyles.flexBasis) layout.flexBasis = allStyles.flexBasis;
+  if (allStyles.order) layout.order = allStyles.order;
+  if (allStyles.alignSelf) layout.alignSelf = allStyles.alignSelf;
+  
+  // Grid properties
   if (allStyles.gridTemplateColumns) layout.gridTemplateColumns = allStyles.gridTemplateColumns;
   if (allStyles.gridTemplateRows) layout.gridTemplateRows = allStyles.gridTemplateRows;
+  if (allStyles.gridTemplateAreas) layout.gridTemplateAreas = allStyles.gridTemplateAreas;
+  if (allStyles.gridColumn) layout.gridColumn = allStyles.gridColumn;
+  if (allStyles.gridColumnStart) layout.gridColumnStart = allStyles.gridColumnStart;
+  if (allStyles.gridColumnEnd) layout.gridColumnEnd = allStyles.gridColumnEnd;
+  if (allStyles.gridRow) layout.gridRow = allStyles.gridRow;
+  if (allStyles.gridRowStart) layout.gridRowStart = allStyles.gridRowStart;
+  if (allStyles.gridRowEnd) layout.gridRowEnd = allStyles.gridRowEnd;
+  if (allStyles.gridArea) layout.gridArea = allStyles.gridArea;
+  if (allStyles.gridAutoFlow) layout.gridAutoFlow = allStyles.gridAutoFlow;
+  if (allStyles.gridAutoColumns) layout.gridAutoColumns = allStyles.gridAutoColumns;
+  if (allStyles.gridAutoRows) layout.gridAutoRows = allStyles.gridAutoRows;
+  if (allStyles.justifyItems) layout.justifyItems = allStyles.justifyItems;
+  if (allStyles.placeItems) layout.placeItems = allStyles.placeItems;
+  if (allStyles.placeContent) layout.placeContent = allStyles.placeContent;
+  if (allStyles.placeSelf) layout.placeSelf = allStyles.placeSelf;
+  
+  // Spacing
   if (allStyles.gap) layout.gap = allStyles.gap;
+  if (allStyles.rowGap) layout.rowGap = allStyles.rowGap;
+  if (allStyles.columnGap) layout.columnGap = allStyles.columnGap;
   
   return Object.keys(layout).length > 0 ? layout : undefined;
 }

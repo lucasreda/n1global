@@ -5513,16 +5513,48 @@ export type PageNodeV4 = {
   // Children nodes (recursive)
   children?: PageNodeV4[];
   
-  // Layout metadata (for editor tools)
+  // Layout metadata (for editor tools) - COMPLETE flex/grid properties
   layout?: {
+    // Display & Position
     display?: string;           // block, flex, grid, inline-block, etc.
     position?: string;          // static, relative, absolute, fixed, sticky
-    flexDirection?: string;
-    justifyContent?: string;
-    alignItems?: string;
-    gridTemplateColumns?: string;
-    gridTemplateRows?: string;
-    gap?: string;
+    
+    // Flexbox properties
+    flexDirection?: string;     // row, column, row-reverse, column-reverse
+    flexWrap?: string;          // nowrap, wrap, wrap-reverse
+    justifyContent?: string;    // flex-start, center, flex-end, space-between, space-around, space-evenly
+    alignItems?: string;        // flex-start, center, flex-end, stretch, baseline
+    alignContent?: string;      // flex-start, center, flex-end, space-between, space-around, stretch
+    flex?: string;              // flex shorthand
+    flexGrow?: string;          // flex-grow value
+    flexShrink?: string;        // flex-shrink value
+    flexBasis?: string;         // flex-basis value
+    order?: string;             // order value
+    alignSelf?: string;         // auto, flex-start, center, flex-end, stretch, baseline
+    
+    // Grid properties
+    gridTemplateColumns?: string;  // grid column template
+    gridTemplateRows?: string;     // grid row template
+    gridTemplateAreas?: string;    // grid areas template
+    gridColumn?: string;           // grid-column shorthand
+    gridColumnStart?: string;      // grid column start
+    gridColumnEnd?: string;        // grid column end
+    gridRow?: string;              // grid-row shorthand
+    gridRowStart?: string;         // grid row start
+    gridRowEnd?: string;           // grid row end
+    gridArea?: string;             // grid area name
+    gridAutoFlow?: string;         // row, column, dense
+    gridAutoColumns?: string;      // auto column sizing
+    gridAutoRows?: string;         // auto row sizing
+    justifyItems?: string;         // start, center, end, stretch
+    placeItems?: string;           // align-items + justify-items shorthand
+    placeContent?: string;         // align-content + justify-content shorthand
+    placeSelf?: string;            // align-self + justify-self shorthand
+    
+    // Spacing
+    gap?: string;                  // gap shorthand
+    rowGap?: string;               // row gap
+    columnGap?: string;            // column gap
   };
   
   // Animations and transitions
