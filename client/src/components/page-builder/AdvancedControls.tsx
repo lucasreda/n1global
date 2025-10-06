@@ -162,6 +162,26 @@ export function FourSidesInput({
     setIsLinked(!isLinked);
   }, [isLinked, value.top, handleLinkedChange]);
 
+  // Spacing presets (common design system scale) - values without units
+  const spacingPresetValues = [0, 4, 8, 12, 16, 24, 32, 48];
+
+  const applyPreset = useCallback((presetNum: number) => {
+    if (isLinked) {
+      // Linked mode: use shared unit from top
+      const currentUnit = parseValueWithUnit(value.top).unit;
+      const presetWithUnit = formatValueWithUnit(presetNum, currentUnit);
+      handleLinkedChange(presetWithUnit);
+    } else {
+      // Unlinked mode: preserve each side's individual unit
+      onChange({
+        top: formatValueWithUnit(presetNum, parseValueWithUnit(value.top).unit),
+        right: formatValueWithUnit(presetNum, parseValueWithUnit(value.right).unit),
+        bottom: formatValueWithUnit(presetNum, parseValueWithUnit(value.bottom).unit),
+        left: formatValueWithUnit(presetNum, parseValueWithUnit(value.left).unit)
+      });
+    }
+  }, [isLinked, handleLinkedChange, onChange, value]);
+
   return (
     <div className="space-y-3" data-testid={testId}>
       <div className="flex justify-between items-center">
@@ -179,6 +199,44 @@ export function FourSidesInput({
             <Unlink className="h-4 w-4" />
           )}
         </Button>
+      </div>
+
+      {/* Spacing Presets Bar */}
+      <div className="flex flex-wrap gap-1">
+        {spacingPresetValues.map((presetNum) => {
+          let isActive = false;
+          
+          if (isLinked) {
+            // Linked mode: compare against shared unit
+            const parsedTop = parseValueWithUnit(value.top);
+            const presetWithUnit = formatValueWithUnit(presetNum, parsedTop.unit);
+            isActive = value.top === presetWithUnit;
+          } else {
+            // Unlinked mode: check if ALL sides have the preset value (with their own units)
+            const topPreset = formatValueWithUnit(presetNum, parseValueWithUnit(value.top).unit);
+            const rightPreset = formatValueWithUnit(presetNum, parseValueWithUnit(value.right).unit);
+            const bottomPreset = formatValueWithUnit(presetNum, parseValueWithUnit(value.bottom).unit);
+            const leftPreset = formatValueWithUnit(presetNum, parseValueWithUnit(value.left).unit);
+            
+            isActive = value.top === topPreset && 
+                      value.right === rightPreset && 
+                      value.bottom === bottomPreset && 
+                      value.left === leftPreset;
+          }
+          
+          return (
+            <Button
+              key={presetNum}
+              variant="outline"
+              size="sm"
+              onClick={() => applyPreset(presetNum)}
+              className={`h-7 px-2 text-xs font-mono ${isActive ? 'bg-accent' : ''}`}
+              data-testid={`${testId}-preset-${presetNum}`}
+            >
+              {presetNum}
+            </Button>
+          );
+        })}
       </div>
 
       {isLinked ? (
