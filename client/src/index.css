@@ -446,10 +446,18 @@ html, body {
   overflow: hidden;
 }
 
-/* PageModelV4 Renderer - Force correct colors for known containers */
-/* React inline styles don't cascade like CSS, so we need explicit rules */
+/* PageModelV4 Renderer - Default text color with specific overrides */
+/* Set default text color to black to prevent inheriting light text-foreground from body */
+.page-renderer-reset {
+  color: #000000;
+}
+
+/* Override for containers with white text (lowest specificity, so inline styles override) */
 .page-renderer-reset .header,
-.page-renderer-reset .header *,
+.page-renderer-reset .header * {
+  color: white;
+}
+
 .page-renderer-reset .hero,
 .page-renderer-reset .hero * {
   color: white;
@@ -460,4 +468,4 @@ html, body {
   color: white;
 }
 
-/* Elements with explicit inline color will override these rules automatically */
+/* Elements with inline style="color: ..." will automatically override all these rules */
