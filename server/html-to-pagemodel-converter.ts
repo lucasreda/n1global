@@ -491,7 +491,37 @@ function convertDOMElementToBlockElement(element: Element, cssRules: Record<stri
         content: { text: items.map(item => `• ${item}`).join('\n') },
       };
     
-    // For other tags (div, span, etc.), return null so children are processed
+    // For container tags (div, span, etc.)
+    case 'div':
+      // Check if div has important layout or styling that should be preserved
+      const hasImportantStyles = computedStyles.display === 'grid' || 
+                                 computedStyles.display === 'flex' ||
+                                 computedStyles.gridTemplateColumns ||
+                                 computedStyles.flexDirection ||
+                                 computedStyles.gap ||
+                                 computedStyles.backgroundColor ||
+                                 computedStyles.backgroundImage ||
+                                 computedStyles.background ||
+                                 computedStyles.padding ||
+                                 computedStyles.margin ||
+                                 computedStyles.border ||
+                                 computedStyles.borderRadius;
+      
+      if (hasImportantStyles && textContent.trim().length > 0) {
+        // Div with text content and styles - create as spacer
+        return {
+          id,
+          type: 'spacer',
+          props: {},
+          styles: computedStyles,
+          content: { text: textContent },
+        };
+      }
+      
+      // Otherwise, process children (grid/flex containers will be handled at Row level)
+      return null;
+    
+    // For other tags, return null so children are processed
     default:
       return null;
   }
