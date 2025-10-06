@@ -197,7 +197,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   return (
     <div className="h-screen flex flex-col">
       {/* Header - CRITICAL: Very high z-index to stay above rendered HTML content */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-[9999]">
+      <div className="border-b bg-background relative z-[9999] shadow-sm">
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
             <Button
