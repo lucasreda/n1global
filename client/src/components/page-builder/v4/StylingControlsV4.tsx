@@ -18,7 +18,10 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
   const currentStyles = node.styles?.[breakpoint] || {};
 
   const handleStyleChange = (updates: Record<string, string | any>) => {
-    const updatedStyles: Partial<ResponsiveStylesV4> = {
+    const updatedStyles: ResponsiveStylesV4 = {
+      desktop: { ...(node.styles?.desktop || {}) },
+      tablet: { ...(node.styles?.tablet || {}) },
+      mobile: { ...(node.styles?.mobile || {}) },
       [breakpoint]: {
         ...currentStyles,
         ...updates,
@@ -141,7 +144,10 @@ export function TypographyControlsV4({ node, breakpoint, onUpdateNode }: Styling
   const currentStyles = node.styles?.[breakpoint] || {};
 
   const handleStyleChange = (updates: Record<string, string>) => {
-    const updatedStyles: Partial<ResponsiveStylesV4> = {
+    const updatedStyles: ResponsiveStylesV4 = {
+      desktop: { ...(node.styles?.desktop || {}) },
+      tablet: { ...(node.styles?.tablet || {}) },
+      mobile: { ...(node.styles?.mobile || {}) },
       [breakpoint]: {
         ...currentStyles,
         ...updates,

@@ -15,7 +15,10 @@ export function LayoutControlsV4({ node, breakpoint, onUpdateNode }: LayoutContr
   const currentStyles = node.styles?.[breakpoint] || {};
 
   const handleStyleChange = (updates: Record<string, string>) => {
-    const updatedStyles: Partial<ResponsiveStylesV4> = {
+    const updatedStyles: ResponsiveStylesV4 = {
+      desktop: { ...(node.styles?.desktop || {}) },
+      tablet: { ...(node.styles?.tablet || {}) },
+      mobile: { ...(node.styles?.mobile || {}) },
       [breakpoint]: {
         ...currentStyles,
         ...updates,
