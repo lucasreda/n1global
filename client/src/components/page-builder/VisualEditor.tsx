@@ -38,6 +38,7 @@ import { useHistoryManager } from '@/lib/history';
 import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2 } from 'lucide-react';
 import { createComponentInstance, setOverridesFromElementUpdates } from '@/lib/componentInstance';
 import { useResolvedElement } from '@/lib/useResolvedElement';
+import { deduplicateComponentIds } from '@/lib/componentExport';
 
 interface VisualEditorProps {
   model: PageModelV2;
@@ -399,6 +400,21 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
       ...model,
       components: components.filter(c => c.id !== componentId),
     }, "Delete component");
+  }, [model, updateModel]);
+
+  const handleImportComponents = useCallback((importedComponents: ComponentDefinitionV3[]) => {
+    const existingComponents = model.components || [];
+    
+    // Build set of existing component IDs
+    const existingIds = new Set(existingComponents.map(c => c.id));
+    
+    // Deduplicate component IDs within imported set and update internal references
+    const deduplicatedComponents = deduplicateComponentIds(importedComponents, existingIds);
+    
+    updateModel({
+      ...model,
+      components: [...existingComponents, ...deduplicatedComponents],
+    }, "Import components");
   }, [model, updateModel]);
 
   // Deep clone element with fresh IDs for all nested children
@@ -829,6 +845,7 @@ export function VisualEditor({ model, onChange, viewport, onViewportChange, clas
                 onSaveComponent={handleSaveComponent}
                 onDeleteComponent={handleDeleteComponent}
                 onInsertComponent={handleInsertComponent}
+                onImportComponents={handleImportComponents}
               />
             </div>
           )}

@@ -1,4 +1,4 @@
-import { Plus, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, FolderOpen, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,8 @@ import { useState } from 'react';
 import type { ComponentDefinitionV3, BlockElementV3, ComponentProp, ComponentSlot } from '@shared/schema';
 import { ComponentPropsEditor } from './ComponentPropsEditor';
 import { ComponentSlotsEditor } from './ComponentSlotsEditor';
+import { downloadComponentsAsJSON, importComponentsFromJSON } from '@/lib/componentExport';
+import { useToast } from '@/hooks/use-toast';
 
 interface ComponentLibraryPanelProps {
   components: ComponentDefinitionV3[];
@@ -31,6 +33,7 @@ interface ComponentLibraryPanelProps {
   onSaveComponent: (name: string, category: string) => void;
   onDeleteComponent: (componentId: string) => void;
   onInsertComponent: (component: ComponentDefinitionV3) => void;
+  onImportComponents?: (components: ComponentDefinitionV3[]) => void;
 }
 
 const COMPONENT_CATEGORIES = [
@@ -51,7 +54,9 @@ export function ComponentLibraryPanel({
   onSaveComponent,
   onDeleteComponent,
   onInsertComponent,
+  onImportComponents,
 }: ComponentLibraryPanelProps) {
+  const { toast } = useToast();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [componentName, setComponentName] = useState('');
   const [componentCategory, setComponentCategory] = useState<string>('Other');
@@ -68,6 +73,71 @@ export function ComponentLibraryPanel({
       setComponentSlots([]);
       setSaveDialogOpen(false);
     }
+  };
+
+  const handleExport = () => {
+    if (components.length === 0) {
+      toast({
+        title: 'No components to export',
+        description: 'Create some components first before exporting.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      const filename = `components-${new Date().toISOString().split('T')[0]}.json`;
+      downloadComponentsAsJSON(components, filename);
+      toast({
+        title: 'Export successful',
+        description: `Exported ${components.length} component${components.length !== 1 ? 's' : ''} to ${filename}`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export components. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const result = importComponentsFromJSON(text);
+        
+        if (!result.valid || !result.components) {
+          toast({
+            title: 'Import failed',
+            description: result.error || 'Invalid component file',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        if (onImportComponents) {
+          onImportComponents(result.components);
+          toast({
+            title: 'Import successful',
+            description: `Imported ${result.components.length} component${result.components.length !== 1 ? 's' : ''}`,
+          });
+        }
+      } catch (error) {
+        toast({
+          title: 'Import failed',
+          description: 'Failed to read or parse the file. Please check the file format.',
+          variant: 'destructive',
+        });
+      }
+    };
+    input.click();
   };
 
   const filteredComponents = filterCategory === 'all'
@@ -96,6 +166,30 @@ export function ComponentLibraryPanel({
           >
             <Plus className="w-4 h-4 mr-1" />
             Save
+          </Button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={components.length === 0}
+            className="flex-1"
+            data-testid="button-export-components"
+          >
+            <Download className="w-4 h-4 mr-1" />
+            Export
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImport}
+            className="flex-1"
+            data-testid="button-import-components"
+          >
+            <Upload className="w-4 h-4 mr-1" />
+            Import
           </Button>
         </div>
 
