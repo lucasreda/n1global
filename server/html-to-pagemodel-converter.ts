@@ -131,6 +131,9 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
       // Parse CSS using css-tree (removes comments automatically)
       const ast = csstree.parse(cssText);
       
+      // Track which rule nodes are inside @media to avoid double processing
+      const rulesInsideMedia = new Set();
+      
       // Walk through the AST and extract rules including media queries
       csstree.walk(ast, {
         visit: 'Atrule',
@@ -144,6 +147,9 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
               csstree.walk(node.block, {
                 visit: 'Rule',
                 enter(ruleNode: any) {
+                  // Mark this rule as processed in media query
+                  rulesInsideMedia.add(ruleNode);
+                  
                   const selectorText = csstree.generate(ruleNode.prelude);
                   const styles = extractStylesFromRule(ruleNode);
                   
@@ -174,21 +180,8 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
       csstree.walk(ast, {
         visit: 'Rule',
         enter(node: any) {
-          // Skip if inside ANY Atrule (media query, keyframes, etc.)
-          // Walk up the parent chain to check if ANY ancestor is an Atrule
-          let currentNode = node;
-          let isInsideAtrule = false;
-          
-          while (currentNode.parentNode) {
-            currentNode = currentNode.parentNode;
-            if (currentNode.type === 'Atrule') {
-              isInsideAtrule = true;
-              break;
-            }
-          }
-          
-          if (isInsideAtrule) {
-            // Skip rules inside @media, @keyframes, etc.
+          // Skip if this rule was already processed inside a @media query
+          if (rulesInsideMedia.has(node)) {
             return;
           }
           
