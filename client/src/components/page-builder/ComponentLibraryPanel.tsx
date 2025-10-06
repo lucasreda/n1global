@@ -19,8 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
-import type { ComponentDefinitionV3, BlockElementV3 } from '@shared/schema';
+import type { ComponentDefinitionV3, BlockElementV3, ComponentProp } from '@shared/schema';
+import { ComponentPropsEditor } from './ComponentPropsEditor';
 
 interface ComponentLibraryPanelProps {
   components: ComponentDefinitionV3[];
@@ -52,6 +54,7 @@ export function ComponentLibraryPanel({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [componentName, setComponentName] = useState('');
   const [componentCategory, setComponentCategory] = useState<string>('Other');
+  const [componentProps, setComponentProps] = useState<ComponentProp[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const handleSave = () => {
@@ -59,6 +62,7 @@ export function ComponentLibraryPanel({
       onSaveComponent(componentName.trim(), componentCategory);
       setComponentName('');
       setComponentCategory('Other');
+      setComponentProps([]);
       setSaveDialogOpen(false);
     }
   };
@@ -169,42 +173,56 @@ export function ComponentLibraryPanel({
       </ScrollArea>
 
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <DialogContent data-testid="dialog-save-component">
+        <DialogContent className="max-w-2xl max-h-[90vh]" data-testid="dialog-save-component">
           <DialogHeader>
             <DialogTitle>Save as Component</DialogTitle>
             <DialogDescription>
-              Save the selected element as a reusable component in your library.
+              Save the selected element as a reusable component with customizable properties.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="component-name">Component Name</Label>
-              <Input
-                id="component-name"
-                placeholder="My Component"
-                value={componentName}
-                onChange={(e) => setComponentName(e.target.value)}
-                data-testid="input-component-name"
-              />
-            </div>
+          <Tabs defaultValue="basic" className="py-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="props">Props</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <Label htmlFor="component-category">Category</Label>
-              <Select value={componentCategory} onValueChange={setComponentCategory}>
-                <SelectTrigger id="component-category" data-testid="select-component-category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMPONENT_CATEGORIES.map(cat => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            <TabsContent value="basic" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="component-name">Component Name</Label>
+                <Input
+                  id="component-name"
+                  placeholder="My Component"
+                  value={componentName}
+                  onChange={(e) => setComponentName(e.target.value)}
+                  data-testid="input-component-name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="component-category">Category</Label>
+                <Select value={componentCategory} onValueChange={setComponentCategory}>
+                  <SelectTrigger id="component-category" data-testid="select-component-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMPONENT_CATEGORIES.map(cat => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="props" className="pt-4">
+              <ComponentPropsEditor
+                props={componentProps}
+                onChange={setComponentProps}
+              />
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button
