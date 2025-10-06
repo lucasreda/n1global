@@ -240,12 +240,12 @@ export class AffiliateLandingService {
       throw new Error("Landing page não encontrada");
     }
     
-    if (!landingPage.originalHtml) {
-      throw new Error("Landing page não possui HTML original para reconverter");
+    if (!landingPage.htmlContent) {
+      throw new Error("Landing page não possui HTML para reconverter");
     }
     
     console.log(`🔄 Reconverting landing page with fixed converter: ${id}`);
-    const model = convertHtmlToPageModelV4(landingPage.originalHtml);
+    const model = convertHtmlToPageModelV4(landingPage.htmlContent);
     
     const [updated] = await db
       .update(affiliateLandingPages)
