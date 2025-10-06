@@ -336,21 +336,8 @@ export function VisualEditorV4({
           const position = overData.position || 'after';
           const parentNode = getParentNode(model.nodes, overData.nodeId);
           
-          console.log('🔍 DROP BEFORE/AFTER VALIDATION:', {
-            position,
-            targetNodeId: overData.nodeId,
-            parentNode: parentNode ? { id: parentNode.id, tag: parentNode.tag } : null,
-            newNodeTag: newNode.tag,
-            hasParent: !!parentNode
-          });
-          
           // If has parent, validate semantic relationship
           if (parentNode && !canAcceptChildWithContext(parentNode, newNode)) {
-            console.log('❌ DROP BLOCKED:', {
-              parentTag: parentNode.tag,
-              childTag: newNode.tag,
-              reason: getDropErrorMessage(parentNode, newNode)
-            });
             toast({
               title: "Drop não permitido",
               description: getDropErrorMessage(parentNode, newNode),
@@ -358,8 +345,6 @@ export function VisualEditorV4({
             });
             return;
           }
-          
-          console.log('✅ DROP ALLOWED');
           
           const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, position);
           onChange({ ...model, nodes: newNodes });
