@@ -5,6 +5,7 @@ The COD Dashboard is a full-stack web application designed for managing Cash on 
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Quality priority: Maximum quality and highest level possible ("atingir o mais alto nivel possivel").
 
 ## System Architecture
 
@@ -44,7 +45,7 @@ Preferred communication style: Simple, everyday language.
     - **HTML Conversion**: Complete HTML→PageModelV3 converter (1732 lines) with CSSOM parsing, specificity calculation, media query parsing, and layout detection
     - **Validation**: Full Zod schemas with recursive validation for nested structures
     - **Bidirectional Migration**: V2↔V3 adapter with auto-conversion (284 lines) in `shared/pageModelAdapter.ts`
-    - **Test Coverage**: 10 conversion tests (100% pass rate), 100% style preservation rate (exceeds 95% target), bijective testing implemented with 5/5 tests passing, descendant selector support, 9 adapter tests
+    - **Test Coverage**: 10 conversion tests (100% pass rate), 100% style preservation rate (exceeds 95% target), bijective testing implemented with 5/5 tests passing, descendant selector support, 14 adapter tests (9 structure + 5 content preservation regression tests)
     - **Files**: `server/html-to-pagemodel-converter.ts`, `server/pagemodel-to-html-renderer.ts`, `server/__tests__/run-converter-tests.ts`, `server/__tests__/bijective-tests.ts`, `shared/pageModelAdapter.ts`, `shared/__tests__/pageModelAdapter.test.ts`
 
 ### System Design Choices
