@@ -205,6 +205,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
               size="sm"
               onClick={() => setLocation('/inside/affiliates/landing-pages')}
               data-testid="button-back-to-list"
+              className="text-foreground dark:text-gray-200"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
@@ -249,6 +250,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
               onClick={() => setShowElements(!showElements)}
               title="Elements Panel"
               data-testid="button-toggle-elements-header"
+              className={showElements ? "" : "text-foreground dark:text-gray-200"}
             >
               <Plus className="h-4 w-4 mr-2" />
               Elements
@@ -259,6 +261,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
               onClick={() => setShowLayers(!showLayers)}
               title="Layers Panel"
               data-testid="button-toggle-layers-header"
+              className={showLayers ? "" : "text-foreground dark:text-gray-200"}
             >
               <Layers className="h-4 w-4 mr-2" />
               Layers
@@ -269,6 +272,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
               onClick={() => setShowProperties(!showProperties)}
               title="Properties Panel"
               data-testid="button-toggle-properties-header"
+              className={showProperties ? "" : "text-foreground dark:text-gray-200"}
             >
               <Settings className="h-4 w-4 mr-2" />
               Properties
