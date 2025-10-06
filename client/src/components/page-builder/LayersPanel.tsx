@@ -93,6 +93,8 @@ export function LayersPanel({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedElements, setExpandedElements] = useState<Set<string>>(new Set());
   const [draggedItem, setDraggedItem] = useState<any>(null);
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [editingLayerName, setEditingLayerName] = useState('');
 
   // DnD sensors
   const sensors = useSensors(
@@ -133,6 +135,40 @@ export function LayersPanel({
       }
       return next;
     });
+  }, []);
+
+  // Inline rename handlers
+  const handleStartEditing = useCallback((layerId: string, currentName: string) => {
+    setEditingLayerId(layerId);
+    setEditingLayerName(currentName);
+  }, []);
+
+  const handleFinishEditing = useCallback((layerId: string, isSection: boolean, currentConfig?: any) => {
+    if (!editingLayerName.trim()) {
+      setEditingLayerId(null);
+      return;
+    }
+
+    if (isSection && onUpdateSection) {
+      onUpdateSection(layerId, { name: editingLayerName.trim() });
+    } else if (!isSection && onUpdateElement) {
+      // CRITICAL: Merge with existing config to preserve hidden, locked, etc.
+      // Use empty object if currentConfig is undefined to ensure merge always works
+      onUpdateElement(layerId, { 
+        config: { 
+          ...(currentConfig || {}),
+          name: editingLayerName.trim() 
+        } 
+      });
+    }
+
+    setEditingLayerId(null);
+    setEditingLayerName('');
+  }, [editingLayerName, onUpdateSection, onUpdateElement]);
+
+  const handleCancelEditing = useCallback(() => {
+    setEditingLayerId(null);
+    setEditingLayerName('');
   }, []);
 
   // Get icon for element type
@@ -304,9 +340,28 @@ export function LayersPanel({
               
               <Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               
-              <span className="text-sm truncate flex-1">
-                {elementName}
-              </span>
+              {editingLayerId === element.id ? (
+                <Input
+                  value={editingLayerName}
+                  onChange={(e) => setEditingLayerName(e.target.value)}
+                  onBlur={() => handleFinishEditing(element.id, false, element.config)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleFinishEditing(element.id, false, element.config);
+                    if (e.key === 'Escape') handleCancelEditing();
+                  }}
+                  autoFocus
+                  className="h-6 text-sm flex-1"
+                  data-testid={`${testId}-element-rename-input`}
+                />
+              ) : (
+                <span 
+                  className="text-sm truncate flex-1 cursor-text"
+                  onDoubleClick={() => handleStartEditing(element.id, elementName)}
+                  data-testid={`${testId}-element-name`}
+                >
+                  {elementName}
+                </span>
+              )}
 
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {isLocked && <Lock className="h-3 w-3 text-muted-foreground" />}
@@ -381,6 +436,11 @@ export function LayersPanel({
     onUpdateElement, 
     onDuplicateElement, 
     onDeleteElement,
+    editingLayerId,
+    editingLayerName,
+    handleStartEditing,
+    handleFinishEditing,
+    handleCancelEditing,
     testId
   ]);
 
@@ -546,6 +606,12 @@ export function LayersPanel({
                     onDelete={onDeleteSection}
                     onHover={onHoverElement}
                     testId={testId}
+                    editingLayerId={editingLayerId}
+                    editingLayerName={editingLayerName}
+                    onStartEditing={handleStartEditing}
+                    onFinishEditing={handleFinishEditing}
+                    onCancelEditing={handleCancelEditing}
+                    setEditingLayerName={setEditingLayerName}
                   >
                     {section.rows?.map((row, rowIndex) => (
                       <div key={rowIndex}>
@@ -593,6 +659,12 @@ interface SortableSectionProps {
   onHover?: (elementId: string | null) => void;
   children: React.ReactNode;
   testId: string;
+  editingLayerId: string | null;
+  editingLayerName: string;
+  onStartEditing: (layerId: string, currentName: string) => void;
+  onFinishEditing: (layerId: string, isSection: boolean, currentConfig?: any) => void;
+  onCancelEditing: () => void;
+  setEditingLayerName: (name: string) => void;
 }
 
 function SortableSection({
@@ -606,7 +678,13 @@ function SortableSection({
   onDelete,
   onHover,
   children,
-  testId
+  testId,
+  editingLayerId,
+  editingLayerName,
+  onStartEditing,
+  onFinishEditing,
+  onCancelEditing,
+  setEditingLayerName
 }: SortableSectionProps) {
   const {
     attributes,
@@ -672,9 +750,28 @@ function SortableSection({
             
             <Layout className="h-4 w-4 text-muted-foreground" />
             
-            <span className="text-sm font-medium flex-1 truncate">
-              {sectionName}
-            </span>
+            {editingLayerId === section.id ? (
+              <Input
+                value={editingLayerName}
+                onChange={(e) => setEditingLayerName(e.target.value)}
+                onBlur={() => onFinishEditing(section.id, true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onFinishEditing(section.id, true);
+                  if (e.key === 'Escape') onCancelEditing();
+                }}
+                autoFocus
+                className="h-6 text-sm flex-1 font-medium"
+                data-testid={`${testId}-section-rename-input`}
+              />
+            ) : (
+              <span 
+                className="text-sm font-medium flex-1 truncate cursor-text"
+                onDoubleClick={() => onStartEditing(section.id, sectionName)}
+                data-testid={`${testId}-section-name`}
+              >
+                {sectionName}
+              </span>
+            )}
 
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">
