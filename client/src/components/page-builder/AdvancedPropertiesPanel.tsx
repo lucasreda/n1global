@@ -21,7 +21,10 @@ import {
   LayoutGrid,
   Anchor,
   Tablet,
-  Smartphone
+  Smartphone,
+  Zap,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { 
   UnitSliderInput, 
@@ -66,7 +69,8 @@ export function AdvancedPropertiesPanel({
     flexbox: false,
     grid: false,
     position: false,
-    structure: true
+    structure: true,
+    animations: false
   });
 
   // Determine current target (element or section)
@@ -1028,6 +1032,187 @@ export function AdvancedPropertiesPanel({
               </Collapsible>
             </>
           )}
+
+          {/* Animations & Transitions Section */}
+          <Separator />
+          <Collapsible 
+            open={openSections.animations}
+            onOpenChange={() => toggleSection('animations')}
+          >
+            <SectionHeader 
+              title="Animations & Transitions" 
+              icon={Zap} 
+              section="animations"
+              hasChanges={!!(target.transitions?.length || target.animations?.length)}
+            />
+            <CollapsibleContent>
+              <div className="px-3 pb-4 space-y-4">
+                {/* Transitions */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Transitions</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newTransition = {
+                          property: 'all',
+                          duration: '300ms',
+                          timingFunction: 'ease',
+                          delay: '0ms'
+                        };
+                        const currentTransitions = target.transitions || [];
+                        const newTransitions = [...currentTransitions, newTransition];
+                        
+                        if (selectedElement && onUpdateElement) {
+                          onUpdateElement(selectedElement.id, { transitions: newTransitions });
+                        } else if (selectedSection && onUpdateSection) {
+                          onUpdateSection(selectedSection.id, { transitions: newTransitions });
+                        }
+                      }}
+                      className="h-6 gap-1"
+                      data-testid={`${testId}-add-transition`}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add
+                    </Button>
+                  </div>
+
+                  {(!target.transitions || target.transitions.length === 0) && (
+                    <p className="text-xs text-muted-foreground">
+                      No transitions defined. Click "Add" to create one.
+                    </p>
+                  )}
+
+                  {target.transitions?.map((transition, index) => (
+                    <Card key={index} className="p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Transition {index + 1}</Label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newTransitions = target.transitions?.filter((_, i) => i !== index) || [];
+                            if (selectedElement && onUpdateElement) {
+                              onUpdateElement(selectedElement.id, { transitions: newTransitions });
+                            } else if (selectedSection && onUpdateSection) {
+                              onUpdateSection(selectedSection.id, { transitions: newTransitions });
+                            }
+                          }}
+                          className="h-6 w-6 p-0"
+                          data-testid={`${testId}-remove-transition-${index}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Property</Label>
+                        <Select
+                          value={transition.property}
+                          onValueChange={(value) => {
+                            const newTransitions = [...(target.transitions || [])];
+                            newTransitions[index] = { ...newTransitions[index], property: value };
+                            if (selectedElement && onUpdateElement) {
+                              onUpdateElement(selectedElement.id, { transitions: newTransitions });
+                            } else if (selectedSection && onUpdateSection) {
+                              onUpdateSection(selectedSection.id, { transitions: newTransitions });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8" data-testid={`${testId}-transition-property-${index}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="opacity">Opacity</SelectItem>
+                            <SelectItem value="transform">Transform</SelectItem>
+                            <SelectItem value="background-color">Background Color</SelectItem>
+                            <SelectItem value="color">Color</SelectItem>
+                            <SelectItem value="width">Width</SelectItem>
+                            <SelectItem value="height">Height</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <UnitSliderInput
+                        label="Duration"
+                        value={transition.duration || '300ms'}
+                        onChange={(value) => {
+                          const newTransitions = [...(target.transitions || [])];
+                          newTransitions[index] = { ...newTransitions[index], duration: value };
+                          if (selectedElement && onUpdateElement) {
+                            onUpdateElement(selectedElement.id, { transitions: newTransitions });
+                          } else if (selectedSection && onUpdateSection) {
+                            onUpdateSection(selectedSection.id, { transitions: newTransitions });
+                          }
+                        }}
+                        min={0}
+                        max={2000}
+                        step={50}
+                        units={['ms', 's']}
+                        data-testid={`${testId}-transition-duration-${index}`}
+                      />
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Timing Function</Label>
+                        <Select
+                          value={transition.timingFunction || 'ease'}
+                          onValueChange={(value) => {
+                            const newTransitions = [...(target.transitions || [])];
+                            newTransitions[index] = { ...newTransitions[index], timingFunction: value };
+                            if (selectedElement && onUpdateElement) {
+                              onUpdateElement(selectedElement.id, { transitions: newTransitions });
+                            } else if (selectedSection && onUpdateSection) {
+                              onUpdateSection(selectedSection.id, { transitions: newTransitions });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8" data-testid={`${testId}-transition-timing-${index}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ease">Ease</SelectItem>
+                            <SelectItem value="linear">Linear</SelectItem>
+                            <SelectItem value="ease-in">Ease In</SelectItem>
+                            <SelectItem value="ease-out">Ease Out</SelectItem>
+                            <SelectItem value="ease-in-out">Ease In Out</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <UnitSliderInput
+                        label="Delay"
+                        value={transition.delay || '0ms'}
+                        onChange={(value) => {
+                          const newTransitions = [...(target.transitions || [])];
+                          newTransitions[index] = { ...newTransitions[index], delay: value };
+                          if (selectedElement && onUpdateElement) {
+                            onUpdateElement(selectedElement.id, { transitions: newTransitions });
+                          } else if (selectedSection && onUpdateSection) {
+                            onUpdateSection(selectedSection.id, { transitions: newTransitions });
+                          }
+                        }}
+                        min={0}
+                        max={2000}
+                        step={50}
+                        units={['ms', 's']}
+                        data-testid={`${testId}-transition-delay-${index}`}
+                      />
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Animations placeholder for future expansion */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Keyframe Animations</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Keyframe animation editor coming soon.
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </ScrollArea>
     </Card>

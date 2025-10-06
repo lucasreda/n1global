@@ -4287,6 +4287,27 @@ export type BlockElement = {
     };
   };
   
+  // V3 compatibility: Transitions and animations
+  transitions?: Array<{
+    property: string;
+    duration?: string;
+    timingFunction?: string;
+    delay?: string;
+  }>;
+  animations?: Array<{
+    name: string;
+    duration?: string;
+    timingFunction?: string;
+    delay?: string;
+    iterationCount?: number | 'infinite';
+    direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+    fillMode?: 'none' | 'forwards' | 'backwards' | 'both';
+    keyframes: Array<{
+      offset: number;
+      styles: Record<string, any>;
+    }>;
+  }>;
+  
   // Configuration for structural elements (container & block)
   config?: {
     // For block type - number of columns
@@ -4410,6 +4431,25 @@ export type BlockSection = {
       mobile?: Record<string, any>;
     };
   };
+  transitions?: Array<{
+    property: string;
+    duration?: string;
+    timingFunction?: string;
+    delay?: string;
+  }>;
+  animations?: Array<{
+    name: string;
+    duration?: string;
+    timingFunction?: string;
+    delay?: string;
+    iterationCount?: number | 'infinite';
+    direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+    fillMode?: 'none' | 'forwards' | 'backwards' | 'both';
+    keyframes: Array<{
+      offset: number;
+      styles: Record<string, any>;
+    }>;
+  }>;
   settings: {
     containerWidth?: 'full' | 'container' | 'narrow';
     verticalAlign?: 'top' | 'center' | 'bottom';
