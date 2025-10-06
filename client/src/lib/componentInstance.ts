@@ -1,0 +1,431 @@
+import { nanoid } from 'nanoid';
+import type {
+  BlockElementV3,
+  ComponentDefinitionV3,
+  ComponentInstanceData,
+  ElementOverrides,
+  InstanceOverridesMap,
+  ValueOverride,
+} from '@shared/schema';
+
+/**
+ * Component Instance Utilities
+ * Implements instance resolution, override management, and sync logic
+ * Following Architect plan for FASE 3.1.1
+ */
+
+// ============================================================================
+// Instance Resolution - Clone base + apply overrides
+// ============================================================================
+
+/**
+ * Resolves a component instance by cloning the base element and applying overrides
+ * @param instanceElement - The instance element (type === 'componentInstance')
+ * @param components - Available component definitions
+ * @returns Resolved element tree with overrides applied
+ */
+export function resolveComponentInstance(
+  instanceElement: BlockElementV3,
+  components: ComponentDefinitionV3[]
+): BlockElementV3 | null {
+  if (!instanceElement.instanceData) {
+    console.warn('resolveComponentInstance: element has no instanceData');
+    return null;
+  }
+
+  const { componentId, overrides } = instanceElement.instanceData;
+  
+  // Find base component
+  const baseComponent = components.find(c => c.id === componentId);
+  if (!baseComponent) {
+    console.warn(`resolveComponentInstance: component not found: ${componentId}`);
+    return null;
+  }
+
+  // Deep clone base element
+  const resolved = deepCloneElement(baseComponent.element);
+  
+  // Apply overrides recursively
+  applyOverridesToTree(resolved, overrides);
+  
+  return resolved;
+}
+
+/**
+ * Deep clone an element tree (prevents mutation of base component)
+ */
+function deepCloneElement(element: BlockElementV3): BlockElementV3 {
+  return JSON.parse(JSON.stringify(element));
+}
+
+/**
+ * Recursively apply overrides to an element tree
+ */
+function applyOverridesToTree(
+  element: BlockElementV3,
+  overrides: InstanceOverridesMap
+): void {
+  const elementOverrides = overrides[element.id];
+  
+  if (elementOverrides) {
+    // Apply prop overrides
+    if (elementOverrides.props && element.props) {
+      for (const [key, override] of Object.entries(elementOverrides.props)) {
+        if (override.isOverridden) {
+          element.props[key] = override.value;
+        }
+      }
+    }
+    
+    // Apply style overrides (responsive)
+    if (elementOverrides.styles && element.styles) {
+      applyResponsiveOverrides(element.styles, elementOverrides.styles);
+    }
+    
+    // Apply state overrides
+    if (elementOverrides.states && element.states) {
+      applyStateOverrides(element.states, elementOverrides.states);
+    }
+    
+    // Apply content override
+    if (elementOverrides.content?.isOverridden && element.props) {
+      element.props.content = elementOverrides.content.value;
+    }
+    
+    // Apply visibility override
+    if (elementOverrides.visible?.isOverridden && element.settings) {
+      element.settings.visible = elementOverrides.visible.value;
+    }
+  }
+  
+  // Recursively apply to children
+  if (element.children) {
+    for (const child of element.children) {
+      applyOverridesToTree(child, overrides);
+    }
+  }
+}
+
+/**
+ * Apply responsive style overrides
+ */
+function applyResponsiveOverrides(
+  baseStyles: any,
+  overrideStyles: ElementOverrides['styles']
+): void {
+  if (!overrideStyles) return;
+  
+  const breakpoints = ['desktop', 'tablet', 'mobile'] as const;
+  
+  for (const breakpoint of breakpoints) {
+    const bpOverrides = overrideStyles[breakpoint];
+    if (!bpOverrides) continue;
+    
+    if (!baseStyles[breakpoint]) {
+      baseStyles[breakpoint] = {};
+    }
+    
+    for (const [key, override] of Object.entries(bpOverrides)) {
+      if (override.isOverridden) {
+        baseStyles[breakpoint][key] = override.value;
+      }
+    }
+  }
+}
+
+/**
+ * Apply state style overrides
+ */
+function applyStateOverrides(
+  baseStates: any,
+  overrideStates: ElementOverrides['states']
+): void {
+  if (!overrideStates) return;
+  
+  const states = ['default', 'hover', 'focus', 'active', 'disabled'] as const;
+  
+  for (const state of states) {
+    const stateOverrides = overrideStates[state];
+    if (!stateOverrides) continue;
+    
+    if (!baseStates[state]) {
+      baseStates[state] = {};
+    }
+    
+    for (const [key, override] of Object.entries(stateOverrides)) {
+      if (override.isOverridden) {
+        baseStates[state][key] = override.value;
+      }
+    }
+  }
+}
+
+// ============================================================================
+// Instance Creation
+// ============================================================================
+
+/**
+ * Create a new component instance from a component definition
+ * @param component - The base component definition
+ * @returns Instance element with instanceData
+ */
+export function createComponentInstance(
+  component: ComponentDefinitionV3
+): BlockElementV3 {
+  const instanceId = nanoid();
+  
+  return {
+    id: nanoid(),
+    type: 'componentInstance',
+    instanceData: {
+      componentId: component.id,
+      instanceId,
+      overrides: {},
+      lastSyncedAt: new Date().toISOString(),
+    },
+  };
+}
+
+// ============================================================================
+// Override Management
+// ============================================================================
+
+/**
+ * Set an override on a specific element within an instance
+ */
+export function setOverride(
+  instanceData: ComponentInstanceData,
+  elementId: string,
+  category: keyof ElementOverrides,
+  key: string,
+  value: any
+): ComponentInstanceData {
+  const overrides = { ...instanceData.overrides };
+  
+  if (!overrides[elementId]) {
+    overrides[elementId] = {};
+  }
+  
+  const elementOverrides = { ...overrides[elementId] };
+  
+  if (category === 'props' || category === 'content' || category === 'visible') {
+    // Simple value override
+    elementOverrides[category] = { value, isOverridden: true } as any;
+  } else if (category === 'styles' || category === 'states') {
+    // Nested override (breakpoint or state)
+    const parts = key.split('.');
+    if (parts.length === 2) {
+      const [breakpointOrState, property] = parts;
+      
+      if (!elementOverrides[category]) {
+        elementOverrides[category] = {};
+      }
+      
+      const nested = { ...(elementOverrides[category] as any) };
+      if (!nested[breakpointOrState]) {
+        nested[breakpointOrState] = {};
+      }
+      
+      nested[breakpointOrState][property] = { value, isOverridden: true };
+      (elementOverrides[category] as any) = nested;
+    }
+  }
+  
+  overrides[elementId] = elementOverrides;
+  
+  return {
+    ...instanceData,
+    overrides,
+  };
+}
+
+/**
+ * Reset an override (remove it, revert to base component value)
+ */
+export function resetOverride(
+  instanceData: ComponentInstanceData,
+  elementId: string,
+  category: keyof ElementOverrides,
+  key?: string
+): ComponentInstanceData {
+  const overrides = { ...instanceData.overrides };
+  
+  if (!overrides[elementId]) {
+    return instanceData;
+  }
+  
+  const elementOverrides = { ...overrides[elementId] };
+  
+  if (!key) {
+    // Reset entire category
+    delete elementOverrides[category];
+  } else {
+    // Reset specific key
+    if (category === 'styles' || category === 'states') {
+      const parts = key.split('.');
+      if (parts.length === 2) {
+        const [breakpointOrState, property] = parts;
+        const nested = { ...(elementOverrides[category] as any) };
+        
+        if (nested[breakpointOrState]) {
+          const breakpointObj = { ...nested[breakpointOrState] };
+          delete breakpointObj[property];
+          
+          if (Object.keys(breakpointObj).length === 0) {
+            delete nested[breakpointOrState];
+          } else {
+            nested[breakpointOrState] = breakpointObj;
+          }
+        }
+        
+        (elementOverrides[category] as any) = nested;
+      }
+    } else {
+      delete (elementOverrides as any)[key];
+    }
+  }
+  
+  // Clean up empty override object
+  if (Object.keys(elementOverrides).length === 0) {
+    delete overrides[elementId];
+  } else {
+    overrides[elementId] = elementOverrides;
+  }
+  
+  return {
+    ...instanceData,
+    overrides,
+  };
+}
+
+/**
+ * Reset all overrides for an element
+ */
+export function resetAllOverrides(
+  instanceData: ComponentInstanceData,
+  elementId: string
+): ComponentInstanceData {
+  const overrides = { ...instanceData.overrides };
+  delete overrides[elementId];
+  
+  return {
+    ...instanceData,
+    overrides,
+  };
+}
+
+/**
+ * Detach instance from component (convert to standalone element)
+ * Returns the resolved element tree without instance metadata
+ */
+export function detachInstance(
+  instanceElement: BlockElementV3,
+  components: ComponentDefinitionV3[]
+): BlockElementV3 | null {
+  const resolved = resolveComponentInstance(instanceElement, components);
+  
+  if (!resolved) {
+    return null;
+  }
+  
+  // Remove instance metadata
+  delete resolved.instanceData;
+  
+  // Regenerate all IDs to avoid conflicts
+  regenerateIds(resolved);
+  
+  return resolved;
+}
+
+/**
+ * Regenerate all IDs in an element tree
+ */
+function regenerateIds(element: BlockElementV3): void {
+  element.id = nanoid();
+  
+  if (element.children) {
+    for (const child of element.children) {
+      regenerateIds(child);
+    }
+  }
+}
+
+// ============================================================================
+// Instance Detection & Helpers
+// ============================================================================
+
+/**
+ * Check if an element is a component instance
+ */
+export function isComponentInstance(element: BlockElementV3): boolean {
+  return element.type === 'componentInstance' && !!element.instanceData;
+}
+
+/**
+ * Get all instances of a specific component in a page model
+ */
+export function findComponentInstances(
+  sections: any[],
+  componentId: string
+): BlockElementV3[] {
+  const instances: BlockElementV3[] = [];
+  
+  function traverse(element: BlockElementV3) {
+    if (isComponentInstance(element) && element.instanceData?.componentId === componentId) {
+      instances.push(element);
+    }
+    
+    if (element.children) {
+      for (const child of element.children) {
+        traverse(child);
+      }
+    }
+  }
+  
+  // Traverse all sections
+  for (const section of sections) {
+    if (section.rows) {
+      for (const row of section.rows) {
+        if (row.columns) {
+          for (const column of row.columns) {
+            if (column.elements) {
+              for (const element of column.elements) {
+                traverse(element);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return instances;
+}
+
+/**
+ * Check if an override exists for a specific property
+ */
+export function hasOverride(
+  instanceData: ComponentInstanceData,
+  elementId: string,
+  category: keyof ElementOverrides,
+  key?: string
+): boolean {
+  const elementOverrides = instanceData.overrides[elementId];
+  if (!elementOverrides) return false;
+  
+  if (!key) {
+    return !!elementOverrides[category];
+  }
+  
+  if (category === 'styles' || category === 'states') {
+    const parts = key.split('.');
+    if (parts.length === 2) {
+      const [breakpointOrState, property] = parts;
+      const nested = (elementOverrides[category] as any)?.[breakpointOrState];
+      return nested?.[property]?.isOverridden === true;
+    }
+  }
+  
+  return (elementOverrides as any)[key]?.isOverridden === true;
+}

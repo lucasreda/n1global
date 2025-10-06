@@ -4672,18 +4672,60 @@ export type DesignTokensV3 = {
   breakpoints?: Record<string, string>;
 };
 
+// ============================================================================
+// Component Instance System - Overrides & References
+// ============================================================================
+
+// Individual property override tracking
+export type ValueOverride<T = any> = {
+  value: T;
+  isOverridden: boolean; // true if modified from base component
+};
+
+// Overrides for a specific element in an instance
+export type ElementOverrides = {
+  props?: Record<string, ValueOverride>; // text, href, src, etc.
+  styles?: {
+    desktop?: Record<string, ValueOverride>;
+    tablet?: Record<string, ValueOverride>;
+    mobile?: Record<string, ValueOverride>;
+  };
+  states?: {
+    default?: Record<string, ValueOverride>;
+    hover?: Record<string, ValueOverride>;
+    focus?: Record<string, ValueOverride>;
+    active?: Record<string, ValueOverride>;
+    disabled?: Record<string, ValueOverride>;
+  };
+  content?: ValueOverride<string>; // For text content overrides
+  visible?: ValueOverride<boolean>; // Show/hide element
+};
+
+// Map of element ID to its overrides
+export type InstanceOverridesMap = Record<string, ElementOverrides>;
+
+// Component instance metadata (stored in element when type === 'componentInstance')
+export type ComponentInstanceData = {
+  componentId: string; // Reference to ComponentDefinitionV3.id
+  instanceId: string; // Unique ID for this instance
+  overrides: InstanceOverridesMap; // Overridden properties per element
+  detachedFrom?: string; // If detached, original componentId
+  lastSyncedAt?: string; // ISO timestamp of last sync
+};
+
 export type ComponentDefinitionV3 = {
   id: string;
   name: string;
   category?: string;
   element: BlockElementV3;
   thumbnail?: string;
+  updatedAt?: string; // ISO timestamp for sync detection
 };
 
 // Element types from converter: heading, text, button, image, link, etc.
 export type BlockElementV3 = {
   id: string;
-  type: string; // More flexible: heading, text, button, image, link, container, etc.
+  type: string; // More flexible: heading, text, button, image, link, container, componentInstance, etc.
   
   // Props for element (text content, href, src, etc.)
   props?: Record<string, any>;
@@ -4714,8 +4756,11 @@ export type BlockElementV3 = {
     [key: string]: any;
   };
   
-  // Component reference
+  // Component reference (legacy, for simple references)
   componentId?: string;
+  
+  // Component Instance metadata (when type === 'componentInstance')
+  instanceData?: ComponentInstanceData;
 };
 
 export type BlockColumnV3 = {
