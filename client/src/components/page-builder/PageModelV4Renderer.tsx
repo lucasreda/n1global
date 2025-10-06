@@ -122,7 +122,7 @@ function PageNodeV4Renderer({
   };
 
   // Handle hover events
-  const handleMouseEnterNode = (e: React.MouseEvent<HTMLElement>) => {
+  const handleMouseEnterNode = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onMouseEnter) {
       const rect = e.currentTarget.getBoundingClientRect();
