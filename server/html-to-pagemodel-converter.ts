@@ -2280,9 +2280,58 @@ function computeElementStylesV4(
       Object.assign(desktopStyles, inlineStyles);
     }
     
-    // CRITICAL: Default text color if not defined (prevents invisible text)
+    // CRITICAL: Apply browser-like defaults for common elements
     if (!desktopStyles.color) {
-      desktopStyles.color = '#000000';
+      desktopStyles.color = '#000000'; // Default text color
+    }
+    
+    // Apply default heading styles (browser defaults)
+    if (tag === 'h1' && !desktopStyles.fontSize) {
+      desktopStyles.fontSize = '2em';
+      desktopStyles.fontWeight = 'bold';
+      if (!desktopStyles.marginTop) desktopStyles.marginTop = '0.67em';
+      if (!desktopStyles.marginBottom) desktopStyles.marginBottom = '0.67em';
+    } else if (tag === 'h2' && !desktopStyles.fontSize) {
+      desktopStyles.fontSize = '1.5em';
+      desktopStyles.fontWeight = 'bold';
+      if (!desktopStyles.marginTop) desktopStyles.marginTop = '0.83em';
+      if (!desktopStyles.marginBottom) desktopStyles.marginBottom = '0.83em';
+    } else if (tag === 'h3' && !desktopStyles.fontSize) {
+      desktopStyles.fontSize = '1.17em';
+      desktopStyles.fontWeight = 'bold';
+      if (!desktopStyles.marginTop) desktopStyles.marginTop = '1em';
+      if (!desktopStyles.marginBottom) desktopStyles.marginBottom = '1em';
+    } else if (tag === 'h4' && !desktopStyles.fontSize) {
+      desktopStyles.fontSize = '1em';
+      desktopStyles.fontWeight = 'bold';
+      if (!desktopStyles.marginTop) desktopStyles.marginTop = '1.33em';
+      if (!desktopStyles.marginBottom) desktopStyles.marginBottom = '1.33em';
+    } else if (tag === 'h5' && !desktopStyles.fontSize) {
+      desktopStyles.fontSize = '0.83em';
+      desktopStyles.fontWeight = 'bold';
+      if (!desktopStyles.marginTop) desktopStyles.marginTop = '1.67em';
+      if (!desktopStyles.marginBottom) desktopStyles.marginBottom = '1.67em';
+    } else if (tag === 'h6' && !desktopStyles.fontSize) {
+      desktopStyles.fontSize = '0.67em';
+      desktopStyles.fontWeight = 'bold';
+      if (!desktopStyles.marginTop) desktopStyles.marginTop = '2.33em';
+      if (!desktopStyles.marginBottom) desktopStyles.marginBottom = '2.33em';
+    }
+    
+    // Apply default paragraph margins
+    if (tag === 'p') {
+      if (!desktopStyles.marginTop) desktopStyles.marginTop = '1em';
+      if (!desktopStyles.marginBottom) desktopStyles.marginBottom = '1em';
+    }
+    
+    // Apply default bold for <strong> and <b>
+    if ((tag === 'strong' || tag === 'b') && !desktopStyles.fontWeight) {
+      desktopStyles.fontWeight = 'bold';
+    }
+    
+    // Apply default italic for <em> and <i>
+    if ((tag === 'em' || tag === 'i') && !desktopStyles.fontStyle) {
+      desktopStyles.fontStyle = 'italic';
     }
     
     if (Object.keys(desktopStyles).length > 0) styles.desktop = desktopStyles;
