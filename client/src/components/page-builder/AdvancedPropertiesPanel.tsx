@@ -38,6 +38,7 @@ import { BoxModelInspector } from './inspector/BoxModelInspector';
 import { ColorPickerProfessional } from './inspector/ColorPickerProfessional';
 import { FontFamilySelectorProfessional } from './inspector/FontFamilySelectorProfessional';
 import { BlockElement, BlockSection } from '@shared/schema';
+import { resetOverride } from '@/lib/componentInstance';
 
 export type Breakpoint = 'desktop' | 'tablet' | 'mobile';
 
@@ -51,6 +52,60 @@ interface AdvancedPropertiesPanelProps {
 }
 
 export type PseudoClass = 'default' | 'hover' | 'focus' | 'active' | 'disabled';
+
+/**
+ * Check if a style property is overridden in an instance
+ */
+function isPropertyOverridden(
+  element: BlockElement | null | undefined,
+  breakpoint: Breakpoint,
+  property: string
+): boolean {
+  if (!element?.instanceData?.overrides) return false;
+  
+  const elementOverrides = element.instanceData.overrides[element.id];
+  if (!elementOverrides?.styles) return false;
+  
+  const bpOverrides = elementOverrides.styles[breakpoint];
+  return !!bpOverrides?.[property]?.isOverridden;
+}
+
+/**
+ * Visual indicator for overridden properties
+ */
+function OverrideIndicator({ 
+  element, 
+  breakpoint, 
+  property,
+  onReset 
+}: { 
+  element: BlockElement | null | undefined; 
+  breakpoint: Breakpoint;
+  property: string;
+  onReset: () => void;
+}) {
+  const isOverridden = isPropertyOverridden(element, breakpoint, property);
+  
+  if (!isOverridden) return null;
+  
+  return (
+    <div className="flex items-center gap-1 ml-2">
+      <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/20">
+        Override
+      </Badge>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-0"
+        onClick={onReset}
+        title="Reset to component default"
+        data-testid={`reset-override-${property}`}
+      >
+        <RotateCcw className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+}
 
 export function AdvancedPropertiesPanel({
   selectedElement,
@@ -269,6 +324,22 @@ export function AdvancedPropertiesPanel({
     const newConfig = { ...selectedElement.config, ...updates };
     onUpdateElement(selectedElement.id, { config: newConfig });
   }, [selectedElement, onUpdateElement]);
+
+  // Reset override for a specific property (for instances)
+  const handleResetOverride = useCallback((property: string) => {
+    if (!selectedElement?.instanceData || !onUpdateElement) return;
+    
+    // Reset the override for this property at the current breakpoint
+    const key = `${activeBreakpoint}.${property}`;
+    const newInstanceData = resetOverride(
+      selectedElement.instanceData,
+      selectedElement.id,
+      'styles',
+      key
+    );
+    
+    onUpdateElement(selectedElement.id, { instanceData: newInstanceData });
+  }, [selectedElement, activeBreakpoint, onUpdateElement]);
 
   // Reset styles for current section (breakpoint-aware)
   const resetSection = useCallback((section: string) => {
@@ -628,12 +699,20 @@ export function AdvancedPropertiesPanel({
                     </Select>
                   </div>
 
-                  <ColorPickerProfessional
-                    label="Text Color"
-                    value={getStyleValue('color', '#000000')}
-                    onChange={(value) => handleStyleUpdate({ color: value })}
-                    data-testid={`${testId}-text-color`}
-                  />
+                  <div className="flex items-center gap-2">
+                    <ColorPickerProfessional
+                      label="Text Color"
+                      value={getStyleValue('color', '#000000')}
+                      onChange={(value) => handleStyleUpdate({ color: value })}
+                      data-testid={`${testId}-text-color`}
+                    />
+                    <OverrideIndicator
+                      element={selectedElement}
+                      breakpoint={activeBreakpoint}
+                      property="color"
+                      onReset={() => handleResetOverride('color')}
+                    />
+                  </div>
                 </div>
               </CollapsibleContent>
             </Collapsible>
