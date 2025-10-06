@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Save, Eye } from "lucide-react";
+import { ArrowLeft, Save, Eye, Undo2, Redo2, Layers, Settings, Plus } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { PageModelV4 } from "@shared/schema";
 import { isPageModelV4 } from "@shared/pageModelAdapter";
 import { VisualEditorV4 } from "@/components/page-builder/VisualEditorV4";
+import { useHistoryV4 } from "@/components/page-builder/HistoryManagerV4";
 import { BreakpointSelector } from "@/components/page-builder/BreakpointSelector";
 
 interface AffiliateLandingPage {
@@ -40,6 +41,17 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   const [currentModel, setCurrentModel] = useState<PageModelV4 | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [showLayers, setShowLayers] = useState(false);
+  const [showProperties, setShowProperties] = useState(true);
+  const [showElements, setShowElements] = useState(true);
+
+  // History/Undo-Redo
+  const defaultModel: PageModelV4 = { 
+    version: "4.0", 
+    nodes: [], 
+    meta: { title: "", description: "" } 
+  };
+  const { addToHistory, undo, redo, canUndo, canRedo } = useHistoryV4(currentModel || defaultModel);
 
   // Fetch landing page data
   const { data: pageResponse, isLoading, error } = useQuery({
@@ -57,10 +69,8 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   // Initialize model when data loads
   useEffect(() => {
     if (pageResponse) {
-      // Handle both direct response and wrapped response
       const loadedPage = pageResponse.landingPage || pageResponse;
       
-      // ✅ V4-only: Validate model is PageModelV4
       if (loadedPage.model) {
         if (!isPageModelV4(loadedPage.model)) {
           console.error('❌ Only PageModelV4 is supported. Please convert HTML to V4 first.');
@@ -75,7 +85,6 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
         setCurrentModel(loadedPage.model);
         console.log('✅ Loaded PageModelV4 for editing');
       } else {
-        // No model - show error (should import HTML first)
         toast({
           title: "Modelo não encontrado",
           description: "Esta landing page não possui um modelo visual. Importe o HTML primeiro.",
@@ -124,9 +133,26 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     }
   };
 
-  const handleModelChange = (newModel: PageModelV4) => {
+  const handleModelChange = useCallback((newModel: PageModelV4) => {
     setCurrentModel(newModel);
     setIsDirty(true);
+    addToHistory(newModel, 'Edit');
+  }, [addToHistory]);
+
+  const handleUndo = () => {
+    const previousModel = undo();
+    if (previousModel && currentModel) {
+      setCurrentModel(previousModel);
+      setIsDirty(true);
+    }
+  };
+
+  const handleRedo = () => {
+    const nextModel = redo();
+    if (nextModel && currentModel) {
+      setCurrentModel(nextModel);
+      setIsDirty(true);
+    }
   };
 
   const handlePreview = () => {
@@ -192,12 +218,73 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Undo/Redo Controls */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              data-testid="button-undo-header"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRedo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+              data-testid="button-redo-header"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+
+            <div className="w-px h-6 bg-border mx-1" />
+
+            {/* Panel Toggles */}
+            <Button
+              variant={showElements ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setShowElements(!showElements)}
+              title="Elements Panel"
+              data-testid="button-toggle-elements-header"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Elements
+            </Button>
+            <Button
+              variant={showLayers ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setShowLayers(!showLayers)}
+              title="Layers Panel"
+              data-testid="button-toggle-layers-header"
+            >
+              <Layers className="h-4 w-4 mr-2" />
+              Layers
+            </Button>
+            <Button
+              variant={showProperties ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setShowProperties(!showProperties)}
+              title="Properties Panel"
+              data-testid="button-toggle-properties-header"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Properties
+            </Button>
+
+            <div className="w-px h-6 bg-border mx-1" />
+
+            {/* Viewport Selector */}
             <BreakpointSelector
               activeBreakpoint={viewport as 'desktop' | 'tablet' | 'mobile'}
               onChange={setViewport}
               data-testid="page-breakpoint-selector"
             />
             
+            <div className="w-px h-6 bg-border mx-1" />
+
             {pageData.vercelDeploymentUrl && (
               <Button
                 variant="outline"
@@ -239,6 +326,9 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
           onChange={handleModelChange}
           viewport={viewport}
           onViewportChange={setViewport}
+          showElements={showElements}
+          showLayers={showLayers}
+          showProperties={showProperties}
         />
       </div>
     </div>
