@@ -18,7 +18,7 @@ import {
   DragEndEvent,
   DragOverEvent,
 } from '@dnd-kit/core';
-import { findNodePath, removeNodeByPath, insertNodeAtPath, canAcceptChild } from './tree-helpers';
+import { findNodePath, removeNodeByPathWithReturn, insertNodeAtPath, canAcceptChild } from './tree-helpers';
 
 interface VisualEditorV4Props {
   model: PageModelV4;
@@ -279,35 +279,33 @@ export function VisualEditorV4({
       const sourcePath = findNodePath(model.nodes, activeData.nodeId);
       if (!sourcePath) return;
       
-      const sourceNode = findNodeInTree(model.nodes, activeData.nodeId);
-      if (!sourceNode) return;
-      
-      // Remove from original position
-      let newNodes = removeNodeByPath(model.nodes, sourcePath);
+      // Remove from original position and get the removed node
+      const { updatedTree, removedNode } = removeNodeByPathWithReturn(model.nodes, sourcePath);
+      if (!removedNode) return;
       
       if (!overData) {
-        // Drop on canvas root
-        newNodes = [...newNodes, JSON.parse(JSON.stringify(sourceNode))];
-        onChange({ ...model, nodes: newNodes });
+        // Drop on canvas root - reuse removed node directly
+        onChange({ ...model, nodes: [...updatedTree, removedNode] });
         return;
       }
       
       if (overData.kind === 'node') {
         // Find new target path after removal
-        const targetPath = findNodePath(newNodes, overData.nodeId);
+        const targetPath = findNodePath(updatedTree, overData.nodeId);
         if (!targetPath) return;
         
-        const targetNode = findNodeInTree(newNodes, overData.nodeId);
+        const targetNode = findNodeInTree(updatedTree, overData.nodeId);
         
-        // Insert at new position
+        // Insert at new position - reuse removed node directly
+        let finalNodes: PageNodeV4[];
         if (overData.position === 'child' && targetNode && canAcceptChild(targetNode)) {
-          newNodes = insertNodeAtPath(newNodes, targetPath, JSON.parse(JSON.stringify(sourceNode)), 'child');
+          finalNodes = insertNodeAtPath(updatedTree, targetPath, removedNode, 'child');
         } else {
           const position = overData.position || 'after';
-          newNodes = insertNodeAtPath(newNodes, targetPath, JSON.parse(JSON.stringify(sourceNode)), position);
+          finalNodes = insertNodeAtPath(updatedTree, targetPath, removedNode, position);
         }
         
-        onChange({ ...model, nodes: newNodes });
+        onChange({ ...model, nodes: finalNodes });
       }
     }
   }, [model, onChange]);

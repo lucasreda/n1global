@@ -55,6 +55,47 @@ export function removeNodeByPath(nodes: PageNodeV4[], path: NodePath): PageNodeV
   return newNodes;
 }
 
+export function removeNodeByPathWithReturn(
+  nodes: PageNodeV4[], 
+  path: NodePath
+): { updatedTree: PageNodeV4[], removedNode: PageNodeV4 | null } {
+  if (path.length === 0) return { updatedTree: nodes, removedNode: null };
+  
+  // First, find and extract the original node WITHOUT cloning
+  let removedNode: PageNodeV4 | null = null;
+  
+  if (path.length === 1) {
+    // Direct child of root - extract original node
+    const nodeToRemove = nodes[path[0]];
+    removedNode = nodeToRemove;
+  } else {
+    // Nested node - traverse to find original
+    let current: PageNodeV4[] = nodes;
+    for (let i = 0; i < path.length - 1; i++) {
+      const node = current[path[i]];
+      current = node.children || [];
+    }
+    removedNode = current[path[path.length - 1]];
+  }
+  
+  // Now clone the tree and remove the node from the clone
+  const newNodes = JSON.parse(JSON.stringify(nodes)) as PageNodeV4[];
+  
+  if (path.length === 1) {
+    newNodes.splice(path[0], 1);
+  } else {
+    let current: PageNodeV4[] = newNodes;
+    for (let i = 0; i < path.length - 1; i++) {
+      const node = current[path[i]];
+      current = node.children || [];
+    }
+    current.splice(path[path.length - 1], 1);
+  }
+  
+  // Return the cloned tree (without the node) and the ORIGINAL node
+  return { updatedTree: newNodes, removedNode };
+}
+
 export function insertNodeAtPath(
   nodes: PageNodeV4[], 
   path: NodePath, 
@@ -99,7 +140,19 @@ export function insertNodeAtPath(
 }
 
 export function canAcceptChild(node: PageNodeV4): boolean {
-  const containerTypes = ['container', 'section', 'header', 'footer', 'nav', 'main', 'aside', 'article'];
-  return containerTypes.includes(node.type) || 
-         ['div', 'section', 'header', 'footer', 'nav', 'main', 'aside', 'article', 'ul', 'ol'].includes(node.tag);
+  // Allowlist: Only true containers can accept children
+  const containerTypes = ['container', 'section', 'column', 'block', 'row'];
+  const containerTags = ['div', 'section', 'header', 'footer', 'nav', 'main', 'aside', 'article', 'ul', 'ol'];
+  
+  // Denylist: Leaf elements that should never accept children
+  const leafTypes = ['text', 'button', 'link', 'image', 'video', 'input'];
+  const leafTags = ['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'button', 'a', 'img', 'video', 'input', 'textarea', 'hr', 'br'];
+  
+  // Explicitly deny leaf elements
+  if (leafTypes.includes(node.type) || leafTags.includes(node.tag)) {
+    return false;
+  }
+  
+  // Accept only if it's a known container
+  return containerTypes.includes(node.type) || containerTags.includes(node.tag);
 }

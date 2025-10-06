@@ -109,20 +109,34 @@ function PageNodeV4Renderer({
     },
   });
 
-  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: `drop-${node.id}`,
+  // Three separate drop zones: before, after, inner
+  const { setNodeRef: setBeforeDropRef, isOver: isOverBefore } = useDroppable({
+    id: `drop-before-${node.id}`,
     data: {
       kind: 'node',
       nodeId: node.id,
-      position: canAcceptChild(node) ? 'child' : 'after',
+      position: 'before',
     },
   });
 
-  // Combine refs
-  const setRefs = useCallback((el: Element | null) => {
-    setDraggableRef(el as HTMLElement | null);
-    setDroppableRef(el as HTMLElement | null);
-  }, [setDraggableRef, setDroppableRef]);
+  const { setNodeRef: setAfterDropRef, isOver: isOverAfter } = useDroppable({
+    id: `drop-after-${node.id}`,
+    data: {
+      kind: 'node',
+      nodeId: node.id,
+      position: 'after',
+    },
+  });
+
+  const { setNodeRef: setInnerDropRef, isOver: isOverInner } = useDroppable({
+    id: `drop-inner-${node.id}`,
+    data: {
+      kind: 'node',
+      nodeId: node.id,
+      position: 'child',
+    },
+    disabled: !canAcceptChild(node),
+  });
   
   // Get styles for current breakpoint
   const styles = node.styles?.[breakpoint] || {};
@@ -171,26 +185,45 @@ function PageNodeV4Renderer({
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
     return (
-      <span
-        ref={setRefs}
-        {...draggableAttributes}
-        {...draggableListeners}
-        data-node-id={node.id}
-        data-testid={`node-text-${node.id}`}
-        className={cn(
-          node.classNames?.join(' '),
-          isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-          isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
-          isDragging && 'opacity-30',
-          isOver && 'ring-2 ring-green-500 ring-offset-2'
-        )}
-        style={finalStyles}
-        onClick={handleClick}
-        onMouseEnter={handleMouseEnterNode}
-        onMouseLeave={handleMouseLeaveNode}
-      >
-        {node.textContent}
-      </span>
+      <div className="relative">
+        {/* Before drop zone */}
+        <div 
+          ref={setBeforeDropRef}
+          className={cn(
+            "absolute top-0 left-0 right-0 h-1 -translate-y-1/2 z-10",
+            isOverBefore && "bg-blue-500 h-0.5"
+          )}
+        />
+        
+        <span
+          ref={setDraggableRef}
+          {...draggableAttributes}
+          {...draggableListeners}
+          data-node-id={node.id}
+          data-testid={`node-text-${node.id}`}
+          className={cn(
+            node.classNames?.join(' '),
+            isSelected && 'ring-2 ring-blue-500 ring-offset-2',
+            isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
+            isDragging && 'opacity-30'
+          )}
+          style={finalStyles}
+          onClick={handleClick}
+          onMouseEnter={handleMouseEnterNode}
+          onMouseLeave={handleMouseLeaveNode}
+        >
+          {node.textContent}
+        </span>
+        
+        {/* After drop zone */}
+        <div 
+          ref={setAfterDropRef}
+          className={cn(
+            "absolute bottom-0 left-0 right-0 h-1 translate-y-1/2 z-10",
+            isOverAfter && "bg-blue-500 h-0.5"
+          )}
+        />
+      </div>
     );
   }
   
@@ -212,8 +245,63 @@ function PageNodeV4Renderer({
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
   if (isSelfClosing) {
     return (
+      <div className="relative">
+        {/* Before drop zone */}
+        <div 
+          ref={setBeforeDropRef}
+          className={cn(
+            "absolute top-0 left-0 right-0 h-1 -translate-y-1/2 z-10",
+            isOverBefore && "bg-blue-500 h-0.5"
+          )}
+        />
+        
+        <Tag
+          ref={setDraggableRef}
+          {...draggableAttributes}
+          {...draggableListeners}
+          data-node-id={node.id}
+          data-testid={`node-${node.tag}-${node.id}`}
+          className={cn(
+            node.classNames?.join(' '),
+            isSelected && 'ring-2 ring-blue-500 ring-offset-2',
+            isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
+            isDragging && 'opacity-30'
+          )}
+          style={{ ...finalStyles, pointerEvents: 'auto' }}
+          onClick={handleClick}
+          onMouseEnter={handleMouseEnterNode}
+          onMouseLeave={handleMouseLeaveNode}
+          {...node.attributes}
+        />
+        
+        {/* After drop zone */}
+        <div 
+          ref={setAfterDropRef}
+          className={cn(
+            "absolute bottom-0 left-0 right-0 h-1 translate-y-1/2 z-10",
+            isOverAfter && "bg-blue-500 h-0.5"
+          )}
+        />
+      </div>
+    );
+  }
+  
+  // Regular elements with children/text
+  const isContainer = canAcceptChild(node);
+  
+  return (
+    <div className="relative">
+      {/* Before drop zone */}
+      <div 
+        ref={setBeforeDropRef}
+        className={cn(
+          "absolute top-0 left-0 right-0 h-1 -translate-y-1/2 z-10",
+          isOverBefore && "bg-blue-500 h-0.5"
+        )}
+      />
+      
       <Tag
-        ref={setRefs}
+        ref={setDraggableRef}
         {...draggableAttributes}
         {...draggableListeners}
         data-node-id={node.id}
@@ -223,51 +311,48 @@ function PageNodeV4Renderer({
           isSelected && 'ring-2 ring-blue-500 ring-offset-2',
           isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
           isDragging && 'opacity-30',
-          isOver && 'ring-2 ring-green-500 ring-offset-2'
+          'relative' // Needed for inner drop zone positioning
         )}
         style={{ ...finalStyles, pointerEvents: 'auto' }}
         onClick={handleClick}
         onMouseEnter={handleMouseEnterNode}
         onMouseLeave={handleMouseLeaveNode}
         {...node.attributes}
+      >
+        {/* Inner drop zone overlay (only for containers) */}
+        {isContainer && (
+          <div 
+            ref={setInnerDropRef}
+            className={cn(
+              "absolute inset-0 pointer-events-none",
+              isOverInner && "bg-blue-500/20 pointer-events-auto"
+            )}
+          />
+        )}
+        
+        {node.textContent}
+        {node.children?.map(child => (
+          <PageNodeV4Renderer 
+            key={child.id} 
+            node={child}
+            selectedNodeId={selectedNodeId}
+            hoveredNodeId={hoveredNodeId}
+            onSelectNode={onSelectNode}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            breakpoint={breakpoint}
+          />
+        ))}
+      </Tag>
+      
+      {/* After drop zone */}
+      <div 
+        ref={setAfterDropRef}
+        className={cn(
+          "absolute bottom-0 left-0 right-0 h-1 translate-y-1/2 z-10",
+          isOverAfter && "bg-blue-500 h-0.5"
+        )}
       />
-    );
-  }
-  
-  // Regular elements with children/text
-  return (
-    <Tag
-      ref={setRefs}
-      {...draggableAttributes}
-      {...draggableListeners}
-      data-node-id={node.id}
-      data-testid={`node-${node.tag}-${node.id}`}
-      className={cn(
-        node.classNames?.join(' '),
-        isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-        isHovered && 'outline outline-2 outline-blue-400 outline-offset-0',
-        isDragging && 'opacity-30',
-        isOver && 'ring-2 ring-green-500 ring-offset-2'
-      )}
-      style={{ ...finalStyles, pointerEvents: 'auto' }}
-      onClick={handleClick}
-      onMouseEnter={handleMouseEnterNode}
-      onMouseLeave={handleMouseLeaveNode}
-      {...node.attributes}
-    >
-      {node.textContent}
-      {node.children?.map(child => (
-        <PageNodeV4Renderer 
-          key={child.id} 
-          node={child}
-          selectedNodeId={selectedNodeId}
-          hoveredNodeId={hoveredNodeId}
-          onSelectNode={onSelectNode}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
-          breakpoint={breakpoint}
-        />
-      ))}
-    </Tag>
+    </div>
   );
 }
