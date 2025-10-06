@@ -21,29 +21,13 @@ import {
 import { useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { PageModelV2, BlockSection, BlockRow, BlockColumn, BlockElement, DesignTokensV3, ComponentDefinitionV3 } from "@shared/schema";
-import { createDefaultTheme, ElementRenderer } from './PageRenderer';
-import { createDefaultElement, getElementIcon } from './elements/utils';
-import { FloatingToolbar, StylesPanel, calculateToolbarPosition } from './FloatingToolbar';
-import { AdvancedPropertiesPanel } from './AdvancedPropertiesPanel';
-import { BreakpointSelector, Breakpoint } from './BreakpointSelector';
-import { LayersPanel } from './LayersPanel';
-import { HistoryPanel } from './HistoryPanel';
-import { DesignTokensDialog } from './DesignTokensDialog';
-import { ComponentLibraryPanel } from './ComponentLibraryPanel';
-import { TemplateGallery } from './TemplateGallery';
-import { Template } from './templates/predefinedTemplates';
-import { AIGenerationDialog } from './AIGenerationDialog';
-import { useHistoryManager } from '@/lib/history';
-import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2, Layers } from 'lucide-react';
-import { createComponentInstance, setOverridesFromElementUpdates } from '@/lib/componentInstance';
-import { useResolvedElement } from '@/lib/useResolvedElement';
-import { deduplicateComponentIds } from '@/lib/componentExport';
+import { PageModelV4, PageNodeV4, DesignTokensV3, ComponentDefinitionV3 } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Type, FileText, RectangleHorizontal, Image, Video, FileInput, Space, Minus, Monitor, Tablet, Smartphone, Plus, GripVertical, Trash2, Copy, Layout, Star, Users, MessageCircle, Mail, Box, Grid3X3, Images, Package, Undo2, Layers } from 'lucide-react';
 
 interface VisualEditorProps {
-  model: PageModelV2;
-  onChange: (model: PageModelV2) => void;
+  model: PageModelV4;
+  onChange: (model: PageModelV4) => void;
   viewport: 'desktop' | 'tablet' | 'mobile';
   onViewportChange: (viewport: 'desktop' | 'tablet' | 'mobile') => void;
   className?: string;

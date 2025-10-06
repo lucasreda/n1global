@@ -6,9 +6,9 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Save, Eye } from "lucide-react";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useLocation } from "wouter";
-import { PageModelV2 } from "@shared/schema";
-import { ensurePageModelV2, isPageModelV2 } from "@shared/pageModelAdapter";
-import { VisualEditor } from "@/components/page-builder/VisualEditor";
+import { PageModelV4 } from "@shared/schema";
+import { isPageModelV4 } from "@shared/pageModelAdapter";
+import { VisualEditorV4 } from "@/components/page-builder/VisualEditorV4";
 import { BreakpointSelector } from "@/components/page-builder/BreakpointSelector";
 
 interface AffiliateLandingPage {
@@ -18,7 +18,7 @@ interface AffiliateLandingPage {
   htmlContent: string;
   cssContent?: string;
   jsContent?: string;
-  model?: PageModelV2;
+  model?: PageModelV4;
   status: 'draft' | 'active' | 'archived';
   thumbnailUrl?: string;
   tags?: string[];
@@ -37,7 +37,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   const [, setLocation] = useLocation();
   
   const [pageData, setPageData] = useState<AffiliateLandingPage | null>(null);
-  const [currentModel, setCurrentModel] = useState<PageModelV2 | null>(null);
+  const [currentModel, setCurrentModel] = useState<PageModelV4 | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
@@ -60,78 +60,37 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
       // Handle both direct response and wrapped response
       const loadedPage = pageResponse.landingPage || pageResponse;
       
-      // If page has a model, use it; otherwise create a default one
+      // ✅ V4-only: Validate model is PageModelV4
       if (loadedPage.model) {
-        const v2Model = ensurePageModelV2(loadedPage.model);
-        
-        if (!isPageModelV2(loadedPage.model)) {
-          console.log('📝 Upgraded legacy page model to PageModelV2 for editing');
+        if (!isPageModelV4(loadedPage.model)) {
+          console.error('❌ Only PageModelV4 is supported. Please convert HTML to V4 first.');
+          toast({
+            title: "Modelo não suportado",
+            description: "Esta landing page usa um formato antigo. Por favor, importe o HTML novamente.",
+            variant: "destructive",
+          });
+          return;
         }
         
-        setCurrentModel(v2Model);
+        setCurrentModel(loadedPage.model);
+        console.log('✅ Loaded PageModelV4 for editing');
       } else {
-        // Create a default PageModelV2 for new visual editing
-        const defaultModel: PageModelV2 = {
-          version: 2,
-          layout: 'single_page',
-          sections: [],
-          theme: {
-            colors: {
-              primary: '#0066ff',
-              secondary: '#6c757d',
-              accent: '#ff6b6b',
-              background: '#ffffff',
-              text: '#212529',
-              muted: '#6c757d',
-            },
-            typography: {
-              headingFont: 'Inter, system-ui, sans-serif',
-              bodyFont: 'Inter, system-ui, sans-serif',
-              fontSize: {
-                xs: '0.75rem',
-                sm: '0.875rem',
-                base: '1rem',
-                lg: '1.125rem',
-                xl: '1.25rem',
-                '2xl': '1.5rem',
-                '3xl': '1.875rem',
-                '4xl': '2.25rem',
-              },
-            },
-            spacing: {
-              xs: '0.5rem',
-              sm: '1rem',
-              md: '1.5rem',
-              lg: '2rem',
-              xl: '3rem',
-              '2xl': '4rem',
-            },
-            borderRadius: {
-              sm: '0.25rem',
-              md: '0.5rem',
-              lg: '1rem',
-            },
-          },
-          seo: {
-            title: loadedPage.name,
-            description: loadedPage.description || '',
-            keywords: loadedPage.tags || [],
-          },
-          settings: {
-            containerMaxWidth: '1200px',
-            enableAnimations: true,
-          },
-        };
-        setCurrentModel(defaultModel);
+        // No model - show error (should import HTML first)
+        toast({
+          title: "Modelo não encontrado",
+          description: "Esta landing page não possui um modelo visual. Importe o HTML primeiro.",
+          variant: "destructive",
+        });
+        return;
       }
       
       setPageData(loadedPage);
     }
-  }, [pageResponse]);
+  }, [pageResponse, toast]);
 
   // Save page mutation
   const savePageMutation = useMutation({
-    mutationFn: async (updatedModel: PageModelV2) => {
+    mutationFn: async (updatedModel: PageModelV4) => {
       const response = await authenticatedApiRequest('PUT', `/api/affiliate/landing-pages/${landingPageId}`, {
         model: updatedModel
       });
@@ -165,7 +124,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     }
   };
 
-  const handleModelChange = (newModel: PageModelV2) => {
+  const handleModelChange = (newModel: PageModelV4) => {
     setCurrentModel(newModel);
     setIsDirty(true);
   };
@@ -275,7 +234,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
       {/* Visual Editor */}
       <div className="flex-1 overflow-hidden">
-        <VisualEditor
+        <VisualEditorV4
           model={currentModel}
           onChange={handleModelChange}
           viewport={viewport}
