@@ -12,9 +12,14 @@ export function useStylesheetManager(
 ) {
   const templateStyleRef = useRef<HTMLStyleElement | null>(null);
   const overrideStyleRef = useRef<HTMLStyleElement | null>(null);
+  const layerOrderRef = useRef<HTMLStyleElement | null>(null);
 
   useEffect(() => {
     // Clean up old style elements
+    if (layerOrderRef.current) {
+      layerOrderRef.current.remove();
+      layerOrderRef.current = null;
+    }
     if (templateStyleRef.current) {
       templateStyleRef.current.remove();
       templateStyleRef.current = null;
@@ -33,6 +38,7 @@ export function useStylesheetManager(
     layerOrderStyle.setAttribute('data-layer', 'order-definition');
     layerOrderStyle.textContent = '@layer template, overrides;';
     document.head.insertBefore(layerOrderStyle, document.head.firstChild);
+    layerOrderRef.current = layerOrderStyle;
     
     // Create template layer (base styles)
     if (templateCss) {
@@ -72,6 +78,9 @@ export function useStylesheetManager(
 
     // Cleanup on unmount
     return () => {
+      if (layerOrderRef.current) {
+        layerOrderRef.current.remove();
+      }
       if (templateStyleRef.current) {
         templateStyleRef.current.remove();
       }
