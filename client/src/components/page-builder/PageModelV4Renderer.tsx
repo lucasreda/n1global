@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { HoverTooltip } from './HoverTooltip';
 import { SelectionToolbar } from './SelectionToolbar';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { canAcceptChild } from './tree-helpers';
+import { useStylesheetManager, generateOverrideCss } from '@/hooks/useStylesheetManager';
 
 interface PageModelV4RendererProps {
   model: PageModelV4;
@@ -26,6 +27,31 @@ export function PageModelV4Renderer({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [hoveredNodeInfo, setHoveredNodeInfo] = useState<{ tag: string; classNames: string[]; dimensions?: { width: number; height: number } } | null>(null);
+  
+  // Collect all nodes for CSS generation
+  const collectNodes = useCallback((node: PageNodeV4): PageNodeV4[] => {
+    const nodes: PageNodeV4[] = [node];
+    if (node.children) {
+      node.children.forEach(child => {
+        nodes.push(...collectNodes(child));
+      });
+    }
+    return nodes;
+  }, []);
+  
+  // Generate override CSS for all nodes with styles
+  const overrideCss = useMemo(() => {
+    if (!model.nodes || model.nodes.length === 0) return '';
+    const allNodes = model.nodes.flatMap(node => collectNodes(node));
+    return generateOverrideCss(allNodes, breakpoint);
+  }, [model.nodes, breakpoint, collectNodes]);
+  
+  // Use stylesheet manager with CSS layers
+  useStylesheetManager(
+    model.globalStyles, // Template base CSS
+    overrideCss,        // User override CSS
+    'page-builder-canvas'
+  );
 
   const handleMouseEnter = useCallback((nodeId: string, tag: string, classNames: string[], dimensions?: { width: number; height: number }) => {
     setHoveredNodeId(nodeId);
@@ -233,57 +259,21 @@ function PageNodeV4Renderer({
     disabled: !canAcceptChild(node),
   });
   
-  // Get styles for current breakpoint
+  // Get styles for current breakpoint (used for CSS generation, not inline)
   const styles = node.styles?.[breakpoint] || {};
   
-  // Merge layout properties, inline styles, and responsive styles
+  // Merge only layout and inline styles (overrides are in CSS Layers)
   const finalStyles: React.CSSProperties = {
     ...(node.layout as React.CSSProperties),
     ...node.inlineStyles,
-    ...styles,
+    // DON'T include override styles here - they're applied via CSS Layers
   };
   
   // Generate unique CSS ID for maximum specificity override
   const uniqueStyleId = `style-override-${node.id}-${breakpoint}`;
   
-  // Ref to access DOM element and apply !important styles directly
+  // Ref for drag and drop
   const elementRef = useRef<HTMLElement>(null);
-  
-  // CRITICAL: Apply ALL styles directly to DOM with setAttribute
-  // This bypasses React's style management and allows !important
-  useEffect(() => {
-    if (elementRef.current) {
-      // Build complete style string with proper priority
-      const allStyles: string[] = [];
-      
-      // 1. Layout styles (lowest priority)
-      if (node.layout) {
-        Object.entries(node.layout).forEach(([key, value]) => {
-          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-          allStyles.push(`${cssKey}: ${value}`);
-        });
-      }
-      
-      // 2. Inline styles (medium priority)  
-      if (node.inlineStyles) {
-        Object.entries(node.inlineStyles).forEach(([key, value]) => {
-          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-          allStyles.push(`${cssKey}: ${value}`);
-        });
-      }
-      
-      // 3. Override styles with !important (HIGHEST priority)
-      if (styles && Object.keys(styles).length > 0) {
-        Object.entries(styles).forEach(([key, value]) => {
-          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-          allStyles.push(`${cssKey}: ${value} !important`);
-        });
-      }
-      
-      // Apply all at once
-      elementRef.current.setAttribute('style', allStyles.join('; '));
-    }
-  }, [node.layout, node.inlineStyles, styles, breakpoint]);
   
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
@@ -367,6 +357,7 @@ function PageNodeV4Renderer({
           isHovered && 'editor-node-hovered',
           isDragging && 'opacity-30'
         )}
+        style={finalStyles}
         onClick={handleClick}
         onMouseEnter={handleMouseEnterNode}
         onMouseLeave={handleMouseLeaveNode}
@@ -413,6 +404,7 @@ function PageNodeV4Renderer({
             isHovered && 'editor-node-hovered',
             isDragging && 'opacity-30'
           )}
+          style={finalStyles}
           onClick={handleClick}
           onMouseEnter={handleMouseEnterNode}
           onMouseLeave={handleMouseLeaveNode}
@@ -448,6 +440,7 @@ function PageNodeV4Renderer({
         isHovered && 'editor-node-hovered',
         isDragging && 'opacity-30'
       )}
+      style={finalStyles}
       onClick={handleClick}
       onMouseEnter={handleMouseEnterNode}
       onMouseLeave={handleMouseLeaveNode}
