@@ -165,6 +165,19 @@ function PageNodeV4Renderer({
     finalStyles.position = 'absolute';
   }
   
+  // FIX: Remove overflow:auto from text elements (h1-h6, p, span, etc.) to prevent unwanted scrollbars
+  // Text elements should use natural height, not fixed height with overflow
+  const textTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'label', 'li', 'td', 'th'];
+  if (textTags.includes(node.tag)) {
+    if (finalStyles.overflow === 'auto' || finalStyles.overflow === 'scroll') {
+      delete finalStyles.overflow;
+    }
+    // If height is set but no explicit overflow:hidden, remove height to allow natural sizing
+    if (finalStyles.height && !finalStyles.overflow) {
+      delete finalStyles.height;
+    }
+  }
+  
   // Handle click to select node
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
