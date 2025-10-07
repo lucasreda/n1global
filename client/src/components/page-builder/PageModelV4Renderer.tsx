@@ -41,13 +41,24 @@ export function PageModelV4Renderer({
     setMousePosition({ x: e.clientX, y: e.clientY });
   }, []);
 
-  // Sanitize global styles to remove unwanted overflow rules
+  // Sanitize global styles to remove unwanted overflow and scrollbar rules
   const sanitizeGlobalStyles = (css: string): string => {
     if (!css) return '';
     
-    // Remove overflow: auto/scroll from all selectors except whitelisted ones
-    // This prevents spurious scrollbars from imported CSS
-    return css.replace(
+    let sanitized = css;
+    
+    // Step 1: Remove custom scrollbar styling rules that cause green scrollbars
+    sanitized = sanitized.replace(
+      /::-webkit-scrollbar[^{]*\{[^}]*\}/gi,
+      ''
+    );
+    sanitized = sanitized.replace(
+      /::-webkit-scrollbar-[^{]*\{[^}]*\}/gi,
+      ''
+    );
+    
+    // Step 2: Remove overflow: auto/scroll from all selectors except whitelisted ones
+    sanitized = sanitized.replace(
       /([^}]*?)\{([^}]*?overflow\s*:\s*(auto|scroll)[^}]*?)\}/gi,
       (match, selector, rules) => {
         // Allow overflow on textarea, pre, code, or elements with scroll/overflow in selector
@@ -66,6 +77,9 @@ export function PageModelV4Renderer({
         return `${selector}{${sanitizedRules}}`;
       }
     );
+    
+    console.log('🎨 CSS sanitized - removed scrollbar customizations');
+    return sanitized;
   };
 
   return (
