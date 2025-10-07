@@ -112,20 +112,30 @@ interface CSSRuleEnhanced {
 
 /**
  * Extract and parse all CSS from HTML using css-tree with enhanced support
+ * Also returns clean HTML without style tags
  */
-function extractAllCSS(html: string): { rules: Record<string, Record<string, string>>, cssText: string, enhancedRules: CSSRuleEnhanced[] } {
+function extractAllCSS(html: string): { 
+  rules: Record<string, Record<string, string>>, 
+  cssText: string, 
+  enhancedRules: CSSRuleEnhanced[],
+  cleanHtml?: string
+} {
   const cssRules: Record<string, Record<string, string>> = {};
   const enhancedRules: CSSRuleEnhanced[] = [];
   let allCssText = '';
   let ruleOrder = 0;
+  let cleanHtml = html;
   
-  // Extract all style tags
+  // Extract all style tags and remove them from HTML
   const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
   let match;
   
   while ((match = styleRegex.exec(html)) !== null) {
     const cssText = match[1];
     allCssText += cssText + '\n';
+    
+    // Remove this style tag from clean HTML
+    cleanHtml = cleanHtml.replace(match[0], '');
     
     try {
       // Parse CSS using css-tree (removes comments automatically)
@@ -227,7 +237,11 @@ function extractAllCSS(html: string): { rules: Record<string, Record<string, str
     } : null
   });
   
-  return { rules: cssRules, cssText: allCssText, enhancedRules };
+  // Also remove <link rel="stylesheet"> tags
+  const linkRegex = /<link[^>]*rel=["']stylesheet["'][^>]*>/gi;
+  cleanHtml = cleanHtml.replace(linkRegex, '');
+  
+  return { rules: cssRules, cssText: allCssText, enhancedRules, cleanHtml };
 }
 
 /**
@@ -1999,20 +2013,21 @@ export function convertHtmlToPageModelV4(html: string): PageModelV4 {
   
   console.log('📋 Meta extracted:', { title, description, keywordsCount: keywords.length });
   
-  // Extract and parse all CSS with enhanced rules
-  const { rules: cssRules, cssText, enhancedRules } = extractAllCSS(html);
+  // Extract and parse all CSS with enhanced rules, getting clean HTML without styles
+  const { rules: cssRules, cssText, enhancedRules, cleanHtml } = extractAllCSS(html);
   
   console.log('🎨 CSS extracted:', {
     rulesCount: Object.keys(cssRules).length,
     enhancedRulesCount: enhancedRules.length,
-    cssTextLength: cssText.length
+    cssTextLength: cssText.length,
+    cleanHtmlLength: cleanHtml?.length || 0
   });
   
   // Extract design tokens from CSS (skip for now in V4)
   const designTokens = undefined; // TODO: Implement extractDesignTokensV3 or create V4 version
   
-  // Parse HTML document
-  const doc = parseDocument(html);
+  // Parse HTML document - use clean HTML if available (without style tags)
+  const doc = parseDocument(cleanHtml || html);
   
   // Find body element
   const bodyElements = findElementsByTag(doc.children, 'body');
