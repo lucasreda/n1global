@@ -6,6 +6,47 @@ import { authenticateToken } from '../auth-middleware';
 
 const router = express.Router();
 
+/**
+ * Serve images from Object Storage
+ */
+router.get('/api/storage/public/page-builder/:filename', async (req: Request, res: Response) => {
+  try {
+    const { filename } = req.params;
+    const objectPath = `public/page-builder/${filename}`;
+    
+    // Initialize client for each request
+    const client = new Client();
+    
+    // Download the file from Object Storage
+    const fileBuffer = await client.download(objectPath);
+    
+    // Determine content type based on file extension
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const contentTypes: { [key: string]: string } = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'svg': 'image/svg+xml'
+    };
+    
+    const contentType = contentTypes[ext || ''] || 'application/octet-stream';
+    
+    // Send the file with appropriate headers
+    res.set({
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000',
+    });
+    
+    res.send(fileBuffer);
+    
+  } catch (error) {
+    console.error('Error serving image:', error);
+    res.status(404).json({ error: 'Image not found' });
+  }
+});
+
 // Configure multer for memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -43,12 +84,15 @@ router.post('/api/upload', authenticateToken, upload.single('file'), async (req:
     // Upload to Object Storage
     await client.uploadFromBytes(objectPath, file.buffer);
     
-    // Get the public URL - using the client's download URL method
-    const downloadUrl = await client.downloadUrl(objectPath);
-    console.log(`✅ Upload successful - URL: ${downloadUrl}`);
+    // Construct the public URL for the uploaded file
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
+      `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+      'http://localhost:5000';
+    const publicUrl = `${baseUrl}/api/storage/public/page-builder/${fileName}`;
+    console.log(`✅ Upload successful - URL: ${publicUrl}`);
     
     // Return the URL
-    res.json({ url: downloadUrl });
+    res.json({ url: publicUrl });
     
   } catch (error) {
     console.error('Upload error:', error);
@@ -86,7 +130,10 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       
       await client.uploadFromBytes(objectPath, desktopFile.buffer);
       
-      urls.desktop = await client.downloadUrl(objectPath);
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
+        `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+        'http://localhost:5000';
+      urls.desktop = `${baseUrl}/api/storage/public/page-builder/${fileName}`;
     }
     
     // Upload mobile version if provided
@@ -98,7 +145,10 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       
       await client.uploadFromBytes(objectPath, mobileFile.buffer);
       
-      urls.mobile = await client.downloadUrl(objectPath);
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN ? 
+        `https://${process.env.REPLIT_DEV_DOMAIN}` : 
+        'http://localhost:5000';
+      urls.mobile = `${baseUrl}/api/storage/public/page-builder/${fileName}`;
     }
     
     // Return the URLs
