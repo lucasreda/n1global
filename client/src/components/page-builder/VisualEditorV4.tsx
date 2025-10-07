@@ -109,6 +109,14 @@ export function VisualEditorV4({
           updated.attributes = { ...updated.attributes, ...updates.attributes };
         }
         
+        // CRITICAL: Process responsiveAttributes updates for images
+        if (updates.responsiveAttributes !== undefined) {
+          updated.responsiveAttributes = {
+            ...updated.responsiveAttributes,
+            ...updates.responsiveAttributes
+          };
+        }
+        
         if (updates.styles !== undefined) {
           updated.styles = deepMergeStyles(node.styles, updates.styles);
         }
