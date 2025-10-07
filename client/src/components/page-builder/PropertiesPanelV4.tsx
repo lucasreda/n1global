@@ -10,6 +10,7 @@ import { Monitor, Tablet, Smartphone, Settings, Type as TypeIcon, Palette, Layou
 import { LayoutControlsV4 } from './v4/LayoutControlsV4';
 import { StylingControlsV4, TypographyControlsV4 } from './v4/StylingControlsV4';
 import { AdvancedControlsV4, PseudoClassEditorV4 } from './v4/AdvancedControlsV4';
+import { useComputedStyles } from '@/hooks/useComputedStyles';
 
 interface PropertiesPanelV4Props {
   node: PageNodeV4 | null;
@@ -18,6 +19,7 @@ interface PropertiesPanelV4Props {
 
 export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props) {
   const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const { computedStyles, hasOverrides, isFromClasses } = useComputedStyles(node, breakpoint);
 
   if (!node) {
     return (
@@ -194,6 +196,9 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
                 node={node}
                 breakpoint={breakpoint}
                 onUpdateNode={onUpdateNode!}
+                computedStyles={computedStyles}
+                hasOverrides={hasOverrides}
+                isFromClasses={isFromClasses}
               />
             </TabsContent>
 
@@ -203,6 +208,9 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
                 node={node}
                 breakpoint={breakpoint}
                 onUpdateNode={onUpdateNode!}
+                computedStyles={computedStyles}
+                hasOverrides={hasOverrides}
+                isFromClasses={isFromClasses}
               />
             </TabsContent>
 

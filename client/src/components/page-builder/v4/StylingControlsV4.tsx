@@ -10,13 +10,18 @@ interface StylingControlsV4Props {
   node: PageNodeV4 | null;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
   onUpdateNode: (updates: Partial<PageNodeV4>) => void;
+  computedStyles?: { [property: string]: string };
+  hasOverrides?: { [property: string]: boolean };
+  isFromClasses?: boolean;
 }
 
-export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingControlsV4Props) {
+export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyles = {}, hasOverrides = {}, isFromClasses = false }: StylingControlsV4Props) {
   if (!node) return null;
 
   // Merge responsive styles with inline styles (inline has precedence)
+  // If element has classes, show computed styles as fallback
   const currentStyles = {
+    ...computedStyles,
     ...(node.styles?.[breakpoint] || {}),
     ...(node.inlineStyles || {}),
   };
@@ -39,6 +44,20 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
 
   return (
     <div className="space-y-6">
+      {/* Class Styles Badge */}
+      {isFromClasses && (
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Estilos de Classes CSS</span>
+          </div>
+          <p className="text-xs text-blue-600 dark:text-blue-400">
+            Este elemento usa classes CSS. Os valores mostrados são os estilos computados. 
+            Ao editar uma propriedade, você criará uma sobrescrita customizada.
+          </p>
+        </div>
+      )}
+      
       {/* Box Model */}
       <BoxModelInspector
         margin={{
@@ -142,11 +161,13 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
   );
 }
 
-export function TypographyControlsV4({ node, breakpoint, onUpdateNode }: StylingControlsV4Props) {
+export function TypographyControlsV4({ node, breakpoint, onUpdateNode, computedStyles = {}, hasOverrides = {}, isFromClasses = false }: StylingControlsV4Props) {
   if (!node) return null;
 
   // Merge responsive styles with inline styles (inline has precedence)
+  // If element has classes, show computed styles as fallback
   const currentStyles = {
+    ...computedStyles,
     ...(node.styles?.[breakpoint] || {}),
     ...(node.inlineStyles || {}),
   };
@@ -169,6 +190,20 @@ export function TypographyControlsV4({ node, breakpoint, onUpdateNode }: Styling
 
   return (
     <div className="space-y-6">
+      {/* Class Styles Badge */}
+      {isFromClasses && (
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Estilos de Classes CSS</span>
+          </div>
+          <p className="text-xs text-blue-600 dark:text-blue-400">
+            Este elemento usa classes CSS. Os valores mostrados são os estilos computados. 
+            Ao editar uma propriedade, você criará uma sobrescrita customizada.
+          </p>
+        </div>
+      )}
+      
       {/* Font Family */}
       <FontFamilySelectorProfessional
         label="Font Family"
