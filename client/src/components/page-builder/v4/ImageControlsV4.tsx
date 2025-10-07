@@ -84,6 +84,12 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
         [targetBreakpoint]: imageUrl
       };
       
+      console.log('🎯 Updating image node with:', {
+        attributes: newAttributes,
+        responsiveAttributes: newResponsiveAttributes,
+        imageUrl
+      });
+      
       onUpdateNode({ 
         attributes: newAttributes,
         responsiveAttributes: newResponsiveAttributes

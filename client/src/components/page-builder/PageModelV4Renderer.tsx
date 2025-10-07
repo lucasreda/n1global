@@ -412,14 +412,36 @@ function PageNodeV4Renderer({
     // Handle responsive images
     let finalAttributes = { ...node.attributes };
     if (node.tag === 'img') {
-      // Check for responsive image attributes (data-src-mobile for mobile view)
-      const mobileSrc = node.attributes?.['data-src-mobile'];
+      // Priority 1: Check responsiveAttributes for the current breakpoint
+      const responsiveSrc = node.responsiveAttributes?.src?.[breakpoint];
       
-      // Use mobile image only when in mobile breakpoint and mobile src exists
-      if (breakpoint === 'mobile' && mobileSrc) {
-        finalAttributes.src = mobileSrc;
+      // Priority 2: Check data-src attributes
+      const dataSrcDesktop = node.attributes?.['data-src-desktop'];
+      const dataSrcMobile = node.attributes?.['data-src-mobile'];
+      
+      // Priority 3: Regular src attribute
+      const baseSrc = node.attributes?.src;
+      
+      // Determine which src to use based on breakpoint
+      if (breakpoint === 'mobile') {
+        finalAttributes.src = responsiveSrc || dataSrcMobile || baseSrc || '';
+      } else if (breakpoint === 'tablet') {
+        // Use desktop image for tablet
+        finalAttributes.src = responsiveSrc || dataSrcDesktop || baseSrc || '';
+      } else {
+        // Desktop
+        finalAttributes.src = responsiveSrc || dataSrcDesktop || baseSrc || '';
       }
-      // For desktop and tablet, use the regular src attribute which is already set
+      
+      console.log('🖼️ Image rendering:', {
+        nodeId: node.id,
+        breakpoint,
+        responsiveSrc,
+        dataSrcDesktop,
+        dataSrcMobile,
+        baseSrc,
+        finalSrc: finalAttributes.src
+      });
     }
     
     return (
