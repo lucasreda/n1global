@@ -42,6 +42,7 @@ export function useStylesheetManager(
     
     // Create template layer (base styles)
     if (templateCss) {
+      console.log('Injecting template CSS:', templateCss.length, 'chars');
       const templateStyle = document.createElement('style');
       templateStyle.setAttribute('data-layer', 'template');
       templateStyle.setAttribute('data-container-id', containerId);
@@ -60,6 +61,7 @@ export function useStylesheetManager(
 
     // Create override layer (user edits)
     if (overrideCss) {
+      console.log('Injecting override CSS:', overrideCss.substring(0, 500));
       const overrideStyle = document.createElement('style');
       overrideStyle.setAttribute('data-layer', 'overrides');
       overrideStyle.setAttribute('data-container-id', containerId);
