@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { objectStorageClient } from '../objectStorage';
+import { Client } from '@replit/object-storage';
 import { nanoid } from 'nanoid';
 import { authenticateToken } from '../auth-middleware';
 
@@ -32,43 +32,21 @@ router.post('/api/upload', authenticateToken, upload.single('file'), async (req:
       return res.status(400).json({ error: 'No file provided' });
     }
     
-    // Get the public directory from environment
-    const publicDirs = process.env.PUBLIC_OBJECT_SEARCH_PATHS;
-    if (!publicDirs) {
-      return res.status(500).json({ error: 'Object storage not configured' });
-    }
+    // Initialize Replit Object Storage client
+    const client = new Client();
     
-    // Use the first public directory
-    const publicDir = publicDirs.split(',')[0].trim();
-    if (!publicDir) {
-      return res.status(500).json({ error: 'No public directory configured' });
-    }
-    
-    // Parse the bucket name and path
-    const pathParts = publicDir.split('/');
-    const bucketName = pathParts[0];
-    const dirPath = pathParts.slice(1).join('/');
-    
-    // Generate a unique filename
+    // Generate a unique filename  
     const fileExt = file.originalname.split('.').pop() || 'png';
     const fileName = `${nanoid()}.${fileExt}`;
-    const fullPath = dirPath ? `${dirPath}/${fileName}` : fileName;
+    const objectPath = `public/page-builder/${fileName}`;
     
-    // Upload to bucket
-    const bucket = objectStorageClient.bucket(bucketName);
-    const gcsFile = bucket.file(fullPath);
-    
-    await gcsFile.save(file.buffer, {
-      metadata: {
-        contentType: file.mimetype,
-        cacheControl: 'public, max-age=31536000',
-      },
-      public: true,
-      validation: false,
+    // Upload to Object Storage
+    await client.uploadFromBuffer(objectPath, file.buffer, {
+      type: file.mimetype
     });
     
     // Get the public URL
-    const publicUrl = `https://storage.googleapis.com/${bucketName}/${fullPath}`;
+    const publicUrl = await client.downloadUrl(objectPath);
     
     // Return the URL
     res.json({ url: publicUrl });
@@ -96,24 +74,8 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       return res.status(400).json({ error: 'No files provided' });
     }
     
-    // Get the public directory from environment
-    const publicDirs = process.env.PUBLIC_OBJECT_SEARCH_PATHS;
-    if (!publicDirs) {
-      return res.status(500).json({ error: 'Object storage not configured' });
-    }
-    
-    // Use the first public directory
-    const publicDir = publicDirs.split(',')[0].trim();
-    if (!publicDir) {
-      return res.status(500).json({ error: 'No public directory configured' });
-    }
-    
-    // Parse the bucket name and path
-    const pathParts = publicDir.split('/');
-    const bucketName = pathParts[0];
-    const dirPath = pathParts.slice(1).join('/');
-    
-    const bucket = objectStorageClient.bucket(bucketName);
+    // Initialize Replit Object Storage client
+    const client = new Client();
     const urls: { desktop?: string; mobile?: string } = {};
     
     // Upload desktop version if provided
@@ -121,19 +83,13 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       const desktopFile = files.desktop[0];
       const fileExt = desktopFile.originalname.split('.').pop() || 'png';
       const fileName = `${nanoid()}_desktop.${fileExt}`;
-      const fullPath = dirPath ? `${dirPath}/${fileName}` : fileName;
+      const objectPath = `public/page-builder/${fileName}`;
       
-      const gcsFile = bucket.file(fullPath);
-      await gcsFile.save(desktopFile.buffer, {
-        metadata: {
-          contentType: desktopFile.mimetype,
-          cacheControl: 'public, max-age=31536000',
-        },
-        public: true,
-        validation: false,
+      await client.uploadFromBuffer(objectPath, desktopFile.buffer, {
+        type: desktopFile.mimetype
       });
       
-      urls.desktop = `https://storage.googleapis.com/${bucketName}/${fullPath}`;
+      urls.desktop = await client.downloadUrl(objectPath);
     }
     
     // Upload mobile version if provided
@@ -141,19 +97,13 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       const mobileFile = files.mobile[0];
       const fileExt = mobileFile.originalname.split('.').pop() || 'png';
       const fileName = `${nanoid()}_mobile.${fileExt}`;
-      const fullPath = dirPath ? `${dirPath}/${fileName}` : fileName;
+      const objectPath = `public/page-builder/${fileName}`;
       
-      const gcsFile = bucket.file(fullPath);
-      await gcsFile.save(mobileFile.buffer, {
-        metadata: {
-          contentType: mobileFile.mimetype,
-          cacheControl: 'public, max-age=31536000',
-        },
-        public: true,
-        validation: false,
+      await client.uploadFromBuffer(objectPath, mobileFile.buffer, {
+        type: mobileFile.mimetype
       });
       
-      urls.mobile = `https://storage.googleapis.com/${bucketName}/${fullPath}`;
+      urls.mobile = await client.downloadUrl(objectPath);
     }
     
     // Return the URLs
