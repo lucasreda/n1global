@@ -73,8 +73,8 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
         [`data-src-${targetBreakpoint}`]: imageUrl,
       };
       
-      // If uploading desktop and there's no base src, set it
-      if (targetBreakpoint === 'desktop' && !node.attributes?.src) {
+      // Always update the base src when uploading desktop image
+      if (targetBreakpoint === 'desktop') {
         newAttributes.src = imageUrl;
       }
       
@@ -103,8 +103,8 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
       [`data-src-${targetBreakpoint}`]: url,
     };
     
-    // If updating desktop and there's no base src, set it
-    if (targetBreakpoint === 'desktop' && !node.attributes?.src) {
+    // Always update the base src when updating desktop image
+    if (targetBreakpoint === 'desktop') {
       newAttributes.src = url;
     }
     

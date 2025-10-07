@@ -412,21 +412,14 @@ function PageNodeV4Renderer({
     // Handle responsive images
     let finalAttributes = { ...node.attributes };
     if (node.tag === 'img') {
-      // Check for responsive image attributes (data-src-desktop, data-src-mobile)
-      const desktopSrc = node.attributes?.['data-src-desktop'];
+      // Check for responsive image attributes (data-src-mobile for mobile view)
       const mobileSrc = node.attributes?.['data-src-mobile'];
-      const originalSrc = node.attributes?.src;
       
+      // Use mobile image only when in mobile breakpoint and mobile src exists
       if (breakpoint === 'mobile' && mobileSrc) {
         finalAttributes.src = mobileSrc;
-      } else if (breakpoint === 'tablet' && desktopSrc) {
-        // Use desktop image for tablet
-        finalAttributes.src = desktopSrc;
-      } else if (desktopSrc) {
-        // Default to desktop
-        finalAttributes.src = desktopSrc;
       }
-      // If no responsive images, keep the original src
+      // For desktop and tablet, use the regular src attribute which is already set
     }
     
     return (
