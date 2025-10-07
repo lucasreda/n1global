@@ -422,6 +422,17 @@ function PageNodeV4Renderer({
       // Priority 3: Regular src attribute
       const baseSrc = node.attributes?.src;
       
+      // Debug: Log image src resolution
+      console.log('🖼️ Image rendering:', {
+        nodeId: node.id,
+        breakpoint,
+        responsiveSrc,
+        dataSrcDesktop,
+        dataSrcMobile,
+        baseSrc,
+        responsiveAttributes: node.responsiveAttributes
+      });
+      
       // Determine which src to use based on breakpoint
       if (breakpoint === 'mobile') {
         finalAttributes.src = responsiveSrc || dataSrcMobile || baseSrc || '';
@@ -432,6 +443,8 @@ function PageNodeV4Renderer({
         // Desktop
         finalAttributes.src = responsiveSrc || dataSrcDesktop || baseSrc || '';
       }
+      
+      console.log('🖼️ Final src:', finalAttributes.src);
       
     }
     
