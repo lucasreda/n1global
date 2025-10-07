@@ -423,8 +423,20 @@ export function VisualEditorV4({
     }
   }, [model, onChange]);
 
+  // CRITICAL: Always find fresh node from current model state
   const selectedNode = selectedNodeId ? findNodeInTree(model.nodes, selectedNodeId) : null;
   const activeNode = activeId ? findNodeInTree(model.nodes, activeId) : null;
+  
+  // Debug: Log selected node changes
+  useEffect(() => {
+    if (selectedNode && selectedNode.tag === 'img') {
+      console.log('🎯 Selected node updated:', {
+        id: selectedNode.id,
+        src: selectedNode.attributes?.src,
+        responsiveAttributes: selectedNode.responsiveAttributes
+      });
+    }
+  }, [selectedNode]);
   
   // Active node for drop indicator (either existing node or template being dragged)
   const dropIndicatorNode = draggedTemplate || activeNode;
