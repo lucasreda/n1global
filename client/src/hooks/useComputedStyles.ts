@@ -67,37 +67,44 @@ export function useComputedStyles(
       return;
     }
 
-    // Find the DOM element by data-node-id
-    const element = document.querySelector(`[data-node-id="${selectedNode.id}"]`);
-    if (!element) {
-      setComputedStyles({});
-      setHasOverrides({});
-      return;
-    }
-
-    // Get computed styles from the rendered element
-    const computed = window.getComputedStyle(element);
-    const styles: ComputedStylesMap = {};
-    const overrides: { [property: string]: boolean } = {};
-
-    // Extract relevant style properties
-    STYLE_PROPERTIES.forEach(prop => {
-      const value = computed.getPropertyValue(
-        prop.replace(/([A-Z])/g, '-$1').toLowerCase()
-      );
-      if (value && value !== 'none' && value !== 'normal' && value !== '0px') {
-        styles[prop] = value;
+    // Small delay to ensure DOM is updated with latest styles
+    const timeoutId = setTimeout(() => {
+      // Find the DOM element by data-node-id
+      const element = document.querySelector(`[data-node-id="${selectedNode.id}"]`) as HTMLElement;
+      if (!element) {
+        console.warn(`Element not found for node ${selectedNode.id}`);
+        setComputedStyles({});
+        setHasOverrides({});
+        return;
       }
 
-      // Check if this property has an override in node.styles
-      const nodeStyles = selectedNode.styles?.[breakpoint];
-      if (nodeStyles && nodeStyles[prop]) {
-        overrides[prop] = true;
-      }
-    });
+      // Get computed styles from the rendered element
+      const computed = window.getComputedStyle(element);
+      const styles: ComputedStylesMap = {};
+      const overrides: { [property: string]: boolean } = {};
 
-    setComputedStyles(styles);
-    setHasOverrides(overrides);
+      // Extract relevant style properties
+      STYLE_PROPERTIES.forEach(prop => {
+        const cssProperty = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+        const value = computed.getPropertyValue(cssProperty);
+        
+        // Include all non-empty values
+        if (value && value !== '') {
+          styles[prop] = value;
+        }
+
+        // Check if this property has an override in node.styles
+        const nodeStyles = selectedNode.styles?.[breakpoint];
+        if (nodeStyles && nodeStyles[prop] !== undefined) {
+          overrides[prop] = true;
+        }
+      });
+
+      setComputedStyles(styles);
+      setHasOverrides(overrides);
+    }, 100); // Small delay to ensure CSS is applied
+
+    return () => clearTimeout(timeoutId);
   }, [selectedNode, breakpoint]);
 
   const isFromClasses = selectedNode 

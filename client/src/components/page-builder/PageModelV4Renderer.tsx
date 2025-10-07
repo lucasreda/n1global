@@ -43,7 +43,9 @@ export function PageModelV4Renderer({
   const overrideCss = useMemo(() => {
     if (!model.nodes || model.nodes.length === 0) return '';
     const allNodes = model.nodes.flatMap(node => collectNodes(node));
-    return generateOverrideCss(allNodes, breakpoint);
+    const css = generateOverrideCss(allNodes, breakpoint);
+    console.log(`Generated override CSS (${breakpoint}):`, css ? 'Yes' : 'No', css?.length || 0, 'chars');
+    return css;
   }, [model.nodes, breakpoint, collectNodes]);
   
   // Use stylesheet manager with CSS layers

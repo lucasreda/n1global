@@ -27,6 +27,8 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
   };
 
   const handleStyleChange = (updates: Record<string, string | any>) => {
+    console.log('Style change received:', updates, 'for breakpoint:', breakpoint);
+    
     const updatedStyles: ResponsiveStylesV4 = {
       desktop: { ...(node.styles?.desktop || {}) },
       tablet: { ...(node.styles?.tablet || {}) },
@@ -37,6 +39,8 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
       },
     };
 
+    console.log('Updating node styles:', updatedStyles[breakpoint]);
+    
     onUpdateNode({
       styles: updatedStyles,
     });

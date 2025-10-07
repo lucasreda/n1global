@@ -139,23 +139,35 @@ export function generateOverrideCss(
   breakpoint: 'desktop' | 'tablet' | 'mobile'
 ): string {
   let css = '';
+  let count = 0;
   
   nodes.forEach(node => {
     if (node.styles?.[breakpoint]) {
       const styles = node.styles[breakpoint];
-      const styleString = Object.entries(styles)
-        .map(([key, value]) => {
-          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-          return `${cssKey}: ${value} !important`;
-        })
-        .join('; ');
+      const styleEntries = Object.entries(styles);
       
-      if (styleString) {
+      if (styleEntries.length > 0) {
+        const styleString = styleEntries
+          .map(([key, value]) => {
+            const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+            return `${cssKey}: ${value} !important`;
+          })
+          .join('; ');
+        
         // Use ID selector for maximum specificity
-        css += `#style-override-${node.id}-${breakpoint} { ${styleString} }\n`;
+        const selector = `#style-override-${node.id}-${breakpoint}`;
+        css += `${selector} { ${styleString} }\n`;
+        count++;
+        
+        // Also add with data-node-id for better targeting
+        css += `[data-node-id="${node.id}"] { ${styleString} }\n`;
       }
     }
   });
+  
+  if (count > 0) {
+    console.log(`Generated override CSS for ${count} nodes:`, css.substring(0, 200));
+  }
   
   return css;
 }

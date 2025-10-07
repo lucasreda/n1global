@@ -449,7 +449,7 @@ export function VisualEditorV4({
       )}
 
       {/* Center - Canvas */}
-      <div id="visual-editor-canvas" className="flex-1 p-4 bg-gray-100 dark:bg-gray-900 overflow-auto relative">
+      <div id="page-builder-canvas" className="flex-1 p-4 bg-gray-100 dark:bg-gray-900 overflow-auto relative">
         <div 
           className="mx-auto bg-white shadow-lg"
           style={{
