@@ -145,37 +145,59 @@ export function generateOverrideCss(
   
   nodes.forEach(node => {
     if (node.styles?.[breakpoint]) {
-      const styles = node.styles[breakpoint];
+      const styles = { ...node.styles[breakpoint] };
+      
+      // Remove overflow-x and overflow-y properties that cause unwanted scrollbars
+      delete styles.overflowX;
+      delete styles.overflowY;
+      delete styles['overflow-x'];
+      delete styles['overflow-y'];
+      
+      // Only keep overflow if it's specifically 'visible' or 'hidden' (not 'auto' or 'scroll')
+      if (styles.overflow === 'auto' || styles.overflow === 'scroll') {
+        delete styles.overflow;
+      }
+      
       const styleEntries = Object.entries(styles);
       
       if (styleEntries.length > 0) {
         const styleString = styleEntries
           .map(([key, value]) => {
             const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+            
+            // Skip overflow-x and overflow-y in CSS output
+            if (cssKey === 'overflow-x' || cssKey === 'overflow-y') {
+              return '';
+            }
+            
             // Special handling for background properties
             if (key === 'background' && value === 'none') {
               // Clear all background properties when set to none
               return `background: none !important; background-color: transparent !important; background-image: none !important`;
             }
+            
             return `${cssKey}: ${value} !important`;
           })
+          .filter(rule => rule !== '')
           .join('; ');
         
-        // Use multiple selectors with increasing specificity
-        // 1. ID selector
-        const idSelector = `#style-override-${node.id}-${breakpoint}`;
-        css += `${idSelector} { ${styleString} }\n`;
-        
-        // 2. Data attribute selector
-        css += `[data-node-id="${node.id}"] { ${styleString} }\n`;
-        
-        // 3. Ultra-specific selector for elements with classes (to override class styles)
-        css += `body #page-builder-canvas [data-node-id="${node.id}"] { ${styleString} }\n`;
-        
-        // 4. Even more specific for buttons and links
-        css += `body #page-builder-canvas a[data-node-id="${node.id}"], body #page-builder-canvas button[data-node-id="${node.id}"] { ${styleString} }\n`;
-        
-        count++;
+        if (styleString) {
+          // Use multiple selectors with increasing specificity
+          // 1. ID selector
+          const idSelector = `#style-override-${node.id}-${breakpoint}`;
+          css += `${idSelector} { ${styleString} }\n`;
+          
+          // 2. Data attribute selector
+          css += `[data-node-id="${node.id}"] { ${styleString} }\n`;
+          
+          // 3. Ultra-specific selector for elements with classes (to override class styles)
+          css += `body #page-builder-canvas [data-node-id="${node.id}"] { ${styleString} }\n`;
+          
+          // 4. Even more specific for buttons and links
+          css += `body #page-builder-canvas a[data-node-id="${node.id}"], body #page-builder-canvas button[data-node-id="${node.id}"] { ${styleString} }\n`;
+          
+          count++;
+        }
       }
     }
   });

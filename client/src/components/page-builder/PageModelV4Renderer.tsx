@@ -140,8 +140,8 @@ export function PageModelV4Renderer({
 
   return (
     <div 
-      className="page-frame w-full h-full overflow-auto page-renderer-reset" 
-      style={{ position: 'relative', zIndex: 0 }}
+      className="page-frame w-full h-full page-renderer-reset" 
+      style={{ position: 'relative', zIndex: 0, overflow: 'visible' }}
       onMouseMove={handleMouseMove}
     >
       {/* Inject global CSS (variables, resets, classes) */}
@@ -152,13 +152,32 @@ export function PageModelV4Renderer({
         }} />
       )}
       
+      {/* Global CSS to prevent unwanted scrollbars */}
+      <style>{`
+        #page-builder-canvas * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        #page-builder-canvas *::-webkit-scrollbar {
+          display: none !important;
+        }
+        #page-builder-canvas section,
+        #page-builder-canvas div,
+        #page-builder-canvas nav,
+        #page-builder-canvas header,
+        #page-builder-canvas footer,
+        #page-builder-canvas aside {
+          overflow: visible !important;
+        }
+      `}</style>
+      
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
       <div style={{ 
         position: 'relative', 
         isolation: 'isolate',
         width: '100%',
         minHeight: '100%',
-        overflow: 'hidden',
+        overflow: 'visible',
         contain: 'layout style paint'
       }}>
         {model.nodes.map(node => (
