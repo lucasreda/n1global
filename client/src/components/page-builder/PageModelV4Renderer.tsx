@@ -81,6 +81,35 @@ export function PageModelV4Renderer({
     return sanitized;
   };
 
+  // Generate override styles with maximum specificity using IDs
+  const generateOverrideStyles = (nodes: PageNodeV4[]): string => {
+    let css = '';
+    
+    const processNode = (node: PageNodeV4) => {
+      const styles = node.styles?.[breakpoint];
+      if (styles && Object.keys(styles).length > 0) {
+        const uniqueId = `style-override-${node.id}-${breakpoint}`;
+        const styleRules = Object.entries(styles)
+          .map(([key, value]) => {
+            const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+            return `${cssKey}: ${value} !important`;
+          })
+          .join('; ');
+        
+        // ID selector has maximum specificity
+        css += `#${uniqueId} { ${styleRules}; }\n`;
+      }
+      
+      // Process children recursively
+      if (node.children) {
+        node.children.forEach(processNode);
+      }
+    };
+    
+    nodes.forEach(processNode);
+    return css;
+  };
+
   return (
     <div 
       className="page-frame w-full h-full overflow-auto page-renderer-reset" 
@@ -94,6 +123,11 @@ export function PageModelV4Renderer({
           __html: sanitizeGlobalStyles(model.globalStyles) 
         }} />
       )}
+      
+      {/* Inject user override styles with maximum specificity using IDs */}
+      <style id="user-overrides" dangerouslySetInnerHTML={{
+        __html: generateOverrideStyles(model.nodes)
+      }} />
       
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
@@ -209,6 +243,9 @@ function PageNodeV4Renderer({
     ...styles,
   };
   
+  // Generate unique CSS ID for maximum specificity override
+  const uniqueStyleId = `style-override-${node.id}-${breakpoint}`;
+  
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
   if (finalStyles.position === 'fixed') {
@@ -280,6 +317,7 @@ function PageNodeV4Renderer({
         ref={setCombinedRefs}
         {...draggableAttributes}
         {...draggableListeners}
+        id={uniqueStyleId}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
         className={cn(
@@ -360,6 +398,7 @@ function PageNodeV4Renderer({
       ref={setCombinedRefs}
       {...draggableAttributes}
       {...draggableListeners}
+      id={uniqueStyleId}
       data-node-id={node.id}
       data-testid={`node-${node.tag}-${node.id}`}
       className={cn(
@@ -374,22 +413,6 @@ function PageNodeV4Renderer({
       onMouseLeave={handleMouseLeaveNode}
       {...node.attributes}
     >
-      {/* Inject scoped override styles with !important */}
-      {styles && Object.keys(styles).length > 0 && (
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            ${node.tag}[data-node-id="${node.id}"] {
-              ${Object.entries(styles)
-                .map(([key, value]) => {
-                  const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-                  return `${cssKey}: ${value} !important`;
-                })
-                .join('; ')}
-            }
-          `
-        }} />
-      )}
-      
       {node.textContent}
       {node.children?.map(child => (
         <PageNodeV4Renderer 
