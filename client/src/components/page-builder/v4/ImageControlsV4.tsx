@@ -191,6 +191,7 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
         {desktopSrc && (
           <div className="relative w-full aspect-video bg-muted rounded overflow-hidden">
             <img 
+              key={desktopSrc}
               src={desktopSrc} 
               alt={altText || 'Desktop preview'}
               className="w-full h-full object-contain"
@@ -261,6 +262,7 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
         {mobileSrc && (
           <div className="relative w-full aspect-video bg-muted rounded overflow-hidden">
             <img 
+              key={mobileSrc}
               src={mobileSrc} 
               alt={altText || 'Mobile preview'}
               className="w-full h-full object-contain"
