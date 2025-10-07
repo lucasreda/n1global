@@ -95,45 +95,6 @@ export function PageModelV4Renderer({
         }} />
       )}
       
-      {/* User-edited styles with MAXIMUM specificity - injected AFTER global styles */}
-      <style id="user-overrides">
-        {model.nodes.map(node => {
-          const generateNodeStyles = (n: PageNodeV4, currentBreakpoint: 'desktop' | 'tablet' | 'mobile'): string => {
-            let css = '';
-            
-            // Generate styles for this node with maximum specificity
-            const styles = n.styles?.[currentBreakpoint];
-            if (styles && Object.keys(styles).length > 0) {
-              const styleRules = Object.entries(styles)
-                .map(([key, value]) => {
-                  const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-                  return `${cssKey}: ${value} !important`;
-                })
-                .join('; ');
-              
-              // Triple attribute selector + tag for absolute maximum specificity
-              const tag = n.tag === 'text' ? 'span' : n.tag;
-              const selector = `${tag}[data-node-id="${n.id}"][data-node-id="${n.id}"][data-node-id="${n.id}"]`;
-              const rule = `${selector} { ${styleRules}; }`;
-              
-              console.log('📝 Generated CSS rule:', { nodeId: n.id, tag, selector, styleRules });
-              
-              css += rule + '\n';
-            }
-            
-            // Recursively generate styles for children
-            if (n.children) {
-              n.children.forEach(child => {
-                css += generateNodeStyles(child, currentBreakpoint);
-              });
-            }
-            
-            return css;
-          };
-          
-          return generateNodeStyles(node, breakpoint);
-        }).join('\n')}
-      </style>
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
       <div style={{ 
@@ -413,6 +374,22 @@ function PageNodeV4Renderer({
       onMouseLeave={handleMouseLeaveNode}
       {...node.attributes}
     >
+      {/* Inject scoped override styles with !important */}
+      {styles && Object.keys(styles).length > 0 && (
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            ${node.tag}[data-node-id="${node.id}"] {
+              ${Object.entries(styles)
+                .map(([key, value]) => {
+                  const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+                  return `${cssKey}: ${value} !important`;
+                })
+                .join('; ')}
+            }
+          `
+        }} />
+      )}
+      
       {node.textContent}
       {node.children?.map(child => (
         <PageNodeV4Renderer 
