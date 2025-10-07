@@ -29,7 +29,7 @@ function DraggableElement({ template }: { template: any }) {
       `}
     >
       {template.icon && <template.icon className="w-5 h-5 text-muted-foreground" />}
-      <span className="text-sm font-medium">{template.name}</span>
+      <span className="text-sm font-medium text-foreground">{template.name}</span>
     </div>
   );
 }
@@ -76,7 +76,7 @@ export function ElementsTab() {
             <AccordionTrigger className="px-4 py-3 hover:no-underline">
               <div className="flex items-center gap-2">
                 <span className="text-lg">{category.icon}</span>
-                <span className="font-semibold">{category.label}</span>
+                <span className="font-semibold text-foreground">{category.label}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {category.elements.length}
                 </span>

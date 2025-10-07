@@ -53,8 +53,30 @@ export function PageModelV4Renderer({
         <style dangerouslySetInnerHTML={{ __html: model.globalStyles }} />
       )}
       
+      {/* Reset scrollbar styles for preview to prevent bleed */}
+      <style>{`
+        .page-preview-isolated * {
+          scrollbar-width: auto;
+          scrollbar-color: auto;
+        }
+        .page-preview-isolated *::-webkit-scrollbar {
+          width: auto;
+          height: auto;
+        }
+        .page-preview-isolated *::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .page-preview-isolated *::-webkit-scrollbar-thumb {
+          background: #888;
+          border-radius: 4px;
+        }
+        .page-preview-isolated *::-webkit-scrollbar-thumb:hover {
+          background: #555;
+        }
+      `}</style>
+      
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
-      <div style={{ position: 'relative', isolation: 'isolate' }}>
+      <div className="page-preview-isolated" style={{ position: 'relative', isolation: 'isolate' }}>
         {model.nodes.map(node => (
           <PageNodeV4Renderer 
             key={node.id} 

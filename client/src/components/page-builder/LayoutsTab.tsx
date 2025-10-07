@@ -39,7 +39,7 @@ export function LayoutsTab({ onInsertLayout }: LayoutsTabProps) {
           {categories.map((cat) => (
             <div key={cat.name} className="flex justify-between items-center">
               <span className="text-muted-foreground">{cat.name}</span>
-              <span className="font-semibold">{cat.count}</span>
+              <span className="font-semibold text-foreground">{cat.count}</span>
             </div>
           ))}
         </div>
@@ -55,7 +55,7 @@ export function LayoutsTab({ onInsertLayout }: LayoutsTabProps) {
 
             return (
               <div key={categoryName} data-testid={`category-${categoryName.toLowerCase().replace(/\s+/g, '-')}`}>
-                <h3 className="font-semibold mb-3 text-sm flex items-center gap-2">
+                <h3 className="font-semibold mb-3 text-sm flex items-center gap-2 text-foreground">
                   <span>{categoryName}</span>
                   <span className="text-xs text-muted-foreground">({templates.length})</span>
                 </h3>
@@ -71,7 +71,7 @@ export function LayoutsTab({ onInsertLayout }: LayoutsTabProps) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xl">{template.icon}</span>
-                              <h4 className="font-semibold text-sm truncate">
+                              <h4 className="font-semibold text-sm truncate text-foreground">
                                 {template.name}
                               </h4>
                             </div>
