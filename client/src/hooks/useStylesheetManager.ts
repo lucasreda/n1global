@@ -28,6 +28,12 @@ export function useStylesheetManager(
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    // Define layer order - template first, overrides last (highest priority)
+    const layerOrderStyle = document.createElement('style');
+    layerOrderStyle.setAttribute('data-layer', 'order-definition');
+    layerOrderStyle.textContent = '@layer template, overrides;';
+    document.head.insertBefore(layerOrderStyle, document.head.firstChild);
+    
     // Create template layer (base styles)
     if (templateCss) {
       const templateStyle = document.createElement('style');
@@ -41,8 +47,8 @@ export function useStylesheetManager(
         }
       `;
       
-      // Insert at the beginning of head to ensure it loads first
-      document.head.insertBefore(templateStyle, document.head.firstChild);
+      // Insert after layer order definition
+      document.head.insertBefore(templateStyle, layerOrderStyle.nextSibling);
       templateStyleRef.current = templateStyle;
     }
 
