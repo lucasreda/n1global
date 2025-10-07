@@ -10,6 +10,7 @@ import { Monitor, Tablet, Smartphone, Settings, Type as TypeIcon, Palette, Layou
 import { LayoutControlsV4 } from './v4/LayoutControlsV4';
 import { StylingControlsV4, TypographyControlsV4 } from './v4/StylingControlsV4';
 import { AdvancedControlsV4, PseudoClassEditorV4 } from './v4/AdvancedControlsV4';
+import { ImageControlsV4 } from './v4/ImageControlsV4';
 import { useComputedStyles } from '@/hooks/useComputedStyles';
 
 interface PropertiesPanelV4Props {
@@ -118,8 +119,17 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
           <div className="p-4">
             {/* Content Tab */}
             <TabsContent value="content" className="mt-0 space-y-4">
+              {/* Image Controls for img elements */}
+              {node.tag === 'img' && (
+                <ImageControlsV4
+                  node={node}
+                  breakpoint={breakpoint}
+                  onUpdateNode={onUpdateNode!}
+                />
+              )}
+              
               {/* Text Content */}
-              {node.textContent !== undefined && (
+              {node.tag !== 'img' && node.textContent !== undefined && (
                 <div className="space-y-2">
                   <Label htmlFor="text-content" className="text-sm font-medium text-foreground">Text Content</Label>
                   <Textarea
