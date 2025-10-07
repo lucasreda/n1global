@@ -433,15 +433,6 @@ function PageNodeV4Renderer({
         finalAttributes.src = responsiveSrc || dataSrcDesktop || baseSrc || '';
       }
       
-      console.log('🖼️ Image rendering:', {
-        nodeId: node.id,
-        breakpoint,
-        responsiveSrc,
-        dataSrcDesktop,
-        dataSrcMobile,
-        baseSrc,
-        finalSrc: finalAttributes.src
-      });
     }
     
     return (
