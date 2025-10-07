@@ -98,11 +98,11 @@ export function PageModelV4Renderer({
       {/* User-edited styles with higher specificity */}
       <style>
         {model.nodes.map(node => {
-          const generateNodeStyles = (n: PageNodeV4, breakpoint: 'desktop' | 'tablet' | 'mobile'): string => {
+          const generateNodeStyles = (n: PageNodeV4, currentBreakpoint: 'desktop' | 'tablet' | 'mobile'): string => {
             let css = '';
             
-            // Generate styles for this node
-            const styles = n.styles?.[breakpoint];
+            // Generate styles for this node with ultra-high specificity
+            const styles = n.styles?.[currentBreakpoint];
             if (styles && Object.keys(styles).length > 0) {
               const styleRules = Object.entries(styles)
                 .map(([key, value]) => {
@@ -111,20 +111,21 @@ export function PageModelV4Renderer({
                 })
                 .join('; ');
               
-              css += `[data-node-id="${n.id}"] { ${styleRules}; }\n`;
+              // Use multiple attribute selectors for maximum specificity
+              css += `[data-node-id="${n.id}"][data-node-id="${n.id}"] { ${styleRules}; }\n`;
             }
             
             // Recursively generate styles for children
             if (n.children) {
               n.children.forEach(child => {
-                css += generateNodeStyles(child, breakpoint);
+                css += generateNodeStyles(child, currentBreakpoint);
               });
             }
             
             return css;
           };
           
-          return generateNodeStyles(node, 'desktop');
+          return generateNodeStyles(node, breakpoint);
         }).join('\n')}
       </style>
       
