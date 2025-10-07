@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { HoverTooltip } from './HoverTooltip';
@@ -246,6 +246,28 @@ function PageNodeV4Renderer({
   // Generate unique CSS ID for maximum specificity override
   const uniqueStyleId = `style-override-${node.id}-${breakpoint}`;
   
+  // Ref to access DOM element and apply !important styles directly
+  const elementRef = useRef<HTMLElement>(null);
+  
+  // CRITICAL: Apply override styles directly to DOM with !important
+  // This is the ONLY way to guarantee override of global CSS with !important
+  useEffect(() => {
+    if (elementRef.current && styles && Object.keys(styles).length > 0) {
+      const styleString = Object.entries(styles)
+        .map(([key, value]) => {
+          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+          return `${cssKey}: ${value} !important`;
+        })
+        .join('; ');
+      
+      // Get existing inline styles (from finalStyles)
+      const existingStyle = elementRef.current.getAttribute('style') || '';
+      
+      // Append override styles with !important
+      elementRef.current.setAttribute('style', `${existingStyle}; ${styleString}`);
+    }
+  }, [styles, breakpoint]);
+  
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
   if (finalStyles.position === 'fixed') {
@@ -301,13 +323,14 @@ function PageNodeV4Renderer({
     }
   };
   
-  // Combine ALL refs into a single callback
+  // Combine ALL refs into a single callback (including elementRef for direct DOM manipulation)
   const setCombinedRefs = useCallback((el: Element | null) => {
     const htmlEl = el as HTMLElement | null;
     setDraggableRef(htmlEl);
     setBeforeDropRef(htmlEl);
     setAfterDropRef(htmlEl);
     setInnerDropRef(htmlEl);
+    (elementRef as any).current = htmlEl; // Also set our ref for direct style manipulation
   }, [setDraggableRef, setBeforeDropRef, setAfterDropRef, setInnerDropRef]);
 
   // Handle text-only nodes (convert 'text' tag to span)
