@@ -415,6 +415,7 @@ function PageNodeV4Renderer({
       // Check for responsive image attributes (data-src-desktop, data-src-mobile)
       const desktopSrc = node.attributes?.['data-src-desktop'];
       const mobileSrc = node.attributes?.['data-src-mobile'];
+      const originalSrc = node.attributes?.src;
       
       if (breakpoint === 'mobile' && mobileSrc) {
         finalAttributes.src = mobileSrc;
