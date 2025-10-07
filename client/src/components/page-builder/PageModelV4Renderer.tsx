@@ -1,4 +1,4 @@
-import { Fragment, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { HoverTooltip } from './HoverTooltip';
@@ -205,27 +205,25 @@ function PageNodeV4Renderer({
 
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
-    return (
-      <Fragment>
-        <span
-          ref={setCombinedRefs}
-          {...draggableAttributes}
-          {...draggableListeners}
-          data-node-id={node.id}
-          data-testid={`node-text-${node.id}`}
-          className={cn(
-            node.classNames?.join(' '),
-            isSelected && 'editor-node-selected',
-            isHovered && 'editor-node-hovered',
-            isDragging && 'opacity-30'
-          )}
-          style={finalStyles}
-          onClick={handleClick}
-          onMouseEnter={handleMouseEnterNode}
-          onMouseLeave={handleMouseLeaveNode}
-        >
-          {node.textContent}
-        </span>
+    const spanElement = (
+      <span
+        ref={setCombinedRefs}
+        {...draggableAttributes}
+        {...draggableListeners}
+        data-node-id={node.id}
+        data-testid={`node-text-${node.id}`}
+        className={cn(
+          node.classNames?.join(' '),
+          isSelected && 'editor-node-selected',
+          isHovered && 'editor-node-hovered',
+          isDragging && 'opacity-30'
+        )}
+        style={finalStyles}
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnterNode}
+        onMouseLeave={handleMouseLeaveNode}
+      >
+        {node.textContent}
         
         {/* Render toolbar for selected node */}
         {isSelected && onDuplicateNode && onDeleteNode && (
@@ -237,8 +235,10 @@ function PageNodeV4Renderer({
             dragAttributes={draggableAttributes}
           />
         )}
-      </Fragment>
+      </span>
     );
+    
+    return spanElement;
   }
   
   // Get the tag name (default to div if not specified)
@@ -250,7 +250,7 @@ function PageNodeV4Renderer({
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
   if (isSelfClosing) {
     return (
-      <Fragment>
+      <div style={{ display: 'inline', position: 'relative' }}>
         <Tag
           ref={setCombinedRefs}
           {...draggableAttributes}
@@ -280,7 +280,7 @@ function PageNodeV4Renderer({
             dragAttributes={draggableAttributes}
           />
         )}
-      </Fragment>
+      </div>
     );
   }
   
