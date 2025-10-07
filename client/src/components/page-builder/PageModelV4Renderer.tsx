@@ -249,24 +249,41 @@ function PageNodeV4Renderer({
   // Ref to access DOM element and apply !important styles directly
   const elementRef = useRef<HTMLElement>(null);
   
-  // CRITICAL: Apply override styles directly to DOM with !important
-  // This is the ONLY way to guarantee override of global CSS with !important
+  // CRITICAL: Apply ALL styles directly to DOM with setAttribute
+  // This bypasses React's style management and allows !important
   useEffect(() => {
-    if (elementRef.current && styles && Object.keys(styles).length > 0) {
-      const styleString = Object.entries(styles)
-        .map(([key, value]) => {
+    if (elementRef.current) {
+      // Build complete style string with proper priority
+      const allStyles: string[] = [];
+      
+      // 1. Layout styles (lowest priority)
+      if (node.layout) {
+        Object.entries(node.layout).forEach(([key, value]) => {
           const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-          return `${cssKey}: ${value} !important`;
-        })
-        .join('; ');
+          allStyles.push(`${cssKey}: ${value}`);
+        });
+      }
       
-      // Get existing inline styles (from finalStyles)
-      const existingStyle = elementRef.current.getAttribute('style') || '';
+      // 2. Inline styles (medium priority)  
+      if (node.inlineStyles) {
+        Object.entries(node.inlineStyles).forEach(([key, value]) => {
+          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+          allStyles.push(`${cssKey}: ${value}`);
+        });
+      }
       
-      // Append override styles with !important
-      elementRef.current.setAttribute('style', `${existingStyle}; ${styleString}`);
+      // 3. Override styles with !important (HIGHEST priority)
+      if (styles && Object.keys(styles).length > 0) {
+        Object.entries(styles).forEach(([key, value]) => {
+          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+          allStyles.push(`${cssKey}: ${value} !important`);
+        });
+      }
+      
+      // Apply all at once
+      elementRef.current.setAttribute('style', allStyles.join('; '));
     }
-  }, [styles, breakpoint]);
+  }, [node.layout, node.inlineStyles, styles, breakpoint]);
   
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
@@ -350,7 +367,6 @@ function PageNodeV4Renderer({
           isHovered && 'editor-node-hovered',
           isDragging && 'opacity-30'
         )}
-        style={finalStyles}
         onClick={handleClick}
         onMouseEnter={handleMouseEnterNode}
         onMouseLeave={handleMouseLeaveNode}
@@ -397,7 +413,6 @@ function PageNodeV4Renderer({
             isHovered && 'editor-node-hovered',
             isDragging && 'opacity-30'
           )}
-          style={finalStyles}
           onClick={handleClick}
           onMouseEnter={handleMouseEnterNode}
           onMouseLeave={handleMouseLeaveNode}
@@ -433,7 +448,6 @@ function PageNodeV4Renderer({
         isHovered && 'editor-node-hovered',
         isDragging && 'opacity-30'
       )}
-      style={finalStyles}
       onClick={handleClick}
       onMouseEnter={handleMouseEnterNode}
       onMouseLeave={handleMouseLeaveNode}
