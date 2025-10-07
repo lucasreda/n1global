@@ -98,8 +98,6 @@ export function PageModelV4Renderer({
         
         // ID selector has maximum specificity
         css += `#${uniqueId} { ${styleRules}; }\n`;
-        
-        console.log('🎨 Override CSS:', { nodeId: node.id, uniqueId, breakpoint, styles, generatedRule: `#${uniqueId} { ${styleRules}; }` });
       }
       
       // Process children recursively
@@ -109,7 +107,6 @@ export function PageModelV4Renderer({
     };
     
     nodes.forEach(processNode);
-    console.log('📝 Total override CSS generated:', css);
     return css;
   };
 
@@ -126,12 +123,6 @@ export function PageModelV4Renderer({
           __html: sanitizeGlobalStyles(model.globalStyles) 
         }} />
       )}
-      
-      {/* Inject user override styles with maximum specificity using IDs */}
-      <style id="user-overrides" dangerouslySetInnerHTML={{
-        __html: generateOverrideStyles(model.nodes)
-      }} />
-      
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
       <div style={{ 
@@ -157,6 +148,12 @@ export function PageModelV4Renderer({
           />
         ))}
       </div>
+      
+      {/* CRITICAL: Inject user overrides AFTER rendered content to win cascade order */}
+      {/* This ensures overrides come after any <style> tags embedded in the imported HTML */}
+      <style id="user-overrides" dangerouslySetInnerHTML={{
+        __html: generateOverrideStyles(model.nodes)
+      }} />
 
       {/* Hover Tooltip */}
       {hoveredNodeInfo && hoveredNodeId !== selectedNodeId && (
@@ -248,11 +245,6 @@ function PageNodeV4Renderer({
   
   // Generate unique CSS ID for maximum specificity override
   const uniqueStyleId = `style-override-${node.id}-${breakpoint}`;
-  
-  // Debug: Log when element has override styles
-  if (styles && Object.keys(styles).length > 0) {
-    console.log('🆔 Element ID applied:', { nodeId: node.id, uniqueStyleId, tag: node.tag, classes: node.classNames, overrideStyles: styles });
-  }
   
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
