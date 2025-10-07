@@ -15,7 +15,11 @@ interface StylingControlsV4Props {
 export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingControlsV4Props) {
   if (!node) return null;
 
-  const currentStyles = node.styles?.[breakpoint] || {};
+  // Merge responsive styles with inline styles (inline has precedence)
+  const currentStyles = {
+    ...(node.styles?.[breakpoint] || {}),
+    ...(node.inlineStyles || {}),
+  };
 
   const handleStyleChange = (updates: Record<string, string | any>) => {
     const updatedStyles: ResponsiveStylesV4 = {
@@ -141,7 +145,11 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
 export function TypographyControlsV4({ node, breakpoint, onUpdateNode }: StylingControlsV4Props) {
   if (!node) return null;
 
-  const currentStyles = node.styles?.[breakpoint] || {};
+  // Merge responsive styles with inline styles (inline has precedence)
+  const currentStyles = {
+    ...(node.styles?.[breakpoint] || {}),
+    ...(node.inlineStyles || {}),
+  };
 
   const handleStyleChange = (updates: Record<string, string>) => {
     const updatedStyles: ResponsiveStylesV4 = {

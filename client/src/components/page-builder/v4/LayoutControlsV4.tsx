@@ -12,7 +12,11 @@ interface LayoutControlsV4Props {
 export function LayoutControlsV4({ node, breakpoint, onUpdateNode }: LayoutControlsV4Props) {
   if (!node) return null;
 
-  const currentStyles = node.styles?.[breakpoint] || {};
+  // Merge responsive styles with inline styles (inline has precedence)
+  const currentStyles = {
+    ...(node.styles?.[breakpoint] || {}),
+    ...(node.inlineStyles || {}),
+  };
 
   const handleStyleChange = (updates: Record<string, string>) => {
     const updatedStyles: ResponsiveStylesV4 = {
