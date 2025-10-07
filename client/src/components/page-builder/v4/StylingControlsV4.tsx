@@ -37,6 +37,13 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
       },
     };
 
+    console.log('🎨 Style update:', {
+      nodeId: node.id,
+      breakpoint,
+      updates,
+      finalStyles: updatedStyles[breakpoint],
+    });
+
     onUpdateNode({
       styles: updatedStyles,
     });

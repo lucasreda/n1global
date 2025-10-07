@@ -95,13 +95,13 @@ export function PageModelV4Renderer({
         }} />
       )}
       
-      {/* User-edited styles with higher specificity */}
-      <style>
+      {/* User-edited styles with MAXIMUM specificity - injected AFTER global styles */}
+      <style id="user-overrides">
         {model.nodes.map(node => {
           const generateNodeStyles = (n: PageNodeV4, currentBreakpoint: 'desktop' | 'tablet' | 'mobile'): string => {
             let css = '';
             
-            // Generate styles for this node with ultra-high specificity
+            // Generate styles for this node with maximum specificity
             const styles = n.styles?.[currentBreakpoint];
             if (styles && Object.keys(styles).length > 0) {
               const styleRules = Object.entries(styles)
@@ -111,8 +111,14 @@ export function PageModelV4Renderer({
                 })
                 .join('; ');
               
-              // Use multiple attribute selectors for maximum specificity
-              css += `[data-node-id="${n.id}"][data-node-id="${n.id}"] { ${styleRules}; }\n`;
+              // Triple attribute selector + tag for absolute maximum specificity
+              const tag = n.tag === 'text' ? 'span' : n.tag;
+              const selector = `${tag}[data-node-id="${n.id}"][data-node-id="${n.id}"][data-node-id="${n.id}"]`;
+              const rule = `${selector} { ${styleRules}; }`;
+              
+              console.log('📝 Generated CSS rule:', { nodeId: n.id, tag, selector, styleRules });
+              
+              css += rule + '\n';
             }
             
             // Recursively generate styles for children
