@@ -129,7 +129,14 @@ export function PageModelV4Renderer({
       </style>
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
-      <div style={{ position: 'relative', isolation: 'isolate' }}>
+      <div style={{ 
+        position: 'relative', 
+        isolation: 'isolate',
+        width: '100%',
+        minHeight: '100%',
+        overflow: 'hidden',
+        contain: 'layout style paint'
+      }}>
         {model.nodes.map(node => (
           <PageNodeV4Renderer 
             key={node.id} 
