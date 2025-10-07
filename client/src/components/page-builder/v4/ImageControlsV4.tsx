@@ -71,14 +71,23 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
       const newAttributes = {
         ...node.attributes,
         [`data-src-${targetBreakpoint}`]: imageUrl,
+        src: imageUrl, // Always update src for immediate display
       };
       
-      // Always update the base src when uploading desktop image
-      if (targetBreakpoint === 'desktop') {
-        newAttributes.src = imageUrl;
+      // CRITICAL: Update responsiveAttributes to make the image display immediately
+      const newResponsiveAttributes = { ...node.responsiveAttributes };
+      if (!newResponsiveAttributes.src) {
+        newResponsiveAttributes.src = {};
       }
+      newResponsiveAttributes.src = {
+        ...newResponsiveAttributes.src,
+        [targetBreakpoint]: imageUrl
+      };
       
-      onUpdateNode({ attributes: newAttributes });
+      onUpdateNode({ 
+        attributes: newAttributes,
+        responsiveAttributes: newResponsiveAttributes
+      });
       
       toast({
         title: 'Imagem enviada',
@@ -98,17 +107,27 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
   };
   
   const handleUrlChange = (url: string, targetBreakpoint: 'desktop' | 'mobile') => {
+    // Update the node attributes with responsive image
     const newAttributes = {
       ...node.attributes,
       [`data-src-${targetBreakpoint}`]: url,
+      src: url, // Always update src for immediate display
     };
     
-    // Always update the base src when updating desktop image
-    if (targetBreakpoint === 'desktop') {
-      newAttributes.src = url;
+    // CRITICAL: Update responsiveAttributes to make the image display immediately
+    const newResponsiveAttributes = { ...node.responsiveAttributes };
+    if (!newResponsiveAttributes.src) {
+      newResponsiveAttributes.src = {};
     }
+    newResponsiveAttributes.src = {
+      ...newResponsiveAttributes.src,
+      [targetBreakpoint]: url
+    };
     
-    onUpdateNode({ attributes: newAttributes });
+    onUpdateNode({ 
+      attributes: newAttributes,
+      responsiveAttributes: newResponsiveAttributes
+    });
   };
   
   const handleAltChange = (alt: string) => {
