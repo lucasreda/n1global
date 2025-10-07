@@ -101,6 +101,8 @@ export function VisualEditorV4({
   };
 
   const updateNodeInTree = (nodes: PageNodeV4[], id: string, updates: Partial<PageNodeV4>): PageNodeV4[] => {
+    console.log('🔄 updateNodeInTree called for node:', id, 'with updates:', updates);
+    
     return nodes.map(node => {
       if (node.id === id) {
         const updated: PageNodeV4 = JSON.parse(JSON.stringify(node));
@@ -111,6 +113,7 @@ export function VisualEditorV4({
         
         // CRITICAL: Process responsiveAttributes updates for images
         if (updates.responsiveAttributes !== undefined) {
+          console.log('🎨 Processing responsiveAttributes for node:', id);
           updated.responsiveAttributes = {
             ...updated.responsiveAttributes,
             ...updates.responsiveAttributes

@@ -422,6 +422,13 @@ function PageNodeV4Renderer({
       // Priority 3: Regular src attribute
       const baseSrc = node.attributes?.src;
       
+      console.log('🖼️ Image rendering for node:', node.id, {
+        breakpoint,
+        responsiveSrc,
+        responsiveAttributes: node.responsiveAttributes,
+        baseSrc
+      });
+      
       // Determine which src to use based on breakpoint
       if (breakpoint === 'mobile') {
         finalAttributes.src = responsiveSrc || dataSrcMobile || baseSrc || '';
