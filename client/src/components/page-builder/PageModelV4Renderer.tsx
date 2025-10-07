@@ -317,6 +317,7 @@ function PageNodeV4Renderer({
         ref={setCombinedRefs}
         {...draggableAttributes}
         {...draggableListeners}
+        {...node.attributes}
         id={uniqueStyleId}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
@@ -363,6 +364,8 @@ function PageNodeV4Renderer({
           ref={setCombinedRefs}
           {...draggableAttributes}
           {...draggableListeners}
+          {...node.attributes}
+          id={uniqueStyleId}
           data-node-id={node.id}
           data-testid={`node-${node.tag}-${node.id}`}
           className={cn(
@@ -375,7 +378,6 @@ function PageNodeV4Renderer({
           onClick={handleClick}
           onMouseEnter={handleMouseEnterNode}
           onMouseLeave={handleMouseLeaveNode}
-          {...node.attributes}
         />
         
         {/* Render toolbar for selected node */}
@@ -398,6 +400,7 @@ function PageNodeV4Renderer({
       ref={setCombinedRefs}
       {...draggableAttributes}
       {...draggableListeners}
+      {...node.attributes}
       id={uniqueStyleId}
       data-node-id={node.id}
       data-testid={`node-${node.tag}-${node.id}`}
@@ -411,7 +414,6 @@ function PageNodeV4Renderer({
       onClick={handleClick}
       onMouseEnter={handleMouseEnterNode}
       onMouseLeave={handleMouseLeaveNode}
-      {...node.attributes}
     >
       {node.textContent}
       {node.children?.map(child => (
