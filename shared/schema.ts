@@ -5495,6 +5495,15 @@ export type PageNodeV4 = {
   // Attributes (href, src, alt, data-*, etc.)
   attributes?: Record<string, string>;
   
+  // Responsive attributes for breakpoint-specific values (e.g., responsive images)
+  responsiveAttributes?: {
+    src?: {
+      desktop?: string;
+      tablet?: string;
+      mobile?: string;
+    };
+  };
+  
   // Text content (for text nodes)
   textContent?: string;
   
