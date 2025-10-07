@@ -11,6 +11,7 @@ import {
   type PageModelV4,
 } from "@shared/schema";
 import { renderPageModelToHTML } from "./page-model-renderer";
+import { renderPageModelV4ToHTML } from "./page-model-v4-renderer";
 import { convertHtmlToPageModel, convertHtmlToPageModelV4 } from "./html-to-pagemodel-converter";
 
 export class AffiliateLandingService {
@@ -181,6 +182,30 @@ export class AffiliateLandingService {
       .set({
         model: model as any,
         htmlContent: generatedHtml, // Auto-generate HTML from model
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliateLandingPages.id, id))
+      .returning();
+    
+    if (!updated) {
+      throw new Error("Landing page não encontrada");
+    }
+    
+    return updated;
+  }
+  
+  async updateLandingPageModelV4(
+    id: string,
+    model: PageModelV4
+  ): Promise<AffiliateLandingPage> {
+    // Generate HTML from the V4 model
+    const generatedHtml = renderPageModelV4ToHTML(model);
+    
+    const [updated] = await db
+      .update(affiliateLandingPages)
+      .set({
+        model: model as any,
+        htmlContent: generatedHtml, // Auto-generate HTML from V4 model
         updatedAt: new Date(),
       })
       .where(eq(affiliateLandingPages.id, id))

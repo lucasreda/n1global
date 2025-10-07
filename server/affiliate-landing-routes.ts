@@ -259,7 +259,13 @@ router.put(
         });
       }
       
-      const landingPage = await affiliateLandingService.updateLandingPageModel(id, model);
+      // Detect if it's V2 or V4 model based on structure
+      // V4 has 'nodes' array, V2 has 'sections' array
+      const isV4Model = 'nodes' in model && Array.isArray(model.nodes);
+      
+      const landingPage = isV4Model 
+        ? await affiliateLandingService.updateLandingPageModelV4(id, model)
+        : await affiliateLandingService.updateLandingPageModel(id, model);
       
       res.json({
         success: true,
