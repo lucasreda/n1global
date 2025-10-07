@@ -41,12 +41,11 @@ router.post('/api/upload', authenticateToken, upload.single('file'), async (req:
     const objectPath = `public/page-builder/${fileName}`;
     
     // Upload to Object Storage
-    await client.uploadFromBuffer(objectPath, file.buffer, {
-      type: file.mimetype
-    });
+    await client.uploadFromBytes(objectPath, file.buffer);
     
-    // Get the public URL
-    const publicUrl = await client.downloadUrl(objectPath);
+    // Get the public URL - construct it manually for public files
+    const bucketId = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split('/')[1] || 'replit-objstore-21841582-91c3-4aa8-a2d5-39b54dc35b43';
+    const publicUrl = `https://storage.googleapis.com/${bucketId}/${objectPath}`;
     
     // Return the URL
     res.json({ url: publicUrl });
@@ -85,11 +84,10 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       const fileName = `${nanoid()}_desktop.${fileExt}`;
       const objectPath = `public/page-builder/${fileName}`;
       
-      await client.uploadFromBuffer(objectPath, desktopFile.buffer, {
-        type: desktopFile.mimetype
-      });
+      await client.uploadFromBytes(objectPath, desktopFile.buffer);
       
-      urls.desktop = await client.downloadUrl(objectPath);
+      const bucketId = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split('/')[1] || 'replit-objstore-21841582-91c3-4aa8-a2d5-39b54dc35b43';
+      urls.desktop = `https://storage.googleapis.com/${bucketId}/${objectPath}`;
     }
     
     // Upload mobile version if provided
@@ -99,11 +97,10 @@ router.post('/api/upload/responsive', authenticateToken, upload.fields([
       const fileName = `${nanoid()}_mobile.${fileExt}`;
       const objectPath = `public/page-builder/${fileName}`;
       
-      await client.uploadFromBuffer(objectPath, mobileFile.buffer, {
-        type: mobileFile.mimetype
-      });
+      await client.uploadFromBytes(objectPath, mobileFile.buffer);
       
-      urls.mobile = await client.downloadUrl(objectPath);
+      const bucketId = process.env.PUBLIC_OBJECT_SEARCH_PATHS?.split('/')[1] || 'replit-objstore-21841582-91c3-4aa8-a2d5-39b54dc35b43';
+      urls.mobile = `https://storage.googleapis.com/${bucketId}/${objectPath}`;
     }
     
     // Return the URLs
