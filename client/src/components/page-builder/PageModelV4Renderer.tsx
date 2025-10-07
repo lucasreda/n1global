@@ -47,16 +47,14 @@ export function PageModelV4Renderer({
       style={{ position: 'relative', zIndex: 0 }}
       onMouseMove={handleMouseMove}
     >
-      {/* Inject global CSS scoped to preview only */}
+      {/* Inject global CSS (variables, resets, classes) */}
       {/* Font Awesome is loaded globally in index.html */}
       {model.globalStyles && (
-        <style dangerouslySetInnerHTML={{ 
-          __html: `.page-preview-isolated { ${model.globalStyles} }` 
-        }} />
+        <style dangerouslySetInnerHTML={{ __html: model.globalStyles }} />
       )}
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
-      <div className="page-preview-isolated" style={{ position: 'relative', isolation: 'isolate' }}>
+      <div style={{ position: 'relative', isolation: 'isolate' }}>
         {model.nodes.map(node => (
           <PageNodeV4Renderer 
             key={node.id} 

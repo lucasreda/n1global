@@ -46,7 +46,7 @@ export function LayoutsTab({ onInsertLayout }: LayoutsTabProps) {
       </div>
 
       {/* Templates grid */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 sidebar-scroll">
         <div className="p-4 space-y-6">
           {/* Group by category */}
           {['Hero', 'Navigation', 'Content', 'Call to Action', 'Forms', 'Misc'].map((categoryName) => {

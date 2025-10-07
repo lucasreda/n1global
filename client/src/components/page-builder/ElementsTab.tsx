@@ -69,7 +69,10 @@ export function ElementsTab() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto" data-testid="elements-tab">
+    <div className="h-full overflow-y-auto sidebar-scroll" data-testid="elements-tab" style={{
+      scrollbarWidth: 'thin',
+      scrollbarColor: '#888 transparent'
+    }}>
       <Accordion type="multiple" defaultValue={['text', 'layout', 'media', 'form', 'interactive']} className="w-full">
         {categories.map((category) => (
           <AccordionItem key={category.id} value={category.id} data-testid={`category-${category.id}`}>
