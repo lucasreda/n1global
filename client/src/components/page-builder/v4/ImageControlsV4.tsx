@@ -22,15 +22,28 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
   
   // Extract current image URLs from attributes
   const getImageSrc = (bp: 'desktop' | 'mobile') => {
-    // Check responsive attributes first
-    const responsiveAttr = node.attributes?.[`data-src-${bp}`];
-    if (responsiveAttr) return responsiveAttr;
-    
-    // Fallback to regular src
-    if (bp === 'desktop') {
-      return node.attributes?.src || '';
+    // PRIORITY 1: Check responsiveAttributes (NEW SYSTEM)
+    const responsiveSrc = node.responsiveAttributes?.src?.[bp];
+    if (responsiveSrc) {
+      console.log(`✅ Using responsiveAttributes for ${bp}:`, responsiveSrc);
+      return responsiveSrc;
     }
     
+    // PRIORITY 2: Check data-src attributes (LEGACY)
+    const responsiveAttr = node.attributes?.[`data-src-${bp}`];
+    if (responsiveAttr) {
+      console.log(`⚠️ Using data-src-${bp}:`, responsiveAttr);
+      return responsiveAttr;
+    }
+    
+    // PRIORITY 3: Fallback to regular src
+    if (bp === 'desktop') {
+      const src = node.attributes?.src || '';
+      console.log(`⚠️ Using fallback src for ${bp}:`, src);
+      return src;
+    }
+    
+    console.log(`❌ No image source for ${bp}`);
     return '';
   };
   
@@ -65,7 +78,8 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
       }
       
       const data = await response.json();
-      const imageUrl = data.url;
+      // Add cache-busting timestamp to force browser reload
+      const imageUrl = `${data.url}?t=${Date.now()}`;
       
       // Update the node attributes with responsive image
       const newAttributes = {
@@ -83,6 +97,12 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
         ...newResponsiveAttributes.src,
         [targetBreakpoint]: imageUrl
       };
+      
+      console.log('📤 Upload complete, updating node:', {
+        imageUrl,
+        newAttributes,
+        newResponsiveAttributes
+      });
       
       onUpdateNode({ 
         attributes: newAttributes,
