@@ -22,8 +22,6 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
   };
 
   const handleStyleChange = (updates: Record<string, string | any>) => {
-    console.log('🎨 Style change:', { breakpoint, updates, currentNode: node.id });
-    
     const updatedStyles: ResponsiveStylesV4 = {
       desktop: { ...(node.styles?.desktop || {}) },
       tablet: { ...(node.styles?.tablet || {}) },
@@ -33,8 +31,6 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode }: StylingCon
         ...updates,
       },
     };
-
-    console.log('🎨 Updated styles:', updatedStyles);
 
     onUpdateNode({
       styles: updatedStyles,

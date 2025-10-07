@@ -137,12 +137,7 @@ export function VisualEditorV4({
   const handleUpdateNode = useCallback((updates: Partial<PageNodeV4>) => {
     if (!selectedNodeId) return;
     
-    console.log('🔧 Update node:', { selectedNodeId, updates });
-    
     const updatedNodes = updateNodeInTree(model.nodes, selectedNodeId, updates);
-    
-    console.log('🔧 Updated tree:', updatedNodes);
-    
     onChange({
       ...model,
       nodes: updatedNodes,

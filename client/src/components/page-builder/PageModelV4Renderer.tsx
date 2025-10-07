@@ -78,7 +78,6 @@ export function PageModelV4Renderer({
       }
     );
     
-    console.log('🎨 CSS sanitized - removed scrollbar customizations');
     return sanitized;
   };
 
@@ -95,6 +94,39 @@ export function PageModelV4Renderer({
           __html: sanitizeGlobalStyles(model.globalStyles) 
         }} />
       )}
+      
+      {/* User-edited styles with higher specificity */}
+      <style>
+        {model.nodes.map(node => {
+          const generateNodeStyles = (n: PageNodeV4, breakpoint: 'desktop' | 'tablet' | 'mobile'): string => {
+            let css = '';
+            
+            // Generate styles for this node
+            const styles = n.styles?.[breakpoint];
+            if (styles && Object.keys(styles).length > 0) {
+              const styleRules = Object.entries(styles)
+                .map(([key, value]) => {
+                  const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+                  return `${cssKey}: ${value} !important`;
+                })
+                .join('; ');
+              
+              css += `[data-node-id="${n.id}"] { ${styleRules}; }\n`;
+            }
+            
+            // Recursively generate styles for children
+            if (n.children) {
+              n.children.forEach(child => {
+                css += generateNodeStyles(child, breakpoint);
+              });
+            }
+            
+            return css;
+          };
+          
+          return generateNodeStyles(node, 'desktop');
+        }).join('\n')}
+      </style>
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
       <div style={{ position: 'relative', isolation: 'isolate' }}>
@@ -201,26 +233,6 @@ function PageNodeV4Renderer({
     ...node.inlineStyles,
     ...styles,
   };
-
-  // Force user-edited styles to override CSS classes
-  // User-edited styles (in node.styles) need !important to override globalStyles classes
-  const hasUserEditedStyles = node.styles && (
-    Object.keys(node.styles.desktop || {}).length > 0 ||
-    Object.keys(node.styles.tablet || {}).length > 0 ||
-    Object.keys(node.styles.mobile || {}).length > 0
-  );
-
-  // Build style string with !important for user-edited properties
-  let styleWithImportant = '';
-  if (hasUserEditedStyles && styles) {
-    Object.entries(styles).forEach(([key, value]) => {
-      if (value) {
-        // Convert camelCase to kebab-case
-        const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-        styleWithImportant += `${cssKey}: ${value} !important; `;
-      }
-    });
-  }
   
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
@@ -284,14 +296,7 @@ function PageNodeV4Renderer({
     setBeforeDropRef(htmlEl);
     setAfterDropRef(htmlEl);
     setInnerDropRef(htmlEl);
-    
-    // Apply !important styles if user has edited
-    if (htmlEl && styleWithImportant) {
-      // Get existing style and append important styles
-      const existingStyle = htmlEl.getAttribute('style') || '';
-      htmlEl.setAttribute('style', existingStyle + ' ' + styleWithImportant);
-    }
-  }, [setDraggableRef, setBeforeDropRef, setAfterDropRef, setInnerDropRef, styleWithImportant]);
+  }, [setDraggableRef, setBeforeDropRef, setAfterDropRef, setInnerDropRef]);
 
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
