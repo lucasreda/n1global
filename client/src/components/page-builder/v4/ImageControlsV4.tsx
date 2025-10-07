@@ -20,13 +20,6 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
   const fileInputRefDesktop = useRef<HTMLInputElement>(null);
   const fileInputRefMobile = useRef<HTMLInputElement>(null);
   
-  // Debug log to see which image is selected
-  console.log('📌 ImageControlsV4 - Selected image node:', {
-    nodeId: node.id,
-    currentSrc: node.attributes?.src,
-    responsiveAttributes: node.responsiveAttributes
-  });
-  
   // Extract current image URLs from attributes
   const getImageSrc = (bp: 'desktop' | 'mobile') => {
     // Check responsive attributes first
@@ -90,13 +83,6 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
         ...newResponsiveAttributes.src,
         [targetBreakpoint]: imageUrl
       };
-      
-      console.log('🚀 ImageControlsV4 - Calling onUpdateNode with:', {
-        nodeId: node.id,
-        newUrl: imageUrl,
-        newAttributes,
-        newResponsiveAttributes
-      });
       
       onUpdateNode({ 
         attributes: newAttributes,

@@ -438,6 +438,7 @@ function PageNodeV4Renderer({
     return (
       <div style={{ display: 'inline', position: 'relative' }}>
         <Tag
+          key={`${node.id}-${finalAttributes.src || 'no-src'}`}
           ref={setCombinedRefs}
           {...draggableAttributes}
           {...draggableListeners}
