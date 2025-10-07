@@ -409,13 +409,29 @@ function PageNodeV4Renderer({
   
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
   if (isSelfClosing) {
+    // Handle responsive images
+    let finalAttributes = { ...node.attributes };
+    if (node.tag === 'img' && node.responsiveAttributes) {
+      // Get the appropriate image for current breakpoint
+      const responsiveSrc = node.responsiveAttributes.src;
+      if (responsiveSrc) {
+        if (breakpoint === 'mobile' && responsiveSrc.mobile) {
+          finalAttributes.src = responsiveSrc.mobile;
+        } else if (breakpoint === 'tablet' && responsiveSrc.tablet) {
+          finalAttributes.src = responsiveSrc.tablet;
+        } else if (responsiveSrc.desktop) {
+          finalAttributes.src = responsiveSrc.desktop;
+        }
+      }
+    }
+    
     return (
       <div style={{ display: 'inline', position: 'relative' }}>
         <Tag
           ref={setCombinedRefs}
           {...draggableAttributes}
           {...draggableListeners}
-          {...node.attributes}
+          {...finalAttributes}
           id={uniqueStyleId}
           data-node-id={node.id}
           data-testid={`node-${node.tag}-${node.id}`}
