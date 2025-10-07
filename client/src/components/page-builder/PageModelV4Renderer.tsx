@@ -47,33 +47,13 @@ export function PageModelV4Renderer({
       style={{ position: 'relative', zIndex: 0 }}
       onMouseMove={handleMouseMove}
     >
-      {/* Inject global CSS (variables, resets, classes) */}
+      {/* Inject global CSS scoped to preview only */}
       {/* Font Awesome is loaded globally in index.html */}
       {model.globalStyles && (
-        <style dangerouslySetInnerHTML={{ __html: model.globalStyles }} />
+        <style dangerouslySetInnerHTML={{ 
+          __html: `.page-preview-isolated { ${model.globalStyles} }` 
+        }} />
       )}
-      
-      {/* Reset scrollbar styles for preview to prevent bleed */}
-      <style>{`
-        .page-preview-isolated * {
-          scrollbar-width: auto;
-          scrollbar-color: auto;
-        }
-        .page-preview-isolated *::-webkit-scrollbar {
-          width: auto;
-          height: auto;
-        }
-        .page-preview-isolated *::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .page-preview-isolated *::-webkit-scrollbar-thumb {
-          background: #888;
-          border-radius: 4px;
-        }
-        .page-preview-isolated *::-webkit-scrollbar-thumb:hover {
-          background: #555;
-        }
-      `}</style>
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
       <div className="page-preview-isolated" style={{ position: 'relative', isolation: 'isolate' }}>
