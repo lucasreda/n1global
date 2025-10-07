@@ -152,17 +152,30 @@ export function generateOverrideCss(
         const styleString = styleEntries
           .map(([key, value]) => {
             const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+            // Special handling for background properties
+            if (key === 'background' && value === 'none') {
+              // Clear all background properties when set to none
+              return `background: none !important; background-color: transparent !important; background-image: none !important`;
+            }
             return `${cssKey}: ${value} !important`;
           })
           .join('; ');
         
-        // Use ID selector for maximum specificity
-        const selector = `#style-override-${node.id}-${breakpoint}`;
-        css += `${selector} { ${styleString} }\n`;
-        count++;
+        // Use multiple selectors with increasing specificity
+        // 1. ID selector
+        const idSelector = `#style-override-${node.id}-${breakpoint}`;
+        css += `${idSelector} { ${styleString} }\n`;
         
-        // Also add with data-node-id for better targeting
+        // 2. Data attribute selector
         css += `[data-node-id="${node.id}"] { ${styleString} }\n`;
+        
+        // 3. Ultra-specific selector for elements with classes (to override class styles)
+        css += `body #page-builder-canvas [data-node-id="${node.id}"] { ${styleString} }\n`;
+        
+        // 4. Even more specific for buttons and links
+        css += `body #page-builder-canvas a[data-node-id="${node.id}"], body #page-builder-canvas button[data-node-id="${node.id}"] { ${styleString} }\n`;
+        
+        count++;
       }
     }
   });

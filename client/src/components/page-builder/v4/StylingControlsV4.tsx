@@ -29,13 +29,20 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
   const handleStyleChange = (updates: Record<string, string | any>) => {
     console.log('Style change received:', updates, 'for breakpoint:', breakpoint);
     
+    // If backgroundColor is being set, remove conflicting background property
+    const cleanedUpdates = { ...updates };
+    if (cleanedUpdates.backgroundColor) {
+      // Remove background property to avoid conflicts
+      cleanedUpdates.background = 'none';
+    }
+    
     const updatedStyles: ResponsiveStylesV4 = {
       desktop: { ...(node.styles?.desktop || {}) },
       tablet: { ...(node.styles?.tablet || {}) },
       mobile: { ...(node.styles?.mobile || {}) },
       [breakpoint]: {
         ...(node.styles?.[breakpoint] || {}),
-        ...updates,
+        ...cleanedUpdates,
       },
     };
 
