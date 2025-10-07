@@ -41,6 +41,33 @@ export function PageModelV4Renderer({
     setMousePosition({ x: e.clientX, y: e.clientY });
   }, []);
 
+  // Sanitize global styles to remove unwanted overflow rules
+  const sanitizeGlobalStyles = (css: string): string => {
+    if (!css) return '';
+    
+    // Remove overflow: auto/scroll from all selectors except whitelisted ones
+    // This prevents spurious scrollbars from imported CSS
+    return css.replace(
+      /([^}]*?)\{([^}]*?overflow\s*:\s*(auto|scroll)[^}]*?)\}/gi,
+      (match, selector, rules) => {
+        // Allow overflow on textarea, pre, code, or elements with scroll/overflow in selector
+        if (
+          selector.includes('textarea') ||
+          selector.includes('pre') ||
+          selector.includes('code') ||
+          selector.includes('scroll') ||
+          selector.includes('overflow')
+        ) {
+          return match; // Keep original
+        }
+        
+        // Remove overflow property from this rule
+        const sanitizedRules = rules.replace(/overflow(-[xy])?\s*:\s*(auto|scroll)\s*;?/gi, '');
+        return `${selector}{${sanitizedRules}}`;
+      }
+    );
+  };
+
   return (
     <div 
       className="page-frame w-full h-full overflow-auto page-renderer-reset" 
@@ -50,7 +77,9 @@ export function PageModelV4Renderer({
       {/* Inject global CSS (variables, resets, classes) */}
       {/* Font Awesome is loaded globally in index.html */}
       {model.globalStyles && (
-        <style dangerouslySetInnerHTML={{ __html: model.globalStyles }} />
+        <style dangerouslySetInnerHTML={{ 
+          __html: sanitizeGlobalStyles(model.globalStyles) 
+        }} />
       )}
       
       {/* Isolate rendered HTML to prevent position:fixed from escaping */}
