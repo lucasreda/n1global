@@ -98,6 +98,8 @@ export function PageModelV4Renderer({
         
         // ID selector has maximum specificity
         css += `#${uniqueId} { ${styleRules}; }\n`;
+        
+        console.log('🎨 Override CSS:', { nodeId: node.id, uniqueId, breakpoint, styles, generatedRule: `#${uniqueId} { ${styleRules}; }` });
       }
       
       // Process children recursively
@@ -107,6 +109,7 @@ export function PageModelV4Renderer({
     };
     
     nodes.forEach(processNode);
+    console.log('📝 Total override CSS generated:', css);
     return css;
   };
 
@@ -245,6 +248,11 @@ function PageNodeV4Renderer({
   
   // Generate unique CSS ID for maximum specificity override
   const uniqueStyleId = `style-override-${node.id}-${breakpoint}`;
+  
+  // Debug: Log when element has override styles
+  if (styles && Object.keys(styles).length > 0) {
+    console.log('🆔 Element ID applied:', { nodeId: node.id, uniqueStyleId, tag: node.tag, classes: node.classNames, overrideStyles: styles });
+  }
   
   // CRITICAL: Convert position:fixed to position:absolute to confine elements within canvas
   // This prevents HTML content from escaping the preview area and overlaying editor controls
