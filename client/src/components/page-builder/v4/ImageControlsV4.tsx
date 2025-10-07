@@ -46,8 +46,16 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
       formData.append('file', file);
       formData.append('path', `page-builder/images/${Date.now()}-${file.name}`);
       
+      // Get the auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers,
         body: formData,
         credentials: 'include'
       });
