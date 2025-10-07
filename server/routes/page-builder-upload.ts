@@ -18,7 +18,7 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
     const client = new Client();
     
     // Download the file from Object Storage
-    const fileBuffer = await client.download(objectPath);
+    const fileBuffer = await client.downloadAsBytes(objectPath);
     
     // Determine content type based on file extension
     const ext = filename.split('.').pop()?.toLowerCase();
