@@ -165,16 +165,23 @@ function PageNodeV4Renderer({
     finalStyles.position = 'absolute';
   }
   
-  // FIX: Remove overflow:auto from text elements (h1-h6, p, span, etc.) to prevent unwanted scrollbars
-  // Text elements should use natural height, not fixed height with overflow
-  const textTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'label', 'li', 'td', 'th'];
-  if (textTags.includes(node.tag)) {
+  // FIX: Remove unwanted overflow:auto that creates spurious scrollbars
+  // Only allow overflow:auto on explicit scrollable containers (divs with specific class/role)
+  const allowScrollbarTags = ['textarea', 'pre', 'code'];
+  const isScrollableContainer = node.classNames?.some(c => 
+    c.includes('scroll') || c.includes('overflow')
+  ) || node.attributes?.role === 'region';
+  
+  if (!allowScrollbarTags.includes(node.tag) && !isScrollableContainer) {
+    // Remove overflow auto/scroll to prevent unwanted scrollbars
     if (finalStyles.overflow === 'auto' || finalStyles.overflow === 'scroll') {
       delete finalStyles.overflow;
     }
-    // If height is set but no explicit overflow:hidden, remove height to allow natural sizing
-    if (finalStyles.height && !finalStyles.overflow) {
-      delete finalStyles.height;
+    if (finalStyles.overflowX === 'auto' || finalStyles.overflowX === 'scroll') {
+      delete finalStyles.overflowX;
+    }
+    if (finalStyles.overflowY === 'auto' || finalStyles.overflowY === 'scroll') {
+      delete finalStyles.overflowY;
     }
   }
   
