@@ -109,9 +109,14 @@ export function ImageControlsV4({ node, breakpoint, onUpdateNode }: ImageControl
         responsiveAttributes: newResponsiveAttributes
       });
       
+      // Trigger save event by dispatching a custom event
+      window.dispatchEvent(new CustomEvent('editor:auto-save', { 
+        detail: { reason: 'image-upload' } 
+      }));
+      
       toast({
         title: 'Imagem enviada',
-        description: `Imagem ${targetBreakpoint === 'desktop' ? 'desktop' : 'mobile'} atualizada com sucesso`,
+        description: `Imagem ${targetBreakpoint === 'desktop' ? 'desktop' : 'mobile'} atualizada. Salvando automaticamente...`,
       });
       
     } catch (error) {

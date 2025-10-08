@@ -131,11 +131,30 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     },
   });
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (currentModel) {
       savePageMutation.mutate(currentModel);
     }
-  };
+  }, [currentModel, savePageMutation]);
+
+  // Auto-save when image is uploaded
+  useEffect(() => {
+    const handleAutoSave = (event: CustomEvent) => {
+      console.log('🔄 Auto-save triggered:', event.detail);
+      // Wait for React state to fully update, then save
+      setTimeout(() => {
+        if (currentModel) {
+          console.log('💾 Executing auto-save...');
+          savePageMutation.mutate(currentModel);
+        }
+      }, 500); // Give enough time for state to propagate
+    };
+
+    window.addEventListener('editor:auto-save', handleAutoSave as EventListener);
+    return () => {
+      window.removeEventListener('editor:auto-save', handleAutoSave as EventListener);
+    };
+  }, [currentModel, savePageMutation]);
 
   const handleModelChange = useCallback((newModel: PageModelV4) => {
     setCurrentModel(newModel);
