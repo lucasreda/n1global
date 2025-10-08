@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,9 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
   const [showProperties, setShowProperties] = useState(true);
   const [showElements, setShowElements] = useState(true);
   const [historyInitialized, setHistoryInitialized] = useState(false);
+  
+  // Ref to always have the latest model for auto-save
+  const currentModelRef = useRef<PageModelV4 | null>(null);
 
   // History/Undo-Redo - Initialize with a stable default, will be reset when model loads
   const defaultModel: PageModelV4 = { 
@@ -113,14 +116,28 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Landing page salva",
         description: "As alterações foram salvas com sucesso.",
       });
       setIsDirty(false);
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/affiliate/landing-pages', landingPageId] });
+      
+      // Force refetch by invalidating and refetching immediately
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/affiliate/landing-pages'], 
+        refetchType: 'active' 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/affiliate/landing-pages', landingPageId],
+        refetchType: 'active'
+      });
+      
+      // Force refetch this specific query
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/affiliate/landing-pages', landingPageId],
+        exact: true
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -137,15 +154,23 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     }
   }, [currentModel, savePageMutation]);
 
+  // Keep ref in sync with currentModel
+  useEffect(() => {
+    currentModelRef.current = currentModel;
+  }, [currentModel]);
+
   // Auto-save when image is uploaded
   useEffect(() => {
     const handleAutoSave = (event: CustomEvent) => {
       console.log('🔄 Auto-save triggered:', event.detail);
       // Wait for React state to fully update, then save
       setTimeout(() => {
-        if (currentModel) {
-          console.log('💾 Executing auto-save...');
-          savePageMutation.mutate(currentModel);
+        const modelToSave = currentModelRef.current;
+        if (modelToSave) {
+          console.log('💾 Executing auto-save with model from ref...');
+          savePageMutation.mutate(modelToSave);
+        } else {
+          console.warn('⚠️ No model available in ref for auto-save');
         }
       }, 500); // Give enough time for state to propagate
     };
@@ -154,7 +179,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     return () => {
       window.removeEventListener('editor:auto-save', handleAutoSave as EventListener);
     };
-  }, [currentModel, savePageMutation]);
+  }, [savePageMutation]);
 
   const handleModelChange = useCallback((newModel: PageModelV4) => {
     setCurrentModel(newModel);
