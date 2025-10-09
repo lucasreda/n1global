@@ -399,6 +399,11 @@ export class AdminService {
     price: number;
     costPrice: number;
     shippingCost: number;
+    imageUrl?: string;
+    weight?: number;
+    height?: number;
+    width?: number;
+    depth?: number;
   }) {
     try {
       // Since products are global, we'll use a default store/operation for now
@@ -410,28 +415,51 @@ export class AdminService {
         throw new Error('No default store found');
       }
 
+      const productValues: any = {
+        sku: productData.sku,
+        name: productData.name,
+        type: productData.type,
+        description: productData.description || null,
+        price: productData.price.toString(),
+        costPrice: productData.costPrice.toString(),
+        shippingCost: productData.shippingCost.toString(),
+        storeId: defaultStore.id,
+        operationId: defaultOperation?.id || null,
+        stock: 0,
+        isActive: true
+      };
+
+      // Add optional fields if provided and valid
+      if (productData.imageUrl) productValues.imageUrl = productData.imageUrl;
+      
+      // Only add dimension fields if they are valid finite numbers
+      if (productData.weight !== undefined && Number.isFinite(productData.weight)) {
+        productValues.weight = productData.weight.toString();
+      }
+      if (productData.height !== undefined && Number.isFinite(productData.height)) {
+        productValues.height = productData.height.toString();
+      }
+      if (productData.width !== undefined && Number.isFinite(productData.width)) {
+        productValues.width = productData.width.toString();
+      }
+      if (productData.depth !== undefined && Number.isFinite(productData.depth)) {
+        productValues.depth = productData.depth.toString();
+      }
+
       const [newProduct] = await db
         .insert(products)
-        .values({
-          sku: productData.sku,
-          name: productData.name,
-          type: productData.type,
-          description: productData.description || null,
-          price: productData.price.toString(),
-          costPrice: productData.costPrice.toString(),
-          shippingCost: productData.shippingCost.toString(),
-          storeId: defaultStore.id,
-          operationId: defaultOperation?.id || null,
-          stock: 0,
-          isActive: true
-        })
+        .values(productValues)
         .returning();
 
       return {
         ...newProduct,
         price: Number(newProduct.price) || 0,
         costPrice: Number(newProduct.costPrice) || 0,
-        shippingCost: Number(newProduct.shippingCost) || 0
+        shippingCost: Number(newProduct.shippingCost) || 0,
+        weight: newProduct.weight ? Number(newProduct.weight) : undefined,
+        height: newProduct.height ? Number(newProduct.height) : undefined,
+        width: newProduct.width ? Number(newProduct.width) : undefined,
+        depth: newProduct.depth ? Number(newProduct.depth) : undefined,
       };
     } catch (error) {
       console.error('❌ Error creating product:', error);
