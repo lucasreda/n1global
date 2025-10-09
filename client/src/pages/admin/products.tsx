@@ -340,11 +340,212 @@ function CostConfigurationModal({ product, open, onClose }: { product: Product; 
   );
 }
 
+// New Product Modal Component
+function NewProductModal({ open, onClose }: { 
+  open: boolean; 
+  onClose: () => void; 
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    name: "",
+    sku: "",
+    type: "nutraceutico" as "fisico" | "nutraceutico",
+    price: "",
+    costPrice: "",
+    shippingCost: "",
+    description: ""
+  });
+
+  const createProductMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...formData,
+          price: parseFloat(formData.price),
+          costPrice: parseFloat(formData.costPrice),
+          shippingCost: parseFloat(formData.shippingCost)
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao criar produto');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Produto criado",
+        description: "O produto foi criado com sucesso.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/products'] });
+      onClose();
+      setFormData({
+        name: "",
+        sku: "",
+        type: "nutraceutico",
+        price: "",
+        costPrice: "",
+        shippingCost: "",
+        description: ""
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createProductMutation.mutate();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Novo Produto
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome do Produto *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                placeholder="Ex: Vitamina C 1000mg"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sku">SKU *</Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                required
+                placeholder="Ex: VIT-C-1000"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="price">Preço de Venda (€) *</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                required
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="costPrice">Preço de Custo (€) *</Label>
+              <Input
+                id="costPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.costPrice}
+                onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                required
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="type">Tipo de Produto *</Label>
+              <Select 
+                value={formData.type} 
+                onValueChange={(value: "fisico" | "nutraceutico") => setFormData({ ...formData, type: value })}
+              >
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nutraceutico">Nutraceutico</SelectItem>
+                  <SelectItem value="fisico">Físico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="shippingCost">Custo de Envio (€) *</Label>
+              <Input
+                id="shippingCost"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.shippingCost}
+                onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
+                required
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Input
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descrição do produto"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose} 
+              disabled={createProductMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="submit"
+              disabled={createProductMutation.isPending}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              {createProductMutation.isPending ? 'Criando...' : 'Criar Produto'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminProducts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ['/api/admin/products', searchTerm, statusFilter, supplierFilter],
@@ -431,7 +632,11 @@ export default function AdminProducts() {
             Gerencie todos os produtos do sistema
           </p>
         </div>
-        <Button className="text-white">
+        <Button 
+          className="text-white" 
+          onClick={() => setShowNewProductModal(true)}
+          data-testid="button-new-product"
+        >
           <Plus className="h-4 w-4 mr-2 text-white" />
           Novo Produto
         </Button>
@@ -696,6 +901,12 @@ export default function AdminProducts() {
           onClose={() => setSelectedProduct(null)}
         />
       )}
+
+      {/* New Product Modal */}
+      <NewProductModal
+        open={showNewProductModal}
+        onClose={() => setShowNewProductModal(false)}
+      />
     </div>
   );
 }
