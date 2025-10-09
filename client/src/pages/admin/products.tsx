@@ -613,7 +613,7 @@ function NewProductModal({ open, onClose }: {
                           className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
                             formData.availableCountries.includes(country.code)
                               ? 'border-primary bg-primary/10'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                              : 'border-gray-800 hover:border-gray-600'
                           }`}
                           data-testid={`button-country-${country.code.toLowerCase()}`}
                         >
