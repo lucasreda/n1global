@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,9 @@ import {
   ImageIcon,
   CheckCircle,
   FileText,
-  Settings
+  Settings,
+  Upload,
+  X
 } from "lucide-react";
 
 interface Product {
@@ -347,6 +349,11 @@ function NewProductModal({ open, onClose }: {
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -354,12 +361,69 @@ function NewProductModal({ open, onClose }: {
     price: "",
     costPrice: "",
     shippingCost: "",
-    description: ""
+    description: "",
+    weight: "",
+    height: "",
+    width: "",
+    depth: ""
   });
+
+  const handleImageSelect = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageSelect(file);
+  };
 
   const createProductMutation = useMutation({
     mutationFn: async () => {
       const token = localStorage.getItem("auth_token");
+      let imageUrl = "";
+
+      // Upload image if selected
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+
+        const uploadResponse = await fetch('/api/page-builder/upload-image', {
+          method: 'POST',
+          headers: {
+            ...(token && { "Authorization": `Bearer ${token}` }),
+          },
+          credentials: 'include',
+          body: formData
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Erro ao fazer upload da imagem');
+        }
+
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url;
+      }
+
+      // Create product
       const response = await fetch('/api/admin/products', {
         method: 'POST',
         headers: {
@@ -369,9 +433,14 @@ function NewProductModal({ open, onClose }: {
         credentials: 'include',
         body: JSON.stringify({
           ...formData,
+          imageUrl,
           price: parseFloat(formData.price),
           costPrice: parseFloat(formData.costPrice),
-          shippingCost: parseFloat(formData.shippingCost)
+          shippingCost: parseFloat(formData.shippingCost),
+          weight: formData.weight ? parseFloat(formData.weight) : undefined,
+          height: formData.height ? parseFloat(formData.height) : undefined,
+          width: formData.width ? parseFloat(formData.width) : undefined,
+          depth: formData.depth ? parseFloat(formData.depth) : undefined,
         })
       });
 
@@ -396,8 +465,14 @@ function NewProductModal({ open, onClose }: {
         price: "",
         costPrice: "",
         shippingCost: "",
-        description: ""
+        description: "",
+        weight: "",
+        height: "",
+        width: "",
+        depth: ""
       });
+      setImageFile(null);
+      setImagePreview("");
     },
     onError: (error: Error) => {
       toast({
@@ -415,126 +490,290 @@ function NewProductModal({ open, onClose }: {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-full h-screen w-screen m-0 rounded-none overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Novo Produto
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome do Produto *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                placeholder="Ex: Vitamina C 1000mg"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sku">SKU *</Label>
-              <Input
-                id="sku"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                required
-                placeholder="Ex: VIT-C-1000"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price">Preço de Venda (€) *</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                required
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="costPrice">Preço de Custo (€) *</Label>
-              <Input
-                id="costPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                required
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type">Tipo de Produto *</Label>
-              <Select 
-                value={formData.type} 
-                onValueChange={(value: "fisico" | "nutraceutico") => setFormData({ ...formData, type: value })}
-              >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nutraceutico">Nutraceutico</SelectItem>
-                  <SelectItem value="fisico">Físico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="shippingCost">Custo de Envio (€) *</Label>
-              <Input
-                id="shippingCost"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.shippingCost}
-                onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
-                required
-                placeholder="0.00"
-              />
-            </div>
+      <DialogContent className="max-w-full h-screen w-screen m-0 rounded-none p-0">
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="border-b px-8 py-6">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-2xl">
+                <Package className="h-6 w-6" />
+                Novo Produto
+              </DialogTitle>
+            </DialogHeader>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Input
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descrição do produto"
-            />
-          </div>
+          {/* Content */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
+              {/* Left Column - Image Upload */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Imagem do Produto</h3>
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 dark:border-gray-700'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {imagePreview ? (
+                      <div className="space-y-4">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-64 object-contain rounded-lg bg-gray-50 dark:bg-gray-900"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Trocar Imagem
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setImageFile(null);
+                              setImagePreview("");
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          Arraste uma imagem ou clique para selecionar
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Selecionar Imagem
+                        </Button>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageSelect(file);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+              {/* Right Column - Product Details */}
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nome do Produto *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                        placeholder="Ex: Vitamina C 1000mg"
+                        data-testid="input-product-name"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="sku">SKU *</Label>
+                        <Input
+                          id="sku"
+                          value={formData.sku}
+                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                          required
+                          placeholder="Ex: VIT-C-1000"
+                          data-testid="input-product-sku"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="type">Tipo *</Label>
+                        <Select 
+                          value={formData.type} 
+                          onValueChange={(value: "fisico" | "nutraceutico") => setFormData({ ...formData, type: value })}
+                        >
+                          <SelectTrigger id="type" data-testid="select-product-type">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nutraceutico">Nutraceutico</SelectItem>
+                            <SelectItem value="fisico">Físico</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Descrição</Label>
+                      <Input
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Descrição breve do produto"
+                        data-testid="input-product-description"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Preços</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price">Venda (€) *</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                        placeholder="0.00"
+                        data-testid="input-product-price"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="costPrice">Custo (€) *</Label>
+                      <Input
+                        id="costPrice"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.costPrice}
+                        onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                        required
+                        placeholder="0.00"
+                        data-testid="input-product-cost"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingCost">Envio (€) *</Label>
+                      <Input
+                        id="shippingCost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.shippingCost}
+                        onChange={(e) => setFormData({ ...formData, shippingCost: e.target.value })}
+                        required
+                        placeholder="0.00"
+                        data-testid="input-product-shipping"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dimensions & Weight */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Dimensões e Peso</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="weight">Peso (kg)</Label>
+                      <Input
+                        id="weight"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.weight}
+                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-product-weight"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="height">Altura (cm)</Label>
+                      <Input
+                        id="height"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.height}
+                        onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-product-height"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="width">Largura (cm)</Label>
+                      <Input
+                        id="width"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.width}
+                        onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-product-width"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="depth">Profundidade (cm)</Label>
+                      <Input
+                        id="depth"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.depth}
+                        onChange={(e) => setFormData({ ...formData, depth: e.target.value })}
+                        placeholder="0.00"
+                        data-testid="input-product-depth"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div className="border-t px-8 py-4 flex justify-end gap-3">
             <Button 
               type="button" 
               variant="outline" 
               onClick={onClose} 
               disabled={createProductMutation.isPending}
+              data-testid="button-cancel-product"
             >
               Cancelar
             </Button>
             <Button 
-              type="submit"
+              onClick={handleSubmit}
               disabled={createProductMutation.isPending}
               className="flex items-center gap-2"
+              data-testid="button-create-product"
             >
               <Plus className="h-4 w-4" />
               {createProductMutation.isPending ? 'Criando...' : 'Criar Produto'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
