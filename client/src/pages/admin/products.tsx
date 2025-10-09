@@ -822,10 +822,10 @@ function NewProductModal({ open, onClose }: {
           <Button 
             onClick={handleSubmit}
             disabled={createProductMutation.isPending}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-white"
             data-testid="button-create-product"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 text-white" />
             {createProductMutation.isPending ? 'Criando...' : 'Criar Produto'}
           </Button>
         </div>
