@@ -497,7 +497,7 @@ function NewProductModal({ open, onClose }: {
         {/* Header */}
         <div className="border-b px-8 py-6 flex-shrink-0">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
+            <DialogTitle className="flex items-center gap-2 text-xl">
               <Package className="h-6 w-6" />
               Novo Produto
             </DialogTitle>
