@@ -513,7 +513,7 @@ function NewProductModal({ open, onClose }: {
                   <h3 className="text-lg font-semibold mb-4">Imagem do Produto</h3>
                   <div
                     className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
-                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 dark:border-gray-700'
+                      isDragging ? 'border-primary bg-primary/5' : 'border-gray-800'
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
