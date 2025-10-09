@@ -365,7 +365,8 @@ function NewProductModal({ open, onClose }: {
     weight: "",
     height: "",
     width: "",
-    depth: ""
+    depth: "",
+    availableCountries: [] as string[]
   });
 
   const handleImageSelect = (file: File) => {
@@ -441,6 +442,7 @@ function NewProductModal({ open, onClose }: {
           height: formData.height ? parseFloat(formData.height) : undefined,
           width: formData.width ? parseFloat(formData.width) : undefined,
           depth: formData.depth ? parseFloat(formData.depth) : undefined,
+          availableCountries: formData.availableCountries,
         })
       });
 
@@ -469,7 +471,8 @@ function NewProductModal({ open, onClose }: {
         weight: "",
         height: "",
         width: "",
-        depth: ""
+        depth: "",
+        availableCountries: []
       });
       setImageFile(null);
       setImagePreview("");
@@ -571,6 +574,55 @@ function NewProductModal({ open, onClose }: {
                         if (file) handleImageSelect(file);
                       }}
                     />
+                  </div>
+                </div>
+
+                {/* Country Availability */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Países Disponíveis</h3>
+                  <div className="border rounded-lg p-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { code: 'ES', name: 'Espanha', flag: '🇪🇸' },
+                        { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+                        { code: 'IT', name: 'Itália', flag: '🇮🇹' },
+                        { code: 'FR', name: 'França', flag: '🇫🇷' },
+                        { code: 'DE', name: 'Alemanha', flag: '🇩🇪' },
+                        { code: 'NL', name: 'Holanda', flag: '🇳🇱' },
+                        { code: 'BE', name: 'Bélgica', flag: '🇧🇪' },
+                        { code: 'AT', name: 'Áustria', flag: '🇦🇹' },
+                        { code: 'PL', name: 'Polônia', flag: '🇵🇱' },
+                        { code: 'CZ', name: 'República Tcheca', flag: '🇨🇿' },
+                      ].map((country) => (
+                        <button
+                          key={country.code}
+                          type="button"
+                          onClick={() => {
+                            const isSelected = formData.availableCountries.includes(country.code);
+                            setFormData({
+                              ...formData,
+                              availableCountries: isSelected
+                                ? formData.availableCountries.filter(c => c !== country.code)
+                                : [...formData.availableCountries, country.code]
+                            });
+                          }}
+                          className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                            formData.availableCountries.includes(country.code)
+                              ? 'border-primary bg-primary/10'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                          data-testid={`button-country-${country.code.toLowerCase()}`}
+                        >
+                          <span className="text-2xl">{country.flag}</span>
+                          <span className="text-sm font-medium">{country.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {formData.availableCountries.length > 0 && (
+                      <div className="mt-3 text-sm text-muted-foreground">
+                        {formData.availableCountries.length} {formData.availableCountries.length === 1 ? 'país selecionado' : 'países selecionados'}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
