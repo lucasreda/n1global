@@ -399,11 +399,13 @@ function NewProductModal({ open, onClose }: {
 
   const createProductMutation = useMutation({
     mutationFn: async () => {
+      console.log("Mutation started!");
       const token = localStorage.getItem("auth_token");
       let imageUrl = "";
 
       // Upload image if selected
       if (imageFile) {
+        console.log("Uploading image...");
         const formData = new FormData();
         formData.append('image', imageFile);
 
@@ -425,6 +427,21 @@ function NewProductModal({ open, onClose }: {
       }
 
       // Create product
+      const productPayload = {
+        ...formData,
+        imageUrl,
+        price: parseFloat(formData.price),
+        costPrice: parseFloat(formData.costPrice),
+        shippingCost: parseFloat(formData.shippingCost),
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        height: formData.height ? parseFloat(formData.height) : undefined,
+        width: formData.width ? parseFloat(formData.width) : undefined,
+        depth: formData.depth ? parseFloat(formData.depth) : undefined,
+        availableCountries: formData.availableCountries,
+      };
+      
+      console.log("Creating product with payload:", productPayload);
+      
       const response = await fetch('/api/admin/products', {
         method: 'POST',
         headers: {
@@ -432,19 +449,10 @@ function NewProductModal({ open, onClose }: {
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
         credentials: 'include',
-        body: JSON.stringify({
-          ...formData,
-          imageUrl,
-          price: parseFloat(formData.price),
-          costPrice: parseFloat(formData.costPrice),
-          shippingCost: parseFloat(formData.shippingCost),
-          weight: formData.weight ? parseFloat(formData.weight) : undefined,
-          height: formData.height ? parseFloat(formData.height) : undefined,
-          width: formData.width ? parseFloat(formData.width) : undefined,
-          depth: formData.depth ? parseFloat(formData.depth) : undefined,
-          availableCountries: formData.availableCountries,
-        })
+        body: JSON.stringify(productPayload)
       });
+      
+      console.log("Response status:", response.status);
 
       if (!response.ok) {
         const error = await response.json();
@@ -488,6 +496,8 @@ function NewProductModal({ open, onClose }: {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Form submitted with data:", formData);
+    console.log("Image file:", imageFile);
     createProductMutation.mutate();
   };
 
