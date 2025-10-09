@@ -584,15 +584,20 @@ function NewProductModal({ open, onClose }: {
                     <div className="grid grid-cols-2 gap-3">
                       {[
                         { code: 'ES', name: 'Espanha', flag: '🇪🇸' },
-                        { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
                         { code: 'IT', name: 'Itália', flag: '🇮🇹' },
-                        { code: 'FR', name: 'França', flag: '🇫🇷' },
-                        { code: 'DE', name: 'Alemanha', flag: '🇩🇪' },
-                        { code: 'NL', name: 'Holanda', flag: '🇳🇱' },
-                        { code: 'BE', name: 'Bélgica', flag: '🇧🇪' },
-                        { code: 'AT', name: 'Áustria', flag: '🇦🇹' },
-                        { code: 'PL', name: 'Polônia', flag: '🇵🇱' },
+                        { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+                        { code: 'RO', name: 'Romênia', flag: '🇷🇴' },
+                        { code: 'GR', name: 'Grécia', flag: '🇬🇷' },
+                        { code: 'SK', name: 'Eslováquia', flag: '🇸🇰' },
+                        { code: 'HR', name: 'Croácia', flag: '🇭🇷' },
                         { code: 'CZ', name: 'República Tcheca', flag: '🇨🇿' },
+                        { code: 'PL', name: 'Polônia', flag: '🇵🇱' },
+                        { code: 'HU', name: 'Hungria', flag: '🇭🇺' },
+                        { code: 'AT', name: 'Áustria', flag: '🇦🇹' },
+                        { code: 'UA', name: 'Ucrânia', flag: '🇺🇦' },
+                        { code: 'NL', name: 'Holanda', flag: '🇳🇱' },
+                        { code: 'AE', name: 'Emirados Árabes Unidos', flag: '🇦🇪' },
+                        { code: 'SA', name: 'Arábia Saudita', flag: '🇸🇦' },
                       ].map((country) => (
                         <button
                           key={country.code}
