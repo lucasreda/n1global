@@ -366,6 +366,9 @@ export const products = pgTable("products", {
   width: decimal("width", { precision: 10, scale: 2 }), // Width in cm
   depth: decimal("depth", { precision: 10, scale: 2 }), // Depth in cm
   
+  // Country Availability
+  availableCountries: text("available_countries").array(), // Array of country codes where product is available
+  
   // Cost Configuration for Financial Analytics
   costPrice: decimal("cost_price", { precision: 10, scale: 2 }), // Product purchase/manufacturing cost
   shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }), // Average shipping cost

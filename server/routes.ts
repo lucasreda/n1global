@@ -4622,7 +4622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/products", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
-      const { sku, name, type, description, price, costPrice, shippingCost, imageUrl, weight, height, width, depth } = req.body;
+      const { sku, name, type, description, price, costPrice, shippingCost, imageUrl, weight, height, width, depth, availableCountries } = req.body;
       
       // Validation
       if (!sku || !name || !type || price === undefined || costPrice === undefined || shippingCost === undefined) {
@@ -4645,6 +4645,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add optional fields if provided and valid
       if (imageUrl) productData.imageUrl = imageUrl;
+      
+      // Add available countries if provided
+      if (availableCountries && Array.isArray(availableCountries)) {
+        productData.availableCountries = availableCountries;
+      }
       
       // Validate and add dimension fields only if they are valid finite numbers
       if (weight !== undefined && weight !== null && weight !== '') {

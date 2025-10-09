@@ -368,6 +368,7 @@ export class AdminService {
           costPrice: products.costPrice,
           shippingCost: products.shippingCost,
           imageUrl: products.imageUrl,
+          availableCountries: products.availableCountries,
           isActive: products.isActive,
           status: products.status,
           supplierId: products.supplierId,
@@ -404,6 +405,7 @@ export class AdminService {
     height?: number;
     width?: number;
     depth?: number;
+    availableCountries?: string[];
   }) {
     try {
       // Since products are global, we'll use a default store/operation for now
@@ -431,6 +433,11 @@ export class AdminService {
 
       // Add optional fields if provided and valid
       if (productData.imageUrl) productValues.imageUrl = productData.imageUrl;
+      
+      // Add available countries if provided
+      if (productData.availableCountries && Array.isArray(productData.availableCountries)) {
+        productValues.availableCountries = productData.availableCountries;
+      }
       
       // Only add dimension fields if they are valid finite numbers
       if (productData.weight !== undefined && Number.isFinite(productData.weight)) {
