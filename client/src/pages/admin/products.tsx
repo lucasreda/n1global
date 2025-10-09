@@ -493,21 +493,20 @@ function NewProductModal({ open, onClose }: {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-full h-screen w-screen m-0 rounded-none p-0">
-        <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="border-b px-8 py-6">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-2xl">
-                <Package className="h-6 w-6" />
-                Novo Produto
-              </DialogTitle>
-            </DialogHeader>
-          </div>
+      <DialogContent className="max-w-full h-screen w-screen m-0 rounded-none p-0 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="border-b px-8 py-6 flex-shrink-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <Package className="h-6 w-6" />
+              Novo Produto
+            </DialogTitle>
+          </DialogHeader>
+        </div>
 
-          {/* Content */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8 pb-24">
+        {/* Content */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8 pb-24">
               {/* Left Column - Image Upload */}
               <div className="space-y-6">
                 <div>
@@ -809,27 +808,26 @@ function NewProductModal({ open, onClose }: {
             </div>
           </form>
 
-          {/* Footer */}
-          <div className="border-t px-8 py-4 flex justify-end gap-3">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onClose} 
-              disabled={createProductMutation.isPending}
-              data-testid="button-cancel-product"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={createProductMutation.isPending}
-              className="flex items-center gap-2"
-              data-testid="button-create-product"
-            >
-              <Plus className="h-4 w-4" />
-              {createProductMutation.isPending ? 'Criando...' : 'Criar Produto'}
-            </Button>
-          </div>
+        {/* Footer */}
+        <div className="border-t px-8 py-4 flex justify-end gap-3 flex-shrink-0">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onClose} 
+            disabled={createProductMutation.isPending}
+            data-testid="button-cancel-product"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={createProductMutation.isPending}
+            className="flex items-center gap-2"
+            data-testid="button-create-product"
+          >
+            <Plus className="h-4 w-4" />
+            {createProductMutation.isPending ? 'Criando...' : 'Criar Produto'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
