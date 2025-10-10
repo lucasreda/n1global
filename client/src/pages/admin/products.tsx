@@ -408,9 +408,9 @@ function NewProductModal({ open, onClose }: {
         if (imageFile) {
           console.log("Uploading image...");
           const formData = new FormData();
-          formData.append('image', imageFile);
+          formData.append('file', imageFile);
 
-          const uploadResponse = await fetch('/api/page-builder/upload-image', {
+          const uploadResponse = await fetch('/api/upload', {
             method: 'POST',
             headers: {
               ...(token && { "Authorization": `Bearer ${token}` }),
