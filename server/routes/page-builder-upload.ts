@@ -20,9 +20,12 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
     const client = new Client();
     
     // Download the file from Object Storage
-    const fileBuffer = await client.downloadAsBytes(objectPath);
+    const fileData = await client.downloadAsBytes(objectPath);
     
-    console.log('✅ Image loaded successfully, size:', fileBuffer?.length || 0, 'bytes');
+    // Convert to Buffer if needed
+    const fileBuffer = Buffer.isBuffer(fileData) ? fileData : Buffer.from(fileData as ArrayBuffer);
+    
+    console.log('✅ Image loaded successfully, size:', fileBuffer.length, 'bytes');
     
     // Determine content type based on file extension
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -43,8 +46,8 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
       'Cache-Control': 'public, max-age=31536000',
     });
     
-    // Use res.end() instead of res.send() to avoid charset addition
-    res.end(fileBuffer, 'binary');
+    // Send the buffer
+    res.send(fileBuffer);
     
   } catch (error) {
     console.error('❌ Error serving image:', error);
