@@ -140,10 +140,10 @@ export function BoxModelInspector({
       <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Box Model</div>
       
       {/* Chrome DevTools-style Box Model Visualization */}
-      <div className="relative bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+      <div className="relative bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 p-8 rounded-lg border border-orange-200 dark:border-orange-800">
         {/* Margin Layer */}
         <div className="relative">
-          <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-orange-700 dark:text-orange-300 font-mono">
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-xs text-orange-700 dark:text-orange-300 font-mono">
             margin
           </div>
           
@@ -153,7 +153,7 @@ export function BoxModelInspector({
             value={getDisplayValue('margin', 'top')}
             onChange={(e) => handleInputChange('margin', 'top', e.target.value)}
             onBlur={() => handleInputBlur('margin', 'top')}
-            className="absolute -top-3 left-1/2 -translate-x-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700"
+            className="absolute -top-5 left-1/2 -translate-x-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700 z-10"
             placeholder="0"
             data-testid="input-margin-top"
           />
@@ -164,7 +164,7 @@ export function BoxModelInspector({
             value={getDisplayValue('margin', 'right')}
             onChange={(e) => handleInputChange('margin', 'right', e.target.value)}
             onBlur={() => handleInputBlur('margin', 'right')}
-            className="absolute top-1/2 -right-3 -translate-y-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700"
+            className="absolute top-1/2 -right-5 -translate-y-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700 z-10"
             placeholder="0"
             data-testid="input-margin-right"
           />
@@ -175,7 +175,7 @@ export function BoxModelInspector({
             value={getDisplayValue('margin', 'bottom')}
             onChange={(e) => handleInputChange('margin', 'bottom', e.target.value)}
             onBlur={() => handleInputBlur('margin', 'bottom')}
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700"
+            className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700 z-10"
             placeholder="0"
             data-testid="input-margin-bottom"
           />
@@ -186,14 +186,14 @@ export function BoxModelInspector({
             value={getDisplayValue('margin', 'left')}
             onChange={(e) => handleInputChange('margin', 'left', e.target.value)}
             onBlur={() => handleInputBlur('margin', 'left')}
-            className="absolute top-1/2 -left-3 -translate-y-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700"
+            className="absolute top-1/2 -left-5 -translate-y-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-orange-300 dark:border-orange-700 z-10"
             placeholder="0"
             data-testid="input-margin-left"
           />
           
           {/* Border Layer */}
-          <div className="relative bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 p-4 rounded border border-yellow-200 dark:border-yellow-800">
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-yellow-700 dark:text-yellow-300 font-mono">
+          <div className="relative bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900 p-8 rounded border border-yellow-200 dark:border-yellow-800">
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-xs text-yellow-700 dark:text-yellow-300 font-mono">
               border
             </div>
             
@@ -203,7 +203,7 @@ export function BoxModelInspector({
               value={getDisplayValue('border', 'top')}
               onChange={(e) => handleInputChange('border', 'top', e.target.value)}
               onBlur={() => handleInputBlur('border', 'top')}
-              className="absolute -top-3 left-1/2 -translate-x-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700"
+              className="absolute -top-5 left-1/2 -translate-x-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700 z-10"
               placeholder="0"
               data-testid="input-border-top"
             />
@@ -213,7 +213,7 @@ export function BoxModelInspector({
               value={getDisplayValue('border', 'right')}
               onChange={(e) => handleInputChange('border', 'right', e.target.value)}
               onBlur={() => handleInputBlur('border', 'right')}
-              className="absolute top-1/2 -right-3 -translate-y-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700"
+              className="absolute top-1/2 -right-5 -translate-y-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700 z-10"
               placeholder="0"
               data-testid="input-border-right"
             />
@@ -223,7 +223,7 @@ export function BoxModelInspector({
               value={getDisplayValue('border', 'bottom')}
               onChange={(e) => handleInputChange('border', 'bottom', e.target.value)}
               onBlur={() => handleInputBlur('border', 'bottom')}
-              className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700"
+              className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700 z-10"
               placeholder="0"
               data-testid="input-border-bottom"
             />
@@ -233,14 +233,14 @@ export function BoxModelInspector({
               value={getDisplayValue('border', 'left')}
               onChange={(e) => handleInputChange('border', 'left', e.target.value)}
               onBlur={() => handleInputBlur('border', 'left')}
-              className="absolute top-1/2 -left-3 -translate-y-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700"
+              className="absolute top-1/2 -left-5 -translate-y-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700 z-10"
               placeholder="0"
               data-testid="input-border-left"
             />
             
             {/* Padding Layer */}
-            <div className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 p-4 rounded border border-green-200 dark:border-green-800">
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-green-700 dark:text-green-300 font-mono">
+            <div className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 p-8 rounded border border-green-200 dark:border-green-800">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-xs text-green-700 dark:text-green-300 font-mono">
                 padding
               </div>
               
@@ -250,7 +250,7 @@ export function BoxModelInspector({
                 value={getDisplayValue('padding', 'top')}
                 onChange={(e) => handleInputChange('padding', 'top', e.target.value)}
                 onBlur={() => handleInputBlur('padding', 'top')}
-                className="absolute -top-3 left-1/2 -translate-x-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700"
+                className="absolute -top-5 left-1/2 -translate-x-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700 z-10"
                 placeholder="0"
                 data-testid="input-padding-top"
               />
@@ -260,7 +260,7 @@ export function BoxModelInspector({
                 value={getDisplayValue('padding', 'right')}
                 onChange={(e) => handleInputChange('padding', 'right', e.target.value)}
                 onBlur={() => handleInputBlur('padding', 'right')}
-                className="absolute top-1/2 -right-3 -translate-y-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700"
+                className="absolute top-1/2 -right-5 -translate-y-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700 z-10"
                 placeholder="0"
                 data-testid="input-padding-right"
               />
@@ -270,7 +270,7 @@ export function BoxModelInspector({
                 value={getDisplayValue('padding', 'bottom')}
                 onChange={(e) => handleInputChange('padding', 'bottom', e.target.value)}
                 onBlur={() => handleInputBlur('padding', 'bottom')}
-                className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700"
+                className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700 z-10"
                 placeholder="0"
                 data-testid="input-padding-bottom"
               />
@@ -280,13 +280,13 @@ export function BoxModelInspector({
                 value={getDisplayValue('padding', 'left')}
                 onChange={(e) => handleInputChange('padding', 'left', e.target.value)}
                 onBlur={() => handleInputBlur('padding', 'left')}
-                className="absolute top-1/2 -left-3 -translate-y-1/2 w-14 h-6 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700"
+                className="absolute top-1/2 -left-5 -translate-y-1/2 w-16 h-7 text-xs text-center bg-white dark:bg-gray-800 border-green-300 dark:border-green-700 z-10"
                 placeholder="0"
                 data-testid="input-padding-left"
               />
               
               {/* Content Box */}
-              <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-8 rounded flex items-center justify-center min-h-[80px] border border-blue-200 dark:border-blue-800">
+              <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-12 rounded flex items-center justify-center min-h-[100px] border border-blue-200 dark:border-blue-800">
                 <div className="text-xs text-blue-700 dark:text-blue-300 font-mono text-center">
                   content
                   <div className="text-xs opacity-60 mt-1">
