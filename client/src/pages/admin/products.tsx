@@ -1092,12 +1092,17 @@ export default function AdminProducts() {
                               src={product.imageUrl} 
                               alt={product.name}
                               className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                              onError={(e) => {
+                                console.error('Image failed to load:', product.imageUrl);
+                                e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.nextElementSibling;
+                                if (placeholder) placeholder.classList.remove('hidden');
+                              }}
                             />
-                          ) : (
-                            <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                              <ImageIcon className="h-6 w-6 text-gray-400" />
-                            </div>
-                          )}
+                          ) : null}
+                          <div className={`w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center ${product.imageUrl ? 'hidden' : ''}`}>
+                            <ImageIcon className="h-6 w-6 text-gray-400" />
+                          </div>
                           <div>
                             <p className="font-medium">{product.name}</p>
                             {product.category && (
