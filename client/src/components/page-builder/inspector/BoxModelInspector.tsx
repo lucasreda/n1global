@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Link, Unlink } from 'lucide-react';
 
 interface BoxModelInspectorProps {
   margin?: { top?: string; right?: string; bottom?: string; left?: string };
@@ -31,6 +33,11 @@ export function BoxModelInspector({
 }: BoxModelInspectorProps) {
   // Track editing state for each field to allow free-form input
   const [editingValues, setEditingValues] = useState<Record<string, string | undefined>>({});
+  
+  // Track linked state for each property type
+  const [marginLinked, setMarginLinked] = useState(false);
+  const [paddingLinked, setPaddingLinked] = useState(false);
+  const [borderLinked, setBorderLinked] = useState(false);
 
   // Extract unit from a CSS value
   const extractUnit = (value: string | undefined): string => {
@@ -72,7 +79,23 @@ export function BoxModelInspector({
   // Handle input change (just update local state)
   const handleInputChange = (fieldType: FieldType, side: Side, value: string) => {
     const key = `${fieldType}-${side}`;
-    setEditingValues(prev => ({ ...prev, [key]: value }));
+    
+    // If linked, update all sides with the same value
+    const isLinked = fieldType === 'margin' ? marginLinked : 
+                     fieldType === 'padding' ? paddingLinked : 
+                     borderLinked;
+    
+    if (isLinked) {
+      setEditingValues(prev => ({
+        ...prev,
+        [`${fieldType}-top`]: value,
+        [`${fieldType}-right`]: value,
+        [`${fieldType}-bottom`]: value,
+        [`${fieldType}-left`]: value,
+      }));
+    } else {
+      setEditingValues(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   // Handle blur (commit the value with proper unit)
@@ -85,10 +108,21 @@ export function BoxModelInspector({
       return;
     }
     
+    const isLinked = fieldType === 'margin' ? marginLinked : 
+                     fieldType === 'padding' ? paddingLinked : 
+                     borderLinked;
+    
     // Clear editing state
     setEditingValues(prev => {
       const newState = { ...prev };
-      delete newState[key];
+      if (isLinked) {
+        delete newState[`${fieldType}-top`];
+        delete newState[`${fieldType}-right`];
+        delete newState[`${fieldType}-bottom`];
+        delete newState[`${fieldType}-left`];
+      } else {
+        delete newState[key];
+      }
       return newState;
     });
     
@@ -103,11 +137,25 @@ export function BoxModelInspector({
     
     // Format and save
     const formatted = formatValueWithUnit(value, originalValue);
-    const propName = fieldType === 'margin' ? `margin${side.charAt(0).toUpperCase() + side.slice(1)}` :
-                     fieldType === 'padding' ? `padding${side.charAt(0).toUpperCase() + side.slice(1)}` :
-                     `border${side.charAt(0).toUpperCase() + side.slice(1)}Width`;
     
-    onChange({ [propName]: formatted });
+    if (isLinked) {
+      // Update all sides when linked
+      const updates: Record<string, string> = {};
+      const sides: Side[] = ['top', 'right', 'bottom', 'left'];
+      sides.forEach(s => {
+        const propName = fieldType === 'margin' ? `margin${s.charAt(0).toUpperCase() + s.slice(1)}` :
+                         fieldType === 'padding' ? `padding${s.charAt(0).toUpperCase() + s.slice(1)}` :
+                         `border${s.charAt(0).toUpperCase() + s.slice(1)}Width`;
+        updates[propName] = formatted;
+      });
+      onChange(updates);
+    } else {
+      // Update single side
+      const propName = fieldType === 'margin' ? `margin${side.charAt(0).toUpperCase() + side.slice(1)}` :
+                       fieldType === 'padding' ? `padding${side.charAt(0).toUpperCase() + side.slice(1)}` :
+                       `border${side.charAt(0).toUpperCase() + side.slice(1)}Width`;
+      onChange({ [propName]: formatted });
+    }
   };
 
   // Format value with unit preservation
@@ -141,7 +189,22 @@ export function BoxModelInspector({
       
       {/* Margin */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-orange-600 dark:text-orange-400">Margin</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold text-white">Margin</Label>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMarginLinked(!marginLinked)}
+            className="h-6 w-6 p-0"
+            data-testid="link-margin"
+          >
+            {marginLinked ? (
+              <Link className="h-3 w-3" />
+            ) : (
+              <Unlink className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           <div>
             <Label className="text-xs text-muted-foreground">Top</Label>
@@ -196,7 +259,22 @@ export function BoxModelInspector({
 
       {/* Padding */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-green-600 dark:text-green-400">Padding</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold text-white">Padding</Label>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setPaddingLinked(!paddingLinked)}
+            className="h-6 w-6 p-0"
+            data-testid="link-padding"
+          >
+            {paddingLinked ? (
+              <Link className="h-3 w-3" />
+            ) : (
+              <Unlink className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           <div>
             <Label className="text-xs text-muted-foreground">Top</Label>
@@ -251,7 +329,22 @@ export function BoxModelInspector({
 
       {/* Border */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold text-yellow-600 dark:text-yellow-400">Border Width</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold text-white">Border Width</Label>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setBorderLinked(!borderLinked)}
+            className="h-6 w-6 p-0"
+            data-testid="link-border"
+          >
+            {borderLinked ? (
+              <Link className="h-3 w-3" />
+            ) : (
+              <Unlink className="h-3 w-3" />
+            )}
+          </Button>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           <div>
             <Label className="text-xs text-muted-foreground">Top</Label>
