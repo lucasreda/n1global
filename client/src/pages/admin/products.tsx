@@ -999,7 +999,7 @@ export default function AdminProducts() {
       {/* Filters */}
       <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <Filter className="h-5 w-5" />
             Filtros
           </CardTitle>
