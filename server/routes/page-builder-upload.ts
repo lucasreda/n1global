@@ -14,11 +14,15 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
     const { filename } = req.params;
     const objectPath = `public/page-builder/${filename}`;
     
+    console.log('🖼️ Attempting to serve image:', objectPath);
+    
     // Initialize client for each request
     const client = new Client();
     
     // Download the file from Object Storage
     const fileBuffer = await client.downloadAsBytes(objectPath);
+    
+    console.log('✅ Image loaded successfully, size:', fileBuffer?.length || 0, 'bytes');
     
     // Determine content type based on file extension
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -43,7 +47,7 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
     res.end(fileBuffer, 'binary');
     
   } catch (error) {
-    console.error('Error serving image:', error);
+    console.error('❌ Error serving image:', error);
     res.status(404).json({ error: 'Image not found' });
   }
 });
