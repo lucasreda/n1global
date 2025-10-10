@@ -301,15 +301,24 @@ export function BoxModelInspector({
 
       {/* Numeric Summary with Units */}
       <Card className="p-3 bg-gray-50 dark:bg-gray-900">
-        <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-          <div className="truncate">
-            <span className="text-orange-600 dark:text-orange-400">margin:</span> {margin.top || '0'}/{margin.right || '0'}/{margin.bottom || '0'}/{margin.left || '0'}
+        <div className="space-y-1 text-xs font-mono">
+          <div className="flex items-center justify-between">
+            <span className="text-orange-600 dark:text-orange-400 font-semibold">margin:</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {margin.top || '0px'} / {margin.right || '0px'} / {margin.bottom || '0px'} / {margin.left || '0px'}
+            </span>
           </div>
-          <div className="truncate">
-            <span className="text-green-600 dark:text-green-400">padding:</span> {padding.top || '0'}/{padding.right || '0'}/{padding.bottom || '0'}/{padding.left || '0'}
+          <div className="flex items-center justify-between">
+            <span className="text-green-600 dark:text-green-400 font-semibold">padding:</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {padding.top || '0px'} / {padding.right || '0px'} / {padding.bottom || '0px'} / {padding.left || '0px'}
+            </span>
           </div>
-          <div className="col-span-2 truncate">
-            <span className="text-yellow-600 dark:text-yellow-400">border:</span> {border.topWidth || border.width || '0'}/{border.rightWidth || border.width || '0'}/{border.bottomWidth || border.width || '0'}/{border.leftWidth || border.width || '0'}
+          <div className="flex items-center justify-between">
+            <span className="text-yellow-600 dark:text-yellow-400 font-semibold">border:</span>
+            <span className="text-gray-700 dark:text-gray-300">
+              {border.topWidth || border.width || '0'} / {border.rightWidth || border.width || '0'} / {border.bottomWidth || border.width || '0'} / {border.leftWidth || border.width || '0'}
+            </span>
           </div>
         </div>
       </Card>
