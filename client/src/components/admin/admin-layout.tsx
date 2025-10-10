@@ -165,6 +165,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const isMenuExpanded = (menuId: string) => expandedMenus.includes(menuId);
 
+  // Check if current location matches any subitem path
+  const isParentMenuActive = (subitems: MenuItem['subitems']) => {
+    if (!subitems) return false;
+    return subitems.some(subitem => isActive(subitem.path));
+  };
+
   // Filter menu items based on user permissions
   const getFilteredMenuItems = () => {
     if (!user) return [];
@@ -205,7 +211,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       <div 
                         onClick={() => toggleMenu(item.id)}
                         className={`cursor-pointer transition-all duration-200 rounded-lg p-2 flex items-center justify-between ${
-                          location.startsWith(item.subitems[0].path.split('/').slice(0, -1).join('/'))
+                          isParentMenuActive(item.subitems)
                             ? 'bg-gray-700/60 text-white border border-gray-600' 
                             : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'
                         }`}
