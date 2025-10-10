@@ -19,13 +19,8 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
     // Initialize client for each request
     const client = new Client();
     
-    // Download the file from Object Storage
-    const fileData = await client.downloadAsBytes(objectPath);
-    
-    // Convert to Buffer if needed
-    const fileBuffer = Buffer.isBuffer(fileData) ? fileData : Buffer.from(fileData as ArrayBuffer);
-    
-    console.log('✅ Image loaded successfully, size:', fileBuffer.length, 'bytes');
+    // Download the file from Object Storage using the stream method
+    const readableStream = await client.downloadAsStream(objectPath);
     
     // Determine content type based on file extension
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -46,8 +41,8 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
       'Cache-Control': 'public, max-age=31536000',
     });
     
-    // Send the buffer
-    res.send(fileBuffer);
+    // Stream the file to the response
+    readableStream.pipe(res);
     
   } catch (error) {
     console.error('❌ Error serving image:', error);
