@@ -39,7 +39,8 @@ router.get('/api/storage/public/page-builder/:filename', async (req: Request, re
       'Cache-Control': 'public, max-age=31536000',
     });
     
-    res.send(fileBuffer);
+    // Use res.end() instead of res.send() to avoid charset addition
+    res.end(fileBuffer, 'binary');
     
   } catch (error) {
     console.error('Error serving image:', error);
