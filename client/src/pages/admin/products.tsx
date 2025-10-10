@@ -399,80 +399,61 @@ function NewProductModal({ open, onClose }: {
 
   const createProductMutation = useMutation({
     mutationFn: async () => {
-      try {
-        console.log("Mutation started!");
-        const token = localStorage.getItem("auth_token");
-        let imageUrl = "";
+      const token = localStorage.getItem("auth_token");
+      let imageUrl = "";
 
-        // Upload image if selected
-        if (imageFile) {
-          console.log("Uploading image...");
-          const formData = new FormData();
-          formData.append('file', imageFile);
+      // Upload image if selected
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('file', imageFile);
 
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-              ...(token && { "Authorization": `Bearer ${token}` }),
-            },
-            credentials: 'include',
-            body: formData
-          });
-
-          if (!uploadResponse.ok) {
-            console.error("Upload failed:", uploadResponse.status);
-            throw new Error('Erro ao fazer upload da imagem');
-          }
-
-          const uploadData = await uploadResponse.json();
-          console.log("Upload response:", uploadData);
-          imageUrl = uploadData.url;
-          console.log("Image URL set to:", imageUrl);
-        } else {
-          console.log("No image selected, skipping upload");
-        }
-
-        // Create product
-        const productPayload = {
-          ...formData,
-          imageUrl,
-          price: parseFloat(formData.price),
-          costPrice: parseFloat(formData.costPrice),
-          shippingCost: parseFloat(formData.shippingCost),
-          weight: formData.weight ? parseFloat(formData.weight) : undefined,
-          height: formData.height ? parseFloat(formData.height) : undefined,
-          width: formData.width ? parseFloat(formData.width) : undefined,
-          depth: formData.depth ? parseFloat(formData.depth) : undefined,
-          availableCountries: formData.availableCountries,
-        };
-        
-        console.log("Creating product with payload:", productPayload);
-        
-        const response = await fetch('/api/admin/products', {
+        const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             ...(token && { "Authorization": `Bearer ${token}` }),
           },
           credentials: 'include',
-          body: JSON.stringify(productPayload)
+          body: formData
         });
-        
-        console.log("Response status:", response.status);
 
-        if (!response.ok) {
-          const error = await response.json();
-          console.error("Product creation failed:", error);
-          throw new Error(error.message || 'Erro ao criar produto');
+        if (!uploadResponse.ok) {
+          throw new Error('Erro ao fazer upload da imagem');
         }
 
-        const result = await response.json();
-        console.log("Product created successfully:", result);
-        return result;
-      } catch (error) {
-        console.error("Mutation error:", error);
-        throw error;
+        const uploadData = await uploadResponse.json();
+        imageUrl = uploadData.url;
       }
+
+      // Create product
+      const productPayload = {
+        ...formData,
+        imageUrl,
+        price: parseFloat(formData.price),
+        costPrice: parseFloat(formData.costPrice),
+        shippingCost: parseFloat(formData.shippingCost),
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        height: formData.height ? parseFloat(formData.height) : undefined,
+        width: formData.width ? parseFloat(formData.width) : undefined,
+        depth: formData.depth ? parseFloat(formData.depth) : undefined,
+        availableCountries: formData.availableCountries,
+      };
+      
+      const response = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: 'include',
+        body: JSON.stringify(productPayload)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao criar produto');
+      }
+
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -509,15 +490,6 @@ function NewProductModal({ open, onClose }: {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted with data:", formData);
-    console.log("Image file:", imageFile);
-    console.log("Image file type:", typeof imageFile);
-    console.log("Image file is null?", imageFile === null);
-    console.log("Image file is truthy?", !!imageFile);
-    if (imageFile) {
-      console.log("Image file name:", (imageFile as File).name);
-      console.log("Image file size:", (imageFile as File).size);
-    }
     createProductMutation.mutate();
   };
 

@@ -428,7 +428,8 @@ export class AdminService {
         storeId: defaultStore.id,
         operationId: defaultOperation?.id || null,
         stock: 0,
-        isActive: true
+        isActive: true,
+        status: 'approved' // Produtos criados pelo admin já vêm aprovados
       };
 
       // Add optional fields if provided and valid
