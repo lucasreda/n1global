@@ -7,6 +7,19 @@ The COD Dashboard is a full-stack web application for managing Cash on Delivery 
 Preferred communication style: Simple, everyday language.
 Quality priority: Maximum quality and highest level possible ("atingir o mais alto nivel possivel").
 
+## Recent Changes
+
+### Visual Editor V4 - Advanced Properties Panel (October 2025)
+Completed 8-stage expansion of PropertiesPanelV4 with professional page builder capabilities:
+- **ETAPA 1**: ShadowPicker with multi-layer box/text shadow editing, visual controls, presets
+- **ETAPA 2**: GradientPicker with multi-stop editor, BackgroundImageControls with URL/size/position/repeat
+- **ETAPA 3**: FilterControls (8 filters: blur, brightness, contrast, grayscale, hue-rotate, invert, saturate, sepia) + BackdropFilter + Glassmorphism preset
+- **ETAPA 4**: Expanded SizingControls with Min/Max width/height, Aspect Ratio (8 presets), Overflow (4 modes), Object Fit (5 modes + 9 positions)
+- **ETAPA 5**: BorderStyleSelector (9 visual styles, unified + individual sides) + OutlineControls (style/width/color/offset)
+- **ETAPA 6**: GridTemplateEditor visual (track presets, rows/columns) + FlexControlsAdvanced (wrap, justify, align, direction, gap)
+- **ETAPA 7**: PseudoClassEditorV4 refactored with 8 collapsible sections (Colors, Background, Spacing, Borders, Shadows, Typography, Effects, Transitions) + TransitionBuilder visual (property/duration/easing/delay)
+- **ETAPA 8**: Typography expanded (word-spacing, text-decoration, text-indent) + TransformControls visual (translate/rotate/scale/skew tabs, preserves order and unknown tokens, known limitation: normalizes function formats)
+
 ## System Architecture
 
 ### UI/UX
