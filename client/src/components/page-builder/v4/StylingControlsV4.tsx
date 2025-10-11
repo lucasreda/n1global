@@ -6,10 +6,14 @@ import { FontFamilySelectorProfessional } from '../inspector/FontFamilySelectorP
 import { ShadowPicker } from '../inspector/ShadowPicker';
 import { GradientPicker } from '../inspector/GradientPicker';
 import { BackgroundImageControls } from '../inspector/BackgroundImageControls';
+import { FilterControls } from '../inspector/FilterControls';
+import { BackdropFilterControls } from '../inspector/BackdropFilterControls';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { UnitSliderInput } from '../AdvancedControls';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 
 interface StylingControlsV4Props {
   node: PageNodeV4 | null;
@@ -43,6 +47,10 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
 
   // State for active background tab with sync from styles
   const [activeBackgroundTab, setActiveBackgroundTab] = useState(detectBackgroundType());
+  
+  // State for collapsible sections
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isBackdropOpen, setIsBackdropOpen] = useState(false);
   
   // Sync tab when node/breakpoint changes
   useEffect(() => {
@@ -244,6 +252,36 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
         type="box"
         data-testid="box-shadow-v4"
       />
+
+      {/* Filter Effects */}
+      <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
+          <Label className="text-sm font-medium text-foreground cursor-pointer">Filter Effects</Label>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <FilterControls
+            value={currentStyles.filter}
+            onChange={(value) => handleStyleChange({ filter: value })}
+            onReset={() => handleStyleChange({ filter: 'none' })}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Backdrop Filter */}
+      <Collapsible open={isBackdropOpen} onOpenChange={setIsBackdropOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
+          <Label className="text-sm font-medium text-foreground cursor-pointer">Backdrop Filter</Label>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isBackdropOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <BackdropFilterControls
+            value={currentStyles.backdropFilter}
+            onChange={(value) => handleStyleChange({ backdropFilter: value })}
+            onReset={() => handleStyleChange({ backdropFilter: 'none' })}
+          />
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
