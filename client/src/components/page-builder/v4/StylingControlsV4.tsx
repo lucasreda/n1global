@@ -13,8 +13,10 @@ import { OverflowControls } from '../inspector/OverflowControls';
 import { ObjectFitControls } from '../inspector/ObjectFitControls';
 import { BorderStyleSelector } from '../inspector/BorderStyleSelector';
 import { OutlineControls } from '../inspector/OutlineControls';
+import { TransformControls } from '../inspector/TransformControls';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UnitSliderInput } from '../AdvancedControls';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -368,6 +370,12 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
         data-testid="box-shadow-v4"
       />
 
+      {/* Transform */}
+      <TransformControls
+        value={currentStyles.transform || 'none'}
+        onChange={(value) => handleStyleChange({ transform: value })}
+      />
+
       {/* Filter Effects */}
       <Collapsible open={isFilterOpen} onOpenChange={setIsFilterOpen}>
         <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
@@ -499,6 +507,49 @@ export function TypographyControlsV4({ node, breakpoint, onUpdateNode, computedS
         step={0.1}
         units={['px', 'em']}
         data-testid="letter-spacing-v4"
+      />
+
+      {/* Word Spacing */}
+      <UnitSliderInput
+        label="Word Spacing"
+        value={currentStyles.wordSpacing || '0px'}
+        onChange={(value) => handleStyleChange({ wordSpacing: value })}
+        min={-10}
+        max={20}
+        step={0.5}
+        units={['px', 'em']}
+        data-testid="word-spacing-v4"
+      />
+
+      {/* Text Decoration */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">Text Decoration</Label>
+        <Select
+          value={currentStyles.textDecoration || 'none'}
+          onValueChange={(value) => handleStyleChange({ textDecoration: value })}
+        >
+          <SelectTrigger className="text-xs" data-testid="text-decoration-v4">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none" className="text-xs">None</SelectItem>
+            <SelectItem value="underline" className="text-xs">Underline</SelectItem>
+            <SelectItem value="overline" className="text-xs">Overline</SelectItem>
+            <SelectItem value="line-through" className="text-xs">Line Through</SelectItem>
+            <SelectItem value="underline overline" className="text-xs">Underline + Overline</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Text Indent */}
+      <UnitSliderInput
+        label="Text Indent"
+        value={currentStyles.textIndent || '0px'}
+        onChange={(value) => handleStyleChange({ textIndent: value })}
+        min={0}
+        max={100}
+        units={['px', 'em', 'rem']}
+        data-testid="text-indent-v4"
       />
 
       {/* Text Align */}
