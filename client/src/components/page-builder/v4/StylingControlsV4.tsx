@@ -1,11 +1,15 @@
+import { useState, useEffect } from 'react';
 import { PageNodeV4, ResponsiveStylesV4 } from '@shared/schema';
 import { BoxModelInspector } from '../inspector/BoxModelInspector';
 import { ColorPickerProfessional } from '../inspector/ColorPickerProfessional';
 import { FontFamilySelectorProfessional } from '../inspector/FontFamilySelectorProfessional';
 import { ShadowPicker } from '../inspector/ShadowPicker';
+import { GradientPicker } from '../inspector/GradientPicker';
+import { BackgroundImageControls } from '../inspector/BackgroundImageControls';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { UnitSliderInput } from '../AdvancedControls';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface StylingControlsV4Props {
   node: PageNodeV4 | null;
@@ -27,15 +31,26 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
     ...(node.inlineStyles || {}),
   };
 
+  // Detect active background type
+  const detectBackgroundType = (): 'color' | 'gradient' | 'image' => {
+    const bgImage = currentStyles.backgroundImage;
+    if (bgImage && bgImage !== 'none') {
+      if (bgImage.includes('gradient')) return 'gradient';
+      if (bgImage.includes('url(')) return 'image';
+    }
+    return 'color';
+  };
+
+  // State for active background tab with sync from styles
+  const [activeBackgroundTab, setActiveBackgroundTab] = useState(detectBackgroundType());
+  
+  // Sync tab when node/breakpoint changes
+  useEffect(() => {
+    setActiveBackgroundTab(detectBackgroundType());
+  }, [node?.id, breakpoint, currentStyles.backgroundImage]);
+
   const handleStyleChange = (updates: Record<string, string | any>) => {
     console.log('Style change received:', updates, 'for breakpoint:', breakpoint);
-    
-    // If backgroundColor is being set, remove conflicting background property
-    const cleanedUpdates = { ...updates };
-    if (cleanedUpdates.backgroundColor) {
-      // Remove background property to avoid conflicts
-      cleanedUpdates.background = 'none';
-    }
     
     const updatedStyles: ResponsiveStylesV4 = {
       desktop: { ...(node.styles?.desktop || {}) },
@@ -43,7 +58,7 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
       mobile: { ...(node.styles?.mobile || {}) },
       [breakpoint]: {
         ...(node.styles?.[breakpoint] || {}),
-        ...cleanedUpdates,
+        ...updates,
       },
     };
 
@@ -97,13 +112,64 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
         data-testid="box-model-v4"
       />
 
-      {/* Background Color */}
-      <ColorPickerProfessional
-        label="Background Color"
-        value={currentStyles.backgroundColor || '#ffffff'}
-        onChange={(value) => handleStyleChange({ backgroundColor: value })}
-        data-testid="bg-color-v4"
-      />
+      {/* Background (Color/Gradient/Image) */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium text-foreground">Background</Label>
+        
+        <Tabs value={activeBackgroundTab} onValueChange={(v) => setActiveBackgroundTab(v as 'color' | 'gradient' | 'image')} className="w-full">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="color" className="text-xs">Color</TabsTrigger>
+            <TabsTrigger value="gradient" className="text-xs">Gradient</TabsTrigger>
+            <TabsTrigger value="image" className="text-xs">Image</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="color" className="mt-4 space-y-0">
+            <ColorPickerProfessional
+              label="Background Color"
+              value={currentStyles.backgroundColor || '#ffffff'}
+              onChange={(value) => handleStyleChange({ backgroundColor: value, backgroundImage: 'none' })}
+              data-testid="bg-color-v4"
+            />
+          </TabsContent>
+          
+          <TabsContent value="gradient" className="mt-4 space-y-0">
+            <GradientPicker
+              label="Gradient"
+              value={currentStyles.backgroundImage?.includes('gradient') ? currentStyles.backgroundImage : 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'}
+              onChange={(value) => handleStyleChange({ backgroundImage: value, backgroundColor: 'transparent' })}
+              data-testid="bg-gradient-v4"
+            />
+          </TabsContent>
+          
+          <TabsContent value="image" className="mt-4 space-y-0">
+            <BackgroundImageControls
+              value={{
+                url: (() => {
+                  const bgImage = currentStyles.backgroundImage;
+                  // Only extract URL if it's actually a url() value
+                  if (bgImage && bgImage.startsWith('url(')) {
+                    return bgImage.replace(/^url\(['"]?(.+?)['"]?\)$/, '$1');
+                  }
+                  return '';
+                })(),
+                size: currentStyles.backgroundSize,
+                position: currentStyles.backgroundPosition,
+                repeat: currentStyles.backgroundRepeat,
+                attachment: currentStyles.backgroundAttachment
+              }}
+              onChange={(bg) => handleStyleChange({
+                backgroundImage: bg.url ? `url('${bg.url}')` : 'none',
+                backgroundSize: bg.size,
+                backgroundPosition: bg.position,
+                backgroundRepeat: bg.repeat,
+                backgroundAttachment: bg.attachment,
+                backgroundColor: 'transparent'
+              })}
+              data-testid="bg-image-v4"
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Text Color */}
       <ColorPickerProfessional
