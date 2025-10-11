@@ -11,6 +11,8 @@ import { BackdropFilterControls } from '../inspector/BackdropFilterControls';
 import { SizingConstraints } from '../inspector/SizingConstraints';
 import { OverflowControls } from '../inspector/OverflowControls';
 import { ObjectFitControls } from '../inspector/ObjectFitControls';
+import { BorderStyleSelector } from '../inspector/BorderStyleSelector';
+import { OutlineControls } from '../inspector/OutlineControls';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { UnitSliderInput } from '../AdvancedControls';
@@ -57,6 +59,8 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
   const [isSizingOpen, setIsSizingOpen] = useState(false);
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const [isObjectFitOpen, setIsObjectFitOpen] = useState(false);
+  const [isBorderOpen, setIsBorderOpen] = useState(false);
+  const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   
   // Sync tab when node/breakpoint changes
   useEffect(() => {
@@ -210,6 +214,56 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
         units={['px', 'rem', '%']}
         data-testid="border-radius-v4"
       />
+
+      {/* Border Advanced */}
+      <Collapsible open={isBorderOpen} onOpenChange={setIsBorderOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
+          <Label className="text-sm font-medium text-foreground cursor-pointer">Border Styles</Label>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isBorderOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <BorderStyleSelector
+            values={{
+              borderStyle: currentStyles.borderStyle,
+              borderWidth: currentStyles.borderWidth,
+              borderColor: currentStyles.borderColor,
+              borderTopStyle: currentStyles.borderTopStyle,
+              borderTopWidth: currentStyles.borderTopWidth,
+              borderTopColor: currentStyles.borderTopColor,
+              borderRightStyle: currentStyles.borderRightStyle,
+              borderRightWidth: currentStyles.borderRightWidth,
+              borderRightColor: currentStyles.borderRightColor,
+              borderBottomStyle: currentStyles.borderBottomStyle,
+              borderBottomWidth: currentStyles.borderBottomWidth,
+              borderBottomColor: currentStyles.borderBottomColor,
+              borderLeftStyle: currentStyles.borderLeftStyle,
+              borderLeftWidth: currentStyles.borderLeftWidth,
+              borderLeftColor: currentStyles.borderLeftColor,
+            }}
+            onChange={handleStyleChange}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Outline */}
+      <Collapsible open={isOutlineOpen} onOpenChange={setIsOutlineOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
+          <Label className="text-sm font-medium text-foreground cursor-pointer">Outline</Label>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isOutlineOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <OutlineControls
+            values={{
+              outline: currentStyles.outline,
+              outlineStyle: currentStyles.outlineStyle,
+              outlineWidth: currentStyles.outlineWidth,
+              outlineColor: currentStyles.outlineColor,
+              outlineOffset: currentStyles.outlineOffset,
+            }}
+            onChange={handleStyleChange}
+          />
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Width & Height */}
       <div className="space-y-3">
