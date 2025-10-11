@@ -2,6 +2,7 @@ import { PageNodeV4, ResponsiveStylesV4 } from '@shared/schema';
 import { BoxModelInspector } from '../inspector/BoxModelInspector';
 import { ColorPickerProfessional } from '../inspector/ColorPickerProfessional';
 import { FontFamilySelectorProfessional } from '../inspector/FontFamilySelectorProfessional';
+import { ShadowPicker } from '../inspector/ShadowPicker';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { UnitSliderInput } from '../AdvancedControls';
@@ -168,6 +169,15 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
         units={['']}
         data-testid="opacity-v4"
       />
+
+      {/* Box Shadow */}
+      <ShadowPicker
+        label="Box Shadow"
+        value={currentStyles.boxShadow || 'none'}
+        onChange={(value) => handleStyleChange({ boxShadow: value })}
+        type="box"
+        data-testid="box-shadow-v4"
+      />
     </div>
   );
 }
@@ -313,6 +323,15 @@ export function TypographyControlsV4({ node, breakpoint, onUpdateNode, computedS
           ))}
         </div>
       </div>
+
+      {/* Text Shadow */}
+      <ShadowPicker
+        label="Text Shadow"
+        value={currentStyles.textShadow || 'none'}
+        onChange={(value) => handleStyleChange({ textShadow: value })}
+        type="text"
+        data-testid="text-shadow-v4"
+      />
     </div>
   );
 }

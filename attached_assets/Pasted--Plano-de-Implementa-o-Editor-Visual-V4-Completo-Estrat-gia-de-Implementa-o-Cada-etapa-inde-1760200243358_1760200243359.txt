@@ -1,0 +1,169 @@
+📋 Plano de Implementação - Editor Visual V4 Completo
+Estratégia de Implementação:
+Cada etapa é independente e pode ser testada isoladamente
+Foco em criar controles visuais intuitivos (não apenas inputs de texto)
+Reutilizar componentes entre etapas para manter consistência
+Priorizar funcionalidades que mais impactam na criação de páginas modernas
+🎯 ETAPA 1: Shadows & Depth (Box Shadow + Text Shadow)
+Impacto: Alto - Sombras são essenciais para criar profundidade e hierarquia visual
+
+Implementar:
+
+ BoxShadowPicker: Controle visual com sliders para offset-x, offset-y, blur, spread, color
+ Suporte para múltiplas sombras (adicionar/remover camadas)
+ TextShadowPicker: Similar ao box-shadow mas para texto
+ Presets populares (soft, medium, hard, glow)
+ Integrar na aba "Styles"
+Componentes novos:
+
+client/src/components/page-builder/inspector/ShadowPicker.tsx
+🎯 ETAPA 2: Backgrounds Avançados (Gradientes + Background Image)
+Impacto: Alto - Backgrounds modernos são cruciais para design atraente
+
+Implementar:
+
+ GradientPicker: Editor visual para gradientes lineares e radiais
+Múltiplos color stops com posição ajustável
+Controle de ângulo/direção
+Presets (sunset, ocean, purple haze, etc)
+ BackgroundImageControls:
+Upload de imagem
+Background size (cover, contain, custom)
+Background position (center, top-left, custom)
+Background repeat (no-repeat, repeat, repeat-x/y)
+Background attachment (scroll, fixed - parallax)
+ Suporte para múltiplos backgrounds (layers)
+Componentes novos:
+
+client/src/components/page-builder/inspector/GradientPicker.tsx
+client/src/components/page-builder/inspector/BackgroundImageControls.tsx
+🎯 ETAPA 3: Filters & Effects (Blur, Brightness, Glassmorphism)
+Impacto: Alto - Efeitos visuais modernos (glassmorphism é tendência)
+
+Implementar:
+
+ FilterControls: Sliders visuais para:
+Blur (0-20px)
+Brightness (0-200%)
+Contrast (0-200%)
+Saturate (0-200%)
+Grayscale (0-100%)
+Hue-rotate (0-360deg)
+Invert (0-100%)
+Sepia (0-100%)
+ BackdropFilterControls: Mesmo conjunto para backdrop-filter
+ Preset "Glassmorphism": Um clique para efeito vidro fosco
+ Blend modes selector (normal, multiply, screen, overlay, etc)
+Componentes novos:
+
+client/src/components/page-builder/inspector/FilterControls.tsx
+client/src/components/page-builder/inspector/BackdropFilterControls.tsx
+🎯 ETAPA 4: Sizing & Constraints (Min/Max + Aspect Ratio)
+Impacto: Médio-Alto - Essencial para layouts responsivos profissionais
+
+Implementar:
+
+ SizingControls expandido:
+Min-width / Max-width
+Min-height / Max-height
+Aspect-ratio (com presets: 16:9, 4:3, 1:1, custom)
+ OverflowControls:
+Overflow (visible, hidden, scroll, auto)
+Overflow-x / Overflow-y separados
+Scroll behavior (smooth)
+ ObjectFit (para imagens/vídeos):
+Fill, contain, cover, none, scale-down
+Object-position (visual picker)
+Atualizar:
+
+client/src/components/page-builder/v4/StylingControlsV4.tsx
+🎯 ETAPA 5: Border & Outline Avançados
+Impacto: Médio - Completa os controles de borda
+
+Implementar:
+
+ BorderStyleSelector: Visual picker para solid/dashed/dotted/double/groove/ridge/inset/outset
+ Border por lado individual:
+Top/Right/Bottom/Left com style e color próprios
+Link/unlink (já temos no width)
+ Border-radius individual por canto:
+Top-left, top-right, bottom-right, bottom-left
+Opção de criar formas orgânicas (30% 70% 70% 30% / 60% 40% 60% 40%)
+ OutlineControls:
+Outline width, style, color, offset
+Útil para focus states
+Atualizar:
+
+client/src/components/page-builder/inspector/BoxModelInspector.tsx
+🎯 ETAPA 6: Layout Avançado (Grid Visual + Flex Completo)
+Impacto: Médio - Facilita criação de layouts complexos
+
+Implementar:
+
+ GridTemplateEditor: Editor visual para grid
+Colunas/linhas com clique para adicionar
+Drag para redimensionar tracks
+FR units, px, auto, minmax() visual
+Grid template areas (nomear áreas visualmente)
+ FlexControls expandido:
+Align-content (wrap multi-linha)
+Gap separado (row-gap, column-gap)
+Order (reordenar filhos)
+ AlignmentHelper: Visual picker para justify-content + align-items combinados
+Atualizar:
+
+client/src/components/page-builder/v4/LayoutControlsV4.tsx
+🎯 ETAPA 7: States Completos (Pseudo-classes com todas propriedades)
+Impacto: Alto - Permite interatividade rica
+
+Implementar:
+
+ Refatorar PseudoClassEditorV4 para reutilizar TODOS os controles:
+Ao selecionar :hover/:focus/:active, mostrar as mesmas abas de edição
+Styles, Typography, Layout disponíveis em cada state
+Indicador visual de "propriedades sobrescritas neste state"
+ TransitionBuilder: Editor visual para transitions
+Property (all, specific)
+Duration (slider 0-2s)
+Timing function (ease, linear, ease-in-out, cubic-bezier visual)
+Delay (slider 0-1s)
+ AnimationPresets expandido:
+Fade in/out, slide, scale, rotate
+Configuração de duration/delay/iteration
+Atualizar:
+
+client/src/components/page-builder/v4/AdvancedControlsV4.tsx
+🎯 ETAPA 8: Typography & Responsiveness Completos
+Impacto: Médio - Finaliza tipografia e responsividade
+
+Implementar:
+
+ TypographyControls expandido:
+Text-decoration (none, underline, overline, line-through)
+Text-decoration-style (solid, double, dotted, dashed, wavy)
+Text-decoration-color
+Word-spacing
+Text-indent
+White-space (normal, nowrap, pre, pre-wrap)
+ TransformControls visual:
+Translate X/Y (sliders)
+Rotate (dial visual 0-360°)
+Scale X/Y (sliders 0-200%)
+Skew X/Y
+Transform-origin (9-point picker)
+ ImageControlsV4: Adicionar suporte para breakpoint tablet
+ ResponsiveIndicator: Badge visual mostrando se valor é herdado ou sobrescrito
+Atualizar:
+
+client/src/components/page-builder/v4/StylingControlsV4.tsx
+client/src/components/page-builder/v4/ImageControlsV4.tsx
+📊 Resumo de Entregas por Etapa:
+Etapa	Funcionalidades	Componentes Novos	Impacto
+1	Box/Text Shadow	ShadowPicker	🔥 Alto
+2	Gradientes + BG Image	GradientPicker, BackgroundImageControls	🔥 Alto
+3	Filters + Glassmorphism	FilterControls, BackdropFilterControls	🔥 Alto
+4	Min/Max + Aspect Ratio + Overflow	SizingControls (atualizar)	⚡ Médio-Alto
+5	Border/Outline Avançados	BorderStyleSelector (atualizar)	⚡ Médio
+6	Grid Visual + Flex Completo	GridTemplateEditor	⚡ Médio
+7	States + Transitions	TransitionBuilder	🔥 Alto
+8	Typography + Transform	TransformControls	⚡ Médio
