@@ -8,6 +8,9 @@ import { GradientPicker } from '../inspector/GradientPicker';
 import { BackgroundImageControls } from '../inspector/BackgroundImageControls';
 import { FilterControls } from '../inspector/FilterControls';
 import { BackdropFilterControls } from '../inspector/BackdropFilterControls';
+import { SizingConstraints } from '../inspector/SizingConstraints';
+import { OverflowControls } from '../inspector/OverflowControls';
+import { ObjectFitControls } from '../inspector/ObjectFitControls';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { UnitSliderInput } from '../AdvancedControls';
@@ -51,6 +54,9 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
   // State for collapsible sections
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isBackdropOpen, setIsBackdropOpen] = useState(false);
+  const [isSizingOpen, setIsSizingOpen] = useState(false);
+  const [isOverflowOpen, setIsOverflowOpen] = useState(false);
+  const [isObjectFitOpen, setIsObjectFitOpen] = useState(false);
   
   // Sync tab when node/breakpoint changes
   useEffect(() => {
@@ -231,6 +237,61 @@ export function StylingControlsV4({ node, breakpoint, onUpdateNode, computedStyl
           </div>
         </div>
       </div>
+
+      {/* Sizing Constraints (Min/Max + Aspect Ratio) */}
+      <Collapsible open={isSizingOpen} onOpenChange={setIsSizingOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
+          <Label className="text-sm font-medium text-foreground cursor-pointer">Size Constraints</Label>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isSizingOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <SizingConstraints
+            values={{
+              minWidth: currentStyles.minWidth,
+              minHeight: currentStyles.minHeight,
+              maxWidth: currentStyles.maxWidth,
+              maxHeight: currentStyles.maxHeight,
+              aspectRatio: currentStyles.aspectRatio,
+            }}
+            onChange={handleStyleChange}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Overflow */}
+      <Collapsible open={isOverflowOpen} onOpenChange={setIsOverflowOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
+          <Label className="text-sm font-medium text-foreground cursor-pointer">Overflow</Label>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isOverflowOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <OverflowControls
+            values={{
+              overflow: currentStyles.overflow,
+              overflowX: currentStyles.overflowX,
+              overflowY: currentStyles.overflowY,
+            }}
+            onChange={handleStyleChange}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Object Fit (for images/videos) */}
+      <Collapsible open={isObjectFitOpen} onOpenChange={setIsObjectFitOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 hover:bg-accent/50 rounded-md px-2 transition-colors">
+          <Label className="text-sm font-medium text-foreground cursor-pointer">Object Fit</Label>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isObjectFitOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3">
+          <ObjectFitControls
+            values={{
+              objectFit: currentStyles.objectFit,
+              objectPosition: currentStyles.objectPosition,
+            }}
+            onChange={handleStyleChange}
+          />
+        </CollapsibleContent>
+      </Collapsible>
 
       {/* Opacity */}
       <UnitSliderInput
