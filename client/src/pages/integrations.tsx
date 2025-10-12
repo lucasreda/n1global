@@ -214,6 +214,9 @@ export default function Integrations() {
         </div>
       </div>
 
+      {/* Armazéns - Multi-Provider */}
+      <MultiProviderPanel />
+
       {/* Aplicativos da Operação */}
       <div className="p-6">
         {/* Título da Seção */}
@@ -257,9 +260,6 @@ export default function Integrations() {
           </div>
         </div>
       </div>
-
-      {/* Armazéns - Multi-Provider */}
-      <MultiProviderPanel />
     </div>
   );
 }
