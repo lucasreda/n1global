@@ -207,55 +207,6 @@ export function PageModelV4Renderer({
         __html: generateOverrideStyles(model.nodes)
       }} />
 
-      {/* Hover Tooltip */}
-      {hoveredNodeInfo && hoveredNodeId !== selectedNodeId && (
-        <HoverTooltip
-          tag={hoveredNodeInfo.tag}
-          classNames={hoveredNodeInfo.classNames}
-          dimensions={hoveredNodeInfo.dimensions}
-          position={mousePosition}
-          visible={true}
-        />
-      )}
-
-      {/* Selection Overlay with Label and Handles */}
-      {selectedNodeId && (
-        <SelectionOverlay
-          nodeId={selectedNodeId}
-          tag={findNodeInTree(model.nodes, selectedNodeId)?.tag || 'div'}
-          isVisible={true}
-        />
-      )}
-
-      {/* Inline Text Toolbar for text elements */}
-      {selectedNodeId && onUpdateNode && (() => {
-        const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
-        const isTextElement = selectedNode && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'text'].includes(selectedNode.tag);
-        
-        if (isTextElement && selectedNode) {
-          return (
-            <InlineTextToolbar
-              node={selectedNode}
-              onUpdateStyle={(styleUpdates) => {
-                // Deep merge: preserve ALL existing style keys (pseudo-states, custom props, etc)
-                const currentStyles = selectedNode.styles || {};
-                
-                onUpdateNode({
-                  styles: {
-                    ...currentStyles, // Preserve all existing keys (desktop, tablet, mobile, AND any other custom keys)
-                    [breakpoint]: {
-                      ...(currentStyles[breakpoint] || {}),
-                      ...styleUpdates
-                    }
-                  }
-                });
-              }}
-              breakpoint={breakpoint}
-            />
-          );
-        }
-        return null;
-      })()}
     </div>
   );
 }

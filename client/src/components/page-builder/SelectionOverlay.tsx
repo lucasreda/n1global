@@ -17,13 +17,14 @@ export function SelectionOverlay({ nodeId, tag, isVisible }: SelectionOverlayPro
       const element = document.querySelector(`[data-node-id="${nodeId}"]`);
       if (element) {
         const rect = element.getBoundingClientRect();
-        const canvasElement = element.closest('.page-builder-canvas');
-        const canvasRect = canvasElement?.getBoundingClientRect();
+        // Find the parent container (the white canvas div)
+        const parentContainer = element.closest('.mx-auto.bg-white');
+        const parentRect = parentContainer?.getBoundingClientRect();
         
-        if (canvasRect) {
+        if (parentRect) {
           setDimensions({
-            top: rect.top - canvasRect.top,
-            left: rect.left - canvasRect.left,
+            top: rect.top - parentRect.top,
+            left: rect.left - parentRect.left,
             width: rect.width,
             height: rect.height,
           });

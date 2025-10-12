@@ -5,6 +5,9 @@ import { LayersPanelV4 } from './LayersPanelV4';
 import { PropertiesPanelV4 } from './PropertiesPanelV4';
 import { ElementsToolbarV4 } from './ElementsToolbarV4';
 import { DropIndicatorLayer } from './DropIndicatorLayer';
+import { SelectionOverlay } from './SelectionOverlay';
+import { InlineTextToolbar } from './InlineTextToolbar';
+import { HoverTooltip } from './HoverTooltip';
 import { useHistoryV4 } from './HistoryManagerV4';
 import { nanoid } from 'nanoid';
 import {
@@ -676,6 +679,46 @@ export function VisualEditorV4({
             onUpdateNode={handleUpdateNode}
             breakpoint={viewport}
           />
+          
+          {/* Overlays rendered outside PageModelV4Renderer for correct positioning */}
+          {/* Selection Overlay with Label */}
+          {selectedNodeId && (
+            <SelectionOverlay
+              nodeId={selectedNodeId}
+              tag={findNodeInTree(model.nodes, selectedNodeId)?.tag || 'div'}
+              isVisible={true}
+            />
+          )}
+
+          {/* Inline Text Toolbar for text elements */}
+          {selectedNodeId && (() => {
+            const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
+            const isTextElement = selectedNode && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'text'].includes(selectedNode.tag);
+            
+            if (isTextElement && selectedNode) {
+              return (
+                <InlineTextToolbar
+                  node={selectedNode}
+                  onUpdateStyle={(styleUpdates) => {
+                    // Deep merge: preserve ALL existing style keys (pseudo-states, custom props, etc)
+                    const currentStyles = selectedNode.styles || {};
+                    
+                    handleUpdateNode({
+                      styles: {
+                        ...currentStyles,
+                        [viewport]: {
+                          ...(currentStyles[viewport] || {}),
+                          ...styleUpdates
+                        }
+                      }
+                    });
+                  }}
+                  breakpoint={viewport}
+                />
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
 
