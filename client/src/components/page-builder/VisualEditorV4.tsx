@@ -622,6 +622,12 @@ export function VisualEditorV4({
   
   // Debug: Log selected node changes
   useEffect(() => {
+    console.log('🎯 Selection changed:', { 
+      selectedNodeId, 
+      hasSelectedNode: !!selectedNode,
+      tag: selectedNode?.tag 
+    });
+    
     if (selectedNode && selectedNode.tag === 'img') {
       console.log('🎯 Selected node updated:', {
         id: selectedNode.id,
@@ -629,7 +635,7 @@ export function VisualEditorV4({
         responsiveAttributes: selectedNode.responsiveAttributes
       });
     }
-  }, [selectedNode]);
+  }, [selectedNode, selectedNodeId]);
   
   // Active node for drop indicator (either existing node or template being dragged)
   const dropIndicatorNode = draggedTemplate || activeNode;
