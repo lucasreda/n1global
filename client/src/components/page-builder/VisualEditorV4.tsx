@@ -206,10 +206,19 @@ export function VisualEditorV4({
     if (!selectedNode) return;
 
     const duplicated = duplicateNode(selectedNode);
-    updateModel({
-      ...model,
-      nodes: [...model.nodes, duplicated],
-    }, 'Duplicate node');
+    
+    // Find path and insert after selected node
+    const selectedPath = findNodePath(model.nodes, selectedNodeId);
+    if (selectedPath) {
+      const newNodes = insertNodeAtPath(model.nodes, selectedPath, duplicated, 'after');
+      updateModel({ ...model, nodes: newNodes }, 'Duplicate node');
+    } else {
+      // Fallback: append to root
+      updateModel({
+        ...model,
+        nodes: [...model.nodes, duplicated],
+      }, 'Duplicate node');
+    }
   }, [selectedNodeId, model, updateModel]);
 
   // Copy/Paste handlers with visual feedback
@@ -250,6 +259,36 @@ export function VisualEditorV4({
     };
 
     const pasted = duplicateNode(clipboard);
+    
+    // If a node is selected, try to paste as sibling (after selected node)
+    if (selectedNodeId) {
+      const selectedPath = findNodePath(model.nodes, selectedNodeId);
+      if (selectedPath) {
+        const parentNode = getParentNode(model.nodes, selectedNodeId);
+        
+        // Validate semantic relationship with parent
+        if (parentNode && !canAcceptChildWithContext(parentNode, pasted)) {
+          toast({
+            title: "❌ Colagem não permitida",
+            description: getDropErrorMessage(parentNode, pasted),
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Insert after selected node
+        const newNodes = insertNodeAtPath(model.nodes, selectedPath, pasted, 'after');
+        updateModel({ ...model, nodes: newNodes }, 'Paste node');
+        
+        toast({
+          title: "📌 Elemento colado",
+          description: `<${clipboard.tag}> inserido após elemento selecionado`,
+        });
+        return;
+      }
+    }
+    
+    // Fallback: paste at root level
     updateModel({
       ...model,
       nodes: [...model.nodes, pasted],
@@ -257,9 +296,9 @@ export function VisualEditorV4({
     
     toast({
       title: "📌 Elemento colado",
-      description: `<${clipboard.tag}> inserido com sucesso`,
+      description: `<${clipboard.tag}> inserido no final`,
     });
-  }, [clipboard, model, updateModel, toast]);
+  }, [clipboard, selectedNodeId, model, updateModel, toast]);
 
   // Arrow nudge handler
   const handleNudge = useCallback((direction: 'up' | 'down' | 'left' | 'right', shift: boolean) => {
