@@ -6437,7 +6437,7 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   app.use("/api/integrations", cartpandaRoutes);
 
   // Register Operational App integration routes
-  app.use("/api/integrations", integrationsRouter);
+  app.use("/api/integrations", authenticateToken, integrationsRouter);
 
   // Register Funnel Builder routes
   app.use("/api", funnelRoutes);
