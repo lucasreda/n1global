@@ -136,13 +136,82 @@ html, body {
   background: #555 !important;
 }
 
-/* Visual Editor V4 - Non-expanding feedback styles */
+/* Visual Editor V4 - Professional Selection Styles */
 .editor-node-selected {
-  box-shadow: inset 0 0 0 2px rgb(59 130 246) !important;
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 0px !important;
+  position: relative !important;
+  z-index: 100 !important;
 }
 
 .editor-node-hovered {
-  box-shadow: inset 0 0 0 2px rgb(96 165 250) !important;
+  outline: 1px solid #60a5fa !important;
+  outline-offset: 0px !important;
+  cursor: pointer !important;
+  position: relative !important;
+  z-index: 50 !important;
+}
+
+/* Selection overlay label */
+.selection-label {
+  position: absolute;
+  top: -24px;
+  left: -2px;
+  background: #3b82f6;
+  color: white;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 3px 3px 0 0;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Selection handles */
+.selection-handles {
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.selection-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border: 2px solid #3b82f6;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.selection-handle.top-left {
+  top: 0;
+  left: 0;
+  cursor: nw-resize;
+}
+
+.selection-handle.top-right {
+  top: 0;
+  right: 0;
+  cursor: ne-resize;
+}
+
+.selection-handle.bottom-left {
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+.selection-handle.bottom-right {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
 }
 
 @layer base {

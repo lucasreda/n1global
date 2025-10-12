@@ -673,6 +673,7 @@ export function VisualEditorV4({
             onSelectNode={handleSelectNode}
             onDuplicateNode={handleDuplicateNode}
             onDeleteNode={handleDeleteNode}
+            onUpdateNode={handleUpdateNode}
             breakpoint={viewport}
           />
         </div>

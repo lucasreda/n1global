@@ -3,6 +3,8 @@ import { PageModelV4, PageNodeV4 } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { HoverTooltip } from './HoverTooltip';
 import { SelectionToolbar } from './SelectionToolbar';
+import { SelectionOverlay } from './SelectionOverlay';
+import { InlineTextToolbar } from './InlineTextToolbar';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { canAcceptChild } from './tree-helpers';
 import { useStylesheetManager, generateOverrideCss } from '@/hooks/useStylesheetManager';
@@ -13,6 +15,7 @@ interface PageModelV4RendererProps {
   onSelectNode?: (nodeId: string) => void;
   onDuplicateNode?: () => void;
   onDeleteNode?: () => void;
+  onUpdateNode?: (updates: Partial<PageNodeV4>) => void;
   breakpoint?: 'desktop' | 'tablet' | 'mobile';
 }
 
@@ -22,6 +25,7 @@ export function PageModelV4Renderer({
   onSelectNode,
   onDuplicateNode,
   onDeleteNode,
+  onUpdateNode,
   breakpoint = 'desktop'
 }: PageModelV4RendererProps) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -191,6 +195,7 @@ export function PageModelV4Renderer({
             onMouseLeave={handleMouseLeave}
             onDuplicateNode={onDuplicateNode}
             onDeleteNode={onDeleteNode}
+            onUpdateNode={onUpdateNode}
             breakpoint={breakpoint}
           />
         ))}
@@ -212,8 +217,59 @@ export function PageModelV4Renderer({
           visible={true}
         />
       )}
+
+      {/* Selection Overlay with Label and Handles */}
+      {selectedNodeId && (
+        <SelectionOverlay
+          nodeId={selectedNodeId}
+          tag={findNodeInTree(model.nodes, selectedNodeId)?.tag || 'div'}
+          isVisible={true}
+        />
+      )}
+
+      {/* Inline Text Toolbar for text elements */}
+      {selectedNodeId && onUpdateNode && (() => {
+        const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
+        const isTextElement = selectedNode && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'a', 'text'].includes(selectedNode.tag);
+        
+        if (isTextElement && selectedNode) {
+          return (
+            <InlineTextToolbar
+              node={selectedNode}
+              onUpdateStyle={(styleUpdates) => {
+                // Deep merge: preserve ALL existing style keys (pseudo-states, custom props, etc)
+                const currentStyles = selectedNode.styles || {};
+                
+                onUpdateNode({
+                  styles: {
+                    ...currentStyles, // Preserve all existing keys (desktop, tablet, mobile, AND any other custom keys)
+                    [breakpoint]: {
+                      ...(currentStyles[breakpoint] || {}),
+                      ...styleUpdates
+                    }
+                  }
+                });
+              }}
+              breakpoint={breakpoint}
+            />
+          );
+        }
+        return null;
+      })()}
     </div>
   );
+}
+
+// Helper function to find a node in the tree
+function findNodeInTree(nodes: PageNodeV4[], nodeId: string): PageNodeV4 | null {
+  for (const node of nodes) {
+    if (node.id === nodeId) return node;
+    if (node.children) {
+      const found = findNodeInTree(node.children, nodeId);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 interface PageNodeV4RendererProps {
@@ -225,6 +281,7 @@ interface PageNodeV4RendererProps {
   onMouseLeave?: () => void;
   onDuplicateNode?: () => void;
   onDeleteNode?: () => void;
+  onUpdateNode?: (updates: Partial<PageNodeV4>) => void;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
 }
 
@@ -237,6 +294,7 @@ function PageNodeV4Renderer({
   onMouseLeave,
   onDuplicateNode,
   onDeleteNode,
+  onUpdateNode,
   breakpoint 
 }: PageNodeV4RendererProps) {
   const isSelected = selectedNodeId === node.id;
@@ -518,6 +576,7 @@ function PageNodeV4Renderer({
           onMouseLeave={onMouseLeave}
           onDuplicateNode={onDuplicateNode}
           onDeleteNode={onDeleteNode}
+          onUpdateNode={onUpdateNode}
           breakpoint={breakpoint}
         />
       ))}
