@@ -5720,3 +5720,47 @@ export const pageModelV4Schema = z.object({
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });;
+// ============================================================================
+// OPERATIONAL APP INTEGRATION SYSTEM
+// ============================================================================
+
+// Integration configurations table - stores webhook settings
+export const integrationConfigs = pgTable("integration_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  integrationType: text("integration_type").notNull(), // 'operational_app'
+  webhookUrl: text("webhook_url").notNull(),
+  webhookSecret: text("webhook_secret").notNull(), // Encrypted secret for HMAC
+  isActive: boolean("is_active").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Webhook logs table - tracks all webhook dispatches
+export const webhookLogs = pgTable("webhook_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationConfigId: varchar("integration_config_id").notNull().references(() => integrationConfigs.id),
+  orderId: text("order_id").notNull().references(() => orders.id),
+  payload: jsonb("payload").notNull(), // The data sent to webhook
+  responseStatus: integer("response_status"), // HTTP status code received
+  responseBody: jsonb("response_body"), // Response from webhook
+  errorMessage: text("error_message"), // Error if failed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Zod schemas for integration configs
+export const insertIntegrationConfigSchema = createInsertSchema(integrationConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWebhookLogSchema = createInsertSchema(webhookLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type IntegrationConfig = typeof integrationConfigs.$inferSelect;
+export type InsertIntegrationConfig = z.infer<typeof insertIntegrationConfigSchema>;
+export type WebhookLog = typeof webhookLogs.$inferSelect;
+export type InsertWebhookLog = z.infer<typeof insertWebhookLogSchema>;

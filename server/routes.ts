@@ -31,6 +31,7 @@ import affiliateLandingRoutes from "./affiliate-landing-routes";
 import affiliateMarketplaceRoutes from "./affiliate-marketplace-routes";
 import affiliatePixelRoutes from "./affiliate-pixel-routes";
 import pageBuilderUploadRoutes from "./routes/page-builder-upload";
+import { integrationsRouter } from "./routes/integrations";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -6427,6 +6428,9 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
 
   // Register CartPanda integration routes
   app.use("/api/integrations", cartpandaRoutes);
+
+  // Register Operational App integration routes
+  app.use("/api/integrations", integrationsRouter);
 
   // Register Funnel Builder routes
   app.use("/api", funnelRoutes);
