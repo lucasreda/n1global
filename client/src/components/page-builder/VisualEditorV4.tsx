@@ -212,15 +212,15 @@ export function VisualEditorV4({
     }, 'Duplicate node');
   }, [selectedNodeId, model, updateModel]);
 
-  // Copy/Paste handlers
+  // Copy/Paste handlers with visual feedback
   const handleCopyNode = useCallback(() => {
     if (!selectedNodeId) return;
     const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
     if (selectedNode) {
       setClipboard(selectedNode);
       toast({
-        title: "Copiado",
-        description: "Elemento copiado para área de transferência",
+        title: "📋 Elemento copiado",
+        description: `<${selectedNode.tag}> copiado para área de transferência`,
       });
     }
   }, [selectedNodeId, model.nodes, toast]);
@@ -232,8 +232,8 @@ export function VisualEditorV4({
       setClipboard(selectedNode);
       handleDeleteNode();
       toast({
-        title: "Recortado",
-        description: "Elemento recortado",
+        title: "✂️ Elemento recortado",
+        description: `<${selectedNode.tag}> removido e copiado`,
       });
     }
   }, [selectedNodeId, model.nodes, handleDeleteNode, toast]);
@@ -256,8 +256,8 @@ export function VisualEditorV4({
     }, 'Paste node');
     
     toast({
-      title: "Colado",
-      description: "Elemento colado com sucesso",
+      title: "📌 Elemento colado",
+      description: `<${clipboard.tag}> inserido com sucesso`,
     });
   }, [clipboard, model, updateModel, toast]);
 
