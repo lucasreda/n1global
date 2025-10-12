@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { PageNodeV4 } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,60 @@ interface PropertiesPanelV4Props {
 export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props) {
   const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const { computedStyles, hasOverrides, isFromClasses } = useComputedStyles(node, breakpoint);
+  
+  // Local state for inputs (immediate feedback)
+  const [localTextContent, setLocalTextContent] = useState(node?.textContent || '');
+  const [localAttributes, setLocalAttributes] = useState(node?.attributes || {});
+  
+  // Debounce timer refs
+  const textDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const attrDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track last known node state to detect external changes
+  const lastNodeSnapshot = useRef<{ id: string; textContent?: string; attributes?: Record<string, string> } | null>(null);
+
+  // Detect external changes (undo/redo/selection) and cancel pending updates
+  useEffect(() => {
+    const currentSnapshot = {
+      id: node?.id || '',
+      textContent: node?.textContent,
+      attributes: node?.attributes
+    };
+    
+    // Check if node changed externally (not from our debounce)
+    const hasExternalChange = 
+      !lastNodeSnapshot.current ||
+      lastNodeSnapshot.current.id !== currentSnapshot.id ||
+      lastNodeSnapshot.current.textContent !== currentSnapshot.textContent ||
+      JSON.stringify(lastNodeSnapshot.current.attributes) !== JSON.stringify(currentSnapshot.attributes);
+    
+    if (hasExternalChange) {
+      // Cancel ALL pending timers immediately
+      if (textDebounceTimer.current) {
+        clearTimeout(textDebounceTimer.current);
+        textDebounceTimer.current = null;
+      }
+      if (attrDebounceTimer.current) {
+        clearTimeout(attrDebounceTimer.current);
+        attrDebounceTimer.current = null;
+      }
+      
+      // Sync local state with external changes
+      setLocalTextContent(node?.textContent || '');
+      setLocalAttributes(node?.attributes || {});
+      
+      // Update snapshot
+      lastNodeSnapshot.current = currentSnapshot;
+    }
+  }, [node?.id, node?.textContent, node?.attributes]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (textDebounceTimer.current) clearTimeout(textDebounceTimer.current);
+      if (attrDebounceTimer.current) clearTimeout(attrDebounceTimer.current);
+    };
+  }, []);
 
   if (!node) {
     return (
@@ -34,18 +88,52 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
     );
   }
 
-  const handleTextContentChange = (value: string) => {
-    if (onUpdateNode) {
+  // Immediate local update + debounced persist
+  const handleTextContentChange = useCallback((value: string) => {
+    setLocalTextContent(value); // Immediate UI update
+    
+    if (!onUpdateNode) return;
+    
+    if (textDebounceTimer.current) {
+      clearTimeout(textDebounceTimer.current);
+    }
+    
+    textDebounceTimer.current = setTimeout(() => {
       onUpdateNode({ textContent: value });
-    }
-  };
+      // Update snapshot after successful persist
+      if (node) {
+        lastNodeSnapshot.current = {
+          id: node.id,
+          textContent: value,
+          attributes: node.attributes
+        };
+      }
+    }, 300);
+  }, [onUpdateNode, node]);
 
-  const handleAttributeChange = (key: string, value: string) => {
-    if (onUpdateNode) {
-      const newAttributes = { ...node.attributes, [key]: value };
-      onUpdateNode({ attributes: newAttributes });
+  const handleAttributeChange = useCallback((key: string, value: string) => {
+    // Immediate local update
+    const newAttributes = { ...localAttributes, [key]: value };
+    setLocalAttributes(newAttributes);
+    
+    if (!onUpdateNode) return;
+    
+    if (attrDebounceTimer.current) {
+      clearTimeout(attrDebounceTimer.current);
     }
-  };
+    
+    attrDebounceTimer.current = setTimeout(() => {
+      onUpdateNode({ attributes: newAttributes });
+      // Update snapshot after successful persist
+      if (node) {
+        lastNodeSnapshot.current = {
+          id: node.id,
+          textContent: node.textContent,
+          attributes: newAttributes
+        };
+      }
+    }, 300);
+  }, [onUpdateNode, node, localAttributes]);
 
   return (
     <div className="properties-panel-v4 flex flex-col h-full bg-background text-foreground">
@@ -134,7 +222,7 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
                   <Label htmlFor="text-content" className="text-sm font-medium text-foreground">Text Content</Label>
                   <Textarea
                     id="text-content"
-                    value={node.textContent}
+                    value={localTextContent}
                     onChange={(e) => handleTextContentChange(e.target.value)}
                     placeholder="Enter text content..."
                     rows={4}
@@ -147,9 +235,9 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
               {/* Attributes */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-foreground">HTML Attributes</Label>
-                {node.attributes && Object.keys(node.attributes).length > 0 ? (
+                {localAttributes && Object.keys(localAttributes).length > 0 ? (
                   <div className="space-y-2">
-                    {Object.entries(node.attributes).map(([key, value]) => (
+                    {Object.entries(localAttributes).map(([key, value]) => (
                       <div key={key} className="grid grid-cols-3 gap-2">
                         <Input
                           value={key}

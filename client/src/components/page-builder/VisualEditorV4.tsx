@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { PageModelV4, PageNodeV4, ResponsiveStylesV4 } from '@shared/schema';
 import { PageModelV4Renderer } from './PageModelV4Renderer';
 import { LayersPanelV4 } from './LayersPanelV4';
 import { PropertiesPanelV4 } from './PropertiesPanelV4';
 import { ElementsToolbarV4 } from './ElementsToolbarV4';
 import { DropIndicatorLayer } from './DropIndicatorLayer';
+import { useHistoryV4 } from './HistoryManagerV4';
 import { nanoid } from 'nanoid';
 import {
   DndContext,
@@ -49,6 +50,10 @@ export function VisualEditorV4({
   const [overId, setOverId] = useState<string | null>(null);
   const [draggedTemplate, setDraggedTemplate] = useState<PageNodeV4 | null>(null);
   const [dropValidation, setDropValidation] = useState<{ allowed: boolean; reason?: string } | null>(null);
+  const [clipboard, setClipboard] = useState<PageNodeV4 | null>(null);
+  
+  // History management
+  const { addToHistory, undo, redo, canUndo, canRedo } = useHistoryV4(model);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -142,22 +147,28 @@ export function VisualEditorV4({
     });
   };
 
+  // Wrapper for onChange that adds to history
+  const updateModel = useCallback((newModel: PageModelV4, description = 'Edit') => {
+    onChange(newModel);
+    addToHistory(newModel, description);
+  }, [onChange, addToHistory]);
+
   const handleUpdateNode = useCallback((updates: Partial<PageNodeV4>) => {
     if (!selectedNodeId) return;
     
     const updatedNodes = updateNodeInTree(model.nodes, selectedNodeId, updates);
-    onChange({
+    updateModel({
       ...model,
       nodes: updatedNodes,
-    });
-  }, [selectedNodeId, model, onChange]);
+    }, 'Update node');
+  }, [selectedNodeId, model, updateModel]);
 
   const handleInsertElement = useCallback((node: PageNodeV4) => {
-    onChange({
+    updateModel({
       ...model,
       nodes: [...model.nodes, node],
-    });
-  }, [model, onChange]);
+    }, 'Insert element');
+  }, [model, updateModel]);
 
   const handleDeleteNode = useCallback(() => {
     if (!selectedNodeId) return;
@@ -172,13 +183,13 @@ export function VisualEditorV4({
       });
     };
 
-    onChange({
+    updateModel({
       ...model,
       nodes: deleteFromTree(model.nodes),
-    });
+    }, 'Delete node');
     
     setSelectedNodeId(null);
-  }, [selectedNodeId, model, onChange]);
+  }, [selectedNodeId, model, updateModel]);
 
   const handleDuplicateNode = useCallback(() => {
     if (!selectedNodeId) return;
@@ -195,11 +206,112 @@ export function VisualEditorV4({
     if (!selectedNode) return;
 
     const duplicated = duplicateNode(selectedNode);
-    onChange({
+    updateModel({
       ...model,
       nodes: [...model.nodes, duplicated],
+    }, 'Duplicate node');
+  }, [selectedNodeId, model, updateModel]);
+
+  // Copy/Paste handlers
+  const handleCopyNode = useCallback(() => {
+    if (!selectedNodeId) return;
+    const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
+    if (selectedNode) {
+      setClipboard(selectedNode);
+      toast({
+        title: "Copiado",
+        description: "Elemento copiado para área de transferência",
+      });
+    }
+  }, [selectedNodeId, model.nodes, toast]);
+
+  const handleCutNode = useCallback(() => {
+    if (!selectedNodeId) return;
+    const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
+    if (selectedNode) {
+      setClipboard(selectedNode);
+      handleDeleteNode();
+      toast({
+        title: "Recortado",
+        description: "Elemento recortado",
+      });
+    }
+  }, [selectedNodeId, model.nodes, handleDeleteNode, toast]);
+
+  const handlePasteNode = useCallback(() => {
+    if (!clipboard) return;
+    
+    const duplicateNode = (node: PageNodeV4): PageNodeV4 => {
+      return {
+        ...node,
+        id: nanoid(),
+        children: node.children?.map(duplicateNode),
+      };
+    };
+
+    const pasted = duplicateNode(clipboard);
+    updateModel({
+      ...model,
+      nodes: [...model.nodes, pasted],
+    }, 'Paste node');
+    
+    toast({
+      title: "Colado",
+      description: "Elemento colado com sucesso",
     });
-  }, [selectedNodeId, model, onChange]);
+  }, [clipboard, model, updateModel, toast]);
+
+  // Arrow nudge handler
+  const handleNudge = useCallback((direction: 'up' | 'down' | 'left' | 'right', shift: boolean) => {
+    if (!selectedNodeId) return;
+    
+    const selectedNode = findNodeInTree(model.nodes, selectedNodeId);
+    if (!selectedNode) return;
+
+    const nudgeAmount = shift ? 10 : 1;
+    const currentStyles = selectedNode.styles?.desktop || {};
+    
+    let updates: any = {};
+    
+    if (direction === 'left') {
+      const currentLeft = parseInt(currentStyles.left as string || '0');
+      updates.styles = {
+        desktop: { ...currentStyles, position: 'relative', left: `${currentLeft - nudgeAmount}px` }
+      };
+    } else if (direction === 'right') {
+      const currentLeft = parseInt(currentStyles.left as string || '0');
+      updates.styles = {
+        desktop: { ...currentStyles, position: 'relative', left: `${currentLeft + nudgeAmount}px` }
+      };
+    } else if (direction === 'up') {
+      const currentTop = parseInt(currentStyles.top as string || '0');
+      updates.styles = {
+        desktop: { ...currentStyles, position: 'relative', top: `${currentTop - nudgeAmount}px` }
+      };
+    } else if (direction === 'down') {
+      const currentTop = parseInt(currentStyles.top as string || '0');
+      updates.styles = {
+        desktop: { ...currentStyles, position: 'relative', top: `${currentTop + nudgeAmount}px` }
+      };
+    }
+    
+    handleUpdateNode(updates);
+  }, [selectedNodeId, model.nodes, handleUpdateNode]);
+
+  // Undo/Redo integration
+  const handleUndo = useCallback(() => {
+    const previousState = undo();
+    if (previousState) {
+      onChange(previousState);
+    }
+  }, [undo, onChange]);
+
+  const handleRedo = useCallback(() => {
+    const nextState = redo();
+    if (nextState) {
+      onChange(nextState);
+    }
+  }, [redo, onChange]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -208,6 +320,29 @@ export function VisualEditorV4({
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
+      }
+
+      // Undo/Redo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+
+      // Copy/Cut/Paste
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedNodeId) {
+        e.preventDefault();
+        handleCopyNode();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x' && selectedNodeId) {
+        e.preventDefault();
+        handleCutNode();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboard) {
+        e.preventDefault();
+        handlePasteNode();
       }
 
       // Delete/Backspace - delete selected node
@@ -222,6 +357,24 @@ export function VisualEditorV4({
         handleDuplicateNode();
       }
 
+      // Arrow keys - nudge position
+      if (e.key === 'ArrowLeft' && selectedNodeId) {
+        e.preventDefault();
+        handleNudge('left', e.shiftKey);
+      }
+      if (e.key === 'ArrowRight' && selectedNodeId) {
+        e.preventDefault();
+        handleNudge('right', e.shiftKey);
+      }
+      if (e.key === 'ArrowUp' && selectedNodeId) {
+        e.preventDefault();
+        handleNudge('up', e.shiftKey);
+      }
+      if (e.key === 'ArrowDown' && selectedNodeId) {
+        e.preventDefault();
+        handleNudge('down', e.shiftKey);
+      }
+
       // Escape - deselect
       if (e.key === 'Escape' && selectedNodeId) {
         e.preventDefault();
@@ -231,7 +384,7 @@ export function VisualEditorV4({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, handleDeleteNode, handleDuplicateNode]);
+  }, [selectedNodeId, clipboard, handleDeleteNode, handleDuplicateNode, handleCopyNode, handleCutNode, handlePasteNode, handleNudge, handleUndo, handleRedo]);
 
   // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -312,10 +465,10 @@ export function VisualEditorV4({
       
       // Drop on canvas root
       if (!overData) {
-        onChange({
+        updateModel({
           ...model,
           nodes: [...model.nodes, newNode],
-        });
+        }, 'Drop template');
         return;
       }
       
@@ -338,7 +491,7 @@ export function VisualEditorV4({
             return;
           }
           const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, 'child');
-          onChange({ ...model, nodes: newNodes });
+          updateModel({ ...model, nodes: newNodes }, 'Drop template as child');
         } else {
           // Insert before/after - validate against parent
           const position = overData.position || 'after';
@@ -355,7 +508,7 @@ export function VisualEditorV4({
           }
           
           const newNodes = insertNodeAtPath(model.nodes, targetPath, newNode, position);
-          onChange({ ...model, nodes: newNodes });
+          updateModel({ ...model, nodes: newNodes }, 'Drop template');
         }
       }
       return;
@@ -372,7 +525,7 @@ export function VisualEditorV4({
       
       if (!overData) {
         // Drop on canvas root - reuse removed node directly
-        onChange({ ...model, nodes: [...updatedTree, removedNode] });
+        updateModel({ ...model, nodes: [...updatedTree, removedNode] }, 'Move node');
         return;
       }
       
@@ -393,8 +546,7 @@ export function VisualEditorV4({
               description: getDropErrorMessage(targetNode, removedNode),
               variant: "destructive",
             });
-            // Restore node to original position
-            onChange({ ...model, nodes: model.nodes });
+            // Don't restore - just cancel the operation
             return;
           }
           finalNodes = insertNodeAtPath(updatedTree, targetPath, removedNode, 'child');
@@ -410,18 +562,17 @@ export function VisualEditorV4({
               description: getDropErrorMessage(parentNode, removedNode),
               variant: "destructive",
             });
-            // Restore node to original position
-            onChange({ ...model, nodes: model.nodes });
+            // Don't restore - just cancel the operation
             return;
           }
           
           finalNodes = insertNodeAtPath(updatedTree, targetPath, removedNode, position);
         }
         
-        onChange({ ...model, nodes: finalNodes });
+        updateModel({ ...model, nodes: finalNodes }, 'Move node');
       }
     }
-  }, [model, onChange]);
+  }, [model, updateModel, toast]);
 
   // CRITICAL: Always find fresh node from current model state
   const selectedNode = selectedNodeId ? findNodeInTree(model.nodes, selectedNodeId) : null;
