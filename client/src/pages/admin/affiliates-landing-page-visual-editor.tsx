@@ -104,7 +104,7 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     }
   }, [pageResponse, toast, historyInitialized, addToHistory]);
 
-  // Save page mutation
+  // Save page mutation (state management handled by auto-save or manual save handlers)
   const savePageMutation = useMutation({
     mutationFn: async (updatedModel: PageModelV4) => {
       const response = await authenticatedApiRequest('PUT', `/api/affiliate/landing-pages/${landingPageId}`, {
@@ -117,12 +117,6 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
       return response.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Landing page salva",
-        description: "As alterações foram salvas com sucesso.",
-      });
-      setIsDirty(false);
-      
       // Force refetch by invalidating and refetching immediately
       queryClient.invalidateQueries({ 
         queryKey: ['/api/affiliate/landing-pages'], 
@@ -150,9 +144,29 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
 
   const handleSave = useCallback(() => {
     if (currentModel) {
-      savePageMutation.mutate(currentModel);
+      const editIdAtSave = lastEditIdRef.current;
+      
+      savePageMutation.mutate(currentModel, {
+        onSuccess: () => {
+          // Only clear isDirty if no newer edits happened
+          if (editIdAtSave === lastEditIdRef.current) {
+            setIsDirty(false);
+            toast({
+              title: "✅ Salvo",
+              description: "Alterações salvas com sucesso",
+            });
+          } else {
+            // Newer edit exists during save
+            console.log('⚠️ Manual save: newer edit detected, keeping isDirty true');
+            toast({
+              title: "⚠️ Salvo com novas edições",
+              description: "Salvo, mas novas alterações detectadas",
+            });
+          }
+        }
+      });
     }
-  }, [currentModel, savePageMutation]);
+  }, [currentModel, savePageMutation, toast]);
 
   // Keep ref in sync with currentModel
   useEffect(() => {
@@ -181,11 +195,90 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
     };
   }, [savePageMutation]);
 
+  // Track edit generations to prevent race conditions
+  const lastEditIdRef = useRef(0);
+  
   const handleModelChange = useCallback((newModel: PageModelV4) => {
+    lastEditIdRef.current++; // Increment on every edit
     setCurrentModel(newModel);
     setIsDirty(true);
     addToHistory(newModel, 'Edit');
   }, [addToHistory]);
+
+  // Auto-save with debounce
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const statusResetTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Only auto-save if there are unsaved changes
+    if (!isDirty || !currentModel) return;
+
+    // Clear existing timers
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    if (statusResetTimerRef.current) {
+      clearTimeout(statusResetTimerRef.current);
+      statusResetTimerRef.current = null;
+    }
+
+    // Capture the current edit ID when starting debounce
+    const editIdAtDebounceStart = lastEditIdRef.current;
+
+    // Set new timer for auto-save
+    autoSaveTimerRef.current = setTimeout(() => {
+      console.log('🔄 Auto-saving changes (editId:', editIdAtDebounceStart, 'current:', lastEditIdRef.current, ')...');
+      setAutoSaveStatus('saving');
+      
+      savePageMutation.mutate(currentModel, {
+        onSuccess: () => {
+          // Only clear isDirty if no newer edits happened
+          if (editIdAtDebounceStart === lastEditIdRef.current) {
+            setAutoSaveStatus('saved');
+            setIsDirty(false);
+            
+            // Clear any existing reset timer
+            if (statusResetTimerRef.current) {
+              clearTimeout(statusResetTimerRef.current);
+            }
+            
+            // Reset to idle after 2 seconds
+            statusResetTimerRef.current = setTimeout(() => {
+              setAutoSaveStatus('idle');
+            }, 2000);
+          } else {
+            // Newer edit exists, keep isDirty true
+            console.log('⚠️ Newer edit detected (editId:', lastEditIdRef.current, '), keeping isDirty true');
+            setAutoSaveStatus('idle'); // Don't show "saved" for stale save
+          }
+        },
+        onError: () => {
+          setAutoSaveStatus('error');
+          
+          // Clear any existing reset timer
+          if (statusResetTimerRef.current) {
+            clearTimeout(statusResetTimerRef.current);
+          }
+          
+          // Reset to idle after 3 seconds
+          statusResetTimerRef.current = setTimeout(() => {
+            setAutoSaveStatus('idle');
+          }, 3000);
+        }
+      });
+    }, 3000); // 3 seconds debounce
+
+    // Cleanup on unmount
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      if (statusResetTimerRef.current) {
+        clearTimeout(statusResetTimerRef.current);
+      }
+    };
+  }, [currentModel, isDirty, savePageMutation]);
 
   const handleUndo = () => {
     const previousModel = undo();
@@ -289,6 +382,28 @@ export function AffiliateLandingPageVisualEditor({ landingPageId }: AffiliateLan
               >
                 <Redo2 className="h-4 w-4" />
               </Button>
+            </div>
+
+            {/* Auto-save Status Indicator */}
+            <div className="flex items-center gap-2 ml-4 text-sm">
+              {autoSaveStatus === 'saving' && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+                  <span>Salvando...</span>
+                </div>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                  <Save className="h-3 w-3" />
+                  <span>Salvo</span>
+                </div>
+              )}
+              {autoSaveStatus === 'error' && (
+                <div className="flex items-center gap-2 text-destructive">
+                  <span>❌</span>
+                  <span>Erro ao salvar</span>
+                </div>
+              )}
             </div>
           </div>
           
