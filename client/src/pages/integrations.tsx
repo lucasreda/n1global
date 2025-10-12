@@ -4,7 +4,8 @@ import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { MultiProviderPanel } from "@/components/integration/multi-provider-panel";
 import { ShopifyIntegration } from "@/components/integrations/shopify-integration";
 import { CartPandaIntegration } from "../components/integrations/cartpanda-integration";
-import { Settings, CheckCircle, AlertCircle, Store, ShoppingCart } from "lucide-react";
+import { OperationalAppIntegration } from "../components/integrations/operational-app-integration";
+import { Settings, CheckCircle, AlertCircle, Store, ShoppingCart, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { authenticatedApiRequest } from "@/lib/auth";
@@ -210,6 +211,50 @@ export default function Integrations() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Aplicativos da Operação */}
+      <div className="p-6">
+        {/* Título da Seção */}
+        <div className="flex items-center space-x-3 mb-6">
+          <Webhook className="text-purple-400" size={20} />
+          <h2 className="text-white font-semibold" style={{ fontSize: '20px' }}>Aplicativos da Operação</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6" style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}} data-testid="integration-operational-app">
+            <div className="flex items-center space-x-3 mb-4">
+              <Webhook className="text-purple-400" size={30} />
+              <div>
+                <h4 className="text-white font-medium">Webhooks</h4>
+                <p className="text-gray-400 text-sm">Envie dados de pedidos para seus aplicativos</p>
+              </div>
+            </div>
+            
+            <Dialog open={openDialog === "operational-app"} onOpenChange={(open) => setOpenDialog(open ? "operational-app" : null)}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                  data-testid="button-configure-operational-app"
+                >
+                  <Settings size={16} className="mr-2" />
+                  Configurar
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="glassmorphism border-0 max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-white flex items-center space-x-2">
+                    <Webhook className="text-purple-400" size={30} />
+                    <span>Aplicativos da Operação</span>
+                  </DialogTitle>
+                </DialogHeader>
+                <OperationalAppIntegration />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
