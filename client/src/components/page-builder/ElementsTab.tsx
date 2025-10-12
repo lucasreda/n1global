@@ -73,7 +73,7 @@ export function ElementsTab() {
       scrollbarWidth: 'thin',
       scrollbarColor: '#888 transparent'
     }}>
-      <Accordion type="multiple" defaultValue={['text', 'layout', 'media', 'form', 'interactive']} className="w-full">
+      <Accordion type="multiple" defaultValue={[]} className="w-full">
         {categories.map((category) => (
           <AccordionItem key={category.id} value={category.id} data-testid={`category-${category.id}`}>
             <AccordionTrigger className="px-4 py-2 hover:no-underline">
