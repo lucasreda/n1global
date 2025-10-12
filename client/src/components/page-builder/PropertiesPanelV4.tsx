@@ -76,19 +76,7 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
     };
   }, []);
 
-  if (!node) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center h-full text-center">
-        <Settings className="w-12 h-12 text-muted-foreground opacity-20 mb-3" />
-        <p className="text-sm font-medium text-muted-foreground">No Element Selected</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Select an element from the canvas or layers panel to edit its properties
-        </p>
-      </div>
-    );
-  }
-
-  // Immediate local update + debounced persist
+  // Immediate local update + debounced persist - MUST be before early return
   const handleTextContentChange = useCallback((value: string) => {
     setLocalTextContent(value); // Immediate UI update
     
@@ -134,6 +122,19 @@ export function PropertiesPanelV4({ node, onUpdateNode }: PropertiesPanelV4Props
       }
     }, 300);
   }, [onUpdateNode, node, localAttributes]);
+
+  // Early return AFTER all hooks (Rules of Hooks)
+  if (!node) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center h-full text-center">
+        <Settings className="w-12 h-12 text-muted-foreground opacity-20 mb-3" />
+        <p className="text-sm font-medium text-muted-foreground">No Element Selected</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Select an element from the canvas or layers panel to edit its properties
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="properties-panel-v4 flex flex-col h-full bg-background text-foreground">
