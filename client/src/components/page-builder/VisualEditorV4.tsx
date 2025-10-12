@@ -69,6 +69,7 @@ export function VisualEditorV4({
   );
 
   const handleSelectNode = useCallback((nodeId: string) => {
+    console.log('🖱️ handleSelectNode called with:', nodeId);
     setSelectedNodeId(nodeId);
   }, []);
 
