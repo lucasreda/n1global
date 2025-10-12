@@ -1,9 +1,13 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { integrationConfigs, insertIntegrationConfigSchema } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { WebhookService } from '../services/webhook-service';
 import crypto from 'crypto';
+
+interface AuthRequest extends Request {
+  user?: any;
+}
 
 export const integrationsRouter = Router();
 
@@ -11,7 +15,7 @@ export const integrationsRouter = Router();
  * GET /api/integrations/operational-app
  * Get operational app integration config
  */
-integrationsRouter.get('/operational-app', async (req, res) => {
+integrationsRouter.get('/operational-app', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -48,7 +52,7 @@ integrationsRouter.get('/operational-app', async (req, res) => {
  * POST /api/integrations/operational-app
  * Create or update operational app integration config
  */
-integrationsRouter.post('/operational-app', async (req, res) => {
+integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { webhookUrl, webhookSecret, isActive } = req.body;
@@ -142,7 +146,7 @@ integrationsRouter.post('/operational-app', async (req, res) => {
  * POST /api/integrations/operational-app/test
  * Test webhook connection
  */
-integrationsRouter.post('/operational-app/test', async (req, res) => {
+integrationsRouter.post('/operational-app/test', async (req: AuthRequest, res: Response) => {
   try {
     const { webhookUrl, webhookSecret } = req.body;
 
@@ -163,7 +167,7 @@ integrationsRouter.post('/operational-app/test', async (req, res) => {
  * GET /api/integrations/operational-app/logs
  * Get webhook logs
  */
-integrationsRouter.get('/operational-app/logs', async (req, res) => {
+integrationsRouter.get('/operational-app/logs', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
