@@ -682,13 +682,17 @@ export function VisualEditorV4({
           
           {/* Overlays rendered outside PageModelV4Renderer for correct positioning */}
           {/* Selection Overlay with Label */}
-          {selectedNodeId && (
-            <SelectionOverlay
-              nodeId={selectedNodeId}
-              tag={findNodeInTree(model.nodes, selectedNodeId)?.tag || 'div'}
-              isVisible={true}
-            />
-          )}
+          {selectedNodeId && (() => {
+            const selectedNodeForOverlay = findNodeInTree(model.nodes, selectedNodeId);
+            console.log('🔍 Rendering SelectionOverlay:', { selectedNodeId, tag: selectedNodeForOverlay?.tag });
+            return (
+              <SelectionOverlay
+                nodeId={selectedNodeId}
+                tag={selectedNodeForOverlay?.tag || 'div'}
+                isVisible={true}
+              />
+            );
+          })()}
 
           {/* Inline Text Toolbar for text elements */}
           {selectedNodeId && (() => {

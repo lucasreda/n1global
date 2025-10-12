@@ -11,23 +11,30 @@ export function SelectionOverlay({ nodeId, tag, isVisible }: SelectionOverlayPro
   const rafRef = useRef<number>();
 
   useEffect(() => {
+    console.log('🎯 SelectionOverlay mounted:', { nodeId, tag, isVisible });
     if (!isVisible) return;
 
     const updatePosition = () => {
       const element = document.querySelector(`[data-node-id="${nodeId}"]`);
+      console.log('📍 Looking for element:', nodeId, 'found:', !!element);
+      
       if (element) {
         const rect = element.getBoundingClientRect();
         // Find the parent container (the white canvas div)
         const parentContainer = element.closest('.mx-auto.bg-white');
         const parentRect = parentContainer?.getBoundingClientRect();
         
+        console.log('📦 Element rect:', rect, 'Parent rect:', parentRect);
+        
         if (parentRect) {
-          setDimensions({
+          const newDimensions = {
             top: rect.top - parentRect.top,
             left: rect.left - parentRect.left,
             width: rect.width,
             height: rect.height,
-          });
+          };
+          console.log('📐 Setting dimensions:', newDimensions);
+          setDimensions(newDimensions);
         }
       }
       rafRef.current = requestAnimationFrame(updatePosition);
