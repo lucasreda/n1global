@@ -76,11 +76,11 @@ export function ElementsTab() {
       <Accordion type="multiple" defaultValue={['text', 'layout', 'media', 'form', 'interactive']} className="w-full">
         {categories.map((category) => (
           <AccordionItem key={category.id} value={category.id} data-testid={`category-${category.id}`}>
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{category.icon}</span>
-                <span className="font-semibold text-foreground">{category.label}</span>
-                <span className="ml-auto text-xs text-muted-foreground">
+            <AccordionTrigger className="px-4 py-2 hover:no-underline">
+              <div className="flex items-center gap-2 w-full">
+                <span className="text-sm opacity-60">{category.icon}</span>
+                <span className="text-sm font-medium text-foreground">{category.label}</span>
+                <span className="ml-auto text-xs text-muted-foreground/60">
                   {category.elements.length}
                 </span>
               </div>
