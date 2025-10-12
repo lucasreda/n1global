@@ -32,6 +32,7 @@ import affiliateMarketplaceRoutes from "./affiliate-marketplace-routes";
 import affiliatePixelRoutes from "./affiliate-pixel-routes";
 import pageBuilderUploadRoutes from "./routes/page-builder-upload";
 import { integrationsRouter } from "./routes/integrations";
+import { WebhookService } from "./services/webhook-service";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -2004,6 +2005,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
+      
+      // Dispatch webhook asynchronously (don't block the response)
+      WebhookService.dispatchOrderCreatedWebhook(order.id, req.user!.id).catch(error => {
+        console.error('Failed to dispatch webhook for order:', order.id, error);
+      });
+      
       res.status(201).json(order);
     } catch (error) {
       res.status(400).json({ message: "Dados inválidos" });
