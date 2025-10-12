@@ -10,7 +10,7 @@ Quality priority: Maximum quality and highest level possible ("atingir o mais al
 ## Recent Changes
 
 ### Visual Editor V4 - Advanced Properties Panel (October 2025)
-Completed 9-stage expansion of PropertiesPanelV4 with professional page builder capabilities:
+Completed 10-stage expansion of PropertiesPanelV4 with professional page builder capabilities:
 - **ETAPA 1**: ShadowPicker with multi-layer box/text shadow editing, visual controls, presets
 - **ETAPA 2**: GradientPicker with multi-stop editor, BackgroundImageControls with URL/size/position/repeat
 - **ETAPA 3**: FilterControls (8 filters: blur, brightness, contrast, grayscale, hue-rotate, invert, saturate, sepia) + BackdropFilter + Glassmorphism preset
@@ -20,6 +20,7 @@ Completed 9-stage expansion of PropertiesPanelV4 with professional page builder 
 - **ETAPA 7**: PseudoClassEditorV4 refactored with 8 collapsible sections (Colors, Background, Spacing, Borders, Shadows, Typography, Effects, Transitions) + TransitionBuilder visual (property/duration/easing/delay)
 - **ETAPA 8**: Typography expanded (word-spacing, text-decoration, text-indent) + TransformControls visual (translate/rotate/scale/skew tabs, preserves order and unknown tokens, known limitation: normalizes function formats)
 - **ETAPA 9**: HistoryManagerV4 with undo/redo (Ctrl+Z/Ctrl+Shift+Z), complete keyboard shortcuts (Delete/Backspace, Ctrl+C/V/X for copy/paste/cut, Ctrl+D duplicate, Arrow keys for nudging 1px/10px with Shift, Escape to deselect), snapshot-based state sync preventing race conditions between debounced inputs and history actions, zero memory leaks
+- **ETAPA 10**: Auto-save system with 3-second debounce, visual status indicator (💾 Saving/✅ Saved/❌ Error), edit ID tracking preventing race conditions across all save paths (auto/manual), visual feedback for copy/paste operations (📋📌✂️ emoji icons), intelligent paste/duplicate positioning with semantic validation (inserts as sibling after selected element), deep clone with new IDs, zero data loss during concurrent saves
 
 ## System Architecture
 
