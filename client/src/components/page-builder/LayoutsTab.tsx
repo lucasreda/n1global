@@ -1,19 +1,47 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { useDraggable } from '@dnd-kit/core';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HERO_TEMPLATES } from './layout-templates/hero-templates';
 import { NAVIGATION_TEMPLATES } from './layout-templates/navigation-templates';
 import { CONTENT_TEMPLATES } from './layout-templates/content-templates';
 import { CTA_TEMPLATES } from './layout-templates/cta-templates';
 import { FORM_TEMPLATES } from './layout-templates/form-templates';
-import { PageNodeV4 } from '@shared/schema';
-import { Plus } from 'lucide-react';
 
-interface LayoutsTabProps {
-  onInsertLayout: (node: PageNodeV4) => void;
+function DraggableLayoutTemplate({ template }: { template: any }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `layout-template-${template.id}`,
+    data: {
+      kind: 'template',
+      template: template.createNode(),
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      data-testid={`template-${template.id}`}
+      className={`
+        flex items-center gap-3 p-3 rounded-lg border border-border bg-card
+        cursor-grab active:cursor-grabbing
+        transition-all hover:border-primary hover:shadow-md hover:bg-accent/30
+        ${isDragging ? 'opacity-50' : 'opacity-100'}
+      `}
+    >
+      <span className="text-base opacity-70">{template.icon}</span>
+      <div className="flex-1 min-w-0">
+        <h4 className="text-sm font-medium text-foreground leading-tight">
+          {template.name}
+        </h4>
+        <p className="text-xs text-muted-foreground/70 mt-0.5">
+          {template.category}
+        </p>
+      </div>
+    </div>
+  );
 }
 
-export function LayoutsTab({ onInsertLayout }: LayoutsTabProps) {
+export function LayoutsTab() {
   const allTemplates = [
     ...HERO_TEMPLATES,
     ...NAVIGATION_TEMPLATES,
@@ -55,42 +83,13 @@ export function LayoutsTab({ onInsertLayout }: LayoutsTabProps) {
 
             return (
               <div key={categoryName} data-testid={`category-${categoryName.toLowerCase().replace(/\s+/g, '-')}`}>
-                <h3 className="font-semibold mb-3 text-sm flex items-center gap-2 text-foreground">
-                  <span>{categoryName}</span>
-                  <span className="text-xs text-muted-foreground">({templates.length})</span>
+                <h3 className="mb-3 text-sm flex items-center gap-2 text-foreground">
+                  <span className="font-medium">{categoryName}</span>
+                  <span className="text-xs text-muted-foreground/60">({templates.length})</span>
                 </h3>
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2">
                   {templates.map((template) => (
-                    <Card
-                      key={template.id}
-                      className="overflow-hidden hover:shadow-md transition-shadow"
-                      data-testid={`template-${template.id}`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xl">{template.icon}</span>
-                              <h4 className="font-semibold text-sm truncate text-foreground">
-                                {template.name}
-                              </h4>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {template.category}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => onInsertLayout(template.createNode())}
-                            className="shrink-0"
-                            data-testid={`insert-${template.id}`}
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Insert
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <DraggableLayoutTemplate key={template.id} template={template} />
                   ))}
                 </div>
               </div>

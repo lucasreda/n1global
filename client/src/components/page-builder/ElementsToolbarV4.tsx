@@ -30,7 +30,7 @@ export function ElementsToolbarV4({ onInsertElement }: ElementsToolbarV4Props) {
         </TabsContent>
 
         <TabsContent value="layouts" className="flex-1 m-0 overflow-hidden">
-          <LayoutsTab onInsertLayout={onInsertElement} />
+          <LayoutsTab />
         </TabsContent>
       </Tabs>
     </div>
