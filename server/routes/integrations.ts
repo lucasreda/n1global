@@ -7,19 +7,11 @@ import crypto from 'crypto';
 
 export const integrationsRouter = Router();
 
-// Middleware to check admin/super_admin role
-const requireAdmin = (req: any, res: any, next: any) => {
-  if (!req.user || !['admin', 'super_admin'].includes(req.user.role)) {
-    return res.status(403).json({ message: 'Acesso negado. Apenas administradores.' });
-  }
-  next();
-};
-
 /**
  * GET /api/integrations/operational-app
  * Get operational app integration config
  */
-integrationsRouter.get('/operational-app', requireAdmin, async (req, res) => {
+integrationsRouter.get('/operational-app', async (req, res) => {
   try {
     const userId = req.user!.id;
 
@@ -56,7 +48,7 @@ integrationsRouter.get('/operational-app', requireAdmin, async (req, res) => {
  * POST /api/integrations/operational-app
  * Create or update operational app integration config
  */
-integrationsRouter.post('/operational-app', requireAdmin, async (req, res) => {
+integrationsRouter.post('/operational-app', async (req, res) => {
   try {
     const userId = req.user!.id;
     const { webhookUrl, webhookSecret, isActive } = req.body;
@@ -150,7 +142,7 @@ integrationsRouter.post('/operational-app', requireAdmin, async (req, res) => {
  * POST /api/integrations/operational-app/test
  * Test webhook connection
  */
-integrationsRouter.post('/operational-app/test', requireAdmin, async (req, res) => {
+integrationsRouter.post('/operational-app/test', async (req, res) => {
   try {
     const { webhookUrl, webhookSecret } = req.body;
 
@@ -171,7 +163,7 @@ integrationsRouter.post('/operational-app/test', requireAdmin, async (req, res) 
  * GET /api/integrations/operational-app/logs
  * Get webhook logs
  */
-integrationsRouter.get('/operational-app/logs', requireAdmin, async (req, res) => {
+integrationsRouter.get('/operational-app/logs', async (req, res) => {
   try {
     const userId = req.user!.id;
 
