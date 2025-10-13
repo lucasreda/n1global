@@ -99,6 +99,14 @@ export default function AdminOperations() {
   const [operationToEdit, setOperationToEdit] = useState<Operation | null>(null);
   const [activeTab, setActiveTab] = useState("general");
   
+  // Integration modal states
+  const [showShopifyModal, setShowShopifyModal] = useState(false);
+  const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
+  const [showFacebookAdsModal, setShowFacebookAdsModal] = useState(false);
+  const [shopifyData, setShopifyData] = useState({ shopName: '', accessToken: '' });
+  const [fulfillmentData, setFulfillmentData] = useState({ provider: 'european_fulfillment', username: '', password: '' });
+  const [facebookAdsData, setFacebookAdsData] = useState({ accountId: '', accountName: '', accessToken: '' });
+  
   const [newOperationData, setNewOperationData] = useState({
     name: '',
     description: '',
@@ -344,6 +352,139 @@ export default function AdminOperations() {
     onError: (error: Error) => {
       toast({
         title: "Erro ao desvincular produto",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch integrations for the operation
+  const { data: operationIntegrations, refetch: refetchIntegrations } = useQuery<{
+    shopify: any | null;
+    fulfillment: any | null;
+    facebookAds: any | null;
+  }>({
+    queryKey: ['/api/admin/operations', operationToEdit?.id, 'integrations'],
+    enabled: !!operationToEdit && showEditModal && activeTab === 'integrations'
+  });
+
+  const saveShopifyIntegrationMutation = useMutation({
+    mutationFn: async (data: typeof shopifyData) => {
+      if (!operationToEdit) throw new Error('Operação não selecionada');
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/operations/${operationToEdit.id}/integrations/shopify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao salvar integração');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchIntegrations();
+      setShowShopifyModal(false);
+      setShopifyData({ shopName: '', accessToken: '' });
+      toast({
+        title: "Integração Shopify salva",
+        description: "A integração foi configurada com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar integração",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveFulfillmentIntegrationMutation = useMutation({
+    mutationFn: async (data: typeof fulfillmentData) => {
+      if (!operationToEdit) throw new Error('Operação não selecionada');
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/operations/${operationToEdit.id}/integrations/fulfillment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          provider: data.provider,
+          credentials: {
+            username: data.username,
+            password: data.password
+          }
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao salvar integração');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchIntegrations();
+      setShowFulfillmentModal(false);
+      setFulfillmentData({ provider: 'european_fulfillment', username: '', password: '' });
+      toast({
+        title: "Integração de envio salva",
+        description: "A integração foi configurada com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar integração",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveFacebookAdsIntegrationMutation = useMutation({
+    mutationFn: async (data: typeof facebookAdsData) => {
+      if (!operationToEdit) throw new Error('Operação não selecionada');
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/operations/${operationToEdit.id}/integrations/facebook-ads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao salvar integração');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchIntegrations();
+      setShowFacebookAdsModal(false);
+      setFacebookAdsData({ accountId: '', accountName: '', accessToken: '' });
+      toast({
+        title: "Integração Facebook Ads salva",
+        description: "A integração foi configurada com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao salvar integração",
         description: error.message,
         variant: "destructive",
       });
@@ -1009,20 +1150,47 @@ export default function AdminOperations() {
                             </div>
                             <div>
                               <h5 className="text-sm font-medium text-white">Shopify</h5>
-                              <p className="text-xs text-slate-400">Integração com loja Shopify</p>
+                              <p className="text-xs text-slate-400">
+                                {operationIntegrations?.shopify ? 
+                                  `Loja: ${operationIntegrations.shopify.shopName}` : 
+                                  'Integração com loja Shopify'
+                                }
+                              </p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            Não configurado
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              operationIntegrations?.shopify?.status === 'active' 
+                                ? 'bg-green-500/20 text-green-400 border-green-500/30' 
+                                : operationIntegrations?.shopify?.status === 'pending'
+                                ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                : 'text-slate-400'
+                            }`}
+                          >
+                            {operationIntegrations?.shopify ? 
+                              (operationIntegrations.shopify.status === 'active' ? 'Ativo' : 
+                               operationIntegrations.shopify.status === 'pending' ? 'Pendente' : 'Erro') 
+                              : 'Não configurado'
+                            }
                           </Badge>
                         </div>
                         <Button 
                           variant="outline" 
                           size="sm"
+                          onClick={() => {
+                            if (operationIntegrations?.shopify) {
+                              setShopifyData({
+                                shopName: operationIntegrations.shopify.shopName || '',
+                                accessToken: operationIntegrations.shopify.accessToken || ''
+                              });
+                            }
+                            setShowShopifyModal(true);
+                          }}
                           className="w-full border-white/20 text-white hover:bg-white/10"
                         >
                           <Settings className="h-3 w-3 mr-2" />
-                          Configurar
+                          {operationIntegrations?.shopify ? 'Editar' : 'Configurar'}
                         </Button>
                       </div>
                       
@@ -1035,20 +1203,45 @@ export default function AdminOperations() {
                             </div>
                             <div>
                               <h5 className="text-sm font-medium text-white">Envio</h5>
-                              <p className="text-xs text-slate-400">Integração de fulfillment</p>
+                              <p className="text-xs text-slate-400">
+                                {operationIntegrations?.fulfillment ? 
+                                  `Provider: ${operationIntegrations.fulfillment.provider}` : 
+                                  'Integração de fulfillment'
+                                }
+                              </p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            Não configurado
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              operationIntegrations?.fulfillment?.status === 'active' 
+                                ? 'bg-green-500/20 text-green-400 border-green-500/30' 
+                                : 'text-slate-400'
+                            }`}
+                          >
+                            {operationIntegrations?.fulfillment ? 
+                              (operationIntegrations.fulfillment.status === 'active' ? 'Ativo' : 'Erro') 
+                              : 'Não configurado'
+                            }
                           </Badge>
                         </div>
                         <Button 
                           variant="outline" 
                           size="sm"
+                          onClick={() => {
+                            if (operationIntegrations?.fulfillment) {
+                              setFulfillmentData({
+                                provider: operationIntegrations.fulfillment.provider || 'european_fulfillment',
+                                username: operationIntegrations.fulfillment.credentials?.username || '',
+                                password: ''
+                              });
+                            }
+                            setShowFulfillmentModal(true);
+                          }}
                           className="w-full border-white/20 text-white hover:bg-white/10"
                         >
                           <Settings className="h-3 w-3 mr-2" />
-                          Configurar
+                          {operationIntegrations?.fulfillment ? 'Editar' : 'Configurar'}
                         </Button>
                       </div>
                       
@@ -1061,20 +1254,45 @@ export default function AdminOperations() {
                             </div>
                             <div>
                               <h5 className="text-sm font-medium text-white">Facebook Ads</h5>
-                              <p className="text-xs text-slate-400">Campanhas publicitárias</p>
+                              <p className="text-xs text-slate-400">
+                                {operationIntegrations?.facebookAds ? 
+                                  `Conta: ${operationIntegrations.facebookAds.accountName || operationIntegrations.facebookAds.accountId}` : 
+                                  'Campanhas publicitárias'
+                                }
+                              </p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            Não configurado
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              operationIntegrations?.facebookAds?.status === 'active' 
+                                ? 'bg-green-500/20 text-green-400 border-green-500/30' 
+                                : 'text-slate-400'
+                            }`}
+                          >
+                            {operationIntegrations?.facebookAds ? 
+                              (operationIntegrations.facebookAds.status === 'active' ? 'Ativo' : 'Erro') 
+                              : 'Não configurado'
+                            }
                           </Badge>
                         </div>
                         <Button 
                           variant="outline" 
                           size="sm"
+                          onClick={() => {
+                            if (operationIntegrations?.facebookAds) {
+                              setFacebookAdsData({
+                                accountId: operationIntegrations.facebookAds.accountId || '',
+                                accountName: operationIntegrations.facebookAds.accountName || '',
+                                accessToken: operationIntegrations.facebookAds.accessToken || ''
+                              });
+                            }
+                            setShowFacebookAdsModal(true);
+                          }}
                           className="w-full border-white/20 text-white hover:bg-white/10"
                         >
                           <Settings className="h-3 w-3 mr-2" />
-                          Configurar
+                          {operationIntegrations?.facebookAds ? 'Editar' : 'Configurar'}
                         </Button>
                       </div>
                     </div>
@@ -1158,6 +1376,169 @@ export default function AdminOperations() {
               data-testid="button-confirm-delete-operation"
             >
               {deleteOperationMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shopify Integration Modal */}
+      <Dialog open={showShopifyModal} onOpenChange={setShowShopifyModal}>
+        <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-white/20">
+          <DialogHeader>
+            <DialogTitle>Configurar Integração Shopify</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Configure sua loja Shopify para esta operação
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="shopify-shop-name" className="text-sm text-slate-400">Nome da Loja</Label>
+              <Input
+                id="shopify-shop-name"
+                placeholder="minhaloja.myshopify.com"
+                value={shopifyData.shopName}
+                onChange={(e) => setShopifyData({ ...shopifyData, shopName: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="shopify-token" className="text-sm text-slate-400">Access Token</Label>
+              <Input
+                id="shopify-token"
+                type="password"
+                placeholder="shpat_..."
+                value={shopifyData.accessToken}
+                onChange={(e) => setShopifyData({ ...shopifyData, accessToken: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowShopifyModal(false)} className="border-white/20 text-white hover:bg-white/10">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => saveShopifyIntegrationMutation.mutate(shopifyData)}
+              disabled={saveShopifyIntegrationMutation.isPending || !shopifyData.shopName || !shopifyData.accessToken}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {saveShopifyIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fulfillment Integration Modal */}
+      <Dialog open={showFulfillmentModal} onOpenChange={setShowFulfillmentModal}>
+        <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-white/20">
+          <DialogHeader>
+            <DialogTitle>Configurar Integração de Envio</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Configure seu provedor de fulfillment
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="fulfillment-provider" className="text-sm text-slate-400">Provedor</Label>
+              <Select value={fulfillmentData.provider} onValueChange={(value) => setFulfillmentData({ ...fulfillmentData, provider: value })}>
+                <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="european_fulfillment" className="text-white hover:bg-gray-700">European Fulfillment</SelectItem>
+                  <SelectItem value="elogy" className="text-white hover:bg-gray-700">Elogy</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="fulfillment-username" className="text-sm text-slate-400">Usuário</Label>
+              <Input
+                id="fulfillment-username"
+                placeholder="usuário"
+                value={fulfillmentData.username}
+                onChange={(e) => setFulfillmentData({ ...fulfillmentData, username: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="fulfillment-password" className="text-sm text-slate-400">Senha</Label>
+              <Input
+                id="fulfillment-password"
+                type="password"
+                placeholder="senha"
+                value={fulfillmentData.password}
+                onChange={(e) => setFulfillmentData({ ...fulfillmentData, password: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFulfillmentModal(false)} className="border-white/20 text-white hover:bg-white/10">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => saveFulfillmentIntegrationMutation.mutate(fulfillmentData)}
+              disabled={saveFulfillmentIntegrationMutation.isPending || !fulfillmentData.username || !fulfillmentData.password}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {saveFulfillmentIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Facebook Ads Integration Modal */}
+      <Dialog open={showFacebookAdsModal} onOpenChange={setShowFacebookAdsModal}>
+        <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-white/20">
+          <DialogHeader>
+            <DialogTitle>Configurar Integração Facebook Ads</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Configure sua conta de anúncios do Facebook
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="facebook-account-id" className="text-sm text-slate-400">Account ID</Label>
+              <Input
+                id="facebook-account-id"
+                placeholder="act_123456789"
+                value={facebookAdsData.accountId}
+                onChange={(e) => setFacebookAdsData({ ...facebookAdsData, accountId: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="facebook-account-name" className="text-sm text-slate-400">Nome da Conta (opcional)</Label>
+              <Input
+                id="facebook-account-name"
+                placeholder="Minha Conta de Anúncios"
+                value={facebookAdsData.accountName}
+                onChange={(e) => setFacebookAdsData({ ...facebookAdsData, accountName: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="facebook-token" className="text-sm text-slate-400">Access Token</Label>
+              <Input
+                id="facebook-token"
+                type="password"
+                placeholder="EAAx..."
+                value={facebookAdsData.accessToken}
+                onChange={(e) => setFacebookAdsData({ ...facebookAdsData, accessToken: e.target.value })}
+                className="bg-white/10 border-white/20 text-white"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFacebookAdsModal(false)} className="border-white/20 text-white hover:bg-white/10">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => saveFacebookAdsIntegrationMutation.mutate(facebookAdsData)}
+              disabled={saveFacebookAdsIntegrationMutation.isPending || !facebookAdsData.accountId || !facebookAdsData.accessToken}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {saveFacebookAdsIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
