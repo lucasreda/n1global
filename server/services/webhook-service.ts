@@ -149,15 +149,13 @@ export class WebhookService {
         return;
       }
 
-      // Build webhook payload
-      const payload: WebhookPayload = {
+      // Build webhook payload (fields at root level for compatibility)
+      const payload: any = {
         event: 'order.created',
-        order: {
-          id: order.id,
-          customer_email: order.customerEmail,
-          customer_name: order.customerName,
-          phone: order.customerPhone,
-        },
+        order_id: order.id,
+        customer_email: order.customerEmail,
+        customer_name: order.customerName,
+        phone: order.customerPhone,
       };
 
       console.log('📤 Dispatching webhook for order:', orderId);
