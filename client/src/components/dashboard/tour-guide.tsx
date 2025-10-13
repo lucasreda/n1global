@@ -47,13 +47,13 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       disableBeacon: true,
     },
     {
-      target: '[data-testid="card-shopify-orders"]',
+      target: '[data-testid="card-paid-revenue"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Faturamento e Pedidos</h4>
+          <h4 className="font-semibold">Receita Paga</h4>
           <p className="text-sm">
-            Este card mostra seu faturamento total e número de pedidos.
-            Acompanhe o crescimento do seu negócio em tempo real!
+            Este card mostra a receita dos pedidos que já foram pagos.
+            É a métrica mais importante para acompanhar seu fluxo de caixa real!
           </p>
         </div>
       ),
@@ -61,13 +61,13 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       disableBeacon: true,
     },
     {
-      target: '[data-testid="card-cpa-marketing"]',
+      target: '[data-testid="card-product-costs-featured"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">CPA e Marketing</h4>
+          <h4 className="font-semibold">Custos de Produtos</h4>
           <p className="text-sm">
-            Aqui você vê o Custo Por Aquisição (CPA) e o total gasto em marketing.
-            Métricas essenciais para avaliar o desempenho das suas campanhas.
+            Aqui você vê o total gasto com produtos vendidos.
+            Importante para calcular sua margem de lucro.
           </p>
         </div>
       ),
