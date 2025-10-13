@@ -34,6 +34,11 @@ export function OnboardingCard() {
     queryKey: ["/api/onboarding/integrations-status"],
   });
 
+  // Fetch user operations to check if user has created an operation
+  const { data: operations = [] } = useQuery<{id: string, name: string}[]>({
+    queryKey: ['/api/operations'],
+  });
+
   const hideCardMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/onboarding/hide-card", {
@@ -76,6 +81,13 @@ export function OnboardingCard() {
   }
 
   const steps = [
+    {
+      id: "operation",
+      label: "Crie sua Operação de Negócio Digital",
+      description: "Defina sua operação para começar a gerenciar seu negócio",
+      completed: operations.length > 0,
+      link: "/",
+    },
     {
       id: "platform",
       label: "Plataforma Integrada",
