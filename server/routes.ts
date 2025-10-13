@@ -4753,7 +4753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/operations/:operationId/integrations/shopify", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { shopName, accessToken } = req.body;
+      const { shopName, accessToken, integrationId } = req.body;
       
       if (!shopName || !accessToken) {
         return res.status(400).json({ message: "Nome da loja e token são obrigatórios" });
@@ -4761,13 +4761,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const integration = await adminService.createOrUpdateShopifyIntegration(operationId, {
         shopName,
-        accessToken
+        accessToken,
+        integrationId
       });
       
       res.json(integration);
     } catch (error) {
       console.error("Admin save Shopify integration error:", error);
       res.status(500).json({ message: "Erro ao salvar integração Shopify" });
+    }
+  });
+
+  app.delete("/api/admin/operations/:operationId/integrations/shopify/:integrationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { integrationId } = req.params;
+      
+      if (!integrationId) {
+        return res.status(400).json({ message: "ID da integração é obrigatório" });
+      }
+      
+      await adminService.deleteShopifyIntegration(integrationId);
+      
+      res.json({ message: "Plataforma removida com sucesso" });
+    } catch (error) {
+      console.error("Admin delete Shopify integration error:", error);
+      res.status(500).json({ message: "Erro ao remover plataforma" });
+    }
+  });
+
+  app.post("/api/admin/operations/:operationId/integrations/cartpanda", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { storeSlug, bearerToken, integrationId } = req.body;
+      
+      if (!storeSlug || !bearerToken) {
+        return res.status(400).json({ message: "Slug da loja e token são obrigatórios" });
+      }
+      
+      const integration = await adminService.createOrUpdateCartpandaIntegration(operationId, {
+        storeSlug,
+        bearerToken,
+        integrationId
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Admin save CartPanda integration error:", error);
+      res.status(500).json({ message: "Erro ao salvar integração CartPanda" });
+    }
+  });
+
+  app.delete("/api/admin/operations/:operationId/integrations/cartpanda/:integrationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { integrationId } = req.params;
+      
+      if (!integrationId) {
+        return res.status(400).json({ message: "ID da integração é obrigatório" });
+      }
+      
+      await adminService.deleteCartpandaIntegration(integrationId);
+      
+      res.json({ message: "Plataforma removida com sucesso" });
+    } catch (error) {
+      console.error("Admin delete CartPanda integration error:", error);
+      res.status(500).json({ message: "Erro ao remover plataforma" });
     }
   });
 

@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { stores, operations, orders, users, products, shopifyIntegrations, fulfillmentIntegrations, facebookAdsIntegrations } from "@shared/schema";
+import { stores, operations, orders, users, products, shopifyIntegrations, cartpandaIntegrations, fulfillmentIntegrations, facebookAdsIntegrations } from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
 export class AdminService {
@@ -839,11 +839,22 @@ export class AdminService {
 
   async getOperationIntegrations(operationId: string) {
     try {
-      const [shopify] = await db
+      // Buscar todas as integrações de plataforma (Shopify e CartPanda)
+      const shopifyList = await db
         .select()
         .from(shopifyIntegrations)
-        .where(eq(shopifyIntegrations.operationId, operationId))
-        .limit(1);
+        .where(eq(shopifyIntegrations.operationId, operationId));
+
+      const cartpandaList = await db
+        .select()
+        .from(cartpandaIntegrations)
+        .where(eq(cartpandaIntegrations.operationId, operationId));
+
+      // Unificar plataformas com campo "platform" para identificação
+      const platforms = [
+        ...shopifyList.map(s => ({ ...s, platform: 'shopify' as const })),
+        ...cartpandaList.map(c => ({ ...c, platform: 'cartpanda' as const }))
+      ];
 
       // Retornar TODAS as integrações de fulfillment (múltiplos armazéns)
       const fulfillments = await db
@@ -858,7 +869,7 @@ export class AdminService {
         .limit(1);
 
       return {
-        shopify: shopify || null,
+        platforms: platforms || [], // Array de plataformas (Shopify + CartPanda)
         fulfillments: fulfillments || [], // Array de armazéns
         facebookAds: facebookAds || null
       };
@@ -871,15 +882,11 @@ export class AdminService {
   async createOrUpdateShopifyIntegration(operationId: string, data: {
     shopName: string;
     accessToken: string;
+    integrationId?: string; // Se fornecido, atualiza essa integração específica
   }) {
     try {
-      const [existing] = await db
-        .select()
-        .from(shopifyIntegrations)
-        .where(eq(shopifyIntegrations.operationId, operationId))
-        .limit(1);
-
-      if (existing) {
+      // Se integrationId for fornecido, atualizar essa integração específica
+      if (data.integrationId) {
         const [updated] = await db
           .update(shopifyIntegrations)
           .set({
@@ -888,10 +895,37 @@ export class AdminService {
             status: 'pending',
             updatedAt: new Date()
           })
+          .where(eq(shopifyIntegrations.id, data.integrationId))
+          .returning();
+        return updated;
+      }
+      
+      // Verificar se já existe integração com essa loja para esta operação
+      const [existing] = await db
+        .select()
+        .from(shopifyIntegrations)
+        .where(
+          and(
+            eq(shopifyIntegrations.operationId, operationId),
+            eq(shopifyIntegrations.shopName, data.shopName)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        // Atualizar integração existente da mesma loja
+        const [updated] = await db
+          .update(shopifyIntegrations)
+          .set({
+            accessToken: data.accessToken,
+            status: 'pending',
+            updatedAt: new Date()
+          })
           .where(eq(shopifyIntegrations.id, existing.id))
           .returning();
         return updated;
       } else {
+        // Criar nova integração
         const [created] = await db
           .insert(shopifyIntegrations)
           .values({
@@ -905,6 +939,106 @@ export class AdminService {
       }
     } catch (error) {
       console.error('❌ Error creating/updating Shopify integration:', error);
+      throw error;
+    }
+  }
+
+  async deleteShopifyIntegration(integrationId: string) {
+    try {
+      const [deleted] = await db
+        .delete(shopifyIntegrations)
+        .where(eq(shopifyIntegrations.id, integrationId))
+        .returning();
+      
+      if (!deleted) {
+        throw new Error('Integration not found');
+      }
+      
+      return deleted;
+    } catch (error) {
+      console.error('❌ Error deleting Shopify integration:', error);
+      throw error;
+    }
+  }
+
+  async createOrUpdateCartpandaIntegration(operationId: string, data: {
+    storeSlug: string;
+    bearerToken: string;
+    integrationId?: string; // Se fornecido, atualiza essa integração específica
+  }) {
+    try {
+      // Se integrationId for fornecido, atualizar essa integração específica
+      if (data.integrationId) {
+        const [updated] = await db
+          .update(cartpandaIntegrations)
+          .set({
+            storeSlug: data.storeSlug,
+            bearerToken: data.bearerToken,
+            status: 'pending',
+            updatedAt: new Date()
+          })
+          .where(eq(cartpandaIntegrations.id, data.integrationId))
+          .returning();
+        return updated;
+      }
+      
+      // Verificar se já existe integração com essa loja para esta operação
+      const [existing] = await db
+        .select()
+        .from(cartpandaIntegrations)
+        .where(
+          and(
+            eq(cartpandaIntegrations.operationId, operationId),
+            eq(cartpandaIntegrations.storeSlug, data.storeSlug)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        // Atualizar integração existente da mesma loja
+        const [updated] = await db
+          .update(cartpandaIntegrations)
+          .set({
+            bearerToken: data.bearerToken,
+            status: 'pending',
+            updatedAt: new Date()
+          })
+          .where(eq(cartpandaIntegrations.id, existing.id))
+          .returning();
+        return updated;
+      } else {
+        // Criar nova integração
+        const [created] = await db
+          .insert(cartpandaIntegrations)
+          .values({
+            operationId,
+            storeSlug: data.storeSlug,
+            bearerToken: data.bearerToken,
+            status: 'pending'
+          })
+          .returning();
+        return created;
+      }
+    } catch (error) {
+      console.error('❌ Error creating/updating CartPanda integration:', error);
+      throw error;
+    }
+  }
+
+  async deleteCartpandaIntegration(integrationId: string) {
+    try {
+      const [deleted] = await db
+        .delete(cartpandaIntegrations)
+        .where(eq(cartpandaIntegrations.id, integrationId))
+        .returning();
+      
+      if (!deleted) {
+        throw new Error('Integration not found');
+      }
+      
+      return deleted;
+    } catch (error) {
+      console.error('❌ Error deleting CartPanda integration:', error);
       throw error;
     }
   }
