@@ -322,6 +322,17 @@ function PageNodeV4Renderer({
       nodeId: node.id,
     },
   });
+  
+  // Debug listeners
+  useEffect(() => {
+    if (isSelected) {
+      console.log('🎯 Selected node listeners:', node.id, {
+        hasListeners: !!draggableListeners,
+        listenerKeys: Object.keys(draggableListeners || {}),
+        listeners: draggableListeners
+      });
+    }
+  }, [isSelected, node.id, draggableListeners]);
 
   // Three separate drop zones: before, after, inner
   const { setNodeRef: setBeforeDropRef, isOver: isOverBefore } = useDroppable({
@@ -442,16 +453,14 @@ function PageNodeV4Renderer({
   if (node.tag === 'text' || node.type === 'text') {
     const spanElement = (
       <span
-        ref={setCombinedRefs}
-        {...draggableAttributes}
-        {...draggableListeners}
+        ref={elementRef}
         {...normalizeAttributes('span', node.attributes)}
         id={uniqueStyleId}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
-          isSelected && 'editor-node-selected',
+          // Removed 'editor-node-selected' to avoid duplicate border with SelectionOverlay
           isHovered && 'editor-node-hovered',
           isDragging && 'opacity-30'
         )}
@@ -475,7 +484,16 @@ function PageNodeV4Renderer({
       </span>
     );
     
-    return spanElement;
+    return (
+      <div
+        ref={setDraggableRef}
+        {...draggableAttributes}
+        {...draggableListeners}
+        style={{ display: 'contents' }}
+      >
+        {spanElement}
+      </div>
+    );
   }
   
   // Get the tag name (default to div if not specified)
@@ -525,20 +543,17 @@ function PageNodeV4Renderer({
       
     }
     
-    return (
+    const imgElement = (
       <div style={{ display: 'inline', position: 'relative' }}>
         <Tag
           key={`${node.id}-${finalAttributes.src || 'no-src'}`}
-          ref={setCombinedRefs}
-          {...draggableAttributes}
-          {...draggableListeners}
+          ref={elementRef}
           {...finalAttributes}
           id={uniqueStyleId}
           data-node-id={node.id}
           data-testid={`node-${node.tag}-${node.id}`}
           className={cn(
             node.classNames?.join(' '),
-            isSelected && 'editor-node-selected',
             isHovered && 'editor-node-hovered',
             isDragging && 'opacity-30'
           )}
@@ -560,21 +575,30 @@ function PageNodeV4Renderer({
         )}
       </div>
     );
+    
+    return (
+      <div
+        ref={setDraggableRef}
+        {...draggableAttributes}
+        {...draggableListeners}
+        style={{ display: 'contents' }}
+      >
+        {imgElement}
+      </div>
+    );
   }
   
   // Regular elements with children/text
-  return (
+  const element = (
     <Tag
-      ref={setCombinedRefs}
-      {...draggableAttributes}
-      {...draggableListeners}
+      ref={elementRef}
       {...normalizeAttributes(node.tag, node.attributes)}
       id={uniqueStyleId}
       data-node-id={node.id}
       data-testid={`node-${node.tag}-${node.id}`}
       className={cn(
         node.classNames?.join(' '),
-        isSelected && 'editor-node-selected',
+        // Removed 'editor-node-selected' to avoid duplicate border with SelectionOverlay
         isHovered && 'editor-node-hovered',
         isDragging && 'opacity-30'
       )}
@@ -611,5 +635,17 @@ function PageNodeV4Renderer({
         />
       )}
     </Tag>
+  );
+  
+  // Wrap in draggable div
+  return (
+    <div
+      ref={setDraggableRef}
+      {...draggableAttributes}
+      {...draggableListeners}
+      style={{ display: 'contents' }} // Makes wrapper transparent in layout
+    >
+      {element}
+    </div>
   );
 }
