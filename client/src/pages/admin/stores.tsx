@@ -1198,7 +1198,7 @@ export default function AdminOperations() {
                           </Badge>
                         </div>
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm"
                           onClick={() => {
                             if (operationIntegrations?.shopify) {
@@ -1209,7 +1209,7 @@ export default function AdminOperations() {
                             }
                             setShowShopifyModal(true);
                           }}
-                          className="w-full border-white/20 text-white hover:bg-white/10"
+                          className="w-full text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
                         >
                           <Settings className="h-3 w-3 mr-2" />
                           {operationIntegrations?.shopify ? 'Editar' : 'Configurar'}
@@ -1248,7 +1248,7 @@ export default function AdminOperations() {
                           </Badge>
                         </div>
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm"
                           onClick={() => {
                             if (operationIntegrations?.fulfillment) {
@@ -1265,7 +1265,7 @@ export default function AdminOperations() {
                             }
                             setShowFulfillmentModal(true);
                           }}
-                          className="w-full border-white/20 text-white hover:bg-white/10"
+                          className="w-full text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
                         >
                           <Settings className="h-3 w-3 mr-2" />
                           {operationIntegrations?.fulfillment ? 'Editar' : 'Configurar'}
@@ -1304,7 +1304,7 @@ export default function AdminOperations() {
                           </Badge>
                         </div>
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm"
                           onClick={() => {
                             if (operationIntegrations?.facebookAds) {
@@ -1316,7 +1316,7 @@ export default function AdminOperations() {
                             }
                             setShowFacebookAdsModal(true);
                           }}
-                          className="w-full border-white/20 text-white hover:bg-white/10"
+                          className="w-full text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
                         >
                           <Settings className="h-3 w-3 mr-2" />
                           {operationIntegrations?.facebookAds ? 'Editar' : 'Configurar'}
