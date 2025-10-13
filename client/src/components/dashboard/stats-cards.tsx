@@ -190,6 +190,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
   const cpaAds = metrics?.cpaAds || 0; // CPA Anúncios (Marketing / Total Shopify)
   
   const totalPaidOrders = metrics?.totalPaidOrders || 0;
+  const paidRevenue = metrics?.paidRevenue || 0;
 
   const calculateGrowth = (current: number, previous: number = current * 0.9): string => {
     if (previous === 0) return "0";
