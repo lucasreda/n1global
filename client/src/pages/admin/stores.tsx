@@ -458,7 +458,7 @@ export default function AdminOperations() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+          <h1 className="font-bold tracking-tight text-gray-900 dark:text-gray-100" style={{ fontSize: '22px' }}>
             Operações
           </h1>
           <p className="text-muted-foreground mt-2">
