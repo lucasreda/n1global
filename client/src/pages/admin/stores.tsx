@@ -104,7 +104,13 @@ export default function AdminOperations() {
   const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
   const [showFacebookAdsModal, setShowFacebookAdsModal] = useState(false);
   const [shopifyData, setShopifyData] = useState({ shopName: '', accessToken: '' });
-  const [fulfillmentData, setFulfillmentData] = useState({ provider: 'european_fulfillment', username: '', password: '' });
+  const [fulfillmentData, setFulfillmentData] = useState({ 
+    provider: 'european_fulfillment', 
+    username: '', 
+    password: '',
+    appId: '',
+    secret: ''
+  });
   const [facebookAdsData, setFacebookAdsData] = useState({ accountId: '', accountName: '', accessToken: '' });
   
   const [newOperationData, setNewOperationData] = useState({
@@ -411,6 +417,19 @@ export default function AdminOperations() {
     mutationFn: async (data: typeof fulfillmentData) => {
       if (!operationToEdit) throw new Error('Operação não selecionada');
       const token = localStorage.getItem("auth_token");
+      
+      // Formatar credenciais baseado no provider
+      const credentials = data.provider === 'fhb' 
+        ? {
+            appId: data.appId,
+            secret: data.secret,
+            apiUrl: "https://api.fhb.sk/v3"
+          }
+        : {
+            username: data.username,
+            password: data.password
+          };
+      
       const response = await fetch(`/api/admin/operations/${operationToEdit.id}/integrations/fulfillment`, {
         method: 'POST',
         headers: {
@@ -420,10 +439,7 @@ export default function AdminOperations() {
         credentials: "include",
         body: JSON.stringify({
           provider: data.provider,
-          credentials: {
-            username: data.username,
-            password: data.password
-          }
+          credentials
         }),
       });
       
@@ -437,7 +453,13 @@ export default function AdminOperations() {
     onSuccess: () => {
       refetchIntegrations();
       setShowFulfillmentModal(false);
-      setFulfillmentData({ provider: 'european_fulfillment', username: '', password: '' });
+      setFulfillmentData({ 
+        provider: 'european_fulfillment', 
+        username: '', 
+        password: '',
+        appId: '',
+        secret: ''
+      });
       toast({
         title: "Integração de envio salva",
         description: "A integração foi configurada com sucesso.",
@@ -1230,10 +1252,15 @@ export default function AdminOperations() {
                           size="sm"
                           onClick={() => {
                             if (operationIntegrations?.fulfillment) {
+                              const provider = operationIntegrations.fulfillment.provider || 'european_fulfillment';
+                              const credentials = operationIntegrations.fulfillment.credentials as any;
+                              
                               setFulfillmentData({
-                                provider: operationIntegrations.fulfillment.provider || 'european_fulfillment',
-                                username: operationIntegrations.fulfillment.credentials?.username || '',
-                                password: ''
+                                provider,
+                                username: provider !== 'fhb' ? (credentials?.username || '') : '',
+                                password: '',
+                                appId: provider === 'fhb' ? (credentials?.appId || '') : '',
+                                secret: ''
                               });
                             }
                             setShowFulfillmentModal(true);
@@ -1451,27 +1478,56 @@ export default function AdminOperations() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="fulfillment-username" className="text-sm text-slate-400">Usuário</Label>
-              <Input
-                id="fulfillment-username"
-                placeholder="usuário"
-                value={fulfillmentData.username}
-                onChange={(e) => setFulfillmentData({ ...fulfillmentData, username: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
-            <div>
-              <Label htmlFor="fulfillment-password" className="text-sm text-slate-400">Senha</Label>
-              <Input
-                id="fulfillment-password"
-                type="password"
-                placeholder="senha"
-                value={fulfillmentData.password}
-                onChange={(e) => setFulfillmentData({ ...fulfillmentData, password: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
+            
+            {fulfillmentData.provider === 'fhb' ? (
+              <>
+                <div>
+                  <Label htmlFor="fulfillment-appid" className="text-sm text-slate-400">App ID</Label>
+                  <Input
+                    id="fulfillment-appid"
+                    placeholder="App ID"
+                    value={fulfillmentData.appId}
+                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, appId: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fulfillment-secret" className="text-sm text-slate-400">Secret</Label>
+                  <Input
+                    id="fulfillment-secret"
+                    type="password"
+                    placeholder="Secret"
+                    value={fulfillmentData.secret}
+                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, secret: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="fulfillment-username" className="text-sm text-slate-400">Usuário</Label>
+                  <Input
+                    id="fulfillment-username"
+                    placeholder="usuário"
+                    value={fulfillmentData.username}
+                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, username: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fulfillment-password" className="text-sm text-slate-400">Senha</Label>
+                  <Input
+                    id="fulfillment-password"
+                    type="password"
+                    placeholder="senha"
+                    value={fulfillmentData.password}
+                    onChange={(e) => setFulfillmentData({ ...fulfillmentData, password: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowFulfillmentModal(false)} className="border-white/20 text-white hover:bg-white/10">
@@ -1479,7 +1535,13 @@ export default function AdminOperations() {
             </Button>
             <Button 
               onClick={() => saveFulfillmentIntegrationMutation.mutate(fulfillmentData)}
-              disabled={saveFulfillmentIntegrationMutation.isPending || !fulfillmentData.username || !fulfillmentData.password}
+              disabled={
+                saveFulfillmentIntegrationMutation.isPending || 
+                (fulfillmentData.provider === 'fhb' 
+                  ? (!fulfillmentData.appId || !fulfillmentData.secret)
+                  : (!fulfillmentData.username || !fulfillmentData.password)
+                )
+              }
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {saveFulfillmentIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
