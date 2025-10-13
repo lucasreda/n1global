@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { stores, operations, orders, users, products, shopifyIntegrations, cartpandaIntegrations, fulfillmentIntegrations, facebookAdsIntegrations } from "@shared/schema";
+import { stores, operations, orders, users, products, shopifyIntegrations, cartpandaIntegrations, fulfillmentIntegrations, facebookAdsIntegrations, googleAdsIntegrations } from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
 export class AdminService {
@@ -862,16 +862,27 @@ export class AdminService {
         .from(fulfillmentIntegrations)
         .where(eq(fulfillmentIntegrations.operationId, operationId));
 
-      const [facebookAds] = await db
+      // Buscar todas as contas de anúncios (Meta e Google)
+      const metaAdsList = await db
         .select()
         .from(facebookAdsIntegrations)
-        .where(eq(facebookAdsIntegrations.operationId, operationId))
-        .limit(1);
+        .where(eq(facebookAdsIntegrations.operationId, operationId));
+
+      const googleAdsList = await db
+        .select()
+        .from(googleAdsIntegrations)
+        .where(eq(googleAdsIntegrations.operationId, operationId));
+
+      // Unificar contas de anúncios com campo "platform" para identificação
+      const adsAccounts = [
+        ...metaAdsList.map(m => ({ ...m, platform: 'meta' as const })),
+        ...googleAdsList.map(g => ({ ...g, platform: 'google' as const }))
+      ];
 
       return {
         platforms: platforms || [], // Array de plataformas (Shopify + CartPanda)
         fulfillments: fulfillments || [], // Array de armazéns
-        facebookAds: facebookAds || null
+        adsAccounts: adsAccounts || [] // Array de contas de anúncios (Meta + Google)
       };
     } catch (error) {
       console.error('❌ Error getting operation integrations:', error);
@@ -1125,23 +1136,45 @@ export class AdminService {
     }
   }
 
-  async createOrUpdateFacebookAdsIntegration(operationId: string, data: {
+  async createOrUpdateMetaAdsIntegration(operationId: string, data: {
     accountId: string;
     accountName?: string;
     accessToken: string;
+    integrationId?: string; // Se fornecido, atualiza essa integração específica
   }) {
     try {
+      // Se integrationId for fornecido, atualizar essa integração específica
+      if (data.integrationId) {
+        const [updated] = await db
+          .update(facebookAdsIntegrations)
+          .set({
+            accountId: data.accountId,
+            accountName: data.accountName,
+            accessToken: data.accessToken,
+            status: 'active',
+            updatedAt: new Date()
+          })
+          .where(eq(facebookAdsIntegrations.id, data.integrationId))
+          .returning();
+        return updated;
+      }
+      
+      // Verificar se já existe integração com esse accountId para esta operação
       const [existing] = await db
         .select()
         .from(facebookAdsIntegrations)
-        .where(eq(facebookAdsIntegrations.operationId, operationId))
+        .where(
+          and(
+            eq(facebookAdsIntegrations.operationId, operationId),
+            eq(facebookAdsIntegrations.accountId, data.accountId)
+          )
+        )
         .limit(1);
 
       if (existing) {
         const [updated] = await db
           .update(facebookAdsIntegrations)
           .set({
-            accountId: data.accountId,
             accountName: data.accountName,
             accessToken: data.accessToken,
             status: 'active',
@@ -1164,33 +1197,109 @@ export class AdminService {
         return created;
       }
     } catch (error) {
-      console.error('❌ Error creating/updating Facebook Ads integration:', error);
+      console.error('❌ Error creating/updating Meta Ads integration:', error);
       throw error;
     }
   }
 
-  async deleteIntegration(operationId: string, integrationType: 'shopify' | 'fulfillment' | 'facebook_ads') {
+  async deleteMetaAdsIntegration(integrationId: string) {
     try {
-      switch (integrationType) {
-        case 'shopify':
-          await db
-            .delete(shopifyIntegrations)
-            .where(eq(shopifyIntegrations.operationId, operationId));
-          break;
-        case 'fulfillment':
-          await db
-            .delete(fulfillmentIntegrations)
-            .where(eq(fulfillmentIntegrations.operationId, operationId));
-          break;
-        case 'facebook_ads':
-          await db
-            .delete(facebookAdsIntegrations)
-            .where(eq(facebookAdsIntegrations.operationId, operationId));
-          break;
+      const [deleted] = await db
+        .delete(facebookAdsIntegrations)
+        .where(eq(facebookAdsIntegrations.id, integrationId))
+        .returning();
+      
+      if (!deleted) {
+        throw new Error('Integration not found');
       }
-      return { success: true };
+      
+      return deleted;
     } catch (error) {
-      console.error('❌ Error deleting integration:', error);
+      console.error('❌ Error deleting Meta Ads integration:', error);
+      throw error;
+    }
+  }
+
+  async createOrUpdateGoogleAdsIntegration(operationId: string, data: {
+    customerId: string;
+    accountName?: string;
+    refreshToken: string;
+    integrationId?: string; // Se fornecido, atualiza essa integração específica
+  }) {
+    try {
+      // Se integrationId for fornecido, atualizar essa integração específica
+      if (data.integrationId) {
+        const [updated] = await db
+          .update(googleAdsIntegrations)
+          .set({
+            customerId: data.customerId,
+            accountName: data.accountName,
+            refreshToken: data.refreshToken,
+            status: 'active',
+            updatedAt: new Date()
+          })
+          .where(eq(googleAdsIntegrations.id, data.integrationId))
+          .returning();
+        return updated;
+      }
+      
+      // Verificar se já existe integração com esse customerId para esta operação
+      const [existing] = await db
+        .select()
+        .from(googleAdsIntegrations)
+        .where(
+          and(
+            eq(googleAdsIntegrations.operationId, operationId),
+            eq(googleAdsIntegrations.customerId, data.customerId)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(googleAdsIntegrations)
+          .set({
+            accountName: data.accountName,
+            refreshToken: data.refreshToken,
+            status: 'active',
+            updatedAt: new Date()
+          })
+          .where(eq(googleAdsIntegrations.id, existing.id))
+          .returning();
+        return updated;
+      } else {
+        const [created] = await db
+          .insert(googleAdsIntegrations)
+          .values({
+            operationId,
+            customerId: data.customerId,
+            accountName: data.accountName,
+            refreshToken: data.refreshToken,
+            status: 'active'
+          })
+          .returning();
+        return created;
+      }
+    } catch (error) {
+      console.error('❌ Error creating/updating Google Ads integration:', error);
+      throw error;
+    }
+  }
+
+  async deleteGoogleAdsIntegration(integrationId: string) {
+    try {
+      const [deleted] = await db
+        .delete(googleAdsIntegrations)
+        .where(eq(googleAdsIntegrations.id, integrationId))
+        .returning();
+      
+      if (!deleted) {
+        throw new Error('Integration not found');
+      }
+      
+      return deleted;
+    } catch (error) {
+      console.error('❌ Error deleting Google Ads integration:', error);
       throw error;
     }
   }
