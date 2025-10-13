@@ -4738,6 +4738,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Integration Management Routes
+  app.get("/api/admin/operations/:operationId/integrations", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const integrations = await adminService.getOperationIntegrations(operationId);
+      res.json(integrations);
+    } catch (error) {
+      console.error("Admin get integrations error:", error);
+      res.status(500).json({ message: "Erro ao buscar integrações" });
+    }
+  });
+
+  app.post("/api/admin/operations/:operationId/integrations/shopify", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { shopName, accessToken } = req.body;
+      
+      if (!shopName || !accessToken) {
+        return res.status(400).json({ message: "Nome da loja e token são obrigatórios" });
+      }
+      
+      const integration = await adminService.createOrUpdateShopifyIntegration(operationId, {
+        shopName,
+        accessToken
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Admin save Shopify integration error:", error);
+      res.status(500).json({ message: "Erro ao salvar integração Shopify" });
+    }
+  });
+
+  app.post("/api/admin/operations/:operationId/integrations/fulfillment", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { provider, credentials } = req.body;
+      
+      if (!provider || !credentials) {
+        return res.status(400).json({ message: "Provider e credenciais são obrigatórios" });
+      }
+      
+      const integration = await adminService.createOrUpdateFulfillmentIntegration(operationId, {
+        provider,
+        credentials
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Admin save Fulfillment integration error:", error);
+      res.status(500).json({ message: "Erro ao salvar integração de envio" });
+    }
+  });
+
+  app.post("/api/admin/operations/:operationId/integrations/facebook-ads", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { accountId, accountName, accessToken } = req.body;
+      
+      if (!accountId || !accessToken) {
+        return res.status(400).json({ message: "Account ID e token são obrigatórios" });
+      }
+      
+      const integration = await adminService.createOrUpdateFacebookAdsIntegration(operationId, {
+        accountId,
+        accountName,
+        accessToken
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Admin save Facebook Ads integration error:", error);
+      res.status(500).json({ message: "Erro ao salvar integração Facebook Ads" });
+    }
+  });
+
+  app.delete("/api/admin/operations/:operationId/integrations/:integrationType", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, integrationType } = req.params;
+      
+      if (!['shopify', 'fulfillment', 'facebook_ads'].includes(integrationType)) {
+        return res.status(400).json({ message: "Tipo de integração inválido" });
+      }
+      
+      await adminService.deleteIntegration(operationId, integrationType as 'shopify' | 'fulfillment' | 'facebook_ads');
+      
+      res.json({ message: "Integração removida com sucesso" });
+    } catch (error) {
+      console.error("Admin delete integration error:", error);
+      res.status(500).json({ message: "Erro ao remover integração" });
+    }
+  });
+
   app.get("/api/admin/clients", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const allUsers = await db

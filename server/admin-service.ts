@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { stores, operations, orders, users, products } from "@shared/schema";
+import { stores, operations, orders, users, products, shopifyIntegrations, fulfillmentIntegrations, facebookAdsIntegrations } from "@shared/schema";
 import { count, sql, and, gte, lte, ilike, or, desc, eq } from "drizzle-orm";
 
 export class AdminService {
@@ -831,6 +831,191 @@ export class AdminService {
       return updatedProduct;
     } catch (error) {
       console.error('❌ Error unlinking product from operation:', error);
+      throw error;
+    }
+  }
+
+  // Integration Management Methods
+
+  async getOperationIntegrations(operationId: string) {
+    try {
+      const [shopify] = await db
+        .select()
+        .from(shopifyIntegrations)
+        .where(eq(shopifyIntegrations.operationId, operationId))
+        .limit(1);
+
+      const [fulfillment] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(eq(fulfillmentIntegrations.operationId, operationId))
+        .limit(1);
+
+      const [facebookAds] = await db
+        .select()
+        .from(facebookAdsIntegrations)
+        .where(eq(facebookAdsIntegrations.operationId, operationId))
+        .limit(1);
+
+      return {
+        shopify: shopify || null,
+        fulfillment: fulfillment || null,
+        facebookAds: facebookAds || null
+      };
+    } catch (error) {
+      console.error('❌ Error getting operation integrations:', error);
+      throw error;
+    }
+  }
+
+  async createOrUpdateShopifyIntegration(operationId: string, data: {
+    shopName: string;
+    accessToken: string;
+  }) {
+    try {
+      const [existing] = await db
+        .select()
+        .from(shopifyIntegrations)
+        .where(eq(shopifyIntegrations.operationId, operationId))
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(shopifyIntegrations)
+          .set({
+            shopName: data.shopName,
+            accessToken: data.accessToken,
+            status: 'pending',
+            updatedAt: new Date()
+          })
+          .where(eq(shopifyIntegrations.id, existing.id))
+          .returning();
+        return updated;
+      } else {
+        const [created] = await db
+          .insert(shopifyIntegrations)
+          .values({
+            operationId,
+            shopName: data.shopName,
+            accessToken: data.accessToken,
+            status: 'pending'
+          })
+          .returning();
+        return created;
+      }
+    } catch (error) {
+      console.error('❌ Error creating/updating Shopify integration:', error);
+      throw error;
+    }
+  }
+
+  async createOrUpdateFulfillmentIntegration(operationId: string, data: {
+    provider: string;
+    credentials: any;
+  }) {
+    try {
+      const [existing] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(eq(fulfillmentIntegrations.operationId, operationId))
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(fulfillmentIntegrations)
+          .set({
+            provider: data.provider,
+            credentials: data.credentials,
+            status: 'active',
+            updatedAt: new Date()
+          })
+          .where(eq(fulfillmentIntegrations.id, existing.id))
+          .returning();
+        return updated;
+      } else {
+        const [created] = await db
+          .insert(fulfillmentIntegrations)
+          .values({
+            operationId,
+            provider: data.provider,
+            credentials: data.credentials,
+            status: 'active'
+          })
+          .returning();
+        return created;
+      }
+    } catch (error) {
+      console.error('❌ Error creating/updating Fulfillment integration:', error);
+      throw error;
+    }
+  }
+
+  async createOrUpdateFacebookAdsIntegration(operationId: string, data: {
+    accountId: string;
+    accountName?: string;
+    accessToken: string;
+  }) {
+    try {
+      const [existing] = await db
+        .select()
+        .from(facebookAdsIntegrations)
+        .where(eq(facebookAdsIntegrations.operationId, operationId))
+        .limit(1);
+
+      if (existing) {
+        const [updated] = await db
+          .update(facebookAdsIntegrations)
+          .set({
+            accountId: data.accountId,
+            accountName: data.accountName,
+            accessToken: data.accessToken,
+            status: 'active',
+            updatedAt: new Date()
+          })
+          .where(eq(facebookAdsIntegrations.id, existing.id))
+          .returning();
+        return updated;
+      } else {
+        const [created] = await db
+          .insert(facebookAdsIntegrations)
+          .values({
+            operationId,
+            accountId: data.accountId,
+            accountName: data.accountName,
+            accessToken: data.accessToken,
+            status: 'active'
+          })
+          .returning();
+        return created;
+      }
+    } catch (error) {
+      console.error('❌ Error creating/updating Facebook Ads integration:', error);
+      throw error;
+    }
+  }
+
+  async deleteIntegration(operationId: string, integrationType: 'shopify' | 'fulfillment' | 'facebook_ads') {
+    try {
+      switch (integrationType) {
+        case 'shopify':
+          await db
+            .delete(shopifyIntegrations)
+            .where(eq(shopifyIntegrations.operationId, operationId));
+          break;
+        case 'fulfillment':
+          await db
+            .delete(fulfillmentIntegrations)
+            .where(eq(fulfillmentIntegrations.operationId, operationId));
+          break;
+        case 'facebook_ads':
+          await db
+            .delete(facebookAdsIntegrations)
+            .where(eq(facebookAdsIntegrations.operationId, operationId));
+          break;
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error deleting integration:', error);
       throw error;
     }
   }
