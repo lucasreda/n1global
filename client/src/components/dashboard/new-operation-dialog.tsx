@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -140,19 +140,9 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg bg-gray-900 border-gray-700 text-white">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl text-white">
-              Criar Nova Operação
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-gray-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl text-white">
+            Criar Nova Operação
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
