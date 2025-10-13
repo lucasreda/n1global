@@ -263,10 +263,42 @@ export class AdminService {
         .limit(limit)
         .offset(offset);
       
-      return globalOrders.map(order => ({
-        ...order,
-        amount: Number(order.amount) || 0
+      // Enrich products with images from registered products when SKU is available
+      const enrichedOrders = await Promise.all(globalOrders.map(async (order) => {
+        if (order.products && Array.isArray(order.products)) {
+          const enrichedProducts = await Promise.all(order.products.map(async (product: any) => {
+            // If product has SKU, try to get image from registered products
+            if (product.sku) {
+              const registeredProduct = await db
+                .select({ imageUrl: products.imageUrl })
+                .from(products)
+                .where(eq(products.sku, product.sku))
+                .limit(1);
+              
+              if (registeredProduct.length > 0 && registeredProduct[0].imageUrl) {
+                return {
+                  ...product,
+                  image: registeredProduct[0].imageUrl
+                };
+              }
+            }
+            return product;
+          }));
+          
+          return {
+            ...order,
+            amount: Number(order.amount) || 0,
+            products: enrichedProducts
+          };
+        }
+        
+        return {
+          ...order,
+          amount: Number(order.amount) || 0
+        };
       }));
+      
+      return enrichedOrders;
     } catch (error) {
       console.error('❌ Error getting global orders:', error);
       throw error;
