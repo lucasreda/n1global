@@ -92,6 +92,7 @@ export default function AdminOrders() {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: pageSize.toString(),
+        _t: Date.now().toString(), // Force cache bypass
       });
       
       if (searchTerm) params.append('searchTerm', searchTerm);
