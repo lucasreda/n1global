@@ -111,6 +111,7 @@ export default function AdminOperations() {
     appId: '',
     secret: ''
   });
+  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
   const [facebookAdsData, setFacebookAdsData] = useState({ accountId: '', accountName: '', accessToken: '' });
   
   const [newOperationData, setNewOperationData] = useState({
@@ -439,7 +440,8 @@ export default function AdminOperations() {
         credentials: "include",
         body: JSON.stringify({
           provider: data.provider,
-          credentials
+          credentials,
+          integrationId: editingWarehouseId // Enviar ID se estiver editando
         }),
       });
       
@@ -453,6 +455,7 @@ export default function AdminOperations() {
     onSuccess: () => {
       refetchIntegrations();
       setShowFulfillmentModal(false);
+      setEditingWarehouseId(null);
       setFulfillmentData({ 
         provider: 'european_fulfillment', 
         username: '', 
@@ -512,6 +515,48 @@ export default function AdminOperations() {
       });
     },
   });
+
+  const deleteFulfillmentIntegrationMutation = useMutation({
+    mutationFn: async (integrationId: string) => {
+      if (!operationToEdit) throw new Error('Operação não selecionada');
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/operations/${operationToEdit.id}/integrations/fulfillment/${integrationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao remover armazém');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchIntegrations();
+      toast({
+        title: "Armazém removido",
+        description: "O armazém foi removido com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover armazém",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteWarehouse = async (integrationId: string) => {
+    if (confirm('Tem certeza que deseja remover este armazém?')) {
+      deleteFulfillmentIntegrationMutation.mutate(integrationId);
+    }
+  };
 
   const handleEditOperation = (operation: Operation) => {
     setOperationToEdit(operation);
@@ -1216,9 +1261,9 @@ export default function AdminOperations() {
                         </Button>
                       </div>
                       
-                      {/* Shipping Integration */}
+                      {/* Warehouses Section */}
                       <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                               <Package className="h-5 w-5 text-blue-400" />
@@ -1226,50 +1271,108 @@ export default function AdminOperations() {
                             <div>
                               <h5 className="text-sm font-medium text-white">Armazéns</h5>
                               <p className="text-xs text-slate-400">
-                                {operationIntegrations?.fulfillment ? 
-                                  `Provider: ${operationIntegrations.fulfillment.provider}` : 
-                                  'Integração de fulfillment'
-                                }
+                                {operationIntegrations?.fulfillments?.length || 0} {operationIntegrations?.fulfillments?.length === 1 ? 'armazém configurado' : 'armazéns configurados'}
                               </p>
                             </div>
                           </div>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${
-                              operationIntegrations?.fulfillment?.status === 'active' 
-                                ? 'bg-green-500/20 text-green-400 border-green-500/30' 
-                                : 'text-slate-400'
-                            }`}
-                          >
-                            {operationIntegrations?.fulfillment ? 
-                              (operationIntegrations.fulfillment.status === 'active' ? 'Ativo' : 'Erro') 
-                              : 'Não configurado'
-                            }
-                          </Badge>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            if (operationIntegrations?.fulfillment) {
-                              const provider = operationIntegrations.fulfillment.provider || 'european_fulfillment';
-                              const credentials = operationIntegrations.fulfillment.credentials as any;
-                              
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
                               setFulfillmentData({
-                                provider,
-                                username: provider !== 'fhb' ? (credentials?.username || '') : '',
+                                provider: 'european_fulfillment',
+                                username: '',
                                 password: '',
-                                appId: provider === 'fhb' ? (credentials?.appId || '') : '',
+                                appId: '',
                                 secret: ''
                               });
-                            }
-                            setShowFulfillmentModal(true);
-                          }}
-                          className="w-full text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
-                        >
-                          <Settings className="h-3 w-3 mr-2" />
-                          {operationIntegrations?.fulfillment ? 'Editar' : 'Configurar'}
-                        </Button>
+                              setEditingWarehouseId(null);
+                              setShowFulfillmentModal(true);
+                            }}
+                            className="text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+                          >
+                            <Plus className="h-3 w-3 mr-2" />
+                            Adicionar
+                          </Button>
+                        </div>
+                        
+                        {/* List of configured warehouses */}
+                        <div className="space-y-2">
+                          {operationIntegrations?.fulfillments && operationIntegrations.fulfillments.length > 0 ? (
+                            operationIntegrations.fulfillments.map((warehouse) => {
+                              const providerNames: Record<string, string> = {
+                                'european_fulfillment': 'European Fulfillment',
+                                'elogy': 'Elogy',
+                                'fhb': 'FHB'
+                              };
+                              
+                              return (
+                                <div key={warehouse.id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between">
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium text-white">
+                                        {providerNames[warehouse.provider] || warehouse.provider}
+                                      </span>
+                                      <span className="text-xs text-slate-400">
+                                        {warehouse.provider === 'fhb' 
+                                          ? `App ID: ${(warehouse.credentials as any)?.appId || 'N/A'}`
+                                          : `Usuário: ${(warehouse.credentials as any)?.username || 'N/A'}`
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs ${
+                                        warehouse.status === 'active' 
+                                          ? 'bg-green-500/20 text-green-400 border-green-500/30' 
+                                          : 'text-slate-400'
+                                      }`}
+                                    >
+                                      {warehouse.status === 'active' ? 'Ativo' : 'Erro'}
+                                    </Badge>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const credentials = warehouse.credentials as any;
+                                        setFulfillmentData({
+                                          provider: warehouse.provider,
+                                          username: warehouse.provider !== 'fhb' ? (credentials?.username || '') : '',
+                                          password: '',
+                                          appId: warehouse.provider === 'fhb' ? (credentials?.appId || '') : '',
+                                          secret: ''
+                                        });
+                                        setEditingWarehouseId(warehouse.id);
+                                        setShowFulfillmentModal(true);
+                                      }}
+                                      className="h-8 px-2 text-slate-400 hover:text-white"
+                                      data-testid={`button-edit-warehouse-${warehouse.id}`}
+                                    >
+                                      <Settings className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteWarehouse(warehouse.id)}
+                                      className="h-8 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                      data-testid={`button-delete-warehouse-${warehouse.id}`}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-center py-6 text-slate-400 text-sm">
+                              <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Nenhum armazém configurado</p>
+                              <p className="text-xs mt-1">Clique em "Adicionar" para começar</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       {/* Facebook Ads Integration */}
@@ -1456,10 +1559,22 @@ export default function AdminOperations() {
       </Dialog>
 
       {/* Fulfillment Integration Modal */}
-      <Dialog open={showFulfillmentModal} onOpenChange={setShowFulfillmentModal}>
+      <Dialog open={showFulfillmentModal} onOpenChange={(open) => {
+        setShowFulfillmentModal(open);
+        if (!open) {
+          setEditingWarehouseId(null);
+          setFulfillmentData({ 
+            provider: 'european_fulfillment', 
+            username: '', 
+            password: '',
+            appId: '',
+            secret: ''
+          });
+        }
+      }}>
         <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-white/20">
           <DialogHeader>
-            <DialogTitle>Configurar Armazém</DialogTitle>
+            <DialogTitle>{editingWarehouseId ? 'Editar Armazém' : 'Adicionar Armazém'}</DialogTitle>
             <DialogDescription className="text-slate-400">
               Configure seu provedor de armazenamento
             </DialogDescription>
