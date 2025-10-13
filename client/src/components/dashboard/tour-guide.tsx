@@ -47,7 +47,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       disableBeacon: true,
     },
     {
-      target: '[data-testid="card-shopify-orders"]',
+      target: '[data-testid="card-shopify-orders"]:not(.sm\\:hidden)',
       content: (
         <div className="space-y-2">
           <h4 className="font-semibold">Faturamento e Pedidos da Plataforma</h4>
@@ -61,7 +61,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       disableBeacon: true,
     },
     {
-      target: '[data-testid="card-cpa-marketing"]',
+      target: '[data-testid="card-cpa-marketing"]:not(.sm\\:hidden)',
       content: (
         <div className="space-y-2">
           <h4 className="font-semibold">CPA Anúncios e Marketing</h4>
@@ -75,7 +75,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       disableBeacon: true,
     },
     {
-      target: '[data-testid="card-orders-delivered"]',
+      target: '[data-testid="card-orders-delivered"]:not(.sm\\:hidden)',
       content: (
         <div className="space-y-2">
           <h4 className="font-semibold">Pedidos N1</h4>
