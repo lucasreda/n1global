@@ -9,6 +9,69 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { canAcceptChild } from './tree-helpers';
 import { useStylesheetManager, generateOverrideCss } from '@/hooks/useStylesheetManager';
 
+// Normalize HTML attributes to React props (fixes imported HTML compatibility)
+function normalizeAttributes(tag: string, attributes: Record<string, any> = {}): Record<string, any> {
+  const normalized: Record<string, any> = {};
+  
+  // Map of HTML attributes to React props
+  const attrMap: Record<string, string> = {
+    'class': 'className', // CRITICAL: Most common HTML attribute
+    'allowfullscreen': 'allowFullScreen',
+    'frameborder': 'frameBorder',
+    'marginwidth': 'marginWidth',
+    'marginheight': 'marginHeight',
+    'charset': 'charSet',
+    'classname': 'className',
+    'for': 'htmlFor',
+    'tabindex': 'tabIndex',
+    'readonly': 'readOnly',
+    'maxlength': 'maxLength',
+    'cellpadding': 'cellPadding',
+    'cellspacing': 'cellSpacing',
+    'colspan': 'colSpan',
+    'rowspan': 'rowSpan',
+    'usemap': 'useMap',
+    'datetime': 'dateTime',
+    'accesskey': 'accessKey',
+    'contenteditable': 'contentEditable'
+  };
+  
+  for (const [key, value] of Object.entries(attributes)) {
+    const lowerKey = key.toLowerCase();
+    
+    // Skip class/className - they're handled separately via node.classNames
+    if (lowerKey === 'class' || lowerKey === 'classname') {
+      continue;
+    }
+    
+    // Use mapped React prop if available
+    if (attrMap[lowerKey]) {
+      normalized[attrMap[lowerKey]] = value;
+    } else {
+      normalized[key] = value;
+    }
+  }
+  
+  // For iframes: enforce sandbox mode to prevent script execution and focus stealing
+  if (tag === 'iframe') {
+    normalized.sandbox = 'allow-same-origin'; // Prevents scripts, allows styling
+    
+    // Safely merge pointerEvents into existing styles
+    if (typeof normalized.style === 'string') {
+      // Keep existing inline style string and add pointerEvents
+      normalized.style = `${normalized.style}; pointer-events: none;`;
+    } else if (normalized.style && typeof normalized.style === 'object') {
+      // Merge with existing style object
+      normalized.style = { ...normalized.style, pointerEvents: 'none' };
+    } else {
+      // No existing style, create new object
+      normalized.style = { pointerEvents: 'none' };
+    }
+  }
+  
+  return normalized;
+}
+
 interface PageModelV4RendererProps {
   model: PageModelV4;
   selectedNodeId?: string | null;
@@ -377,7 +440,7 @@ function PageNodeV4Renderer({
         ref={setCombinedRefs}
         {...draggableAttributes}
         {...draggableListeners}
-        {...node.attributes}
+        {...normalizeAttributes('span', node.attributes)}
         id={uniqueStyleId}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
@@ -418,8 +481,8 @@ function PageNodeV4Renderer({
   
   // CRITICAL: For self-closing tags, we MUST NOT render children or textContent
   if (isSelfClosing) {
-    // Handle responsive images
-    let finalAttributes = { ...node.attributes };
+    // Handle responsive images - normalize attributes first
+    let finalAttributes = normalizeAttributes(node.tag, node.attributes);
     if (node.tag === 'img') {
       // Priority 1: Check responsiveAttributes for the current breakpoint
       const responsiveSrc = node.responsiveAttributes?.src?.[breakpoint];
@@ -500,7 +563,7 @@ function PageNodeV4Renderer({
       ref={setCombinedRefs}
       {...draggableAttributes}
       {...draggableListeners}
-      {...node.attributes}
+      {...normalizeAttributes(node.tag, node.attributes)}
       id={uniqueStyleId}
       data-node-id={node.id}
       data-testid={`node-${node.tag}-${node.id}`}

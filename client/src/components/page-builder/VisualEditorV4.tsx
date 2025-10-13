@@ -359,9 +359,14 @@ export function VisualEditorV4({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in input/textarea
+      // Ignore if typing in input/textarea or if focus is inside iframe
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      
+      // Prevent keyboard events from iframes (they cause focus stealing and frozen shortcuts)
+      if (target.tagName === 'IFRAME' || target.closest('iframe')) {
         return;
       }
 
@@ -428,6 +433,25 @@ export function VisualEditorV4({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, clipboard, handleDeleteNode, handleDuplicateNode, handleCopyNode, handleCutNode, handlePasteNode, handleNudge, handleUndo, handleRedo]);
+
+  // Prevent iframes from stealing focus (fixes keyboard shortcuts freezing)
+  useEffect(() => {
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // If an iframe gains focus, immediately refocus the canvas container
+      if (target.tagName === 'IFRAME') {
+        e.preventDefault();
+        const canvasContainer = document.querySelector('[data-canvas-container]') as HTMLElement;
+        if (canvasContainer) {
+          canvasContainer.focus();
+        }
+      }
+    };
+    
+    document.addEventListener('focusin', handleFocusIn, true); // Use capture phase
+    return () => document.removeEventListener('focusin', handleFocusIn, true);
+  }, []);
 
   // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -669,7 +693,12 @@ export function VisualEditorV4({
       )}
 
       {/* Center - Canvas */}
-      <div id="page-builder-canvas" className="flex-1 p-4 bg-gray-100 dark:bg-gray-900 overflow-auto relative">
+      <div 
+        id="page-builder-canvas" 
+        data-canvas-container 
+        tabIndex={0}
+        className="flex-1 p-4 bg-gray-100 dark:bg-gray-900 overflow-auto relative focus:outline-none"
+      >
         <div 
           className="mx-auto bg-white shadow-lg"
           style={{
