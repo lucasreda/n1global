@@ -13,6 +13,7 @@ interface TourContextType {
   navigateToPage: (page: 'dashboard' | 'integrations' | 'ads' | 'sync-orders') => void;
   isCompletingTour: boolean;
   isResettingTour: boolean;
+  tourWasCompletedOrSkipped: boolean;
 }
 
 const TourContext = createContext<TourContextType | undefined>(undefined);

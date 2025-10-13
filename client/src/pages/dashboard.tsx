@@ -22,7 +22,7 @@ export default function Dashboard() {
   const { selectedOperation } = useCurrentOperation();
   
   // Tour context
-  const { startTour, isTourRunning } = useTourContext();
+  const { startTour, isTourRunning, tourWasCompletedOrSkipped } = useTourContext();
 
   // Fetch user data to check if tour was completed
   const { data: user } = useQuery({
@@ -33,14 +33,14 @@ export default function Dashboard() {
     },
   });
 
-  // Auto-start tour if not completed
+  // Auto-start tour if not completed (but only once per session)
   useEffect(() => {
-    console.log('🎯 Tour auto-start check:', { user, tourCompleted: user?.tourCompleted, isTourRunning });
-    if (user && user.tourCompleted === false && !isTourRunning) {
+    console.log('🎯 Tour auto-start check:', { user, tourCompleted: user?.tourCompleted, isTourRunning, tourWasCompletedOrSkipped });
+    if (user && user.tourCompleted === false && !isTourRunning && !tourWasCompletedOrSkipped) {
       console.log('✅ Starting tour automatically!');
       startTour();
     }
-  }, [user, startTour, isTourRunning]);
+  }, [user, startTour, isTourRunning, tourWasCompletedOrSkipped]);
 
   // Fetch integrations status to check if platform and warehouse are connected
   const { data: integrationsStatus } = useQuery({

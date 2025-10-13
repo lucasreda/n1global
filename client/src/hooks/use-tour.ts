@@ -7,6 +7,7 @@ import { apiRequest } from '@/lib/queryClient';
 export function useTour() {
   const [isTourRunning, setIsTourRunning] = useState(false);
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'integrations' | 'ads' | 'sync-orders'>('dashboard');
+  const [tourWasCompletedOrSkipped, setTourWasCompletedOrSkipped] = useState(false);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -94,12 +95,14 @@ export function useTour() {
   // Completar o tour
   const completeTour = useCallback(() => {
     setIsTourRunning(false);
+    setTourWasCompletedOrSkipped(true);
     completeTourMutation.mutate();
   }, [completeTourMutation]);
 
   // Pular o tour (salva como completo também)
   const skipTour = useCallback(() => {
     setIsTourRunning(false);
+    setTourWasCompletedOrSkipped(true);
     completeTourMutation.mutate();
   }, [completeTourMutation]);
 
@@ -125,5 +128,6 @@ export function useTour() {
     navigateToPage,
     isCompletingTour: completeTourMutation.isPending,
     isResettingTour: resetTourMutation.isPending,
+    tourWasCompletedOrSkipped,
   };
 }
