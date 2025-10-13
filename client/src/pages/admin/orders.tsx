@@ -392,7 +392,7 @@ export default function AdminOrders() {
       {/* Filters */}
       <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-[20px]">
             <Filter className="h-5 w-5" />
             Filtros
           </CardTitle>
@@ -470,7 +470,7 @@ export default function AdminOrders() {
       {/* Orders Table */}
       <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-[20px]">
             <ShoppingCart className="h-5 w-5" />
             Pedidos ({totalOrders.toLocaleString()})
           </CardTitle>
