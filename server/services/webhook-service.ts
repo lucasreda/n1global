@@ -379,12 +379,30 @@ ${operation.name}
       console.log('✅ Webhook logged successfully');
 
       // If webhook was successful, send welcome email with credentials
+      console.log('🔍 Checking webhook response for email sending...', {
+        status: result.status,
+        hasBody: !!result.body,
+        body: result.body
+      });
+
       if (result.status >= 200 && result.status < 300 && result.body) {
         const response = result.body as any;
+        
+        console.log('🔍 Response validation:', {
+          success: response.success,
+          hasEmail: !!response.email,
+          hasPassword: !!response.password,
+          email: response.email
+        });
         
         // Check if response contains email and password
         if (response.success && response.email && response.password) {
           console.log('📧 Webhook successful, sending welcome email...');
+          console.log('📧 Email details:', {
+            to: response.email,
+            customerName: order.customerName,
+            operationId: order.operationId
+          });
           
           // Prepare order data for email
           const orderData = {
@@ -398,14 +416,23 @@ ${operation.name}
           };
           
           // Send welcome email with login credentials
-          await this.sendWelcomeEmail(
-            response.email,
-            response.password,
-            order.customerName || 'Cliente',
-            order.operationId || '',
-            orderData
-          );
+          try {
+            await this.sendWelcomeEmail(
+              response.email,
+              response.password,
+              order.customerName || 'Cliente',
+              order.operationId || '',
+              orderData
+            );
+            console.log('✅ Welcome email sent successfully!');
+          } catch (emailError) {
+            console.error('❌ Error sending welcome email:', emailError);
+          }
+        } else {
+          console.log('⚠️ Skipping email - response validation failed');
         }
+      } else {
+        console.log('⚠️ Skipping email - webhook response not successful');
       }
     } catch (error) {
       console.error('❌ Error dispatching webhook:', error);
