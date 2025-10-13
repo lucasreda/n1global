@@ -1,58 +1,25 @@
 # COD Dashboard
 
 ## Overview
-The COD Dashboard is a full-stack web application for managing Cash on Delivery (COD) orders and business analytics. It offers order tracking, customer management, real-time performance monitoring, secure multi-role authentication, and AI-powered features. Key capabilities include an empathetic virtual agent, comprehensive investment management, creative intelligence for Facebook Ads, an enterprise-grade visual editor (PageModelV3) with HTML conversion and style preservation, a production-ready component library, a template system, and AI-powered page generation. The system supports various user roles (investors, suppliers, finance, administrators) to optimize COD operations and provide actionable business insights.
+The COD Dashboard is a full-stack web application designed for comprehensive management of Cash on Delivery (COD) orders and business analytics. Its core purpose is to optimize COD operations by offering order tracking, customer management, real-time performance monitoring, and secure multi-role authentication. Key capabilities include an empathetic AI-powered virtual agent, integrated investment management, creative intelligence for Facebook Ads, an enterprise-grade visual editor (PageModelV4) with HTML conversion and style preservation, a production-ready component library, and AI-powered page generation. The system supports various user roles (investors, suppliers, finance, administrators) to provide actionable business insights and streamline operations.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Quality priority: Maximum quality and highest level possible ("atingir o mais alto nivel possivel").
 
-## Recent Changes
-
-### Onboarding Progress Card (October 13, 2025)
-Implemented a smart onboarding progress card for the user dashboard that tracks integration completeness:
-- **Integration Status Tracking**: New API endpoint `/api/onboarding/integrations-status` verifies (1) Platform integrated (Shopify/CartPanda), (2) At least 1 warehouse connected, (3) At least 1 ad account connected, (4) Support email configured with domain
-- **Smart Visibility**: Card automatically appears when any integration is incomplete and disappears when all steps are done
-- **User Control**: Manual hide option with confirmation modal (stores preference in `onboardingCardHidden` user field)
-- **Visual Progress**: Progress bar showing X of 4 steps completed, checkmarks for completed items, clear descriptions for each requirement
-- **Dashboard Integration**: Card appears at the top of the dashboard above stats, uses glassmorphism blue gradient design
-- **Database Schema**: Added `onboardingCardHidden` boolean field to users table with SQL migration
-- **Storage Methods**: `getShopifyIntegrationsByOperation`, `getAdAccountsByOperation`, `getCustomerSupportByOperation`, `updateUserOnboardingCardHidden`
-
-### Iframe Compatibility & Keyboard Shortcuts Fix (October 13, 2025)
-Fixed critical page builder issues with imported HTML containing iframes:
-- **HTML Attribute Normalization**: Created normalizeAttributes function that converts HTML attributes to React props (allowfullscreen→allowFullScreen, frameborder→frameBorder, etc.). Skips class/className as they're handled separately via node.classNames array
-- **Iframe Sandboxing**: All iframes automatically sandboxed with 'allow-same-origin' to prevent script execution and focus stealing. Smart style handling detects string vs object styles and safely merges pointer-events:none
-- **Keyboard Shortcuts Protection**: Enhanced keyboard event listeners to ignore events from iframes, preventing frozen shortcuts. Added focusin listener to redirect focus back to canvas when iframe attempts to steal it
-- **Canvas Focusability**: Added data-canvas-container and tabIndex to canvas div for proper focus management
-- **Results**: Zero React warnings, no "Invalid hook call" errors, all keyboard shortcuts (Ctrl+Z/Y, Delete, arrows, Escape) work correctly even with iframe-heavy pages
-
-### Visual Editor V4 - Advanced Properties Panel (October 2025)
-Completed 10-stage expansion of PropertiesPanelV4 with professional page builder capabilities:
-- **ETAPA 1**: ShadowPicker with multi-layer box/text shadow editing, visual controls, presets
-- **ETAPA 2**: GradientPicker with multi-stop editor, BackgroundImageControls with URL/size/position/repeat
-- **ETAPA 3**: FilterControls (8 filters: blur, brightness, contrast, grayscale, hue-rotate, invert, saturate, sepia) + BackdropFilter + Glassmorphism preset
-- **ETAPA 4**: Expanded SizingControls with Min/Max width/height, Aspect Ratio (8 presets), Overflow (4 modes), Object Fit (5 modes + 9 positions)
-- **ETAPA 5**: BorderStyleSelector (9 visual styles, unified + individual sides) + OutlineControls (style/width/color/offset)
-- **ETAPA 6**: GridTemplateEditor visual (track presets, rows/columns) + FlexControlsAdvanced (wrap, justify, align, direction, gap)
-- **ETAPA 7**: PseudoClassEditorV4 refactored with 8 collapsible sections (Colors, Background, Spacing, Borders, Shadows, Typography, Effects, Transitions) + TransitionBuilder visual (property/duration/easing/delay)
-- **ETAPA 8**: Typography expanded (word-spacing, text-decoration, text-indent) + TransformControls visual (translate/rotate/scale/skew tabs, preserves order and unknown tokens, known limitation: normalizes function formats)
-- **ETAPA 9**: HistoryManagerV4 with undo/redo (Ctrl+Z/Ctrl+Shift+Z), complete keyboard shortcuts (Delete/Backspace, Ctrl+C/V/X for copy/paste/cut, Ctrl+D duplicate, Arrow keys for nudging 1px/10px with Shift, Escape to deselect), snapshot-based state sync preventing race conditions between debounced inputs and history actions, zero memory leaks
-- **ETAPA 10**: Auto-save system with 3-second debounce, visual status indicator (💾 Saving/✅ Saved/❌ Error), edit ID tracking preventing race conditions across all save paths (auto/manual), visual feedback for copy/paste operations (📋📌✂️ emoji icons), intelligent paste/duplicate positioning with semantic validation (inserts as sibling after selected element), deep clone with new IDs, zero data loss during concurrent saves
-
 ## System Architecture
 
 ### UI/UX
-- **Frontend Framework**: React 18 with TypeScript and Vite
+- **Frontend Framework**: React 18 with TypeScript and Vite.
 - **Styling**: shadcn/ui (Radix UI primitives), Tailwind CSS (glassmorphism, dark theme), mobile-first adaptive layouts.
-- **State Management**: Zustand (authentication)
-- **Data Fetching**: React Query
-- **Routing**: Wouter
-- **Charts**: Recharts
-- **Forms**: React Hook Form with Zod
+- **State Management**: Zustand (authentication).
+- **Data Fetching**: React Query.
+- **Routing**: Wouter.
+- **Charts**: Recharts.
+- **Forms**: React Hook Form with Zod.
 
 ### Technical Implementations
-- **Backend Runtime**: Node.js with Express.js (TypeScript, ES modules)
+- **Backend Runtime**: Node.js with Express.js (TypeScript, ES modules).
 - **Authentication**: JWT, bcryptjs, PostgreSQL-backed sessions.
 - **Database ORM**: Drizzle ORM (PostgreSQL dialect).
 - **API**: RESTful with structured error handling and logging.
@@ -62,13 +29,13 @@ Completed 10-stage expansion of PropertiesPanelV4 with professional page builder
     - **Sofia Virtual Agent**: Empathetic AI with Telnyx Voice API, emotional context analysis, dynamic prompt generation, adaptive response tone, and intelligent ticket creation.
     - **Creative Intelligence**: OpenAI GPT-4 for Facebook Ads creative analysis (insights, recommendations, variant generation), real-time SSE for progress, cost estimation, batch processing, comprehensive metrics, and advanced copywriting analysis.
     - **Intelligent Refund Management**: AI-powered customer retention using GPT-4 for progressive engagement, critical keyword detection, and adaptive responses.
-- **Email System**: Professional HTML templates, multilingual support, Reply-To configuration, threading, smart keyword detection for automated responses, and universal auto-confirmation.
+- **Email System**: Professional HTML templates, multilingual support, Reply-To configuration, threading, smart keyword detection, and universal auto-confirmation.
 - **Shipping Integration**: European Fulfillment Center API for lead creation, status tracking, product management, and country selection, with JWT-based authentication.
 - **Voice System**: Telnyx Voice API (PT-BR gather-only architecture) for Sofia's outbound calling and real-time PT-BR speech recognition.
-- **Affiliate Program System**: Enterprise-grade affiliate marketing with JWT-signed tracking links, centralized landing page hosting on Vercel, and anti-fraud protection. Includes dedicated database tables and features like product discovery, affiliation requests, and a universal tracking system.
-- **Visual Editor V4 (Native)**: 100% PageModelV4-native visual editor with perfect HTML→Editor→Edit→Save fidelity and Elementor-style drag and drop. Renders recursive node trees preserving exact HTML tags, attributes, responsive styles, and semantic structure. Features: (1) **PageModelV4Renderer**: Recursive component rendering any HTML structure with infinite nesting, preserving tag semantics (header, nav, section, etc.). (2) **VisualEditorV4**: Main editor with 3-zone layout - left toolbar (layers/properties toggles), center canvas (responsive viewport: desktop/tablet/mobile), right properties panel. (3) **LayersPanelV4**: Hierarchical tree view with expand/collapse, node selection, tag display, and text preview. (4) **PropertiesPanelV4**: Full editing capabilities - responsive styles (desktop/tablet/mobile), text content, HTML attributes (href, src, etc.), breakpoint selector, CSS classes display. (5) **Deep Merge Logic**: Preserves all node data during edits - updating one attribute/style doesn't erase others, responsive breakpoints remain intact. (6) **Drag and Drop System**: @dnd-kit powered drag and drop with explicit drop zones (before/after/inner), Elementor-style visual indicators (blue lines for before/after, semi-transparent overlay for containers), intelligent container detection (only true containers can accept children), and complete style preservation during node movement (reuses original node reference without cloning). (7) **Semantic Validation System**: Comprehensive HTML semantics enforcement preventing invalid structures - categorizes elements (Container, List, Table, Form, TextBlock, TextInline, Media, Input, Button, Link), enforces parent-child relationships (lists only accept li, text blocks only accept inline elements, prevents nesting same-type text), provides real-time visual feedback (blue indicators for valid drops, red for invalid), and displays contextual error messages when attempting invalid operations. Ensures generated pages maintain 100% valid HTML structure. **Status**: Replaces V2/V3 editors for affiliate landing pages. No V2 compatibility - HTML must be converted to V4 first via HTML-to-PageModel Converter V4.
-- **HTML-to-PageModel Converter V4**: 100% fidelity converter with recursive node architecture supporting any HTML structure. Features: (1) Enhanced CSS parser with combinator selectors (>, +, ~, descendant), pseudo-classes (:hover, :focus, :nth-child), media queries for responsive breakpoints, and specificity-based cascade computation. (2) Complete layout property extraction including all flexbox properties (flexWrap, justifyContent, alignItems, flexDirection, gap) and grid properties (gridTemplateColumns, gridTemplateRows, gridTemplateAreas, gridColumn, gridRow, gridAutoFlow). (3) Semantic HTML preservation - renders exact tags (header, footer, nav, main, section, aside, article) instead of converting to generic divs. (4) CSS variables preservation in globalStyles. (5) Validated with complex HTML: 43 nodes, 17 unique tags, grid template areas, flexbox with wrap, combinator selectors working correctly.
-- **PageModelV4 Architecture**: Universal recursive node system with arbitrary nesting depth. Each node preserves: tag (exact HTML element), type (semantic NodeType), attributes (href, src, data-*), classNames, inlineStyles, styles (ResponsiveStylesV4 with desktop/tablet/mobile), states (hover/focus/active pseudo-classes), layout metadata, children (recursive PageNodeV4[]), animations, transitions, and pseudoElements. Supports complete V2↔V3↔V4 conversion pipeline with auto-detection and backwards compatibility.
+- **Affiliate Program System**: Enterprise-grade affiliate marketing with JWT-signed tracking links, centralized landing page hosting on Vercel, and anti-fraud protection. Includes product discovery, affiliation requests, and a universal tracking system.
+- **Visual Editor V4 (Native)**: 100% PageModelV4-native visual editor with perfect HTML→Editor→Edit→Save fidelity and Elementor-style drag and drop. Renders recursive node trees preserving exact HTML tags, attributes, responsive styles, and semantic structure. Features include a recursive renderer, a 3-zone editor layout, hierarchical layers panel, comprehensive properties panel (including responsive styles, text content, HTML attributes), deep merge logic for preserving node data, `@dnd-kit` powered drag and drop with explicit drop zones and intelligent container detection, and a semantic validation system for enforcing valid HTML structures. Replaces V2/V3 editors for affiliate landing pages.
+- **HTML-to-PageModel Converter V4**: 100% fidelity converter with recursive node architecture supporting any HTML structure. Features an enhanced CSS parser with combinator selectors, pseudo-classes, media queries, and specificity-based cascade computation; complete layout property extraction (flexbox, grid); and semantic HTML preservation.
+- **PageModelV4 Architecture**: Universal recursive node system where each node preserves tag, type, attributes, classNames, inlineStyles, responsive styles (desktop/tablet/mobile), states (pseudo-classes), layout metadata, children, animations, transitions, and pseudoElements.
 
 ### System Design Choices
 - **Database Schema**: UUID primary keys, automatic timestamps, decimal precision for financial data. Tables for users, orders, metrics, fulfillment leads, products, shipping providers, investment pools, investor profiles, investments, transactions, performance history, and intelligent refund requests.

@@ -30,7 +30,7 @@ export default function Settings() {
   };
 
   // Fetch full operations data to get operationType
-  const { data: operations } = useQuery({
+  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string }>>({
     queryKey: ['/api/operations'],
     enabled: !!selectedOperation,
   });
@@ -38,7 +38,7 @@ export default function Settings() {
   // Set initial operationType from current operation
   useEffect(() => {
     if (operations && selectedOperation) {
-      const operation = operations.find((op: any) => op.id === selectedOperation);
+      const operation = operations.find((op) => op.id === selectedOperation);
       if (operation?.operationType) {
         setOperationType(operation.operationType);
         setOriginalOperationType(operation.operationType);
