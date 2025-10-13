@@ -8,6 +8,7 @@ import { OnboardingCard } from "@/components/dashboard/onboarding-card";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useTourContext } from "@/contexts/tour-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +19,25 @@ export default function Dashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
+  
+  // Tour context
+  const { startTour } = useTourContext();
+
+  // Fetch user data to check if tour was completed
+  const { data: user } = useQuery({
+    queryKey: ['/api/user'],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest('GET', '/api/user');
+      return response.json();
+    },
+  });
+
+  // Auto-start tour if not completed
+  useEffect(() => {
+    if (user && user.tourCompleted === false) {
+      startTour();
+    }
+  }, [user, startTour]);
 
   // Sync mutation (same as orders page)
   const syncMutation = useMutation({
@@ -274,7 +294,6 @@ export default function Dashboard() {
       />
       
       <SyncStatus />
-      
     </div>
   );
 }

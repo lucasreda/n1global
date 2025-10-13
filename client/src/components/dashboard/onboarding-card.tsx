@@ -104,7 +104,7 @@ export function OnboardingCard() {
   const progress = (completedSteps / totalSteps) * 100;
 
   return (
-    <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900" data-testid="card-onboarding">
+    <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900" data-testid="card-onboarding" data-tour-id="onboarding-card">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">

@@ -164,7 +164,7 @@ export default function Integrations() {
       </div>
       
       {/* Integrações de E-commerce */}
-      <div className="p-6">
+      <div className="p-6" data-tour-id="section-shopify">
         {/* Título da Seção */}
         <div className="flex items-center space-x-3 mb-6">
           <Store className="text-blue-400" size={20} />
@@ -215,7 +215,9 @@ export default function Integrations() {
       </div>
 
       {/* Armazéns - Multi-Provider */}
-      <MultiProviderPanel />
+      <div data-tour-id="section-warehouses">
+        <MultiProviderPanel />
+      </div>
 
       {/* Aplicativos da Operação */}
       <div className="p-6">

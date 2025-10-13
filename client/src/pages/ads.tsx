@@ -1014,7 +1014,7 @@ export default function Ads() {
           </CardContent>
         </Card>
 
-        <Card className="glassmorphism border-gray-700">
+        <Card className="glassmorphism border-gray-700" data-tour-id="section-ad-accounts">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-white flex items-center space-x-2">
               {(() => {

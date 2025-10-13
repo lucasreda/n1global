@@ -7,6 +7,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { TourProvider, useTourContext } from "@/contexts/tour-context";
+import { TourGuide } from "@/components/dashboard/tour-guide";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -376,6 +378,7 @@ function SupplierHeader() {
 }
 
 function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
   const { data: metrics } = useQuery({
     queryKey: ["/api/dashboard/metrics", "30"],
     queryFn: async () => {
@@ -387,9 +390,38 @@ function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNo
 
   const exchangeRate = metrics?.exchangeRates?.EUR || 6.37;
 
+  // Tour context
+  const {
+    isTourRunning,
+    currentPage,
+    completeTour,
+    skipTour,
+    navigateToPage,
+  } = useTourContext();
+
+  // Handle tour navigation between pages
+  const handleTourNavigate = (page: 'dashboard' | 'integrations' | 'ads') => {
+    navigateToPage(page);
+    if (page === 'integrations') {
+      navigate('/integrations');
+    } else if (page === 'ads') {
+      navigate('/ads');
+    } else if (page === 'dashboard') {
+      navigate('/');
+    }
+  };
+
   return (
     <DashboardLayout exchangeRate={exchangeRate}>
       {children}
+      {/* Tour Guide - rendered here so it persists across all dashboard pages */}
+      <TourGuide
+        run={isTourRunning}
+        onComplete={completeTour}
+        onSkip={skipTour}
+        currentPage={currentPage}
+        onNavigate={handleTourNavigate}
+      />
     </DashboardLayout>
   );
 }
@@ -502,12 +534,14 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="dark">
-          <AppContent />
-          <Toaster />
-        </div>
-      </TooltipProvider>
+      <TourProvider>
+        <TooltipProvider>
+          <div className="dark">
+            <AppContent />
+            <Toaster />
+          </div>
+        </TooltipProvider>
+      </TourProvider>
     </QueryClientProvider>
   );
 }
