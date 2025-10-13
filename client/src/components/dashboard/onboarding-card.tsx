@@ -37,9 +37,11 @@ export function OnboardingCard() {
     queryKey: ["/api/onboarding/integrations-status", { operationId: currentOperationId }],
     enabled: !!currentOperationId, // Only run if we have an operation
     queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/onboarding/integrations-status", {
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
           "x-operation-id": currentOperationId || "",
         },
         credentials: "include",

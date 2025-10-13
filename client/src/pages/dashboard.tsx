@@ -48,9 +48,11 @@ export default function Dashboard() {
     queryKey: ['/api/onboarding/integrations-status', { operationId: currentOperationId }],
     enabled: !!currentOperationId,
     queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/onboarding/integrations-status", {
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
           "x-operation-id": currentOperationId || "",
         },
         credentials: "include",
