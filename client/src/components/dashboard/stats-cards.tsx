@@ -437,6 +437,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             data-testid="card-shopify-orders"
+            data-tour-id="card-shopify-orders-desktop"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex-shrink-0">
@@ -484,6 +485,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
             data-testid="card-cpa-marketing"
+            data-tour-id="card-cpa-marketing-desktop"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex-shrink-0">
@@ -587,6 +589,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           <div 
             className="group backdrop-blur-sm rounded-xl p-4 transition-all duration-300 bg-black/20 border border-white/10 hover:bg-black/30" 
             data-testid="card-orders-delivered"
+            data-tour-id="card-orders-delivered-desktop"
             style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
             onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
             onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
