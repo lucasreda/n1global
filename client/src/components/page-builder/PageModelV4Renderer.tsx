@@ -322,16 +322,6 @@ function PageNodeV4Renderer({
       nodeId: node.id,
     },
   });
-  
-  // Debug: Log draggable setup
-  useEffect(() => {
-    console.log('🔧 Draggable setup for node:', node.id, {
-      hasListeners: !!draggableListeners,
-      hasAttributes: !!draggableAttributes,
-      isDragging,
-      listeners: draggableListeners
-    });
-  }, [node.id, isDragging]);
 
   // Three separate drop zones: before, after, inner
   const { setNodeRef: setBeforeDropRef, isOver: isOverBefore } = useDroppable({
@@ -413,7 +403,8 @@ function PageNodeV4Renderer({
   
   // Handle click to select node
   const handleClick = (e: React.MouseEvent) => {
-    // Don't stopPropagation - let drag events bubble
+    // Stop propagation only for click, not for drag events
+    e.stopPropagation();
     if (onSelectNode) {
       onSelectNode(node.id);
     }
@@ -440,15 +431,12 @@ function PageNodeV4Renderer({
     }
   };
   
-  // Combine ALL refs into a single callback (including elementRef for direct DOM manipulation)
+  // Combine refs - drag ref is applied to the element, drop refs are disabled for now
   const setCombinedRefs = useCallback((el: Element | null) => {
     const htmlEl = el as HTMLElement | null;
-    setDraggableRef(htmlEl);
-    setBeforeDropRef(htmlEl);
-    setAfterDropRef(htmlEl);
-    setInnerDropRef(htmlEl);
+    setDraggableRef(htmlEl); // Only drag ref for now to fix listeners issue
     (elementRef as any).current = htmlEl; // Also set our ref for direct style manipulation
-  }, [setDraggableRef, setBeforeDropRef, setAfterDropRef, setInnerDropRef]);
+  }, [setDraggableRef]);
 
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
