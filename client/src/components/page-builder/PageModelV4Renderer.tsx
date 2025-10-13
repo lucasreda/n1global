@@ -451,16 +451,17 @@ function PageNodeV4Renderer({
 
   // Handle text-only nodes (convert 'text' tag to span)
   if (node.tag === 'text' || node.type === 'text') {
-    const spanElement = (
+    return (
       <span
-        ref={elementRef}
+        ref={setDraggableRef}
+        {...draggableAttributes}
+        {...draggableListeners}
         {...normalizeAttributes('span', node.attributes)}
         id={uniqueStyleId}
         data-node-id={node.id}
         data-testid={`node-text-${node.id}`}
         className={cn(
           node.classNames?.join(' '),
-          // Removed 'editor-node-selected' to avoid duplicate border with SelectionOverlay
           isHovered && 'editor-node-hovered',
           isDragging && 'opacity-30'
         )}
@@ -482,17 +483,6 @@ function PageNodeV4Renderer({
           />
         )}
       </span>
-    );
-    
-    return (
-      <div
-        ref={setDraggableRef}
-        {...draggableAttributes}
-        {...draggableListeners}
-        style={{ display: 'contents' }}
-      >
-        {spanElement}
-      </div>
     );
   }
   
@@ -543,11 +533,13 @@ function PageNodeV4Renderer({
       
     }
     
-    const imgElement = (
+    return (
       <div style={{ display: 'inline', position: 'relative' }}>
         <Tag
           key={`${node.id}-${finalAttributes.src || 'no-src'}`}
-          ref={elementRef}
+          ref={setDraggableRef}
+          {...draggableAttributes}
+          {...draggableListeners}
           {...finalAttributes}
           id={uniqueStyleId}
           data-node-id={node.id}
@@ -575,30 +567,20 @@ function PageNodeV4Renderer({
         )}
       </div>
     );
-    
-    return (
-      <div
-        ref={setDraggableRef}
-        {...draggableAttributes}
-        {...draggableListeners}
-        style={{ display: 'contents' }}
-      >
-        {imgElement}
-      </div>
-    );
   }
   
   // Regular elements with children/text
-  const element = (
+  return (
     <Tag
-      ref={elementRef}
+      ref={setDraggableRef}
+      {...draggableAttributes}
+      {...draggableListeners}
       {...normalizeAttributes(node.tag, node.attributes)}
       id={uniqueStyleId}
       data-node-id={node.id}
       data-testid={`node-${node.tag}-${node.id}`}
       className={cn(
         node.classNames?.join(' '),
-        // Removed 'editor-node-selected' to avoid duplicate border with SelectionOverlay
         isHovered && 'editor-node-hovered',
         isDragging && 'opacity-30'
       )}
@@ -635,17 +617,5 @@ function PageNodeV4Renderer({
         />
       )}
     </Tag>
-  );
-  
-  // Wrap in draggable div
-  return (
-    <div
-      ref={setDraggableRef}
-      {...draggableAttributes}
-      {...draggableListeners}
-      style={{ display: 'contents' }} // Makes wrapper transparent in layout
-    >
-      {element}
-    </div>
   );
 }
