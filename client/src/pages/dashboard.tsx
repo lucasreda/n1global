@@ -43,11 +43,20 @@ export default function Dashboard() {
   }, [user, startTour, isTourRunning, tourWasCompletedOrSkipped]);
 
   // Fetch integrations status to check if platform and warehouse are connected
+  const currentOperationId = localStorage.getItem("current_operation_id");
   const { data: integrationsStatus } = useQuery({
-    queryKey: ['/api/onboarding/integrations-status'],
+    queryKey: ['/api/onboarding/integrations-status', { operationId: currentOperationId }],
+    enabled: !!currentOperationId,
     queryFn: async () => {
-      const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
-      return response.json();
+      const res = await fetch("/api/onboarding/integrations-status", {
+        headers: {
+          "Content-Type": "application/json",
+          "x-operation-id": currentOperationId || "",
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch integration status");
+      return res.json();
     },
   });
 
