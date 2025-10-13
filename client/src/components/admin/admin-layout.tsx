@@ -54,7 +54,7 @@ const menuItems: MenuItem[] = [
   },
   { 
     id: 'stores', 
-    label: 'Lojas', 
+    label: 'Operações', 
     icon: Building2, 
     path: '/inside/stores' 
   },
