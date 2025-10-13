@@ -4420,13 +4420,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash da senha
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Define permissões padrão para novos usuários normais
+      const userRole = role || 'user';
+      let defaultPermissions = permissions || [];
+      
+      // Se não foram passadas permissões explícitas e o role é 'user' ou 'store', adicionar permissões padrão
+      if (!permissions && (userRole === 'user' || userRole === 'store')) {
+        defaultPermissions = ['dashboard', 'orders', 'ads', 'integrations'];
+      }
+
       // Criar o usuário
       const [newUser] = await db.insert(users).values({
         name,
         email,
         password: hashedPassword,
-        role: role || 'user',
-        permissions: permissions || [],
+        role: userRole,
+        permissions: defaultPermissions,
         onboardingCompleted: role === 'super_admin' || role === 'supplier' || role === 'admin_financeiro' // Skip onboarding for privileged users
       }).returning({
         id: users.id,
