@@ -784,16 +784,19 @@ export function VisualEditorV4({
       validation={dropValidation}
     />
     
-    {/* Drag Overlay */}
-    <DragOverlay>
+    {/* Drag Overlay - Shows visual preview of dragged element */}
+    <DragOverlay dropAnimation={null}>
       {activeNode ? (
-        <div className="bg-blue-600 text-white border-2 border-blue-700 rounded-md shadow-lg px-4 py-2">
-          <span className="text-sm font-semibold flex items-center gap-2">
-            <span className="text-xs opacity-75">{activeNode.tag}</span>
-            {activeNode.classNames && activeNode.classNames.length > 0 && (
-              <span className="text-xs opacity-60">.{activeNode.classNames[0]}</span>
-            )}
-          </span>
+        <div className="opacity-80 pointer-events-none shadow-2xl border-2 border-blue-500 rounded">
+          <PageModelV4Renderer
+            model={{
+              ...model,
+              nodes: [activeNode]
+            }}
+            selectedNodeId={null}
+            onSelectNode={() => {}}
+            breakpoint={viewport}
+          />
         </div>
       ) : null}
     </DragOverlay>
