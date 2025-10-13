@@ -4643,6 +4643,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/operations", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { name, description, storeId, ownerId, country, currency, operationType, status } = req.body;
+      
+      if (!name || !storeId || !country) {
+        res.status(400).json({ message: "Nome, loja e país são obrigatórios" });
+        return;
+      }
+      
+      const newOperation = await adminService.createOperation({
+        name,
+        description,
+        storeId,
+        ownerId,
+        country,
+        currency,
+        operationType,
+        status
+      });
+      
+      res.status(201).json(newOperation);
+    } catch (error) {
+      console.error("Admin create operation error:", error);
+      res.status(500).json({ message: "Erro ao criar operação" });
+    }
+  });
+
+  app.put("/api/admin/operations/:operationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { name, description, ownerId, country, currency, operationType, status } = req.body;
+      
+      const updatedOperation = await adminService.updateOperation(operationId, {
+        name,
+        description,
+        ownerId,
+        country,
+        currency,
+        operationType,
+        status
+      });
+      
+      res.json(updatedOperation);
+    } catch (error) {
+      console.error("Admin update operation error:", error);
+      res.status(500).json({ message: "Erro ao atualizar operação" });
+    }
+  });
+
+  app.delete("/api/admin/operations/:operationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      
+      await adminService.deleteOperation(operationId);
+      
+      res.json({ message: "Operação excluída com sucesso" });
+    } catch (error) {
+      console.error("Admin delete operation error:", error);
+      res.status(500).json({ message: "Erro ao excluir operação" });
+    }
+  });
+
+  app.get("/api/admin/operations/:operationId/products", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const products = await adminService.getOperationProducts(operationId);
+      res.json(products);
+    } catch (error) {
+      console.error("Admin operation products error:", error);
+      res.status(500).json({ message: "Erro ao buscar produtos da operação" });
+    }
+  });
+
+  app.post("/api/admin/operations/:operationId/products/:productId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId, productId } = req.params;
+      const updatedProduct = await adminService.linkProductToOperation(productId, operationId);
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error("Admin link product error:", error);
+      res.status(500).json({ message: "Erro ao vincular produto" });
+    }
+  });
+
+  app.delete("/api/admin/operations/:operationId/products/:productId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { productId } = req.params;
+      const updatedProduct = await adminService.unlinkProductFromOperation(productId);
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error("Admin unlink product error:", error);
+      res.status(500).json({ message: "Erro ao desvincular produto" });
+    }
+  });
+
   app.get("/api/admin/clients", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const allUsers = await db

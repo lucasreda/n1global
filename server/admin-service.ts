@@ -154,10 +154,13 @@ export class AdminService {
         .select({
           id: operations.id,
           name: operations.name,
+          description: operations.description,
           storeId: operations.storeId,
           storeName: stores.name,
+          ownerId: operations.ownerId,
           country: operations.country,
           currency: operations.currency,
+          operationType: operations.operationType,
           status: operations.status,
           createdAt: operations.createdAt
         })
@@ -656,6 +659,178 @@ export class AdminService {
       return deletedProduct;
     } catch (error) {
       console.error('❌ Error deleting product:', error);
+      throw error;
+    }
+  }
+
+  async createOperation(operationData: {
+    name: string;
+    description?: string;
+    storeId: string;
+    ownerId?: string;
+    country: string;
+    currency?: string;
+    operationType?: string;
+    status?: string;
+  }) {
+    try {
+      const operationValues: any = {
+        name: operationData.name,
+        storeId: operationData.storeId,
+        country: operationData.country,
+        currency: operationData.currency || 'EUR',
+        operationType: operationData.operationType || 'Cash on Delivery',
+        status: operationData.status || 'active'
+      };
+
+      if (operationData.description) {
+        operationValues.description = operationData.description;
+      }
+      
+      if (operationData.ownerId) {
+        operationValues.ownerId = operationData.ownerId;
+      }
+
+      const [newOperation] = await db
+        .insert(operations)
+        .values(operationValues)
+        .returning();
+
+      return newOperation;
+    } catch (error) {
+      console.error('❌ Error creating operation:', error);
+      throw error;
+    }
+  }
+
+  async updateOperation(operationId: string, operationData: {
+    name?: string;
+    description?: string;
+    ownerId?: string;
+    country?: string;
+    currency?: string;
+    operationType?: string;
+    status?: string;
+  }) {
+    try {
+      const updateData: any = { updatedAt: new Date() };
+      
+      if (operationData.name !== undefined) updateData.name = operationData.name;
+      if (operationData.description !== undefined) updateData.description = operationData.description;
+      if (operationData.ownerId !== undefined) updateData.ownerId = operationData.ownerId;
+      if (operationData.country !== undefined) updateData.country = operationData.country;
+      if (operationData.currency !== undefined) updateData.currency = operationData.currency;
+      if (operationData.operationType !== undefined) updateData.operationType = operationData.operationType;
+      if (operationData.status !== undefined) updateData.status = operationData.status;
+
+      const [updatedOperation] = await db
+        .update(operations)
+        .set(updateData)
+        .where(eq(operations.id, operationId))
+        .returning();
+
+      if (!updatedOperation) {
+        throw new Error('Operation not found');
+      }
+
+      return updatedOperation;
+    } catch (error) {
+      console.error('❌ Error updating operation:', error);
+      throw error;
+    }
+  }
+
+  async deleteOperation(operationId: string) {
+    try {
+      // Delete the operation
+      const [deletedOperation] = await db
+        .delete(operations)
+        .where(eq(operations.id, operationId))
+        .returning();
+
+      if (!deletedOperation) {
+        throw new Error('Operation not found');
+      }
+
+      return deletedOperation;
+    } catch (error) {
+      console.error('❌ Error deleting operation:', error);
+      throw error;
+    }
+  }
+
+  async getOperationProducts(operationId: string) {
+    try {
+      const operationProducts = await db
+        .select({
+          id: products.id,
+          sku: products.sku,
+          name: products.name,
+          type: products.type,
+          description: products.description,
+          price: products.price,
+          costPrice: products.costPrice,
+          shippingCost: products.shippingCost,
+          imageUrl: products.imageUrl,
+          isActive: products.isActive,
+          status: products.status
+        })
+        .from(products)
+        .where(eq(products.operationId, operationId))
+        .orderBy(desc(products.createdAt));
+
+      return operationProducts.map(product => ({
+        ...product,
+        price: Number(product.price) || 0,
+        costPrice: Number(product.costPrice) || 0,
+        shippingCost: Number(product.shippingCost) || 0
+      }));
+    } catch (error) {
+      console.error('❌ Error getting operation products:', error);
+      throw error;
+    }
+  }
+
+  async linkProductToOperation(productId: string, operationId: string) {
+    try {
+      const [updatedProduct] = await db
+        .update(products)
+        .set({ 
+          operationId,
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, productId))
+        .returning();
+
+      if (!updatedProduct) {
+        throw new Error('Product not found');
+      }
+
+      return updatedProduct;
+    } catch (error) {
+      console.error('❌ Error linking product to operation:', error);
+      throw error;
+    }
+  }
+
+  async unlinkProductFromOperation(productId: string) {
+    try {
+      const [updatedProduct] = await db
+        .update(products)
+        .set({ 
+          operationId: null,
+          updatedAt: new Date()
+        })
+        .where(eq(products.id, productId))
+        .returning();
+
+      if (!updatedProduct) {
+        throw new Error('Product not found');
+      }
+
+      return updatedProduct;
+    } catch (error) {
+      console.error('❌ Error unlinking product from operation:', error);
       throw error;
     }
   }
