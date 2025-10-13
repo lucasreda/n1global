@@ -36,7 +36,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       target: 'body',
       content: (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold">Bem-vindo ao COD Dashboard! 🎉</h3>
+          <h3 className="text-lg font-bold">Bem-vindo ao N1 Dashboard! 🎉</h3>
           <p className="text-sm">
             Vamos fazer um tour rápido pelas principais funcionalidades da plataforma.
             Você pode pular o tour a qualquer momento.
@@ -168,7 +168,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         <div className="space-y-3">
           <h3 className="text-lg font-bold">Pronto! 🎊</h3>
           <p className="text-sm">
-            Você concluiu o tour do COD Dashboard. Agora você já conhece as principais
+            Você concluiu o tour do N1 Dashboard. Agora você já conhece as principais
             funcionalidades da plataforma.
           </p>
           <p className="text-sm text-muted-foreground">
