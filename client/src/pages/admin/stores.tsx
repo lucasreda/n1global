@@ -798,18 +798,7 @@ export default function AdminOperations() {
                     Selecione os produtos que farão parte desta operação.
                   </div>
                   
-                  {/* Search field */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      placeholder="Buscar por nome ou SKU..."
-                      value={productSearchTerm}
-                      onChange={(e) => setProductSearchTerm(e.target.value)}
-                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-500"
-                    />
-                  </div>
-                  
-                  <div className="bg-white/5 border border-white/20 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
                     <h4 className="text-sm font-medium text-white mb-3">
                       <Package className="inline h-4 w-4 mr-2" />
                       Produtos Disponíveis
@@ -819,6 +808,19 @@ export default function AdminOperations() {
                         </span>
                       )}
                     </h4>
+                    
+                    {/* Search field */}
+                    <div className="relative mb-4">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Buscar por nome ou SKU..."
+                        value={productSearchTerm}
+                        onChange={(e) => setProductSearchTerm(e.target.value)}
+                        className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-500"
+                      />
+                    </div>
+                    
+                    <div className="max-h-[350px] overflow-y-auto">
                     
                     {allProducts && allProducts.length > 0 ? (
                       (() => {
@@ -886,6 +888,7 @@ export default function AdminOperations() {
                         Nenhum produto disponível no momento.
                       </div>
                     )}
+                    </div>
                   </div>
                   
                   {/* Products summary */}
