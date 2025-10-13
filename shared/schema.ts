@@ -273,6 +273,24 @@ export const facebookAdsIntegrations = pgTable("facebook_ads_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Google Ads integrations - per operation
+export const googleAdsIntegrations = pgTable("google_ads_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  operationId: varchar("operation_id").notNull().references(() => operations.id),
+  
+  customerId: text("customer_id").notNull(), // Google Ads Customer ID
+  accountName: text("account_name"),
+  refreshToken: text("refresh_token").notNull(),
+  
+  selectedCampaignIds: text("selected_campaign_ids").array().default([]), // Array of campaign IDs
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
+  lastSyncAt: timestamp("last_sync_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // European Fulfillment integration - per operation 
 export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -527,6 +545,13 @@ export const insertFacebookAdsIntegrationSchema = createInsertSchema(facebookAds
   updatedAt: true,
 });
 
+// Google Ads integration schemas
+export const insertGoogleAdsIntegrationSchema = createInsertSchema(googleAdsIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Fulfillment integration schemas
 export const insertFulfillmentIntegrationSchema = createInsertSchema(fulfillmentIntegrations).omit({
   id: true,
@@ -636,6 +661,9 @@ export type InsertOperation = z.infer<typeof insertOperationSchema>;
 
 export type FacebookAdsIntegration = typeof facebookAdsIntegrations.$inferSelect;
 export type InsertFacebookAdsIntegration = z.infer<typeof insertFacebookAdsIntegrationSchema>;
+
+export type GoogleAdsIntegration = typeof googleAdsIntegrations.$inferSelect;
+export type InsertGoogleAdsIntegration = z.infer<typeof insertGoogleAdsIntegrationSchema>;
 
 export type FulfillmentIntegration = typeof fulfillmentIntegrations.$inferSelect;
 export type InsertFulfillmentIntegration = z.infer<typeof insertFulfillmentIntegrationSchema>;
