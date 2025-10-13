@@ -5,8 +5,8 @@ interface TourGuideProps {
   run: boolean;
   onComplete: () => void;
   onSkip: () => void;
-  currentPage: 'dashboard' | 'integrations' | 'ads';
-  onNavigate: (page: 'dashboard' | 'integrations' | 'ads') => void;
+  currentPage: 'dashboard' | 'integrations' | 'ads' | 'sync-orders';
+  onNavigate: (page: 'dashboard' | 'integrations' | 'ads' | 'sync-orders') => void;
 }
 
 export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: TourGuideProps) {
@@ -270,6 +270,28 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
     },
   ];
 
+  const getSyncOrdersSteps = (): Step[] => [
+    {
+      target: '[data-testid="button-sync-complete"]',
+      content: (
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold">Importe seus Pedidos! 📦</h3>
+          <p className="text-sm">
+            Agora que você configurou sua plataforma e armazém, clique em <strong>Sync Completo</strong> para importar todos os seus pedidos.
+          </p>
+          <p className="text-sm">
+            Esta sincronização vai trazer os dados da sua plataforma (Shopify/CartPanda) e do armazém, permitindo que você gerencie tudo em um só lugar.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Pode levar alguns minutos dependendo da quantidade de pedidos.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
+  ];
+
   const getAllSteps = (): Step[] => {
     // Return steps based on current page
     if (currentPage === 'dashboard') {
@@ -278,6 +300,8 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       return getIntegrationsSteps();
     } else if (currentPage === 'ads') {
       return getAdsSteps();
+    } else if (currentPage === 'sync-orders') {
+      return getSyncOrdersSteps();
     }
     
     return [];
@@ -292,6 +316,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       const dashboardSteps = getDashboardSteps();
       const integrationsSteps = getIntegrationsSteps();
       const adsSteps = getAdsSteps();
+      const syncOrdersSteps = getSyncOrdersSteps();
 
       // Lógica de navegação entre páginas ANTES de verificar status
       if (type === 'step:after' && action === 'next') {
@@ -300,11 +325,20 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
           index, 
           dashboardLength: dashboardSteps.length,
           integrationsLength: integrationsSteps.length,
-          adsLength: adsSteps.length
+          adsLength: adsSteps.length,
+          syncOrdersLength: syncOrdersSteps.length
         });
 
+        // Se é tour de sync-orders (apenas 1 step), apenas completa e para o tour
+        if (currentPage === 'sync-orders' && index === syncOrdersSteps.length - 1) {
+          console.log('✅ Sync tour completed! Stopping tour.');
+          setTimeout(() => {
+            onComplete();
+          }, 300);
+          return;
+        }
         // Se terminou os steps do dashboard, vai para integrations
-        if (currentPage === 'dashboard' && index === dashboardSteps.length - 1) {
+        else if (currentPage === 'dashboard' && index === dashboardSteps.length - 1) {
           console.log('🔄 Navigating to integrations');
           setTimeout(() => {
             onNavigate('integrations');

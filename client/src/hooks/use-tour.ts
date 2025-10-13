@@ -6,7 +6,7 @@ import { apiRequest } from '@/lib/queryClient';
 
 export function useTour() {
   const [isTourRunning, setIsTourRunning] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'integrations' | 'ads'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'integrations' | 'ads' | 'sync-orders'>('dashboard');
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -79,6 +79,13 @@ export function useTour() {
     setCurrentPage('dashboard');
   }, []);
 
+  // Iniciar tour focado em Sync (após configurar integrações)
+  const startSyncTour = useCallback(() => {
+    console.log('🚀 startSyncTour called - starting sync-focused tour');
+    setIsTourRunning(true);
+    setCurrentPage('sync-orders');
+  }, []);
+
   // Parar o tour
   const stopTour = useCallback(() => {
     setIsTourRunning(false);
@@ -102,7 +109,7 @@ export function useTour() {
   }, [resetTourMutation]);
 
   // Navegar para outra página durante o tour
-  const navigateToPage = useCallback((page: 'dashboard' | 'integrations' | 'ads') => {
+  const navigateToPage = useCallback((page: 'dashboard' | 'integrations' | 'ads' | 'sync-orders') => {
     setCurrentPage(page);
   }, []);
 
@@ -110,6 +117,7 @@ export function useTour() {
     isTourRunning,
     currentPage,
     startTour,
+    startSyncTour,
     stopTour,
     completeTour,
     skipTour,

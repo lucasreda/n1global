@@ -3,13 +3,14 @@ import { useTour } from '@/hooks/use-tour';
 
 interface TourContextType {
   isTourRunning: boolean;
-  currentPage: 'dashboard' | 'integrations' | 'ads';
+  currentPage: 'dashboard' | 'integrations' | 'ads' | 'sync-orders';
   startTour: () => void;
+  startSyncTour: () => void;
   stopTour: () => void;
   completeTour: () => void;
   skipTour: () => void;
   resetTour: () => void;
-  navigateToPage: (page: 'dashboard' | 'integrations' | 'ads') => void;
+  navigateToPage: (page: 'dashboard' | 'integrations' | 'ads' | 'sync-orders') => void;
   isCompletingTour: boolean;
   isResettingTour: boolean;
 }
