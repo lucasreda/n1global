@@ -194,14 +194,13 @@ export class WebhookService {
     message: string;
   }> {
     try {
-      const testPayload: WebhookPayload = {
+      // Send test payload with fields at root level for compatibility
+      const testPayload: any = {
         event: 'test',
-        order: {
-          id: 'test-order-123',
-          customer_email: 'test@example.com',
-          customer_name: 'Test Customer',
-          phone: '+1234567890',
-        },
+        customer_email: 'test@example.com',
+        customer_name: 'Test Customer',
+        phone: '+1234567890',
+        order_id: 'test-order-123',
       };
 
       const result = await this.sendWebhookWithRetry(
