@@ -62,7 +62,7 @@ export function VisualEditorV4({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 3, // Reduced from 8px to 3px for easier drag initiation
       },
     }),
     useSensor(KeyboardSensor)
@@ -455,12 +455,17 @@ export function VisualEditorV4({
 
   // Drag and drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    console.log('🎯 DRAG START:', event.active.id, event.active.data.current);
     setActiveId(event.active.id as string);
     
     // Capture template being dragged
     const activeData = event.active.data.current;
     if (activeData?.kind === 'template') {
       setDraggedTemplate(activeData.template as PageNodeV4);
+      console.log('📦 Dragging template:', activeData.template);
+    } else if (activeData?.kind === 'node') {
+      setDraggedTemplate(null);
+      console.log('📦 Dragging existing node:', activeData.nodeId);
     } else {
       setDraggedTemplate(null);
     }

@@ -322,6 +322,16 @@ function PageNodeV4Renderer({
       nodeId: node.id,
     },
   });
+  
+  // Debug: Log draggable setup
+  useEffect(() => {
+    console.log('🔧 Draggable setup for node:', node.id, {
+      hasListeners: !!draggableListeners,
+      hasAttributes: !!draggableAttributes,
+      isDragging,
+      listeners: draggableListeners
+    });
+  }, [node.id, isDragging]);
 
   // Three separate drop zones: before, after, inner
   const { setNodeRef: setBeforeDropRef, isOver: isOverBefore } = useDroppable({
@@ -372,6 +382,13 @@ function PageNodeV4Renderer({
   // This prevents HTML content from escaping the preview area and overlaying editor controls
   if (finalStyles.position === 'fixed') {
     finalStyles.position = 'absolute';
+  }
+  
+  // Add cursor:grab for draggable elements
+  if (draggableListeners && !isDragging) {
+    finalStyles.cursor = 'grab';
+  } else if (isDragging) {
+    finalStyles.cursor = 'grabbing';
   }
   
   // FIX: Remove unwanted overflow:auto that creates spurious scrollbars
