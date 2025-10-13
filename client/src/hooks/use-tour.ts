@@ -12,15 +12,7 @@ export function useTour() {
   // Mutation para completar o tour
   const completeTourMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/tour/complete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to complete tour');
-      return response.json();
+      return await apiRequest('/api/tour/complete', 'POST', {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -41,15 +33,7 @@ export function useTour() {
   // Mutation para resetar o tour
   const resetTourMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/tour/reset', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to reset tour');
-      return response.json();
+      return await apiRequest('/api/tour/reset', 'POST', {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -71,6 +55,7 @@ export function useTour() {
 
   // Iniciar o tour
   const startTour = useCallback(() => {
+    console.log('🚀 startTour called - setting isTourRunning to true');
     setIsTourRunning(true);
     setCurrentPage('dashboard');
   }, []);

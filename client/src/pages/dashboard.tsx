@@ -34,7 +34,9 @@ export default function Dashboard() {
 
   // Auto-start tour if not completed
   useEffect(() => {
+    console.log('🎯 Tour auto-start check:', { user, tourCompleted: user?.tourCompleted });
     if (user && user.tourCompleted === false) {
+      console.log('✅ Starting tour automatically!');
       startTour();
     }
   }, [user, startTour]);
