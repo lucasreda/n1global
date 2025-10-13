@@ -665,6 +665,99 @@ export default function AdminUsers() {
                   </Select>
                 </div>
 
+                {/* Account Status Card */}
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${editUserData.isActive ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                        {editUserData.isActive ? '✅' : '🔒'}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-white mb-1">
+                        Status da Conta
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {editUserData.isActive 
+                          ? 'Conta ativa - usuário pode fazer login'
+                          : 'Conta desativada - acesso bloqueado'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Checkbox
+                        checked={editUserData.isActive}
+                        onCheckedChange={(checked) => 
+                          setEditUserData({ ...editUserData, isActive: checked === true })
+                        }
+                        data-testid="checkbox-user-active"
+                      />
+                    </div>
+                  </div>
+                  {!editUserData.isActive && (
+                    <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400">
+                      ⚠️ Este usuário não poderá acessar o sistema até que a conta seja reativada
+                    </div>
+                  )}
+                </div>
+
+                {/* Activity Statistics Card */}
+                {userToEdit?.lastLoginAt && (
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/20">
+                          📊
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-white mb-1">
+                          Atividade Recente
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Último login: {new Date(userToEdit.lastLoginAt).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Security Card */}
+                <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${editUserData.forcePasswordChange ? 'bg-orange-500/20' : 'bg-gray-500/20'}`}>
+                        🔐
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-white mb-1">
+                        Segurança da Senha
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        {editUserData.forcePasswordChange 
+                          ? 'Usuário será obrigado a alterar a senha no próximo login'
+                          : 'Nenhuma ação de segurança pendente'
+                        }
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Checkbox
+                        checked={editUserData.forcePasswordChange}
+                        onCheckedChange={(checked) => 
+                          setEditUserData({ ...editUserData, forcePasswordChange: checked === true })
+                        }
+                        data-testid="checkbox-force-password-change"
+                      />
+                    </div>
+                  </div>
+                  {editUserData.forcePasswordChange && (
+                    <div className="mt-3 p-2 bg-orange-500/10 border border-orange-500/20 rounded text-xs text-orange-400">
+                      🔔 O usuário receberá um aviso para alterar sua senha imediatamente após o login
+                    </div>
+                  )}
+                </div>
+
                 {/* Onboarding Status Card */}
                 <div className="bg-white/5 border border-white/20 rounded-lg p-4">
                   <div className="flex items-center gap-3">
