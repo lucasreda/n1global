@@ -4403,7 +4403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/admin/users - Create new user (Super Admin only)
   app.post("/api/admin/users", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
-      const { name, email, password, role, permissions } = req.body;
+      const { name, email, password, role, permissions, operationIds } = req.body;
 
       // Validação dos campos obrigatórios
       if (!name || !email || !password) {
@@ -4457,6 +4457,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: users.createdAt,
         permissions: users.permissions
       });
+
+      // Vincular operações se foram fornecidas
+      if (operationIds && Array.isArray(operationIds) && operationIds.length > 0) {
+        await Promise.all(
+          operationIds.map((operationId: string) =>
+            db.insert(userOperationAccess).values({
+              userId: newUser.id,
+              operationId
+            })
+          )
+        );
+      }
 
       res.status(201).json(newUser);
     } catch (error) {

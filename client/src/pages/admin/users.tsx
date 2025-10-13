@@ -75,7 +75,8 @@ export default function AdminUsers() {
     name: '',
     email: '',
     password: '',
-    role: 'store'
+    role: 'store',
+    operationIds: [] as string[]
   });
   const [editUserData, setEditUserData] = useState({
     name: '',
@@ -175,7 +176,7 @@ export default function AdminUsers() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (userData: { name: string; email: string; password: string; role: string }) => {
+    mutationFn: async (userData: { name: string; email: string; password: string; role: string; operationIds: string[] }) => {
       const token = localStorage.getItem("auth_token");
       const response = await fetch('/api/admin/users', {
         method: 'POST',
@@ -202,7 +203,7 @@ export default function AdminUsers() {
         description: "O usuário foi criado com sucesso.",
       });
       setShowCreateUserModal(false);
-      setNewUserData({ name: '', email: '', password: '', role: 'store' });
+      setNewUserData({ name: '', email: '', password: '', role: 'store', operationIds: [] });
     },
     onError: (error: Error) => {
       toast({
@@ -584,6 +585,55 @@ export default function AdminUsers() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Operations Selection */}
+            {(newUserData.role === 'user' || newUserData.role === 'store') && (
+              <div className="space-y-2">
+                <Label>Operações</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Selecione quais operações este usuário terá acesso
+                </p>
+                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                  {allOperations && allOperations.length > 0 ? (
+                    allOperations.map((op) => (
+                      <div key={op.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`new-op-${op.id}`}
+                          checked={newUserData.operationIds.includes(op.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setNewUserData({
+                                ...newUserData,
+                                operationIds: [...newUserData.operationIds, op.id]
+                              });
+                            } else {
+                              setNewUserData({
+                                ...newUserData,
+                                operationIds: newUserData.operationIds.filter(id => id !== op.id)
+                              });
+                            }
+                          }}
+                          data-testid={`checkbox-new-operation-${op.id}`}
+                        />
+                        <label
+                          htmlFor={`new-op-${op.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {op.name}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Nenhuma operação disponível</p>
+                  )}
+                </div>
+                {newUserData.operationIds.length > 0 && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    {newUserData.operationIds.length} operação(ões) selecionada(s)
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateUserModal(false)}>
