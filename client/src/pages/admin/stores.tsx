@@ -17,7 +17,8 @@ import {
   Trash2,
   ShoppingCart,
   Users,
-  Package
+  Package,
+  Search
 } from "lucide-react";
 
 interface Operation {
@@ -112,6 +113,7 @@ export default function AdminOperations() {
   });
 
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -796,56 +798,89 @@ export default function AdminOperations() {
                     Selecione os produtos que farão parte desta operação.
                   </div>
                   
+                  {/* Search field */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Buscar por nome ou SKU..."
+                      value={productSearchTerm}
+                      onChange={(e) => setProductSearchTerm(e.target.value)}
+                      className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-500"
+                    />
+                  </div>
+                  
                   <div className="bg-white/5 border border-white/20 rounded-lg p-4 max-h-[400px] overflow-y-auto">
                     <h4 className="text-sm font-medium text-white mb-3">
                       <Package className="inline h-4 w-4 mr-2" />
                       Produtos Disponíveis
+                      {productSearchTerm && (
+                        <span className="ml-2 text-xs text-slate-400">
+                          (filtrado)
+                        </span>
+                      )}
                     </h4>
                     
                     {allProducts && allProducts.length > 0 ? (
-                      <div className="grid grid-cols-1 gap-3">
-                        {allProducts.map((product) => {
-                          const isSelected = selectedProductIds.includes(product.id);
-                          
+                      (() => {
+                        const filteredProducts = allProducts.filter(product => {
+                          if (!productSearchTerm) return true;
+                          const searchLower = productSearchTerm.toLowerCase();
                           return (
-                            <div 
-                              key={product.id}
-                              className={`flex items-start space-x-3 p-3 rounded-md border transition-colors ${
-                                isSelected 
-                                  ? 'bg-blue-50/10 border-blue-500/30' 
-                                  : 'bg-white/5 border-white/20'
-                              }`}
-                              data-testid={`product-${product.id}`}
-                            >
-                              <Checkbox 
-                                checked={isSelected}
-                                onCheckedChange={() => toggleProduct(product.id)}
-                                className="mt-1"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-white">
-                                    {product.name}
-                                  </span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {product.sku}
-                                  </Badge>
-                                </div>
-                                {product.description && (
-                                  <p className="text-xs text-slate-400 mt-1">
-                                    {product.description}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                                  <span>Preço: €{product.price.toFixed(2)}</span>
-                                  <span>•</span>
-                                  <span>Custo: €{product.costPrice.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            </div>
+                            product.name.toLowerCase().includes(searchLower) ||
+                            product.sku.toLowerCase().includes(searchLower)
                           );
-                        })}
-                      </div>
+                        });
+                        
+                        return filteredProducts.length > 0 ? (
+                          <div className="grid grid-cols-1 gap-3">
+                            {filteredProducts.map((product) => {
+                              const isSelected = selectedProductIds.includes(product.id);
+                              
+                              return (
+                                <div 
+                                  key={product.id}
+                                  className={`flex items-start space-x-3 p-3 rounded-md border transition-colors ${
+                                    isSelected 
+                                      ? 'bg-blue-50/10 border-blue-500/30' 
+                                      : 'bg-white/5 border-white/20'
+                                  }`}
+                                  data-testid={`product-${product.id}`}
+                                >
+                                  <Checkbox 
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleProduct(product.id)}
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-white">
+                                        {product.name}
+                                      </span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {product.sku}
+                                      </Badge>
+                                    </div>
+                                    {product.description && (
+                                      <p className="text-xs text-slate-400 mt-1">
+                                        {product.description}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                                      <span>Preço: €{product.price.toFixed(2)}</span>
+                                      <span>•</span>
+                                      <span>Custo: €{product.costPrice.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-slate-400">
+                            Nenhum produto encontrado com esse termo de busca.
+                          </div>
+                        );
+                      })()
                     ) : (
                       <div className="text-center py-8 text-slate-400">
                         Nenhum produto disponível no momento.
