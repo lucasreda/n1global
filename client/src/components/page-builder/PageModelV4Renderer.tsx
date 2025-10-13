@@ -413,7 +413,7 @@ function PageNodeV4Renderer({
   
   // Handle click to select node
   const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    // Don't stopPropagation - let drag events bubble
     if (onSelectNode) {
       onSelectNode(node.id);
     }
@@ -421,7 +421,7 @@ function PageNodeV4Renderer({
 
   // Handle hover events
   const handleMouseEnterNode = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    // Don't stopPropagation - let drag events bubble
     if (onMouseEnter) {
       const rect = e.currentTarget.getBoundingClientRect();
       onMouseEnter(
@@ -434,7 +434,7 @@ function PageNodeV4Renderer({
   };
 
   const handleMouseLeaveNode = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    // Don't stopPropagation - let drag events bubble
     if (onMouseLeave) {
       onMouseLeave();
     }
