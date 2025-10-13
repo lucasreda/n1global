@@ -20,7 +20,8 @@ import {
   Package,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ImageIcon
 } from "lucide-react";
 
 interface Operation {
@@ -862,6 +863,19 @@ export default function AdminOperations() {
                                   }`}
                                   data-testid={`product-${product.id}`}
                                 >
+                                  {/* Product Image or Placeholder */}
+                                  {product.imageUrl ? (
+                                    <img 
+                                      src={product.imageUrl} 
+                                      alt={product.name}
+                                      className="w-12 h-12 rounded-md object-cover flex-shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="w-12 h-12 rounded-md bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
+                                      <ImageIcon className="h-6 w-6 text-slate-500" />
+                                    </div>
+                                  )}
+                                  
                                   <Checkbox 
                                     checked={isSelected}
                                     onCheckedChange={() => toggleProduct(product.id)}
