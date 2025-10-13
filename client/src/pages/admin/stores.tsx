@@ -502,7 +502,6 @@ export default function AdminOperations() {
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <th className="text-left py-3 px-4 font-semibold">Operação</th>
-                    <th className="text-left py-3 px-4 font-semibold">Loja</th>
                     <th className="text-left py-3 px-4 font-semibold">País</th>
                     <th className="text-left py-3 px-4 font-semibold">Moeda</th>
                     <th className="text-left py-3 px-4 font-semibold">Tipo</th>
@@ -525,9 +524,6 @@ export default function AdminOperations() {
                             <p className="text-sm text-muted-foreground">{operation.description}</p>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm">{operation.storeName}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="font-medium">{operation.country}</span>
