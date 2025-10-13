@@ -149,10 +149,8 @@ export class WebhookService {
         return;
       }
 
-      // Build webhook payload (fields at root level for compatibility)
+      // Build webhook payload (only required fields for operational app)
       const payload: any = {
-        event: 'order.created',
-        order_id: order.id,
         customer_email: order.customerEmail,
         customer_name: order.customerName,
         phone: order.customerPhone,
@@ -192,13 +190,11 @@ export class WebhookService {
     message: string;
   }> {
     try {
-      // Send test payload with fields at root level for compatibility
+      // Send test payload (only required fields for operational app)
       const testPayload: any = {
-        event: 'test',
         customer_email: 'test@example.com',
         customer_name: 'Test Customer',
         phone: '+1234567890',
-        order_id: 'test-order-123',
       };
 
       const result = await this.sendWebhookWithRetry(
