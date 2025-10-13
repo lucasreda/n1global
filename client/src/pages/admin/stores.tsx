@@ -102,7 +102,7 @@ export default function AdminOperations() {
   // Integration modal states
   const [showPlatformModal, setShowPlatformModal] = useState(false);
   const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
-  const [showFacebookAdsModal, setShowFacebookAdsModal] = useState(false);
+  const [showAdsModal, setShowAdsModal] = useState(false);
   const [platformData, setPlatformData] = useState({ 
     platform: 'shopify',
     shopName: '', 
@@ -119,7 +119,15 @@ export default function AdminOperations() {
     secret: ''
   });
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
-  const [facebookAdsData, setFacebookAdsData] = useState({ accountId: '', accountName: '', accessToken: '' });
+  const [adsData, setAdsData] = useState({ 
+    platform: 'meta',
+    accountId: '', 
+    accountName: '', 
+    accessToken: '',
+    customerId: '',
+    refreshToken: ''
+  });
+  const [editingAdsId, setEditingAdsId] = useState<string | null>(null);
   
   const [newOperationData, setNewOperationData] = useState({
     name: '',
@@ -376,7 +384,7 @@ export default function AdminOperations() {
   const { data: operationIntegrations, refetch: refetchIntegrations} = useQuery<{
     platforms: any[];
     fulfillments: any[];
-    facebookAds: any | null;
+    adsAccounts: any[];
   }>({
     queryKey: ['/api/admin/operations', operationToEdit?.id, 'integrations'],
     enabled: !!operationToEdit && showEditModal && activeTab === 'integrations'
@@ -547,18 +555,27 @@ export default function AdminOperations() {
     },
   });
 
-  const saveFacebookAdsIntegrationMutation = useMutation({
-    mutationFn: async (data: typeof facebookAdsData) => {
+  const saveAdsIntegrationMutation = useMutation({
+    mutationFn: async (data: typeof adsData) => {
       if (!operationToEdit) throw new Error('Operação não selecionada');
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`/api/admin/operations/${operationToEdit.id}/integrations/facebook-ads`, {
+      
+      const endpoint = data.platform === 'meta' 
+        ? `/api/admin/operations/${operationToEdit.id}/integrations/meta-ads`
+        : `/api/admin/operations/${operationToEdit.id}/integrations/google-ads`;
+      
+      const body = data.platform === 'meta'
+        ? { accountId: data.accountId, accountName: data.accountName, accessToken: data.accessToken, integrationId: editingAdsId }
+        : { customerId: data.customerId, accountName: data.accountName, refreshToken: data.refreshToken, integrationId: editingAdsId };
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
         credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       });
       
       if (!response.ok) {
@@ -570,10 +587,18 @@ export default function AdminOperations() {
     },
     onSuccess: () => {
       refetchIntegrations();
-      setShowFacebookAdsModal(false);
-      setFacebookAdsData({ accountId: '', accountName: '', accessToken: '' });
+      setShowAdsModal(false);
+      setEditingAdsId(null);
+      setAdsData({ 
+        platform: 'meta',
+        accountId: '', 
+        accountName: '', 
+        accessToken: '',
+        customerId: '',
+        refreshToken: ''
+      });
       toast({
-        title: "Integração Facebook Ads salva",
+        title: "Conta de anúncios salva",
         description: "A integração foi configurada com sucesso.",
       });
     },
@@ -585,6 +610,53 @@ export default function AdminOperations() {
       });
     },
   });
+
+  const deleteAdsIntegrationMutation = useMutation({
+    mutationFn: async ({ integrationId, platform }: { integrationId: string, platform: string }) => {
+      if (!operationToEdit) throw new Error('Operação não selecionada');
+      const token = localStorage.getItem("auth_token");
+      
+      const endpoint = platform === 'meta'
+        ? `/api/admin/operations/${operationToEdit.id}/integrations/meta-ads/${integrationId}`
+        : `/api/admin/operations/${operationToEdit.id}/integrations/google-ads/${integrationId}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao remover conta de anúncios');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchIntegrations();
+      toast({
+        title: "Conta de anúncios removida",
+        description: "A conta foi removida com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover conta de anúncios",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteAds = async (integrationId: string, platform: string) => {
+    if (confirm('Tem certeza que deseja remover esta conta de anúncios?')) {
+      deleteAdsIntegrationMutation.mutate({ integrationId, platform });
+    }
+  };
 
   const deleteFulfillmentIntegrationMutation = useMutation({
     mutationFn: async (integrationId: string) => {
@@ -1517,55 +1589,137 @@ export default function AdminOperations() {
                         </div>
                       </div>
                       
-                      {/* Facebook Ads Integration */}
+                      {/* Ads Accounts Section */}
                       <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                               <Globe className="h-5 w-5 text-purple-400" />
                             </div>
                             <div>
-                              <h5 className="text-sm font-medium text-white">Facebook Ads</h5>
+                              <h5 className="text-sm font-medium text-white">Anúncios</h5>
                               <p className="text-xs text-slate-400">
-                                {operationIntegrations?.facebookAds ? 
-                                  `Conta: ${operationIntegrations.facebookAds.accountName || operationIntegrations.facebookAds.accountId}` : 
-                                  'Campanhas publicitárias'
-                                }
+                                {operationIntegrations?.adsAccounts?.length || 0} {operationIntegrations?.adsAccounts?.length === 1 ? 'conta configurada' : 'contas configuradas'}
                               </p>
                             </div>
                           </div>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${
-                              operationIntegrations?.facebookAds?.status === 'active' 
-                                ? 'bg-green-500/20 text-green-400 border-green-500/30' 
-                                : 'text-slate-400'
-                            }`}
-                          >
-                            {operationIntegrations?.facebookAds ? 
-                              (operationIntegrations.facebookAds.status === 'active' ? 'Ativo' : 'Erro') 
-                              : 'Não configurado'
-                            }
-                          </Badge>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            if (operationIntegrations?.facebookAds) {
-                              setFacebookAdsData({
-                                accountId: operationIntegrations.facebookAds.accountId || '',
-                                accountName: operationIntegrations.facebookAds.accountName || '',
-                                accessToken: operationIntegrations.facebookAds.accessToken || ''
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setAdsData({
+                                platform: 'meta',
+                                accountId: '', 
+                                accountName: '', 
+                                accessToken: '',
+                                customerId: '',
+                                refreshToken: ''
                               });
-                            }
-                            setShowFacebookAdsModal(true);
-                          }}
-                          className="w-full text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
-                        >
-                          <Settings className="h-3 w-3 mr-2" />
-                          {operationIntegrations?.facebookAds ? 'Editar' : 'Configurar'}
-                        </Button>
+                              setEditingAdsId(null);
+                              setShowAdsModal(true);
+                            }}
+                            className="text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+                          >
+                            <Plus className="h-3 w-3 mr-2" />
+                            Adicionar
+                          </Button>
+                        </div>
+                        
+                        {/* List of configured ads accounts */}
+                        <div className="space-y-2">
+                          {operationIntegrations?.adsAccounts && operationIntegrations.adsAccounts.length > 0 ? (
+                            operationIntegrations.adsAccounts.map((account) => {
+                              const platformNames: Record<string, string> = {
+                                'meta': 'Meta Ads',
+                                'google': 'Google Ads'
+                              };
+                              
+                              const accountInfo = account.platform === 'meta'
+                                ? `Conta: ${(account as any).accountId || 'N/A'}`
+                                : `Cliente: ${(account as any).customerId || 'N/A'}`;
+                              
+                              return (
+                                <div key={account.id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between">
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium text-white">
+                                        {platformNames[account.platform] || account.platform}
+                                      </span>
+                                      <span className="text-xs text-slate-400">
+                                        {accountInfo}
+                                      </span>
+                                      {(account as any).accountName && (
+                                        <span className="text-xs text-slate-500">
+                                          {(account as any).accountName}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs ${
+                                        account.status === 'active' 
+                                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                          : account.status === 'pending'
+                                          ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                          : 'text-slate-400'
+                                      }`}
+                                    >
+                                      {account.status === 'active' ? 'Ativo' : account.status === 'pending' ? 'Pendente' : 'Erro'}
+                                    </Badge>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (account.platform === 'meta') {
+                                          setAdsData({
+                                            platform: 'meta',
+                                            accountId: (account as any).accountId || '',
+                                            accountName: (account as any).accountName || '',
+                                            accessToken: '',
+                                            customerId: '',
+                                            refreshToken: ''
+                                          });
+                                        } else {
+                                          setAdsData({
+                                            platform: 'google',
+                                            accountId: '',
+                                            accountName: (account as any).accountName || '',
+                                            accessToken: '',
+                                            customerId: (account as any).customerId || '',
+                                            refreshToken: ''
+                                          });
+                                        }
+                                        setEditingAdsId(account.id);
+                                        setShowAdsModal(true);
+                                      }}
+                                      className="h-8 px-2 text-slate-400 hover:text-white"
+                                      data-testid={`button-edit-ads-${account.id}`}
+                                    >
+                                      <Settings className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteAds(account.id, account.platform)}
+                                      className="h-8 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                      data-testid={`button-delete-ads-${account.id}`}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-center py-6 text-slate-400 text-sm">
+                              <Globe className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Nenhuma conta de anúncios configurada</p>
+                              <p className="text-xs mt-1">Clique em "Adicionar" para começar</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1866,58 +2020,128 @@ export default function AdminOperations() {
         </DialogContent>
       </Dialog>
 
-      {/* Facebook Ads Integration Modal */}
-      <Dialog open={showFacebookAdsModal} onOpenChange={setShowFacebookAdsModal}>
+      {/* Ads Integration Modal */}
+      <Dialog open={showAdsModal} onOpenChange={(open) => {
+        setShowAdsModal(open);
+        if (!open) {
+          setEditingAdsId(null);
+          setAdsData({ 
+            platform: 'meta',
+            accountId: '', 
+            accountName: '', 
+            accessToken: '',
+            customerId: '',
+            refreshToken: ''
+          });
+        }
+      }}>
         <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-white/20">
           <DialogHeader>
-            <DialogTitle>Configurar Integração Facebook Ads</DialogTitle>
+            <DialogTitle>{editingAdsId ? 'Editar Conta de Anúncios' : 'Adicionar Conta de Anúncios'}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Configure sua conta de anúncios do Facebook
+              Configure sua conta de anúncios (Meta ou Google)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="facebook-account-id" className="text-sm text-slate-400">Account ID</Label>
-              <Input
-                id="facebook-account-id"
-                placeholder="act_123456789"
-                value={facebookAdsData.accountId}
-                onChange={(e) => setFacebookAdsData({ ...facebookAdsData, accountId: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
+              <Label htmlFor="ads-platform" className="text-sm text-slate-400">Plataforma</Label>
+              <Select value={adsData.platform} onValueChange={(value) => setAdsData({ ...adsData, platform: value })}>
+                <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="meta" className="text-white hover:bg-gray-700">Meta Ads</SelectItem>
+                  <SelectItem value="google" className="text-white hover:bg-gray-700">Google Ads</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label htmlFor="facebook-account-name" className="text-sm text-slate-400">Nome da Conta (opcional)</Label>
-              <Input
-                id="facebook-account-name"
-                placeholder="Minha Conta de Anúncios"
-                value={facebookAdsData.accountName}
-                onChange={(e) => setFacebookAdsData({ ...facebookAdsData, accountName: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
-            <div>
-              <Label htmlFor="facebook-token" className="text-sm text-slate-400">Access Token</Label>
-              <Input
-                id="facebook-token"
-                type="password"
-                placeholder="EAAx..."
-                value={facebookAdsData.accessToken}
-                onChange={(e) => setFacebookAdsData({ ...facebookAdsData, accessToken: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
+            
+            {adsData.platform === 'meta' ? (
+              <>
+                <div>
+                  <Label htmlFor="ads-account-id" className="text-sm text-slate-400">Account ID</Label>
+                  <Input
+                    id="ads-account-id"
+                    placeholder="act_123456789"
+                    value={adsData.accountId}
+                    onChange={(e) => setAdsData({ ...adsData, accountId: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ads-account-name" className="text-sm text-slate-400">Nome da Conta (opcional)</Label>
+                  <Input
+                    id="ads-account-name"
+                    placeholder="Minha Conta de Anúncios"
+                    value={adsData.accountName}
+                    onChange={(e) => setAdsData({ ...adsData, accountName: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ads-access-token" className="text-sm text-slate-400">Access Token</Label>
+                  <Input
+                    id="ads-access-token"
+                    type="password"
+                    placeholder="EAAx..."
+                    value={adsData.accessToken}
+                    onChange={(e) => setAdsData({ ...adsData, accessToken: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="ads-customer-id" className="text-sm text-slate-400">Customer ID</Label>
+                  <Input
+                    id="ads-customer-id"
+                    placeholder="123-456-7890"
+                    value={adsData.customerId}
+                    onChange={(e) => setAdsData({ ...adsData, customerId: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ads-account-name-google" className="text-sm text-slate-400">Nome da Conta (opcional)</Label>
+                  <Input
+                    id="ads-account-name-google"
+                    placeholder="Minha Conta Google Ads"
+                    value={adsData.accountName}
+                    onChange={(e) => setAdsData({ ...adsData, accountName: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ads-refresh-token" className="text-sm text-slate-400">Refresh Token</Label>
+                  <Input
+                    id="ads-refresh-token"
+                    type="password"
+                    placeholder="Refresh token..."
+                    value={adsData.refreshToken}
+                    onChange={(e) => setAdsData({ ...adsData, refreshToken: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowFacebookAdsModal(false)} className="border-white/20 text-white hover:bg-white/10">
+            <Button variant="outline" onClick={() => setShowAdsModal(false)} className="border-white/20 text-white hover:bg-white/10">
               Cancelar
             </Button>
             <Button 
-              onClick={() => saveFacebookAdsIntegrationMutation.mutate(facebookAdsData)}
-              disabled={saveFacebookAdsIntegrationMutation.isPending || !facebookAdsData.accountId || !facebookAdsData.accessToken}
+              onClick={() => saveAdsIntegrationMutation.mutate(adsData)}
+              disabled={
+                saveAdsIntegrationMutation.isPending || 
+                (adsData.platform === 'meta' 
+                  ? (!adsData.accountId || !adsData.accessToken)
+                  : (!adsData.customerId || !adsData.refreshToken)
+                )
+              }
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              {saveFacebookAdsIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
+              {saveAdsIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
