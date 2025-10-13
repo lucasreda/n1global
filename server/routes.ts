@@ -983,9 +983,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referer: req.headers.referer
       });
       
-      let operations = await storage.getUserOperations(req.user.id);
-      console.log("📊 Initial operations found:", operations.length);
-      console.log("📊 Operations details:", operations.map(op => `${op.name} (${op.id})`));
+      // Get ALL operations from the database (not filtered by user)
+      const allOperations = await db
+        .select({
+          id: operations.id,
+          name: operations.name,
+          country: operations.country
+        })
+        .from(operations);
+      
+      console.log("📊 All operations found:", allOperations.length);
+      
+      // Return all operations instead of user-specific ones
+      res.json(allOperations);
+      return;
       
       // AUTO-SYNC: Se usuário não tem operações, verificar se existe outro usuário com mesmo email
       if (operations.length === 0 && req.user.email === 'fresh@teste.com') {
@@ -4600,23 +4611,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/operations - Get all operations (authenticated users)
-  app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
-    try {
-      const allOperations = await db
-        .select({
-          id: operations.id,
-          name: operations.name,
-          country: operations.country
-        })
-        .from(operations);
-
-      res.json(allOperations);
-    } catch (error) {
-      console.error("Error fetching operations:", error);
-      res.status(500).json({ message: "Erro interno do servidor" });
-    }
-  });
 
   app.get("/api/admin/stats", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
