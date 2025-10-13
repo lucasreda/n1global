@@ -9,6 +9,14 @@ Quality priority: Maximum quality and highest level possible ("atingir o mais al
 
 ## Recent Changes
 
+### Iframe Compatibility & Keyboard Shortcuts Fix (October 13, 2025)
+Fixed critical page builder issues with imported HTML containing iframes:
+- **HTML Attribute Normalization**: Created normalizeAttributes function that converts HTML attributes to React props (allowfullscreen→allowFullScreen, frameborder→frameBorder, etc.). Skips class/className as they're handled separately via node.classNames array
+- **Iframe Sandboxing**: All iframes automatically sandboxed with 'allow-same-origin' to prevent script execution and focus stealing. Smart style handling detects string vs object styles and safely merges pointer-events:none
+- **Keyboard Shortcuts Protection**: Enhanced keyboard event listeners to ignore events from iframes, preventing frozen shortcuts. Added focusin listener to redirect focus back to canvas when iframe attempts to steal it
+- **Canvas Focusability**: Added data-canvas-container and tabIndex to canvas div for proper focus management
+- **Results**: Zero React warnings, no "Invalid hook call" errors, all keyboard shortcuts (Ctrl+Z/Y, Delete, arrows, Escape) work correctly even with iframe-heavy pages
+
 ### Visual Editor V4 - Advanced Properties Panel (October 2025)
 Completed 10-stage expansion of PropertiesPanelV4 with professional page builder capabilities:
 - **ETAPA 1**: ShadowPicker with multi-layer box/text shadow editing, visual controls, presets
