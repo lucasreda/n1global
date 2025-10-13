@@ -4612,7 +4612,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("✅ Order created manually:", orderId, "for operation:", operation.name);
       
       // Dispatch webhook for operational app integration
-      await WebhookService.dispatchOrderCreatedWebhook(orderId, req.user!.id);
+      // Get the owner of the store/operation
+      const [store] = await db
+        .select({ ownerId: stores.ownerId })
+        .from(stores)
+        .where(eq(stores.id, operation.storeId))
+        .limit(1);
+      
+      if (store?.ownerId) {
+        await WebhookService.dispatchOrderCreatedWebhook(orderId, store.ownerId);
+      }
       
       res.status(201).json(newOrder);
     } catch (error) {
