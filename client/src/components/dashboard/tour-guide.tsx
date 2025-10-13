@@ -14,9 +14,10 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
   
   // Local state to handle delayed tour start
   const [isRunning, setIsRunning] = useState(false);
+  const [key, setKey] = useState(0); // Key to force remount
   
   useEffect(() => {
-    console.log('🎯 TourGuide useEffect - run changed:', { run, currentPage });
+    console.log('🎯 TourGuide useEffect - run or page changed:', { run, currentPage, isRunning });
     
     if (run && !isRunning) {
       // Small delay to ensure all elements are rendered
@@ -29,7 +30,23 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
     } else if (!run && isRunning) {
       setIsRunning(false);
     }
-  }, [run, isRunning, currentPage]);
+  }, [run, isRunning]);
+  
+  // Restart tour when page changes
+  useEffect(() => {
+    if (run && isRunning) {
+      console.log('🔄 Page changed, restarting tour:', currentPage);
+      setIsRunning(false);
+      setKey(prev => prev + 1);
+      
+      const timer = setTimeout(() => {
+        console.log('⏰ Restarting tour after page change');
+        setIsRunning(true);
+      }, 800);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentPage]);
   
   const getDashboardSteps = (): Step[] => [
     {
@@ -331,6 +348,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
 
   return (
     <Joyride
+      key={key}
       steps={getAllSteps()}
       run={isRunning}
       continuous
