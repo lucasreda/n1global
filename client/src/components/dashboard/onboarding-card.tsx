@@ -97,13 +97,6 @@ export function OnboardingCard() {
       completed: status.hasAdAccount,
       link: "/ads",
     },
-    {
-      id: "support",
-      label: "Email de Suporte",
-      description: "Configure o email de suporte com domínio",
-      completed: status.hasSupportEmail,
-      link: "/customer-support/settings",
-    },
   ];
 
   const completedSteps = steps.filter(step => step.completed).length;
