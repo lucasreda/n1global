@@ -55,6 +55,36 @@ interface User {
   role: string;
 }
 
+const getCountryFlag = (countryCode: string) => {
+  const flags: Record<string, string> = {
+    'BR': '🇧🇷',
+    'PT': '🇵🇹',
+    'ES': '🇪🇸',
+    'IT': '🇮🇹',
+    'FR': '🇫🇷',
+    'DE': '🇩🇪',
+    'UK': '🇬🇧',
+    'GB': '🇬🇧',
+    'US': '🇺🇸',
+    'PL': '🇵🇱',
+    'NL': '🇳🇱',
+    'BE': '🇧🇪',
+    'AT': '🇦🇹',
+    'CH': '🇨🇭',
+    'SE': '🇸🇪',
+    'NO': '🇳🇴',
+    'DK': '🇩🇰',
+    'FI': '🇫🇮',
+    'IE': '🇮🇪',
+    'GR': '🇬🇷',
+    'CZ': '🇨🇿',
+    'RO': '🇷🇴',
+    'HU': '🇭🇺',
+    'BG': '🇧🇬',
+  };
+  return flags[countryCode.toUpperCase()] || '🌍';
+};
+
 export default function AdminOperations() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -526,7 +556,10 @@ export default function AdminOperations() {
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="font-medium">{operation.country}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{getCountryFlag(operation.country)}</span>
+                          <span className="font-medium">{operation.country}</span>
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <span className="font-medium">{operation.currency}</span>
