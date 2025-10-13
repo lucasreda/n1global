@@ -892,7 +892,7 @@ export default function Ads() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString(), 'EUR')}</div>
+            <div className="text-2xl font-bold text-green-400">{formatCurrency(totalSpent.toString(), 'BRL')}</div>
             <p className="text-gray-400 text-sm">{allSelectedCampaigns.length} campanhas de todas as contas</p>
             
             {/* Breakdown por plataforma */}
@@ -962,7 +962,7 @@ export default function Ads() {
                                 <FacebookIcon size={12} />
                                 <span className="text-gray-300">Meta Ads</span>
                               </div>
-                              <span className="text-blue-400 font-medium">{formatCurrency(metaTotalSpent.toString(), 'EUR')}</span>
+                              <span className="text-blue-400 font-medium">{formatCurrency(metaTotalSpent.toString(), 'BRL')}</span>
                             </div>
                           )}
                           {googleTotalSpent > 0 && (
@@ -971,7 +971,7 @@ export default function Ads() {
                                 <GoogleAdsIcon size={12} />
                                 <span className="text-gray-300">Google Ads</span>
                               </div>
-                              <span className="text-red-400 font-medium">{formatCurrency(googleTotalSpent.toString(), 'EUR')}</span>
+                              <span className="text-red-400 font-medium">{formatCurrency(googleTotalSpent.toString(), 'BRL')}</span>
                             </div>
                           )}
                         </>
@@ -1187,7 +1187,7 @@ export default function Ads() {
                             <div>
                               <span className="text-gray-400">Gasto: </span>
                               <div className="flex flex-col">
-                                <span className="text-white font-medium">{formatCurrency(campaign.amountSpent, 'EUR')}</span>
+                                <span className="text-white font-medium">{formatCurrency(campaign.amountSpent, 'BRL')}</span>
                                 {campaign.originalCurrency && campaign.originalCurrency !== 'BRL' && formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency) && (
                                   <span className="text-gray-500 text-xs">
                                     {formatOriginalCurrency(campaign.originalAmountSpent, campaign.originalCurrency)}
