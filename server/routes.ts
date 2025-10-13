@@ -4436,7 +4436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword,
         role: userRole,
         permissions: defaultPermissions,
-        onboardingCompleted: role === 'super_admin' || role === 'supplier' || role === 'admin_financeiro' // Skip onboarding for privileged users
+        onboardingCompleted: true // Usuários criados pelo sistema administrativo já vêm com onboarding concluído
       }).returning({
         id: users.id,
         name: users.name,
