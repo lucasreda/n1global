@@ -513,7 +513,7 @@ export default function AdminOperations() {
       {/* Operations Table */}
       <Card style={{backgroundColor: '#0f0f0f', borderColor: '#252525'}}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2" style={{ fontSize: '20px' }}>
             <Globe className="h-5 w-5" />
             Operações ({operations?.length || 0})
           </CardTitle>
