@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { SyncStatus } from "@/components/dashboard/sync-status";
+import { OnboardingCard } from "@/components/dashboard/onboarding-card";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -261,6 +262,8 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+      
+      <OnboardingCard />
       
       <StatsCards metrics={metrics} isLoading={metricsLoading} period={dateFilter} />
       
