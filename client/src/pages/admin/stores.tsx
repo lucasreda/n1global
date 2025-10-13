@@ -21,7 +21,9 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  ImageIcon
+  ImageIcon,
+  Settings,
+  Plug
 } from "lucide-react";
 
 interface Operation {
@@ -721,16 +723,27 @@ export default function AdminOperations() {
           </DialogHeader>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20">
+            <TabsList className="grid w-full grid-cols-3 bg-white/10 border border-white/20">
               <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
                 Informações Gerais
               </TabsTrigger>
               <TabsTrigger value="products" className="data-[state=active]:bg-blue-600">
                 Produtos
               </TabsTrigger>
+              <TabsTrigger value="integrations" className="data-[state=active]:bg-blue-600">
+                Integrações
+              </TabsTrigger>
             </TabsList>
             
-            <form onSubmit={(e) => { e.preventDefault(); activeTab === 'general' ? handleSubmitEdit() : handleSaveProducts(); }} className="space-y-4">
+            <form onSubmit={(e) => { 
+              e.preventDefault(); 
+              if (activeTab === 'general') {
+                handleSubmitEdit();
+              } else if (activeTab === 'products') {
+                handleSaveProducts();
+              }
+              // Integrations tab doesn't need form submission yet
+            }} className="space-y-4">
               <TabsContent value="general" className="mt-4 space-y-4">
                 <div>
                   <Label htmlFor="edit-operation-name" className="text-sm text-slate-400">Nome da Operação</Label>
@@ -974,6 +987,118 @@ export default function AdminOperations() {
                 </div>
               </TabsContent>
               
+              <TabsContent value="integrations" className="mt-4">
+                <div className="space-y-4">
+                  <div className="text-sm text-slate-400">
+                    Gerencie as integrações configuradas para esta operação.
+                  </div>
+                  
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-3">
+                      <Plug className="inline h-4 w-4 mr-2" />
+                      Integrações Disponíveis
+                    </h4>
+                    
+                    <div className="space-y-3">
+                      {/* Shopify Integration */}
+                      <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                              <ShoppingCart className="h-5 w-5 text-green-400" />
+                            </div>
+                            <div>
+                              <h5 className="text-sm font-medium text-white">Shopify</h5>
+                              <p className="text-xs text-slate-400">Integração com loja Shopify</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            Não configurado
+                          </Badge>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full border-white/20 text-white hover:bg-white/10"
+                        >
+                          <Settings className="h-3 w-3 mr-2" />
+                          Configurar
+                        </Button>
+                      </div>
+                      
+                      {/* Shipping Integration */}
+                      <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                              <Package className="h-5 w-5 text-blue-400" />
+                            </div>
+                            <div>
+                              <h5 className="text-sm font-medium text-white">Envio</h5>
+                              <p className="text-xs text-slate-400">Integração de fulfillment</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            Não configurado
+                          </Badge>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full border-white/20 text-white hover:bg-white/10"
+                        >
+                          <Settings className="h-3 w-3 mr-2" />
+                          Configurar
+                        </Button>
+                      </div>
+                      
+                      {/* Facebook Ads Integration */}
+                      <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                              <Globe className="h-5 w-5 text-purple-400" />
+                            </div>
+                            <div>
+                              <h5 className="text-sm font-medium text-white">Facebook Ads</h5>
+                              <p className="text-xs text-slate-400">Campanhas publicitárias</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            Não configurado
+                          </Badge>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full border-white/20 text-white hover:bg-white/10"
+                        >
+                          <Settings className="h-3 w-3 mr-2" />
+                          Configurar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Integration Info */}
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                        <Settings className="h-4 w-4 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="text-sm font-medium text-white mb-1">
+                          Configuração de Integrações
+                        </h5>
+                        <p className="text-xs text-slate-300">
+                          Configure as integrações necessárias para esta operação. As credenciais são armazenadas de forma segura e podem ser atualizadas a qualquer momento.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
               <DialogFooter className="flex justify-between">
                 <Button 
                   variant="outline" 
@@ -986,21 +1111,23 @@ export default function AdminOperations() {
                 >
                   Cancelar
                 </Button>
-                <Button 
-                  type="submit"
-                  disabled={activeTab === 'general' ? editOperationMutation.isPending : (linkProductMutation.isPending || unlinkProductMutation.isPending)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  data-testid="button-save-edit-operation"
-                >
-                  {(activeTab === 'general' ? editOperationMutation.isPending : (linkProductMutation.isPending || unlinkProductMutation.isPending)) ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Salvando...
-                    </>
-                  ) : (
-                    'Salvar Alterações'
-                  )}
-                </Button>
+                {activeTab !== 'integrations' && (
+                  <Button 
+                    type="submit"
+                    disabled={activeTab === 'general' ? editOperationMutation.isPending : (linkProductMutation.isPending || unlinkProductMutation.isPending)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    data-testid="button-save-edit-operation"
+                  >
+                    {(activeTab === 'general' ? editOperationMutation.isPending : (linkProductMutation.isPending || unlinkProductMutation.isPending)) ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salvar Alterações'
+                    )}
+                  </Button>
+                )}
               </DialogFooter>
             </form>
           </Tabs>
