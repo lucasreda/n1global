@@ -56,6 +56,7 @@ export const operations = pgTable("operations", {
   name: text("name").notNull(), // e.g., "PureDreams", "Operation Alpha"
   description: text("description"),
   storeId: varchar("store_id").notNull().references(() => stores.id), // Links operation to store
+  ownerId: varchar("owner_id").references(() => users.id), // Operation owner/manager
   country: text("country").notNull(), // Country code e.g., "ES", "IT", "FR"
   currency: text("currency").notNull().default("EUR"), // Currency code e.g., "EUR", "PLN", "CZK"
   operationType: text("operation_type").notNull().default("Cash on Delivery"), // 'Cash on Delivery', 'Pagamento no Cartão'
