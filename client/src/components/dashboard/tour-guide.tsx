@@ -64,7 +64,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       disableBeacon: true,
     },
     {
-      target: '[data-testid="operation-selector"]',
+      target: '[data-tour-id="operation-selector-section"]',
       content: (
         <div className="space-y-3">
           <h3 className="text-lg font-bold">Seletor de Operação 🏢</h3>

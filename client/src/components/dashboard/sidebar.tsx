@@ -157,7 +157,7 @@ export function Sidebar() {
       </div>
 
       {/* Operation Selector */}
-      <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
+      <div className="mb-6 p-3 rounded-lg border bg-card text-card-foreground shadow-sm" data-tour-id="operation-selector-section">
         <div className="flex items-center gap-2 mb-2">
           <Briefcase className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground font-medium">Operação</span>
