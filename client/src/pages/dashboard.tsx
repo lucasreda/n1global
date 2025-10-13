@@ -118,8 +118,22 @@ export default function Dashboard() {
     performAutoSync();
   }, []); // Run only on component mount
 
-  // Fetch dashboard metrics with new API
+  // Fetch current operation data (including currency)
   const operationId = localStorage.getItem("current_operation_id");
+  const { data: currentOperation } = useQuery({
+    queryKey: ["/api/operations", operationId],
+    queryFn: async () => {
+      if (!operationId) return null;
+      const response = await authenticatedApiRequest("GET", "/api/operations");
+      const operations = await response.json();
+      return operations.find((op: any) => op.id === operationId) || null;
+    },
+    enabled: !!operationId,
+  });
+
+  const operationCurrency = currentOperation?.currency || 'EUR';
+
+  // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ["/api/dashboard/metrics", dateFilter, operationId, "v3"],
     queryFn: async () => {
@@ -258,79 +272,69 @@ export default function Dashboard() {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
-      {/* Header with Euro Rate, Complete Sync Button, and Date Filter */}
-      <div className="w-full flex flex-col gap-3 sm:gap-4 lg:flex-row lg:justify-between lg:items-center">
-        {/* Euro Exchange Rate - Hidden on mobile */}
-        <div className="hidden lg:flex items-center space-x-2 bg-gray-900/30 border border-green-500/50 rounded-lg px-2 sm:px-3 py-2 w-fit max-w-full">
-          <span className="text-green-400 font-medium text-sm">
-            € {metrics?.exchangeRates?.EUR ? (metrics.exchangeRates.EUR).toFixed(2).replace('.', ',') : '6,37'}
-          </span>
-          <span className="text-gray-400 text-xs">BRL</span>
+      {/* Header with Complete Sync Button and Date Filter */}
+      <div className="w-full flex items-center justify-between gap-2 sm:gap-3">
+        {/* Date Filter - Left on mobile */}
+        <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-2 sm:px-3 py-2 min-w-0">
+          <Calendar className="text-gray-400" size={14} />
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-20 sm:w-24 lg:w-32 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0 min-w-0">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent className="glassmorphism border-gray-600">
+              <SelectItem value="current_month">Este Mês</SelectItem>
+              <SelectItem value="1">Hoje</SelectItem>
+              <SelectItem value="7">7 dias</SelectItem>
+              <SelectItem value="30">30 dias</SelectItem>
+              <SelectItem value="90">3 meses</SelectItem>
+              <SelectItem value="365">1 ano</SelectItem>
+              <SelectItem value="all">Tudo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Action buttons and Date Filter */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
-          {/* Date Filter - Left on mobile */}
-          <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-2 sm:px-3 py-2 min-w-0">
-            <Calendar className="text-gray-400" size={14} />
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-20 sm:w-24 lg:w-32 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0 min-w-0">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent className="glassmorphism border-gray-600">
-                <SelectItem value="current_month">Este Mês</SelectItem>
-                <SelectItem value="1">Hoje</SelectItem>
-                <SelectItem value="7">7 dias</SelectItem>
-                <SelectItem value="30">30 dias</SelectItem>
-                <SelectItem value="90">3 meses</SelectItem>
-                <SelectItem value="365">1 ano</SelectItem>
-                <SelectItem value="all">Tudo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Complete Sync Button - Right on mobile */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button
-                    onClick={() => syncMutation.mutate()}
-                    disabled={
-                      syncMutation.isPending || 
-                      !integrationsStatus?.hasPlatform || 
-                      !integrationsStatus?.hasWarehouse
-                    }
-                    variant="outline"
-                    size="sm"
-                    className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
-                    data-testid="button-complete-sync"
-                  >
-                    <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">
-                      {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
-                    </span>
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
-                <TooltipContent>
-                  <p>É necessário conectar pelo menos uma plataforma e um armazém para realizar a sincronização completa</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+        {/* Complete Sync Button - Right on mobile */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button
+                  onClick={() => syncMutation.mutate()}
+                  disabled={
+                    syncMutation.isPending || 
+                    !integrationsStatus?.hasPlatform || 
+                    !integrationsStatus?.hasWarehouse
+                  }
+                  variant="outline"
+                  size="sm"
+                  className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
+                  data-testid="button-complete-sync"
+                >
+                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">
+                    {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
+                  </span>
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
+              <TooltipContent>
+                <p>É necessário conectar pelo menos uma plataforma e um armazém para realizar a sincronização completa</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
       <OnboardingCard />
       
-      <StatsCards metrics={metrics} isLoading={metricsLoading} period={dateFilter} />
+      <StatsCards metrics={metrics} isLoading={metricsLoading} period={dateFilter} currency={operationCurrency} />
       
       <ChartsSection 
         revenueData={revenueData || []}
         distributionData={getDistributionData()}
         isLoading={revenueLoading}
+        currency={operationCurrency}
       />
       
       <SyncStatus />

@@ -2,12 +2,13 @@ import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Download, BarChart3 } from "lucide-react";
-import { formatCurrencyBRL } from "@/lib/utils";
+import { formatOperationCurrency } from "@/lib/utils";
 
 interface ChartsSectionProps {
   revenueData: any[];
   distributionData: { name: string; value: number; percentage: string; color: string; description: string }[];
   isLoading?: boolean;
+  currency?: string;
 }
 
 const RADIAN = Math.PI / 180;
@@ -23,7 +24,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
-export function ChartsSection({ revenueData, distributionData, isLoading = false }: ChartsSectionProps) {
+export function ChartsSection({ revenueData, distributionData, isLoading = false, currency = "EUR" }: ChartsSectionProps) {
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 animate-fade-in">
       {/* Revenue Chart */}
@@ -56,7 +57,7 @@ export function ChartsSection({ revenueData, distributionData, isLoading = false
                     color: '#fff',
                     fontSize: '12px'
                   }}
-                  formatter={(value: any) => [formatCurrencyBRL(value), 'Receita']}
+                  formatter={(value: any) => [formatOperationCurrency(value, currency), 'Receita']}
                 />
                 <Line 
                   type="monotone" 

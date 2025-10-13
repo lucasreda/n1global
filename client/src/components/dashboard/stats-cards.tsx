@@ -3,7 +3,7 @@ import { ShoppingCart, CheckCircle, XCircle, Percent, Calculator, TrendingUp, Ta
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { authenticatedApiRequest } from "@/lib/auth";
-import { formatCurrencyBRL, formatCurrencyEUR } from "@/lib/utils";
+import { formatOperationCurrency } from "@/lib/utils";
 import shopifyIcon from "@assets/shopify_1756413996883.webp";
 import facebookIcon from "@assets/meta-icon_1756415603759.png";
 import facebookIconMini from "@assets/metamini_1756416312919.png";
@@ -15,6 +15,7 @@ interface StatsCardsProps {
   metrics: any;
   isLoading: boolean;
   period?: string;
+  currency?: string;
 }
 
 // Componentes customizados para os ícones de anúncios
@@ -64,7 +65,7 @@ interface AdAccount {
   isActive: boolean;
 }
 
-export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProps) {
+export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR" }: StatsCardsProps) {
   const [isOrdersVisible, setIsOrdersVisible] = useState(true);
   const operationId = localStorage.getItem("current_operation_id");
   
@@ -175,12 +176,8 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   const confirmedOrders = metrics?.confirmedOrders || 0;
   const revenue = metrics?.totalRevenue || 0;
   const productCosts = metrics?.totalProductCosts || 0;
-  const productCostsBRL = metrics?.totalProductCostsBRL || 0;
   const shippingCosts = metrics?.totalShippingCosts || 0;
-  const shippingCostsBRL = metrics?.totalShippingCostsBRL || 0;
   const marketingCosts = metrics?.marketingCosts || 0;
-  const marketingCostsBRL = metrics?.marketingCostsBRL || 0;
-  const marketingCostsEUR = metrics?.marketingCostsEUR || 0;
   const deliveryRate = metrics?.deliveryRate || 0;
   const totalProfit = metrics?.totalProfit || 0;
   const profitMargin = metrics?.profitMargin || 0;
@@ -189,21 +186,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
   
   // Novos cálculos para os cards especiais
   const shopifyOrders = metrics?.shopifyOrders || 0;
-  const avgCPA = metrics?.cpaBRL || 0; // CPA Real (Marketing / Entregues)
-  const cpaAds = metrics?.cpaAdsBRL || 0; // CPA Anúncios (Marketing / Total Shopify)
+  const avgCPA = metrics?.cpa || 0; // CPA Real (Marketing / Entregues)
+  const cpaAds = metrics?.cpaAds || 0; // CPA Anúncios (Marketing / Total Shopify)
   
-  // Custos de retorno: 2 euros por pedido retornado
-  const returnCostEUR = returnedOrders * 2;
-  const returnCostBRL = returnCostEUR * (metrics?.exchangeRates?.EUR || 6.37);
-  
-  
-
-  // Calcular valores em BRL
-  const totalProfitBRL = metrics?.totalProfitBRL || 0;
-  const totalRevenueEUR = revenue;
-  const totalRevenueBRL = metrics?.totalRevenueBRL || 0;
-  const paidRevenueBRL = metrics?.paidRevenueBRL || 0;
-  const paidRevenueEUR = metrics?.paidRevenue || 0;
   const totalPaidOrders = metrics?.totalPaidOrders || 0;
 
   const calculateGrowth = (current: number, previous: number = current * 0.9): string => {
@@ -211,7 +196,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
     return ((current - previous) / previous * 100).toFixed(1);
   };
 
-  // Métricas principais
+  // Métricas principais - Sem conversão de moedas
   const primaryMetrics = [
     {
       title: "Pedidos",
@@ -227,7 +212,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
     },
     {
       title: "CPA & Marketing",
-      value: formatCurrencyBRL(avgCPA),
+      value: formatOperationCurrency(avgCPA, currency),
       subtitle: "Custo por aquisição",
       icon: Target,
       color: "orange",
@@ -236,26 +221,26 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
       isProfit: false,
       isNegative: false,
       isCombined: true,
-      marketingValue: formatCurrencyBRL(marketingCostsBRL),
-      marketingSubtitle: marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas",
+      marketingValue: formatOperationCurrency(marketingCosts, currency),
+      marketingSubtitle: marketingCosts > 0 ? "Investimento em anúncios" : "Sem campanhas",
       isSingle: false
     }
   ];
 
-  // Métricas secundárias
+  // Métricas secundárias - Sem conversão de moedas
   const secondaryMetrics = [
     {
       title: "Custos Envio",
-      value: formatCurrencyBRL(shippingCostsBRL),
-      subtitle: shippingCosts > 0 ? formatCurrencyEUR(shippingCosts) : "Sem custos",
+      value: formatOperationCurrency(shippingCosts, currency),
+      subtitle: shippingCosts > 0 ? "Custos de envio" : "Sem custos",
       icon: Truck,
       color: "amber",
       testId: "card-shipping-costs"
     },
     {
       title: "Custos Produtos",
-      value: formatCurrencyBRL(productCostsBRL),
-      subtitle: productCosts > 0 ? formatCurrencyEUR(productCosts) : "Sem custos",
+      value: formatOperationCurrency(productCosts, currency),
+      subtitle: productCosts > 0 ? "Custos de produtos" : "Sem custos",
       icon: DollarSign,
       color: "red",
       testId: "card-product-costs"
@@ -305,8 +290,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex items-start gap-[50px] mb-2">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento</p>
-                <h3 className="text-[22px] font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
-                <p className="text-base text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
+                <h3 className="text-[22px] font-semibold mt-1 text-white">{formatOperationCurrency(revenue, currency)}</h3>
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -354,13 +338,13 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(cpaAds)}</h3>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(cpaAds, currency)}</h3>
                 <p className="text-sm text-gray-500">Custo por aquisição</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-400">Marketing</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(marketingCostsBRL)}</h3>
-                <p className="text-sm text-gray-500">{marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(marketingCosts, currency)}</h3>
+                <p className="text-sm text-gray-500">{marketingCosts > 0 ? "Investimento em anúncios" : "Sem campanhas"}</p>
               </div>
             </div>
           </div>
@@ -447,8 +431,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex items-start gap-[50px] mb-2">
               <div>
                 <p className="text-sm font-medium text-gray-400">Faturamento</p>
-                <h3 className="text-[22px] font-semibold mt-1 text-white">{formatCurrencyBRL(totalRevenueBRL)}</h3>
-                <p className="text-base text-gray-500">{formatCurrencyEUR(totalRevenueEUR)}</p>
+                <h3 className="text-[22px] font-semibold mt-1 text-white">{formatOperationCurrency(revenue, currency)}</h3>
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -495,13 +478,13 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-400">CPA Anúncios</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(cpaAds)}</h3>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(cpaAds, currency)}</h3>
                 <p className="text-sm text-gray-500">Custo por aquisição</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-400">Marketing</p>
-                <h3 className="text-lg font-semibold mt-1 text-white">{formatCurrencyBRL(marketingCostsBRL)}</h3>
-                <p className="text-sm text-gray-500">{marketingCostsEUR > 0 ? formatCurrencyEUR(marketingCostsEUR) : "Sem campanhas"}</p>
+                <h3 className="text-lg font-semibold mt-1 text-white">{formatOperationCurrency(marketingCosts, currency)}</h3>
+                <p className="text-sm text-gray-500">{marketingCosts > 0 ? "Investimento em anúncios" : "Sem campanhas"}</p>
               </div>
             </div>
           </div>
@@ -560,7 +543,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               <Truck className="w-4 h-4 text-amber-500" />
             </div>
             <div>
-              <h4 className="text-base font-semibold text-white mb-1">{formatCurrencyBRL(shippingCostsBRL)}</h4>
+              <h4 className="text-base font-semibold text-white mb-1">{formatOperationCurrency(shippingCosts, currency)}</h4>
               <p className="text-xs font-medium text-gray-400">Custos Envio</p>
             </div>
           </div>
@@ -577,7 +560,7 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               <RotateCcw className="w-4 h-4 text-red-400" />
             </div>
             <div>
-              <h4 className="text-base font-semibold text-white mb-1">{formatCurrencyBRL(returnCostBRL)}</h4>
+              <h4 className="text-base font-semibold text-white mb-1">{formatOperationCurrency(returnedOrders * 2, currency)}</h4>
               <p className="text-xs font-medium text-gray-400">Custos Retornados</p>
             </div>
           </div>
@@ -631,9 +614,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               <RotateCcw className="w-4 h-4 text-red-400" />
             </div>
             <div>
-              <h4 className="text-lg font-semibold text-white mb-1">{formatCurrencyBRL(returnCostBRL)}</h4>
+              <h4 className="text-lg font-semibold text-white mb-1">{formatOperationCurrency(returnedOrders * 2, currency)}</h4>
               <p className="text-xs font-medium text-gray-400">Custos Retornados</p>
-              <p className="text-xs text-gray-500 mt-1">{formatCurrencyEUR(returnCostEUR)} • {returnedOrders} retornos</p>
+              <p className="text-xs text-gray-500 mt-1">{returnedOrders} retornos</p>
             </div>
           </div>
           
@@ -675,9 +658,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <DollarSign className="w-4 h-4 text-red-500" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(productCostsBRL)}</h3>
+            <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(productCosts, currency)}</h3>
             <p className="text-sm font-medium text-gray-400">Custos Produtos</p>
-            <p className="text-sm text-gray-500 mt-1">{productCosts > 0 ? formatCurrencyEUR(productCosts) : "Sem custos"}</p>
+            <p className="text-sm text-gray-500 mt-1">{productCosts > 0 ? `${totalOrders} pedidos` : "Sem custos"}</p>
           </div>
         </div>
       </div>
@@ -695,16 +678,16 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
             <DollarSign className="w-4 h-4 text-blue-500" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(paidRevenueBRL)}</h3>
+            <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(paidRevenue, currency)}</h3>
             <p className="text-sm font-medium text-gray-400">Receita Paga</p>
-            <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(paidRevenueEUR)} • {totalPaidOrders} entregas</p>
+            <p className="text-sm text-gray-500 mt-1">{totalPaidOrders} entregas</p>
           </div>
         </div>
 
 
         <div 
           className={`backdrop-blur-sm rounded-lg p-4 transition-all duration-300 ${
-            totalProfitBRL < 0 
+            totalProfit < 0 
               ? 'bg-red-900/20 border border-red-400/50 hover:bg-red-900/30' 
               : 'bg-green-900/20 border border-[#4ade80]/50 hover:bg-green-900/30'
           }`}
@@ -714,12 +697,12 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
           onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
         >
           <div className="flex items-center justify-between mb-3">
-            <TrendingUp className={`w-4 h-4 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-[#4ade80]'}`} />
+            <TrendingUp className={`w-4 h-4 ${totalProfit < 0 ? 'text-red-400' : 'text-[#4ade80]'}`} />
           </div>
           <div>
-            <h3 className={`text-xl font-semibold mb-1 ${totalProfitBRL < 0 ? 'text-white' : 'text-white'}`}>{formatCurrencyBRL(totalProfitBRL)}</h3>
-            <p className={`text-sm font-medium ${totalProfitBRL < 0 ? 'text-red-300' : 'text-[#4ade80]'}`}>Lucro Total</p>
-            <p className={`text-sm mt-1 ${totalProfitBRL < 0 ? 'text-red-400' : 'text-green-300'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
+            <h3 className={`text-xl font-semibold mb-1 ${totalProfit < 0 ? 'text-white' : 'text-white'}`}>{formatOperationCurrency(totalProfit, currency)}</h3>
+            <p className={`text-sm font-medium ${totalProfit < 0 ? 'text-red-300' : 'text-[#4ade80]'}`}>Lucro Total</p>
+            <p className={`text-sm mt-1 ${totalProfit < 0 ? 'text-red-400' : 'text-green-300'}`}>{profitMargin.toFixed(1)}% margem • {roi.toFixed(1)}% ROI</p>
           </div>
         </div>
       </div>
@@ -745,9 +728,9 @@ export function StatsCards({ metrics, isLoading, period = "30" }: StatsCardsProp
               <Target className="w-4 h-4 text-slate-400" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-white mb-1">{formatCurrencyBRL(avgCPA)}</h3>
+              <h3 className="text-xl font-semibold text-white mb-1">{formatOperationCurrency(avgCPA, currency)}</h3>
               <p className="text-sm font-medium text-gray-400">CPA Real</p>
-              <p className="text-sm text-gray-500 mt-1">{formatCurrencyEUR(metrics?.cacEUR || 0)} • {metrics?.deliveredOrders || 0} entregues</p>
+              <p className="text-sm text-gray-500 mt-1">{metrics?.deliveredOrders || 0} entregues</p>
             </div>
           </div>
 

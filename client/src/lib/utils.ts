@@ -14,10 +14,7 @@ export function formatCurrency(value: number, currency: string = 'EUR', locale: 
   }).format(value)
 }
 
-export function formatCurrencyBRL(value: number): string {
-  return formatCurrency(value, 'BRL', 'pt-BR')
-}
-
-export function formatCurrencyEUR(value: number): string {
-  return formatCurrency(value, 'EUR', 'pt-BR')
+// Formata valor baseado na moeda da operação
+export function formatOperationCurrency(value: number, currency: string = 'EUR'): string {
+  return formatCurrency(value, currency, 'pt-BR')
 }
