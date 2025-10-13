@@ -21,7 +21,7 @@ export default function Dashboard() {
   const { selectedOperation } = useCurrentOperation();
   
   // Tour context
-  const { startTour } = useTourContext();
+  const { startTour, isTourRunning } = useTourContext();
 
   // Fetch user data to check if tour was completed
   const { data: user } = useQuery({
@@ -34,12 +34,12 @@ export default function Dashboard() {
 
   // Auto-start tour if not completed
   useEffect(() => {
-    console.log('🎯 Tour auto-start check:', { user, tourCompleted: user?.tourCompleted });
-    if (user && user.tourCompleted === false) {
+    console.log('🎯 Tour auto-start check:', { user, tourCompleted: user?.tourCompleted, isTourRunning });
+    if (user && user.tourCompleted === false && !isTourRunning) {
       console.log('✅ Starting tour automatically!');
       startTour();
     }
-  }, [user, startTour]);
+  }, [user, startTour, isTourRunning]);
 
   // Sync mutation (same as orders page)
   const syncMutation = useMutation({

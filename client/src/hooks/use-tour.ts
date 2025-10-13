@@ -18,17 +18,19 @@ export function useTour() {
     mutationFn: async () => {
       return await apiRequest('/api/tour/complete', 'POST', {});
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    onSuccess: async () => {
+      // Invalidar e esperar a query ser refetchada
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
       toast({
         title: 'Tour Concluído!',
         description: 'Você pode refazer o tour a qualquer momento nas configurações.',
       });
       
-      // Redirecionar para a página inicial após completar o tour
+      // Aguardar um pouco mais para garantir que o cache foi atualizado
       setTimeout(() => {
         setLocation('/');
-      }, 1000);
+      }, 1500);
     },
     onError: () => {
       toast({
