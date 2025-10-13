@@ -4867,42 +4867,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/operations/:operationId/integrations/facebook-ads", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  // Meta Ads (Facebook Ads) routes
+  app.post("/api/admin/operations/:operationId/integrations/meta-ads", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { accountId, accountName, accessToken } = req.body;
+      const { accountId, accountName, accessToken, integrationId } = req.body;
       
       if (!accountId || !accessToken) {
         return res.status(400).json({ message: "Account ID e token são obrigatórios" });
       }
       
-      const integration = await adminService.createOrUpdateFacebookAdsIntegration(operationId, {
+      const integration = await adminService.createOrUpdateMetaAdsIntegration(operationId, {
         accountId,
         accountName,
-        accessToken
+        accessToken,
+        integrationId
       });
       
       res.json(integration);
     } catch (error) {
-      console.error("Admin save Facebook Ads integration error:", error);
-      res.status(500).json({ message: "Erro ao salvar integração Facebook Ads" });
+      console.error("Admin save Meta Ads integration error:", error);
+      res.status(500).json({ message: "Erro ao salvar integração Meta Ads" });
     }
   });
 
-  app.delete("/api/admin/operations/:operationId/integrations/:integrationType", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+  app.delete("/api/admin/operations/:operationId/integrations/meta-ads/:integrationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
-      const { operationId, integrationType } = req.params;
+      const { integrationId } = req.params;
       
-      if (!['shopify', 'fulfillment', 'facebook_ads'].includes(integrationType)) {
-        return res.status(400).json({ message: "Tipo de integração inválido" });
+      if (!integrationId) {
+        return res.status(400).json({ message: "ID da integração é obrigatório" });
       }
       
-      await adminService.deleteIntegration(operationId, integrationType as 'shopify' | 'fulfillment' | 'facebook_ads');
+      await adminService.deleteMetaAdsIntegration(integrationId);
       
-      res.json({ message: "Integração removida com sucesso" });
+      res.json({ message: "Conta Meta Ads removida com sucesso" });
     } catch (error) {
-      console.error("Admin delete integration error:", error);
-      res.status(500).json({ message: "Erro ao remover integração" });
+      console.error("Admin delete Meta Ads integration error:", error);
+      res.status(500).json({ message: "Erro ao remover conta Meta Ads" });
+    }
+  });
+
+  // Google Ads routes
+  app.post("/api/admin/operations/:operationId/integrations/google-ads", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const { customerId, accountName, refreshToken, integrationId } = req.body;
+      
+      if (!customerId || !refreshToken) {
+        return res.status(400).json({ message: "Customer ID e refresh token são obrigatórios" });
+      }
+      
+      const integration = await adminService.createOrUpdateGoogleAdsIntegration(operationId, {
+        customerId,
+        accountName,
+        refreshToken,
+        integrationId
+      });
+      
+      res.json(integration);
+    } catch (error) {
+      console.error("Admin save Google Ads integration error:", error);
+      res.status(500).json({ message: "Erro ao salvar integração Google Ads" });
+    }
+  });
+
+  app.delete("/api/admin/operations/:operationId/integrations/google-ads/:integrationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { integrationId } = req.params;
+      
+      if (!integrationId) {
+        return res.status(400).json({ message: "ID da integração é obrigatório" });
+      }
+      
+      await adminService.deleteGoogleAdsIntegration(integrationId);
+      
+      res.json({ message: "Conta Google Ads removida com sucesso" });
+    } catch (error) {
+      console.error("Admin delete Google Ads integration error:", error);
+      res.status(500).json({ message: "Erro ao remover conta Google Ads" });
     }
   });
 
