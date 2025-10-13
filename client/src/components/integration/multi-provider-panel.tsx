@@ -14,6 +14,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useTourContext } from "@/contexts/tour-context";
+import { useLocation } from "wouter";
 
 interface Provider {
   type: string;
@@ -30,6 +32,17 @@ export function MultiProviderPanel() {
   const { toast } = useToast();
   const { selectedOperation: operationId } = useCurrentOperation();
   const queryClient = useQueryClient();
+  const { startSyncTour } = useTourContext();
+  const [, setLocation] = useLocation();
+
+  // Buscar status das integrações
+  const { data: integrationsStatus } = useQuery({
+    queryKey: ['/api/onboarding/integrations-status'],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
+      return response.json();
+    },
+  });
 
   // Buscar todos os providers disponíveis
   const { data: providers, isLoading: providersLoading } = useQuery({
@@ -82,16 +95,40 @@ export function MultiProviderPanel() {
       const response = await authenticatedApiRequest("POST", url, payload);
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: data.success ? "Credenciais configuradas!" : "Erro na configuração",
         description: data.message,
         variant: data.success ? "default" : "destructive"
       });
       if (data.success) {
-        queryClient.invalidateQueries({ queryKey: ["/api/integrations/providers"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/integrations/providers"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/onboarding/integrations-status"] });
         setShowCredentialsForm(false);
         setSelectedProvider(null);
+
+        // Verificar se já tem plataforma configurada
+        const status = await queryClient.fetchQuery({
+          queryKey: ['/api/onboarding/integrations-status'],
+          queryFn: async () => {
+            const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
+            return response.json();
+          },
+        });
+
+        // Se já tem plataforma, redirecionar para orders e iniciar tour
+        if (status?.hasPlatform) {
+          toast({
+            title: "Pronto para Sincronizar!",
+            description: "Agora você pode importar seus pedidos.",
+          });
+          setTimeout(() => {
+            setLocation('/orders');
+            setTimeout(() => {
+              startSyncTour();
+            }, 1000);
+          }, 1500);
+        }
       }
     },
     onError: (error) => {

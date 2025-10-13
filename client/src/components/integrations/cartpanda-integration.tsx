@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
+import { useTourContext } from "@/contexts/tour-context";
+import { useLocation } from "wouter";
 import cartpandaIcon from "@assets/carticon_1758210690464.avif";
 
 interface CartPandaIntegration {
@@ -35,6 +37,17 @@ export function CartPandaIntegration() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation: operationId } = useCurrentOperation();
+  const { startSyncTour } = useTourContext();
+  const [, setLocation] = useLocation();
+
+  // Buscar status das integrações
+  const { data: integrationsStatus } = useQuery({
+    queryKey: ['/api/onboarding/integrations-status'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/onboarding/integrations-status', 'GET');
+      return response.json();
+    },
+  });
 
   // Buscar integração existente
   const { data: integration, isLoading } = useQuery<CartPandaIntegration | null>({
@@ -62,13 +75,37 @@ export function CartPandaIntegration() {
       });
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/integrations/cartpanda", operationId] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/integrations/cartpanda", operationId] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/onboarding/integrations-status"] });
       setIsConfiguring(false);
       toast({
         title: "Sucesso",
         description: "Integração CartPanda configurada com sucesso!",
       });
+
+      // Verificar se já tem armazém configurado
+      const status = await queryClient.fetchQuery({
+        queryKey: ['/api/onboarding/integrations-status'],
+        queryFn: async () => {
+          const response = await apiRequest('/api/onboarding/integrations-status', 'GET');
+          return response.json();
+        },
+      });
+
+      // Se já tem armazém, redirecionar para orders e iniciar tour
+      if (status?.hasWarehouse) {
+        toast({
+          title: "Pronto para Sincronizar!",
+          description: "Agora você pode importar seus pedidos.",
+        });
+        setTimeout(() => {
+          setLocation('/orders');
+          setTimeout(() => {
+            startSyncTour();
+          }, 1000);
+        }, 1500);
+      }
     },
     onError: (error: any) => {
       toast({
