@@ -4511,13 +4511,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/orders", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+      
       const filters = {
         searchTerm: req.query.searchTerm as string,
         storeId: req.query.storeId as string,
         operationId: req.query.operationId as string,
         dateRange: req.query.dateRange as string,
-        limit: parseInt(req.query.limit as string) || 20,
-        offset: parseInt(req.query.offset as string) || 0
+        limit,
+        offset
       };
       
       const orders = await adminService.getGlobalOrders(filters);
