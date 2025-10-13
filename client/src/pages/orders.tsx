@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap } from "lucide-react";
-import { cn, formatCurrencyEUR } from "@/lib/utils";
+import { cn, formatOperationCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Orders() {
@@ -165,13 +165,13 @@ export default function Orders() {
   };
 
   const formatAmount = (amount: any) => {
-    if (!amount) return formatCurrencyEUR(0);
+    if (!amount) return formatOperationCurrency(0, 'EUR');
     
     // Convert string to number if needed
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     
-    if (isNaN(numAmount)) return formatCurrencyEUR(0);
-    return formatCurrencyEUR(numAmount);
+    if (isNaN(numAmount)) return formatOperationCurrency(0, 'EUR');
+    return formatOperationCurrency(numAmount, 'EUR');
   };
 
   return (
