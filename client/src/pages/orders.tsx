@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap } from "lucide-react";
 import { cn, formatCurrencyEUR } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +73,15 @@ export default function Orders() {
   const totalPages = ordersResponse?.totalPages || Math.ceil(totalOrders / pageSize);
   const hasNext = ordersResponse?.hasNext || false;
   const hasPrev = ordersResponse?.hasPrev || false;
+
+  // Fetch integrations status to check if platform and warehouse are connected
+  const { data: integrationsStatus } = useQuery({
+    queryKey: ['/api/onboarding/integrations-status'],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
+      return response.json();
+    },
+  });
 
   // Remove the query for operations with orders since we'll show a simple message
 
@@ -221,26 +231,43 @@ export default function Orders() {
             
             {/* Sync button and count */}
             <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => syncMutation.mutate()}
-                disabled={syncMutation.isPending}
-                className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap flex-1"
-                data-testid="button-sync-complete"
-              >
-                {syncMutation.isPending ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Zap className="w-4 h-4 mr-2" />
-                )}
-                <span className="hidden sm:inline">
-                  {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
-                </span>
-                <span className="sm:hidden">
-                  {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
-                </span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex-1">
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => syncMutation.mutate()}
+                        disabled={
+                          syncMutation.isPending || 
+                          !integrationsStatus?.hasPlatform || 
+                          !integrationsStatus?.hasWarehouse
+                        }
+                        className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap w-full"
+                        data-testid="button-sync-complete"
+                      >
+                        {syncMutation.isPending ? (
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Zap className="w-4 h-4 mr-2" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
+                        </span>
+                        <span className="sm:hidden">
+                          {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
+                        </span>
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
+                    <TooltipContent>
+                      <p>É necessário conectar pelo menos uma plataforma e um armazém para realizar a sincronização completa</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               <div className="text-xs text-gray-300 text-center sm:text-left whitespace-nowrap">
                 {totalOrders} pedidos
               </div>
