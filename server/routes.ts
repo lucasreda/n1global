@@ -1382,6 +1382,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tour routes
+  app.post("/api/tour/complete", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      await storage.updateUserTourCompleted(req.user.id, true);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Complete tour error:", error);
+      res.status(500).json({ message: "Erro ao completar tour" });
+    }
+  });
+
+  app.post("/api/tour/reset", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      await storage.resetUserTour(req.user.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Reset tour error:", error);
+      res.status(500).json({ message: "Erro ao reiniciar tour" });
+    }
+  });
+
   // Shipping providers routes
   app.get("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
