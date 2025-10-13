@@ -28,12 +28,18 @@ interface GlobalOrder {
   operationId: string;
   operationName: string;
   customerName: string;
+  customerEmail?: string;
   customerPhone: string;
+  customerAddress?: string;
+  customerCity?: string;
+  customerState?: string;
+  customerCountry?: string;
+  customerZip?: string;
   status: string;
   amount: number;
   currency: string;
-  shippingAddress: string;
-  createdAt: string;
+  orderDate: string;
+  createdAt?: string;
 }
 
 export default function AdminOrders() {
@@ -476,7 +482,7 @@ export default function AdminOrders() {
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-sm">
-                            {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+                            {new Date(order.orderDate).toLocaleDateString('pt-BR')}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -834,11 +840,25 @@ export default function AdminOrders() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Telefone</p>
-                    <p className="text-slate-200">{selectedOrder.customerPhone}</p>
+                    <p className="text-slate-200">{selectedOrder.customerPhone || '-'}</p>
                   </div>
+                  {selectedOrder.customerEmail && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-slate-400">Email</p>
+                      <p className="text-slate-200">{selectedOrder.customerEmail}</p>
+                    </div>
+                  )}
                   <div className="col-span-2">
                     <p className="text-sm text-slate-400">Endereço de Entrega</p>
-                    <p className="text-slate-200">{selectedOrder.shippingAddress}</p>
+                    <p className="text-slate-200">
+                      {[
+                        selectedOrder.customerAddress,
+                        selectedOrder.customerCity,
+                        selectedOrder.customerState,
+                        selectedOrder.customerZip,
+                        selectedOrder.customerCountry
+                      ].filter(Boolean).join(', ') || '-'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -868,9 +888,9 @@ export default function AdminOrders() {
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm text-slate-400">Data de Criação</p>
+                    <p className="text-sm text-slate-400">Data do Pedido</p>
                     <p className="text-slate-200">
-                      {new Date(selectedOrder.createdAt).toLocaleString('pt-BR', {
+                      {new Date(selectedOrder.orderDate).toLocaleString('pt-BR', {
                         day: '2-digit',
                         month: '2-digit',
                         year: 'numeric',
