@@ -114,6 +114,9 @@ export function OnboardingCard() {
   const completedSteps = steps.filter(step => step.completed).length;
   const totalSteps = steps.length;
   const progress = (completedSteps / totalSteps) * 100;
+  
+  // Check if first step (operation) is completed
+  const hasOperation = operations.length > 0;
 
   return (
     <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900" data-testid="card-onboarding" data-tour-id="onboarding-card">
@@ -160,13 +163,21 @@ export function OnboardingCard() {
       </CardHeader>
       <CardContent className="pb-4">
         <div className="space-y-3">
-          {steps.map((step) => (
-            <div
-              key={step.id}
-              onClick={() => window.location.href = step.link}
-              className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              data-testid={`step-${step.id}`}
-            >
+          {steps.map((step, index) => {
+            // Only allow clicking if it's the first step OR if first step is completed
+            const isClickable = index === 0 || hasOperation;
+            
+            return (
+              <div
+                key={step.id}
+                onClick={() => isClickable && (window.location.href = step.link)}
+                className={`flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 transition-colors ${
+                  isClickable 
+                    ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' 
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                data-testid={`step-${step.id}`}
+              >
               {step.completed ? (
                 <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" data-testid={`icon-completed-${step.id}`} />
               ) : (
@@ -186,7 +197,8 @@ export function OnboardingCard() {
                 </p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
