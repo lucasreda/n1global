@@ -184,36 +184,16 @@ export function MultiProviderPanel() {
     setSelectedProvider(providerType);
     setShowCredentialsForm(true);
     
-    // Reset form com valores padrão específicos do provider
-    if (providerType === "european_fulfillment") {
-      credentialsForm.reset({
-        email: "unit1@n1storeworld.com",
-        password: "Ecom@2025",
-        authHeader: "",
-        warehouseId: "",
-        apiUrl: "",
-      });
-    } else if (providerType === "elogy") {
-      credentialsForm.reset({
-        email: "",
-        password: "",
-        authHeader: "",
-        warehouseId: "",
-        apiUrl: "https://api.elogy.io",
-      });
-    } else if (providerType === "fhb") {
-      credentialsForm.reset({
-        email: "",
-        password: "",
-        authHeader: "",
-        warehouseId: "",
-        apiUrl: "https://api.fhb.sk/v3",
-        appId: "",
-        secret: "",
-      });
-    } else {
-      credentialsForm.reset();
-    }
+    // Reset form com valores vazios - usuário deve inserir suas próprias credenciais
+    credentialsForm.reset({
+      email: "",
+      password: "",
+      authHeader: "",
+      warehouseId: "",
+      apiUrl: providerType === "elogy" ? "https://api.elogy.io" : providerType === "fhb" ? "https://api.fhb.sk/v3" : "",
+      appId: "",
+      secret: "",
+    });
   };
 
   const getProviderFields = (providerType: string) => {

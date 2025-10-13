@@ -3268,16 +3268,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Shipping providers routes
-  app.get("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
-    try {
-      const providers = await storage.getShippingProviders();
-      res.json(providers);
-    } catch (error) {
-      res.status(500).json({ message: "Erro ao buscar provedores de envio" });
-    }
-  });
-
   // Unified Ad Networks Routes (Facebook + Google)
   
   // Get all ad accounts (Facebook + Google)
