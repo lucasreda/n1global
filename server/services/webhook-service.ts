@@ -1,8 +1,10 @@
 import crypto from 'crypto';
 import fetch from 'node-fetch';
 import { db } from '../db';
-import { integrationConfigs, webhookLogs, orders } from '@shared/schema';
+import { integrationConfigs, webhookLogs, orders, operations } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import formData from 'form-data';
+import Mailgun from 'mailgun.js';
 
 interface WebhookPayload {
   event: string;
@@ -14,6 +16,15 @@ interface WebhookPayload {
   };
 }
 
+// Configure Mailgun
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+  username: 'api',
+  key: process.env.MAILGUN_API_KEY || '',
+});
+
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || '';
+
 export class WebhookService {
   /**
    * Generate HMAC signature for webhook payload
@@ -23,6 +34,95 @@ export class WebhookService {
       .createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
+  }
+
+  /**
+   * Send welcome email with login credentials
+   */
+  private static async sendWelcomeEmail(
+    email: string,
+    password: string,
+    customerName: string,
+    operationId: string
+  ): Promise<void> {
+    try {
+      // Get operation details
+      const [operation] = await db
+        .select()
+        .from(operations)
+        .where(eq(operations.id, operationId))
+        .limit(1);
+
+      if (!operation) {
+        console.error('❌ Operation not found:', operationId);
+        return;
+      }
+
+      // Build email content
+      const subject = `Bem-vindo! Seus dados de acesso - ${operation.name}`;
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #f8f9fa; border-radius: 10px; padding: 30px; margin-bottom: 20px;">
+            <h1 style="color: #2c3e50; margin-top: 0;">Bem-vindo, ${customerName}! 👋</h1>
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:
+            </p>
+            
+            <div style="background-color: white; border-left: 4px solid #3498db; padding: 20px; margin: 20px 0; border-radius: 5px;">
+              <p style="margin: 0 0 10px 0;"><strong>🔐 Email:</strong> ${email}</p>
+              <p style="margin: 0;"><strong>🔑 Senha:</strong> <code style="background-color: #ecf0f1; padding: 5px 10px; border-radius: 3px; font-size: 14px;">${password}</code></p>
+            </div>
+
+            <p style="font-size: 14px; color: #7f8c8d; margin-top: 20px;">
+              ⚠️ <strong>Importante:</strong> Por segurança, recomendamos que você altere sua senha no primeiro acesso.
+            </p>
+          </div>
+
+          <div style="text-align: center; color: #95a5a6; font-size: 12px; margin-top: 30px;">
+            <p>Esta é uma mensagem automática. Por favor, não responda a este email.</p>
+            <p>${operation.name}</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const textContent = `
+Bem-vindo, ${customerName}!
+
+Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:
+
+Email: ${email}
+Senha: ${password}
+
+⚠️ Importante: Por segurança, recomendamos que você altere sua senha no primeiro acesso.
+
+---
+Esta é uma mensagem automática. Por favor, não responda a este email.
+${operation.name}
+      `.trim();
+
+      console.log('📧 Sending welcome email to:', email);
+
+      // Send email via Mailgun
+      await mg.messages.create(MAILGUN_DOMAIN, {
+        from: `${operation.name} <noreply@${MAILGUN_DOMAIN}>`,
+        to: [email],
+        subject: subject,
+        text: textContent,
+        html: htmlContent,
+      });
+
+      console.log('✅ Welcome email sent successfully to:', email);
+    } catch (error) {
+      console.error('❌ Error sending welcome email:', error);
+    }
   }
 
   /**
@@ -176,6 +276,24 @@ export class WebhookService {
       });
 
       console.log('✅ Webhook logged successfully');
+
+      // If webhook was successful, send welcome email with credentials
+      if (result.status >= 200 && result.status < 300 && result.body) {
+        const response = result.body as any;
+        
+        // Check if response contains email and password
+        if (response.success && response.email && response.password) {
+          console.log('📧 Webhook successful, sending welcome email...');
+          
+          // Send welcome email with login credentials
+          await this.sendWelcomeEmail(
+            response.email,
+            response.password,
+            order.customerName || 'Cliente',
+            order.operationId || ''
+          );
+        }
+      }
     } catch (error) {
       console.error('❌ Error dispatching webhook:', error);
     }
