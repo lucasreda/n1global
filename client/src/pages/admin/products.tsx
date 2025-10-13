@@ -841,6 +841,7 @@ export default function AdminProducts() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
@@ -1140,7 +1141,12 @@ export default function AdminProducts() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           {product.status === 'approved' && (
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setViewProduct(product)}
+                              data-testid={`button-view-product-${product.id}`}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
                           )}
@@ -1201,6 +1207,151 @@ export default function AdminProducts() {
           open={!!selectedProduct}
           onClose={() => setSelectedProduct(null)}
         />
+      )}
+
+      {/* View Product Modal */}
+      {viewProduct && (
+        <Dialog open={!!viewProduct} onOpenChange={() => setViewProduct(null)}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-800 text-slate-100">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-slate-100">
+                Detalhes do Produto
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Product Image */}
+              {viewProduct.imageUrl && (
+                <div className="flex justify-center">
+                  <img 
+                    src={viewProduct.imageUrl} 
+                    alt={viewProduct.name}
+                    className="max-h-64 rounded-lg border border-slate-700"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Basic Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-200 mb-3">Informações Básicas</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-slate-400">Nome</p>
+                    <p className="text-slate-200">{viewProduct.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">SKU</p>
+                    <p className="text-slate-200 font-mono">{viewProduct.sku}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Preço</p>
+                    <p className="text-lg font-semibold text-green-400">€{viewProduct.price.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Custo</p>
+                    <p className="text-slate-200">€{viewProduct.costPrice.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Fornecedor</p>
+                    <p className="text-slate-200">{viewProduct.supplierName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Status</p>
+                    <div className="mt-1">
+                      {viewProduct.status === 'approved' && (
+                        <Badge className="bg-green-500/10 text-green-400 border-green-500/20">
+                          Aprovado
+                        </Badge>
+                      )}
+                      {viewProduct.status === 'pending' && (
+                        <Badge className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                          Pendente
+                        </Badge>
+                      )}
+                      {viewProduct.status === 'contract_sent' && (
+                        <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                          Contrato Enviado
+                        </Badge>
+                      )}
+                      {viewProduct.status === 'contract_signed' && (
+                        <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+                          Contrato Assinado
+                        </Badge>
+                      )}
+                      {viewProduct.status === 'rejected' && (
+                        <Badge className="bg-red-500/10 text-red-400 border-red-500/20">
+                          Rejeitado
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {viewProduct.description && (
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-200 mb-3">Descrição</h3>
+                  <p className="text-slate-300">{viewProduct.description}</p>
+                </div>
+              )}
+
+              {/* Category */}
+              {viewProduct.category && (
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-200 mb-3">Categoria</h3>
+                  <p className="text-slate-300">{viewProduct.category}</p>
+                </div>
+              )}
+
+              {/* Timestamps */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-200 mb-3">Datas</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-slate-400">Criado em</p>
+                    <p className="text-slate-200">
+                      {new Date(viewProduct.createdAt).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Atualizado em</p>
+                    <p className="text-slate-200">
+                      {new Date(viewProduct.updatedAt).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end pt-4 border-t border-slate-800">
+                <Button
+                  variant="outline"
+                  onClick={() => setViewProduct(null)}
+                  className="bg-slate-800 border-slate-700 text-slate-300"
+                  data-testid="button-close-product-details"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* New Product Modal */}
