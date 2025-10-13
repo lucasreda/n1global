@@ -661,14 +661,14 @@ export default function AdminOperations() {
             <div>
               <Label htmlFor="operation-owner">Usuário Dono (opcional)</Label>
               <Select 
-                value={newOperationData.ownerId} 
-                onValueChange={(value) => setNewOperationData({ ...newOperationData, ownerId: value })}
+                value={newOperationData.ownerId || undefined} 
+                onValueChange={(value) => setNewOperationData({ ...newOperationData, ownerId: value === 'none' ? '' : value })}
               >
                 <SelectTrigger data-testid="select-operation-owner">
                   <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-gray-600">
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none" className="text-white hover:bg-gray-700">Nenhum</SelectItem>
                   {users?.map((user) => (
                     <SelectItem key={user.id} value={user.id} className="text-white hover:bg-gray-700">
                       {user.name} ({user.email})
@@ -761,14 +761,14 @@ export default function AdminOperations() {
                 <div>
                   <Label htmlFor="edit-operation-owner" className="text-sm text-slate-400">Usuário Dono</Label>
                   <Select 
-                    value={editOperationData.ownerId} 
-                    onValueChange={(value) => setEditOperationData({ ...editOperationData, ownerId: value })}
+                    value={editOperationData.ownerId || undefined} 
+                    onValueChange={(value) => setEditOperationData({ ...editOperationData, ownerId: value === 'none' ? '' : value })}
                   >
                     <SelectTrigger className="bg-white/10 border-white/20 text-white backdrop-blur-sm" data-testid="select-edit-operation-owner">
                       <SelectValue placeholder="Selecione um usuário" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      <SelectItem value="" className="text-white hover:bg-gray-700">Nenhum</SelectItem>
+                      <SelectItem value="none" className="text-white hover:bg-gray-700">Nenhum</SelectItem>
                       {users?.map((user) => (
                         <SelectItem key={user.id} value={user.id} className="text-white hover:bg-gray-700">
                           {user.name} ({user.email})
