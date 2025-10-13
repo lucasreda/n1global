@@ -98,8 +98,27 @@ export default function AdminUsers() {
   });
 
   // Buscar todas as operações disponíveis
-  const { data: allOperations } = useQuery<{ id: string; name: string; country: string }[]>({
-    queryKey: ['/api/operations']
+  const { data: allOperations, isLoading: operationsLoading } = useQuery<{ id: string; name: string; country: string }[]>({
+    queryKey: ['/api/operations'],
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      console.log('🔑 Fetching operations with token:', token ? 'exists' : 'missing');
+      const response = await fetch('/api/operations', {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      console.log('📡 Operations response status:', response.status);
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Operations fetch error:', error);
+        throw new Error(error.message || 'Erro ao buscar operações');
+      }
+      const data = await response.json();
+      console.log('✅ Operations loaded:', data.length, 'items');
+      return data;
+    }
   });
 
   // Buscar operações do usuário atual sendo editado
@@ -887,7 +906,14 @@ export default function AdminUsers() {
                     Controle as operações (lojas/regiões) que este usuário pode acessar e gerenciar.
                   </div>
                   
-                  {allOperations && allOperations.length > 0 ? (
+                  {operationsLoading ? (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-6 text-center">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-slate-400 text-sm">
+                        Carregando operações...
+                      </p>
+                    </div>
+                  ) : allOperations && allOperations.length > 0 ? (
                     <div className="bg-white/5 border border-white/20 rounded-lg p-4">
                       <h4 className="text-sm font-medium text-white mb-3">
                         🌍 Operações Disponíveis
