@@ -202,20 +202,27 @@ export function Sidebar() {
 
       <ul className="space-y-1 flex-1" data-testid="nav-menu">
         {navigation.map((item: any) => {
+          const hasOperations = operations.length > 0;
+          const isDashboard = item.name === "Dashboard";
+          const isLocked = !isDashboard && !hasOperations;
+
           if (item.isDropdown) {
             const isDropdownOpen = openDropdowns.includes(item.name);
             const isAnySubItemActive = item.subItems?.some((subItem: any) => location === subItem.href);
             
             return (
               <li key={item.name}>
-                <Collapsible open={isDropdownOpen} onOpenChange={() => toggleDropdown(item.name)}>
+                <Collapsible open={isDropdownOpen} onOpenChange={() => !isLocked && toggleDropdown(item.name)}>
                   <CollapsibleTrigger asChild>
                     <div
                       className={cn(
-                        "flex items-center justify-between space-x-2.5 px-3 py-2 rounded-xl transition-all cursor-pointer w-full",
-                        isAnySubItemActive
+                        "flex items-center justify-between space-x-2.5 px-3 py-2 rounded-xl transition-all w-full",
+                        isLocked 
+                          ? "opacity-50 cursor-not-allowed text-gray-400"
+                          : "cursor-pointer",
+                        !isLocked && isAnySubItemActive
                           ? "text-white bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30"
-                          : "text-gray-300 hover:text-white hover:bg-white/10"
+                          : !isLocked && "text-gray-300 hover:text-white hover:bg-white/10"
                       )}
                       data-testid={`nav-dropdown-${item.name.toLowerCase()}`}
                     >
@@ -232,32 +239,51 @@ export function Sidebar() {
                       />
                     </div>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1 mt-1">
-                    {item.subItems?.map((subItem: any) => {
-                      const isActive = location === subItem.href;
-                      return (
-                        <Link key={subItem.name} href={subItem.href}>
-                          <div
-                            className={cn(
-                              "flex items-center space-x-2.5 px-3 py-2 ml-6 rounded-xl transition-all cursor-pointer",
-                              isActive
-                                ? "text-white bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30"
-                                : "text-gray-300 hover:text-white hover:bg-white/10"
-                            )}
-                            data-testid={`nav-sublink-${subItem.name.toLowerCase()}`}
-                          >
-                            <span className="font-medium text-sm">{subItem.name}</span>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </CollapsibleContent>
+                  {!isLocked && (
+                    <CollapsibleContent className="space-y-1 mt-1">
+                      {item.subItems?.map((subItem: any) => {
+                        const isActive = location === subItem.href;
+                        return (
+                          <Link key={subItem.name} href={subItem.href}>
+                            <div
+                              className={cn(
+                                "flex items-center space-x-2.5 px-3 py-2 ml-6 rounded-xl transition-all cursor-pointer",
+                                isActive
+                                  ? "text-white bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30"
+                                  : "text-gray-300 hover:text-white hover:bg-white/10"
+                              )}
+                              data-testid={`nav-sublink-${subItem.name.toLowerCase()}`}
+                            >
+                              <span className="font-medium text-sm">{subItem.name}</span>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </CollapsibleContent>
+                  )}
                 </Collapsible>
               </li>
             );
           }
 
           const isActive = location === item.href;
+          
+          if (isLocked) {
+            return (
+              <li key={item.name}>
+                <div
+                  className={cn(
+                    "flex items-center space-x-2.5 px-3 py-2 rounded-xl transition-all opacity-50 cursor-not-allowed text-gray-400"
+                  )}
+                  data-testid={`nav-link-${item.name.toLowerCase()}`}
+                >
+                  <item.icon size={15} className="text-gray-400" />
+                  <span className="font-medium">{item.name}</span>
+                </div>
+              </li>
+            );
+          }
+
           return (
             <li key={item.name}>
               <Link href={item.href}>
