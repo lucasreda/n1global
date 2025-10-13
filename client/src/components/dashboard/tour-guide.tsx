@@ -14,7 +14,6 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
   
   // Local state to handle delayed tour start
   const [isRunning, setIsRunning] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
   
   useEffect(() => {
     console.log('🎯 TourGuide useEffect - run changed:', { run, currentPage });
@@ -24,13 +23,11 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       const timer = setTimeout(() => {
         console.log('⏰ Starting tour after delay');
         setIsRunning(true);
-        setStepIndex(0);
       }, 800);
       
       return () => clearTimeout(timer);
     } else if (!run && isRunning) {
       setIsRunning(false);
-      setStepIndex(0);
     }
   }, [run, isRunning, currentPage]);
   
@@ -225,9 +222,6 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       
       console.log('🎯 Joyride callback:', { status, action, index, type, currentPage });
       
-      // Update step index
-      setStepIndex(index);
-      
       // Se o tour foi completado ou pulado
       if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
         console.log('✅ Tour finished or skipped');
@@ -277,7 +271,6 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
     <Joyride
       steps={getAllSteps()}
       run={isRunning}
-      stepIndex={stepIndex}
       continuous
       showProgress={false}
       showSkipButton
