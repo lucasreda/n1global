@@ -12,6 +12,7 @@ import { useTourContext } from "@/contexts/tour-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar, Filter, RefreshCw } from "lucide-react";
 
 export default function Dashboard() {
@@ -40,6 +41,15 @@ export default function Dashboard() {
       startTour();
     }
   }, [user, startTour, isTourRunning]);
+
+  // Fetch integrations status to check if platform and warehouse are connected
+  const { data: integrationsStatus } = useQuery({
+    queryKey: ['/api/onboarding/integrations-status'],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
+      return response.json();
+    },
+  });
 
   // Sync mutation (same as orders page)
   const syncMutation = useMutation({
@@ -269,19 +279,36 @@ export default function Dashboard() {
           </div>
 
           {/* Complete Sync Button - Right on mobile */}
-          <Button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            variant="outline"
-            size="sm"
-            className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
-            data-testid="button-complete-sync"
-          >
-            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-            <span className="hidden sm:inline">
-              {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
-            </span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    onClick={() => syncMutation.mutate()}
+                    disabled={
+                      syncMutation.isPending || 
+                      !integrationsStatus?.hasPlatform || 
+                      !integrationsStatus?.hasWarehouse
+                    }
+                    variant="outline"
+                    size="sm"
+                    className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
+                    data-testid="button-complete-sync"
+                  >
+                    <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">
+                      {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
+                    </span>
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
+                <TooltipContent>
+                  <p>É necessário conectar pelo menos uma plataforma e um armazém para realizar a sincronização completa</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
       
