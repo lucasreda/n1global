@@ -95,8 +95,14 @@ export function MultiProviderPanel() {
         ? data // Para FHB, operationId vai na URL, não no body
         : { ...data, operationId }; // Para outros providers, operationId vai no body
       
+      console.log('🔧 Configurando provider:', { selectedProvider, url, payload });
+      
       const response = await authenticatedApiRequest("POST", url, payload);
-      return response.json();
+      const result = await response.json();
+      
+      console.log('📊 Resposta do servidor:', result);
+      
+      return result;
     },
     onSuccess: async (data) => {
       toast({
