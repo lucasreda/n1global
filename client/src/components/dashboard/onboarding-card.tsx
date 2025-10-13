@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -179,17 +179,6 @@ export function OnboardingCard() {
           ))}
         </div>
       </CardContent>
-      <CardFooter>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => window.location.href = "/onboarding"}
-          data-testid="button-goto-onboarding"
-        >
-          Ir para Configuração
-        </Button>
-      </CardFooter>
     </Card>
   );
 }
