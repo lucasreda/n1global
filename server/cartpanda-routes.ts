@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { CartPandaService, CartPandaCredentials } from "./cartpanda-service";
 import { db } from "./db";
@@ -6,6 +6,10 @@ import { cartpandaIntegrations, orders } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { authenticateToken } from "./auth-middleware";
 import { validateOperationAccess } from "./middleware/operation-access";
+
+interface AuthRequest extends Request {
+  user?: { id: string; email: string; role: string };
+}
 
 const router = Router();
 
@@ -199,7 +203,7 @@ router.post("/cartpanda", authenticateToken, validateOperationAccess, async (req
 /**
  * Sincronizar pedidos da CartPanda
  */
-router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async (req, res) => {
+router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async (req: AuthRequest, res: Response) => {
   try {
     const { operationId } = req.query;
 
@@ -506,6 +510,10 @@ router.post("/cartpanda/sync", authenticateToken, validateOperationAccess, async
           await db.insert(orders).values(orderData);
           importedCount++;
           console.log(`✅ Pedido importado: ${cartpandaOrder.id}`);
+          
+          // Dispatch webhook for operational app integration
+          const { WebhookService } = await import('./services/webhook-service');
+          await WebhookService.dispatchOrderCreatedWebhook(orderData.id, req.user!.id);
         }
 
       } catch (error) {

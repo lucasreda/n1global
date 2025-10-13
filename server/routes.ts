@@ -4610,6 +4610,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).returning();
 
       console.log("✅ Order created manually:", orderId, "for operation:", operation.name);
+      
+      // Dispatch webhook for operational app integration
+      await WebhookService.dispatchOrderCreatedWebhook(orderId, req.user!.id);
+      
       res.status(201).json(newOrder);
     } catch (error) {
       console.error("Error creating manual order:", error);

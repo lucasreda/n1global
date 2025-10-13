@@ -1,5 +1,5 @@
 import { db } from './db';
-import { orders, operations } from '../shared/schema';
+import { orders, operations, stores } from '../shared/schema';
 import { eq, and, isNull, sql } from 'drizzle-orm';
 import { shopifyService, type ShopifyOrder as ShopifyServiceOrder } from './shopify-service';
 
@@ -424,14 +424,30 @@ export class ShopifySyncService {
       return { created: false };
     } else {
       // Cria novo pedido
+      const orderId = `shopify_${shopifyOrder.id}`;
       await db
         .insert(orders)
         .values({
-          id: `shopify_${shopifyOrder.id}`, // ID único baseado no Shopify
+          id: orderId,
           ...orderData,
         });
       
       console.log(`✅ Novo pedido Shopify importado: ${shopifyOrder.name}`);
+      
+      // Dispatch webhook for operational app integration
+      // Get userId from operation -> store -> ownerId
+      const [operationWithStore] = await db
+        .select({ ownerId: stores.ownerId })
+        .from(operations)
+        .innerJoin(stores, eq(operations.storeId, stores.id))
+        .where(eq(operations.id, orderData.operationId))
+        .limit(1);
+      
+      if (operationWithStore?.ownerId) {
+        const { WebhookService } = await import('./services/webhook-service');
+        await WebhookService.dispatchOrderCreatedWebhook(orderId, operationWithStore.ownerId);
+      }
+      
       return { created: true };
     }
   }
