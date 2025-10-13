@@ -63,6 +63,7 @@ export default function AdminOrders() {
   // Create order modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<Record<string, { product: any; quantity: number }>>({});
   const [newOrder, setNewOrder] = useState({
     storeId: "",
     operationId: "",
@@ -78,7 +79,6 @@ export default function AdminOrders() {
     paymentMethod: "cod",
     total: "",
     currency: "EUR",
-    productsJson: "[]",
     notes: ""
   });
 
@@ -197,14 +197,45 @@ export default function AdminOrders() {
     enabled: !!selectedClientId && isCreateModalOpen
   });
 
+  // Products query for selected operation
+  const { data: operationProducts } = useQuery<Array<{
+    id: string;
+    name: string;
+    description: string;
+    price: string;
+    currency: string;
+    imageUrl?: string;
+  }>>({
+    queryKey: ['/api/admin/operations', newOrder.operationId, 'products'],
+    enabled: !!newOrder.operationId && isCreateModalOpen
+  });
+
+  // Reset selected products when operation changes
+  useEffect(() => {
+    setSelectedProducts({});
+  }, [newOrder.operationId]);
+
+  // Auto-calculate total when products change
+  useEffect(() => {
+    const total = Object.values(selectedProducts).reduce((sum, item) => {
+      const price = parseFloat(item.product.price || 0);
+      return sum + (price * item.quantity);
+    }, 0);
+    setNewOrder(prev => ({ ...prev, total: total.toFixed(2) }));
+  }, [selectedProducts]);
+
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: typeof newOrder) => {
-      let products = [];
-      try {
-        products = JSON.parse(orderData.productsJson);
-      } catch (e) {
-        throw new Error("Formato JSON inválido para produtos");
+      const products = Object.values(selectedProducts).map(item => ({
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        image: item.product.imageUrl || null
+      }));
+
+      if (products.length === 0) {
+        throw new Error("Selecione pelo menos um produto");
       }
 
       const payload = {
@@ -237,6 +268,7 @@ export default function AdminOrders() {
         description: "O pedido foi criado com sucesso.",
       });
       setIsCreateModalOpen(false);
+      setSelectedProducts({});
       // Reset form
       setNewOrder({
         storeId: "",
@@ -253,7 +285,6 @@ export default function AdminOrders() {
         paymentMethod: "cod",
         total: "",
         currency: "EUR",
-        productsJson: "[]",
         notes: ""
       });
     },
@@ -737,13 +768,12 @@ export default function AdminOrders() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-300">Valor Total *</Label>
+                <Label className="text-slate-300">Valor Total (auto-calculado)</Label>
                 <Input
-                  type="number"
-                  step="0.01"
-                  value={newOrder.total}
-                  onChange={(e) => setNewOrder({ ...newOrder, total: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-slate-200"
+                  type="text"
+                  value={newOrder.total ? `${parseFloat(newOrder.total).toFixed(2)}` : '0.00'}
+                  readOnly
+                  className="bg-slate-800/50 border-slate-700 text-slate-200 cursor-not-allowed"
                   placeholder="0.00"
                 />
               </div>
@@ -766,19 +796,134 @@ export default function AdminOrders() {
               </div>
             </div>
 
-            {/* Products JSON */}
+            {/* Products Selection */}
             <div className="space-y-2">
-              <Label className="text-slate-300">Produtos (JSON)</Label>
-              <Textarea
-                value={newOrder.productsJson}
-                onChange={(e) => setNewOrder({ ...newOrder, productsJson: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-slate-200 font-mono text-sm"
-                placeholder='[{"name":"Produto 1","quantity":1,"price":"10.00"}]'
-                rows={3}
-              />
-              <p className="text-xs text-slate-400">
-                Formato: Array JSON com name, quantity e price
-              </p>
+              <Label className="text-slate-300">Produtos</Label>
+              {!newOrder.operationId ? (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 text-center">
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-2 text-slate-600" />
+                  <p className="text-slate-400 text-sm">
+                    Selecione uma operação para ver os produtos disponíveis
+                  </p>
+                </div>
+              ) : !operationProducts || operationProducts.length === 0 ? (
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 text-center">
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-2 text-slate-600" />
+                  <p className="text-slate-400 text-sm">
+                    Nenhum produto vinculado a esta operação
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {operationProducts.map((product) => {
+                    const isSelected = !!selectedProducts[product.id];
+                    const quantity = selectedProducts[product.id]?.quantity || 0;
+                    
+                    return (
+                      <div 
+                        key={product.id} 
+                        className={`flex items-center gap-3 bg-slate-800/50 border rounded-lg p-3 transition-all ${
+                          isSelected ? 'border-blue-500 bg-blue-500/10' : 'border-slate-700 hover:border-slate-600'
+                        }`}
+                        data-testid={`product-card-${product.id}`}
+                      >
+                        {/* Product Image */}
+                        <div className="flex-shrink-0">
+                          {product.imageUrl ? (
+                            <img 
+                              src={product.imageUrl} 
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded-lg border border-slate-600"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64?text=Sem+Imagem';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-slate-700 rounded-lg flex items-center justify-center">
+                              <ShoppingCart className="w-6 h-6 text-slate-500" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-200 truncate">{product.name}</p>
+                          <p className="text-sm text-slate-400">
+                            {product.currency || 'EUR'} {parseFloat(product.price || '0').toFixed(2)}
+                          </p>
+                        </div>
+
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-2">
+                          {isSelected ? (
+                            <>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  if (quantity > 1) {
+                                    setSelectedProducts(prev => ({
+                                      ...prev,
+                                      [product.id]: { product, quantity: quantity - 1 }
+                                    }));
+                                  } else {
+                                    const newSelected = { ...selectedProducts };
+                                    delete newSelected[product.id];
+                                    setSelectedProducts(newSelected);
+                                  }
+                                }}
+                                className="h-8 w-8 p-0 bg-slate-700 border-slate-600 hover:bg-slate-600"
+                                data-testid={`button-decrease-${product.id}`}
+                              >
+                                -
+                              </Button>
+                              <span className="text-slate-200 font-medium w-8 text-center">{quantity}</span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedProducts(prev => ({
+                                    ...prev,
+                                    [product.id]: { product, quantity: quantity + 1 }
+                                  }));
+                                }}
+                                className="h-8 w-8 p-0 bg-slate-700 border-slate-600 hover:bg-slate-600"
+                                data-testid={`button-increase-${product.id}`}
+                              >
+                                +
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedProducts(prev => ({
+                                  ...prev,
+                                  [product.id]: { product, quantity: 1 }
+                                }));
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                              data-testid={`button-add-${product.id}`}
+                            >
+                              Adicionar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {Object.keys(selectedProducts).length > 0 && (
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-2">
+                  <p className="text-sm text-blue-400">
+                    {Object.keys(selectedProducts).length} produto(s) selecionado(s)
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Notes */}
