@@ -95,6 +95,8 @@ export function OperationalAppIntegration() {
 
   const handleSave = () => {
     const url = webhookUrl || config?.webhookUrl;
+    console.log('🔧 handleSave called:', { url, webhookUrl, configUrl: config?.webhookUrl, isActive });
+    
     if (!url) {
       toast({
         title: "URL obrigatória",
@@ -104,6 +106,8 @@ export function OperationalAppIntegration() {
       return;
     }
 
+    console.log('✅ Sending mutation:', { webhookUrl: url, webhookSecret: webhookSecret || undefined, isActive });
+    
     saveMutation.mutate({
       webhookUrl: url,
       webhookSecret: webhookSecret || undefined,
