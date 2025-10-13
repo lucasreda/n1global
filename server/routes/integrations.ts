@@ -53,6 +53,10 @@ integrationsRouter.get('/operational-app', async (req: AuthRequest, res: Respons
  * Create or update operational app integration config
  */
 integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Response) => {
+  console.log('🚀 POST /operational-app route hit!');
+  console.log('📦 Request body:', req.body);
+  console.log('👤 User:', req.user);
+  
   try {
     const userId = req.user!.id;
     const { webhookUrl, webhookSecret, isActive } = req.body;

@@ -6433,11 +6433,11 @@ Ao aceitar este contrato, o fornecedor concorda com todos os termos estabelecido
   // Register voice support routes
   app.use("/api/voice", voiceRoutes);
 
+  // Register Operational App integration routes (must be before CartPanda to avoid conflicts)
+  app.use("/api/integrations", authenticateToken, integrationsRouter);
+
   // Register CartPanda integration routes
   app.use("/api/integrations", cartpandaRoutes);
-
-  // Register Operational App integration routes
-  app.use("/api/integrations", authenticateToken, integrationsRouter);
 
   // Register Funnel Builder routes
   app.use("/api", funnelRoutes);
