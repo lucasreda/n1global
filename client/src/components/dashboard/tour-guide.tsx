@@ -14,6 +14,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
   
   // Local state to handle delayed tour start
   const [isRunning, setIsRunning] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
   
   useEffect(() => {
     console.log('🎯 TourGuide useEffect - run changed:', { run, currentPage });
@@ -23,11 +24,13 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       const timer = setTimeout(() => {
         console.log('⏰ Starting tour after delay');
         setIsRunning(true);
-      }, 500);
+        setStepIndex(0);
+      }, 800);
       
       return () => clearTimeout(timer);
     } else if (!run && isRunning) {
       setIsRunning(false);
+      setStepIndex(0);
     }
   }, [run, isRunning, currentPage]);
   
@@ -39,7 +42,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
           <h3 className="text-lg font-bold">Bem-vindo ao N1 Dashboard! 🎉</h3>
           <p className="text-sm">
             Vamos fazer um tour rápido pelas principais funcionalidades da plataforma.
-            Você pode pular o tour a qualquer momento.
+            Este tour tem 11 etapas e leva cerca de 2 minutos.
           </p>
         </div>
       ),
@@ -102,6 +105,20 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       placement: 'bottom',
       disableBeacon: true,
     },
+    {
+      target: '.recharts-wrapper',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Gráfico de Faturamento</h4>
+          <p className="text-sm">
+            Visualize a evolução do seu faturamento ao longo do tempo.
+            Ideal para identificar tendências e padrões de crescimento.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
   ];
 
   const getIntegrationsSteps = (): Step[] => [
@@ -117,6 +134,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'right',
+      disableBeacon: true,
     },
     {
       target: '[data-tour-id="section-warehouses"]',
@@ -130,6 +148,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'right',
+      disableBeacon: true,
     },
   ];
 
@@ -145,7 +164,8 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
           </p>
         </div>
       ),
-      placement: 'right',
+      placement: 'bottom',
+      disableBeacon: true,
     },
   ];
 
@@ -162,6 +182,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'bottom',
+      disableBeacon: true,
     },
   ];
 
@@ -181,27 +202,18 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'center',
+      disableBeacon: true,
     },
   ];
 
   const getAllSteps = (): Step[] => {
-    // Return all steps in the correct sequence for the current page
-    const dashboardSteps = getDashboardSteps();
-    const integrationsSteps = getIntegrationsSteps();
-    const adsSteps = getAdsSteps();
-    const onboardingSteps = getOnboardingCardStep();
-    const finalSteps = getFinalStep();
-
-    // Calculate the starting index based on current page
+    // Return steps based on current page
     if (currentPage === 'dashboard') {
-      // Show dashboard steps only
-      return dashboardSteps;
+      return getDashboardSteps();
     } else if (currentPage === 'integrations') {
-      // Show integrations steps only
-      return integrationsSteps;
+      return getIntegrationsSteps();
     } else if (currentPage === 'ads') {
-      // Show ads steps only
-      return adsSteps;
+      return getAdsSteps();
     }
     
     return [];
@@ -211,9 +223,15 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
     (data: CallBackProps) => {
       const { status, action, index, type } = data;
       
+      console.log('🎯 Joyride callback:', { status, action, index, type, currentPage });
+      
+      // Update step index
+      setStepIndex(index);
+      
       // Se o tour foi completado ou pulado
-      if (status === 'finished' || status === 'skipped') {
-        if (status === 'skipped') {
+      if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+        console.log('✅ Tour finished or skipped');
+        if (status === STATUS.SKIPPED) {
           onSkip();
         } else {
           onComplete();
@@ -227,22 +245,27 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         const integrationsSteps = getIntegrationsSteps();
         const adsSteps = getAdsSteps();
 
+        console.log('➡️ Moving to next step:', { currentPage, index, dashboardLength: dashboardSteps.length });
+
         // Se terminou os steps do dashboard, vai para integrations
         if (currentPage === 'dashboard' && index === dashboardSteps.length - 1) {
+          console.log('🔄 Navigating to integrations');
           setTimeout(() => {
             onNavigate('integrations');
           }, 300);
         }
         // Se terminou os steps de integrations, vai para ads
         else if (currentPage === 'integrations' && index === integrationsSteps.length - 1) {
+          console.log('🔄 Navigating to ads');
           setTimeout(() => {
             onNavigate('ads');
           }, 300);
         }
-        // Se terminou os steps de ads, volta para dashboard para mostrar onboarding card e step final
+        // Se terminou os steps de ads, completa o tour
         else if (currentPage === 'ads' && index === adsSteps.length - 1) {
+          console.log('🎉 Tour completed!');
           setTimeout(() => {
-            onNavigate('dashboard');
+            onComplete();
           }, 300);
         }
       }
@@ -254,12 +277,15 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
     <Joyride
       steps={getAllSteps()}
       run={isRunning}
+      stepIndex={stepIndex}
       continuous
       showProgress={false}
       showSkipButton
       callback={handleJoyrideCallback}
       disableOverlayClose
       disableCloseOnEsc={false}
+      scrollToFirstStep
+      scrollOffset={100}
       spotlightPadding={8}
       styles={{
         options: {
