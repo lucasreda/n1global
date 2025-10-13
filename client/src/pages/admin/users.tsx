@@ -370,21 +370,49 @@ export default function AdminUsers() {
     if (!userToEdit) return;
     
     const updateData: any = { id: userToEdit.id };
-    if (editUserData.name !== userToEdit.name) updateData.name = editUserData.name;
-    if (editUserData.email !== userToEdit.email) updateData.email = editUserData.email;
-    if (editUserData.password) updateData.password = editUserData.password;
-    if (editUserData.role !== userToEdit.role) updateData.role = editUserData.role;
+    let hasChanges = false;
+    
+    if (editUserData.name !== userToEdit.name) {
+      updateData.name = editUserData.name;
+      hasChanges = true;
+    }
+    if (editUserData.email !== userToEdit.email) {
+      updateData.email = editUserData.email;
+      hasChanges = true;
+    }
+    if (editUserData.password) {
+      updateData.password = editUserData.password;
+      hasChanges = true;
+    }
+    if (editUserData.role !== userToEdit.role) {
+      updateData.role = editUserData.role;
+      hasChanges = true;
+    }
     if (JSON.stringify(editUserData.permissions) !== JSON.stringify(userToEdit.permissions || [])) {
       updateData.permissions = editUserData.permissions;
+      hasChanges = true;
     }
     if (editUserData.onboardingCompleted !== (userToEdit.onboardingCompleted || false)) {
       updateData.onboardingCompleted = editUserData.onboardingCompleted;
+      hasChanges = true;
     }
     if (editUserData.isActive !== (userToEdit.isActive ?? true)) {
       updateData.isActive = editUserData.isActive;
+      hasChanges = true;
     }
     if (editUserData.forcePasswordChange) {
       updateData.forcePasswordChange = editUserData.forcePasswordChange;
+      hasChanges = true;
+    }
+    
+    // Só fazer a mutação se houver mudanças
+    if (!hasChanges) {
+      toast({
+        title: "Nenhuma alteração",
+        description: "Nenhum campo foi modificado.",
+      });
+      setShowEditModal(false);
+      return;
     }
     
     editUserMutation.mutate(updateData);
