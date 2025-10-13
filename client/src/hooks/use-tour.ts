@@ -19,18 +19,26 @@ export function useTour() {
       return await apiRequest('/api/tour/complete', 'POST', {});
     },
     onSuccess: async () => {
-      // Invalidar e esperar a query ser refetchada
-      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      // Atualizar o cache manualmente ANTES de redirecionar
+      queryClient.setQueryData(['/api/user'], (oldData: any) => {
+        if (oldData) {
+          return { ...oldData, tourCompleted: true };
+        }
+        return oldData;
+      });
+      
+      // Forçar refetch para garantir sincronização
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       
       toast({
         title: 'Tour Concluído!',
         description: 'Você pode refazer o tour a qualquer momento nas configurações.',
       });
       
-      // Aguardar um pouco mais para garantir que o cache foi atualizado
+      // Redirecionar para a página inicial
       setTimeout(() => {
         setLocation('/');
-      }, 1500);
+      }, 500);
     },
     onError: () => {
       toast({
