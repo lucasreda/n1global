@@ -1224,7 +1224,7 @@ export default function AdminOperations() {
                               <Package className="h-5 w-5 text-blue-400" />
                             </div>
                             <div>
-                              <h5 className="text-sm font-medium text-white">Envio</h5>
+                              <h5 className="text-sm font-medium text-white">Armazéns</h5>
                               <p className="text-xs text-slate-400">
                                 {operationIntegrations?.fulfillment ? 
                                   `Provider: ${operationIntegrations.fulfillment.provider}` : 
@@ -1459,9 +1459,9 @@ export default function AdminOperations() {
       <Dialog open={showFulfillmentModal} onOpenChange={setShowFulfillmentModal}>
         <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-white/20">
           <DialogHeader>
-            <DialogTitle>Configurar Integração de Envio</DialogTitle>
+            <DialogTitle>Configurar Armazém</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Configure seu provedor de fulfillment
+              Configure seu provedor de armazenamento
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
