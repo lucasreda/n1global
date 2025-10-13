@@ -43,7 +43,16 @@ export class WebhookService {
     email: string,
     password: string,
     customerName: string,
-    operationId: string
+    operationId: string,
+    orderData: {
+      customerPhone: string | null;
+      customerAddress: string | null;
+      customerCity: string | null;
+      customerZipCode: string | null;
+      customerCountry: string | null;
+      products: string;
+      total: string;
+    }
   ): Promise<void> {
     try {
       // Get operation details
@@ -58,8 +67,8 @@ export class WebhookService {
         return;
       }
 
-      // Build email content
-      const subject = `Bem-vindo! Seus dados de acesso - ${operation.name}`;
+      // Build email content in Spanish (Spain)
+      const subject = `¡Tu viaje comienza aquí! - Mi Monja Boost`;
       
       const htmlContent = `
         <!DOCTYPE html>
@@ -68,43 +77,100 @@ export class WebhookService {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #f8f9fa; border-radius: 10px; padding: 30px; margin-bottom: 20px;">
-            <h1 style="color: #2c3e50; margin-top: 0;">Bem-vindo, ${customerName}! 👋</h1>
-            <p style="font-size: 16px; margin-bottom: 20px;">
-              Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:
-            </p>
-            
-            <div style="background-color: white; border-left: 4px solid #3498db; padding: 20px; margin: 20px 0; border-radius: 5px;">
-              <p style="margin: 0 0 10px 0;"><strong>🔐 Email:</strong> ${email}</p>
-              <p style="margin: 0;"><strong>🔑 Senha:</strong> <code style="background-color: #ecf0f1; padding: 5px 10px; border-radius: 3px; font-size: 14px;">${password}</code></p>
-            </div>
-
-            <p style="font-size: 14px; color: #7f8c8d; margin-top: 20px;">
-              ⚠️ <strong>Importante:</strong> Por segurança, recomendamos que você altere sua senha no primeiro acesso.
-            </p>
+        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+          
+          <!-- Header con mensaje de bienvenida -->
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px 15px 0 0; padding: 40px 30px; text-align: center; color: white;">
+            <h1 style="margin: 0 0 15px 0; font-size: 28px; font-weight: bold;">¡Tu viaje comienza aquí! 🚀</h1>
+            <p style="margin: 0; font-size: 18px; opacity: 0.95;">Tu pedido ya está siendo preparado</p>
           </div>
 
-          <div style="text-align: center; color: #95a5a6; font-size: 12px; margin-top: 30px;">
-            <p>Esta é uma mensagem automática. Por favor, não responda a este email.</p>
-            <p>${operation.name}</p>
+          <!-- Contenido principal -->
+          <div style="background-color: white; padding: 35px 30px; border-radius: 0 0 15px 15px;">
+            
+            <!-- Datos del Pedido -->
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #667eea; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">📦 Detalles del Pedido</h2>
+              
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                <p style="margin: 0 0 8px 0;"><strong>Productos:</strong> ${orderData.products}</p>
+                <p style="margin: 0;"><strong>Total:</strong> <span style="color: #667eea; font-size: 18px; font-weight: bold;">${orderData.total}</span></p>
+              </div>
+
+              ${orderData.customerAddress ? `
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
+                <h3 style="margin: 0 0 12px 0; color: #555; font-size: 16px;">📍 Dirección de Envío</h3>
+                <p style="margin: 0 0 5px 0;">${orderData.customerAddress}</p>
+                <p style="margin: 0;">${orderData.customerCity || ''}${orderData.customerZipCode ? ', ' + orderData.customerZipCode : ''}${orderData.customerCountry ? ', ' + orderData.customerCountry : ''}</p>
+                ${orderData.customerPhone ? `<p style="margin: 8px 0 0 0;"><strong>Tel:</strong> ${orderData.customerPhone}</p>` : ''}
+              </div>
+              ` : ''}
+            </div>
+
+            <!-- Datos de Acceso -->
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #667eea; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">🔐 Datos de Acceso al Aplicativo</h2>
+              
+              <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 25px; border-radius: 10px; border-left: 5px solid #667eea;">
+                <p style="margin: 0 0 12px 0;">
+                  <strong style="color: #555;">Email:</strong><br>
+                  <span style="font-size: 16px; color: #667eea; font-weight: 600;">${email}</span>
+                </p>
+                <p style="margin: 0;">
+                  <strong style="color: #555;">Contraseña:</strong><br>
+                  <code style="background-color: white; padding: 8px 15px; border-radius: 5px; font-size: 16px; color: #333; display: inline-block; margin-top: 5px; border: 2px solid #667eea;">${password}</code>
+                </p>
+              </div>
+
+              <p style="font-size: 13px; color: #7f8c8d; margin-top: 15px; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+                ⚠️ <strong>Importante:</strong> Por seguridad, te recomendamos cambiar tu contraseña en el primer acceso.
+              </p>
+            </div>
+
+            <!-- Botón de Acceso -->
+            <div style="text-align: center; margin: 35px 0 20px 0;">
+              <a href="https://nutra.replit.app/" 
+                 style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 16px 45px; border-radius: 50px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;">
+                🚀 Acceder al Aplicativo Mi Monja Boost
+              </a>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div style="text-align: center; color: #95a5a6; font-size: 12px; margin-top: 25px; padding: 20px;">
+            <p style="margin: 0 0 5px 0;">Este es un mensaje automático. Por favor, no respondas a este email.</p>
+            <p style="margin: 0; font-weight: 600;">${operation.name}</p>
           </div>
         </body>
         </html>
       `;
 
       const textContent = `
-Bem-vindo, ${customerName}!
+¡Tu viaje comienza aquí!
+Tu pedido ya está siendo preparado
 
-Sua conta foi criada com sucesso. Aqui estão seus dados de acesso:
+📦 DETALLES DEL PEDIDO
+Productos: ${orderData.products}
+Total: ${orderData.total}
 
+${orderData.customerAddress ? `📍 DIRECCIÓN DE ENVÍO
+${orderData.customerAddress}
+${orderData.customerCity || ''}${orderData.customerZipCode ? ', ' + orderData.customerZipCode : ''}${orderData.customerCountry ? ', ' + orderData.customerCountry : ''}
+${orderData.customerPhone ? 'Tel: ' + orderData.customerPhone : ''}
+` : ''}
+
+🔐 DATOS DE ACCESO AL APLICATIVO
 Email: ${email}
-Senha: ${password}
+Contraseña: ${password}
 
-⚠️ Importante: Por segurança, recomendamos que você altere sua senha no primeiro acesso.
+⚠️ Importante: Por seguridad, te recomendamos cambiar tu contraseña en el primer acceso.
+
+🚀 ACCEDER AL APLICATIVO
+https://nutra.replit.app/
 
 ---
-Esta é uma mensagem automática. Por favor, não responda a este email.
+Este es un mensaje automático. Por favor, no respondas a este email.
 ${operation.name}
       `.trim();
 
@@ -112,7 +178,7 @@ ${operation.name}
 
       // Send email via Mailgun
       await mg.messages.create(MAILGUN_DOMAIN, {
-        from: `${operation.name} <noreply@${MAILGUN_DOMAIN}>`,
+        from: `Mi Monja Boost <noreply@${MAILGUN_DOMAIN}>`,
         to: [email],
         subject: subject,
         text: textContent,
@@ -285,12 +351,24 @@ ${operation.name}
         if (response.success && response.email && response.password) {
           console.log('📧 Webhook successful, sending welcome email...');
           
+          // Prepare order data for email
+          const orderData = {
+            customerPhone: order.customerPhone,
+            customerAddress: order.customerAddress,
+            customerCity: order.customerCity,
+            customerZipCode: order.customerZip,
+            customerCountry: order.customerCountry,
+            products: (order.products as any)?.name || order.products || 'Pedido',
+            total: order.total ? `€${Number(order.total).toFixed(2)}` : '€0.00',
+          };
+          
           // Send welcome email with login credentials
           await this.sendWelcomeEmail(
             response.email,
             response.password,
             order.customerName || 'Cliente',
-            order.operationId || ''
+            order.operationId || '',
+            orderData
           );
         }
       }
