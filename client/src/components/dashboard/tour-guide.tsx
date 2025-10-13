@@ -38,12 +38,96 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         <div className="space-y-3">
           <h3 className="text-lg font-bold">Bem-vindo ao N1 Dashboard! 🎉</h3>
           <p className="text-sm">
-            Vamos fazer um tour rápido pelas principais funcionalidades da plataforma.
-            Este tour tem 11 etapas e leva cerca de 2 minutos.
+            Vamos fazer um tour rápido pelos principais indicadores e funcionalidades da plataforma.
+            Este tour tem 13 etapas e leva cerca de 3 minutos.
           </p>
         </div>
       ),
       placement: 'center',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="card-shopify-orders"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Faturamento e Pedidos da Plataforma</h4>
+          <p className="text-sm">
+            Este card mostra o faturamento total e o número de pedidos importados da sua plataforma de vendas (Shopify/CartPanda).
+            É o valor bruto antes de descontar custos.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="card-cpa-marketing"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">CPA Anúncios e Marketing</h4>
+          <p className="text-sm">
+            Aqui você vê o custo por aquisição (CPA) dos anúncios e o total gasto em marketing.
+            Ajuda a entender quanto você investe para conseguir cada pedido.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="card-orders-delivered"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Pedidos N1</h4>
+          <p className="text-sm">
+            Total de pedidos confirmados pelo armazém e entregues ao cliente.
+            Mostra quantos pedidos foram processados e completados com sucesso.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="card-custos-retornados"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Custos Retornados</h4>
+          <p className="text-sm">
+            Valor total dos custos de pedidos que foram devolvidos ou cancelados.
+            Importante para calcular o prejuízo com devoluções.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="card-shipping-costs"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Custos de Envio</h4>
+          <p className="text-sm">
+            Total gasto com envios e frete dos pedidos.
+            Uma das principais despesas operacionais do negócio.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="card-product-costs"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Custos de Produtos</h4>
+          <p className="text-sm">
+            Valor total gasto com os produtos vendidos (custo de aquisição).
+            Fundamental para calcular a margem de lucro bruta.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
       disableBeacon: true,
     },
     {
@@ -52,36 +136,8 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         <div className="space-y-2">
           <h4 className="font-semibold">Receita Paga</h4>
           <p className="text-sm">
-            Este card mostra a receita dos pedidos que já foram pagos.
-            É a métrica mais importante para acompanhar seu fluxo de caixa real!
-          </p>
-        </div>
-      ),
-      placement: 'bottom',
-      disableBeacon: true,
-    },
-    {
-      target: '[data-testid="card-product-costs-featured"]',
-      content: (
-        <div className="space-y-2">
-          <h4 className="font-semibold">Custos de Produtos</h4>
-          <p className="text-sm">
-            Aqui você vê o total gasto com produtos vendidos.
-            Importante para calcular sua margem de lucro.
-          </p>
-        </div>
-      ),
-      placement: 'bottom',
-      disableBeacon: true,
-    },
-    {
-      target: '[data-testid="card-total-profit"]',
-      content: (
-        <div className="space-y-2">
-          <h4 className="font-semibold">Lucro Total</h4>
-          <p className="text-sm">
-            O lucro líquido depois de descontar todos os custos (produtos, envio, marketing).
-            Este é o indicador mais importante da saúde financeira do seu negócio.
+            Valor efetivamente recebido pelos pedidos que foram entregues.
+            Este é o dinheiro real que entrou no caixa, diferente do faturamento bruto.
           </p>
         </div>
       ),
@@ -94,8 +150,8 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         <div className="space-y-2">
           <h4 className="font-semibold">Taxa de Entrega</h4>
           <p className="text-sm">
-            A porcentagem de pedidos que foram entregues com sucesso.
-            Uma taxa alta indica boa qualidade logística e satisfação do cliente.
+            Porcentagem de pedidos que foram entregues com sucesso em relação ao total.
+            Quanto maior, melhor é sua operação logística e satisfação do cliente.
           </p>
         </div>
       ),
@@ -103,13 +159,27 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       disableBeacon: true,
     },
     {
-      target: '.recharts-wrapper',
+      target: '[data-testid="card-cac"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Gráfico de Faturamento</h4>
+          <h4 className="font-semibold">CPA Real</h4>
           <p className="text-sm">
-            Visualize a evolução do seu faturamento ao longo do tempo.
-            Ideal para identificar tendências e padrões de crescimento.
+            Custo real por aquisição calculado com base nos pedidos efetivamente entregues.
+            Métrica mais precisa do que o CPA de anúncios, pois considera apenas vendas concretizadas.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="card-total-profit"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Lucro Total</h4>
+          <p className="text-sm">
+            O lucro líquido final depois de descontar TODOS os custos (produtos, envio, marketing, devoluções).
+            Este é o indicador mais importante da saúde financeira do seu negócio! 💰
           </p>
         </div>
       ),
@@ -123,10 +193,10 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       target: '[data-tour-id="section-shopify"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Conecte sua Loja</h4>
+          <h4 className="font-semibold">Integração com Plataformas</h4>
           <p className="text-sm">
-            Aqui você conecta sua loja Shopify ou CartPanda para sincronizar pedidos
-            automaticamente. É o primeiro passo para começar a usar a plataforma!
+            Conecte sua loja Shopify ou CartPanda para sincronizar pedidos automaticamente.
+            É o primeiro passo essencial para começar a usar a plataforma!
           </p>
         </div>
       ),
@@ -137,48 +207,14 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       target: '[data-tour-id="section-warehouses"]',
       content: (
         <div className="space-y-2">
-          <h4 className="font-semibold">Configure Transportadoras</h4>
+          <h4 className="font-semibold">Integração com Armazéns</h4>
           <p className="text-sm">
-            Adicione suas transportadoras para gestão de envios. Você pode conectar
-            múltiplos armazéns e gerenciar todo o processo logístico em um só lugar.
+            Configure suas transportadoras e armazéns para gestão completa de envios.
+            Gerencie todo o processo logístico em um só lugar.
           </p>
         </div>
       ),
       placement: 'right',
-      disableBeacon: true,
-    },
-  ];
-
-  const getAdsSteps = (): Step[] => [
-    {
-      target: '[data-tour-id="section-ad-accounts"]',
-      content: (
-        <div className="space-y-2">
-          <h4 className="font-semibold">Gerencie suas Campanhas</h4>
-          <p className="text-sm">
-            Conecte suas contas do Facebook Ads para acompanhar o desempenho das
-            suas campanhas e otimizar seus anúncios diretamente na plataforma.
-          </p>
-        </div>
-      ),
-      placement: 'bottom',
-      disableBeacon: true,
-    },
-  ];
-
-  const getOnboardingCardStep = (): Step[] => [
-    {
-      target: '[data-tour-id="onboarding-card"]',
-      content: (
-        <div className="space-y-2">
-          <h4 className="font-semibold">Card de Progresso</h4>
-          <p className="text-sm">
-            Use este card para acompanhar seu progresso de configuração inicial.
-            Ele desaparece automaticamente quando todas as integrações estiverem completas!
-          </p>
-        </div>
-      ),
-      placement: 'bottom',
       disableBeacon: true,
     },
   ];
@@ -188,10 +224,10 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       target: 'body',
       content: (
         <div className="space-y-3">
-          <h3 className="text-lg font-bold">Pronto! 🎊</h3>
+          <h3 className="text-lg font-bold">Tour Concluído! 🎊</h3>
           <p className="text-sm">
-            Você concluiu o tour do N1 Dashboard. Agora você já conhece as principais
-            funcionalidades da plataforma.
+            Você agora conhece todos os principais indicadores e funcionalidades do N1 Dashboard.
+            Está pronto para começar a gerenciar seu negócio de forma profissional!
           </p>
           <p className="text-sm text-muted-foreground">
             Você pode refazer este tour a qualquer momento nas configurações.
@@ -209,8 +245,6 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       return getDashboardSteps();
     } else if (currentPage === 'integrations') {
       return getIntegrationsSteps();
-    } else if (currentPage === 'ads') {
-      return getAdsSteps();
     }
     
     return [];
@@ -237,7 +271,6 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       if (type === 'step:after' && action === 'next') {
         const dashboardSteps = getDashboardSteps();
         const integrationsSteps = getIntegrationsSteps();
-        const adsSteps = getAdsSteps();
 
         console.log('➡️ Moving to next step:', { currentPage, index, dashboardLength: dashboardSteps.length });
 
@@ -248,15 +281,8 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
             onNavigate('integrations');
           }, 300);
         }
-        // Se terminou os steps de integrations, vai para ads
+        // Se terminou os steps de integrations, completa o tour
         else if (currentPage === 'integrations' && index === integrationsSteps.length - 1) {
-          console.log('🔄 Navigating to ads');
-          setTimeout(() => {
-            onNavigate('ads');
-          }, 300);
-        }
-        // Se terminou os steps de ads, completa o tour
-        else if (currentPage === 'ads' && index === adsSteps.length - 1) {
           console.log('🎉 Tour completed!');
           setTimeout(() => {
             onComplete();
