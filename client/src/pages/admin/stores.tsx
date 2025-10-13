@@ -1447,6 +1447,7 @@ export default function AdminOperations() {
                 <SelectContent className="bg-gray-800 border-gray-600">
                   <SelectItem value="european_fulfillment" className="text-white hover:bg-gray-700">European Fulfillment</SelectItem>
                   <SelectItem value="elogy" className="text-white hover:bg-gray-700">Elogy</SelectItem>
+                  <SelectItem value="fhb" className="text-white hover:bg-gray-700">N1 Warehouse 3 (FHB)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
