@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { useToast } from './use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
 export function useTour() {
   const [isTourRunning, setIsTourRunning] = useState(false);
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'integrations' | 'ads'>('dashboard');
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -22,6 +24,11 @@ export function useTour() {
         title: 'Tour Concluído!',
         description: 'Você pode refazer o tour a qualquer momento nas configurações.',
       });
+      
+      // Redirecionar para a página inicial após completar o tour
+      setTimeout(() => {
+        setLocation('/');
+      }, 1000);
     },
     onError: () => {
       toast({
