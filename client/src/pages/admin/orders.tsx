@@ -68,6 +68,15 @@ export default function AdminOrders() {
     notes: ""
   });
 
+  // View order details modal states
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<GlobalOrder | null>(null);
+
+  const handleViewOrder = (order: GlobalOrder) => {
+    setSelectedOrder(order);
+    setIsViewModalOpen(true);
+  };
+
   const pageSize = 20;
 
   const { data: ordersResponse, isLoading: ordersLoading } = useQuery({
@@ -471,7 +480,12 @@ export default function AdminOrders() {
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleViewOrder(order)}
+                            data-testid={`button-view-order-${order.id}`}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                         </td>
@@ -790,6 +804,97 @@ export default function AdminOrders() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Order Details Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-3xl bg-slate-900 border-slate-800 text-slate-100">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-100">
+              Detalhes do Pedido
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedOrder && (
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Order ID */}
+              <div className="bg-slate-800/50 rounded-lg p-4">
+                <p className="text-sm text-slate-400 mb-1">ID do Pedido</p>
+                <p className="text-lg font-mono text-slate-200">{selectedOrder.id}</p>
+              </div>
+
+              {/* Customer Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-200 mb-3">Informações do Cliente</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-slate-400">Nome</p>
+                    <p className="text-slate-200">{selectedOrder.customerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Telefone</p>
+                    <p className="text-slate-200">{selectedOrder.customerPhone}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-sm text-slate-400">Endereço de Entrega</p>
+                    <p className="text-slate-200">{selectedOrder.shippingAddress}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-200 mb-3">Informações do Pedido</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-slate-400">Loja</p>
+                    <p className="text-slate-200">{selectedOrder.storeName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Operação</p>
+                    <p className="text-slate-200">{selectedOrder.operationName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Status</p>
+                    <div className="mt-1">
+                      {getStatusBadge(selectedOrder.status)}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400">Valor Total</p>
+                    <p className="text-lg font-semibold text-green-400">
+                      {selectedOrder.currency} {selectedOrder.amount.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-sm text-slate-400">Data de Criação</p>
+                    <p className="text-slate-200">
+                      {new Date(selectedOrder.createdAt).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end pt-4 border-t border-slate-800">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="bg-slate-800 border-slate-700 text-slate-300"
+                  data-testid="button-close-order-details"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
