@@ -30,7 +30,8 @@ export function OperationalAppIntegration() {
   // Save config mutation
   const saveMutation = useMutation({
     mutationFn: async (data: { webhookUrl: string; webhookSecret?: string; isActive: boolean }) => {
-      return apiRequest("POST", "/api/integrations/operational-app", data);
+      const res = await apiRequest("/api/integrations/operational-app", "POST", data);
+      return res.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/operational-app"] });
@@ -57,10 +58,11 @@ export function OperationalAppIntegration() {
   // Test webhook mutation
   const testMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/integrations/operational-app/test", {
+      const res = await apiRequest("/api/integrations/operational-app/test", "POST", {
         webhookUrl: webhookUrl || config?.webhookUrl,
         webhookSecret: webhookSecret || generatedSecret,
       });
+      return res.json();
     },
     onSuccess: (data: any) => {
       if (data.success) {
