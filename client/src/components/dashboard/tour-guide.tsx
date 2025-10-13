@@ -58,6 +58,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'bottom',
+      disableBeacon: true,
     },
     {
       target: '[data-testid="card-cpa-marketing"]',
@@ -71,6 +72,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'bottom',
+      disableBeacon: true,
     },
     {
       target: '[data-testid="card-total-profit"]',
@@ -84,6 +86,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'bottom',
+      disableBeacon: true,
     },
     {
       target: '[data-testid="card-taxa-entrega"]',
@@ -97,6 +100,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
         </div>
       ),
       placement: 'bottom',
+      disableBeacon: true,
     },
   ];
 
