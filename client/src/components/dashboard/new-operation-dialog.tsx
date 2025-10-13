@@ -52,6 +52,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
   const [operationName, setOperationName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('');
+  const [operationType, setOperationType] = useState('Cash on Delivery');
   const { toast } = useToast();
 
   // Reset state when dialog opens/closes
@@ -60,6 +61,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       setOperationName('');
       setSelectedCountry('');
       setSelectedCurrency('');
+      setOperationType('Cash on Delivery');
     }
   }, [open]);
 
@@ -75,7 +77,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
 
   // Create operation mutation
   const createOperationMutation = useMutation({
-    mutationFn: async (data: { name: string; country: string; currency: string }) => {
+    mutationFn: async (data: { name: string; country: string; currency: string; operationType: string }) => {
       const response = await fetch('/api/operations', {
         method: 'POST',
         headers: { 
@@ -132,6 +134,7 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
       name: operationName,
       country: selectedCountry,
       currency: selectedCurrency,
+      operationType: operationType,
     });
   };
 
@@ -156,6 +159,23 @@ export function NewOperationDialog({ open, onOpenChange, onOperationCreated }: N
               className="bg-gray-800 border-gray-700 text-white"
               data-testid="input-operation-name"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-white">Tipo de Operação</Label>
+            <Select value={operationType} onValueChange={setOperationType}>
+              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectItem value="Cash on Delivery" className="text-white hover:bg-gray-700">
+                  💵 Cash on Delivery
+                </SelectItem>
+                <SelectItem value="Pagamento no Cartão" className="text-white hover:bg-gray-700">
+                  💳 Pagamento no Cartão
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

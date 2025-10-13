@@ -37,7 +37,7 @@ export interface IStorage {
   updateOnboardingStep(userId: string, stepId: string, completed: boolean): Promise<void>;
   completeOnboarding(userId: string): Promise<void>;
   resetUserOnboarding(userId: string): Promise<void>;
-  createOperation(operationData: { name: string; description: string; country: string; currency: string }, userId: string): Promise<Operation>;
+  createOperation(operationData: { name: string; description: string; country: string; currency: string; operationType?: string }, userId: string): Promise<Operation>;
   updateUserOnboardingCardHidden(userId: string, hidden: boolean): Promise<void>;
   getShopifyIntegrationsByOperation(operationId: string): Promise<any[]>;
   getAdAccountsByOperation(operationId: string): Promise<any[]>;
@@ -321,7 +321,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  async createOperation(operationData: { name: string; description: string; country: string; currency: string }, userId: string): Promise<Operation> {
+  async createOperation(operationData: { name: string; description: string; country: string; currency: string; operationType?: string }, userId: string): Promise<Operation> {
     console.log("🏭 Creating operation - Start", { operationData, userId });
     
     const user = await this.getUser(userId);
@@ -372,6 +372,7 @@ export class DatabaseStorage implements IStorage {
           description: operationData.description,
           country: operationData.country,
           currency: operationData.currency,
+          operationType: operationData.operationType || 'Cash on Delivery',
           storeId
         })
         .returning();

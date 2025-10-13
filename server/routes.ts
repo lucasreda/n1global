@@ -1051,7 +1051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { name, country, currency } = req.body;
+      const { name, country, currency, operationType } = req.body;
       if (!name?.trim()) {
         return res.status(400).json({ message: "Nome da operação é obrigatório" });
       }
@@ -1067,7 +1067,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: name.trim(),
         description: `Operação criada em ${new Date().toLocaleDateString()}`,
         country: country.trim(),
-        currency: currency.trim()
+        currency: currency.trim(),
+        operationType: operationType || 'Cash on Delivery'
       }, req.user.id);
 
       console.log("New operation created:", operation);
