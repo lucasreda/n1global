@@ -219,7 +219,21 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
     },
   ];
 
-  const getFinalStep = (): Step[] => [
+  const getAdsSteps = (): Step[] => [
+    {
+      target: '[data-tour-id="section-ad-accounts"]',
+      content: (
+        <div className="space-y-2">
+          <h4 className="font-semibold">Gerencie suas Campanhas</h4>
+          <p className="text-sm">
+            Conecte suas contas do Facebook Ads para acompanhar o desempenho das campanhas
+            e otimizar seus anúncios diretamente na plataforma.
+          </p>
+        </div>
+      ),
+      placement: 'bottom',
+      disableBeacon: true,
+    },
     {
       target: 'body',
       content: (
@@ -245,6 +259,8 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       return getDashboardSteps();
     } else if (currentPage === 'integrations') {
       return getIntegrationsSteps();
+    } else if (currentPage === 'ads') {
+      return getAdsSteps();
     }
     
     return [];
@@ -256,23 +272,19 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       
       console.log('🎯 Joyride callback:', { status, action, index, type, currentPage });
       
-      // Se o tour foi completado ou pulado
-      if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
-        console.log('✅ Tour finished or skipped');
-        if (status === STATUS.SKIPPED) {
-          onSkip();
-        } else {
-          onComplete();
-        }
-        return;
-      }
+      const dashboardSteps = getDashboardSteps();
+      const integrationsSteps = getIntegrationsSteps();
+      const adsSteps = getAdsSteps();
 
-      // Lógica de navegação entre páginas
+      // Lógica de navegação entre páginas ANTES de verificar status
       if (type === 'step:after' && action === 'next') {
-        const dashboardSteps = getDashboardSteps();
-        const integrationsSteps = getIntegrationsSteps();
-
-        console.log('➡️ Moving to next step:', { currentPage, index, dashboardLength: dashboardSteps.length });
+        console.log('➡️ Moving to next step:', { 
+          currentPage, 
+          index, 
+          dashboardLength: dashboardSteps.length,
+          integrationsLength: integrationsSteps.length,
+          adsLength: adsSteps.length
+        });
 
         // Se terminou os steps do dashboard, vai para integrations
         if (currentPage === 'dashboard' && index === dashboardSteps.length - 1) {
@@ -280,14 +292,38 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
           setTimeout(() => {
             onNavigate('integrations');
           }, 300);
+          return; // Previne que o onComplete seja chamado
         }
-        // Se terminou os steps de integrations, completa o tour
+        // Se terminou os steps de integrations, vai para ads
         else if (currentPage === 'integrations' && index === integrationsSteps.length - 1) {
-          console.log('🎉 Tour completed!');
+          console.log('🔄 Navigating to ads');
+          setTimeout(() => {
+            onNavigate('ads');
+          }, 300);
+          return; // Previne que o onComplete seja chamado
+        }
+        // Se terminou os steps de ads, completa o tour
+        else if (currentPage === 'ads' && index === adsSteps.length - 1) {
+          console.log('🎉 Tour completed! Calling onComplete');
           setTimeout(() => {
             onComplete();
           }, 300);
+          return;
         }
+      }
+      
+      // Se o tour foi pulado
+      if (status === STATUS.SKIPPED) {
+        console.log('⏭️ Tour skipped');
+        onSkip();
+        return;
+      }
+
+      // Se o tour foi completado naturalmente
+      if (status === STATUS.FINISHED) {
+        console.log('✅ Tour finished naturally');
+        // Não faz nada aqui porque a navegação já foi tratada acima
+        return;
       }
     },
     [currentPage, onComplete, onSkip, onNavigate]
