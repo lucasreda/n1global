@@ -252,7 +252,8 @@ export class AdminService {
           provider: orders.provider,
           dataSource: orders.dataSource,
           shopifyOrderNumber: orders.shopifyOrderNumber,
-          carrierImported: orders.carrierImported
+          carrierImported: orders.carrierImported,
+          products: orders.products
         })
         .from(orders)
         .leftJoin(stores, sql`${stores.id} = ${orders.storeId}`)

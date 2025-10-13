@@ -21,6 +21,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
+interface OrderProduct {
+  name: string;
+  price: string | number;
+  quantity?: number;
+  image?: string;
+}
+
 interface GlobalOrder {
   id: string;
   storeId: string;
@@ -40,6 +47,7 @@ interface GlobalOrder {
   currency: string;
   orderDate: string;
   createdAt?: string;
+  products?: OrderProduct[] | any;
 }
 
 export default function AdminOrders() {
@@ -816,7 +824,7 @@ export default function AdminOrders() {
 
       {/* View Order Details Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-3xl bg-slate-900 border-slate-800 text-slate-100">
+        <DialogContent className="max-w-6xl bg-slate-900 border-slate-800 text-slate-100">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-slate-100">
               Detalhes do Pedido
@@ -824,7 +832,7 @@ export default function AdminOrders() {
           </DialogHeader>
           
           {selectedOrder && (
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2">
               {/* Order ID */}
               <div className="bg-slate-800/50 rounded-lg p-4">
                 <p className="text-sm text-slate-400 mb-1">ID do Pedido</p>
@@ -902,6 +910,57 @@ export default function AdminOrders() {
                   </div>
                 </div>
               </div>
+
+              {/* Products */}
+              {selectedOrder.products && Array.isArray(selectedOrder.products) && selectedOrder.products.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-200 mb-3">Produtos</h3>
+                  <div className="space-y-3">
+                    {selectedOrder.products.map((product: OrderProduct, index: number) => (
+                      <div 
+                        key={index} 
+                        className="flex items-center gap-4 bg-slate-800/30 rounded-lg p-4 border border-slate-700/50"
+                        data-testid={`product-item-${index}`}
+                      >
+                        {/* Product Image */}
+                        <div className="flex-shrink-0">
+                          {product.image ? (
+                            <img 
+                              src={product.image} 
+                              alt={product.name}
+                              className="w-20 h-20 object-cover rounded-lg border border-slate-600"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80?text=No+Image';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-20 h-20 bg-slate-700 rounded-lg flex items-center justify-center">
+                              <ShoppingCart className="w-8 h-8 text-slate-500" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-200 mb-1">{product.name}</p>
+                          {product.quantity && (
+                            <p className="text-sm text-slate-400">Quantidade: {product.quantity}</p>
+                          )}
+                        </div>
+
+                        {/* Product Price */}
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-green-400">
+                            {selectedOrder.currency} {typeof product.price === 'number' 
+                              ? product.price.toFixed(2) 
+                              : parseFloat(product.price || '0').toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex justify-end pt-4 border-t border-slate-800">
