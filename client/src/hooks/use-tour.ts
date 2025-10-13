@@ -9,6 +9,8 @@ export function useTour() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  console.log('🎨 useTour hook state:', { isTourRunning, currentPage });
+
   // Mutation para completar o tour
   const completeTourMutation = useMutation({
     mutationFn: async () => {

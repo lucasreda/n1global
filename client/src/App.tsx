@@ -399,6 +399,8 @@ function DashboardLayoutWithExchangeRate({ children }: { children: React.ReactNo
     navigateToPage,
   } = useTourContext();
 
+  console.log('🏗️ DashboardLayoutWithExchangeRate:', { isTourRunning, currentPage });
+
   // Handle tour navigation between pages
   const handleTourNavigate = (page: 'dashboard' | 'integrations' | 'ads') => {
     navigateToPage(page);

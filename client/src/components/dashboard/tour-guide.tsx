@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 
 interface TourGuideProps {
@@ -10,6 +10,27 @@ interface TourGuideProps {
 }
 
 export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: TourGuideProps) {
+  console.log('🎭 TourGuide render:', { run, currentPage });
+  
+  // Local state to handle delayed tour start
+  const [isRunning, setIsRunning] = useState(false);
+  
+  useEffect(() => {
+    console.log('🎯 TourGuide useEffect - run changed:', { run, currentPage });
+    
+    if (run && !isRunning) {
+      // Small delay to ensure all elements are rendered
+      const timer = setTimeout(() => {
+        console.log('⏰ Starting tour after delay');
+        setIsRunning(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else if (!run && isRunning) {
+      setIsRunning(false);
+    }
+  }, [run, isRunning, currentPage]);
+  
   const getDashboardSteps = (): Step[] => [
     {
       target: 'body',
@@ -228,7 +249,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
   return (
     <Joyride
       steps={getAllSteps()}
-      run={run}
+      run={isRunning}
       continuous
       showProgress
       showSkipButton
