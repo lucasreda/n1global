@@ -84,27 +84,32 @@ export function ShopifyIntegration() {
         description: "Integração Shopify configurada com sucesso!",
       });
 
-      // Verificar se já tem armazém configurado
-      const status = await queryClient.fetchQuery({
-        queryKey: ['/api/onboarding/integrations-status'],
-        queryFn: async () => {
-          const response = await apiRequest('/api/onboarding/integrations-status', 'GET');
-          return response.json();
-        },
-      });
-
-      // Se já tem armazém, redirecionar para orders e iniciar tour
-      if (status?.hasWarehouse) {
-        toast({
-          title: "Pronto para Sincronizar!",
-          description: "Agora você pode importar seus pedidos.",
+      // Verificar se já tem armazém configurado (com tratamento de erro)
+      try {
+        const status = await queryClient.fetchQuery({
+          queryKey: ['/api/onboarding/integrations-status'],
+          queryFn: async () => {
+            const response = await apiRequest('/api/onboarding/integrations-status', 'GET');
+            return response.json();
+          },
         });
-        setTimeout(() => {
-          setLocation('/orders');
+
+        // Se já tem armazém, redirecionar para orders e iniciar tour
+        if (status?.hasWarehouse) {
+          toast({
+            title: "Pronto para Sincronizar!",
+            description: "Agora você pode importar seus pedidos.",
+          });
           setTimeout(() => {
-            startSyncTour();
-          }, 1000);
-        }, 1500);
+            setLocation('/orders');
+            setTimeout(() => {
+              startSyncTour();
+            }, 1000);
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar status das integrações:', error);
+        // Silenciosamente falhar - não atrapalhar o fluxo do usuário
       }
     },
     onError: (error: any) => {

@@ -107,27 +107,32 @@ export function MultiProviderPanel() {
         setShowCredentialsForm(false);
         setSelectedProvider(null);
 
-        // Verificar se já tem plataforma configurada
-        const status = await queryClient.fetchQuery({
-          queryKey: ['/api/onboarding/integrations-status'],
-          queryFn: async () => {
-            const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
-            return response.json();
-          },
-        });
-
-        // Se já tem plataforma, redirecionar para orders e iniciar tour
-        if (status?.hasPlatform) {
-          toast({
-            title: "Pronto para Sincronizar!",
-            description: "Agora você pode importar seus pedidos.",
+        // Verificar se já tem plataforma configurada (com tratamento de erro)
+        try {
+          const status = await queryClient.fetchQuery({
+            queryKey: ['/api/onboarding/integrations-status'],
+            queryFn: async () => {
+              const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
+              return response.json();
+            },
           });
-          setTimeout(() => {
-            setLocation('/orders');
+
+          // Se já tem plataforma, redirecionar para orders e iniciar tour
+          if (status?.hasPlatform) {
+            toast({
+              title: "Pronto para Sincronizar!",
+              description: "Agora você pode importar seus pedidos.",
+            });
             setTimeout(() => {
-              startSyncTour();
-            }, 1000);
-          }, 1500);
+              setLocation('/orders');
+              setTimeout(() => {
+                startSyncTour();
+              }, 1000);
+            }, 1500);
+          }
+        } catch (error) {
+          console.error('Erro ao verificar status das integrações:', error);
+          // Silenciosamente falhar - não atrapalhar o fluxo do usuário
         }
       }
     },
