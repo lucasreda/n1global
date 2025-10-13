@@ -238,32 +238,57 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       spotlightPadding={8}
       styles={{
         options: {
-          arrowColor: 'hsl(var(--popover))',
-          backgroundColor: 'hsl(var(--popover))',
-          overlayColor: 'rgba(0, 0, 0, 0.5)',
-          primaryColor: 'hsl(var(--primary))',
-          textColor: 'hsl(var(--popover-foreground))',
+          arrowColor: '#1a1a1a',
+          backgroundColor: '#1a1a1a',
+          overlayColor: 'rgba(0, 0, 0, 0.7)',
+          primaryColor: '#3b82f6',
+          textColor: '#ffffff',
           zIndex: 10000,
         },
         tooltip: {
-          borderRadius: 8,
-          padding: 20,
+          backgroundColor: 'rgba(26, 26, 26, 0.95)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: 12,
+          padding: 24,
+          boxShadow: '0 8px 32px rgba(31, 38, 135, 0.5)',
         },
         tooltipContainer: {
           textAlign: 'left',
         },
-        buttonNext: {
-          backgroundColor: 'hsl(var(--primary))',
-          borderRadius: 6,
-          padding: '8px 16px',
+        tooltipTitle: {
+          color: '#ffffff',
+          fontSize: 18,
+          fontWeight: 600,
+          marginBottom: 12,
+        },
+        tooltipContent: {
+          color: '#e5e7eb',
           fontSize: 14,
+          lineHeight: 1.6,
+        },
+        buttonNext: {
+          backgroundColor: '#3b82f6',
+          borderRadius: 8,
+          padding: '10px 20px',
+          fontSize: 14,
+          fontWeight: 500,
+          transition: 'all 0.2s',
         },
         buttonBack: {
-          color: 'hsl(var(--muted-foreground))',
-          marginRight: 8,
+          color: '#9ca3af',
+          marginRight: 10,
+          fontSize: 14,
         },
         buttonSkip: {
-          color: 'hsl(var(--muted-foreground))',
+          color: '#9ca3af',
+          fontSize: 14,
+        },
+        buttonClose: {
+          color: '#ffffff',
+        },
+        spotlight: {
+          borderRadius: 8,
         },
       }}
       locale={{

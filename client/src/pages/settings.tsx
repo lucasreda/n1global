@@ -1,5 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { User, Bell, Shield, Database, Briefcase } from "lucide-react";
+import { User, Bell, Shield, Database, Briefcase, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTourContext } from "@/contexts/tour-context";
+import { useLocation } from "wouter";
 
 export default function Settings() {
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
@@ -16,6 +18,16 @@ export default function Settings() {
   
   const { selectedOperation } = useCurrentOperation();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  
+  // Tour context
+  const { resetTour, isResettingTour } = useTourContext();
+
+  const handleRestartTour = async () => {
+    await resetTour();
+    // Navigate to dashboard to start tour
+    navigate('/');
+  };
 
   // Fetch full operations data to get operationType
   const { data: operations } = useQuery({
@@ -196,6 +208,51 @@ export default function Settings() {
           >
             {isSaving ? 'Salvando...' : 'Salvar Configuração'}
           </Button>
+        </div>
+      </div>
+      
+      {/* Tour Interativo */}
+      <div 
+        className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+        style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+      >
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center">
+            <PlayCircle className="text-purple-400" size={20} />
+          </div>
+          <div>
+            <h3 className="text-white font-semibold">Tour Interativo</h3>
+            <p className="text-gray-400 text-sm">Conheça todas as funcionalidades do dashboard</p>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="bg-black/10 border border-white/5 rounded-lg p-4">
+            <p className="text-gray-300 text-sm mb-4">
+              O tour guiado mostra os principais recursos do sistema, incluindo métricas, integrações e anúncios. 
+              Perfeito para novos usuários ou para relembrar funcionalidades.
+            </p>
+            <Button 
+              onClick={handleRestartTour}
+              disabled={isResettingTour}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200"
+              data-testid="button-restart-tour"
+            >
+              {isResettingTour ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Iniciando...
+                </>
+              ) : (
+                <>
+                  <PlayCircle className="mr-2" size={18} />
+                  Refazer Tour Guiado
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
       
