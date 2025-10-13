@@ -43,6 +43,10 @@ export interface IStorage {
   getAdAccountsByOperation(operationId: string): Promise<any[]>;
   getCustomerSupportByOperation(operationId: string): Promise<any | null>;
   
+  // Tour methods
+  updateUserTourCompleted(userId: string, completed: boolean): Promise<void>;
+  resetUserTour(userId: string): Promise<void>;
+  
   // Shipping providers creation
   createShippingProvider(data: InsertShippingProvider, storeId: string, operationId: string): Promise<ShippingProvider>;
   updateShippingProvider(id: string, updates: Partial<ShippingProvider>): Promise<ShippingProvider | undefined>;
@@ -401,6 +405,20 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(users)
       .set({ onboardingCardHidden: hidden })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserTourCompleted(userId: string, completed: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ tourCompleted: completed })
+      .where(eq(users.id, userId));
+  }
+
+  async resetUserTour(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ tourCompleted: false })
       .where(eq(users.id, userId));
   }
 
