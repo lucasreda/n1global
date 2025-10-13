@@ -4774,7 +4774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/operations/:operationId/integrations/fulfillment", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { operationId } = req.params;
-      const { provider, credentials } = req.body;
+      const { provider, credentials, integrationId } = req.body;
       
       if (!provider || !credentials) {
         return res.status(400).json({ message: "Provider e credenciais são obrigatórios" });
@@ -4782,13 +4782,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const integration = await adminService.createOrUpdateFulfillmentIntegration(operationId, {
         provider,
-        credentials
+        credentials,
+        integrationId
       });
       
       res.json(integration);
     } catch (error) {
       console.error("Admin save Fulfillment integration error:", error);
       res.status(500).json({ message: "Erro ao salvar integração de envio" });
+    }
+  });
+
+  app.delete("/api/admin/operations/:operationId/integrations/fulfillment/:integrationId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { integrationId } = req.params;
+      
+      if (!integrationId) {
+        return res.status(400).json({ message: "ID da integração é obrigatório" });
+      }
+      
+      await adminService.deleteFulfillmentIntegration(integrationId);
+      
+      res.json({ message: "Armazém removido com sucesso" });
+    } catch (error) {
+      console.error("Admin delete Fulfillment integration error:", error);
+      res.status(500).json({ message: "Erro ao remover armazém" });
     }
   });
 

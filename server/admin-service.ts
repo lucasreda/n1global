@@ -845,11 +845,11 @@ export class AdminService {
         .where(eq(shopifyIntegrations.operationId, operationId))
         .limit(1);
 
-      const [fulfillment] = await db
+      // Retornar TODAS as integrações de fulfillment (múltiplos armazéns)
+      const fulfillments = await db
         .select()
         .from(fulfillmentIntegrations)
-        .where(eq(fulfillmentIntegrations.operationId, operationId))
-        .limit(1);
+        .where(eq(fulfillmentIntegrations.operationId, operationId));
 
       const [facebookAds] = await db
         .select()
@@ -859,7 +859,7 @@ export class AdminService {
 
       return {
         shopify: shopify || null,
-        fulfillment: fulfillment || null,
+        fulfillments: fulfillments || [], // Array de armazéns
         facebookAds: facebookAds || null
       };
     } catch (error) {
@@ -912,15 +912,11 @@ export class AdminService {
   async createOrUpdateFulfillmentIntegration(operationId: string, data: {
     provider: string;
     credentials: any;
+    integrationId?: string; // Se fornecido, atualiza essa integração específica
   }) {
     try {
-      const [existing] = await db
-        .select()
-        .from(fulfillmentIntegrations)
-        .where(eq(fulfillmentIntegrations.operationId, operationId))
-        .limit(1);
-
-      if (existing) {
+      // Se integrationId for fornecido, atualizar essa integração específica
+      if (data.integrationId) {
         const [updated] = await db
           .update(fulfillmentIntegrations)
           .set({
@@ -929,10 +925,37 @@ export class AdminService {
             status: 'active',
             updatedAt: new Date()
           })
+          .where(eq(fulfillmentIntegrations.id, data.integrationId))
+          .returning();
+        return updated;
+      }
+      
+      // Verificar se já existe integração com esse provider para esta operação
+      const [existing] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(
+          and(
+            eq(fulfillmentIntegrations.operationId, operationId),
+            eq(fulfillmentIntegrations.provider, data.provider)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        // Atualizar integração existente do mesmo provider
+        const [updated] = await db
+          .update(fulfillmentIntegrations)
+          .set({
+            credentials: data.credentials,
+            status: 'active',
+            updatedAt: new Date()
+          })
           .where(eq(fulfillmentIntegrations.id, existing.id))
           .returning();
         return updated;
       } else {
+        // Criar nova integração
         const [created] = await db
           .insert(fulfillmentIntegrations)
           .values({
@@ -946,6 +969,24 @@ export class AdminService {
       }
     } catch (error) {
       console.error('❌ Error creating/updating Fulfillment integration:', error);
+      throw error;
+    }
+  }
+
+  async deleteFulfillmentIntegration(integrationId: string) {
+    try {
+      const [deleted] = await db
+        .delete(fulfillmentIntegrations)
+        .where(eq(fulfillmentIntegrations.id, integrationId))
+        .returning();
+      
+      if (!deleted) {
+        throw new Error('Integration not found');
+      }
+      
+      return deleted;
+    } catch (error) {
+      console.error('❌ Error deleting Fulfillment integration:', error);
       throw error;
     }
   }
