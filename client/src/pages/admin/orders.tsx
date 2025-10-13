@@ -372,7 +372,7 @@ export default function AdminOrders() {
       {/* Page Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+          <h1 className="text-[22px] font-bold tracking-tight text-gray-900 dark:text-gray-100">
             Pedidos
           </h1>
           <p className="text-muted-foreground mt-2">
