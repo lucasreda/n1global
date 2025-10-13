@@ -9,6 +9,16 @@ Quality priority: Maximum quality and highest level possible ("atingir o mais al
 
 ## Recent Changes
 
+### Onboarding Progress Card (October 13, 2025)
+Implemented a smart onboarding progress card for the user dashboard that tracks integration completeness:
+- **Integration Status Tracking**: New API endpoint `/api/onboarding/integrations-status` verifies (1) Platform integrated (Shopify/CartPanda), (2) At least 1 warehouse connected, (3) At least 1 ad account connected, (4) Support email configured with domain
+- **Smart Visibility**: Card automatically appears when any integration is incomplete and disappears when all steps are done
+- **User Control**: Manual hide option with confirmation modal (stores preference in `onboardingCardHidden` user field)
+- **Visual Progress**: Progress bar showing X of 4 steps completed, checkmarks for completed items, clear descriptions for each requirement
+- **Dashboard Integration**: Card appears at the top of the dashboard above stats, uses glassmorphism blue gradient design
+- **Database Schema**: Added `onboardingCardHidden` boolean field to users table with SQL migration
+- **Storage Methods**: `getShopifyIntegrationsByOperation`, `getAdAccountsByOperation`, `getCustomerSupportByOperation`, `updateUserOnboardingCardHidden`
+
 ### Iframe Compatibility & Keyboard Shortcuts Fix (October 13, 2025)
 Fixed critical page builder issues with imported HTML containing iframes:
 - **HTML Attribute Normalization**: Created normalizeAttributes function that converts HTML attributes to React props (allowfullscreen→allowFullScreen, frameborder→frameBorder, etc.). Skips class/className as they're handled separately via node.classNames array

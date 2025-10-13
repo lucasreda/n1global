@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,13 +66,6 @@ export function OnboardingCard() {
     hideCardMutation.mutate();
     setIsDialogOpen(false);
   };
-
-  // Auto-hide card when all steps are completed
-  useEffect(() => {
-    if (status?.allCompleted && !hideCardMutation.isPending) {
-      hideCardMutation.mutate();
-    }
-  }, [status?.allCompleted]);
 
   if (isLoading) {
     return null; // Don't show anything while loading
