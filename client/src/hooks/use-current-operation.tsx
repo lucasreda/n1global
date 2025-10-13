@@ -54,18 +54,10 @@ export function useCurrentOperation() {
         console.log("🔄 Restoring saved operation:", savedOperation.name, savedOperation.id);
         setSelectedOperation(savedOperation.id);
       } else {
-        // Default to Dss operation (has the Shopify orders) only if no saved choice
-        const dssOperation = finalOperations.find((op: any) => op.name === "Dss");
-        
-        if (dssOperation) {
-          console.log("✅ Setting default Dss operation:", dssOperation.id);
-          setSelectedOperation(dssOperation.id);
-          localStorage.setItem("current_operation_id", dssOperation.id);
-        } else {
-          console.warn("⚠️ Dss operation not found, using fallback");
-          setSelectedOperation(finalOperations[0].id);
-          localStorage.setItem("current_operation_id", finalOperations[0].id);
-        }
+        // Use first available operation, no specific default
+        console.log("✅ Setting first available operation:", finalOperations[0].name, finalOperations[0].id);
+        setSelectedOperation(finalOperations[0].id);
+        localStorage.setItem("current_operation_id", finalOperations[0].id);
       }
     }
   }, [finalOperations, selectedOperation]);
