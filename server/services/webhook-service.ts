@@ -67,8 +67,8 @@ export class WebhookService {
         return;
       }
 
-      // Build email content in Spanish (Spain)
-      const subject = `¡Tu viaje comienza aquí! - Mi Monja Boost`;
+      // Build email content in Spanish (Spain) - High conversion copy
+      const subject = `✨ ¡Tu transformación empieza HOY! - Mi Monja Boost`;
       
       const htmlContent = `
         <!DOCTYPE html>
@@ -81,16 +81,24 @@ export class WebhookService {
           
           <!-- Header con mensaje de bienvenida -->
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px 15px 0 0; padding: 40px 30px; text-align: center; color: white;">
-            <h1 style="margin: 0 0 15px 0; font-size: 28px; font-weight: bold;">¡Tu viaje comienza aquí! 🚀</h1>
-            <p style="margin: 0; font-size: 18px; opacity: 0.95;">Tu pedido ya está siendo preparado</p>
+            <h1 style="margin: 0 0 15px 0; font-size: 28px; font-weight: bold;">¡Tu transformación empieza HOY! ✨</h1>
+            <p style="margin: 0; font-size: 18px; opacity: 0.95; line-height: 1.4;">Tu pedido ya está en camino...<br><strong>¡Pero no tienes que esperar para comenzar!</strong></p>
           </div>
 
           <!-- Contenido principal -->
           <div style="background-color: white; padding: 35px 30px; border-radius: 0 0 15px 15px;">
             
+            <!-- Mensaje de engagement -->
+            <div style="background: linear-gradient(135deg, #e0f7fa 0%, #e1f5fe 100%); padding: 25px; border-radius: 12px; margin-bottom: 30px; border-left: 5px solid #00acc1; text-align: center;">
+              <p style="margin: 0; font-size: 17px; color: #00838f; font-weight: 600; line-height: 1.5;">
+                🎯 Mientras tu producto llega a tu puerta en los próximos días,<br>
+                <span style="font-size: 19px; color: #00695c;">¡ya puedes empezar tu viaje de transformación AHORA MISMO!</span>
+              </p>
+            </div>
+
             <!-- Datos del Pedido -->
             <div style="margin-bottom: 30px;">
-              <h2 style="color: #667eea; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">📦 Detalles del Pedido</h2>
+              <h2 style="color: #667eea; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">📦 Tu Pedido Confirmado</h2>
               
               <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
                 <p style="margin: 0 0 8px 0;"><strong>Productos:</strong> ${orderData.products}</p>
@@ -99,7 +107,7 @@ export class WebhookService {
 
               ${orderData.customerAddress ? `
               <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px;">
-                <h3 style="margin: 0 0 12px 0; color: #555; font-size: 16px;">📍 Dirección de Envío</h3>
+                <h3 style="margin: 0 0 12px 0; color: #555; font-size: 16px;">📍 Envío en Camino a:</h3>
                 <p style="margin: 0 0 5px 0;">${orderData.customerAddress}</p>
                 <p style="margin: 0;">${orderData.customerCity || ''}${orderData.customerZipCode ? ', ' + orderData.customerZipCode : ''}${orderData.customerCountry ? ', ' + orderData.customerCountry : ''}</p>
                 ${orderData.customerPhone ? `<p style="margin: 8px 0 0 0;"><strong>Tel:</strong> ${orderData.customerPhone}</p>` : ''}
@@ -107,9 +115,16 @@ export class WebhookService {
               ` : ''}
             </div>
 
+            <!-- Mensaje motivacional -->
+            <div style="background: linear-gradient(135deg, #fff8e1 0%, #fff9c4 100%); padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 5px solid #ffa726;">
+              <p style="margin: 0; font-size: 16px; color: #e65100; line-height: 1.6;">
+                <strong>💡 ¿Sabías que?</strong> Los usuarios que empiezan a usar la app <u>antes de recibir su producto</u> consiguen resultados <strong>3x más rápidos</strong>. ¡No pierdas ni un día más!
+              </p>
+            </div>
+
             <!-- Datos de Acceso -->
             <div style="margin-bottom: 30px;">
-              <h2 style="color: #667eea; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">🔐 Datos de Acceso al Aplicativo</h2>
+              <h2 style="color: #667eea; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">🔐 Accede AHORA a Tu Aplicativo</h2>
               
               <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 25px; border-radius: 10px; border-left: 5px solid #667eea;">
                 <p style="margin: 0 0 12px 0;">
@@ -127,12 +142,21 @@ export class WebhookService {
               </p>
             </div>
 
-            <!-- Botón de Acceso -->
-            <div style="text-align: center; margin: 35px 0 20px 0;">
-              <a href="https://nutra.replit.app/" 
-                 style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 16px 45px; border-radius: 50px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;">
-                🚀 Acceder al Aplicativo Mi Monja Boost
+            <!-- CTA Principal -->
+            <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+              <p style="margin: 0 0 20px 0; font-size: 18px; color: #2e7d32; font-weight: 600; line-height: 1.4;">
+                ¡Tu viaje de transformación te espera! 🌟<br>
+                <span style="font-size: 15px; color: #558b2f;">Accede ahora y descubre todo lo que hemos preparado para ti</span>
+              </p>
+              
+              <a href="https://nutra.replit.app/auth" 
+                 style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 18px 50px; border-radius: 50px; font-size: 19px; font-weight: bold; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5); transition: transform 0.2s;">
+                🚀 ¡EMPEZAR MI TRANSFORMACIÓN AHORA!
               </a>
+              
+              <p style="margin: 15px 0 0 0; font-size: 13px; color: #689f38;">
+                ⏱️ Solo te llevará 30 segundos empezar
+              </p>
             </div>
 
           </div>
@@ -147,27 +171,38 @@ export class WebhookService {
       `;
 
       const textContent = `
-¡Tu viaje comienza aquí!
-Tu pedido ya está siendo preparado
+✨ ¡Tu transformación empieza HOY!
 
-📦 DETALLES DEL PEDIDO
+Tu pedido ya está en camino... ¡Pero no tienes que esperar para comenzar!
+
+🎯 MENSAJE IMPORTANTE:
+Mientras tu producto llega a tu puerta en los próximos días, ¡ya puedes empezar tu viaje de transformación AHORA MISMO!
+
+📦 TU PEDIDO CONFIRMADO
 Productos: ${orderData.products}
 Total: ${orderData.total}
 
-${orderData.customerAddress ? `📍 DIRECCIÓN DE ENVÍO
+${orderData.customerAddress ? `📍 ENVÍO EN CAMINO A:
 ${orderData.customerAddress}
 ${orderData.customerCity || ''}${orderData.customerZipCode ? ', ' + orderData.customerZipCode : ''}${orderData.customerCountry ? ', ' + orderData.customerCountry : ''}
 ${orderData.customerPhone ? 'Tel: ' + orderData.customerPhone : ''}
 ` : ''}
 
-🔐 DATOS DE ACCESO AL APLICATIVO
+💡 ¿SABÍAS QUE?
+Los usuarios que empiezan a usar la app ANTES de recibir su producto consiguen resultados 3x más rápidos. ¡No pierdas ni un día más!
+
+🔐 ACCEDE AHORA A TU APLICATIVO
 Email: ${email}
 Contraseña: ${password}
 
 ⚠️ Importante: Por seguridad, te recomendamos cambiar tu contraseña en el primer acceso.
 
-🚀 ACCEDER AL APLICATIVO
-https://nutra.replit.app/
+🚀 ¡EMPEZAR MI TRANSFORMACIÓN AHORA!
+https://nutra.replit.app/auth
+
+¡Tu viaje de transformación te espera! 🌟
+Accede ahora y descubre todo lo que hemos preparado para ti
+⏱️ Solo te llevará 30 segundos empezar
 
 ---
 Este es un mensaje automático. Por favor, no respondas a este email.
