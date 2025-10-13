@@ -31,6 +31,9 @@ export const users = pgTable("users", {
   onboardingCardHidden: boolean("onboarding_card_hidden").default(false),
   tourCompleted: boolean("tour_completed").default(false),
   permissions: jsonb("permissions").$type<string[]>().default([]),
+  isActive: boolean("is_active").default(true), // Account active/inactive status
+  forcePasswordChange: boolean("force_password_change").default(false), // Force password change on next login
+  lastLoginAt: timestamp("last_login_at"), // Last login timestamp
   createdAt: timestamp("created_at").defaultNow(),
 });
 

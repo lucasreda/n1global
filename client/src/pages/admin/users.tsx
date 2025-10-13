@@ -83,7 +83,10 @@ export default function AdminUsers() {
     password: '',
     role: '',
     permissions: [] as string[],
-    onboardingCompleted: false
+    operationIds: [] as string[],
+    onboardingCompleted: false,
+    isActive: true,
+    forcePasswordChange: false
   });
   const [activeTab, setActiveTab] = useState("general");
 
@@ -92,6 +95,28 @@ export default function AdminUsers() {
 
   const { data: systemUsers, isLoading: usersLoading } = useQuery<SystemUser[]>({
     queryKey: ['/api/admin/users']
+  });
+
+  // Buscar todas as operações disponíveis
+  const { data: allOperations } = useQuery<{ id: string; name: string; country: string }[]>({
+    queryKey: ['/api/operations']
+  });
+
+  // Buscar operações do usuário atual sendo editado
+  const { data: userOperations } = useQuery<{ operationId: string }[]>({
+    queryKey: ['/api/admin/users', userToEdit?.id, 'operations'],
+    enabled: !!userToEdit?.id,
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(`/api/admin/users/${userToEdit?.id}/operations`, {
+        headers: {
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error('Erro ao buscar operações do usuário');
+      return response.json();
+    }
   });
 
   const deleteUserMutation = useMutation({
@@ -171,7 +196,18 @@ export default function AdminUsers() {
   });
 
   const editUserMutation = useMutation({
-    mutationFn: async (userData: { id: string; name?: string; email?: string; password?: string; role?: string; permissions?: string[]; onboardingCompleted?: boolean }) => {
+    mutationFn: async (userData: { 
+      id: string; 
+      name?: string; 
+      email?: string; 
+      password?: string; 
+      role?: string; 
+      permissions?: string[];
+      operationIds?: string[];
+      onboardingCompleted?: boolean;
+      isActive?: boolean;
+      forcePasswordChange?: boolean;
+    }) => {
       const token = localStorage.getItem("auth_token");
       const response = await fetch(`/api/admin/users/${userData.id}`, {
         method: 'PUT',
@@ -305,10 +341,33 @@ export default function AdminUsers() {
       password: '',
       role: user.role,
       permissions: user.permissions || [],
-      onboardingCompleted: user.onboardingCompleted || false
+      operationIds: [], // Will be populated by useEffect when userOperations loads
+      onboardingCompleted: user.onboardingCompleted || false,
+      isActive: user.isActive ?? true,
+      forcePasswordChange: false
     });
     setActiveTab("general");
     setShowEditModal(true);
+  };
+
+  // Populate operationIds when userOperations data is loaded
+  useEffect(() => {
+    if (userOperations && showEditModal) {
+      setEditUserData(prev => ({
+        ...prev,
+        operationIds: userOperations.map(op => op.operationId)
+      }));
+    }
+  }, [userOperations, showEditModal]);
+
+  const toggleOperation = (operationId: string, shouldAdd: boolean) => {
+    setEditUserData(prev => {
+      const operationIds = shouldAdd
+        ? [...prev.operationIds, operationId]
+        : prev.operationIds.filter(id => id !== operationId);
+      
+      return { ...prev, operationIds };
+    });
   };
 
   const handleSubmitEdit = () => {
@@ -325,6 +384,14 @@ export default function AdminUsers() {
     if (editUserData.onboardingCompleted !== (userToEdit.onboardingCompleted || false)) {
       updateData.onboardingCompleted = editUserData.onboardingCompleted;
     }
+    if (editUserData.isActive !== (userToEdit.isActive ?? true)) {
+      updateData.isActive = editUserData.isActive;
+    }
+    if (editUserData.forcePasswordChange) {
+      updateData.forcePasswordChange = editUserData.forcePasswordChange;
+    }
+    // Always send operationIds to update user operations
+    updateData.operationIds = editUserData.operationIds;
     
     editUserMutation.mutate(updateData);
   };
@@ -530,12 +597,15 @@ export default function AdminUsers() {
           </DialogHeader>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white/10 border border-white/20">
+            <TabsList className="grid w-full grid-cols-3 bg-white/10 border border-white/20">
               <TabsTrigger value="general" className="data-[state=active]:bg-blue-600">
                 Informações Gerais
               </TabsTrigger>
               <TabsTrigger value="permissions" className="data-[state=active]:bg-blue-600">
                 Permissões
+              </TabsTrigger>
+              <TabsTrigger value="operations" className="data-[state=active]:bg-blue-600">
+                Operações
               </TabsTrigger>
             </TabsList>
             
@@ -711,6 +781,101 @@ export default function AdminUsers() {
                       ) : (
                         <span className="text-orange-400">
                           ⚠️ Nenhuma página selecionada - usuário não terá acesso a nenhuma funcionalidade
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="operations" className="mt-4">
+                <div className="space-y-4">
+                  <div className="text-sm text-slate-400">
+                    Controle as operações (lojas/regiões) que este usuário pode acessar e gerenciar.
+                  </div>
+                  
+                  {allOperations && allOperations.length > 0 ? (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-white mb-3">
+                        🌍 Operações Disponíveis
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {allOperations.map((operation) => {
+                          const hasAccess = editUserData.operationIds.includes(operation.id);
+                          
+                          return (
+                            <div 
+                              key={operation.id}
+                              className={`flex items-start space-x-3 p-3 rounded-md border transition-colors ${
+                                hasAccess 
+                                  ? 'bg-green-50/10 border-green-500/30' 
+                                  : 'bg-white/5 border-white/20'
+                              }`}
+                              data-testid={`operation-${operation.id}`}
+                            >
+                              <Checkbox 
+                                checked={hasAccess}
+                                onCheckedChange={(checked) => toggleOperation(operation.id, checked === true)}
+                                className="mt-1"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-white">
+                                    {operation.name}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  {operation.country}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
+                        <div className="flex items-center gap-2 text-green-400 text-sm">
+                          <span>💡</span>
+                          <span className="font-medium">Dica:</span>
+                        </div>
+                        <p className="text-xs text-green-300 mt-1">
+                          Selecione as operações que este usuário pode gerenciar. Isso determina quais dados ele verá no dashboard.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white/5 border border-white/20 rounded-lg p-6 text-center">
+                      <p className="text-slate-400 text-sm">
+                        Nenhuma operação disponível no momento.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Operations summary */}
+                  <div className="bg-white/5 border border-white/20 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-2">
+                      📋 Resumo das Operações
+                    </h4>
+                    <div className="text-xs text-slate-400">
+                      {editUserData.operationIds.length > 0 ? (
+                        <>
+                          <span className="text-green-400 font-medium">
+                            {editUserData.operationIds.length} operações selecionadas
+                          </span>
+                          {allOperations && (
+                            <>
+                              {': '}
+                              {editUserData.operationIds.map(operationId => {
+                                const operation = allOperations.find(op => op.id === operationId);
+                                return operation?.name;
+                              }).filter(Boolean).join(', ')}
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-orange-400">
+                          ⚠️ Nenhuma operação selecionada - usuário terá acesso limitado
                         </span>
                       )}
                     </div>

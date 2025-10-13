@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, funnels, funnelPages, stores } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, funnels, funnelPages, stores, userOperationAccess } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -4458,7 +4458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/users/:userId", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
     try {
       const { userId } = req.params;
-      const { name, email, password, role, permissions, onboardingCompleted } = req.body;
+      const { name, email, password, role, permissions, operationIds, onboardingCompleted, isActive, forcePasswordChange } = req.body;
 
       // Verificar se o usuário existe
       const existingUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -4516,6 +4516,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.onboardingCompleted = Boolean(onboardingCompleted);
       }
 
+      if (isActive !== undefined) {
+        updateData.isActive = Boolean(isActive);
+      }
+
+      if (forcePasswordChange !== undefined) {
+        updateData.forcePasswordChange = Boolean(forcePasswordChange);
+      }
+
       // Atualizar o usuário
       const [updatedUser] = await db.update(users)
         .set(updateData)
@@ -4527,8 +4535,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: users.role,
           onboardingCompleted: users.onboardingCompleted,
           createdAt: users.createdAt,
-          permissions: users.permissions
+          permissions: users.permissions,
+          isActive: users.isActive,
+          forcePasswordChange: users.forcePasswordChange
         });
+
+      // Update user operations if operationIds is provided
+      if (operationIds !== undefined && Array.isArray(operationIds)) {
+        // First, delete all existing operations for this user
+        await db.delete(userOperationAccess).where(eq(userOperationAccess.userId, userId));
+
+        // Then, insert new operations
+        if (operationIds.length > 0) {
+          const operationAccessData = operationIds.map(operationId => ({
+            userId,
+            operationId
+          }));
+          await db.insert(userOperationAccess).values(operationAccessData);
+        }
+      }
 
       res.json(updatedUser);
     } catch (error) {
@@ -4552,6 +4577,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Usuário excluído com sucesso" });
     } catch (error) {
       console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // GET /api/admin/users/:userId/operations - Get user operations (Super Admin only)
+  app.get("/api/admin/users/:userId/operations", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      const userOps = await db
+        .select({
+          operationId: userOperationAccess.operationId
+        })
+        .from(userOperationAccess)
+        .where(eq(userOperationAccess.userId, userId));
+
+      res.json(userOps);
+    } catch (error) {
+      console.error("Error fetching user operations:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
+    }
+  });
+
+  // GET /api/operations - Get all operations (authenticated users)
+  app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const allOperations = await db
+        .select({
+          id: operations.id,
+          name: operations.name,
+          country: operations.country
+        })
+        .from(operations);
+
+      res.json(allOperations);
+    } catch (error) {
+      console.error("Error fetching operations:", error);
       res.status(500).json({ message: "Erro interno do servidor" });
     }
   });
