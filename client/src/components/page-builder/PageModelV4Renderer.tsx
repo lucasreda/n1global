@@ -414,8 +414,10 @@ function PageNodeV4Renderer({
   
   // Handle click to select node
   const handleClick = (e: React.MouseEvent) => {
-    // Stop propagation only for click, not for drag events
-    e.stopPropagation();
+    // Don't stop propagation during drag - it breaks @dnd-kit sensors
+    if (!isDragging) {
+      e.stopPropagation();
+    }
     if (onSelectNode) {
       onSelectNode(node.id);
     }

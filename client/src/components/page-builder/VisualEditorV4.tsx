@@ -14,6 +14,8 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -58,11 +60,17 @@ export function VisualEditorV4({
   // History management
   const { addToHistory, undo, redo, canUndo, canRedo } = useHistoryV4(model);
 
-  // Drag and drop sensors
+  // Drag and drop sensors - using MouseSensor instead of PointerSensor for better compatibility
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 3, // Reduced from 8px to 3px for easier drag initiation
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor)
