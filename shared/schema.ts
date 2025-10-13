@@ -29,6 +29,7 @@ export const users = pgTable("users", {
     step5_sync: false
   }),
   onboardingCardHidden: boolean("onboarding_card_hidden").default(false),
+  tourCompleted: boolean("tour_completed").default(false),
   permissions: jsonb("permissions").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
