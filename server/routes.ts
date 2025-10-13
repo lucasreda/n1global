@@ -1403,6 +1403,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current user data
+  app.get("/api/user", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Return user data including tourCompleted
+      res.json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tourCompleted: user.tourCompleted || false,
+        onboardingCompleted: user.onboardingCompleted,
+        onboardingSteps: user.onboardingSteps,
+      });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Erro ao buscar dados do usuário" });
+    }
+  });
+
   // Shipping providers routes
   app.get("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
