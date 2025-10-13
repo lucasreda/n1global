@@ -83,10 +83,13 @@ export function MultiProviderPanel() {
     mutationFn: async (data: any) => {
       if (!selectedProvider) throw new Error("Nenhum provider selecionado");
       
+      // Converter nome do provider para formato da URL (underscore -> hífen)
+      const providerUrlName = selectedProvider.replace(/_/g, '-');
+      
       // Para FHB, usar rota com operationId como parâmetro
       const url = selectedProvider === 'fhb' 
-        ? `/api/integrations/${selectedProvider}/${operationId}/credentials`
-        : `/api/integrations/${selectedProvider}/credentials`;
+        ? `/api/integrations/${providerUrlName}/${operationId}/credentials`
+        : `/api/integrations/${providerUrlName}/credentials`;
       
       const payload = selectedProvider === 'fhb'
         ? data // Para FHB, operationId vai na URL, não no body
