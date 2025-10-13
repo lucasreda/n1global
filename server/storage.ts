@@ -38,6 +38,10 @@ export interface IStorage {
   completeOnboarding(userId: string): Promise<void>;
   resetUserOnboarding(userId: string): Promise<void>;
   createOperation(operationData: { name: string; description: string; country: string; currency: string }, userId: string): Promise<Operation>;
+  updateUserOnboardingCardHidden(userId: string, hidden: boolean): Promise<void>;
+  getShopifyIntegrationsByOperation(operationId: string): Promise<any[]>;
+  getAdAccountsByOperation(operationId: string): Promise<any[]>;
+  getCustomerSupportByOperation(operationId: string): Promise<any | null>;
   
   // Shipping providers creation
   createShippingProvider(data: InsertShippingProvider, storeId: string, operationId: string): Promise<ShippingProvider>;
@@ -391,6 +395,40 @@ export class DatabaseStorage implements IStorage {
       console.error("❌ Error creating operation or granting access:", error);
       throw error;
     }
+  }
+
+  async updateUserOnboardingCardHidden(userId: string, hidden: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ onboardingCardHidden: hidden })
+      .where(eq(users.id, userId));
+  }
+
+  async getShopifyIntegrationsByOperation(operationId: string): Promise<any[]> {
+    const { shopifyIntegrations } = await import("@shared/schema");
+    const result = await db
+      .select()
+      .from(shopifyIntegrations)
+      .where(eq(shopifyIntegrations.operationId, operationId));
+    return result;
+  }
+
+  async getAdAccountsByOperation(operationId: string): Promise<any[]> {
+    const { adAccounts } = await import("@shared/schema");
+    const result = await db
+      .select()
+      .from(adAccounts)
+      .where(eq(adAccounts.operationId, operationId));
+    return result;
+  }
+
+  async getCustomerSupportByOperation(operationId: string): Promise<any | null> {
+    const { customerSupportOperations } = await import("@shared/schema");
+    const [result] = await db
+      .select()
+      .from(customerSupportOperations)
+      .where(eq(customerSupportOperations.operationId, operationId));
+    return result || null;
   }
 
   /**

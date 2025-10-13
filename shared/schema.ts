@@ -28,6 +28,7 @@ export const users = pgTable("users", {
     step4_ads: false,
     step5_sync: false
   }),
+  onboardingCardHidden: boolean("onboarding_card_hidden").default(false),
   permissions: jsonb("permissions").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });

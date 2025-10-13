@@ -1326,6 +1326,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New onboarding card endpoints
+  app.get("/api/onboarding/integrations-status", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const operationId = req.headers['x-operation-id'] as string;
+      
+      if (!operationId) {
+        return res.json({
+          hasPlatform: false,
+          hasWarehouse: false,
+          hasAdAccount: false,
+          hasSupportEmail: false,
+          allCompleted: false
+        });
+      }
+
+      // Check if has Shopify integration
+      const shopifyIntegrations = await storage.getShopifyIntegrationsByOperation(operationId);
+      const hasPlatform = shopifyIntegrations.length > 0; // For now only checking Shopify, CartPanda would be added later
+
+      // Check if has at least one shipping provider
+      const shippingProviders = await storage.getShippingProvidersByOperation(operationId);
+      const hasWarehouse = shippingProviders.length > 0;
+
+      // Check if has at least one ad account
+      const adAccounts = await storage.getAdAccountsByOperation(operationId);
+      const hasAdAccount = adAccounts.length > 0;
+
+      // Check if has customer support email configured
+      const supportConfig = await storage.getCustomerSupportByOperation(operationId);
+      const hasSupportEmail = !!supportConfig && !!supportConfig.supportEmail;
+
+      const allCompleted = hasPlatform && hasWarehouse && hasAdAccount && hasSupportEmail;
+
+      res.json({
+        hasPlatform,
+        hasWarehouse,
+        hasAdAccount,
+        hasSupportEmail,
+        allCompleted
+      });
+    } catch (error) {
+      console.error("Integrations status error:", error);
+      res.status(500).json({ message: "Erro ao buscar status das integrações" });
+    }
+  });
+
+  app.post("/api/onboarding/hide-card", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      await storage.updateUserOnboardingCardHidden(req.user.id, true);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Hide onboarding card error:", error);
+      res.status(500).json({ message: "Erro ao ocultar card de onboarding" });
+    }
+  });
+
   // Shipping providers routes
   app.get("/api/shipping-providers", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
