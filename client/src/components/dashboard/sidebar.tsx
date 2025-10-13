@@ -190,7 +190,7 @@ export function Sidebar() {
         ) : (
           <Button 
             onClick={() => setShowNewOperationDialog(true)} 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 animate-soft-bounce" 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white border-0 animate-soft-bounce shadow-[0_0_20px_rgba(59,130,246,0.5),0_8px_32px_rgba(31,38,135,0.37)]" 
             data-testid="create-operation-button"
           >
             <Plus className="w-4 h-4 mr-2 text-white" />
