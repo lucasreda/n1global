@@ -30,8 +30,23 @@ export function OnboardingCard() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // Get current operation ID from localStorage
+  const currentOperationId = localStorage.getItem("current_operation_id");
+  
   const { data: status, isLoading } = useQuery<IntegrationStatus>({
-    queryKey: ["/api/onboarding/integrations-status"],
+    queryKey: ["/api/onboarding/integrations-status", { operationId: currentOperationId }],
+    enabled: !!currentOperationId, // Only run if we have an operation
+    queryFn: async () => {
+      const res = await fetch("/api/onboarding/integrations-status", {
+        headers: {
+          "Content-Type": "application/json",
+          "x-operation-id": currentOperationId || "",
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch integration status");
+      return res.json();
+    },
   });
 
   // Fetch user operations to check if user has created an operation
