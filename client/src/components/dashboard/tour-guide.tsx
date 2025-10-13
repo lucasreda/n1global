@@ -36,12 +36,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       target: 'body',
       content: (
         <div className="space-y-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold">Bem-vindo ao COD Dashboard! 🎉</h3>
-            <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">
-              Etapa 1 de 11
-            </span>
-          </div>
+          <h3 className="text-lg font-bold">Bem-vindo ao COD Dashboard! 🎉</h3>
           <p className="text-sm">
             Vamos fazer um tour rápido pelas principais funcionalidades da plataforma.
             Você pode pular o tour a qualquer momento.
