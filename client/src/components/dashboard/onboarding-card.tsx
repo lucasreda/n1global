@@ -81,24 +81,28 @@ export function OnboardingCard() {
       label: "Plataforma Integrada",
       description: "Conecte sua loja Shopify ou CartPanda",
       completed: status.hasPlatform,
+      link: "/integrations",
     },
     {
       id: "warehouse",
       label: "Armazém Conectado",
       description: "Configure pelo menos um armazém para envio",
       completed: status.hasWarehouse,
+      link: "/integrations",
     },
     {
       id: "ads",
       label: "Conta de Anúncios",
       description: "Conecte pelo menos uma conta de anúncios",
       completed: status.hasAdAccount,
+      link: "/ads",
     },
     {
       id: "support",
       label: "Email de Suporte",
       description: "Configure o email de suporte com domínio",
       completed: status.hasSupportEmail,
+      link: "/customer-support/settings",
     },
   ];
 
@@ -154,7 +158,8 @@ export function OnboardingCard() {
           {steps.map((step) => (
             <div
               key={step.id}
-              className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
+              onClick={() => window.location.href = step.link}
+              className="flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               data-testid={`step-${step.id}`}
             >
               {step.completed ? (
