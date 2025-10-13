@@ -100,10 +100,17 @@ export default function AdminOperations() {
   const [activeTab, setActiveTab] = useState("general");
   
   // Integration modal states
-  const [showShopifyModal, setShowShopifyModal] = useState(false);
+  const [showPlatformModal, setShowPlatformModal] = useState(false);
   const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
   const [showFacebookAdsModal, setShowFacebookAdsModal] = useState(false);
-  const [shopifyData, setShopifyData] = useState({ shopName: '', accessToken: '' });
+  const [platformData, setPlatformData] = useState({ 
+    platform: 'shopify',
+    shopName: '', 
+    accessToken: '',
+    storeSlug: '',
+    bearerToken: ''
+  });
+  const [editingPlatformId, setEditingPlatformId] = useState<string | null>(null);
   const [fulfillmentData, setFulfillmentData] = useState({ 
     provider: 'european_fulfillment', 
     username: '', 
@@ -366,27 +373,36 @@ export default function AdminOperations() {
   });
 
   // Fetch integrations for the operation
-  const { data: operationIntegrations, refetch: refetchIntegrations } = useQuery<{
-    shopify: any | null;
-    fulfillment: any | null;
+  const { data: operationIntegrations, refetch: refetchIntegrations} = useQuery<{
+    platforms: any[];
+    fulfillments: any[];
     facebookAds: any | null;
   }>({
     queryKey: ['/api/admin/operations', operationToEdit?.id, 'integrations'],
     enabled: !!operationToEdit && showEditModal && activeTab === 'integrations'
   });
 
-  const saveShopifyIntegrationMutation = useMutation({
-    mutationFn: async (data: typeof shopifyData) => {
+  const savePlatformIntegrationMutation = useMutation({
+    mutationFn: async (data: typeof platformData) => {
       if (!operationToEdit) throw new Error('Operação não selecionada');
       const token = localStorage.getItem("auth_token");
-      const response = await fetch(`/api/admin/operations/${operationToEdit.id}/integrations/shopify`, {
+      
+      const endpoint = data.platform === 'shopify' 
+        ? `/api/admin/operations/${operationToEdit.id}/integrations/shopify`
+        : `/api/admin/operations/${operationToEdit.id}/integrations/cartpanda`;
+      
+      const body = data.platform === 'shopify'
+        ? { shopName: data.shopName, accessToken: data.accessToken, integrationId: editingPlatformId }
+        : { storeSlug: data.storeSlug, bearerToken: data.bearerToken, integrationId: editingPlatformId };
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
         credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       });
       
       if (!response.ok) {
@@ -398,10 +414,17 @@ export default function AdminOperations() {
     },
     onSuccess: () => {
       refetchIntegrations();
-      setShowShopifyModal(false);
-      setShopifyData({ shopName: '', accessToken: '' });
+      setShowPlatformModal(false);
+      setEditingPlatformId(null);
+      setPlatformData({ 
+        platform: 'shopify',
+        shopName: '', 
+        accessToken: '',
+        storeSlug: '',
+        bearerToken: ''
+      });
       toast({
-        title: "Integração Shopify salva",
+        title: "Plataforma salva",
         description: "A integração foi configurada com sucesso.",
       });
     },
@@ -413,6 +436,53 @@ export default function AdminOperations() {
       });
     },
   });
+
+  const deletePlatformIntegrationMutation = useMutation({
+    mutationFn: async ({ integrationId, platform }: { integrationId: string, platform: string }) => {
+      if (!operationToEdit) throw new Error('Operação não selecionada');
+      const token = localStorage.getItem("auth_token");
+      
+      const endpoint = platform === 'shopify'
+        ? `/api/admin/operations/${operationToEdit.id}/integrations/shopify/${integrationId}`
+        : `/api/admin/operations/${operationToEdit.id}/integrations/cartpanda/${integrationId}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao remover plataforma');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchIntegrations();
+      toast({
+        title: "Plataforma removida",
+        description: "A plataforma foi removida com sucesso.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover plataforma",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeletePlatform = async (integrationId: string, platform: string) => {
+    if (confirm('Tem certeza que deseja remover esta plataforma?')) {
+      deletePlatformIntegrationMutation.mutate({ integrationId, platform });
+    }
+  };
 
   const saveFulfillmentIntegrationMutation = useMutation({
     mutationFn: async (data: typeof fulfillmentData) => {
@@ -1208,57 +1278,129 @@ export default function AdminOperations() {
                     </h4>
                     
                     <div className="space-y-3">
-                      {/* Shopify Integration */}
+                      {/* Platforms Section */}
                       <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
                               <ShoppingCart className="h-5 w-5 text-green-400" />
                             </div>
                             <div>
-                              <h5 className="text-sm font-medium text-white">Shopify</h5>
+                              <h5 className="text-sm font-medium text-white">Plataformas</h5>
                               <p className="text-xs text-slate-400">
-                                {operationIntegrations?.shopify ? 
-                                  `Loja: ${operationIntegrations.shopify.shopName}` : 
-                                  'Integração com loja Shopify'
-                                }
+                                {operationIntegrations?.platforms?.length || 0} {operationIntegrations?.platforms?.length === 1 ? 'plataforma configurada' : 'plataformas configuradas'}
                               </p>
                             </div>
                           </div>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${
-                              operationIntegrations?.shopify?.status === 'active' 
-                                ? 'bg-green-500/20 text-green-400 border-green-500/30' 
-                                : operationIntegrations?.shopify?.status === 'pending'
-                                ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-                                : 'text-slate-400'
-                            }`}
-                          >
-                            {operationIntegrations?.shopify ? 
-                              (operationIntegrations.shopify.status === 'active' ? 'Ativo' : 
-                               operationIntegrations.shopify.status === 'pending' ? 'Pendente' : 'Erro') 
-                              : 'Não configurado'
-                            }
-                          </Badge>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            if (operationIntegrations?.shopify) {
-                              setShopifyData({
-                                shopName: operationIntegrations.shopify.shopName || '',
-                                accessToken: operationIntegrations.shopify.accessToken || ''
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setPlatformData({
+                                platform: 'shopify',
+                                shopName: '',
+                                accessToken: '',
+                                storeSlug: '',
+                                bearerToken: ''
                               });
-                            }
-                            setShowShopifyModal(true);
-                          }}
-                          className="w-full text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
-                        >
-                          <Settings className="h-3 w-3 mr-2" />
-                          {operationIntegrations?.shopify ? 'Editar' : 'Configurar'}
-                        </Button>
+                              setEditingPlatformId(null);
+                              setShowPlatformModal(true);
+                            }}
+                            className="text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 hover:border-white/20 transition-all"
+                          >
+                            <Plus className="h-3 w-3 mr-2" />
+                            Adicionar
+                          </Button>
+                        </div>
+                        
+                        {/* List of configured platforms */}
+                        <div className="space-y-2">
+                          {operationIntegrations?.platforms && operationIntegrations.platforms.length > 0 ? (
+                            operationIntegrations.platforms.map((platform) => {
+                              const platformNames: Record<string, string> = {
+                                'shopify': 'Shopify',
+                                'cartpanda': 'CartPanda'
+                              };
+                              
+                              const platformInfo = platform.platform === 'shopify'
+                                ? `Loja: ${(platform as any).shopName || 'N/A'}`
+                                : `Slug: ${(platform as any).storeSlug || 'N/A'}`;
+                              
+                              return (
+                                <div key={platform.id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between">
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium text-white">
+                                        {platformNames[platform.platform] || platform.platform}
+                                      </span>
+                                      <span className="text-xs text-slate-400">
+                                        {platformInfo}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs ${
+                                        platform.status === 'active' 
+                                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                          : platform.status === 'pending'
+                                          ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                          : 'text-slate-400'
+                                      }`}
+                                    >
+                                      {platform.status === 'active' ? 'Ativo' : platform.status === 'pending' ? 'Pendente' : 'Erro'}
+                                    </Badge>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (platform.platform === 'shopify') {
+                                          setPlatformData({
+                                            platform: 'shopify',
+                                            shopName: (platform as any).shopName || '',
+                                            accessToken: '',
+                                            storeSlug: '',
+                                            bearerToken: ''
+                                          });
+                                        } else {
+                                          setPlatformData({
+                                            platform: 'cartpanda',
+                                            shopName: '',
+                                            accessToken: '',
+                                            storeSlug: (platform as any).storeSlug || '',
+                                            bearerToken: ''
+                                          });
+                                        }
+                                        setEditingPlatformId(platform.id);
+                                        setShowPlatformModal(true);
+                                      }}
+                                      className="h-8 px-2 text-slate-400 hover:text-white"
+                                      data-testid={`button-edit-platform-${platform.id}`}
+                                    >
+                                      <Settings className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeletePlatform(platform.id, platform.platform)}
+                                      className="h-8 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                      data-testid={`button-delete-platform-${platform.id}`}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-center py-6 text-slate-400 text-sm">
+                              <ShoppingCart className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Nenhuma plataforma configurada</p>
+                              <p className="text-xs mt-1">Clique em "Adicionar" para começar</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
                       {/* Warehouses Section */}
@@ -1511,48 +1653,107 @@ export default function AdminOperations() {
         </DialogContent>
       </Dialog>
 
-      {/* Shopify Integration Modal */}
-      <Dialog open={showShopifyModal} onOpenChange={setShowShopifyModal}>
+      {/* Platform Integration Modal */}
+      <Dialog open={showPlatformModal} onOpenChange={(open) => {
+        setShowPlatformModal(open);
+        if (!open) {
+          setEditingPlatformId(null);
+          setPlatformData({ 
+            platform: 'shopify',
+            shopName: '', 
+            accessToken: '',
+            storeSlug: '',
+            bearerToken: ''
+          });
+        }
+      }}>
         <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white border-white/20">
           <DialogHeader>
-            <DialogTitle>Configurar Integração Shopify</DialogTitle>
+            <DialogTitle>{editingPlatformId ? 'Editar Plataforma' : 'Adicionar Plataforma'}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Configure sua loja Shopify para esta operação
+              Configure sua plataforma de e-commerce
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="shopify-shop-name" className="text-sm text-slate-400">Nome da Loja</Label>
-              <Input
-                id="shopify-shop-name"
-                placeholder="minhaloja.myshopify.com"
-                value={shopifyData.shopName}
-                onChange={(e) => setShopifyData({ ...shopifyData, shopName: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
+              <Label htmlFor="platform-type" className="text-sm text-slate-400">Plataforma</Label>
+              <Select value={platformData.platform} onValueChange={(value) => setPlatformData({ ...platformData, platform: value })}>
+                <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="shopify" className="text-white hover:bg-gray-700">Shopify</SelectItem>
+                  <SelectItem value="cartpanda" className="text-white hover:bg-gray-700">CartPanda</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label htmlFor="shopify-token" className="text-sm text-slate-400">Access Token</Label>
-              <Input
-                id="shopify-token"
-                type="password"
-                placeholder="shpat_..."
-                value={shopifyData.accessToken}
-                onChange={(e) => setShopifyData({ ...shopifyData, accessToken: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
+            
+            {platformData.platform === 'shopify' ? (
+              <>
+                <div>
+                  <Label htmlFor="platform-shopname" className="text-sm text-slate-400">Nome da Loja</Label>
+                  <Input
+                    id="platform-shopname"
+                    placeholder="minhaloja.myshopify.com"
+                    value={platformData.shopName}
+                    onChange={(e) => setPlatformData({ ...platformData, shopName: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="platform-token" className="text-sm text-slate-400">Access Token</Label>
+                  <Input
+                    id="platform-token"
+                    type="password"
+                    placeholder="shpat_..."
+                    value={platformData.accessToken}
+                    onChange={(e) => setPlatformData({ ...platformData, accessToken: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="platform-slug" className="text-sm text-slate-400">Store Slug</Label>
+                  <Input
+                    id="platform-slug"
+                    placeholder="minhaloja-test"
+                    value={platformData.storeSlug}
+                    onChange={(e) => setPlatformData({ ...platformData, storeSlug: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="platform-bearer" className="text-sm text-slate-400">Bearer Token</Label>
+                  <Input
+                    id="platform-bearer"
+                    type="password"
+                    placeholder="Bearer token..."
+                    value={platformData.bearerToken}
+                    onChange={(e) => setPlatformData({ ...platformData, bearerToken: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowShopifyModal(false)} className="border-white/20 text-white hover:bg-white/10">
+            <Button variant="outline" onClick={() => setShowPlatformModal(false)} className="border-white/20 text-white hover:bg-white/10">
               Cancelar
             </Button>
             <Button 
-              onClick={() => saveShopifyIntegrationMutation.mutate(shopifyData)}
-              disabled={saveShopifyIntegrationMutation.isPending || !shopifyData.shopName || !shopifyData.accessToken}
+              onClick={() => savePlatformIntegrationMutation.mutate(platformData)}
+              disabled={
+                savePlatformIntegrationMutation.isPending || 
+                (platformData.platform === 'shopify' 
+                  ? (!platformData.shopName || !platformData.accessToken)
+                  : (!platformData.storeSlug || !platformData.bearerToken)
+                )
+              }
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              {saveShopifyIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
+              {savePlatformIntegrationMutation.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
