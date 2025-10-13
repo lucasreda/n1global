@@ -346,6 +346,28 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
     [currentPage, onComplete, onSkip, onNavigate]
   );
 
+  // Get current step index for custom button labels
+  const [stepIndex, setStepIndex] = useState(0);
+  
+  const customCallback = useCallback((data: CallBackProps) => {
+    setStepIndex(data.index);
+    handleJoyrideCallback(data);
+  }, [handleJoyrideCallback]);
+
+  // Determinar o label do botão baseado na página e índice
+  const getButtonLabel = () => {
+    const currentSteps = getAllSteps();
+    const isLastStep = stepIndex === currentSteps.length - 1;
+    
+    // Se for o último step da página de Ads, mostrar "Finalizar"
+    if (currentPage === 'ads' && isLastStep) {
+      return 'Finalizar';
+    }
+    
+    // Caso contrário, sempre mostrar "Próximo"
+    return 'Próximo';
+  };
+
   return (
     <Joyride
       key={key}
@@ -354,7 +376,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       continuous
       showProgress={false}
       showSkipButton
-      callback={handleJoyrideCallback}
+      callback={customCallback}
       disableOverlayClose
       disableCloseOnEsc={false}
       scrollToFirstStep
@@ -418,7 +440,7 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
       locale={{
         back: 'Voltar',
         close: 'Fechar',
-        last: 'Finalizar',
+        last: getButtonLabel(),
         next: 'Próximo',
         skip: 'Pular tour',
         open: 'Abrir',
