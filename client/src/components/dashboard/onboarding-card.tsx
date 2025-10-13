@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ interface IntegrationStatus {
 
 export function OnboardingCard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Get current operation ID from localStorage
@@ -187,7 +189,7 @@ export function OnboardingCard() {
             return (
               <div
                 key={step.id}
-                onClick={() => isClickable && (window.location.href = step.link)}
+                onClick={() => isClickable && setLocation(step.link)}
                 className={`flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 transition-colors ${
                   isClickable 
                     ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' 
