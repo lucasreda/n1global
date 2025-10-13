@@ -976,30 +976,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/operations", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       console.log("🔍 /api/operations called by:", req.user.email, "ID:", req.user.id, "ENV:", process.env.NODE_ENV || 'unknown');
-      console.log("🔍 REQUEST HEADERS:", {
-        authorization: req.headers.authorization ? 'Bearer ***' : 'NONE',
-        userAgent: req.headers['user-agent'],
-        origin: req.headers.origin,
-        referer: req.headers.referer
-      });
       
-      // Get ALL operations from the database (not filtered by user)
-      const allOperations = await db
-        .select({
-          id: operations.id,
-          name: operations.name,
-          country: operations.country
-        })
-        .from(operations);
+      // Get user-specific operations from userOperationAccess table
+      let userOperations = await storage.getUserOperations(req.user.id);
       
-      console.log("📊 All operations found:", allOperations.length);
-      
-      // Return all operations instead of user-specific ones
-      res.json(allOperations);
-      return;
+      console.log("📊 User operations found:", userOperations.length);
       
       // AUTO-SYNC: Se usuário não tem operações, verificar se existe outro usuário com mesmo email
-      if (operations.length === 0 && req.user.email === 'fresh@teste.com') {
+      if (userOperations.length === 0 && req.user.email === 'fresh@teste.com') {
         console.log("🔄 PRODUCTION AUTO-SYNC INICIADO: usuário fresh sem operações, buscando outros usuários...");
         
         try {
@@ -1046,8 +1030,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log("📋 Operações copiadas com sucesso!");
             
             // Buscar operações novamente após sync
-            operations = await storage.getUserOperations(req.user.id);
-            console.log("✅ PRODUCTION AUTO-SYNC CONCLUÍDO! Operações copiadas:", operations.length);
+            userOperations = await storage.getUserOperations(req.user.id);
+            console.log("✅ PRODUCTION AUTO-SYNC CONCLUÍDO! Operações copiadas:", userOperations.length);
           } else {
             console.log("❌ Nenhum usuário fresh com operações encontrado para copiar");
           }
@@ -1056,9 +1040,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log("✅ FINAL Operations found:", operations.length, "for user:", req.user.email);
+      console.log("✅ FINAL Operations found:", userOperations.length, "for user:", req.user.email);
       
-      res.json(operations);
+      res.json(userOperations);
     } catch (error) {
       console.error("❌ Operations error for user", req.user.email, ":", error);
       res.status(500).json({ message: "Erro ao buscar operações" });
