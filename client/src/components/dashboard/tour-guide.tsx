@@ -56,11 +56,30 @@ export function TourGuide({ run, onComplete, onSkip, currentPage, onNavigate }: 
           <h3 className="text-lg font-bold">Bem-vindo ao N1 Dashboard! 🎉</h3>
           <p className="text-sm">
             Vamos fazer um tour rápido pelos principais indicadores e funcionalidades da plataforma.
-            Este tour tem 13 etapas e leva cerca de 3 minutos.
+            Este tour tem 14 etapas e leva cerca de 3 minutos.
           </p>
         </div>
       ),
       placement: 'center',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-testid="operation-selector"]',
+      content: (
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold">Seletor de Operação 🏢</h3>
+          <p className="text-sm">
+            O primeiro passo é <strong>criar sua Operação de Negócio Digital</strong>!
+          </p>
+          <p className="text-sm">
+            Uma operação representa um negócio ou marca específica. Você pode ter várias operações (ex: diferentes lojas, países ou marcas) e alternar entre elas facilmente.
+          </p>
+          <p className="text-sm text-blue-400">
+            Use o botão "Criar Operação" logo abaixo para começar.
+          </p>
+        </div>
+      ),
+      placement: 'right',
       disableBeacon: true,
     },
     {
