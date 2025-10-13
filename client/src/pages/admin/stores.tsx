@@ -18,7 +18,9 @@ import {
   ShoppingCart,
   Users,
   Package,
-  Search
+  Search,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 interface Operation {
@@ -114,6 +116,8 @@ export default function AdminOperations() {
 
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 10;
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -815,7 +819,10 @@ export default function AdminOperations() {
                       <Input
                         placeholder="Buscar por nome ou SKU..."
                         value={productSearchTerm}
-                        onChange={(e) => setProductSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                          setProductSearchTerm(e.target.value);
+                          setCurrentPage(1); // Reset to first page on search
+                        }}
                         className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-500"
                       />
                     </div>
@@ -833,9 +840,16 @@ export default function AdminOperations() {
                           );
                         });
                         
+                        // Pagination calculations
+                        const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+                        const startIndex = (currentPage - 1) * productsPerPage;
+                        const endIndex = startIndex + productsPerPage;
+                        const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+                        
                         return filteredProducts.length > 0 ? (
-                          <div className="grid grid-cols-1 gap-3">
-                            {filteredProducts.map((product) => {
+                          <>
+                            <div className="grid grid-cols-1 gap-3">
+                              {paginatedProducts.map((product) => {
                               const isSelected = selectedProductIds.includes(product.id);
                               
                               return (
@@ -875,8 +889,41 @@ export default function AdminOperations() {
                                   </div>
                                 </div>
                               );
-                            })}
-                          </div>
+                              })}
+                            </div>
+                            
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/20">
+                                <div className="text-xs text-slate-400">
+                                  Mostrando {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} de {filteredProducts.length} produtos
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="h-8 w-8 p-0 border-white/20 text-white hover:bg-white/10"
+                                  >
+                                    <ChevronLeft className="h-4 w-4" />
+                                  </Button>
+                                  <span className="text-xs text-white">
+                                    Página {currentPage} de {totalPages}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="h-8 w-8 p-0 border-white/20 text-white hover:bg-white/10"
+                                  >
+                                    <ChevronRight className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <div className="text-center py-8 text-slate-400">
                             Nenhum produto encontrado com esse termo de busca.
