@@ -717,7 +717,7 @@ export function VisualEditorV4({
           />
           
           {/* Overlays rendered outside PageModelV4Renderer for correct positioning */}
-          {/* Selection Overlay with Label */}
+          {/* Selection Overlay with Label and Controls */}
           {selectedNodeId && (() => {
             const selectedNodeForOverlay = findNodeInTree(model.nodes, selectedNodeId);
             console.log('🔍 Rendering SelectionOverlay:', { selectedNodeId, tag: selectedNodeForOverlay?.tag });
@@ -726,6 +726,8 @@ export function VisualEditorV4({
                 nodeId={selectedNodeId}
                 tag={selectedNodeForOverlay?.tag || 'div'}
                 isVisible={true}
+                onDuplicate={handleDuplicateNode}
+                onDelete={handleDeleteNode}
               />
             );
           })()}
