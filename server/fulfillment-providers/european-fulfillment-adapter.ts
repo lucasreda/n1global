@@ -88,9 +88,12 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
     try {
       console.log(`🔧 Iniciando busca de leads para operação ${operationId}`);
       
-      // Importar storage para buscar a operação
-      const { storage } = await import('../storage.js');
-      const operation = await storage.getOperationById(operationId);
+      // Buscar a operação diretamente do banco
+      const { db } = await import('../db.js');
+      const { operations } = await import('../../shared/schema.js');
+      const { eq } = await import('drizzle-orm');
+      
+      const [operation] = await db.select().from(operations).where(eq(operations.id, operationId));
       
       if (!operation) {
         return {
