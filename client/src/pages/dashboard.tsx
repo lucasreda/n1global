@@ -288,8 +288,8 @@ export default function Dashboard() {
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
       {/* Header with Complete Sync Button and Date Filter */}
-      <div className="w-full flex items-center justify-between gap-2 sm:gap-3">
-        {/* Date Range Picker - Left on mobile */}
+      <div className="w-full flex items-center justify-end gap-2 sm:gap-3">
+        {/* Date Range Picker */}
         <Popover open={isPopoverOpen} onOpenChange={(open) => {
           setIsPopoverOpen(open);
           if (open) {
@@ -312,7 +312,7 @@ export default function Dashboard() {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 glassmorphism border-gray-600" align="start">
+          <PopoverContent className="w-auto p-0 glassmorphism border-gray-600" align="end">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">
