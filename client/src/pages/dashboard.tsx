@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, RefreshCw } from "lucide-react";
+import { CalendarIcon, RefreshCw, X } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -307,6 +307,24 @@ export default function Dashboard() {
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 glassmorphism border-gray-600" align="start">
             <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-400">
+                  {dateRange?.from && dateRange?.to 
+                    ? "Clique para selecionar novo período" 
+                    : "Selecione a data inicial e final"}
+                </p>
+                {dateRange?.from && dateRange?.to && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDateRange(undefined)}
+                    className="h-6 px-2 text-xs text-gray-400 hover:text-white"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
               <Calendar
                 mode="range"
                 selected={dateRange}
@@ -337,7 +355,7 @@ export default function Dashboard() {
                   day_hidden: "invisible",
                 }}
               />
-              <div className="flex gap-2 justify-end pt-2 border-t border-gray-700">
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-700">
                 <Button
                   variant="outline"
                   size="sm"
