@@ -64,7 +64,7 @@ class GoogleAdsService {
   /**
    * Sincroniza campanhas do Google Ads - similar ao Facebook
    */
-  async syncCampaigns(period: string = "last_30d", storeId?: string, operationId?: string): Promise<number> {
+  async syncCampaigns(period: string = "maximum", storeId?: string, operationId?: string): Promise<number> {
     try {
       if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
         console.log('⚠️ Google Ads credenciais não configuradas, pulando sincronização');
