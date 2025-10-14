@@ -142,11 +142,14 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
       const leads = await service.getLeadsListWithDateFilter(country, dateFrom);
       console.log(`📦 European Fulfillment: ${leads?.length || 0} leads encontrados`);
       
+      // Importar storage dinamicamente
+      const { storage } = await import('../storage.js');
+      
       for (const lead of leads) {
         try {
           ordersProcessed++;
           
-          const leadNumber = lead.number || lead.lead_number || lead.id;
+          const leadNumber = lead.n_lead || lead.number || lead.lead_number || lead.id;
           
           // Verificar se o pedido já existe (por carrierOrderId)
           const existingOrder = await storage.getOrderByCarrierId(leadNumber, operationId);

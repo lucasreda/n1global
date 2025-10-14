@@ -438,41 +438,57 @@ class EuropeanFulfillmentService {
     }
 
     try {
-      // Try various analytics endpoints with date filter
-      if (dateFrom && dateTo) {
-        console.log(`🎯 Trying analytics endpoints with date filter: ${dateFrom} - ${dateTo}`);
-        const dateRange = `${dateFrom} - ${dateTo}`;
-        
-        const analyticsEndpoints = [
-          `api/analytics/shipping?date=${encodeURIComponent(dateRange)}`,
-          `api/reports/orders?from=${dateFrom}&to=${dateTo}&country=ITALY`,
-          `api/leads/analytics?date_from=${dateFrom}&date_to=${dateTo}&country=ITALY`,
-          `api/dashboard/orders?from=${dateFrom}&to=${dateTo}&country=ITALY`
-        ];
-        
-        for (const endpoint of analyticsEndpoints) {
-          try {
-            console.log(`🔍 Testing endpoint: ${endpoint}`);
-            const response = await this.makeAuthenticatedRequest(endpoint);
-            console.log(`📊 Response from ${endpoint}:`, response);
-            
-            if (response && (Array.isArray(response.data) || Array.isArray(response))) {
-              const data = Array.isArray(response.data) ? response.data : response;
-              console.log(`✅ Found ${data.length} orders from analytics endpoint`);
-              return data;
-            }
-          } catch (endpointError: any) {
-            console.log(`⚠️  Endpoint ${endpoint} failed:`, endpointError?.message || endpointError);
-          }
+      // Buscar todas as páginas de leads
+      const allLeads: any[] = [];
+      let page = 1;
+      let hasMorePages = true;
+      
+      console.log(`📋 Buscando todos os leads de ${country || 'todos países'} desde ${dateFrom || 'sempre'}`);
+      
+      while (hasMorePages) {
+        let endpoint = `api/leads?page=${page}`;
+        if (country) {
+          endpoint += `&country=${encodeURIComponent(country)}`;
+        }
+        if (dateFrom) {
+          endpoint += `&date_from=${encodeURIComponent(dateFrom)}`;
+        }
+        if (dateTo) {
+          endpoint += `&date_to=${encodeURIComponent(dateTo)}`;
         }
         
-        console.log(`⚠️  All analytics endpoints failed, falling back to leads pagination`);
+        console.log(`🔍 Buscando página ${page}...`);
+        const response = await this.makeAuthenticatedRequest(endpoint);
+        
+        if (response && response.data && Array.isArray(response.data)) {
+          allLeads.push(...response.data);
+          console.log(`📦 Página ${page}: ${response.data.length} leads (Total até agora: ${allLeads.length})`);
+          
+          // Verificar se há mais páginas
+          if (response.last_page && page >= response.last_page) {
+            hasMorePages = false;
+            console.log(`✅ Última página alcançada. Total de leads: ${allLeads.length}`);
+          } else if (response.data.length === 0) {
+            hasMorePages = false;
+            console.log(`✅ Sem mais leads. Total: ${allLeads.length}`);
+          } else {
+            page++;
+          }
+        } else {
+          console.log(`⚠️ Resposta inesperada na página ${page}. Parando.`);
+          hasMorePages = false;
+        }
+        
+        // Evitar loop infinito
+        if (page > 20) {
+          console.log(`⚠️ Limite de segurança de 20 páginas atingido`);
+          hasMorePages = false;
+        }
       }
       
-      // Fallback to pagination method
-      return await this.getLeadsList(country, 1, dateFrom, dateTo);
-    } catch (error) {
-      console.error(`Error getting leads with date filter:`, error);
+      return allLeads;
+    } catch (error: any) {
+      console.error(`❌ Erro ao buscar leads com paginação:`, error.message || error);
       return [];
     }
   }
