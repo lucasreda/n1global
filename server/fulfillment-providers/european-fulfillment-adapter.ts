@@ -272,13 +272,17 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           
           if (matchedOrder) {
             // 3. Pedido da Shopify encontrado - ATUALIZAR com informações da transportadora
+            const mappedStatus = this.mapLeadStatusToOrderStatus(lead.status);
+            
+            console.log(`📦 Status da API: "${lead.status}" → Mapeado: "${mappedStatus}"`);
+            
             await db
               .update(ordersTable)
               .set({
                 carrierImported: true,
                 carrierOrderId: leadNumber,
                 carrierMatchedAt: new Date(),
-                status: this.mapLeadStatusToOrderStatus(lead.status),
+                status: mappedStatus,
                 trackingNumber: lead.tracking_number || lead.tracking || matchedOrder.trackingNumber,
                 lastStatusUpdate: new Date(),
                 providerData: lead
@@ -286,7 +290,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
               .where(eq(ordersTable.id, matchedOrder.id));
             
             ordersUpdated++;
-            console.log(`✅ Pedido Shopify #${matchedOrder.shopifyOrderNumber} atualizado com lead ${leadNumber} (match por ${matchType})`);
+            console.log(`✅ Pedido Shopify #${matchedOrder.shopifyOrderNumber} atualizado: lead ${leadNumber}, status: ${mappedStatus} (match por ${matchType})`);
           } else {
             // 4. Pedido NÃO encontrado - PULAR (não criar novo pedido)
             console.log(`⏭️ Lead ${leadNumber} pulado - sem match na Shopify`);
