@@ -183,26 +183,62 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           ordersProcessed++;
           
           const leadNumber = lead.n_lead || lead.number || lead.lead_number || lead.id;
+          const orderReference = lead.order_number || lead.order_ref || lead.reference || leadNumber;
           
-          // Verificar se o pedido já existe (por carrierOrderId)
-          const existingOrder = await storage.getOrderByCarrierId(leadNumber, operationId);
+          // 1. Tentar buscar pedido da Shopify por número de referência
+          const { orders: ordersTable } = await import('../../shared/schema.js');
+          const { and } = await import('drizzle-orm');
           
-          if (existingOrder) {
-            // Atualizar status se mudou
-            if (existingOrder.status !== lead.status) {
-              await storage.updateOrderStatus(existingOrder.id, {
+          const shopifyOrders = await db
+            .select()
+            .from(ordersTable)
+            .where(
+              and(
+                eq(ordersTable.operationId, operationId),
+                eq(ordersTable.dataSource, 'shopify'),
+                eq(ordersTable.shopifyOrderNumber, orderReference)
+              )
+            );
+          
+          let matchedOrder = shopifyOrders[0];
+          
+          // 2. Se não encontrou por número, tentar por ID
+          if (!matchedOrder && lead.order_id) {
+            const ordersByShopifyId = await db
+              .select()
+              .from(ordersTable)
+              .where(
+                and(
+                  eq(ordersTable.operationId, operationId),
+                  eq(ordersTable.dataSource, 'shopify'),
+                  eq(ordersTable.shopifyOrderId, lead.order_id)
+                )
+              );
+            matchedOrder = ordersByShopifyId[0];
+          }
+          
+          if (matchedOrder) {
+            // 3. Pedido da Shopify encontrado - ATUALIZAR com informações da transportadora
+            await db
+              .update(ordersTable)
+              .set({
+                carrierImported: true,
+                carrierOrderId: leadNumber,
+                carrierMatchedAt: new Date(),
                 status: this.mapLeadStatusToOrderStatus(lead.status),
+                trackingNumber: lead.tracking_number || lead.tracking || matchedOrder.trackingNumber,
                 lastStatusUpdate: new Date(),
                 providerData: lead
-              });
-              ordersUpdated++;
-              console.log(`📝 Order ${leadNumber} atualizado: ${lead.status}`);
-            }
+              })
+              .where(eq(ordersTable.id, matchedOrder.id));
+            
+            ordersUpdated++;
+            console.log(`✅ Pedido Shopify ${orderReference} atualizado com lead ${leadNumber}`);
           } else {
-            // Criar novo pedido do carrier
+            // 4. Pedido NÃO existe na Shopify - criar novo pedido da transportadora
             const newOrder = {
-              id: leadNumber, // Use lead number as primary key
-              storeId, // Usar a loja encontrada ou criada
+              id: leadNumber,
+              storeId,
               operationId,
               dataSource: 'carrier' as const,
               carrierImported: true,
@@ -236,7 +272,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
             
             await storage.createOrder(newOrder as any);
             ordersCreated++;
-            console.log(`✨ Novo order criado: ${leadNumber}`);
+            console.log(`➕ Novo pedido criado da transportadora: ${leadNumber} (não encontrado na Shopify)`);
           }
           
         } catch (orderError) {
