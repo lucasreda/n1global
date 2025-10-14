@@ -413,10 +413,8 @@ export class ShopifyService {
         };
       }
 
-      // Busca pedidos recentes (últimos 30 dias)
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      // Busca TODOS os pedidos (sem filtro de data)
       const ordersResult = await this.getOrders(integration.shopName, integration.accessToken, {
-        created_at_min: thirtyDaysAgo,
         limit: 250
       });
 
