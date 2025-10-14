@@ -1828,7 +1828,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/sync/complete-progressive', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const { forceComplete, maxRetries } = req.body;
-      const { smartSyncService } = await import("./smart-sync-service");
+      
+      // Get user's current operation for proper data isolation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const requestedOperationId = req.query.operationId as string || req.body.operationId;
+      
+      let currentOperation;
+      if (requestedOperationId) {
+        currentOperation = userOperations.find(op => op.id === requestedOperationId);
+      } else {
+        currentOperation = userOperations[0];
+      }
+      
+      if (!currentOperation) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Nenhuma operação encontrada. Complete o onboarding primeiro." 
+        });
+      }
+
+      console.log(`🔄 Iniciando sync completo para operação: ${currentOperation.name} (${currentOperation.id})`);
+
+      // Buscar credenciais do fulfillment integration desta operação
+      const fulfillmentIntegrations = await storage.getFulfillmentIntegrationsByOperation(currentOperation.id);
+      
+      if (fulfillmentIntegrations.length === 0) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Nenhum armazém configurado para esta operação. Configure um armazém primeiro." 
+        });
+      }
+
+      // Usar a primeira integração de fulfillment encontrada
+      const integration = fulfillmentIntegrations[0];
+      console.log(`📦 Usando integração: ${integration.email} (Tipo: ${integration.type})`);
+
+      // Criar fulfillment service com credenciais da integração
+      const { EuropeanFulfillmentService } = await import("./fulfillment-service");
+      const fulfillmentService = new EuropeanFulfillmentService(
+        integration.email,
+        integration.password
+      );
+
+      // Criar smart sync service com o fulfillment service configurado
+      const { SmartSyncService } = await import("./smart-sync-service");
+      const smartSyncService = new SmartSyncService(fulfillmentService);
       
       // Iniciar sincronização completa progressiva de forma assíncrona
       smartSyncService.performCompleteSyncProgressive({ 

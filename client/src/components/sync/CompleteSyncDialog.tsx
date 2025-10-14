@@ -26,9 +26,10 @@ interface CompleteSyncDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete?: () => void;
+  operationId?: string;
 }
 
-export function CompleteSyncDialog({ isOpen, onClose, onComplete }: CompleteSyncDialogProps) {
+export function CompleteSyncDialog({ isOpen, onClose, onComplete, operationId }: CompleteSyncDialogProps) {
   const [syncStatus, setSyncStatus] = useState<CompleteSyncStatus | null>(null);
   const [pollingInterval, setPollingInterval] = useState<number | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -37,7 +38,11 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete }: CompleteSync
   const startCompleteSync = async () => {
     setIsStarting(true);
     try {
-      const response = await apiRequest('POST', '/api/sync/complete-progressive', {
+      const url = operationId 
+        ? `/api/sync/complete-progressive?operationId=${operationId}`
+        : '/api/sync/complete-progressive';
+      
+      const response = await apiRequest('POST', url, {
         forceComplete: true,
         maxRetries: 5
       });
