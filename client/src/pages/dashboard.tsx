@@ -17,9 +17,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 
 export default function Dashboard() {
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
@@ -141,8 +142,9 @@ export default function Dashboard() {
 
   // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ["/api/dashboard/metrics", dateRange.from.toISOString(), dateRange.to.toISOString(), operationId, "v4"],
+    queryKey: ["/api/dashboard/metrics", dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), operationId, "v4"],
     queryFn: async () => {
+      if (!dateRange?.from || !dateRange?.to) return null;
       const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
       const dateTo = format(dateRange.to, 'yyyy-MM-dd');
       const url = operationId 
@@ -151,6 +153,7 @@ export default function Dashboard() {
       const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },
+    enabled: !!dateRange?.from && !!dateRange?.to,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in memory for 10 minutes
     refetchOnMount: false, // Don't refetch on every mount
@@ -159,8 +162,9 @@ export default function Dashboard() {
 
   // Fetch revenue chart data
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ["/api/dashboard/revenue-chart", dateRange.from.toISOString(), dateRange.to.toISOString(), operationId, "v3"],
+    queryKey: ["/api/dashboard/revenue-chart", dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), operationId, "v3"],
     queryFn: async () => {
+      if (!dateRange?.from || !dateRange?.to) return [];
       const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
       const dateTo = format(dateRange.to, 'yyyy-MM-dd');
       const url = operationId 
@@ -172,6 +176,7 @@ export default function Dashboard() {
       console.log(`📈 Revenue chart data received:`, data);
       return data;
     },
+    enabled: !!dateRange?.from && !!dateRange?.to,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in memory for 10 minutes
     refetchOnMount: false, // Don't refetch on every mount
@@ -291,7 +296,7 @@ export default function Dashboard() {
               data-testid="button-date-range-picker"
             >
               <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
-              {dateRange.from && dateRange.to ? (
+              {dateRange?.from && dateRange?.to ? (
                 <span className="truncate">
                   {format(dateRange.from, "dd/MM/yy", { locale: pt })} - {format(dateRange.to, "dd/MM/yy", { locale: pt })}
                 </span>
@@ -302,62 +307,36 @@ export default function Dashboard() {
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 glassmorphism border-gray-600" align="start">
             <div className="p-4 space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-300">Data Inicial</label>
-                <Calendar
-                  mode="single"
-                  selected={dateRange.from}
-                  onSelect={(date) => date && setDateRange(prev => ({ ...prev, from: date }))}
-                  initialFocus
-                  className="rounded-md border-0"
-                  classNames={{
-                    months: "text-gray-200",
-                    month: "space-y-4",
-                    caption: "text-gray-200",
-                    caption_label: "text-sm font-medium",
-                    nav_button: "h-7 w-7 bg-transparent hover:bg-gray-700/50",
-                    nav_button_previous: "absolute left-1",
-                    nav_button_next: "absolute right-1",
-                    table: "w-full border-collapse",
-                    head_row: "flex",
-                    head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
-                    row: "flex w-full mt-2",
-                    cell: "text-center text-sm p-0 relative",
-                    day: "h-9 w-9 p-0 font-normal hover:bg-gray-700/50 rounded-md",
-                    day_selected: "bg-blue-600 text-white hover:bg-blue-700",
-                    day_today: "bg-gray-700/50 text-gray-200",
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-gray-300">Data Final</label>
-                <Calendar
-                  mode="single"
-                  selected={dateRange.to}
-                  onSelect={(date) => date && setDateRange(prev => ({ ...prev, to: date }))}
-                  disabled={(date) => date < dateRange.from}
-                  initialFocus
-                  className="rounded-md border-0"
-                  classNames={{
-                    months: "text-gray-200",
-                    month: "space-y-4",
-                    caption: "text-gray-200",
-                    caption_label: "text-sm font-medium",
-                    nav_button: "h-7 w-7 bg-transparent hover:bg-gray-700/50",
-                    nav_button_previous: "absolute left-1",
-                    nav_button_next: "absolute right-1",
-                    table: "w-full border-collapse",
-                    head_row: "flex",
-                    head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
-                    row: "flex w-full mt-2",
-                    cell: "text-center text-sm p-0 relative",
-                    day: "h-9 w-9 p-0 font-normal hover:bg-gray-700/50 rounded-md",
-                    day_selected: "bg-blue-600 text-white hover:bg-blue-700",
-                    day_today: "bg-gray-700/50 text-gray-200",
-                    day_disabled: "text-gray-600 opacity-50",
-                  }}
-                />
-              </div>
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                initialFocus
+                className="rounded-md border-0"
+                classNames={{
+                  months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                  month: "space-y-4",
+                  caption: "flex justify-center pt-1 relative items-center text-gray-200",
+                  caption_label: "text-sm font-medium",
+                  nav: "space-x-1 flex items-center",
+                  nav_button: "h-7 w-7 bg-transparent hover:bg-gray-700/50 p-0 opacity-50 hover:opacity-100",
+                  nav_button_previous: "absolute left-1",
+                  nav_button_next: "absolute right-1",
+                  table: "w-full border-collapse space-y-1",
+                  head_row: "flex",
+                  head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                  row: "flex w-full mt-2",
+                  cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-blue-600/20 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                  day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-gray-700/50 rounded-md",
+                  day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white",
+                  day_today: "bg-gray-700/50 text-gray-200",
+                  day_outside: "text-gray-600 opacity-50",
+                  day_disabled: "text-gray-600 opacity-50",
+                  day_range_middle: "aria-selected:bg-blue-600/30 aria-selected:text-white rounded-none",
+                  day_hidden: "invisible",
+                }}
+              />
               <div className="flex gap-2 justify-end pt-2 border-t border-gray-700">
                 <Button
                   variant="outline"
@@ -421,7 +400,12 @@ export default function Dashboard() {
       
       <OnboardingCard />
       
-      <StatsCards metrics={metrics} isLoading={metricsLoading} period={`${format(dateRange.from, 'dd/MM/yy')} - ${format(dateRange.to, 'dd/MM/yy')}`} currency={operationCurrency} />
+      <StatsCards 
+        metrics={metrics} 
+        isLoading={metricsLoading} 
+        period={dateRange?.from && dateRange?.to ? `${format(dateRange.from, 'dd/MM/yy')} - ${format(dateRange.to, 'dd/MM/yy')}` : 'Selecione um período'} 
+        currency={operationCurrency} 
+      />
       
       <ChartsSection 
         revenueData={revenueData || []}
