@@ -183,38 +183,45 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           ordersProcessed++;
           
           const leadNumber = lead.n_lead || lead.number || lead.lead_number || lead.id;
-          const orderReference = lead.order_number || lead.order_ref || lead.reference || leadNumber;
+          const customerPhone = lead.customer_phone || lead.phone || '';
+          const customerEmail = lead.customer_email || lead.email || '';
           
-          // 1. Tentar buscar pedido da Shopify por número de referência
+          // 1. Buscar pedido da Shopify por TELEFONE ou EMAIL (match mais confiável)
           const { orders: ordersTable } = await import('../../shared/schema.js');
-          const { and } = await import('drizzle-orm');
+          const { and, or } = await import('drizzle-orm');
           
-          const shopifyOrders = await db
-            .select()
-            .from(ordersTable)
-            .where(
-              and(
-                eq(ordersTable.operationId, operationId),
-                eq(ordersTable.dataSource, 'shopify'),
-                eq(ordersTable.shopifyOrderNumber, orderReference)
-              )
-            );
+          let matchedOrder = null;
           
-          let matchedOrder = shopifyOrders[0];
-          
-          // 2. Se não encontrou por número, tentar por ID
-          if (!matchedOrder && lead.order_id) {
-            const ordersByShopifyId = await db
+          // Buscar por telefone (mais confiável)
+          if (customerPhone) {
+            const ordersByPhone = await db
               .select()
               .from(ordersTable)
               .where(
                 and(
                   eq(ordersTable.operationId, operationId),
                   eq(ordersTable.dataSource, 'shopify'),
-                  eq(ordersTable.shopifyOrderId, lead.order_id)
+                  eq(ordersTable.customerPhone, customerPhone)
                 )
-              );
-            matchedOrder = ordersByShopifyId[0];
+              )
+              .limit(1);
+            matchedOrder = ordersByPhone[0];
+          }
+          
+          // 2. Se não encontrou por telefone, buscar por email
+          if (!matchedOrder && customerEmail) {
+            const ordersByEmail = await db
+              .select()
+              .from(ordersTable)
+              .where(
+                and(
+                  eq(ordersTable.operationId, operationId),
+                  eq(ordersTable.dataSource, 'shopify'),
+                  eq(ordersTable.customerEmail, customerEmail)
+                )
+              )
+              .limit(1);
+            matchedOrder = ordersByEmail[0];
           }
           
           if (matchedOrder) {
@@ -233,7 +240,8 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
               .where(eq(ordersTable.id, matchedOrder.id));
             
             ordersUpdated++;
-            console.log(`✅ Pedido Shopify ${orderReference} atualizado com lead ${leadNumber}`);
+            const matchType = customerPhone ? 'telefone' : 'email';
+            console.log(`✅ Pedido Shopify #${matchedOrder.shopifyOrderNumber} atualizado com lead ${leadNumber} (match por ${matchType})`);
           } else {
             // 4. Pedido NÃO existe na Shopify - criar novo pedido da transportadora
             const newOrder = {
