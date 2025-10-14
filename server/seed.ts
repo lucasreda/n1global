@@ -322,11 +322,9 @@ export async function seedDatabase() {
         .delete(userOperationAccess)
         .where(eq(userOperationAccess.userId, freshUser.id));
 
-      // Get specific operations for fresh user (exclude PureDreams - it's for admin only)
-      const relevantOperations = await db
-        .select()
-        .from(operations)
-        .where(inArray(operations.name, ['Dss', 'test 2', 'Test 3']));
+      // Get all operations for fresh user (exclude PureDreams - it's for admin only)
+      const allOps = await db.select().from(operations);
+      const relevantOperations = allOps.filter(op => op.name !== 'PureDreams');
       
       console.log(`🎯 Setting up access for fresh user to ${relevantOperations.length} operations...`);
       
