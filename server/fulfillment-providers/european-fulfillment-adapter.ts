@@ -84,14 +84,16 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
     let ordersCreated = 0;
     let ordersUpdated = 0;
     let errors: string[] = [];
+    
+    // Importar todas as dependências no início para reusar
+    const { db } = await import('../db.js');
+    const { eq } = await import('drizzle-orm');
 
     try {
       console.log(`🔧 Iniciando busca de leads para operação ${operationId}`);
       
       // SEMPRE buscar o país da operação
-      const { db } = await import('../db.js');
       const { operations } = await import('../../shared/schema.js');
-      const { eq } = await import('drizzle-orm');
       
       const [operation] = await db.select().from(operations).where(eq(operations.id, operationId));
       
@@ -160,6 +162,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
         };
       }
       
+      // eq já foi importado acima, mas se necessário reimportamos aqui
       const storesResult = await db.select().from(stores).where(eq(stores.operationId, operationId)).limit(1);
       let defaultStore = storesResult[0];
       
