@@ -42,12 +42,16 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete, operationId }:
         ? `/api/sync/complete-progressive?operationId=${operationId}`
         : '/api/sync/complete-progressive';
       
+      console.log("🔄 Iniciando sync completo...", { url, operationId });
+      
       const response = await apiRequest('POST', url, {
         forceComplete: true,
         maxRetries: 5
       });
 
       const result = await response.json();
+      console.log("📊 Resposta do sync:", result);
+      
       if (result.success) {
         console.log("🚀 Sincronização completa iniciada");
         startPolling();
