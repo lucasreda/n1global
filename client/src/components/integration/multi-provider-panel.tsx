@@ -37,11 +37,12 @@ export function MultiProviderPanel() {
 
   // Buscar status das integrações
   const { data: integrationsStatus } = useQuery({
-    queryKey: ['/api/onboarding/integrations-status'],
+    queryKey: ['/api/onboarding/integrations-status', { operationId }],
     queryFn: async () => {
       const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
       return response.json();
     },
+    enabled: !!operationId,
   });
 
   // Buscar todos os providers disponíveis
@@ -119,7 +120,7 @@ export function MultiProviderPanel() {
         // Verificar se já tem plataforma configurada (com tratamento de erro)
         try {
           const status = await queryClient.fetchQuery({
-            queryKey: ['/api/onboarding/integrations-status'],
+            queryKey: ['/api/onboarding/integrations-status', { operationId }],
             queryFn: async () => {
               const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
               return response.json();

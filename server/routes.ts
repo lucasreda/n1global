@@ -1341,9 +1341,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shopifyIntegrations = await storage.getShopifyIntegrationsByOperation(operationId);
       const hasPlatform = shopifyIntegrations.length > 0; // For now only checking Shopify, CartPanda would be added later
 
-      // Check if has at least one shipping provider
+      // Check if has at least one warehouse configured (shipping provider OR fulfillment integration)
       const shippingProviders = await storage.getShippingProvidersByOperation(operationId);
-      const hasWarehouse = shippingProviders.length > 0;
+      const fulfillmentIntegrationsCheck = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(eq(fulfillmentIntegrations.operationId, operationId))
+        .limit(1);
+      const hasWarehouse = shippingProviders.length > 0 || fulfillmentIntegrationsCheck.length > 0;
 
       // Check if has at least one ad account
       const adAccounts = await storage.getAdAccountsByOperation(operationId);
