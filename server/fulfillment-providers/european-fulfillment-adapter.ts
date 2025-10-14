@@ -147,46 +147,32 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
       // Importar storage dinamicamente
       const { storage } = await import('../storage.js');
       
-      // Buscar ou criar loja padrão para a operação
+      // Buscar a store da operação (operation.storeId)
       const { stores } = await import('../../shared/schema.js');
       
-      // Verificar se operationId é válido
-      if (!operationId) {
-        console.log('❌ operationId inválido:', operationId);
+      if (!operation.storeId) {
+        console.log('❌ Operação não tem storeId associado');
         return {
           success: false,
           ordersProcessed: 0,
           ordersCreated: 0,
           ordersUpdated: 0,
-          errors: ['operationId inválido']
+          errors: ['Operação não tem storeId associado']
         };
       }
       
-      // Debug: verificar valores antes da query
-      console.log('🔍 Debug SQL query:', {
-        hasDb: !!db,
-        hasEq: !!eq,
-        hasStores: !!stores,
-        operationId,
-        operationIdType: typeof operationId
-      });
-      
-      const storesResult = await db.select().from(stores).where(eq(stores.operationId, operationId)).limit(1);
-      let defaultStore = storesResult[0];
+      const storesResult = await db.select().from(stores).where(eq(stores.id, operation.storeId)).limit(1);
+      const defaultStore = storesResult[0];
       
       if (!defaultStore) {
-        console.log('⚠️ Nenhuma loja encontrada para a operação. Criando loja padrão...');
-        // Criar loja padrão para a operação
-        const insertResult = await db.insert(stores).values({
-          id: `default-${operationId}`,
-          name: `Loja Principal - ${operation.name}`,
-          operationId,
-          domain: 'https://loja.exemplo.com',
-          platform: 'custom',
-          isActive: true
-        }).returning();
-        defaultStore = insertResult[0];
-        console.log('✅ Loja padrão criada:', defaultStore.id);
+        console.log('❌ Loja não encontrada para storeId:', operation.storeId);
+        return {
+          success: false,
+          ordersProcessed: 0,
+          ordersCreated: 0,
+          ordersUpdated: 0,
+          errors: ['Loja não encontrada']
+        };
       }
       
       const storeId = defaultStore.id;
