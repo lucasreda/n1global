@@ -50,16 +50,16 @@ export class DashboardService {
     return this.defaultStoreId;
   }
   
-  async getDashboardMetrics(period?: '1d' | '7d' | '30d' | '90d' | 'current_month', provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string) {
-    console.log(`📊 Getting dashboard metrics for period: ${period || `${dateFrom} to ${dateTo}`}, provider: ${provider || 'all'}`);
+  async getDashboardMetrics(period?: '1d' | '7d' | '30d' | '90d' | 'current_month', provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string, productId?: string) {
+    console.log(`📊 Getting dashboard metrics for period: ${period || `${dateFrom} to ${dateTo}`}, provider: ${provider || 'all'}, product: ${productId || 'all'}`);
     
-    // When using custom date range, skip cache
-    if (dateFrom && dateTo) {
-      const metrics = await this.calculateMetrics(period, provider, req, operationId, dateFrom, dateTo);
+    // When using custom date range or product filter, skip cache
+    if ((dateFrom && dateTo) || productId) {
+      const metrics = await this.calculateMetrics(period, provider, req, operationId, dateFrom, dateTo, productId);
       return metrics;
     }
     
-    // Check cache first for period-based queries
+    // Check cache first for period-based queries (no product filter)
     const cached = await this.getCachedMetrics(period || 'current_month', provider, req, operationId);
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
@@ -280,7 +280,7 @@ export class DashboardService {
     }
   }
   
-  private async calculateMetrics(period: string, provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string) {
+  private async calculateMetrics(period: string, provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string, productId?: string) {
     // Use custom date range if provided, otherwise calculate from period
     const dateRange = (dateFrom && dateTo) 
       ? { from: new Date(dateFrom), to: new Date(dateTo + 'T23:59:59.000Z') } 
@@ -304,11 +304,11 @@ export class DashboardService {
       return this.getEmptyMetrics();
     }
     
-    console.log(`📅 Calculating metrics for ${dateFrom && dateTo ? `custom range: ${dateFrom} to ${dateTo}` : `period: ${period}`}, operation: ${currentOperation.name} (${currentOperation.id})`);
+    console.log(`📅 Calculating metrics for ${dateFrom && dateTo ? `custom range: ${dateFrom} to ${dateTo}` : `period: ${period}`}, operation: ${currentOperation.name} (${currentOperation.id}), product: ${productId || 'all'}`);
     console.log(`📅 Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
     console.log(`📊 Chart will use same ${dateFrom && dateTo ? 'custom date range' : `period: ${period}`}`);
     
-    // CRITICAL: Use operationId instead of storeId for data isolation + DATE FILTERING
+    // CRITICAL: Use operationId instead of storeId for data isolation + DATE FILTERING + PRODUCT FILTERING
     let whereConditions = [
       eq(orders.operationId, currentOperation.id),
       gte(orders.orderDate, dateRange.from), // FIXED: Filter by Shopify order date
@@ -317,6 +317,10 @@ export class DashboardService {
     
     if (provider) {
       whereConditions.push(eq(orders.provider, provider));
+    }
+
+    if (productId) {
+      whereConditions.push(eq(orders.productId, productId));
     }
     
     const whereClause = and(...whereConditions);
@@ -346,7 +350,8 @@ export class DashboardService {
         gte(orders.orderDate, dateRange.from), // SAME date filter as order counts
         lte(orders.orderDate, dateRange.to),   // SAME date filter as order counts
         ne(orders.status, 'cancelled'), // All orders except cancelled (total Shopify revenue)
-        provider ? eq(orders.provider, provider) : sql`TRUE`
+        provider ? eq(orders.provider, provider) : sql`TRUE`,
+        productId ? eq(orders.productId, productId) : sql`TRUE`
       ));
     
     // 3. Get transportadora data filtered by period AND carrier_imported = true
@@ -361,7 +366,8 @@ export class DashboardService {
         gte(orders.orderDate, dateRange.from), // SAME period filter
         lte(orders.orderDate, dateRange.to),   // SAME period filter
         eq(orders.carrierImported, true), // ONLY orders found in carrier/transportadora
-        provider ? eq(orders.provider, provider) : sql`TRUE`
+        provider ? eq(orders.provider, provider) : sql`TRUE`,
+        productId ? eq(orders.productId, productId) : sql`TRUE`
       ))
       .groupBy(orders.status);
     
@@ -1037,7 +1043,7 @@ export class DashboardService {
     return { from, to };
   }
   
-  async getRevenueOverTime(period: string = '30d', provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string) {
+  async getRevenueOverTime(period: string = '30d', provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string, productId?: string) {
     // Use custom date range if provided, otherwise calculate from period
     const dateRange = (dateFrom && dateTo) 
       ? { from: new Date(dateFrom), to: new Date(dateTo + 'T23:59:59.000Z') } 
@@ -1069,6 +1075,10 @@ export class DashboardService {
     
     if (provider) {
       whereConditions.push(eq(orders.provider, provider));
+    }
+
+    if (productId) {
+      whereConditions.push(eq(orders.productId, productId));
     }
     
     console.log(`📊 Chart will use same period: ${period}`);
