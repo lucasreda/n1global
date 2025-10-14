@@ -1358,7 +1358,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const supportConfig = await storage.getCustomerSupportByOperation(operationId);
       const hasSupportEmail = !!supportConfig && !!supportConfig.supportEmail;
 
-      const allCompleted = hasPlatform && hasWarehouse && hasAdAccount && hasSupportEmail;
+      // Only check visible steps in the onboarding card (operation is checked on frontend)
+      const allCompleted = hasPlatform && hasWarehouse && hasAdAccount;
 
       res.json({
         hasPlatform,
