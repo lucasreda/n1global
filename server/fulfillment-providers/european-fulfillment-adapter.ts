@@ -87,18 +87,42 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
 
     try {
       console.log(`🔧 Iniciando busca de leads para operação ${operationId}`);
+      
+      // Importar storage para buscar a operação
+      const { storage } = await import('../storage.js');
+      const operation = await storage.getOperationById(operationId);
+      
+      if (!operation) {
+        return {
+          success: false,
+          ordersProcessed: 0,
+          ordersCreated: 0,
+          ordersUpdated: 0,
+          errors: ['Operação não encontrada']
+        };
+      }
+      
+      // Mapear país da operação para o formato esperado pela API
+      const countryMap: Record<string, string> = {
+        'Portugal': 'PORTUGAL',
+        'Itália': 'ITALY',
+        'Espanha': 'SPAIN',
+        'França': 'FRANCE',
+        'Alemanha': 'GERMANY'
+      };
+      
+      const country = countryMap[operation.country] || operation.country.toUpperCase();
+      console.log(`🌍 País da operação: ${operation.country} → API: ${country}`);
+      
       const service = await this.getEuropeanService();
       console.log(`✅ Serviço European Fulfillment obtido com sucesso`);
       
       // Buscar leads do European Fulfillment (últimos 30 dias)
       const dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      console.log(`📅 Buscando leads desde: ${dateFrom}`);
+      console.log(`📅 Buscando leads desde: ${dateFrom} para país: ${country}`);
       
-      const leads = await service.getLeadsListWithDateFilter(undefined, dateFrom);
-      console.log(`📦 European Fulfillment: ${leads?.length || 0} leads encontrados`, leads);
-
-      // Importar storage dinamicamente para evitar dependências circulares
-      const { storage } = await import('../storage.js');
+      const leads = await service.getLeadsListWithDateFilter(country, dateFrom);
+      console.log(`📦 European Fulfillment: ${leads?.length || 0} leads encontrados`);
       
       for (const lead of leads) {
         try {
