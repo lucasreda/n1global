@@ -13,8 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, RefreshCw, X } from "lucide-react";
+import { CalendarIcon, RefreshCw, X, Package } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -26,6 +27,7 @@ export default function Dashboard() {
   });
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
@@ -142,16 +144,27 @@ export default function Dashboard() {
 
   const operationCurrency = currentOperation?.currency || 'EUR';
 
+  // Fetch products for the current operation
+  const { data: products = [] } = useQuery({
+    queryKey: ["/api/operations", operationId, "products"],
+    queryFn: async () => {
+      if (!operationId) return [];
+      const response = await authenticatedApiRequest("GET", `/api/operations/${operationId}/products`);
+      return response.json();
+    },
+    enabled: !!operationId,
+  });
+
   // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ["/api/dashboard/metrics", dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), operationId, "v4"],
+    queryKey: ["/api/dashboard/metrics", dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), operationId, selectedProduct, "v5"],
     queryFn: async () => {
       if (!dateRange?.from || !dateRange?.to) return null;
       const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
       const dateTo = format(dateRange.to, 'yyyy-MM-dd');
-      const url = operationId 
-        ? `/api/dashboard/metrics?dateFrom=${dateFrom}&dateTo=${dateTo}&operationId=${operationId}`
-        : `/api/dashboard/metrics?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+      let url = `/api/dashboard/metrics?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+      if (operationId) url += `&operationId=${operationId}`;
+      if (selectedProduct && selectedProduct !== 'all') url += `&productId=${selectedProduct}`;
       const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },
@@ -164,14 +177,14 @@ export default function Dashboard() {
 
   // Fetch revenue chart data
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ["/api/dashboard/revenue-chart", dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), operationId, "v3"],
+    queryKey: ["/api/dashboard/revenue-chart", dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), operationId, selectedProduct, "v4"],
     queryFn: async () => {
       if (!dateRange?.from || !dateRange?.to) return [];
       const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
       const dateTo = format(dateRange.to, 'yyyy-MM-dd');
-      const url = operationId 
-        ? `/api/dashboard/revenue-chart?dateFrom=${dateFrom}&dateTo=${dateTo}&operationId=${operationId}`
-        : `/api/dashboard/revenue-chart?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+      let url = `/api/dashboard/revenue-chart?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+      if (operationId) url += `&operationId=${operationId}`;
+      if (selectedProduct && selectedProduct !== 'all') url += `&productId=${selectedProduct}`;
       console.log(`📊 Fetching revenue chart data for date range: ${dateFrom} to ${dateTo}`, url);
       const response = await authenticatedApiRequest("GET", url);
       const data = await response.json();
@@ -289,6 +302,48 @@ export default function Dashboard() {
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
       {/* Header with Complete Sync Button and Date Filter */}
       <div className="w-full flex items-center justify-end gap-2 sm:gap-3">
+        {/* Product Filter */}
+        {products.length > 0 && (
+          <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+            <SelectTrigger 
+              className="bg-gray-900/30 border-gray-700/50 hover:bg-gray-800/50 text-gray-300 text-xs sm:text-sm min-w-[180px] sm:min-w-[220px]"
+              data-testid="select-product-filter"
+            >
+              <Package className="mr-2 h-4 w-4 text-gray-400 flex-shrink-0" />
+              <SelectValue placeholder="Todos os produtos" />
+            </SelectTrigger>
+            <SelectContent className="glassmorphism border-gray-600">
+              <SelectItem value="all" className="text-gray-300">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-gray-400" />
+                  <span>Todos os produtos</span>
+                </div>
+              </SelectItem>
+              {products.map((product: any) => (
+                <SelectItem key={product.id} value={product.id} className="text-gray-300">
+                  <div className="flex items-center gap-2">
+                    {product.imageUrl ? (
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.name}
+                        className="h-6 w-6 rounded object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <Package className="h-4 w-4 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="text-sm">{product.name}</span>
+                      {product.sku && <span className="text-xs text-gray-400">SKU: {product.sku}</span>}
+                    </div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {/* Date Range Picker */}
         <Popover open={isPopoverOpen} onOpenChange={(open) => {
           setIsPopoverOpen(open);
