@@ -272,9 +272,12 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           
           if (matchedOrder) {
             // 3. Pedido da Shopify encontrado - ATUALIZAR com informações da transportadora
-            const mappedStatus = this.mapLeadStatusToOrderStatus(lead.status);
+            const statusLivraison = lead.status_livrison || lead.status_livraison || '';
+            const statusConfirmation = lead.status_confirmation || '';
             
-            console.log(`📦 Status da API: "${lead.status}" → Mapeado: "${mappedStatus}"`);
+            const mappedStatus = this.mapLeadStatusToOrderStatus(statusLivraison, statusConfirmation);
+            
+            console.log(`📦 Status da API: livraison="${statusLivraison}", confirmation="${statusConfirmation}" → Mapeado: "${mappedStatus}"`);
             
             await db
               .update(ordersTable)
@@ -324,18 +327,30 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
     }
   }
 
-  private mapLeadStatusToOrderStatus(leadStatus: string): string {
-    // Mapear status do European Fulfillment para nosso padrão
-    const statusMap: Record<string, string> = {
-      'pending': 'pending',
-      'confirmed': 'confirmed',
-      'shipped': 'shipped',
-      'delivered': 'delivered',
-      'cancelled': 'cancelled',
-      'returned': 'returned'
-    };
+  private mapLeadStatusToOrderStatus(statusLivraison: string, statusConfirmation: string): string {
+    // Prioridade: status de entrega (livraison) primeiro
+    const livraison = statusLivraison?.toLowerCase() || '';
+    const confirmation = statusConfirmation?.toLowerCase() || '';
     
-    return statusMap[leadStatus?.toLowerCase()] || 'pending';
+    // 1. Status FINAIS de entrega (prioridade máxima)
+    if (livraison === 'delivered' || livraison === 'livré') return 'delivered';
+    if (livraison === 'returned' || livraison === 'retourné') return 'returned';
+    if (livraison === 'rejected') return 'cancelled';
+    
+    // 2. Status EM TRÂNSITO
+    if (livraison === 'in transit' || livraison === 'in delivery' || livraison === 'shipped' || livraison === 'expédié' || livraison === 'expedition') return 'shipped';
+    
+    // 3. Status PROCESSANDO/PREPARANDO
+    if (livraison === 'unpacked' || livraison === 'déballé' || livraison === 'proseccing' || livraison === 'processing' || livraison === 'redeployment') return 'confirmed';
+    
+    // 4. Status de CONFIRMAÇÃO (quando livraison não define)
+    if (confirmation === 'confirmed' || confirmation === 'confirmé') return 'confirmed';
+    if (confirmation === 'canceled' || confirmation === 'cancelled' || confirmation === 'annulé' || confirmation === 'canceled by system') return 'cancelled';
+    
+    // 5. INCIDENTE ou status desconhecido
+    if (livraison === 'incident') return 'pending';
+    
+    return 'pending';
   }
 
   async testConnection(): Promise<{ connected: boolean; message: string }> {
