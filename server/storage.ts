@@ -13,8 +13,10 @@ export interface IStorage {
   // Order methods - limited interface for backward compatibility
   getOrders(limit?: number, offset?: number): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
+  getOrderByCarrierId(carrierId: string, operationId: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrder(id: string, updates: Partial<Order>): Promise<Order | undefined>;
+  updateOrderStatus(id: string, updates: { status: string; lastStatusUpdate: Date; providerData?: any }): Promise<Order | undefined>;
   deleteOrder(id: string): Promise<boolean>;
   getOrdersByStore(storeId: string): Promise<Order[]>;
 
@@ -140,6 +142,19 @@ export class DatabaseStorage implements IStorage {
     return order || undefined;
   }
 
+  async getOrderByCarrierId(carrierId: string, operationId: string): Promise<Order | undefined> {
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.carrierOrderId, carrierId),
+          eq(orders.operationId, operationId)
+        )
+      );
+    return order || undefined;
+  }
+
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const [order] = await db
       .insert(orders)
@@ -153,6 +168,21 @@ export class DatabaseStorage implements IStorage {
     const [order] = await db
       .update(orders)
       .set({ ...updates, updatedAt: new Date() })
+      .where(eq(orders.id, id))
+      .returning();
+    
+    return order || undefined;
+  }
+
+  async updateOrderStatus(id: string, updates: { status: string; lastStatusUpdate: Date; providerData?: any }): Promise<Order | undefined> {
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        status: updates.status,
+        lastStatusUpdate: updates.lastStatusUpdate,
+        providerData: updates.providerData,
+        updatedAt: new Date()
+      })
       .where(eq(orders.id, id))
       .returning();
     

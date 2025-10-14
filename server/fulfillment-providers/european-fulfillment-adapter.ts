@@ -80,15 +80,127 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
   async syncOrders(operationId: string): Promise<SyncResult> {
     console.log(`🔄 European Fulfillment Adapter: Sincronizando pedidos para operação ${operationId}`);
     
-    // TODO: Implementar sincronização de leads/pedidos com o banco de dados
-    // Por enquanto, retornar resultado vazio
-    return {
-      success: true,
-      ordersProcessed: 0,
-      ordersCreated: 0,
-      ordersUpdated: 0,
-      errors: []
+    let ordersProcessed = 0;
+    let ordersCreated = 0;
+    let ordersUpdated = 0;
+    let errors: string[] = [];
+
+    try {
+      console.log(`🔧 Iniciando busca de leads para operação ${operationId}`);
+      const service = await this.getEuropeanService();
+      console.log(`✅ Serviço European Fulfillment obtido com sucesso`);
+      
+      // Buscar leads do European Fulfillment (últimos 30 dias)
+      const dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      console.log(`📅 Buscando leads desde: ${dateFrom}`);
+      
+      const leads = await service.getLeadsListWithDateFilter(undefined, dateFrom);
+      console.log(`📦 European Fulfillment: ${leads?.length || 0} leads encontrados`, leads);
+
+      // Importar storage dinamicamente para evitar dependências circulares
+      const { storage } = await import('../storage.js');
+      
+      for (const lead of leads) {
+        try {
+          ordersProcessed++;
+          
+          const leadNumber = lead.number || lead.lead_number || lead.id;
+          
+          // Verificar se o pedido já existe (por carrierOrderId)
+          const existingOrder = await storage.getOrderByCarrierId(leadNumber, operationId);
+          
+          if (existingOrder) {
+            // Atualizar status se mudou
+            if (existingOrder.status !== lead.status) {
+              await storage.updateOrderStatus(existingOrder.id, {
+                status: this.mapLeadStatusToOrderStatus(lead.status),
+                lastStatusUpdate: new Date(),
+                providerData: lead
+              });
+              ordersUpdated++;
+              console.log(`📝 Order ${leadNumber} atualizado: ${lead.status}`);
+            }
+          } else {
+            // Criar novo pedido do carrier
+            const newOrder = {
+              id: leadNumber, // Use lead number as primary key
+              storeId: '', // Will be filled by storage
+              operationId,
+              dataSource: 'carrier' as const,
+              carrierImported: true,
+              carrierOrderId: leadNumber,
+              carrierMatchedAt: new Date(),
+              
+              customerName: lead.customer_name || lead.name || '',
+              customerEmail: lead.customer_email || lead.email || '',
+              customerPhone: lead.customer_phone || lead.phone || '',
+              customerAddress: lead.shipping_address || lead.address || '',
+              customerCity: lead.shipping_city || lead.city || '',
+              customerCountry: lead.shipping_country || lead.country || '',
+              customerZip: lead.shipping_zip || lead.zip || '',
+              
+              status: this.mapLeadStatusToOrderStatus(lead.status),
+              paymentMethod: 'cod',
+              
+              total: lead.total || '0',
+              productCost: lead.product_cost || '0',
+              shippingCost: lead.shipping_cost || '0',
+              currency: 'EUR',
+              
+              products: lead.items || lead.products || [],
+              provider: 'european_fulfillment',
+              trackingNumber: lead.tracking_number || lead.tracking || '',
+              providerData: lead,
+              
+              orderDate: lead.created_at ? new Date(lead.created_at) : new Date(),
+              lastStatusUpdate: new Date()
+            };
+            
+            await storage.createOrder(newOrder as any);
+            ordersCreated++;
+            console.log(`✨ Novo order criado: ${leadNumber}`);
+          }
+          
+        } catch (orderError) {
+          console.error(`❌ Erro processando lead ${lead.number}:`, orderError);
+          errors.push(`Lead ${lead.number}: ${orderError instanceof Error ? orderError.message : 'Unknown error'}`);
+        }
+      }
+
+      console.log(`✅ European Fulfillment sync completo: ${ordersProcessed} processados, ${ordersCreated} criados, ${ordersUpdated} atualizados`);
+      
+      return {
+        success: true,
+        ordersProcessed,
+        ordersCreated,
+        ordersUpdated,
+        errors
+      };
+      
+    } catch (error) {
+      console.error("❌ European Fulfillment sync error:", error);
+      return {
+        success: false,
+        ordersProcessed,
+        ordersCreated,
+        ordersUpdated,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      };
+    }
+  }
+
+  private mapLeadStatusToOrderStatus(leadStatus: string): string {
+    // Mapear status do European Fulfillment para nosso padrão
+    const statusMap: Record<string, string> = {
+      'pending': 'pending',
+      'confirmed': 'confirmed',
+      'shipped': 'shipped',
+      'delivered': 'delivered',
+      'cancelled': 'cancelled',
+      'returned': 'returned'
     };
+    
+    return statusMap[leadStatus?.toLowerCase()] || 'pending';
   }
 
   async testConnection(): Promise<{ connected: boolean; message: string }> {
