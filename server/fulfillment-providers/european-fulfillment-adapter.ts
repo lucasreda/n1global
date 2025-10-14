@@ -147,6 +147,19 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
       
       // Buscar ou criar loja padrão para a operação
       const { stores } = await import('../../shared/schema.js');
+      
+      // Verificar se operationId é válido
+      if (!operationId) {
+        console.log('❌ operationId inválido:', operationId);
+        return {
+          success: false,
+          ordersProcessed: 0,
+          ordersCreated: 0,
+          ordersUpdated: 0,
+          errors: ['operationId inválido']
+        };
+      }
+      
       const storesResult = await db.select().from(stores).where(eq(stores.operationId, operationId)).limit(1);
       let defaultStore = storesResult[0];
       
