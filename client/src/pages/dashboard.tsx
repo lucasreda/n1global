@@ -11,12 +11,18 @@ import { useCurrentOperation } from "@/hooks/use-current-operation";
 import { useTourContext } from "@/contexts/tour-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Calendar, Filter, RefreshCw } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 
 export default function Dashboard() {
-  const [dateFilter, setDateFilter] = useState("30");
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+    to: new Date()
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
@@ -135,12 +141,13 @@ export default function Dashboard() {
 
   // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ["/api/dashboard/metrics", dateFilter, operationId, "v3"],
+    queryKey: ["/api/dashboard/metrics", dateRange.from.toISOString(), dateRange.to.toISOString(), operationId, "v4"],
     queryFn: async () => {
-      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : '30d';
+      const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
+      const dateTo = format(dateRange.to, 'yyyy-MM-dd');
       const url = operationId 
-        ? `/api/dashboard/metrics?period=${period}&operationId=${operationId}`
-        : `/api/dashboard/metrics?period=${period}`;
+        ? `/api/dashboard/metrics?dateFrom=${dateFrom}&dateTo=${dateTo}&operationId=${operationId}`
+        : `/api/dashboard/metrics?dateFrom=${dateFrom}&dateTo=${dateTo}`;
       const response = await authenticatedApiRequest("GET", url);
       return response.json();
     },
@@ -152,13 +159,14 @@ export default function Dashboard() {
 
   // Fetch revenue chart data
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ["/api/dashboard/revenue-chart", dateFilter, operationId, "v2"],
+    queryKey: ["/api/dashboard/revenue-chart", dateRange.from.toISOString(), dateRange.to.toISOString(), operationId, "v3"],
     queryFn: async () => {
-      const period = dateFilter === '1' ? '1d' : dateFilter === '7' ? '7d' : dateFilter === '30' ? '30d' : dateFilter === '90' ? '90d' : dateFilter === 'current_month' ? 'current_month' : '30d';
+      const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
+      const dateTo = format(dateRange.to, 'yyyy-MM-dd');
       const url = operationId 
-        ? `/api/dashboard/revenue-chart?period=${period}&operationId=${operationId}`
-        : `/api/dashboard/revenue-chart?period=${period}`;
-      console.log(`📊 Fetching revenue chart data for period: ${period}`, url);
+        ? `/api/dashboard/revenue-chart?dateFrom=${dateFrom}&dateTo=${dateTo}&operationId=${operationId}`
+        : `/api/dashboard/revenue-chart?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+      console.log(`📊 Fetching revenue chart data for date range: ${dateFrom} to ${dateTo}`, url);
       const response = await authenticatedApiRequest("GET", url);
       const data = await response.json();
       console.log(`📈 Revenue chart data received:`, data);
@@ -274,24 +282,109 @@ export default function Dashboard() {
     <div className="w-full max-w-full overflow-x-hidden space-y-3 sm:space-y-4 lg:space-y-6">
       {/* Header with Complete Sync Button and Date Filter */}
       <div className="w-full flex items-center justify-between gap-2 sm:gap-3">
-        {/* Date Filter - Left on mobile */}
-        <div className="flex items-center space-x-2 bg-gray-900/30 border border-gray-700/50 rounded-lg px-2 sm:px-3 py-2 min-w-0">
-          <Calendar className="text-gray-400" size={14} />
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="w-20 sm:w-24 lg:w-32 bg-transparent border-0 text-gray-300 text-xs sm:text-sm h-auto p-0 min-w-0">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent className="glassmorphism border-gray-600">
-              <SelectItem value="current_month">Este Mês</SelectItem>
-              <SelectItem value="1">Hoje</SelectItem>
-              <SelectItem value="7">7 dias</SelectItem>
-              <SelectItem value="30">30 dias</SelectItem>
-              <SelectItem value="90">3 meses</SelectItem>
-              <SelectItem value="365">1 ano</SelectItem>
-              <SelectItem value="all">Tudo</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Date Range Picker - Left on mobile */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="justify-start text-left font-normal bg-gray-900/30 border-gray-700/50 hover:bg-gray-800/50 text-gray-300 text-xs sm:text-sm min-w-[200px] sm:min-w-[240px]"
+              data-testid="button-date-range-picker"
+            >
+              <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+              {dateRange.from && dateRange.to ? (
+                <span className="truncate">
+                  {format(dateRange.from, "dd/MM/yy", { locale: pt })} - {format(dateRange.to, "dd/MM/yy", { locale: pt })}
+                </span>
+              ) : (
+                <span>Selecionar período</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 glassmorphism border-gray-600" align="start">
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-300">Data Inicial</label>
+                <Calendar
+                  mode="single"
+                  selected={dateRange.from}
+                  onSelect={(date) => date && setDateRange(prev => ({ ...prev, from: date }))}
+                  initialFocus
+                  className="rounded-md border-0"
+                  classNames={{
+                    months: "text-gray-200",
+                    month: "space-y-4",
+                    caption: "text-gray-200",
+                    caption_label: "text-sm font-medium",
+                    nav_button: "h-7 w-7 bg-transparent hover:bg-gray-700/50",
+                    nav_button_previous: "absolute left-1",
+                    nav_button_next: "absolute right-1",
+                    table: "w-full border-collapse",
+                    head_row: "flex",
+                    head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                    row: "flex w-full mt-2",
+                    cell: "text-center text-sm p-0 relative",
+                    day: "h-9 w-9 p-0 font-normal hover:bg-gray-700/50 rounded-md",
+                    day_selected: "bg-blue-600 text-white hover:bg-blue-700",
+                    day_today: "bg-gray-700/50 text-gray-200",
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-300">Data Final</label>
+                <Calendar
+                  mode="single"
+                  selected={dateRange.to}
+                  onSelect={(date) => date && setDateRange(prev => ({ ...prev, to: date }))}
+                  disabled={(date) => date < dateRange.from}
+                  initialFocus
+                  className="rounded-md border-0"
+                  classNames={{
+                    months: "text-gray-200",
+                    month: "space-y-4",
+                    caption: "text-gray-200",
+                    caption_label: "text-sm font-medium",
+                    nav_button: "h-7 w-7 bg-transparent hover:bg-gray-700/50",
+                    nav_button_previous: "absolute left-1",
+                    nav_button_next: "absolute right-1",
+                    table: "w-full border-collapse",
+                    head_row: "flex",
+                    head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+                    row: "flex w-full mt-2",
+                    cell: "text-center text-sm p-0 relative",
+                    day: "h-9 w-9 p-0 font-normal hover:bg-gray-700/50 rounded-md",
+                    day_selected: "bg-blue-600 text-white hover:bg-blue-700",
+                    day_today: "bg-gray-700/50 text-gray-200",
+                    day_disabled: "text-gray-600 opacity-50",
+                  }}
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-2 border-t border-gray-700">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateRange({
+                    from: new Date(new Date().setDate(new Date().getDate() - 30)),
+                    to: new Date()
+                  })}
+                  className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
+                >
+                  Últimos 30 dias
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDateRange({
+                    from: new Date(new Date().setDate(new Date().getDate() - 90)),
+                    to: new Date()
+                  })}
+                  className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
+                >
+                  Últimos 90 dias
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {/* Complete Sync Button - Right on mobile */}
         <TooltipProvider>
@@ -328,7 +421,7 @@ export default function Dashboard() {
       
       <OnboardingCard />
       
-      <StatsCards metrics={metrics} isLoading={metricsLoading} period={dateFilter} currency={operationCurrency} />
+      <StatsCards metrics={metrics} isLoading={metricsLoading} period={`${format(dateRange.from, 'dd/MM/yy')} - ${format(dateRange.to, 'dd/MM/yy')}`} currency={operationCurrency} />
       
       <ChartsSection 
         revenueData={revenueData || []}

@@ -545,14 +545,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard routes - using real database data
   app.get("/api/dashboard/metrics", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const period = (req.query.period as string) || '30d';
+      const period = req.query.period as string;
+      const dateFrom = req.query.dateFrom as string;
+      const dateTo = req.query.dateTo as string;
       const provider = req.query.provider as string;
       const operationId = req.query.operationId as string;
 
-      console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}, operation: ${operationId || 'auto'}`);
+      console.log(`📊 Getting dashboard metrics for period: ${period || `${dateFrom} to ${dateTo}`}, provider: ${provider || 'all'}, operation: ${operationId || 'auto'}`);
       
       const { dashboardService } = await import("./dashboard-service");
-      const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req, operationId);
+      const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req, operationId, dateFrom, dateTo);
 
       res.json(metrics);
     } catch (error) {
@@ -563,12 +565,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/dashboard/revenue-chart", authenticateToken, storeContext, async (req: AuthRequest, res: Response) => {
     try {
-      const period = (req.query.period as string) || '30d';
+      const period = req.query.period as string;
+      const dateFrom = req.query.dateFrom as string;
+      const dateTo = req.query.dateTo as string;
       const provider = req.query.provider as string;
       const operationId = req.query.operationId as string;
 
       const { dashboardService } = await import("./dashboard-service");
-      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider, req, operationId);
+      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider, req, operationId, dateFrom, dateTo);
 
       res.json(revenueData);
     } catch (error) {

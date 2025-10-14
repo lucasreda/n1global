@@ -50,11 +50,17 @@ export class DashboardService {
     return this.defaultStoreId;
   }
   
-  async getDashboardMetrics(period: '1d' | '7d' | '30d' | '90d' | 'current_month' = 'current_month', provider?: string, req?: any, operationId?: string) {
-    console.log(`📊 Getting dashboard metrics for period: ${period}, provider: ${provider || 'all'}`);
+  async getDashboardMetrics(period?: '1d' | '7d' | '30d' | '90d' | 'current_month', provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string) {
+    console.log(`📊 Getting dashboard metrics for period: ${period || `${dateFrom} to ${dateTo}`}, provider: ${provider || 'all'}`);
     
-    // Check cache first
-    const cached = await this.getCachedMetrics(period, provider, req, operationId);
+    // When using custom date range, skip cache
+    if (dateFrom && dateTo) {
+      const metrics = await this.calculateMetrics(period, provider, req, operationId, dateFrom, dateTo);
+      return metrics;
+    }
+    
+    // Check cache first for period-based queries
+    const cached = await this.getCachedMetrics(period || 'current_month', provider, req, operationId);
     if (cached && cached.validUntil > new Date()) {
       console.log(`📦 Using cached metrics for ${period}`);
       
@@ -95,12 +101,12 @@ export class DashboardService {
     }
     
     // Calculate fresh metrics
-    const metrics = await this.calculateMetrics(period, provider, req, operationId);
+    const metrics = await this.calculateMetrics(period || 'current_month', provider, req, operationId, dateFrom, dateTo);
     
     // 🚀 CACHE INTELIGENTE: TTL baseado no período
-    await this.cacheMetrics(period, provider, metrics, req, operationId);
+    await this.cacheMetrics(period || 'current_month', provider, metrics, req, operationId);
     
-    console.log(`💾 Métricas calculadas e armazenadas em cache por ${this.getCacheTTL(period)} minutos`);
+    console.log(`💾 Métricas calculadas e armazenadas em cache por ${this.getCacheTTL(period || 'current_month')} minutos`);
     
     return metrics;
   }
@@ -274,8 +280,11 @@ export class DashboardService {
     }
   }
   
-  private async calculateMetrics(period: string, provider?: string, req?: any, operationId?: string) {
-    const dateRange = this.getDateRange(period);
+  private async calculateMetrics(period: string, provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string) {
+    // Use custom date range if provided, otherwise calculate from period
+    const dateRange = (dateFrom && dateTo) 
+      ? { from: new Date(dateFrom), to: new Date(dateTo + 'T23:59:59.000Z') } 
+      : this.getDateRange(period);
     
     // CRITICAL: Get user's current operation for data isolation
     let currentOperation;
@@ -295,9 +304,9 @@ export class DashboardService {
       return this.getEmptyMetrics();
     }
     
-    console.log(`📅 Calculating metrics for period: ${period}, operation: ${currentOperation.name} (${currentOperation.id})`);
+    console.log(`📅 Calculating metrics for ${dateFrom && dateTo ? `custom range: ${dateFrom} to ${dateTo}` : `period: ${period}`}, operation: ${currentOperation.name} (${currentOperation.id})`);
     console.log(`📅 Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
-    console.log(`📊 Chart will use same period: ${period}`);
+    console.log(`📊 Chart will use same ${dateFrom && dateTo ? 'custom date range' : `period: ${period}`}`);
     
     // CRITICAL: Use operationId instead of storeId for data isolation + DATE FILTERING
     let whereConditions = [
@@ -1028,8 +1037,11 @@ export class DashboardService {
     return { from, to };
   }
   
-  async getRevenueOverTime(period: string = '30d', provider?: string, req?: any, operationId?: string) {
-    const dateRange = this.getDateRange(period);
+  async getRevenueOverTime(period: string = '30d', provider?: string, req?: any, operationId?: string, dateFrom?: string, dateTo?: string) {
+    // Use custom date range if provided, otherwise calculate from period
+    const dateRange = (dateFrom && dateTo) 
+      ? { from: new Date(dateFrom), to: new Date(dateTo + 'T23:59:59.000Z') } 
+      : this.getDateRange(period);
     
     // CRITICAL: Get operation context for data isolation
     let currentOperation;
