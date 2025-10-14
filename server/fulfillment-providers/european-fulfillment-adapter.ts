@@ -162,7 +162,15 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
         };
       }
       
-      // eq já foi importado acima, mas se necessário reimportamos aqui
+      // Debug: verificar valores antes da query
+      console.log('🔍 Debug SQL query:', {
+        hasDb: !!db,
+        hasEq: !!eq,
+        hasStores: !!stores,
+        operationId,
+        operationIdType: typeof operationId
+      });
+      
       const storesResult = await db.select().from(stores).where(eq(stores.operationId, operationId)).limit(1);
       let defaultStore = storesResult[0];
       
