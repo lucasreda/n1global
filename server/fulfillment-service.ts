@@ -94,7 +94,7 @@ class EuropeanFulfillmentService {
       return this.token.token;
     }
 
-    const loginUrl = `${this.credentials.apiUrl}api/login?email=${encodeURIComponent(this.credentials.email)}&password=${encodeURIComponent(this.credentials.password)}`;
+    const loginUrl = `${this.credentials.apiUrl}api/login`;
     console.log("🔐 Attempting authentication with:", {
       url: loginUrl,
       email: this.credentials.email,
@@ -106,7 +106,12 @@ class EuropeanFulfillmentService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json"
         },
+        body: JSON.stringify({
+          email: this.credentials.email,
+          password: this.credentials.password
+        }),
         agent: new https.Agent({
           rejectUnauthorized: false // Allow self-signed certificates in development
         })

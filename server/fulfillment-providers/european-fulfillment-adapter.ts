@@ -105,28 +105,32 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
         };
       }
       
-      // Mapear país da operação para código de país da API (minúsculas)
+      // Mapear país da operação para NOME COMPLETO em inglês (API espera "spain", não "es")
       const countryMap: Record<string, string> = {
-        'Portugal': 'pt',
-        'Itália': 'it', 
-        'Espanha': 'es',
-        'España': 'es',
-        'França': 'fr',
-        'Alemanha': 'de',
-        'Germany': 'de',
-        'France': 'fr',
-        'Italy': 'it',
-        'Spain': 'es',
-        'Portugal': 'pt',
-        'IT': 'it',
-        'ES': 'es',
-        'PT': 'pt',
-        'FR': 'fr',
-        'DE': 'de'
+        'Portugal': 'portugal',
+        'Itália': 'italy', 
+        'Espanha': 'spain',
+        'España': 'spain',
+        'França': 'france',
+        'Alemanha': 'germany',
+        'Germany': 'germany',
+        'France': 'france',
+        'Italy': 'italy',
+        'Spain': 'spain',
+        'IT': 'italy',
+        'ES': 'spain',
+        'PT': 'portugal',
+        'FR': 'france',
+        'DE': 'germany',
+        'it': 'italy',
+        'es': 'spain',
+        'pt': 'portugal',
+        'fr': 'france',
+        'de': 'germany'
       };
       
-      const country = countryMap[operation.country] || operation.country.toLowerCase().substring(0, 2);
-      console.log(`🌍 País da operação: ${operation.country} → Código API: ${country}`);
+      const country = countryMap[operation.country] || operation.country.toLowerCase();
+      console.log(`🌍 País da operação: ${operation.country} → País API: ${country}`);
       
       const service = await this.getEuropeanService();
       console.log(`✅ Serviço European Fulfillment obtido com sucesso`);
