@@ -338,6 +338,8 @@ export default function Dashboard() {
                 onSelect={setTempDateRange}
                 numberOfMonths={2}
                 initialFocus
+                disabled={(date) => date > new Date()}
+                toDate={new Date()}
                 className="rounded-md border-0"
                 classNames={{
                   months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -357,33 +359,49 @@ export default function Dashboard() {
                   day_selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white focus:bg-blue-700 focus:text-white",
                   day_today: "bg-gray-700/50 text-gray-200",
                   day_outside: "text-gray-600 opacity-50",
-                  day_disabled: "text-gray-600 opacity-50",
+                  day_disabled: "text-gray-600 opacity-50 cursor-not-allowed",
                   day_range_middle: "aria-selected:bg-blue-600/30 aria-selected:text-white rounded-none",
                   day_hidden: "invisible",
                 }}
               />
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-700">
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-700">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setTempDateRange({
-                    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-                    to: new Date()
-                  })}
+                  onClick={() => {
+                    const now = new Date();
+                    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    setTempDateRange({ from: firstDayOfMonth, to: now });
+                  }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Últimos 30 dias
+                  Este mês
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setTempDateRange({
-                    from: new Date(new Date().setDate(new Date().getDate() - 90)),
-                    to: new Date()
-                  })}
+                  onClick={() => {
+                    const now = new Date();
+                    const thirtyDaysAgo = new Date(now);
+                    thirtyDaysAgo.setDate(now.getDate() - 30);
+                    setTempDateRange({ from: thirtyDaysAgo, to: now });
+                  }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Últimos 90 dias
+                  30 dias
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const now = new Date();
+                    const ninetyDaysAgo = new Date(now);
+                    ninetyDaysAgo.setDate(now.getDate() - 90);
+                    setTempDateRange({ from: ninetyDaysAgo, to: now });
+                  }}
+                  className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
+                >
+                  90 dias
                 </Button>
               </div>
               <div className="flex gap-2 pt-2 border-t border-gray-700">
