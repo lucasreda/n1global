@@ -24,6 +24,8 @@ export default function Dashboard() {
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
@@ -288,7 +290,12 @@ export default function Dashboard() {
       {/* Header with Complete Sync Button and Date Filter */}
       <div className="w-full flex items-center justify-between gap-2 sm:gap-3">
         {/* Date Range Picker - Left on mobile */}
-        <Popover>
+        <Popover open={isPopoverOpen} onOpenChange={(open) => {
+          setIsPopoverOpen(open);
+          if (open) {
+            setTempDateRange(dateRange);
+          }
+        }}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -309,15 +316,15 @@ export default function Dashboard() {
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-400">
-                  {dateRange?.from && dateRange?.to 
-                    ? "Clique para selecionar novo período" 
+                  {tempDateRange?.from && tempDateRange?.to 
+                    ? `${format(tempDateRange.from, "dd/MM/yy")} - ${format(tempDateRange.to, "dd/MM/yy")}`
                     : "Selecione a data inicial e final"}
                 </p>
-                {dateRange?.from && dateRange?.to && (
+                {tempDateRange?.from && tempDateRange?.to && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setDateRange(undefined)}
+                    onClick={() => setTempDateRange(undefined)}
                     className="h-6 px-2 text-xs text-gray-400 hover:text-white"
                   >
                     <X className="h-3 w-3 mr-1" />
@@ -327,8 +334,8 @@ export default function Dashboard() {
               </div>
               <Calendar
                 mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
+                selected={tempDateRange}
+                onSelect={setTempDateRange}
                 numberOfMonths={2}
                 initialFocus
                 className="rounded-md border-0"
@@ -359,7 +366,7 @@ export default function Dashboard() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setDateRange({
+                  onClick={() => setTempDateRange({
                     from: new Date(new Date().setDate(new Date().getDate() - 30)),
                     to: new Date()
                   })}
@@ -370,13 +377,39 @@ export default function Dashboard() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setDateRange({
+                  onClick={() => setTempDateRange({
                     from: new Date(new Date().setDate(new Date().getDate() - 90)),
                     to: new Date()
                   })}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
                   Últimos 90 dias
+                </Button>
+              </div>
+              <div className="flex gap-2 pt-2 border-t border-gray-700">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setTempDateRange(dateRange);
+                    setIsPopoverOpen(false);
+                  }}
+                  className="flex-1 text-xs bg-gray-800/50 hover:bg-gray-700/50"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (tempDateRange?.from && tempDateRange?.to) {
+                      setDateRange(tempDateRange);
+                      setIsPopoverOpen(false);
+                    }
+                  }}
+                  disabled={!tempDateRange?.from || !tempDateRange?.to}
+                  className="flex-1 text-xs bg-blue-600 hover:bg-blue-700"
+                >
+                  Aplicar
                 </Button>
               </div>
             </div>
