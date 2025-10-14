@@ -43,9 +43,9 @@ export class FulfillmentProviderFactory {
    * Cria provider European Fulfillment (mantendo compatibilidade)
    */
   private static async createEuropeanFulfillmentProvider(credentials: FulfillmentCredentials): Promise<BaseFulfillmentProvider> {
-    // Importação dinâmica para evitar problemas de importação circular
-    const { EuropeanFulfillmentService } = await import('../fulfillment-service.js');
-    return new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
+    // Importação dinâmica do adapter
+    const { EuropeanFulfillmentAdapter } = await import('./european-fulfillment-adapter.js');
+    return new EuropeanFulfillmentAdapter(credentials);
   }
 
   /**
