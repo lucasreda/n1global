@@ -310,37 +310,34 @@ export default function Dashboard() {
         {products.length > 0 && (
           <Select value={selectedProduct} onValueChange={setSelectedProduct}>
             <SelectTrigger 
-              className="bg-gray-900/30 border-gray-700/50 hover:bg-gray-800/50 text-gray-300 text-xs sm:text-sm min-w-[180px] sm:min-w-[220px]"
+              className="bg-gray-900/30 border-gray-700/50 hover:bg-gray-800/50 text-gray-300 text-xs sm:text-sm w-[140px] sm:w-[160px]"
               data-testid="select-product-filter"
             >
-              <Package className="mr-2 h-4 w-4 text-gray-400 flex-shrink-0" />
-              <SelectValue placeholder="Todos os produtos" />
+              <Package className="mr-1 h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+              <SelectValue placeholder="Produto" />
             </SelectTrigger>
-            <SelectContent className="glassmorphism border-gray-600">
-              <SelectItem value="all" className="text-gray-300">
+            <SelectContent className="glassmorphism border-gray-600 max-w-[280px]">
+              <SelectItem value="all" className="text-gray-300 text-xs">
                 <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-gray-400" />
-                  <span>Todos os produtos</span>
+                  <Package className="h-3.5 w-3.5 text-gray-400" />
+                  <span>Todos</span>
                 </div>
               </SelectItem>
               {products.map((product: any) => (
-                <SelectItem key={product.id} value={product.id} className="text-gray-300">
+                <SelectItem key={product.id} value={product.id} className="text-gray-300 text-xs">
                   <div className="flex items-center gap-2">
                     {product.imageUrl ? (
                       <img 
                         src={product.imageUrl} 
                         alt={product.name}
-                        className="h-6 w-6 rounded object-cover flex-shrink-0"
+                        className="h-5 w-5 rounded object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className="h-6 w-6 rounded bg-gray-700 flex items-center justify-center flex-shrink-0">
-                        <Package className="h-4 w-4 text-gray-400" />
+                      <div className="h-5 w-5 rounded bg-gray-700 flex items-center justify-center flex-shrink-0">
+                        <Package className="h-3 w-3 text-gray-400" />
                       </div>
                     )}
-                    <div className="flex flex-col">
-                      <span className="text-sm">{product.name}</span>
-                      {product.sku && <span className="text-xs text-gray-400">SKU: {product.sku}</span>}
-                    </div>
+                    <span className="truncate max-w-[180px]">{product.name}</span>
                   </div>
                 </SelectItem>
               ))}

@@ -55,7 +55,7 @@ export class DashboardService {
     
     // When using custom date range or product filter, skip cache
     if ((dateFrom && dateTo) || productId) {
-      const metrics = await this.calculateMetrics(period, provider, req, operationId, dateFrom, dateTo, productId);
+      const metrics = await this.calculateMetrics(period || '30d', provider, req, operationId, dateFrom, dateTo, productId);
       return metrics;
     }
     
@@ -319,9 +319,8 @@ export class DashboardService {
       whereConditions.push(eq(orders.provider, provider));
     }
 
-    if (productId) {
-      whereConditions.push(eq(orders.productId, productId));
-    }
+    // Note: Product filtering removed - orders table doesn't have productId column
+    // Products are stored in JSONB array, filtering would require JSON queries
     
     const whereClause = and(...whereConditions);
     
@@ -350,8 +349,7 @@ export class DashboardService {
         gte(orders.orderDate, dateRange.from), // SAME date filter as order counts
         lte(orders.orderDate, dateRange.to),   // SAME date filter as order counts
         ne(orders.status, 'cancelled'), // All orders except cancelled (total Shopify revenue)
-        provider ? eq(orders.provider, provider) : sql`TRUE`,
-        productId ? eq(orders.productId, productId) : sql`TRUE`
+        provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
     // 3. Get transportadora data filtered by period AND carrier_imported = true
@@ -366,8 +364,7 @@ export class DashboardService {
         gte(orders.orderDate, dateRange.from), // SAME period filter
         lte(orders.orderDate, dateRange.to),   // SAME period filter
         eq(orders.carrierImported, true), // ONLY orders found in carrier/transportadora
-        provider ? eq(orders.provider, provider) : sql`TRUE`,
-        productId ? eq(orders.productId, productId) : sql`TRUE`
+        provider ? eq(orders.provider, provider) : sql`TRUE`
       ))
       .groupBy(orders.status);
     
@@ -1077,9 +1074,7 @@ export class DashboardService {
       whereConditions.push(eq(orders.provider, provider));
     }
 
-    if (productId) {
-      whereConditions.push(eq(orders.productId, productId));
-    }
+    // Note: Product filtering removed - orders table doesn't have productId column
     
     console.log(`📊 Chart will use same period: ${period}`);
 
