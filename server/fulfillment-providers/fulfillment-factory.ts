@@ -12,13 +12,13 @@ export class FulfillmentProviderFactory {
   /**
    * Cria uma instância do provider específico com credenciais
    */
-  static createProvider(providerType: ProviderType, credentials: FulfillmentCredentials): BaseFulfillmentProvider {
+  static async createProvider(providerType: ProviderType, credentials: FulfillmentCredentials): Promise<BaseFulfillmentProvider> {
     console.log(`🏭 Factory: Criando provider ${providerType} com credenciais`);
     
     switch (providerType) {
       case 'european_fulfillment':
         // Importação dinâmica para evitar dependências circulares
-        return FulfillmentProviderFactory.createEuropeanFulfillmentProvider(credentials);
+        return await FulfillmentProviderFactory.createEuropeanFulfillmentProvider(credentials);
         
       case 'elogy':
         // Validar credenciais específicas da eLogy

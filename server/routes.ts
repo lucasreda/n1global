@@ -3034,7 +3034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
           
-          const provider = FulfillmentProviderFactory.createProvider(
+          const provider = await FulfillmentProviderFactory.createProvider(
             integration.provider as any, 
             integration.credentials as any
           );
