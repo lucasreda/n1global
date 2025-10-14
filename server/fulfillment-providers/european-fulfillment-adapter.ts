@@ -137,11 +137,10 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
       const service = await this.getEuropeanService();
       console.log(`✅ Serviço European Fulfillment obtido com sucesso`);
       
-      // Buscar leads do European Fulfillment (últimos 30 dias)
-      const dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      console.log(`📅 Buscando leads desde: ${dateFrom} para país: ${country}`);
+      // Buscar TODOS os leads do European Fulfillment (sem filtro de data)
+      console.log(`📅 Buscando TODOS os leads para país: ${country} (sem filtro de período)`);
       
-      const leads = await service.getLeadsListWithDateFilter(country, dateFrom);
+      const leads = await service.getLeadsList(country);
       console.log(`📦 European Fulfillment: ${leads?.length || 0} leads encontrados`);
       
       // Importar storage dinamicamente
