@@ -145,6 +145,29 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
       // Importar storage dinamicamente
       const { storage } = await import('../storage.js');
       
+      // Buscar ou criar loja padrão para a operação
+      const { stores } = await import('../../shared/schema.js');
+      const storesResult = await db.select().from(stores).where(eq(stores.operationId, operationId)).limit(1);
+      let defaultStore = storesResult[0];
+      
+      if (!defaultStore) {
+        console.log('⚠️ Nenhuma loja encontrada para a operação. Criando loja padrão...');
+        // Criar loja padrão para a operação
+        const [newStore] = await db.insert(stores).values({
+          id: `default-${operationId}`,
+          name: `Loja Principal - ${operation.name}`,
+          operationId,
+          domain: 'https://loja.exemplo.com',
+          platform: 'custom',
+          isActive: true
+        }).returning();
+        defaultStore = newStore;
+        console.log('✅ Loja padrão criada:', defaultStore.id);
+      }
+      
+      const storeId = defaultStore.id;
+      console.log(`🏪 Usando store_id: ${storeId} para importar leads`);
+      
       for (const lead of leads) {
         try {
           ordersProcessed++;
@@ -169,7 +192,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
             // Criar novo pedido do carrier
             const newOrder = {
               id: leadNumber, // Use lead number as primary key
-              storeId: '', // Will be filled by storage
+              storeId, // Usar a loja encontrada ou criada
               operationId,
               dataSource: 'carrier' as const,
               carrierImported: true,
