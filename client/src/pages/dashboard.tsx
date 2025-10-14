@@ -426,7 +426,7 @@ export default function Dashboard() {
                     }
                   }}
                   disabled={!tempDateRange?.from || !tempDateRange?.to}
-                  className="flex-1 text-xs"
+                  className="flex-1 text-xs text-white"
                 >
                   Aplicar
                 </Button>
