@@ -365,7 +365,31 @@ export default function Dashboard() {
                   day_hidden: "invisible",
                 }}
               />
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-700">
+              <div className="grid grid-cols-4 gap-2 pt-2 border-t border-gray-700">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const today = new Date();
+                    setTempDateRange({ from: today, to: today });
+                  }}
+                  className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
+                >
+                  Hoje
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const now = new Date();
+                    const weekAgo = new Date(now);
+                    weekAgo.setDate(now.getDate() - 7);
+                    setTempDateRange({ from: weekAgo, to: now });
+                  }}
+                  className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
+                >
+                  Semana
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -376,33 +400,19 @@ export default function Dashboard() {
                   }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  Este mês
+                  Mês
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     const now = new Date();
-                    const thirtyDaysAgo = new Date(now);
-                    thirtyDaysAgo.setDate(now.getDate() - 30);
-                    setTempDateRange({ from: thirtyDaysAgo, to: now });
+                    const startOfYear = new Date(2020, 0, 1);
+                    setTempDateRange({ from: startOfYear, to: now });
                   }}
                   className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
                 >
-                  30 dias
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const now = new Date();
-                    const ninetyDaysAgo = new Date(now);
-                    ninetyDaysAgo.setDate(now.getDate() - 90);
-                    setTempDateRange({ from: ninetyDaysAgo, to: now });
-                  }}
-                  className="text-xs bg-gray-800/50 hover:bg-gray-700/50"
-                >
-                  90 dias
+                  Total
                 </Button>
               </div>
               <div className="flex gap-2 pt-2 border-t border-gray-700">
