@@ -550,11 +550,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dateTo = req.query.dateTo as string;
       const provider = req.query.provider as string;
       const operationId = req.query.operationId as string;
+      const productId = req.query.productId as string;
 
-      console.log(`📊 Getting dashboard metrics for period: ${period || `${dateFrom} to ${dateTo}`}, provider: ${provider || 'all'}, operation: ${operationId || 'auto'}`);
+      console.log(`📊 Getting dashboard metrics for period: ${period || `${dateFrom} to ${dateTo}`}, provider: ${provider || 'all'}, operation: ${operationId || 'auto'}, product: ${productId || 'all'}`);
       
       const { dashboardService } = await import("./dashboard-service");
-      const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req, operationId, dateFrom, dateTo);
+      const metrics = await dashboardService.getDashboardMetrics(period as any, provider, req, operationId, dateFrom, dateTo, productId);
 
       res.json(metrics);
     } catch (error) {
@@ -570,9 +571,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dateTo = req.query.dateTo as string;
       const provider = req.query.provider as string;
       const operationId = req.query.operationId as string;
+      const productId = req.query.productId as string;
 
       const { dashboardService } = await import("./dashboard-service");
-      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider, req, operationId, dateFrom, dateTo);
+      const revenueData = await dashboardService.getRevenueOverTime(period as any, provider, req, operationId, dateFrom, dateTo, productId);
 
       res.json(revenueData);
     } catch (error) {
