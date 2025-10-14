@@ -105,22 +105,27 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
         };
       }
       
-      // Mapear país da operação para código de país da API
+      // Mapear país da operação para código de país da API (minúsculas)
       const countryMap: Record<string, string> = {
-        'Portugal': 'PT',
-        'Itália': 'IT', 
-        'Espanha': 'ES',
-        'España': 'ES',
-        'França': 'FR',
-        'Alemanha': 'DE',
-        'Germany': 'DE',
-        'France': 'FR',
-        'Italy': 'IT',
-        'Spain': 'ES',
-        'Portugal': 'PT'
+        'Portugal': 'pt',
+        'Itália': 'it', 
+        'Espanha': 'es',
+        'España': 'es',
+        'França': 'fr',
+        'Alemanha': 'de',
+        'Germany': 'de',
+        'France': 'fr',
+        'Italy': 'it',
+        'Spain': 'es',
+        'Portugal': 'pt',
+        'IT': 'it',
+        'ES': 'es',
+        'PT': 'pt',
+        'FR': 'fr',
+        'DE': 'de'
       };
       
-      const country = countryMap[operation.country] || operation.country.toUpperCase().substring(0, 2);
+      const country = countryMap[operation.country] || operation.country.toLowerCase().substring(0, 2);
       console.log(`🌍 País da operação: ${operation.country} → Código API: ${country}`);
       
       const service = await this.getEuropeanService();
