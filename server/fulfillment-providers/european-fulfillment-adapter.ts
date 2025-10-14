@@ -188,12 +188,19 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           
           // 1. Buscar pedido da Shopify por TELEFONE ou EMAIL (match mais confiável)
           const { orders: ordersTable } = await import('../../shared/schema.js');
-          const { and, or } = await import('drizzle-orm');
+          const { and, or, sql: sqlOp } = await import('drizzle-orm');
           
           let matchedOrder = null;
           
-          // Buscar por telefone (mais confiável)
+          // Buscar por telefone (mais confiável) - NORMALIZAR para remover formatação
           if (customerPhone) {
+            // Normalizar: remover todos os caracteres não numéricos
+            const normalizedPhone = customerPhone.replace(/\D/g, '');
+            
+            // Debug: mostrar telefone que está sendo procurado
+            console.log(`🔍 Buscando match para lead ${leadNumber}, telefone: ${customerPhone} → normalizado: ${normalizedPhone}`);
+            
+            // Buscar usando SQL para normalizar também o telefone do banco
             const ordersByPhone = await db
               .select()
               .from(ordersTable)
@@ -201,15 +208,21 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
                 and(
                   eq(ordersTable.operationId, operationId),
                   eq(ordersTable.dataSource, 'shopify'),
-                  eq(ordersTable.customerPhone, customerPhone)
+                  sqlOp`REGEXP_REPLACE(${ordersTable.customerPhone}, '[^0-9]', '', 'g') = ${normalizedPhone}`
                 )
               )
               .limit(1);
             matchedOrder = ordersByPhone[0];
+            
+            if (matchedOrder) {
+              console.log(`✅ Match encontrado por telefone! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+            }
           }
           
           // 2. Se não encontrou por telefone, buscar por email
           if (!matchedOrder && customerEmail) {
+            console.log(`🔍 Tentando match por email para lead ${leadNumber}: ${customerEmail}`);
+            
             const ordersByEmail = await db
               .select()
               .from(ordersTable)
@@ -217,11 +230,19 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
                 and(
                   eq(ordersTable.operationId, operationId),
                   eq(ordersTable.dataSource, 'shopify'),
-                  eq(ordersTable.customerEmail, customerEmail)
+                  eq(ordersTable.customerEmail, customerEmail.toLowerCase())
                 )
               )
               .limit(1);
             matchedOrder = ordersByEmail[0];
+            
+            if (matchedOrder) {
+              console.log(`✅ Match encontrado por email! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+            }
+          }
+          
+          if (!matchedOrder) {
+            console.log(`❌ Nenhum match encontrado para lead ${leadNumber} (telefone: ${customerPhone}, email: ${customerEmail})`);
           }
           
           if (matchedOrder) {
