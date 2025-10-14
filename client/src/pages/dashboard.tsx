@@ -27,7 +27,7 @@ export default function Dashboard() {
   });
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [selectedProduct, setSelectedProduct] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
@@ -150,10 +150,14 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!operationId) return [];
       const response = await authenticatedApiRequest("GET", `/api/operations/${operationId}/products`);
-      return response.json();
+      const data = await response.json();
+      console.log('📦 Products fetched:', data);
+      return data;
     },
     enabled: !!operationId,
   });
+
+  console.log('🔍 Products state:', { products, count: products?.length, operationId });
 
   // Fetch dashboard metrics with new API
   const { data: metrics, isLoading: metricsLoading } = useQuery({
