@@ -88,44 +88,40 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
     try {
       console.log(`🔧 Iniciando busca de leads para operação ${operationId}`);
       
-      // Usar o countryCode das credenciais da integração
-      const credentials = this.credentials as any;
-      let country = credentials.countryCode;
+      // SEMPRE buscar o país da operação
+      const { db } = await import('../db.js');
+      const { operations } = await import('../../shared/schema.js');
+      const { eq } = await import('drizzle-orm');
       
-      if (!country) {
-        console.log('⚠️ CountryCode não encontrado nas credenciais, tentando fallback pela operação...');
-        
-        // Fallback: buscar país da operação (para integrações antigas)
-        const { db } = await import('../db.js');
-        const { operations } = await import('../../shared/schema.js');
-        const { eq } = await import('drizzle-orm');
-        
-        const [operation] = await db.select().from(operations).where(eq(operations.id, operationId));
-        
-        if (!operation) {
-          return {
-            success: false,
-            ordersProcessed: 0,
-            ordersCreated: 0,
-            ordersUpdated: 0,
-            errors: ['Operação não encontrada e credenciais sem countryCode']
-          };
-        }
-        
-        // Mapear país da operação para código (fallback temporário)
-        const countryMap: Record<string, string> = {
-          'Portugal': 'PT',
-          'Itália': 'IT', 
-          'Espanha': 'ES',
-          'França': 'FR',
-          'Alemanha': 'DE'
+      const [operation] = await db.select().from(operations).where(eq(operations.id, operationId));
+      
+      if (!operation) {
+        return {
+          success: false,
+          ordersProcessed: 0,
+          ordersCreated: 0,
+          ordersUpdated: 0,
+          errors: ['Operação não encontrada']
         };
-        
-        country = countryMap[operation.country] || operation.country.toUpperCase().substring(0, 2);
-        console.log(`🌍 Fallback - País da operação: ${operation.country} → API: ${country}`);
-      } else {
-        console.log(`🌍 Usando countryCode das credenciais: ${country}`);
       }
+      
+      // Mapear país da operação para código de país da API
+      const countryMap: Record<string, string> = {
+        'Portugal': 'PT',
+        'Itália': 'IT', 
+        'Espanha': 'ES',
+        'España': 'ES',
+        'França': 'FR',
+        'Alemanha': 'DE',
+        'Germany': 'DE',
+        'France': 'FR',
+        'Italy': 'IT',
+        'Spain': 'ES',
+        'Portugal': 'PT'
+      };
+      
+      const country = countryMap[operation.country] || operation.country.toUpperCase().substring(0, 2);
+      console.log(`🌍 País da operação: ${operation.country} → Código API: ${country}`);
       
       const service = await this.getEuropeanService();
       console.log(`✅ Serviço European Fulfillment obtido com sucesso`);
