@@ -340,6 +340,7 @@ export default function Dashboard() {
                 initialFocus
                 disabled={(date) => date > new Date()}
                 toDate={new Date()}
+                locale={pt}
                 className="rounded-md border-0"
                 classNames={{
                   months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
