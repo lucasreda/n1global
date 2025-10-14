@@ -2236,12 +2236,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update credentials
   app.post("/api/integrations/european-fulfillment/credentials", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const { email, password, apiUrl, operationId } = req.body;
-      console.log("🔧 Iniciando salvamento de credenciais...", { email, operationId });
+      const { email, password, apiUrl, operationId, countryCode } = req.body;
+      console.log("🔧 Iniciando salvamento de credenciais...", { email, operationId, countryCode });
       
-      if (!email || !password || !operationId) {
-        console.log("❌ Dados faltando:", { email: !!email, password: !!password, operationId: !!operationId });
-        return res.status(400).json({ message: "Email, senha e operationId são obrigatórios" });
+      if (!email || !password || !operationId || !countryCode) {
+        console.log("❌ Dados faltando:", { email: !!email, password: !!password, operationId: !!operationId, countryCode: !!countryCode });
+        return res.status(400).json({ message: "Email, senha, país e operationId são obrigatórios" });
       }
       
       console.log("🧪 Testando credenciais...");
@@ -2251,10 +2251,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Resultado do teste:", testResult);
       
       if (testResult.connected) {
-        console.log("🔄 Salvando credenciais no banco...", { operationId, email });
+        console.log("🔄 Salvando credenciais no banco...", { operationId, email, countryCode });
         
         // Save credentials to database
-        const credentials = { email, password, apiUrl: apiUrl || "https://api.ecomfulfilment.eu/" };
+        const credentials = { email, password, apiUrl: apiUrl || "https://api.ecomfulfilment.eu/", countryCode };
         
         // Check if integration already exists for this operation
         const [existingIntegration] = await db

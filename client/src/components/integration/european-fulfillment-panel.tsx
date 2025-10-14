@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation } from "@/hooks/use-current-operation";
@@ -38,10 +39,20 @@ export function EuropeanFulfillmentPanel() {
     enabled: connectionTest?.connected && !!operationId,
   });
 
+  // Get available countries
+  const { data: countries } = useQuery({
+    queryKey: ["/api/integrations/european-fulfillment/countries"],
+    queryFn: async () => {
+      const response = await authenticatedApiRequest("GET", "/api/integrations/european-fulfillment/countries");
+      return response.json();
+    },
+  });
+
   // Credentials form schema
   const credentialsSchema = z.object({
     email: z.string().email("Email inválido"),
     password: z.string().min(1, "Senha é obrigatória"),
+    countryCode: z.string().min(2, "País é obrigatório"),
   });
 
   const credentialsForm = useForm<z.infer<typeof credentialsSchema>>({
@@ -49,6 +60,7 @@ export function EuropeanFulfillmentPanel() {
     defaultValues: {
       email: "unit1@n1storeworld.com",
       password: "Ecom@2025",
+      countryCode: "ES",
     },
   });
 
@@ -173,6 +185,30 @@ export function EuropeanFulfillmentPanel() {
                               className="glassmorphism border-gray-600/30 text-white"
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={credentialsForm.control}
+                      name="countryCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-200">País</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="glassmorphism border-gray-600/30 text-white">
+                                <SelectValue placeholder="Selecione o país" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {countries?.map((country: any) => (
+                                <SelectItem key={country.code} value={country.code}>
+                                  {country.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
