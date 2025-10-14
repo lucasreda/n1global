@@ -7,6 +7,21 @@ export async function seedDatabase() {
   try {
     console.log("🌱 Starting database seeding...");
     
+    // Verify database schema compatibility
+    try {
+      // Test if required columns exist by doing a simple select
+      await db
+        .select()
+        .from(users)
+        .limit(1);
+      console.log("✅ Database schema verification passed");
+    } catch (schemaError: any) {
+      console.error("⚠️ Database schema issue detected:", schemaError.message);
+      console.log("⚠️ Skipping seeding - database schema needs migration");
+      console.log("ℹ️  Run 'npm run db:push' to update database schema");
+      return; // Exit gracefully instead of crashing
+    }
+    
     // Check if store owner already exists
     const [existingOwner] = await db
       .select()
@@ -52,7 +67,7 @@ export async function seedDatabase() {
 
     if (!existingStore) {
       // Create default store
-      [defaultStore] = await db
+      const storeResult = await db
         .insert(stores)
         .values({
           name: "COD Dashboard Store",
@@ -62,6 +77,7 @@ export async function seedDatabase() {
         })
         .returning();
       
+      defaultStore = storeResult[0];
       console.log("✅ Default store created:", defaultStore.name);
     } else {
       defaultStore = existingStore;
