@@ -153,7 +153,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
       if (!defaultStore) {
         console.log('⚠️ Nenhuma loja encontrada para a operação. Criando loja padrão...');
         // Criar loja padrão para a operação
-        const [newStore] = await db.insert(stores).values({
+        const insertResult = await db.insert(stores).values({
           id: `default-${operationId}`,
           name: `Loja Principal - ${operation.name}`,
           operationId,
@@ -161,7 +161,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           platform: 'custom',
           isActive: true
         }).returning();
-        defaultStore = newStore;
+        defaultStore = insertResult[0];
         console.log('✅ Loja padrão criada:', defaultStore.id);
       }
       
