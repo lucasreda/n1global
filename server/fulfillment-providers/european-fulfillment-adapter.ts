@@ -185,44 +185,46 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           const leadNumber = lead.n_lead || lead.number || lead.lead_number || lead.id;
           const customerPhone = lead.customer_phone || lead.phone || '';
           const customerEmail = lead.customer_email || lead.email || '';
+          const customerName = lead.customer_name || lead.name || '';
+          const customerCity = lead.shipping_city || lead.city || '';
           
-          // 1. Buscar pedido da Shopify por TELEFONE ou EMAIL (match mais confiável)
+          // 1. Buscar pedido da Shopify por múltiplos campos
           const { orders: ordersTable } = await import('../../shared/schema.js');
-          const { and, or, sql: sqlOp } = await import('drizzle-orm');
+          const { and, or, like } = await import('drizzle-orm');
           
           let matchedOrder = null;
+          let matchType = '';
           
-          // Buscar por telefone (mais confiável) - NORMALIZAR para remover formatação
+          // PRIORIDADE 1: Buscar por telefone (normalizado)
           if (customerPhone) {
-            // Normalizar: remover todos os caracteres não numéricos
             const normalizedPhone = customerPhone.replace(/\D/g, '');
             
-            // Debug: mostrar telefone que está sendo procurado
-            console.log(`🔍 Buscando match para lead ${leadNumber}, telefone: ${customerPhone} → normalizado: ${normalizedPhone}`);
-            
-            // Buscar usando SQL para normalizar também o telefone do banco
-            const ordersByPhone = await db
-              .select()
-              .from(ordersTable)
-              .where(
-                and(
-                  eq(ordersTable.operationId, operationId),
-                  eq(ordersTable.dataSource, 'shopify'),
-                  sqlOp`REGEXP_REPLACE(${ordersTable.customerPhone}, '[^0-9]', '', 'g') = ${normalizedPhone}`
+            if (normalizedPhone.length >= 9) {
+              // Buscar por telefone usando LIKE para pegar os últimos 9 dígitos
+              const last9Digits = normalizedPhone.slice(-9);
+              
+              const ordersByPhone = await db
+                .select()
+                .from(ordersTable)
+                .where(
+                  and(
+                    eq(ordersTable.operationId, operationId),
+                    eq(ordersTable.dataSource, 'shopify'),
+                    like(ordersTable.customerPhone, `%${last9Digits}%`)
+                  )
                 )
-              )
-              .limit(1);
-            matchedOrder = ordersByPhone[0];
-            
-            if (matchedOrder) {
-              console.log(`✅ Match encontrado por telefone! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+                .limit(1);
+              
+              matchedOrder = ordersByPhone[0];
+              if (matchedOrder) {
+                matchType = 'telefone';
+                console.log(`✅ Match por telefone! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+              }
             }
           }
           
-          // 2. Se não encontrou por telefone, buscar por email
+          // PRIORIDADE 2: Buscar por email
           if (!matchedOrder && customerEmail) {
-            console.log(`🔍 Tentando match por email para lead ${leadNumber}: ${customerEmail}`);
-            
             const ordersByEmail = await db
               .select()
               .from(ordersTable)
@@ -234,15 +236,38 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
                 )
               )
               .limit(1);
-            matchedOrder = ordersByEmail[0];
             
+            matchedOrder = ordersByEmail[0];
             if (matchedOrder) {
-              console.log(`✅ Match encontrado por email! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+              matchType = 'email';
+              console.log(`✅ Match por email! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+            }
+          }
+          
+          // PRIORIDADE 3: Buscar por nome + cidade (quando não tem telefone/email)
+          if (!matchedOrder && customerName && customerCity) {
+            const ordersByNameCity = await db
+              .select()
+              .from(ordersTable)
+              .where(
+                and(
+                  eq(ordersTable.operationId, operationId),
+                  eq(ordersTable.dataSource, 'shopify'),
+                  eq(ordersTable.customerName, customerName),
+                  eq(ordersTable.customerCity, customerCity)
+                )
+              )
+              .limit(1);
+            
+            matchedOrder = ordersByNameCity[0];
+            if (matchedOrder) {
+              matchType = 'nome+cidade';
+              console.log(`✅ Match por nome+cidade! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
             }
           }
           
           if (!matchedOrder) {
-            console.log(`❌ Nenhum match encontrado para lead ${leadNumber} (telefone: ${customerPhone}, email: ${customerEmail})`);
+            console.log(`❌ Sem match: Lead ${leadNumber} (tel: ${customerPhone}, email: ${customerEmail}, nome: ${customerName}, cidade: ${customerCity})`);
           }
           
           if (matchedOrder) {
@@ -261,47 +286,10 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
               .where(eq(ordersTable.id, matchedOrder.id));
             
             ordersUpdated++;
-            const matchType = customerPhone ? 'telefone' : 'email';
             console.log(`✅ Pedido Shopify #${matchedOrder.shopifyOrderNumber} atualizado com lead ${leadNumber} (match por ${matchType})`);
           } else {
-            // 4. Pedido NÃO existe na Shopify - criar novo pedido da transportadora
-            const newOrder = {
-              id: leadNumber,
-              storeId,
-              operationId,
-              dataSource: 'carrier' as const,
-              carrierImported: true,
-              carrierOrderId: leadNumber,
-              carrierMatchedAt: new Date(),
-              
-              customerName: lead.customer_name || lead.name || '',
-              customerEmail: lead.customer_email || lead.email || '',
-              customerPhone: lead.customer_phone || lead.phone || '',
-              customerAddress: lead.shipping_address || lead.address || '',
-              customerCity: lead.shipping_city || lead.city || '',
-              customerCountry: lead.shipping_country || lead.country || '',
-              customerZip: lead.shipping_zip || lead.zip || '',
-              
-              status: this.mapLeadStatusToOrderStatus(lead.status),
-              paymentMethod: 'cod',
-              
-              total: lead.total || '0',
-              productCost: lead.product_cost || '0',
-              shippingCost: lead.shipping_cost || '0',
-              currency: 'EUR',
-              
-              products: lead.items || lead.products || [],
-              provider: 'european_fulfillment',
-              trackingNumber: lead.tracking_number || lead.tracking || '',
-              providerData: lead,
-              
-              orderDate: lead.created_at ? new Date(lead.created_at) : new Date(),
-              lastStatusUpdate: new Date()
-            };
-            
-            await storage.createOrder(newOrder as any);
-            ordersCreated++;
-            console.log(`➕ Novo pedido criado da transportadora: ${leadNumber} (não encontrado na Shopify)`);
+            // 4. Pedido NÃO encontrado - PULAR (não criar novo pedido)
+            console.log(`⏭️ Lead ${leadNumber} pulado - sem match na Shopify`);
           }
           
         } catch (orderError) {
