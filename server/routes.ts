@@ -3204,6 +3204,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get products by operation ID
+  app.get("/api/operations/:operationId/products", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      const products = await storage.getProductsByOperation(operationId);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching operation products:", error);
+      res.status(500).json({ message: "Erro ao buscar produtos da operação" });
+    }
+  });
+
   app.get("/api/products/:id", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const product = await storage.getProduct(req.params.id);
