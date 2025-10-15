@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap } from "lucide-react";
 import { cn, formatOperationCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
 
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -18,6 +19,8 @@ export default function Orders() {
   const [dateFilter, setDateFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize] = useState(15);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<any | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -83,11 +86,25 @@ export default function Orders() {
     },
   });
 
+  // Fetch operation details to get currency
+  const { data: operationDetails } = useQuery({
+    queryKey: ['/api/operations', selectedOperation],
+    queryFn: async () => {
+      if (!selectedOperation) return null;
+      const response = await authenticatedApiRequest('GET', `/api/operations/${selectedOperation}`);
+      return response.json();
+    },
+    enabled: !!selectedOperation,
+  });
+
   // Remove the query for operations with orders since we'll show a simple message
 
   const handleViewOrder = (orderId: string) => {
-    console.log("View order:", orderId);
-    // TODO: Implement order view functionality
+    const order = orders.find((o: any) => o.id === orderId);
+    if (order) {
+      setSelectedOrderForDetails(order);
+      setIsDetailsDialogOpen(true);
+    }
   };
 
   const handleEditOrder = (orderId: string) => {
@@ -650,6 +667,14 @@ export default function Orders() {
           </>
         )}
       </div>
+
+      {/* Order Details Dialog */}
+      <OrderDetailsDialog
+        order={selectedOrderForDetails}
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        operationCurrency={operationDetails?.currency || 'EUR'}
+      />
     </div>
   );
 }
