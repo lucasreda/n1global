@@ -467,13 +467,16 @@ export class DashboardService {
       totalCarrierLeads += count; // Count ALL leads with carrier_imported=true
       
       const confirmation = row.confirmation?.toLowerCase() || '';
-      if (confirmation === 'confirmed' || confirmation === 'confirmé') {
-        confirmedCarrierLeads += count;
-      } else if (confirmation.includes('cancel') || confirmation === 'annulé') {
-        // Match all cancel variations: canceled, cancelled, canceled by system
+      
+      // CANCELLED: leads explicitamente cancelados
+      if (confirmation.includes('cancel') || confirmation === 'annulé') {
         cancelledCarrierLeads += count;
       }
-      // Note: 'duplicated', 'out of area', 'wrong', etc. are counted in total but not in confirmed/cancelled
+      // CONFIRMED: todos os outros são considerados confirmados pela transportadora
+      // (confirmed, duplicated, out of area, wrong, empty/null, etc)
+      else {
+        confirmedCarrierLeads += count;
+      }
     });
     
     // Calculate transportadora totals by status (for delivered/shipped/pending breakdown)
@@ -536,10 +539,12 @@ export class DashboardService {
     const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL + returnCostsBRL;
     const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
-    console.log(`🎯 CARRIER API CONFIRMATION (original): Total Leads: ${totalCarrierLeads}, Confirmed: ${confirmedCarrierLeads}, Cancelled: ${cancelledCarrierLeads}`);
-    console.log(`🔍 Debug Transportadora (by status): Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}, Confirmed status: ${confirmedTransportadoraOrders}, Pending: ${pendingTransportadoraOrders}, Shipped: ${shippedTransportadoraOrders}`);
-    console.log(`🎯 CONFIRMADOS CALCULADOS (transportadora): ${confirmedTransportadoraOrders} + ${pendingTransportadoraOrders} + ${deliveredTransportadoraOrders} + ${shippedTransportadoraOrders} = ${confirmedOrders}`);
-    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}, Paid Revenue: €${paidRevenue}`);
+    console.log(`🎯 CARRIER API CONFIRMATION (campo original da API):`);
+    console.log(`   📊 Total Pedidos com carrier_imported=true: ${totalCarrierLeads}`);
+    console.log(`   ✅ Confirmados (todos exceto cancelados): ${confirmedCarrierLeads}`);
+    console.log(`   ❌ Cancelados (canceled/cancelled/canceled by system): ${cancelledCarrierLeads}`);
+    console.log(`🔍 Debug Transportadora (by mapped status): Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}, Confirmed status: ${confirmedTransportadoraOrders}, Pending: ${pendingTransportadoraOrders}, Shipped: ${shippedTransportadoraOrders}`);
+    console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledCarrierLeads}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}, Paid Revenue: €${paidRevenue}`);
     
     // Calculate previous period orders for growth comparison
     const previousPeriodRange = this.getPreviousPeriodDateRange(period);
