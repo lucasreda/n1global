@@ -464,14 +464,16 @@ export class DashboardService {
     
     carrierConfirmationStats.forEach(row => {
       const count = Number(row.count);
-      totalCarrierLeads += count;
+      totalCarrierLeads += count; // Count ALL leads with carrier_imported=true
       
       const confirmation = row.confirmation?.toLowerCase() || '';
       if (confirmation === 'confirmed' || confirmation === 'confirmé') {
         confirmedCarrierLeads += count;
-      } else if (confirmation === 'canceled' || confirmation === 'cancelled' || confirmation === 'annulé' || confirmation === 'canceled by system') {
+      } else if (confirmation.includes('cancel') || confirmation === 'annulé') {
+        // Match all cancel variations: canceled, cancelled, canceled by system
         cancelledCarrierLeads += count;
       }
+      // Note: 'duplicated', 'out of area', 'wrong', etc. are counted in total but not in confirmed/cancelled
     });
     
     // Calculate transportadora totals by status (for delivered/shipped/pending breakdown)
