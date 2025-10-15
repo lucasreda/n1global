@@ -100,10 +100,16 @@ export default function Orders() {
   // Remove the query for operations with orders since we'll show a simple message
 
   const handleViewOrder = (orderId: string) => {
+    console.log("View order:", orderId);
+    console.log("Orders array:", orders);
     const order = orders.find((o: any) => o.id === orderId);
+    console.log("Found order:", order);
     if (order) {
+      console.log("Setting order for details and opening dialog");
       setSelectedOrderForDetails(order);
       setIsDetailsDialogOpen(true);
+    } else {
+      console.log("Order not found in array!");
     }
   };
 

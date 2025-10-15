@@ -14,8 +14,6 @@ interface OrderDetailsDialogProps {
 }
 
 export function OrderDetailsDialog({ order, open, onOpenChange, operationCurrency = "EUR" }: OrderDetailsDialogProps) {
-  if (!order) return null;
-
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'delivered':
@@ -46,9 +44,15 @@ export function OrderDetailsDialog({ order, open, onOpenChange, operationCurrenc
         <DialogHeader>
           <DialogTitle className="text-2xl text-white flex items-center gap-3">
             <Package className="h-6 w-6 text-blue-400" />
-            Detalhes do Pedido {order.shopifyOrderNumber || order.id}
+            Detalhes do Pedido {order?.shopifyOrderNumber || order?.id || ''}
           </DialogTitle>
         </DialogHeader>
+
+        {!order ? (
+          <div className="p-8 text-center text-gray-400">
+            Nenhum pedido selecionado
+          </div>
+        ) : (
 
         <ScrollArea className="max-h-[calc(90vh-100px)] pr-4">
           <div className="space-y-6">
@@ -345,6 +349,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, operationCurrenc
             )}
           </div>
         </ScrollArea>
+        )}
       </DialogContent>
     </Dialog>
   );
