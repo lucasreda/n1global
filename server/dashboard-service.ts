@@ -389,9 +389,6 @@ export class DashboardService {
         case 'returned':
           returnedOrders += orderCount;
           break;
-        case 'unpacked':
-          // unpacked orders are NOT confirmed - they reduce the confirmed count
-          break;
         case 'cancelled':
         case 'canceled':
         case 'rejected':
@@ -403,10 +400,14 @@ export class DashboardService {
           shippedOrders += orderCount;
           break;
         case 'confirmed':
+          // confirmed status from carrier
+          confirmedOrders += orderCount;
+          break;
         case 'pending':
         case 'new order':
         case 'item packed':
         case 'incident':
+        case 'unpacked':
         default:
           pendingOrders += orderCount;
           break;
@@ -441,10 +442,11 @@ export class DashboardService {
     const totalCombinedCosts = productCosts.totalCombinedCosts; // EUR value (product + shipping)
     const totalCombinedCostsBRL = productCosts.totalCombinedCostsBRL; // BRL value (product + shipping)
     
-    // Calculate confirmed orders: pending + delivered + shipped (orders accepted by carrier)
-    confirmedOrders = pendingOrders + deliveredOrders + shippedOrders;
+    // Calculate confirmed orders: confirmed (status) + pending + delivered + shipped (orders accepted by carrier)
+    // confirmedOrders already has count from 'confirmed' status in the switch above
+    confirmedOrders = confirmedOrders + pendingOrders + deliveredOrders + shippedOrders;
     
-    console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Unpacked: 0, Confirmed: ${confirmedOrders}`);
+    console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Pending: ${pendingOrders}, Delivered: ${deliveredOrders}, Shipped: ${shippedOrders}, StatusConfirmed: ${confirmedOrders - pendingOrders - deliveredOrders - shippedOrders}, Final Confirmed: ${confirmedOrders}`);
     
     // Calculate transportadora totals for delivery rate (period-filtered)
     let totalTransportadoraOrders = 0;
