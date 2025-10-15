@@ -354,7 +354,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           if (matchedOrder) {
             // 3. Pedido da Shopify encontrado - ATUALIZAR com informações da transportadora
             const statusLivraison = lead.status_livrison || lead.status_livraison || '';
-            const statusConfirmation = lead.status_confirmation || '';
+            const statusConfirmation = lead.status_confirmation || 'not_provided'; // 🆕 Default value to ensure all leads are counted
             
             const mappedStatus = this.mapLeadStatusToOrderStatus(statusLivraison, statusConfirmation);
             
@@ -365,7 +365,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
               .set({
                 carrierImported: true,
                 carrierOrderId: leadNumber,
-                carrierConfirmation: statusConfirmation, // 🆕 Save original confirmation status from API
+                carrierConfirmation: statusConfirmation, // 🆕 Save original confirmation status from API (always has value now)
                 carrierMatchedAt: new Date(),
                 status: mappedStatus,
                 trackingNumber: lead.tracking_number || lead.tracking || matchedOrder.trackingNumber,
