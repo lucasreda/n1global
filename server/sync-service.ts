@@ -157,29 +157,22 @@ export class SyncService {
   
   private async fetchAllLeads(): Promise<any[]> {
     const allLeads: any[] = [];
-    let currentPage = 1;
-    const maxPages = 63; // Based on API response
     
-    while (currentPage <= maxPages) {
-      try {
-        const pageLeads = await this.fulfillmentService.getLeadsList("ITALY", currentPage);
-        allLeads.push(...pageLeads);
-        
-        console.log(`📄 Page ${currentPage}: ${pageLeads.length} leads (total: ${allLeads.length})`);
-        
-        if (pageLeads.length < 15) {
-          console.log(`🏁 Reached end of data at page ${currentPage}`);
-          break;
-        }
-        
-        currentPage++;
-      } catch (error) {
-        console.error(`Error fetching page ${currentPage}:`, error);
-        break;
-      }
+    // 🎯 CRITICAL FIX: Use complete historical period (from 2024-01-01 to today)
+    const dateFrom = '2024-01-01';
+    const dateTo = new Date().toISOString().split('T')[0];
+    
+    console.log(`📅 Sync period: ${dateFrom} to ${dateTo} (FULL HISTORICAL SYNC)`);
+    
+    // Use getLeadsListWithDateFilter with date range - it handles pagination internally
+    try {
+      const leads = await this.fulfillmentService.getLeadsListWithDateFilter('ITALY', dateFrom, dateTo);
+      console.log(`✅ Fetched ${leads.length} total leads from complete historical period`);
+      return leads;
+    } catch (error) {
+      console.error(`❌ Error fetching leads with date filter:`, error);
+      return [];
     }
-    
-    return allLeads;
   }
   
   private async getLeadDetails(leadNumber: string): Promise<any> {

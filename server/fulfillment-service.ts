@@ -479,9 +479,9 @@ class EuropeanFulfillmentService {
           hasMorePages = false;
         }
         
-        // Evitar loop infinito
-        if (page > 20) {
-          console.log(`⚠️ Limite de segurança de 20 páginas atingido`);
+        // Safety limit increased to support full historical sync
+        if (page > 200) {
+          console.log(`⚠️ Limite de segurança de 200 páginas atingido`);
           hasMorePages = false;
         }
       }
