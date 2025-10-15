@@ -31,9 +31,17 @@ export default function Dashboard() {
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
   const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
   const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
+  const [currentSyncState, setCurrentSyncState] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
+
+  // Detectar quando o modal fecha durante sync
+  useEffect(() => {
+    if (!isSyncDialogOpen && currentSyncState) {
+      setIsSyncingInBackground(true);
+    }
+  }, [isSyncDialogOpen, currentSyncState]);
   
   // Tour context
   const { startTour, isTourRunning, tourWasCompletedOrSkipped } = useTourContext();
@@ -76,33 +84,6 @@ export default function Dashboard() {
     },
   });
 
-  // Function to check if sync is still running in background
-  const checkIfSyncingInBackground = async () => {
-    try {
-      const response = await authenticatedApiRequest('GET', '/api/sync/complete-status');
-      const status = await response.json();
-      
-      if (status.isRunning && !status.phase?.includes('error')) {
-        setIsSyncingInBackground(true);
-      } else {
-        setIsSyncingInBackground(false);
-      }
-    } catch (error) {
-      console.error('Erro ao verificar status de sincronização:', error);
-      setIsSyncingInBackground(false);
-    }
-  };
-
-  // Poll sync status when syncing in background
-  useEffect(() => {
-    if (!isSyncingInBackground) return;
-
-    const interval = setInterval(() => {
-      checkIfSyncingInBackground();
-    }, 2000); // Check every 2 seconds
-
-    return () => clearInterval(interval);
-  }, [isSyncingInBackground]);
 
   // Auto-sync on page load (optimized - no page reload)
   useEffect(() => {
@@ -560,8 +541,14 @@ export default function Dashboard() {
         isOpen={isSyncDialogOpen}
         onClose={() => {
           setIsSyncDialogOpen(false);
-          // Se ainda está sincronizando, marcar como background
-          checkIfSyncingInBackground();
+        }}
+        onSyncStateChange={(isRunning) => {
+          // Rastrear estado atual do sync
+          setCurrentSyncState(isRunning);
+          // Se terminou, limpar background
+          if (!isRunning) {
+            setIsSyncingInBackground(false);
+          }
         }}
         onComplete={() => {
           setIsSyncingInBackground(false);

@@ -1916,6 +1916,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Rota SSE para streaming de status da sincronização completa
+  app.get('/api/sync/complete-status-stream', authenticateToken, async (req: AuthRequest, res: Response) => {
+    // Configurar headers para SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    
+    try {
+      const { smartSyncService } = await import("./smart-sync-service");
+      
+      // Enviar status inicial imediatamente
+      const initialStatus = smartSyncService.getCompleteSyncStatus();
+      res.write(`data: ${JSON.stringify(initialStatus)}\n\n`);
+      
+      // Se não está rodando, fechar conexão
+      if (!initialStatus.isRunning) {
+        res.end();
+        return;
+      }
+      
+      // Enviar atualizações a cada 500ms enquanto está rodando
+      const intervalId = setInterval(() => {
+        try {
+          const status = smartSyncService.getCompleteSyncStatus();
+          res.write(`data: ${JSON.stringify(status)}\n\n`);
+          
+          // Se não está mais rodando, fechar
+          if (!status.isRunning) {
+            clearInterval(intervalId);
+            res.end();
+          }
+        } catch (error) {
+          console.error('Erro ao enviar status SSE:', error);
+          clearInterval(intervalId);
+          res.end();
+        }
+      }, 500);
+      
+      // Limpar interval quando cliente desconectar
+      req.on('close', () => {
+        clearInterval(intervalId);
+      });
+      
+    } catch (error) {
+      console.error('Erro ao iniciar stream SSE:', error);
+      res.end();
+    }
+  });
+
   // Rota para sincronização combinada Shopify + Transportadora
   app.post('/api/sync/shopify-carrier', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

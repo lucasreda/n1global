@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -26,17 +26,119 @@ interface CompleteSyncDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete?: () => void;
+  onSyncStateChange?: (isRunning: boolean) => void;
   operationId?: string;
 }
 
-export function CompleteSyncDialog({ isOpen, onClose, onComplete, operationId }: CompleteSyncDialogProps) {
+export function CompleteSyncDialog({ 
+  isOpen, 
+  onClose, 
+  onComplete, 
+  onSyncStateChange,
+  operationId 
+}: CompleteSyncDialogProps) {
   const [syncStatus, setSyncStatus] = useState<CompleteSyncStatus | null>(null);
-  const [pollingInterval, setPollingInterval] = useState<number | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const hasStartedSyncRef = useRef(false);
+  const pollingIntervalRef = useRef<number | null>(null);
 
-  // Função para iniciar a sincronização
+  // Processar status e resetar ref se completou/erro
+  const processStatus = (status: CompleteSyncStatus) => {
+    setSyncStatus(status);
+    onSyncStateChange?.(status.isRunning);
+
+    // Resetar ref quando completar ou erro
+    if (status.phase === 'completed' || status.phase === 'error') {
+      hasStartedSyncRef.current = false;
+      
+      if (status.phase === 'completed' && onComplete) {
+        setTimeout(onComplete, 1000);
+      }
+    }
+  };
+
+  // Função para assinar atualizações via SSE
+  const subscribeToStatus = () => {
+    // Fechar conexão anterior se existir
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const url = operationId 
+      ? `/api/sync/complete-status-stream?operationId=${operationId}`
+      : '/api/sync/complete-status-stream';
+
+    console.log("📡 Conectando ao SSE:", url);
+    const eventSource = new EventSource(url);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const status: CompleteSyncStatus = JSON.parse(event.data);
+        console.log("📊 Status recebido via SSE:", status);
+        processStatus(status);
+
+        // Se não está mais rodando, fechar conexão
+        if (!status.isRunning) {
+          eventSource.close();
+        }
+      } catch (error) {
+        console.error("❌ Erro ao parsear status SSE:", error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("❌ Erro na conexão SSE:", error);
+      eventSource.close();
+      
+      // Em caso de erro, iniciar polling como fallback
+      startPollingFallback();
+    };
+
+    eventSourceRef.current = eventSource;
+  };
+
+  // Fallback: buscar status uma vez (quando SSE falhar)
+  const fetchStatusOnce = async (): Promise<CompleteSyncStatus | null> => {
+    try {
+      const response = await apiRequest('GET', '/api/sync/complete-status');
+      const status = await response.json();
+      processStatus(status);
+      return status;
+    } catch (error) {
+      console.error("❌ Erro ao buscar status:", error);
+      return null;
+    }
+  };
+
+  // Iniciar polling como fallback quando SSE falhar
+  const startPollingFallback = () => {
+    // Limpar polling anterior se existir
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    console.log("🔄 SSE falhou, iniciando polling fallback...");
+    
+    // Buscar status a cada 2 segundos
+    const interval = setInterval(async () => {
+      const status = await fetchStatusOnce();
+      
+      // Se não está mais rodando, parar polling
+      if (status && !status.isRunning) {
+        clearInterval(interval);
+        pollingIntervalRef.current = null;
+      }
+    }, 2000) as unknown as number;
+
+    pollingIntervalRef.current = interval;
+  };
+
+  // Função para iniciar a sincronização (apenas quando realmente iniciar)
   const startCompleteSync = async () => {
     setIsStarting(true);
+    hasStartedSyncRef.current = true;
+
     try {
       const url = operationId 
         ? `/api/sync/complete-progressive?operationId=${operationId}`
@@ -54,65 +156,75 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete, operationId }:
       
       if (result.success) {
         console.log("🚀 Sincronização completa iniciada");
-        startPolling();
+        // Assinar atualizações via SSE
+        subscribeToStatus();
       } else {
         console.error("❌ Erro ao iniciar sincronização:", result.message);
+        hasStartedSyncRef.current = false;
+        onSyncStateChange?.(false);
       }
     } catch (error) {
       console.error("❌ Erro na requisição de sincronização:", error);
+      hasStartedSyncRef.current = false;
+      onSyncStateChange?.(false);
     } finally {
       setIsStarting(false);
     }
   };
 
-  // Função para buscar status da sincronização
-  const fetchSyncStatus = async () => {
-    try {
-      const response = await apiRequest('GET', '/api/sync/complete-status');
-      const status = await response.json();
-      setSyncStatus(status);
-
-      // Se completou ou houve erro, parar o polling
-      if (status.phase === 'completed' || (status.phase === 'error' && !status.isRunning)) {
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-          setPollingInterval(null);
-        }
-
-        // Se completou com sucesso, chamar callback
-        if (status.phase === 'completed' && onComplete) {
-          setTimeout(onComplete, 1000); // Aguardar um pouco antes de atualizar a UI
-        }
-      }
-    } catch (error) {
-      console.error("❌ Erro ao buscar status da sincronização:", error);
-    }
-  };
-
-  // Iniciar polling
-  const startPolling = () => {
-    if (pollingInterval) return;
-
-    fetchSyncStatus(); // Buscar imediatamente
-    const interval = setInterval(fetchSyncStatus, 1000) as unknown as number; // A cada segundo
-    setPollingInterval(interval);
-  };
-
-  // Limpar polling quando fechar
+  // Ao abrir o dialog, verificar se já há sync rodando
   useEffect(() => {
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
+    if (!isOpen) {
+      return;
+    }
+
+    // Ao abrir, buscar status PRIMEIRO para decidir
+    const initDialog = async () => {
+      const status = await fetchStatusOnce();
+      
+      // Se status mostra running, reconectar ao SSE
+      if (status && status.isRunning) {
+        subscribeToStatus();
+      }
+      // Se hasStartedSyncRef é true mas status não mostra running ainda (race),
+      // reconectar ao SSE para pegar atualizações
+      else if (hasStartedSyncRef.current && (!status || !status.isRunning)) {
+        console.log("⏳ Sync iniciado mas status ainda não refletido, reconectando ao SSE...");
+        subscribeToStatus();
+      }
+      // Se não está rodando e não iniciamos ainda, iniciar novo sync
+      else if (status && !status.isRunning && !hasStartedSyncRef.current) {
+        await startCompleteSync();
       }
     };
-  }, [pollingInterval]);
 
-  // Auto-iniciar ao abrir o dialog
-  useEffect(() => {
-    if (isOpen && !syncStatus?.isRunning && !isStarting) {
-      startCompleteSync();
-    }
+    initDialog();
+
+    return () => {
+      // NÃO fechar SSE no cleanup - deixar ativo para background
+      // SSE será fechado automaticamente quando sync completar (via processStatus)
+      // ou quando o componente for completamente desmontado
+    };
   }, [isOpen]);
+
+  // Cleanup final ao desmontar completamente o componente
+  useEffect(() => {
+    return () => {
+      // Fechar SSE ao desmontar completamente
+      if (eventSourceRef.current) {
+        console.log("🔌 Fechando SSE na desmontagem do componente");
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      
+      // Limpar polling se existir
+      if (pollingIntervalRef.current) {
+        console.log("🔌 Limpando polling na desmontagem do componente");
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Calcular progresso
   const getProgress = () => {
@@ -140,31 +252,16 @@ export function CompleteSyncDialog({ isOpen, onClose, onComplete, operationId }:
     }
   };
 
-  // Cor da barra de progresso baseada na fase
-  const getProgressColor = () => {
-    if (!syncStatus) return "";
-
-    switch (syncStatus.phase) {
-      case 'connecting':
-      case 'syncing':
-        return "bg-blue-500";
-      case 'retrying':
-        return "bg-yellow-500";
-      case 'completed':
-        return "bg-green-500";
-      case 'error':
-        return "bg-red-500";
-      default:
-        return "bg-blue-500";
-    }
-  };
-
   const handleClose = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
+    // NÃO fechar SSE - manter ativo para detectar conclusão em background
+    // SSE será fechado automaticamente quando sync completar (via processStatus)
+    
+    // Se iniciamos um sync (POST foi feito), sempre notificar como running
+    // mesmo que o primeiro payload SSE ainda não tenha chegado
+    if (isStarting || hasStartedSyncRef.current) {
+      onSyncStateChange?.(true);
     }
-    setSyncStatus(null);
+    
     onClose();
   };
 
