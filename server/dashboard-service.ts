@@ -352,7 +352,7 @@ export class DashboardService {
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
-    // 3. Get transportadora data filtered by period AND carrier_imported = true
+    // 3. Get transportadora data WITHOUT period filter (count ALL carrier orders)
     const transportadoraStats = await db
       .select({
         status: orders.status,
@@ -361,12 +361,25 @@ export class DashboardService {
       .from(orders)
       .where(and(
         eq(orders.operationId, currentOperation.id),
-        gte(orders.orderDate, dateRange.from), // SAME period filter
-        lte(orders.orderDate, dateRange.to),   // SAME period filter
+        // NO DATE FILTER - count ALL orders from carrier regardless of period
         eq(orders.carrierImported, true), // ONLY orders found in carrier/transportadora
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ))
       .groupBy(orders.status);
+    
+    // 4. Get carrier confirmation stats (original API field) - for exact carrier dashboard match
+    const carrierConfirmationStats = await db
+      .select({
+        confirmation: orders.carrierConfirmation,
+        count: count()
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.operationId, currentOperation.id),
+        eq(orders.carrierImported, true), // ONLY carrier orders
+        provider ? eq(orders.provider, provider) : sql`TRUE`
+      ))
+      .groupBy(orders.carrierConfirmation);
     
     // Calculate metrics from order counts (filtered by period)
     let totalOrders = 0;
@@ -444,7 +457,24 @@ export class DashboardService {
     
     console.log(`🔍 Debug Shopify (all orders): Total: ${totalOrders}, Pending: ${pendingOrders}, Delivered: ${deliveredOrders}, Shipped: ${shippedOrders}, Confirmed status: ${confirmedOrders}`);
     
-    // Calculate transportadora totals for delivery rate (period-filtered)
+    // Process carrier confirmation stats (original API field) - for EXACT carrier dashboard match
+    let totalCarrierLeads = 0;
+    let confirmedCarrierLeads = 0;
+    let cancelledCarrierLeads = 0;
+    
+    carrierConfirmationStats.forEach(row => {
+      const count = Number(row.count);
+      totalCarrierLeads += count;
+      
+      const confirmation = row.confirmation?.toLowerCase() || '';
+      if (confirmation === 'confirmed' || confirmation === 'confirmé') {
+        confirmedCarrierLeads += count;
+      } else if (confirmation === 'canceled' || confirmation === 'cancelled' || confirmation === 'annulé' || confirmation === 'canceled by system') {
+        cancelledCarrierLeads += count;
+      }
+    });
+    
+    // Calculate transportadora totals by status (for delivered/shipped/pending breakdown)
     let totalTransportadoraOrders = 0;
     let deliveredTransportadoraOrders = 0;
     let cancelledTransportadoraOrders = 0;
@@ -504,7 +534,8 @@ export class DashboardService {
     const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL + returnCostsBRL;
     const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
-    console.log(`🔍 Debug Transportadora: Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}, Confirmed status: ${confirmedTransportadoraOrders}, Pending: ${pendingTransportadoraOrders}, Shipped: ${shippedTransportadoraOrders}`);
+    console.log(`🎯 CARRIER API CONFIRMATION (original): Total Leads: ${totalCarrierLeads}, Confirmed: ${confirmedCarrierLeads}, Cancelled: ${cancelledCarrierLeads}`);
+    console.log(`🔍 Debug Transportadora (by status): Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}, Confirmed status: ${confirmedTransportadoraOrders}, Pending: ${pendingTransportadoraOrders}, Shipped: ${shippedTransportadoraOrders}`);
     console.log(`🎯 CONFIRMADOS CALCULADOS (transportadora): ${confirmedTransportadoraOrders} + ${pendingTransportadoraOrders} + ${deliveredTransportadoraOrders} + ${shippedTransportadoraOrders} = ${confirmedOrders}`);
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}, Paid Revenue: €${paidRevenue}`);
     

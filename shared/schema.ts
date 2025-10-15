@@ -79,6 +79,7 @@ export const orders = pgTable("orders", {
   carrierImported: boolean("carrier_imported").notNull().default(false), // If found in carrier API
   carrierMatchedAt: timestamp("carrier_matched_at"), // When matched with carrier
   carrierOrderId: text("carrier_order_id"), // ID from carrier when matched
+  carrierConfirmation: text("carrier_confirmation"), // Original confirmation status from carrier API ('confirmed', 'canceled', etc)
   
   // Customer information
   customerId: text("customer_id"),

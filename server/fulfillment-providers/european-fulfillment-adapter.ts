@@ -318,6 +318,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
               .set({
                 carrierImported: true,
                 carrierOrderId: leadNumber,
+                carrierConfirmation: statusConfirmation, // 🆕 Save original confirmation status from API
                 carrierMatchedAt: new Date(),
                 status: mappedStatus,
                 trackingNumber: lead.tracking_number || lead.tracking || matchedOrder.trackingNumber,
