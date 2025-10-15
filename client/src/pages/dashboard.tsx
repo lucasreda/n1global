@@ -4,6 +4,7 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChartsSection } from "@/components/dashboard/charts-section";
 import { SyncStatus } from "@/components/dashboard/sync-status";
 import { OnboardingCard } from "@/components/dashboard/onboarding-card";
+import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,8 @@ export default function Dashboard() {
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("all");
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedOperation } = useCurrentOperation();
@@ -73,33 +76,33 @@ export default function Dashboard() {
     },
   });
 
-  // Sync mutation (same as orders page)
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", `/api/integrations/sync-all`, { 
-        operationId: selectedOperation 
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      console.log("✅ Sincronização completa:", data);
-      toast({
-        title: "Sincronização Concluída",
-        description: data.message || "Dados sincronizados com sucesso",
-      });
-      // Refresh dashboard data without page reload
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
-    },
-    onError: (error: any) => {
-      console.error("❌ Erro na sincronização:", error);
-      toast({
-        title: "Erro na Sincronização",
-        description: error.message || "Falha ao sincronizar dados",
-        variant: "destructive",
-      });
+  // Function to check if sync is still running in background
+  const checkIfSyncingInBackground = async () => {
+    try {
+      const response = await authenticatedApiRequest('GET', '/api/sync/complete-status');
+      const status = await response.json();
+      
+      if (status.isRunning && !status.phase?.includes('error')) {
+        setIsSyncingInBackground(true);
+      } else {
+        setIsSyncingInBackground(false);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status de sincronização:', error);
+      setIsSyncingInBackground(false);
     }
-  });
+  };
+
+  // Poll sync status when syncing in background
+  useEffect(() => {
+    if (!isSyncingInBackground) return;
+
+    const interval = setInterval(() => {
+      checkIfSyncingInBackground();
+    }, 2000); // Check every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [isSyncingInBackground]);
 
   // Auto-sync on page load (optimized - no page reload)
   useEffect(() => {
@@ -506,20 +509,21 @@ export default function Dashboard() {
             <TooltipTrigger asChild>
               <div>
                 <Button
-                  onClick={() => syncMutation.mutate()}
+                  onClick={() => setIsSyncDialogOpen(true)}
                   disabled={
-                    syncMutation.isPending || 
                     !integrationsStatus?.hasPlatform || 
                     !integrationsStatus?.hasWarehouse
                   }
                   variant="outline"
                   size="sm"
-                  className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0"
+                  className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 text-xs sm:text-sm flex-shrink-0 ${
+                    isSyncingInBackground ? 'animate-pulse ring-2 ring-blue-500/50' : ''
+                  }`}
                   data-testid="button-complete-sync"
                 >
-                  <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 sm:mr-2 ${isSyncingInBackground ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">
-                    {syncMutation.isPending ? 'Sincronizando...' : 'Sync Completo'}
+                    {isSyncingInBackground ? 'Sincronizando...' : 'Sync Completo'}
                   </span>
                 </Button>
               </div>
@@ -550,6 +554,27 @@ export default function Dashboard() {
       />
       
       <SyncStatus />
+
+      {/* Complete Sync Dialog */}
+      <CompleteSyncDialog 
+        isOpen={isSyncDialogOpen}
+        onClose={() => {
+          setIsSyncDialogOpen(false);
+          // Se ainda está sincronizando, marcar como background
+          checkIfSyncingInBackground();
+        }}
+        onComplete={() => {
+          setIsSyncingInBackground(false);
+          // Refresh dashboard data
+          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
+          toast({
+            title: "Sincronização Concluída",
+            description: "Dados sincronizados com sucesso",
+          });
+        }}
+        operationId={selectedOperation}
+      />
     </div>
   );
 }
