@@ -441,15 +441,10 @@ export class DashboardService {
     const totalCombinedCosts = productCosts.totalCombinedCosts; // EUR value (product + shipping)
     const totalCombinedCostsBRL = productCosts.totalCombinedCostsBRL; // BRL value (product + shipping)
     
-    // Calculate confirmed orders (total - unpacked)
-    const unpackedOrders = statusCounts
-      .filter(row => row.status === 'unpacked')
-      .reduce((sum, row) => sum + row.count, 0);
+    // Calculate confirmed orders: pending + delivered + shipped (orders accepted by carrier)
+    confirmedOrders = pendingOrders + deliveredOrders + shippedOrders;
     
-    // Override confirmedOrders calculation: total orders - unpacked orders
-    confirmedOrders = totalOrders - unpackedOrders;
-    
-    console.log(`🔍 Debug: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
+    console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Unpacked: 0, Confirmed: ${confirmedOrders}`);
     
     // Calculate transportadora totals for delivery rate (period-filtered)
     let totalTransportadoraOrders = 0;
@@ -496,7 +491,6 @@ export class DashboardService {
     const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL + returnCostsBRL;
     const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
-    console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Unpacked: ${unpackedOrders}, Confirmed: ${confirmedOrders}`);
     console.log(`🔍 Debug Transportadora: Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}`);
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}, Paid Revenue: €${paidRevenue}`);
     
