@@ -60,10 +60,12 @@ export function OnboardingCard() {
 
   const hideCardMutation = useMutation({
     mutationFn: async () => {
+      const token = localStorage.getItem("auth_token");
       const response = await fetch("/api/onboarding/hide-card", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         credentials: "include",
       });
