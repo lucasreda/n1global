@@ -464,16 +464,21 @@ export class DashboardService {
     
     carrierConfirmationStats.forEach(row => {
       const count = Number(row.count);
-      totalCarrierLeads += count; // Count ALL leads with carrier_imported=true
-      
       const confirmation = row.confirmation?.toLowerCase() || '';
+      
+      // Skip entries with NULL/empty confirmation - these may not have come from carrier API
+      if (!confirmation) {
+        return; // Don't count in total, confirmed, or cancelled
+      }
+      
+      totalCarrierLeads += count; // Count only leads with actual confirmation status
       
       // CANCELLED: leads explicitamente cancelados
       if (confirmation.includes('cancel') || confirmation === 'annulé') {
         cancelledCarrierLeads += count;
       }
       // CONFIRMED: todos os outros são considerados confirmados pela transportadora
-      // (confirmed, duplicated, out of area, wrong, empty/null, etc)
+      // (confirmed, duplicated, out of area, wrong, etc)
       else {
         confirmedCarrierLeads += count;
       }
