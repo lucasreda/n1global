@@ -590,13 +590,13 @@ export class DashboardService {
     
     return {
       exchangeRates, // Include current exchange rates
-      totalOrders: totalTransportadoraOrders, // Transportadora orders filtered by period
+      totalOrders: totalCarrierLeads, // 🆕 Total leads from carrier API (original confirmation field)
       shopifyOrders: totalOrders, // Shopify orders filtered by period
       previousPeriodOrders, // Previous period orders for growth comparison
       deliveredOrders, // Shopify delivered orders filtered by period  
-      cancelledOrders: cancelledTransportadoraOrders, // Transportadora cancelled orders filtered by period
+      cancelledOrders: cancelledCarrierLeads, // 🆕 Cancelled from carrier API (original confirmation field)
       returnedOrders,
-      confirmedOrders,
+      confirmedOrders: confirmedCarrierLeads, // 🆕 Confirmed from carrier API (original confirmation field)
       shippedOrders,
       pendingOrders,
       totalRevenue: totalShopifyRevenue, // Total Shopify revenue (all orders)
