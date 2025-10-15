@@ -197,10 +197,12 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           // PRIORIDADE 1: Buscar por telefone (normalizado)
           if (customerPhone) {
             const normalizedPhone = customerPhone.replace(/\D/g, '');
+            console.log(`🔍 Tentando match por telefone: Lead ${leadNumber}, tel: ${customerPhone}, normalizado: ${normalizedPhone}`);
             
             if (normalizedPhone.length >= 9) {
               // Buscar por telefone usando LIKE para pegar os últimos 9 dígitos
               const last9Digits = normalizedPhone.slice(-9);
+              console.log(`🔍 Buscando últimos 9 dígitos: ${last9Digits}`);
               
               const ordersByPhone = await db
                 .select()
@@ -218,6 +220,8 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
               if (matchedOrder) {
                 matchType = 'telefone';
                 console.log(`✅ Match por telefone! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+              } else {
+                console.log(`❌ Nenhum pedido Shopify com telefone terminando em ${last9Digits}`);
               }
             }
           }
