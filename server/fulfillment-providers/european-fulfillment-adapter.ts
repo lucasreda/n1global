@@ -245,23 +245,35 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           
           // PRIORIDADE 3: Buscar por nome + cidade (quando não tem telefone/email)
           if (!matchedOrder && customerName && customerCity) {
-            const ordersByNameCity = await db
+            // Normalizar nome e cidade para matching mais flexível
+            const normalizeName = (str: string) => str.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const normalizedName = normalizeName(customerName);
+            const normalizedCity = normalizeName(customerCity);
+            
+            // Buscar todos pedidos da operação para fazer match flexível
+            const allOrders = await db
               .select()
               .from(ordersTable)
               .where(
                 and(
                   eq(ordersTable.operationId, operationId),
-                  eq(ordersTable.dataSource, 'shopify'),
-                  eq(ordersTable.customerName, customerName),
-                  eq(ordersTable.customerCity, customerCity)
+                  eq(ordersTable.dataSource, 'shopify')
                 )
-              )
-              .limit(1);
+              );
             
-            matchedOrder = ordersByNameCity[0];
-            if (matchedOrder) {
-              matchType = 'nome+cidade';
-              console.log(`✅ Match por nome+cidade! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+            // Fazer matching case-insensitive sem acentos
+            for (const order of allOrders) {
+              if (order.customerName && order.customerCity) {
+                const orderName = normalizeName(order.customerName);
+                const orderCity = normalizeName(order.customerCity);
+                
+                if (orderName === normalizedName && orderCity === normalizedCity) {
+                  matchedOrder = order;
+                  matchType = 'nome+cidade (normalizado)';
+                  console.log(`✅ Match por nome+cidade normalizado! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
+                  break;
+                }
+              }
             }
           }
           
