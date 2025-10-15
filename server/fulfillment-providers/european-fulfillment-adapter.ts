@@ -265,7 +265,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
                 )
               );
             
-            // Fazer matching case-insensitive sem acentos
+            // ESTRATÉGIA 1: Match exato de nome+cidade (normalizado)
             for (const order of allOrders) {
               if (order.customerName && order.customerCity) {
                 const orderName = normalizeName(order.customerName);
@@ -273,9 +273,28 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
                 
                 if (orderName === normalizedName && orderCity === normalizedCity) {
                   matchedOrder = order;
-                  matchType = 'nome+cidade (normalizado)';
+                  matchType = 'nome+cidade (exato)';
                   console.log(`✅ Match por nome+cidade normalizado! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
                   break;
+                }
+              }
+            }
+            
+            // ESTRATÉGIA 2: Match parcial de nome (um contém o outro) + cidade exata
+            if (!matchedOrder) {
+              for (const order of allOrders) {
+                if (order.customerName && order.customerCity) {
+                  const orderName = normalizeName(order.customerName);
+                  const orderCity = normalizeName(order.customerCity);
+                  
+                  // Cidade deve ser exata, nome pode ser parcial (um contém o outro)
+                  if (orderCity === normalizedCity && 
+                      (orderName.includes(normalizedName) || normalizedName.includes(orderName))) {
+                    matchedOrder = order;
+                    matchType = 'nome parcial+cidade';
+                    console.log(`✅ Match por nome PARCIAL+cidade! Lead ${leadNumber} (${customerName}) → Pedido #${matchedOrder.shopifyOrderNumber} (${order.customerName})`);
+                    break;
+                  }
                 }
               }
             }
