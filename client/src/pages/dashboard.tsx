@@ -313,7 +313,6 @@ export default function Dashboard() {
               className="bg-gray-900/30 border-gray-700/50 hover:bg-gray-800/50 text-gray-300 text-xs sm:text-sm w-[140px] sm:w-[160px]"
               data-testid="select-product-filter"
             >
-              <Package className="mr-1 h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
               <SelectValue placeholder="Produto" />
             </SelectTrigger>
             <SelectContent className="glassmorphism border-gray-600 max-w-[280px]">
