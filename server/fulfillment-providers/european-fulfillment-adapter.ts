@@ -186,6 +186,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           const customerEmail = lead.customer_email || lead.email || '';
           const customerName = lead.customer_name || lead.name || '';
           const customerCity = lead.shipping_city || lead.city || '';
+          const orderNumber = lead.order_number || lead.n_order || lead.shopify_order || '';
           
           // 1. Buscar pedido da Shopify por múltiplos campos
           const { orders: ordersTable } = await import('../../shared/schema.js');
@@ -194,15 +195,48 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           let matchedOrder = null;
           let matchType = '';
           
-          // PRIORIDADE 1: Buscar por telefone (normalizado)
-          if (customerPhone) {
+          // PRIORIDADE 1: Buscar por número de pedido (se disponível)
+          if (orderNumber && !matchedOrder) {
+            // Testar várias variações do número do pedido
+            const orderVariations = [
+              orderNumber,
+              orderNumber.replace('#', ''),
+              `#${orderNumber.replace('#', '')}`,
+              orderNumber.replace(/\D/g, ''), // apenas números
+            ];
+            
+            for (const variation of orderVariations) {
+              const ordersByNumber = await db
+                .select()
+                .from(ordersTable)
+                .where(
+                  and(
+                    eq(ordersTable.operationId, operationId),
+                    eq(ordersTable.dataSource, 'shopify'),
+                    or(
+                      eq(ordersTable.shopifyOrderNumber, variation),
+                      like(ordersTable.shopifyOrderNumber, `%${variation}%`)
+                    )
+                  )
+                )
+                .limit(1);
+              
+              if (ordersByNumber[0]) {
+                matchedOrder = ordersByNumber[0];
+                matchType = 'número pedido';
+                console.log(`✅ Match por NÚMERO DE PEDIDO! Lead ${leadNumber} (${orderNumber}) → Pedido #${matchedOrder.shopifyOrderNumber}`);
+                break;
+              }
+            }
+          }
+          
+          // PRIORIDADE 2: Buscar por telefone (normalizado)
+          if (!matchedOrder && customerPhone) {
             const normalizedPhone = customerPhone.replace(/\D/g, '');
-            console.log(`🔍 Tentando match por telefone: Lead ${leadNumber}, tel: ${customerPhone}, normalizado: ${normalizedPhone}`);
             
             if (normalizedPhone.length >= 9) {
               // Buscar por telefone usando LIKE para pegar os últimos 9 dígitos
               const last9Digits = normalizedPhone.slice(-9);
-              console.log(`🔍 Buscando últimos 9 dígitos: ${last9Digits}`);
               
               const ordersByPhone = await db
                 .select()
@@ -220,14 +254,14 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
               if (matchedOrder) {
                 matchType = 'telefone';
                 console.log(`✅ Match por telefone! Lead ${leadNumber} → Pedido #${matchedOrder.shopifyOrderNumber}`);
-              } else {
-                console.log(`❌ Nenhum pedido Shopify com telefone terminando em ${last9Digits}`);
               }
             }
           }
           
-          // PRIORIDADE 2: Buscar por email
+          // PRIORIDADE 3: Buscar por email (normalizado)
           if (!matchedOrder && customerEmail) {
+            const normalizedEmail = customerEmail.toLowerCase().trim();
+            
             const ordersByEmail = await db
               .select()
               .from(ordersTable)
@@ -235,7 +269,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
                 and(
                   eq(ordersTable.operationId, operationId),
                   eq(ordersTable.dataSource, 'shopify'),
-                  eq(ordersTable.customerEmail, customerEmail.toLowerCase())
+                  eq(ordersTable.customerEmail, normalizedEmail)
                 )
               )
               .limit(1);
@@ -247,7 +281,7 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
             }
           }
           
-          // PRIORIDADE 3: Buscar por nome + cidade (quando não tem telefone/email)
+          // PRIORIDADE 4: Buscar por nome + cidade (quando não tem telefone/email)
           if (!matchedOrder && customerName && customerCity) {
             // Normalizar nome e cidade para matching mais flexível
             const normalizeName = (str: string) => str.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -301,7 +335,20 @@ export class EuropeanFulfillmentAdapter extends BaseFulfillmentProvider {
           }
           
           if (!matchedOrder) {
-            console.log(`❌ Sem match: Lead ${leadNumber} (tel: ${customerPhone}, email: ${customerEmail}, nome: ${customerName}, cidade: ${customerCity})`);
+            console.log(`\n🚨 ========== LEAD SEM MATCH ENCONTRADO ==========`);
+            console.log(`❌ Lead: ${leadNumber}`);
+            console.log(`   📱 Telefone original: "${customerPhone}"`);
+            console.log(`   📱 Telefone normalizado: "${customerPhone.replace(/\D/g, '')}"`);
+            console.log(`   📱 Últimos 9 dígitos: "${customerPhone.replace(/\D/g, '').slice(-9)}"`);
+            console.log(`   📧 Email original: "${customerEmail}"`);
+            console.log(`   📧 Email normalizado: "${customerEmail.toLowerCase().trim()}"`);
+            console.log(`   👤 Nome: "${customerName}"`);
+            console.log(`   🏙️ Cidade: "${customerCity}"`);
+            console.log(`   🔢 Número pedido: "${orderNumber}"`);
+            console.log(`   📊 Status livraison: "${lead.status_livrison || lead.status_livraison || ''}"`);
+            console.log(`   📊 Status confirmation: "${lead.status_confirmation || ''}"`);
+            console.log(`   🔍 Dados completos do lead:`, JSON.stringify(lead, null, 2));
+            console.log(`================================================\n`);
           }
           
           if (matchedOrder) {
