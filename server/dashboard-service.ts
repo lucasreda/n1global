@@ -442,16 +442,15 @@ export class DashboardService {
     const totalCombinedCosts = productCosts.totalCombinedCosts; // EUR value (product + shipping)
     const totalCombinedCostsBRL = productCosts.totalCombinedCostsBRL; // BRL value (product + shipping)
     
-    // Calculate confirmed orders: confirmed (status) + pending + delivered + shipped (orders accepted by carrier)
-    // confirmedOrders already has count from 'confirmed' status in the switch above
-    confirmedOrders = confirmedOrders + pendingOrders + deliveredOrders + shippedOrders;
-    
-    console.log(`🔍 Debug Shopify: Total: ${totalOrders}, Pending: ${pendingOrders}, Delivered: ${deliveredOrders}, Shipped: ${shippedOrders}, StatusConfirmed: ${confirmedOrders - pendingOrders - deliveredOrders - shippedOrders}, Final Confirmed: ${confirmedOrders}`);
+    console.log(`🔍 Debug Shopify (all orders): Total: ${totalOrders}, Pending: ${pendingOrders}, Delivered: ${deliveredOrders}, Shipped: ${shippedOrders}, Confirmed status: ${confirmedOrders}`);
     
     // Calculate transportadora totals for delivery rate (period-filtered)
     let totalTransportadoraOrders = 0;
     let deliveredTransportadoraOrders = 0;
     let cancelledTransportadoraOrders = 0;
+    let confirmedTransportadoraOrders = 0;
+    let pendingTransportadoraOrders = 0;
+    let shippedTransportadoraOrders = 0;
     
     transportadoraStats.forEach(row => {
       const orderCount = Number(row.count);
@@ -466,8 +465,20 @@ export class DashboardService {
         case 'rejected':
           cancelledTransportadoraOrders += orderCount;
           break;
+        case 'confirmed':
+          confirmedTransportadoraOrders += orderCount;
+          break;
+        case 'pending':
+          pendingTransportadoraOrders += orderCount;
+          break;
+        case 'shipped':
+          shippedTransportadoraOrders += orderCount;
+          break;
       }
     });
+    
+    // Calculate confirmed orders from TRANSPORTADORA data only (orders accepted by carrier)
+    confirmedOrders = confirmedTransportadoraOrders + pendingTransportadoraOrders + deliveredTransportadoraOrders + shippedTransportadoraOrders;
     
     // Calculate delivery percentage based on transportadora data
     const deliveryRate = totalTransportadoraOrders > 0 ? (deliveredTransportadoraOrders / totalTransportadoraOrders) * 100 : 0;
@@ -493,7 +504,8 @@ export class DashboardService {
     const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL + returnCostsBRL;
     const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
     
-    console.log(`🔍 Debug Transportadora: Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}`);
+    console.log(`🔍 Debug Transportadora: Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}, Confirmed status: ${confirmedTransportadoraOrders}, Pending: ${pendingTransportadoraOrders}, Shipped: ${shippedTransportadoraOrders}`);
+    console.log(`🎯 CONFIRMADOS CALCULADOS (transportadora): ${confirmedTransportadoraOrders} + ${pendingTransportadoraOrders} + ${deliveredTransportadoraOrders} + ${shippedTransportadoraOrders} = ${confirmedOrders}`);
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledTransportadoraOrders}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}, Paid Revenue: €${paidRevenue}`);
     
     // Calculate previous period orders for growth comparison
