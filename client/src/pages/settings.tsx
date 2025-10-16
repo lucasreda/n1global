@@ -1,5 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { User, Shield, Database, Briefcase, PlayCircle, Clock } from "lucide-react";
+import { User, Briefcase, PlayCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
@@ -128,18 +128,6 @@ export default function Settings() {
       description: "Gerencie informações pessoais e preferências",
       icon: User,
       items: ["Dados pessoais", "Alterar senha", "Foto de perfil"]
-    },
-    {
-      title: "Segurança",
-      description: "Configurações de segurança e autenticação",
-      icon: Shield,
-      items: ["Autenticação 2FA", "Sessões ativas", "Logs de acesso"]
-    },
-    {
-      title: "Sistema",
-      description: "Configurações gerais do dashboard",
-      icon: Database,
-      items: ["Backup automático", "Tema da interface", "Idioma"]
     },
   ];
 
