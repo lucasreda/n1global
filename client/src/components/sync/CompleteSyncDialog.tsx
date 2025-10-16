@@ -39,7 +39,6 @@ export function CompleteSyncDialog({
 }: CompleteSyncDialogProps) {
   const [syncStatus, setSyncStatus] = useState<CompleteSyncStatus | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const hasStartedSyncRef = useRef(false);
   const pollingIntervalRef = useRef<number | null>(null);
 
@@ -58,47 +57,35 @@ export function CompleteSyncDialog({
     }
   };
 
-  // Função para assinar atualizações via SSE
-  const subscribeToStatus = () => {
-    // Fechar conexão anterior se existir
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+  // Iniciar polling de status
+  const startStatusPolling = () => {
+    // Limpar polling anterior se existir
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
     }
 
-    const url = operationId 
-      ? `/api/sync/complete-status-stream?operationId=${operationId}`
-      : '/api/sync/complete-status-stream';
-
-    console.log("📡 Conectando ao SSE:", url);
-    const eventSource = new EventSource(url);
-
-    eventSource.onmessage = (event) => {
-      try {
-        const status: CompleteSyncStatus = JSON.parse(event.data);
-        console.log("📊 Status recebido via SSE:", status);
-        processStatus(status);
-
-        // Se não está mais rodando, fechar conexão
-        if (!status.isRunning) {
-          eventSource.close();
-        }
-      } catch (error) {
-        console.error("❌ Erro ao parsear status SSE:", error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error("❌ Erro na conexão SSE:", error);
-      eventSource.close();
+    console.log("🔄 Iniciando polling de status...");
+    
+    // Buscar status a cada 1 segundo
+    const interval = setInterval(async () => {
+      const status = await fetchStatusOnce();
       
-      // Em caso de erro, iniciar polling como fallback
-      startPollingFallback();
-    };
+      // Se não está mais rodando, parar polling e fechar modal
+      if (status && !status.isRunning) {
+        clearInterval(interval);
+        pollingIntervalRef.current = null;
+        
+        // Aguardar 1.5s e fechar modal automaticamente
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      }
+    }, 1000) as unknown as number;
 
-    eventSourceRef.current = eventSource;
+    pollingIntervalRef.current = interval;
   };
 
-  // Fallback: buscar status uma vez (quando SSE falhar)
+  // Buscar status uma vez
   const fetchStatusOnce = async (): Promise<CompleteSyncStatus | null> => {
     try {
       const url = operationId 
@@ -112,29 +99,6 @@ export function CompleteSyncDialog({
       console.error("❌ Erro ao buscar status:", error);
       return null;
     }
-  };
-
-  // Iniciar polling como fallback quando SSE falhar
-  const startPollingFallback = () => {
-    // Limpar polling anterior se existir
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-
-    console.log("🔄 SSE falhou, iniciando polling fallback...");
-    
-    // Buscar status a cada 2 segundos
-    const interval = setInterval(async () => {
-      const status = await fetchStatusOnce();
-      
-      // Se não está mais rodando, parar polling
-      if (status && !status.isRunning) {
-        clearInterval(interval);
-        pollingIntervalRef.current = null;
-      }
-    }, 2000) as unknown as number;
-
-    pollingIntervalRef.current = interval;
   };
 
   // Função para iniciar a sincronização (apenas quando realmente iniciar)
@@ -159,8 +123,8 @@ export function CompleteSyncDialog({
       
       if (result.success) {
         console.log("🚀 Sincronização completa iniciada");
-        // Assinar atualizações via SSE
-        subscribeToStatus();
+        // Iniciar polling de status
+        startStatusPolling();
       } else {
         console.error("❌ Erro ao iniciar sincronização:", result.message);
         hasStartedSyncRef.current = false;
@@ -185,15 +149,15 @@ export function CompleteSyncDialog({
     const initDialog = async () => {
       const status = await fetchStatusOnce();
       
-      // Se status mostra running, reconectar ao SSE
+      // Se status mostra running, iniciar polling
       if (status && status.isRunning) {
-        subscribeToStatus();
+        startStatusPolling();
       }
       // Se hasStartedSyncRef é true mas status não mostra running ainda (race),
-      // reconectar ao SSE para pegar atualizações
+      // iniciar polling para pegar atualizações
       else if (hasStartedSyncRef.current && (!status || !status.isRunning)) {
-        console.log("⏳ Sync iniciado mas status ainda não refletido, reconectando ao SSE...");
-        subscribeToStatus();
+        console.log("⏳ Sync iniciado mas status ainda não refletido, iniciando polling...");
+        startStatusPolling();
       }
       // Se não está rodando e não iniciamos ainda, iniciar novo sync
       else if (status && !status.isRunning && !hasStartedSyncRef.current) {
@@ -204,22 +168,13 @@ export function CompleteSyncDialog({
     initDialog();
 
     return () => {
-      // NÃO fechar SSE no cleanup - deixar ativo para background
-      // SSE será fechado automaticamente quando sync completar (via processStatus)
-      // ou quando o componente for completamente desmontado
+      // Cleanup será feito no useEffect de desmontagem
     };
   }, [isOpen]);
 
   // Cleanup final ao desmontar completamente o componente
   useEffect(() => {
     return () => {
-      // Fechar SSE ao desmontar completamente
-      if (eventSourceRef.current) {
-        console.log("🔌 Fechando SSE na desmontagem do componente");
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-      
       // Limpar polling se existir
       if (pollingIntervalRef.current) {
         console.log("🔌 Limpando polling na desmontagem do componente");

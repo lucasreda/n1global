@@ -552,12 +552,14 @@ export default function Dashboard() {
         }}
         onComplete={() => {
           setIsSyncingInBackground(false);
-          // Refresh dashboard data
+          // Refresh ALL dashboard data and sync stats
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/revenue-chart"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
           toast({
-            title: "Sincronização Concluída",
-            description: "Dados sincronizados com sucesso",
+            title: "✅ Sincronização Concluída!",
+            description: "Todos os dados foram atualizados com sucesso",
           });
         }}
         operationId={selectedOperation}
