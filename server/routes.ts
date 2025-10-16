@@ -2025,10 +2025,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para sincronização combinada Shopify + Transportadora
   app.post('/api/sync/shopify-carrier', authenticateToken, async (req: AuthRequest, res: Response) => {
+    const syncStartTime = Date.now();
+    
     try {
-      // Get user's current operation for proper data isolation
-      const userOperations = await storage.getUserOperations(req.user.id);
+      // 🚀 OPTIMIZATION: Keepalive query to wake up database in production (prevents cold start)
+      const { pool } = await import("./db");
+      await pool.query('SELECT 1');
+      console.log('⚡ Database keepalive query executed - preventing cold start');
+      
+      // 🚀 OPTIMIZATION: Pre-fetch all operation data to minimize queries
       const requestedOperationId = req.query.operationId as string || req.body.operationId;
+      const [userOperations, adAccountsData] = await Promise.all([
+        storage.getUserOperations(req.user.id),
+        requestedOperationId ? pool.query(
+          'SELECT * FROM ad_accounts WHERE operation_id = $1',
+          [requestedOperationId]
+        ) : Promise.resolve({ rows: [] })
+      ]);
       
       let currentOperation;
       if (requestedOperationId) {
@@ -2044,6 +2057,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log(`⚡ Pre-fetched operation data in ${Date.now() - syncStartTime}ms`);
+
       const { shopifySyncService } = await import("./shopify-sync-service");
       
       // Fase 1: Sincronização do Shopify
@@ -2057,15 +2072,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fase 3: Sincronização de Facebook Ads (só se houver contas configuradas)
       let adsResult = { campaigns: 0, accounts: 0 };
       
-      // Verificar se há contas de Facebook Ads configuradas para esta operação
-      const { db } = await import("./db");
-      const { adAccounts } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      
-      const adAccountsForOperation = await db
-        .select()
-        .from(adAccounts)
-        .where(eq(adAccounts.operationId, currentOperation.id));
+      // 🚀 OPTIMIZATION: Use pre-fetched ad accounts data
+      const adAccountsForOperation = adAccountsData.rows || [];
       
       if (adAccountsForOperation.length > 0) {
         console.log(`📢 Iniciando sincronização Facebook Ads para ${adAccountsForOperation.length} contas`);
@@ -2085,6 +2093,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`ℹ️ Pulando sincronização Facebook Ads - nenhuma conta configurada para operação ${currentOperation.name}`);
       }
       
+      const syncDuration = Date.now() - syncStartTime;
+      
       const result = {
         success: true,
         shopify: {
@@ -2098,10 +2108,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           campaigns: adsResult.campaigns,
           accounts: adsResult.accounts
         },
+        performance: {
+          durationMs: syncDuration,
+          durationSeconds: (syncDuration / 1000).toFixed(2)
+        },
         message: `Shopify: ${shopifyResult.imported} novos, ${shopifyResult.updated} atualizados. Transportadora: ${matchResult.matched} matched. Ads: ${adsResult.campaigns} campanhas sincronizadas.`
       };
       
-      console.log(`✅ Sincronização completa concluída:`, result);
+      console.log(`✅ Sincronização completa concluída em ${syncDuration}ms (${(syncDuration/1000).toFixed(2)}s):`, result);
       res.json(result);
     } catch (error) {
       console.error('Erro na sincronização completa:', error);

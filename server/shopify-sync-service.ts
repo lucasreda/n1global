@@ -559,10 +559,15 @@ export class ShopifySyncService {
       console.log(`   Taxa de cobertura atual: ${potentialMatches}/${Math.min(50, unmatchedOrders.length)} (${((potentialMatches/Math.min(50, unmatchedOrders.length))*100).toFixed(1)}%)`);
     }
     
-    // Agora aplica os matches de verdade
+    // 🚀 OPTIMIZATION: Batch matching and updates
+    console.log(`⚡ Using batch processing for optimal performance`);
+    
+    // Primeiro, faz todos os matches em memória
+    const matchesToUpdate: Array<{orderId: string; leadData: any}> = [];
+    
     for (const order of unmatchedOrders) {
       // Debug específico do matching nos primeiros
-      if (matched < 5) {
+      if (matchesToUpdate.length < 5) {
         console.log(`🔍 Tentando match para:`, {
           name: order.customerName,
           phone: order.customerPhone,
@@ -578,28 +583,82 @@ export class ShopifySyncService {
       );
       
       if (matchedLead) {
-        console.log(`✅ Match encontrado! Shopify: ${order.customerName} (${order.customerPhone}) ↔ Transportadora: ${matchedLead.name} (${matchedLead.phone})`);
-      } else if (matched < 5) {
+        if (matchesToUpdate.length < 5) {
+          console.log(`✅ Match encontrado! Shopify: ${order.customerName} (${order.customerPhone}) ↔ Transportadora: ${matchedLead.name} (${matchedLead.phone})`);
+        }
+        matchesToUpdate.push({ orderId: order.id, leadData: matchedLead });
+      } else if (matchesToUpdate.length < 5) {
         console.log(`❌ Sem match para: ${order.customerName} (${order.customerPhone} → ${this.normalizePhone(order.customerPhone || '')})`);
       }
+    }
+    
+    // 🚀 Batch update: atualiza todos os matches de uma vez usando raw SQL
+    if (matchesToUpdate.length > 0) {
+      console.log(`⚡ Atualizando ${matchesToUpdate.length} pedidos em batch...`);
       
-      if (matchedLead) {
-        // Atualiza o pedido com dados da transportadora
-        await db
-          .update(orders)
-          .set({
-            carrierImported: true,
-            carrierMatchedAt: new Date(),
-            carrierOrderId: matchedLead.n_lead || matchedLead.id,
-            trackingNumber: matchedLead.tracking_number || matchedLead.tracking,
-            status: this.mapCarrierStatus(matchedLead.status_livrison || matchedLead.status),
-            providerData: matchedLead,
-            updatedAt: new Date(),
-          })
-          .where(eq(orders.id, order.id));
+      const { pool } = await import('./db');
+      const timestamp = new Date();
+      
+      // Atualizar em lotes de 50 para evitar queries muito grandes
+      const BATCH_SIZE = 50;
+      for (let i = 0; i < matchesToUpdate.length; i += BATCH_SIZE) {
+        const batch = matchesToUpdate.slice(i, i + BATCH_SIZE);
         
-        matched++;
+        // Construir SQL para update em batch
+        const caseStatements = batch.map((match, idx) => 
+          `WHEN id = $${idx * 6 + 1} THEN $${idx * 6 + 2}`
+        ).join(' ');
+        
+        const orderIdsCaseStatements = batch.map((match, idx) => 
+          `WHEN id = $${idx * 6 + 1} THEN $${idx * 6 + 3}`
+        ).join(' ');
+        
+        const trackingCaseStatements = batch.map((match, idx) => 
+          `WHEN id = $${idx * 6 + 1} THEN $${idx * 6 + 4}`
+        ).join(' ');
+        
+        const statusCaseStatements = batch.map((match, idx) => 
+          `WHEN id = $${idx * 6 + 1} THEN $${idx * 6 + 5}`
+        ).join(' ');
+        
+        const providerDataCaseStatements = batch.map((match, idx) => 
+          `WHEN id = $${idx * 6 + 1} THEN $${idx * 6 + 6}::jsonb`
+        ).join(' ');
+        
+        const params: any[] = [];
+        batch.forEach(match => {
+          params.push(
+            match.orderId,
+            true, // carrier_imported
+            match.leadData.n_lead || match.leadData.id, // carrier_order_id
+            match.leadData.tracking_number || match.leadData.tracking || null, // tracking_number
+            this.mapCarrierStatus(match.leadData.status_livrison || match.leadData.status), // status
+            JSON.stringify(match.leadData) // provider_data
+          );
+        });
+        
+        const orderIds = batch.map(m => m.orderId);
+        const placeholders = orderIds.map((_, i) => `$${batch.length * 6 + i + 1}`).join(', ');
+        params.push(...orderIds);
+        
+        await pool.query(`
+          UPDATE orders
+          SET 
+            carrier_imported = CASE ${caseStatements} END,
+            carrier_matched_at = $${batch.length * 6 + orderIds.length + 1},
+            carrier_order_id = CASE ${orderIdsCaseStatements} END,
+            tracking_number = CASE ${trackingCaseStatements} END,
+            status = CASE ${statusCaseStatements} END,
+            provider_data = CASE ${providerDataCaseStatements} END,
+            updated_at = $${batch.length * 6 + orderIds.length + 1}
+          WHERE id IN (${placeholders})
+        `, [...params, timestamp]);
+        
+        console.log(`✅ Batch ${Math.floor(i/BATCH_SIZE) + 1} atualizado: ${batch.length} pedidos`);
       }
+      
+      matched = matchesToUpdate.length;
+      console.log(`🚀 Batch update concluído: ${matched} pedidos atualizados em ${Math.ceil(matchesToUpdate.length / BATCH_SIZE)} queries`);
     }
     
     console.log(`🔗 Match concluído: ${matched} pedidos matched`);
