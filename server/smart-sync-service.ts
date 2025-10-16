@@ -1423,7 +1423,7 @@ export class SmartSyncService {
           console.log(`✅ Pedido atualizado: ${matchResult.order.id} (${matchResult.matchMethod})`);
           updatedLeads++;
         } else {
-          // Nenhum match - criar novo pedido (carrier-first)
+          // Nenhum match - usar UPSERT (criar ou atualizar se já existir)
           // Usar o ID da transportadora como ID do pedido
           await db.insert(orders).values({
             id: apiLead.n_lead, // Usar ID da transportadora como ID do pedido
@@ -1442,9 +1442,29 @@ export class SmartSyncService {
             carrierConfirmation: apiLead.status_confirmation || null,
             dataSource: "carrier",
             lastStatusUpdate: new Date(),
+          }).onConflictDoUpdate({
+            target: orders.id,
+            set: {
+              storeId,
+              operationId,
+              customerName: apiLead.name,
+              customerPhone: apiLead.phone,
+              customerCity: apiLead.city,
+              customerCountry: "ES",
+              total: apiLead.lead_value,
+              status: this.mapCarrierStatusToOrderStatus(apiLead.status_livrison),
+              paymentMethod: apiLead.method_payment || "COD",
+              provider: "european_fulfillment",
+              carrierImported: true,
+              carrierOrderId: apiLead.n_lead,
+              carrierConfirmation: apiLead.status_confirmation || null,
+              dataSource: "carrier",
+              lastStatusUpdate: new Date(),
+              updatedAt: new Date(),
+            }
           });
 
-          console.log(`➕ Novo pedido criado (carrier-first): ${apiLead.n_lead}`);
+          console.log(`💾 Pedido upsert (criar/atualizar): ${apiLead.n_lead}`);
           newLeads++;
         }
       } catch (error) {
