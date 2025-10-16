@@ -1221,13 +1221,15 @@ export class SmartSyncService {
   /**
    * Executa sincronização completa progressiva com atualizações em tempo real
    */
-  async performCompleteSyncProgressive(options: SyncOptions & { maxRetries?: number; countryCode?: string } = {}): Promise<void> {
+  async performCompleteSyncProgressive(options: SyncOptions & { maxRetries?: number; countryCode?: string; operationId?: string; storeId?: string } = {}): Promise<void> {
     if (this.completeSyncStatus.isRunning) {
       throw new Error('Sincronização completa já está em execução');
     }
 
     const maxRetries = options.maxRetries || 5;
     const countryCode = options.countryCode || 'IT';
+    const operationId = options.operationId || '';
+    const storeId = options.storeId || await this.getDefaultStoreId();
     let currentRetry = 0;
 
     // Map country codes to API format
@@ -1264,7 +1266,7 @@ export class SmartSyncService {
 
     while (currentRetry <= maxRetries) {
       try {
-        await this.executeCompleteSyncWithProgress(apiCountry);
+        await this.executeCompleteSyncWithProgress(apiCountry, operationId, storeId);
         
         // Sucesso - marcar como concluído
         this.completeSyncStatus.phase = 'completed';
@@ -1299,7 +1301,7 @@ export class SmartSyncService {
   /**
    * Executa a sincronização completa com atualizações de progresso
    */
-  private async executeCompleteSyncWithProgress(apiCountry: string = 'ITALY'): Promise<void> {
+  private async executeCompleteSyncWithProgress(apiCountry: string, operationId: string, storeId: string): Promise<void> {
     console.log(`🔄 Iniciando sincronização completa progressiva para ${apiCountry}...`);
     
     this.completeSyncStatus.phase = 'syncing';
@@ -1325,7 +1327,6 @@ export class SmartSyncService {
     console.log(`📊 Total de pedidos a processar: ${this.completeSyncStatus.totalLeads}`);
     console.log(`📄 Total de páginas estimadas: ${this.completeSyncStatus.totalPages}`);
 
-    const storeId = await this.getDefaultStoreId();
     let allNewLeads = 0;
     let allUpdatedLeads = 0;
 
@@ -1343,7 +1344,7 @@ export class SmartSyncService {
           break;
         }
         
-        const { newLeads, updatedLeads } = await this.processLeadsPage(pageLeads, storeId);
+        const { newLeads, updatedLeads } = await this.processLeadsPage(pageLeads, storeId, operationId);
         
         allNewLeads += newLeads;
         allUpdatedLeads += updatedLeads;
@@ -1384,58 +1385,97 @@ export class SmartSyncService {
   }
 
   /**
-   * Processa uma página de leads da API
+   * Processa uma página de leads da API com algoritmo de matching em 4 níveis
    */
-  private async processLeadsPage(leads: any[], storeId: string): Promise<{ newLeads: number; updatedLeads: number }> {
+  private async processLeadsPage(leads: any[], storeId: string, operationId: string): Promise<{ newLeads: number; updatedLeads: number }> {
     let newLeads = 0;
     let updatedLeads = 0;
 
+    const { matchCarrierLeadToOrder } = await import('./carrier-matcher');
+
     for (const apiLead of leads) {
       try {
-        // Verificar se o lead já existe
-        const [existingLead] = await db
-          .select()
-          .from(orders)
-          .where(eq(orders.id, apiLead.n_lead))
-          .limit(1);
+        // Executar algoritmo de matching em 4 níveis
+        const matchResult = await matchCarrierLeadToOrder(apiLead, storeId, operationId);
 
-        if (!existingLead) {
-          // Lead novo - inserir
+        if (matchResult.matched && matchResult.order) {
+          // Pedido encontrado - ATUALIZAR com dados da transportadora
+          const updateData: any = {
+            carrierImported: true,
+            carrierOrderId: apiLead.n_lead,
+            carrierMatchedAt: new Date(),
+            carrierConfirmation: apiLead.status_confirmation || null,
+            status: this.mapCarrierStatusToOrderStatus(apiLead.status_livrison),
+            lastStatusUpdate: new Date(),
+            updatedAt: new Date(),
+          };
+
+          // Atualizar tracking se disponível
+          if (apiLead.tracking_number) {
+            updateData.trackingNumber = apiLead.tracking_number;
+          }
+
+          await db
+            .update(orders)
+            .set(updateData)
+            .where(eq(orders.id, matchResult.order.id));
+
+          console.log(`✅ Pedido atualizado: ${matchResult.order.id} (${matchResult.matchMethod})`);
+          updatedLeads++;
+        } else {
+          // Nenhum match - criar novo pedido (carrier-first)
           await db.insert(orders).values({
-            id: apiLead.n_lead,
             storeId,
+            operationId,
             customerName: apiLead.name,
             customerPhone: apiLead.phone,
             customerCity: apiLead.city,
-            customerCountry: "IT",
+            customerCountry: "ES",
             total: apiLead.lead_value,
-            status: apiLead.status_livrison || "new order",
+            status: this.mapCarrierStatusToOrderStatus(apiLead.status_livrison),
             paymentMethod: apiLead.method_payment || "COD",
             provider: "european_fulfillment",
+            carrierImported: true,
+            carrierOrderId: apiLead.n_lead,
+            carrierConfirmation: apiLead.status_confirmation || null,
+            dataSource: "carrier",
+            lastStatusUpdate: new Date(),
           });
 
+          console.log(`➕ Novo pedido criado (carrier-first): ${apiLead.n_lead}`);
           newLeads++;
-        } else {
-          // Lead existente - atualizar status se mudou
-          if (existingLead.status !== (apiLead.status_livrison || "new order")) {
-            await db
-              .update(orders)
-              .set({
-                status: apiLead.status_livrison || "new order",
-                updatedAt: new Date(),
-              })
-              .where(eq(orders.id, apiLead.n_lead));
-            
-            updatedLeads++;
-          }
         }
       } catch (error) {
         console.warn(`⚠️  Erro ao processar lead ${apiLead.n_lead}:`, error);
-        throw error; // Re-throw para controle de erro na sincronização
+        throw error;
       }
     }
 
     return { newLeads, updatedLeads };
+  }
+
+  /**
+   * Mapeia status da transportadora para status do pedido
+   */
+  private mapCarrierStatusToOrderStatus(carrierStatus: string): string {
+    if (!carrierStatus) return 'pending';
+
+    const statusMap: Record<string, string> = {
+      'proseccing': 'shipped',
+      'processing': 'shipped',
+      'delivered': 'delivered',
+      'livred': 'delivered',
+      'canceled': 'cancelled',
+      'cancelled': 'cancelled',
+      'canceled by system': 'cancelled',
+      'unpacked': 'pending',
+      'new order': 'pending',
+      'wrong': 'pending',
+      'out of area': 'cancelled'
+    };
+
+    const normalized = carrierStatus.toLowerCase().trim();
+    return statusMap[normalized] || 'pending';
   }
 
   /**

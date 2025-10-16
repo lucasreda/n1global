@@ -1888,7 +1888,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       smartSyncService.performCompleteSyncProgressive({ 
         forceFullSync: forceComplete,
         maxRetries,
-        countryCode: currentOperation.country || 'IT'
+        countryCode: currentOperation.country || 'IT',
+        operationId: currentOperation.id,
+        storeId: currentOperation.storeId
       }).catch(error => {
         console.error('Erro na sincronização completa progressiva:', error);
       });
