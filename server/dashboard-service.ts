@@ -147,14 +147,14 @@ export class DashboardService {
   }
   
   // 🎯 MÉTODO PRINCIPAL: Conversões históricas otimizadas por agregação de data
-  private async calculateHistoricalRevenue(operationId: string, dateRange: any, provider?: string) {
-    console.log(`📊 Iniciando cálculo de receita histórica para operação ${operationId}`);
+  private async calculateHistoricalRevenue(operationId: string, dateRange: any, provider?: string, timezone: string = 'Europe/Madrid') {
+    console.log(`📊 Iniciando cálculo de receita histórica para operação ${operationId} (timezone: ${timezone})`);
     
-    // 1. Agregar pedidos POR DATA (otimizado com GROUP BY)
+    // 1. Agregar pedidos POR DATA (otimizado com GROUP BY) - com timezone awareness
     let whereConditions = [
       eq(orders.operationId, operationId),
-      gte(orders.orderDate, dateRange.from),
-      lte(orders.orderDate, dateRange.to)
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`
     ];
     
     if (provider) {
@@ -163,7 +163,7 @@ export class DashboardService {
     
     const dailyAggregation = await db
       .select({
-        day: sql<string>`DATE(order_date)`,
+        day: sql<string>`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date`,
         totalRevenueEUR: sql<string>`SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END)`,
         deliveredRevenueEUR: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`,
         paidRevenueEUR: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`, // COD: delivered = paid
@@ -172,8 +172,8 @@ export class DashboardService {
       })
       .from(orders)
       .where(and(...whereConditions))
-      .groupBy(sql`DATE(order_date)`)
-      .orderBy(sql`DATE(order_date)`);
+      .groupBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date`)
+      .orderBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date`);
     
     console.log(`📈 Agregação por data concluída: ${dailyAggregation.length} dias com dados`);
     
@@ -308,11 +308,26 @@ export class DashboardService {
     console.log(`📅 Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
     console.log(`📊 Chart will use same ${dateFrom && dateTo ? 'custom date range' : `period: ${period}`}`);
     
-    // CRITICAL: Use operationId instead of storeId for data isolation + DATE FILTERING + PRODUCT FILTERING
+    // Determine timezone based on operation country
+    const timezoneMap: Record<string, string> = {
+      'ES': 'Europe/Madrid',
+      'IT': 'Europe/Rome',
+      'FR': 'Europe/Paris',
+      'DE': 'Europe/Berlin',
+      'PT': 'Europe/Lisbon',
+      'GB': 'Europe/London',
+      'NL': 'Europe/Amsterdam',
+      'BE': 'Europe/Brussels'
+    };
+    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
+    console.log(`🌍 Using timezone: ${operationTimezone} for country: ${currentOperation.country || 'ES'}`);
+    
+    // CRITICAL: Use operationId + TIMEZONE-AWARE date filtering
+    // Filter by operation timezone to match Shopify's display
     let whereConditions = [
       eq(orders.operationId, currentOperation.id),
-      gte(orders.orderDate, dateRange.from), // FIXED: Filter by Shopify order date
-      lte(orders.orderDate, dateRange.to)    // FIXED: Filter by Shopify order date
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`
     ];
     
     if (provider) {
@@ -334,7 +349,7 @@ export class DashboardService {
       .where(whereClause)
       .groupBy(orders.status);
     
-    // 2. Get revenue data: total, delivered, and PAID revenue
+    // 2. Get revenue data: total, delivered, and PAID revenue (with timezone-aware filtering)
     const revenueQuery = await db
       .select({
         totalRevenue: sum(orders.total),
@@ -346,8 +361,8 @@ export class DashboardService {
       .from(orders)
       .where(and(
         eq(orders.operationId, currentOperation.id),
-        gte(orders.orderDate, dateRange.from), // SAME date filter as order counts
-        lte(orders.orderDate, dateRange.to),   // SAME date filter as order counts
+        sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+        sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`,
         ne(orders.status, 'cancelled'), // All orders except cancelled (total Shopify revenue)
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
@@ -523,8 +538,8 @@ export class DashboardService {
     // Calculate delivery percentage based on transportadora data
     const deliveryRate = totalTransportadoraOrders > 0 ? (deliveredTransportadoraOrders / totalTransportadoraOrders) * 100 : 0;
     
-    // 🎯 NOVA LÓGICA: Agregação por data com conversões históricas precisas
-    const dailyRevenueData = await this.calculateHistoricalRevenue(currentOperation.id, dateRange, provider);
+    // 🎯 NOVA LÓGICA: Agregação por data com conversões históricas precisas (timezone-aware)
+    const dailyRevenueData = await this.calculateHistoricalRevenue(currentOperation.id, dateRange, provider, operationTimezone);
     
     const totalShopifyRevenueBRL = dailyRevenueData.totalShopifyRevenueBRL;
     const deliveredRevenueBRL = dailyRevenueData.deliveredRevenueBRL;
@@ -551,7 +566,7 @@ export class DashboardService {
     console.log(`🔍 Debug Transportadora (by mapped status): Total: ${totalTransportadoraOrders}, Delivered: ${deliveredTransportadoraOrders}, Cancelled: ${cancelledTransportadoraOrders}, Confirmed status: ${confirmedTransportadoraOrders}, Pending: ${pendingTransportadoraOrders}, Shipped: ${shippedTransportadoraOrders}`);
     console.log(`📈 Calculated metrics for ${period}: Total: ${totalOrders}, Delivered: ${deliveredOrders}, Returned: ${returnedOrders}, Confirmed: ${confirmedOrders}, Cancelled: ${cancelledCarrierLeads}, Shipped: ${shippedOrders}, Pending: ${pendingOrders}, Shopify Revenue: €${totalShopifyRevenue}, Delivered Revenue: €${deliveredRevenue}, Paid Revenue: €${paidRevenue}`);
     
-    // Calculate previous period orders for growth comparison
+    // Calculate previous period orders for growth comparison (timezone-aware)
     const previousPeriodRange = this.getPreviousPeriodDateRange(period);
     const previousPeriodQuery = await db
       .select({
@@ -560,8 +575,8 @@ export class DashboardService {
       .from(orders)
       .where(and(
         eq(orders.operationId, currentOperation.id),
-        gte(orders.orderDate, previousPeriodRange.from),
-        lte(orders.orderDate, previousPeriodRange.to),
+        sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${previousPeriodRange.from.toISOString().split('T')[0]}`,
+        sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${previousPeriodRange.to.toISOString().split('T')[0]}`,
         provider ? eq(orders.provider, provider) : sql`TRUE`
       ));
     
@@ -760,12 +775,20 @@ export class DashboardService {
       };
     }
     
-    // Build where conditions for delivered orders only (as requested)
+    // Get timezone based on operation country
+    const timezoneMap: Record<string, string> = {
+      'ES': 'Europe/Madrid', 'IT': 'Europe/Rome', 'FR': 'Europe/Paris',
+      'DE': 'Europe/Berlin', 'PT': 'Europe/Lisbon', 'GB': 'Europe/London',
+      'NL': 'Europe/Amsterdam', 'BE': 'Europe/Brussels'
+    };
+    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
+    
+    // Build where conditions for delivered orders only (timezone-aware)
     let whereConditions = [
       eq(orders.operationId, currentOperation.id),
       eq(orders.status, 'delivered'), // Only delivered orders
-      gte(orders.orderDate, dateRange.from),
-      lte(orders.orderDate, dateRange.to)
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`
     ];
     
     if (provider) {
@@ -1114,10 +1137,18 @@ export class DashboardService {
       return []; // No operation, no data
     }
     
+    // Get timezone based on operation country
+    const timezoneMap: Record<string, string> = {
+      'ES': 'Europe/Madrid', 'IT': 'Europe/Rome', 'FR': 'Europe/Paris',
+      'DE': 'Europe/Berlin', 'PT': 'Europe/Lisbon', 'GB': 'Europe/London',
+      'NL': 'Europe/Amsterdam', 'BE': 'Europe/Brussels'
+    };
+    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
+    
     let whereConditions = [
       eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
-      gte(orders.orderDate, dateRange.from),
-      lte(orders.orderDate, dateRange.to),
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`,
       ne(orders.status, 'cancelled') // Count all orders except cancelled
     ];
     
@@ -1127,19 +1158,19 @@ export class DashboardService {
 
     // Note: Product filtering removed - orders table doesn't have productId column
     
-    console.log(`📊 Chart will use same period: ${period}`);
+    console.log(`📊 Chart will use same period: ${period} (timezone: ${operationTimezone})`);
 
-    // Group by date
+    // Group by date in operation timezone
     const revenueData = await db
       .select({
-        date: sql<string>`DATE(${orders.orderDate})`,
+        date: sql<string>`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date`,
         revenue: sum(orders.total),
         orderCount: count()
       })
       .from(orders)
       .where(and(...whereConditions))
-      .groupBy(sql`DATE(${orders.orderDate})`)
-      .orderBy(sql`DATE(${orders.orderDate})`);
+      .groupBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date`)
+      .orderBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date`);
     
     console.log(`📊 Found ${revenueData.length} days with data for period ${period}`);
     
@@ -1193,10 +1224,18 @@ export class DashboardService {
       return []; // No operation, no data
     }
     
+    // Get timezone based on operation country
+    const timezoneMap: Record<string, string> = {
+      'ES': 'Europe/Madrid', 'IT': 'Europe/Rome', 'FR': 'Europe/Paris',
+      'DE': 'Europe/Berlin', 'PT': 'Europe/Lisbon', 'GB': 'Europe/London',
+      'NL': 'Europe/Amsterdam', 'BE': 'Europe/Brussels'
+    };
+    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
+    
     let whereConditions = [
       eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
-      gte(orders.orderDate, dateRange.from),
-      lte(orders.orderDate, dateRange.to)
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
+      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`
     ];
     
     if (provider) {
