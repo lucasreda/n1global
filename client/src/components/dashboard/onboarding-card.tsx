@@ -46,6 +46,8 @@ export function OnboardingCard() {
     onboardingCardHidden: boolean;
   }>({
     queryKey: ['/api/user'],
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache (v5 uses gcTime instead of cacheTime)
   });
   
   const { data: status, isLoading } = useQuery<IntegrationStatus>({
@@ -85,8 +87,9 @@ export function OnboardingCard() {
       if (!response.ok) throw new Error("Failed to hide card");
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    onSuccess: async () => {
+      // Force refetch to bypass HTTP cache
+      await queryClient.refetchQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Card ocultado",
         description: "O card de onboarding foi ocultado com sucesso.",
@@ -110,8 +113,12 @@ export function OnboardingCard() {
     return null; // Don't show anything while loading
   }
 
+  // Debug: Log userData to see what we're receiving
+  console.log('🔍 OnboardingCard userData:', userData);
+
   // Don't show card if user has hidden it
   if (userData?.onboardingCardHidden) {
+    console.log('✅ Card hidden by user preference');
     return null;
   }
 
