@@ -59,6 +59,7 @@ export const operations = pgTable("operations", {
   ownerId: varchar("owner_id").references(() => users.id), // Operation owner/manager
   country: text("country").notNull(), // Country code e.g., "ES", "IT", "FR"
   currency: text("currency").notNull().default("EUR"), // Currency code e.g., "EUR", "PLN", "CZK"
+  timezone: text("timezone").notNull().default("Europe/Madrid"), // IANA timezone e.g., "Europe/Madrid", "Europe/Rome"
   operationType: text("operation_type").notNull().default("Cash on Delivery"), // 'Cash on Delivery', 'Pagamento no Cartão'
   status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
   settings: jsonb("settings"), // Operation-specific settings
