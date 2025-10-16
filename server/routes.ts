@@ -5,7 +5,7 @@ import { apiCache } from "./cache";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, funnels, funnelPages, stores, userOperationAccess } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, linkProductBySkuSchema, users, orders, operations, fulfillmentIntegrations, currencyHistory, insertCurrencyHistorySchema, currencySettings, insertCurrencySettingsSchema, adCreatives, creativeAnalyses, campaigns, updateOperationTypeSchema, updateOperationSettingsSchema, funnels, funnelPages, stores, userOperationAccess } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
@@ -1128,6 +1128,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Erro ao atualizar tipo de operação" });
+    }
+  });
+
+  // Update operation settings (type and timezone)
+  app.patch("/api/operations/:operationId/settings", authenticateToken, async (req: AuthRequest, res: Response) => {
+    try {
+      const { operationId } = req.params;
+      console.log(`🔄 PATCH /api/operations/${operationId}/settings - User: ${req.user?.email}, Body:`, req.body);
+      
+      // Validate request body
+      const { operationType, timezone } = updateOperationSettingsSchema.parse(req.body);
+      console.log('✅ Validation passed, operationType:', operationType, 'timezone:', timezone);
+      
+      // Verify user has access to this operation
+      const userOperations = await storage.getUserOperations(req.user.id);
+      const hasAccess = userOperations.some(op => op.id === operationId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Acesso negado à esta operação" });
+      }
+
+      // Build update object with only provided fields
+      const updates: any = {};
+      if (operationType !== undefined) updates.operationType = operationType;
+      if (timezone !== undefined) updates.timezone = timezone;
+
+      // Update operation settings
+      const updatedOperation = await storage.updateOperation(operationId, updates);
+      
+      if (!updatedOperation) {
+        return res.status(404).json({ message: "Operação não encontrada" });
+      }
+
+      console.log(`Operation settings updated: ${operationId} ->`, updates);
+      res.json({ 
+        success: true, 
+        operation: updatedOperation,
+        message: "Configurações atualizadas com sucesso" 
+      });
+    } catch (error) {
+      console.error("Update operation settings error:", error);
+      
+      // Handle Zod validation errors specifically
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          details: error.message 
+        });
+      }
+      
+      res.status(500).json({ message: "Erro ao atualizar configurações" });
     }
   });
 

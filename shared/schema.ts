@@ -540,6 +540,12 @@ export const updateOperationTypeSchema = z.object({
   operationType: operationTypeSchema,
 });
 
+// Operation settings update schema for API
+export const updateOperationSettingsSchema = z.object({
+  operationType: operationTypeSchema.optional(),
+  timezone: z.string().optional(),
+});
+
 // Facebook Ads integration schemas
 export const insertFacebookAdsIntegrationSchema = createInsertSchema(facebookAdsIntegrations).omit({
   id: true,
