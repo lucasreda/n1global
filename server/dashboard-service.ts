@@ -151,29 +151,34 @@ export class DashboardService {
     console.log(`📊 Iniciando cálculo de receita histórica para operação ${operationId} (timezone: ${timezone})`);
     
     // 1. Agregar pedidos POR DATA (otimizado com GROUP BY) - com timezone awareness
-    let whereConditions = [
-      eq(orders.operationId, operationId),
-      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
-      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`
-    ];
+    // Use raw SQL with CTE to avoid Drizzle GROUP BY issues
+    const providerFilter = provider ? sql`AND provider = ${provider}` : sql``;
     
-    if (provider) {
-      whereConditions.push(eq(orders.provider, provider));
-    }
+    const result = await db.execute(sql`
+      WITH tz_orders AS (
+        SELECT 
+          (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date AS order_day,
+          total,
+          status
+        FROM orders
+        WHERE operation_id = ${operationId}
+          AND (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date >= ${dateRange.from.toISOString().split('T')[0]}::date
+          AND (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date <= ${dateRange.to.toISOString().split('T')[0]}::date
+          ${providerFilter}
+      )
+      SELECT 
+        order_day::text AS day,
+        SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END)::text AS "totalRevenueEUR",
+        SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)::text AS "deliveredRevenueEUR",
+        SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)::text AS "paidRevenueEUR",
+        COUNT(*)::int AS "orderCount",
+        SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)::int AS "deliveredCount"
+      FROM tz_orders
+      GROUP BY order_day
+      ORDER BY order_day
+    `);
     
-    const dailyAggregation = await db
-      .select({
-        day: sql<string>`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date`,
-        totalRevenueEUR: sql<string>`SUM(CASE WHEN status != 'cancelled' THEN total ELSE 0 END)`,
-        deliveredRevenueEUR: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`,
-        paidRevenueEUR: sql<string>`SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END)`, // COD: delivered = paid
-        orderCount: sql<number>`COUNT(*)`,
-        deliveredCount: sql<number>`SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END)`
-      })
-      .from(orders)
-      .where(and(...whereConditions))
-      .groupBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date`)
-      .orderBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${timezone})::date`);
+    const dailyAggregation = result.rows;
     
     console.log(`📈 Agregação por data concluída: ${dailyAggregation.length} dias com dados`);
     
@@ -1145,32 +1150,34 @@ export class DashboardService {
     };
     const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
     
-    let whereConditions = [
-      eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation
-      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}`,
-      sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}`,
-      ne(orders.status, 'cancelled') // Count all orders except cancelled
-    ];
+    // Use raw SQL with CTE to avoid Drizzle GROUP BY issues
+    const providerFilter = provider ? sql`AND provider = ${provider}` : sql``;
     
-    if (provider) {
-      whereConditions.push(eq(orders.provider, provider));
-    }
-
-    // Note: Product filtering removed - orders table doesn't have productId column
+    const result = await db.execute(sql`
+      WITH tz_orders AS (
+        SELECT 
+          (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date AS order_day,
+          total,
+          status
+        FROM orders
+        WHERE operation_id = ${currentOperation.id}
+          AND (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date >= ${dateRange.from.toISOString().split('T')[0]}::date
+          AND (order_date AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date <= ${dateRange.to.toISOString().split('T')[0]}::date
+          AND status != 'cancelled'
+          ${providerFilter}
+      )
+      SELECT 
+        order_day::text AS date,
+        SUM(total)::text AS revenue,
+        COUNT(*)::int AS "orderCount"
+      FROM tz_orders
+      GROUP BY order_day
+      ORDER BY order_day
+    `);
+    
+    const revenueData = result.rows;
     
     console.log(`📊 Chart will use same period: ${period} (timezone: ${operationTimezone})`);
-
-    // Group by date in operation timezone
-    const revenueData = await db
-      .select({
-        date: sql<string>`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date`,
-        revenue: sum(orders.total),
-        orderCount: count()
-      })
-      .from(orders)
-      .where(and(...whereConditions))
-      .groupBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date`)
-      .orderBy(sql`(${orders.orderDate} AT TIME ZONE 'UTC' AT TIME ZONE ${operationTimezone})::date`);
     
     console.log(`📊 Found ${revenueData.length} days with data for period ${period}`);
     
