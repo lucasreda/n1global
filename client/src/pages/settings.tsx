@@ -1,5 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { User, Briefcase, PlayCircle, Clock } from "lucide-react";
+import { Briefcase, PlayCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
@@ -122,51 +122,12 @@ export default function Settings() {
     }
   };
 
-  const settingSections = [
-    {
-      title: "Perfil do Usuário",
-      description: "Gerencie informações pessoais e preferências",
-      icon: User,
-      items: ["Dados pessoais", "Alterar senha", "Foto de perfil"]
-    },
-  ];
-
   return (
     <div className="space-y-6">
       <DashboardHeader 
         title="Configurações do Sistema" 
         subtitle="Personalize e configure suas preferências" 
       />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {settingSections.map((section) => (
-          <div 
-            key={section.title} 
-            className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-            style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-            onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-          >
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center">
-                <section.icon className="text-blue-400" size={20} />
-              </div>
-              <div>
-                <h3 className="text-white font-semibold">{section.title}</h3>
-                <p className="text-gray-400 text-sm">{section.description}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              {section.items.map((item) => (
-                <div key={item} className="bg-black/10 border border-white/5 rounded-lg p-3 hover:bg-black/20 hover:border-white/10 transition-all duration-200 cursor-pointer">
-                  <span className="text-gray-300 text-sm">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
       
       {/* Card Negócio */}
       <div 
