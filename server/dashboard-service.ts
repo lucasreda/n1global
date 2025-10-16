@@ -87,7 +87,8 @@ export class DashboardService {
         totalShippingCosts: Number(cached.totalShippingCosts || 0),
         totalCombinedCosts: Number(cached.totalCombinedCosts || 0),
         marketingCosts: Number(cached.marketingCosts || 0),
-        totalProfit: Number(cached.totalProfit || 0),
+        totalProfit: Number(cached.totalProfit || 0), // EUR value from cache
+        totalProfitEUR: Number(cached.totalProfit || 0), // EUR value explicitly
         profitMargin: Number(cached.profitMargin || 0),
         roi: Number(cached.roi || 0),
         // Include new cached fields
@@ -545,8 +546,13 @@ export class DashboardService {
     
     // Calculate profit using ONLY delivered/paid revenue (deliveredRevenueBRL - costs)
     const marketingCostsBRL = marketingCosts.totalBRL;
+    const marketingCostsEUR = marketingCosts.totalEUR;
     // Custos retornados: 2 euros por pedido retornado
-    const returnCostsBRL = currencyService.convertToBRLSync(returnedOrders * 2, 'EUR', exchangeRates);
+    const returnCostsEUR = returnedOrders * 2;
+    const returnCostsBRL = currencyService.convertToBRLSync(returnCostsEUR, 'EUR', exchangeRates);
+    
+    // Calculate profit in BOTH currencies
+    const totalProfitEUR = deliveredRevenue - totalCombinedCosts - marketingCostsEUR - returnCostsEUR;
     const totalProfitBRL = deliveredRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL - returnCostsBRL;
     const profitMargin = deliveredRevenueBRL > 0 ? (totalProfitBRL / deliveredRevenueBRL) * 100 : 0;
     
@@ -638,7 +644,8 @@ export class DashboardService {
       marketingCostsBRL: marketingCosts.totalBRL, // Explicit BRL value
       marketingCostsEUR: marketingCosts.totalEUR, // EUR value for display
       deliveryRate,
-      totalProfit: totalProfitBRL, // Now calculated in BRL
+      totalProfit: totalProfitEUR, // EUR value for storage and cache
+      totalProfitEUR, // EUR value for display
       totalProfitBRL, // BRL value for display
       profitMargin,
       roi,
