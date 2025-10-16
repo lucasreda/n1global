@@ -129,125 +129,127 @@ export default function Settings() {
         subtitle="Personalize e configure suas preferências" 
       />
       
-      {/* Card Negócio */}
-      <div 
-        className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-        style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-      >
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
-            <Briefcase className="text-green-400" size={20} />
-          </div>
-          <div>
-            <h3 className="text-white font-semibold">Negócio</h3>
-            <p className="text-gray-400 text-sm">Configure o tipo de operação do seu negócio</p>
-          </div>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <label className="text-gray-300 text-sm mb-3 block">Tipo de Operação</label>
-            <Select value={operationType} onValueChange={handleOperationTypeChange}>
-              <SelectTrigger 
-                className="bg-black/20 border-white/10 text-white hover:bg-black/30"
-                data-testid="select-operation-type"
-              >
-                <SelectValue placeholder="Selecione o tipo de operação" />
-              </SelectTrigger>
-              <SelectContent className="bg-black/90 border-white/10">
-                <SelectItem value="Cash on Delivery" data-testid="option-cash-on-delivery">
-                  Cash on Delivery
-                </SelectItem>
-                <SelectItem value="Pagamento no Cartão" data-testid="option-pagamento-cartao">
-                  Pagamento no Cartão
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
-            <label className="text-gray-300 text-sm mb-3 block flex items-center">
-              <Clock className="mr-2" size={16} />
-              Fuso Horário da Operação
-            </label>
-            <Select value={timezone} onValueChange={handleTimezoneChange}>
-              <SelectTrigger 
-                className="bg-black/20 border-white/10 text-white hover:bg-black/30"
-                data-testid="select-timezone"
-              >
-                <SelectValue placeholder="Selecione o fuso horário" />
-              </SelectTrigger>
-              <SelectContent className="bg-black/90 border-white/10">
-                {TIMEZONES.map((tz) => (
-                  <SelectItem key={tz.value} value={tz.value} data-testid={`option-timezone-${tz.value}`}>
-                    {tz.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-gray-400 text-xs mt-2">
-              Este fuso horário será usado para calcular as métricas e relatórios do dashboard
-            </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Card Negócio */}
+        <div 
+          className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+        >
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
+              <Briefcase className="text-green-400" size={20} />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Negócio</h3>
+              <p className="text-gray-400 text-sm">Configure o tipo de operação do seu negócio</p>
+            </div>
           </div>
           
-          <Button 
-            onClick={handleSave}
-            disabled={!hasChanges || isSaving}
-            className={`w-full transition-all duration-200 ${
-              hasChanges && !isSaving
-                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
-            }`}
-            data-testid="button-save-settings"
-          >
-            {isSaving ? 'Salvando...' : 'Salvar Configurações'}
-          </Button>
-        </div>
-      </div>
-      
-      {/* Tour Interativo */}
-      <div 
-        className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
-        style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
-        onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
-        onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
-      >
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center">
-            <PlayCircle className="text-purple-400" size={20} />
-          </div>
-          <div>
-            <h3 className="text-white font-semibold">Tour Interativo</h3>
-            <p className="text-gray-400 text-sm">Conheça todas as funcionalidades do dashboard</p>
+          <div className="space-y-4">
+            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+              <label className="text-gray-300 text-sm mb-3 block">Tipo de Operação</label>
+              <Select value={operationType} onValueChange={handleOperationTypeChange}>
+                <SelectTrigger 
+                  className="bg-black/20 border-white/10 text-white hover:bg-black/30"
+                  data-testid="select-operation-type"
+                >
+                  <SelectValue placeholder="Selecione o tipo de operação" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 border-white/10">
+                  <SelectItem value="Cash on Delivery" data-testid="option-cash-on-delivery">
+                    Cash on Delivery
+                  </SelectItem>
+                  <SelectItem value="Pagamento no Cartão" data-testid="option-pagamento-cartao">
+                    Pagamento no Cartão
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+              <label className="text-gray-300 text-sm mb-3 block flex items-center">
+                <Clock className="mr-2" size={16} />
+                Fuso Horário da Operação
+              </label>
+              <Select value={timezone} onValueChange={handleTimezoneChange}>
+                <SelectTrigger 
+                  className="bg-black/20 border-white/10 text-white hover:bg-black/30"
+                  data-testid="select-timezone"
+                >
+                  <SelectValue placeholder="Selecione o fuso horário" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 border-white/10">
+                  {TIMEZONES.map((tz) => (
+                    <SelectItem key={tz.value} value={tz.value} data-testid={`option-timezone-${tz.value}`}>
+                      {tz.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-gray-400 text-xs mt-2">
+                Este fuso horário será usado para calcular as métricas e relatórios do dashboard
+              </p>
+            </div>
+            
+            <Button 
+              onClick={handleSave}
+              disabled={!hasChanges || isSaving}
+              className={`w-full transition-all duration-200 ${
+                hasChanges && !isSaving
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+              }`}
+              data-testid="button-save-settings"
+            >
+              {isSaving ? 'Salvando...' : 'Salvar Configurações'}
+            </Button>
           </div>
         </div>
         
-        <div className="space-y-4">
-          <div className="bg-black/10 border border-white/5 rounded-lg p-4">
-            <p className="text-gray-300 text-sm mb-4">
-              O tour guiado mostra os principais recursos do sistema, incluindo métricas, integrações e anúncios. 
-              Perfeito para novos usuários ou para relembrar funcionalidades.
-            </p>
-            <Button 
-              onClick={handleRestartTour}
-              disabled={isResettingTour}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200"
-              data-testid="button-restart-tour"
-            >
-              {isResettingTour ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                  Iniciando...
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="mr-2" size={18} />
-                  Refazer Tour Guiado
-                </>
-              )}
-            </Button>
+        {/* Tour Interativo */}
+        <div 
+          className="group bg-black/20 backdrop-blur-sm border border-white/10 rounded-lg p-6 hover:bg-black/30 transition-all duration-300"
+          style={{boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'}}
+          onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.5)'}
+          onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 8px 32px rgba(31, 38, 135, 0.37)'}
+        >
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center">
+              <PlayCircle className="text-purple-400" size={20} />
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Tour Interativo</h3>
+              <p className="text-gray-400 text-sm">Conheça todas as funcionalidades do dashboard</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="bg-black/10 border border-white/5 rounded-lg p-4">
+              <p className="text-gray-300 text-sm mb-4">
+                O tour guiado mostra os principais recursos do sistema, incluindo métricas, integrações e anúncios. 
+                Perfeito para novos usuários ou para relembrar funcionalidades.
+              </p>
+              <Button 
+                onClick={handleRestartTour}
+                disabled={isResettingTour}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-all duration-200"
+                data-testid="button-restart-tour"
+              >
+                {isResettingTour ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Iniciando...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="mr-2" size={18} />
+                    Refazer Tour Guiado
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
