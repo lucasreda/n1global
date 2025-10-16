@@ -35,6 +35,19 @@ export function OnboardingCard() {
   // Get current operation ID from localStorage
   const currentOperationId = localStorage.getItem("current_operation_id");
   
+  // Fetch user data to check if card was hidden
+  const { data: userData } = useQuery<{
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    tourCompleted: boolean;
+    onboardingCompleted: boolean;
+    onboardingCardHidden: boolean;
+  }>({
+    queryKey: ['/api/user'],
+  });
+  
   const { data: status, isLoading } = useQuery<IntegrationStatus>({
     queryKey: ["/api/onboarding/integrations-status", { operationId: currentOperationId }],
     enabled: !!currentOperationId, // Only run if we have an operation
@@ -95,6 +108,11 @@ export function OnboardingCard() {
 
   if (isLoading) {
     return null; // Don't show anything while loading
+  }
+
+  // Don't show card if user has hidden it
+  if (userData?.onboardingCardHidden) {
+    return null;
   }
 
   if (!status || status.allCompleted) {

@@ -1470,7 +1470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
       
-      // Return user data including tourCompleted
+      // Return user data including tourCompleted and onboardingCardHidden
       res.json({
         id: user.id,
         email: user.email,
@@ -1479,6 +1479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tourCompleted: user.tourCompleted || false,
         onboardingCompleted: user.onboardingCompleted,
         onboardingSteps: user.onboardingSteps,
+        onboardingCardHidden: user.onboardingCardHidden || false,
       });
     } catch (error) {
       console.error("Get user error:", error);
