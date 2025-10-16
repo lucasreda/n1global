@@ -1260,12 +1260,30 @@ export class SmartSyncService {
       estimatedTimeRemaining: "Calculando...",
       currentSpeed: 0,
       phase: 'connecting',
-      message: "Conectando à API da transportadora...",
+      message: "Importando pedidos históricos do Shopify...",
       startTime: new Date()
     };
 
     while (currentRetry <= maxRetries) {
       try {
+        // 🚀 ETAPA 1: Importar TODOS os pedidos históricos do Shopify
+        console.log('📦 Etapa 1/2: Importando TODOS os pedidos históricos do Shopify...');
+        this.completeSyncStatus.message = "Importando pedidos históricos do Shopify...";
+        this.completeSyncStatus.phase = 'connecting';
+        
+        try {
+          const { ShopifySyncService } = await import('./shopify-sync-service');
+          const shopifyService = new ShopifySyncService();
+          const shopifyResult = await shopifyService.importShopifyOrders(operationId);
+          console.log(`✅ Shopify sync concluído: ${shopifyResult.imported} novos, ${shopifyResult.updated} atualizados`);
+        } catch (shopifyError) {
+          console.error("⚠️ Erro ao importar do Shopify (continuando):", shopifyError);
+          // Continuar mesmo com erro do Shopify - pode não ter integração configurada
+        }
+
+        // 🚀 ETAPA 2: Sincronizar com transportadora
+        console.log('🚚 Etapa 2/2: Sincronizando com transportadora...');
+        this.completeSyncStatus.message = "Sincronizando com transportadora...";
         await this.executeCompleteSyncWithProgress(apiCountry, operationId, storeId);
         
         // Sucesso - marcar como concluído
