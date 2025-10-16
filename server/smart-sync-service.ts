@@ -1221,13 +1221,29 @@ export class SmartSyncService {
   /**
    * Executa sincronização completa progressiva com atualizações em tempo real
    */
-  async performCompleteSyncProgressive(options: SyncOptions & { maxRetries?: number } = {}): Promise<void> {
+  async performCompleteSyncProgressive(options: SyncOptions & { maxRetries?: number; countryCode?: string } = {}): Promise<void> {
     if (this.completeSyncStatus.isRunning) {
       throw new Error('Sincronização completa já está em execução');
     }
 
     const maxRetries = options.maxRetries || 5;
+    const countryCode = options.countryCode || 'IT';
     let currentRetry = 0;
+
+    // Map country codes to API format
+    const countryMapping: Record<string, string> = {
+      'ES': 'SPAIN',
+      'IT': 'ITALY',
+      'FR': 'FRANCE',
+      'DE': 'GERMANY',
+      'PT': 'PORTUGAL',
+      'GB': 'UK',
+      'NL': 'NETHERLANDS',
+      'BE': 'BELGIUM'
+    };
+
+    const apiCountry = countryMapping[countryCode] || countryCode;
+    console.log(`🌍 País configurado: ${countryCode} -> API: ${apiCountry}`);
 
     this.completeSyncStatus = {
       isRunning: true,
@@ -1248,7 +1264,7 @@ export class SmartSyncService {
 
     while (currentRetry <= maxRetries) {
       try {
-        await this.executeCompleteSyncWithProgress();
+        await this.executeCompleteSyncWithProgress(apiCountry);
         
         // Sucesso - marcar como concluído
         this.completeSyncStatus.phase = 'completed';
@@ -1269,7 +1285,7 @@ export class SmartSyncService {
           
           // Aguardar antes de tentar novamente (backoff exponencial)
           const waitTime = Math.min(1000 * Math.pow(2, currentRetry), 30000);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          await new Promise(resolve, setTimeout(resolve, waitTime));
         } else {
           // Esgotar todas as tentativas
           this.completeSyncStatus.phase = 'error';
@@ -1283,21 +1299,21 @@ export class SmartSyncService {
   /**
    * Executa a sincronização completa com atualizações de progresso
    */
-  private async executeCompleteSyncWithProgress(): Promise<void> {
-    console.log('🔄 Iniciando sincronização completa progressiva...');
+  private async executeCompleteSyncWithProgress(apiCountry: string = 'ITALY'): Promise<void> {
+    console.log(`🔄 Iniciando sincronização completa progressiva para ${apiCountry}...`);
     
     this.completeSyncStatus.phase = 'syncing';
     this.completeSyncStatus.message = "Obtendo informações totais da API...";
 
     // Obter informações iniciais da API - primeiro buscar dados para calcular total
-    const firstPageLeads = await this.fulfillmentService.getLeadsList("ITALY", 1);
+    const firstPageLeads = await this.fulfillmentService.getLeadsList(apiCountry, 1);
     
     if (!firstPageLeads || firstPageLeads.length === 0) {
       throw new Error('Não foi possível obter dados da primeira página da API');
     }
 
     // Usar o total real retornado pela API
-    const apiResponse = await this.fulfillmentService.getLeadsListWithPagination("ITALY", 1);
+    const apiResponse = await this.fulfillmentService.getLeadsListWithPagination(apiCountry, 1);
     const totalLeads = apiResponse?.total || 1173; // Fallback baseado no último valor conhecido
     const leadsPerPage = apiResponse?.per_page || 15; // Usar o valor real da API
     const totalPages = apiResponse?.last_page || Math.ceil(totalLeads / leadsPerPage);
@@ -1319,7 +1335,7 @@ export class SmartSyncService {
       this.completeSyncStatus.message = `Processando página ${page} de ${this.completeSyncStatus.totalPages}...`;
 
       try {
-        const pageResponse = await this.fulfillmentService.getLeadsListWithPagination("ITALY", page);
+        const pageResponse = await this.fulfillmentService.getLeadsListWithPagination(apiCountry, page);
         const pageLeads = pageResponse.data || pageResponse;
         
         if (!pageLeads || pageLeads.length === 0) {
