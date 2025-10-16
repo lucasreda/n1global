@@ -1,5 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { User, Bell, Shield, Database, Briefcase, PlayCircle } from "lucide-react";
+import { User, Bell, Shield, Database, Briefcase, PlayCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
@@ -10,9 +10,27 @@ import { useToast } from "@/hooks/use-toast";
 import { useTourContext } from "@/contexts/tour-context";
 import { useLocation } from "wouter";
 
+// Common European timezones
+const TIMEZONES = [
+  { value: "Europe/Madrid", label: "Madrid (GMT+1)" },
+  { value: "Europe/Lisbon", label: "Lisboa (GMT+0)" },
+  { value: "Europe/Rome", label: "Roma (GMT+1)" },
+  { value: "Europe/Paris", label: "Paris (GMT+1)" },
+  { value: "Europe/Berlin", label: "Berlim (GMT+1)" },
+  { value: "Europe/Amsterdam", label: "Amsterdam (GMT+1)" },
+  { value: "Europe/Brussels", label: "Bruxelas (GMT+1)" },
+  { value: "Europe/London", label: "Londres (GMT+0)" },
+  { value: "Europe/Warsaw", label: "Varsóvia (GMT+1)" },
+  { value: "Europe/Prague", label: "Praga (GMT+1)" },
+  { value: "Europe/Vienna", label: "Viena (GMT+1)" },
+  { value: "Europe/Athens", label: "Atenas (GMT+2)" },
+];
+
 export default function Settings() {
   const [operationType, setOperationType] = useState<string>("Cash on Delivery");
   const [originalOperationType, setOriginalOperationType] = useState<string>("Cash on Delivery");
+  const [timezone, setTimezone] = useState<string>("Europe/Madrid");
+  const [originalTimezone, setOriginalTimezone] = useState<string>("Europe/Madrid");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -29,31 +47,40 @@ export default function Settings() {
     navigate('/');
   };
 
-  // Fetch full operations data to get operationType
-  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string }>>({
+  // Fetch full operations data to get operationType and timezone
+  const { data: operations } = useQuery<Array<{ id: string; name: string; operationType?: string; timezone?: string }>>({
     queryKey: ['/api/operations'],
     enabled: !!selectedOperation,
   });
 
-  // Set initial operationType from current operation
+  // Set initial operationType and timezone from current operation
   useEffect(() => {
     if (operations && selectedOperation) {
       const operation = operations.find((op) => op.id === selectedOperation);
       if (operation?.operationType) {
         setOperationType(operation.operationType);
         setOriginalOperationType(operation.operationType);
-        setHasChanges(false);
       }
+      if (operation?.timezone) {
+        setTimezone(operation.timezone);
+        setOriginalTimezone(operation.timezone);
+      }
+      setHasChanges(false);
     }
   }, [operations, selectedOperation]);
 
   const handleOperationTypeChange = (value: string) => {
     setOperationType(value);
-    setHasChanges(value !== originalOperationType);
+    setHasChanges(value !== originalOperationType || timezone !== originalTimezone);
+  };
+
+  const handleTimezoneChange = (value: string) => {
+    setTimezone(value);
+    setHasChanges(operationType !== originalOperationType || value !== originalTimezone);
   };
 
   const handleSave = async () => {
-    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType);
+    console.log('🔄 Starting handleSave, selectedOperation:', selectedOperation, 'operationType:', operationType, 'timezone:', timezone);
     
     if (!selectedOperation) {
       toast({
@@ -66,13 +93,14 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/type`, 'with data:', { operationType });
+      console.log('📤 Making API request to:', `/api/operations/${selectedOperation}/settings`, 'with data:', { operationType, timezone });
       
-      const response = await apiRequest(`/api/operations/${selectedOperation}/type`, 'PATCH', { operationType });
+      const response = await apiRequest(`/api/operations/${selectedOperation}/settings`, 'PATCH', { operationType, timezone });
       
       console.log('✅ API response received:', response);
 
       setOriginalOperationType(operationType);
+      setOriginalTimezone(timezone);
       setHasChanges(false);
       
       // Invalidate cache to refresh operations data across the app
@@ -80,13 +108,13 @@ export default function Settings() {
       
       toast({
         title: "Sucesso",
-        description: "Tipo de operação atualizado com sucesso",
+        description: "Configurações atualizadas com sucesso",
       });
     } catch (error) {
-      console.error('Erro ao salvar operationType:', error);
+      console.error('Erro ao salvar configurações:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar tipo de operação",
+        description: "Erro ao atualizar configurações",
         variant: "destructive",
       });
     } finally {
@@ -195,6 +223,31 @@ export default function Settings() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="bg-black/10 border border-white/5 rounded-lg p-4 hover:bg-black/20 hover:border-white/10 transition-all duration-200">
+            <label className="text-gray-300 text-sm mb-3 block flex items-center">
+              <Clock className="mr-2" size={16} />
+              Fuso Horário da Operação
+            </label>
+            <Select value={timezone} onValueChange={handleTimezoneChange}>
+              <SelectTrigger 
+                className="bg-black/20 border-white/10 text-white hover:bg-black/30"
+                data-testid="select-timezone"
+              >
+                <SelectValue placeholder="Selecione o fuso horário" />
+              </SelectTrigger>
+              <SelectContent className="bg-black/90 border-white/10">
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value} data-testid={`option-timezone-${tz.value}`}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-gray-400 text-xs mt-2">
+              Este fuso horário será usado para calcular as métricas e relatórios do dashboard
+            </p>
+          </div>
           
           <Button 
             onClick={handleSave}
@@ -204,9 +257,9 @@ export default function Settings() {
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                 : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
             }`}
-            data-testid="button-save-operation-type"
+            data-testid="button-save-settings"
           >
-            {isSaving ? 'Salvando...' : 'Salvar Configuração'}
+            {isSaving ? 'Salvando...' : 'Salvar Configurações'}
           </Button>
         </div>
       </div>
