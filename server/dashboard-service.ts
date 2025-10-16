@@ -556,6 +556,9 @@ export class DashboardService {
     const totalProfitBRL = deliveredRevenueBRL - totalCombinedCostsBRL - marketingCostsBRL - returnCostsBRL;
     const profitMargin = deliveredRevenueBRL > 0 ? (totalProfitBRL / deliveredRevenueBRL) * 100 : 0;
     
+    console.log(`💰 LUCRO DEBUG - EUR: €${totalProfitEUR.toFixed(2)}, BRL: R$${totalProfitBRL.toFixed(2)}`);
+    console.log(`💰 Cálculo: €${deliveredRevenue} - €${totalCombinedCosts} - €${marketingCostsEUR} - €${returnCostsEUR} = €${totalProfitEUR.toFixed(2)}`);
+    
     // Calculate ROI (return on investment) using delivered revenue
     const totalCostsBRL = totalCombinedCostsBRL + marketingCostsBRL + returnCostsBRL;
     const roi = totalCostsBRL > 0 ? ((deliveredRevenueBRL - totalCostsBRL) / totalCostsBRL) * 100 : 0;
