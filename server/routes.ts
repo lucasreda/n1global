@@ -1856,9 +1856,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔄 Iniciando sync completo para operação: ${currentOperation.name} (${currentOperation.id})`);
 
       // Buscar credenciais do fulfillment integration desta operação
-      const fulfillmentIntegrations = await storage.getFulfillmentIntegrationsByOperation(currentOperation.id);
+      const fulfillmentIntegrationsList = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(eq(fulfillmentIntegrations.operationId, currentOperation.id));
       
-      if (fulfillmentIntegrations.length === 0) {
+      if (fulfillmentIntegrationsList.length === 0) {
         return res.status(400).json({ 
           success: false,
           message: "Nenhum armazém configurado para esta operação. Configure um armazém primeiro." 
@@ -1866,14 +1869,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Usar a primeira integração de fulfillment encontrada
-      const integration = fulfillmentIntegrations[0];
-      console.log(`📦 Usando integração: ${integration.email} (Tipo: ${integration.type})`);
+      const integration = fulfillmentIntegrationsList[0];
+      const credentials = integration.credentials as { email: string; password: string };
+      console.log(`📦 Usando integração: ${credentials.email} (Provider: ${integration.provider})`);
 
       // Criar fulfillment service com credenciais da integração
       const { EuropeanFulfillmentService } = await import("./fulfillment-service");
       const fulfillmentService = new EuropeanFulfillmentService(
-        integration.email,
-        integration.password
+        credentials.email,
+        credentials.password
       );
 
       // Criar smart sync service com o fulfillment service configurado
