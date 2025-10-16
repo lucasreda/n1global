@@ -313,19 +313,9 @@ export class DashboardService {
     console.log(`📅 Date range: ${dateRange.from.toISOString()} to ${dateRange.to.toISOString()}`);
     console.log(`📊 Chart will use same ${dateFrom && dateTo ? 'custom date range' : `period: ${period}`}`);
     
-    // Determine timezone based on operation country
-    const timezoneMap: Record<string, string> = {
-      'ES': 'Europe/Madrid',
-      'IT': 'Europe/Rome',
-      'FR': 'Europe/Paris',
-      'DE': 'Europe/Berlin',
-      'PT': 'Europe/Lisbon',
-      'GB': 'Europe/London',
-      'NL': 'Europe/Amsterdam',
-      'BE': 'Europe/Brussels'
-    };
-    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
-    console.log(`🌍 Using timezone: ${operationTimezone} for country: ${currentOperation.country || 'ES'}`);
+    // Use operation's configured timezone
+    const operationTimezone = currentOperation.timezone || 'Europe/Madrid';
+    console.log(`🌍 Using timezone: ${operationTimezone} from operation configuration`);
     
     // CRITICAL: Use operationId + TIMEZONE-AWARE date filtering
     // Filter by operation timezone to match Shopify's display
@@ -780,13 +770,8 @@ export class DashboardService {
       };
     }
     
-    // Get timezone based on operation country
-    const timezoneMap: Record<string, string> = {
-      'ES': 'Europe/Madrid', 'IT': 'Europe/Rome', 'FR': 'Europe/Paris',
-      'DE': 'Europe/Berlin', 'PT': 'Europe/Lisbon', 'GB': 'Europe/London',
-      'NL': 'Europe/Amsterdam', 'BE': 'Europe/Brussels'
-    };
-    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
+    // Use operation's configured timezone
+    const operationTimezone = currentOperation.timezone || 'Europe/Madrid';
     
     // Build where conditions for delivered orders only (timezone-aware)
     let whereConditions = [
@@ -1142,13 +1127,8 @@ export class DashboardService {
       return []; // No operation, no data
     }
     
-    // Get timezone based on operation country
-    const timezoneMap: Record<string, string> = {
-      'ES': 'Europe/Madrid', 'IT': 'Europe/Rome', 'FR': 'Europe/Paris',
-      'DE': 'Europe/Berlin', 'PT': 'Europe/Lisbon', 'GB': 'Europe/London',
-      'NL': 'Europe/Amsterdam', 'BE': 'Europe/Brussels'
-    };
-    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
+    // Use operation's configured timezone
+    const operationTimezone = currentOperation.timezone || 'Europe/Madrid';
     
     // Use raw SQL with CTE to avoid Drizzle GROUP BY issues
     const providerFilter = provider ? sql`AND provider = ${provider}` : sql``;
@@ -1231,13 +1211,8 @@ export class DashboardService {
       return []; // No operation, no data
     }
     
-    // Get timezone based on operation country
-    const timezoneMap: Record<string, string> = {
-      'ES': 'Europe/Madrid', 'IT': 'Europe/Rome', 'FR': 'Europe/Paris',
-      'DE': 'Europe/Berlin', 'PT': 'Europe/Lisbon', 'GB': 'Europe/London',
-      'NL': 'Europe/Amsterdam', 'BE': 'Europe/Brussels'
-    };
-    const operationTimezone = timezoneMap[currentOperation.country || 'ES'] || 'Europe/Madrid';
+    // Use operation's configured timezone
+    const operationTimezone = currentOperation.timezone || 'Europe/Madrid';
     
     let whereConditions = [
       eq(orders.operationId, currentOperation.id), // CRITICAL: Filter by operation

@@ -272,6 +272,7 @@ export class DatabaseStorage implements IStorage {
         description: operations.description,
         country: operations.country,
         currency: operations.currency, // CRITICAL: Include missing currency field
+        timezone: operations.timezone, // Include timezone for dashboard calculations
         operationType: operations.operationType, // Include operationType field
         status: operations.status,
         createdAt: operations.createdAt,
