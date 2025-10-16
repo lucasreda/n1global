@@ -1470,6 +1470,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
       
+      // Disable caching for user data to ensure fresh data
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       // Return user data including tourCompleted and onboardingCardHidden
       res.json({
         id: user.id,
