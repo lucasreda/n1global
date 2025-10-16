@@ -48,6 +48,21 @@ export function OnboardingCard() {
     queryKey: ['/api/user'],
     staleTime: 0, // Always consider data stale
     gcTime: 0, // Don't cache (v5 uses gcTime instead of cacheTime)
+    queryFn: async () => {
+      const token = localStorage.getItem("auth_token");
+      const res = await fetch("/api/user?_=" + Date.now(), { // Add timestamp to URL to bypass cache
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
+        cache: 'no-store',
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch user data");
+      return res.json();
+    },
   });
   
   const { data: status, isLoading } = useQuery<IntegrationStatus>({
