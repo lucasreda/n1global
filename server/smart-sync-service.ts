@@ -1287,7 +1287,7 @@ export class SmartSyncService {
           
           // Aguardar antes de tentar novamente (backoff exponencial)
           const waitTime = Math.min(1000 * Math.pow(2, currentRetry), 30000);
-          await new Promise(resolve, setTimeout(resolve, waitTime));
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         } else {
           // Esgotar todas as tentativas
           this.completeSyncStatus.phase = 'error';
@@ -1424,7 +1424,9 @@ export class SmartSyncService {
           updatedLeads++;
         } else {
           // Nenhum match - criar novo pedido (carrier-first)
+          // Usar o ID da transportadora como ID do pedido
           await db.insert(orders).values({
+            id: apiLead.n_lead, // Usar ID da transportadora como ID do pedido
             storeId,
             operationId,
             customerName: apiLead.name,
