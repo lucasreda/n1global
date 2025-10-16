@@ -101,7 +101,10 @@ export function CompleteSyncDialog({
   // Fallback: buscar status uma vez (quando SSE falhar)
   const fetchStatusOnce = async (): Promise<CompleteSyncStatus | null> => {
     try {
-      const response = await apiRequest('GET', '/api/sync/complete-status');
+      const url = operationId 
+        ? `/api/sync/complete-status?operationId=${operationId}`
+        : '/api/sync/complete-status';
+      const response = await apiRequest(url, 'GET');
       const status = await response.json();
       processStatus(status);
       return status;
@@ -146,7 +149,7 @@ export function CompleteSyncDialog({
       
       console.log("🔄 Iniciando sync completo...", { url, operationId });
       
-      const response = await apiRequest('POST', url, {
+      const response = await apiRequest(url, 'POST', {
         forceComplete: true,
         maxRetries: 5
       });
