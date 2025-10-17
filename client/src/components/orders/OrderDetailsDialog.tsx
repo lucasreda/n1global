@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,6 +46,9 @@ export function OrderDetailsDialog({ order, open, onOpenChange, operationCurrenc
             <Package className="h-6 w-6 text-blue-400" />
             Detalhes do Pedido {order?.shopifyOrderNumber || order?.id || ''}
           </DialogTitle>
+          <DialogDescription className="text-gray-400">
+            Informações completas do pedido incluindo cliente, produtos e histórico de status
+          </DialogDescription>
         </DialogHeader>
 
         {!order ? (
