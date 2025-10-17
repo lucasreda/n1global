@@ -4776,7 +4776,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Você não pode excluir sua própria conta." });
       }
 
-      // Delete user and related data
+      // Delete user and related data (order matters: foreign keys first)
+      // 1. First delete user_operation_access entries
+      await db.delete(userOperationAccess).where(eq(userOperationAccess.userId, userId));
+      
+      // 2. Then delete the user
       await db.delete(users).where(eq(users.id, userId));
 
       res.json({ message: "Usuário excluído com sucesso" });
