@@ -3259,9 +3259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🧪 Iniciando teste de sincronização do onboarding para operação ${operationId}`);
       
-      // Import smart sync service
-      const { SmartSyncService } = await import("./smart-sync-service");
-      const syncService = new SmartSyncService();
+      // Import smart sync service (usar singleton compartilhado)
+      const { smartSyncService: syncService } = await import("./smart-sync-service");
       
       // Get operation details
       const { db } = await import("./db");
