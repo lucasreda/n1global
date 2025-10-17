@@ -2245,6 +2245,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Shopify fields mapping
           shopifyOrderId: order.shopify_order_id,
           shopifyOrderNumber: order.shopify_order_number,
+          // Date fields mapping
+          orderDate: order.order_date,
+          lastStatusUpdate: order.last_status_update,
+          createdAt: order.created_at,
+          updatedAt: order.updated_at,
+          // Carrier fields mapping
+          carrierOrderId: order.carrier_order_id,
+          carrierConfirmation: order.carrier_confirmation,
+          carrierMatchedAt: order.carrier_matched_at,
+          carrierImported: order.carrier_imported,
+          dataSource: order.data_source,
           // Include cost fields
           productCost: parseFloat(order.product_cost || '0').toFixed(2),
           shippingCost: parseFloat(order.shipping_cost || '0').toFixed(2),
