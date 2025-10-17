@@ -66,19 +66,30 @@ export function CompleteSyncDialog({
 
     console.log("🔄 Iniciando polling de status...");
     
+    let pollCount = 0;
+    
     // Buscar status a cada 1 segundo
     const interval = setInterval(async () => {
+      pollCount++;
       const status = await fetchStatusOnce();
       
       // Se não está mais rodando, parar polling e fechar modal
+      // MAS: se está nos primeiros 3 polls (primeiros 3 segundos) e nunca rodou,
+      // não fechar ainda (pode ser race condition com o POST)
       if (status && !status.isRunning) {
-        clearInterval(interval);
-        pollingIntervalRef.current = null;
-        
-        // Aguardar 1.5s e fechar modal automaticamente
-        setTimeout(() => {
-          onClose();
-        }, 1500);
+        // Se já processou algo OU já tentou 3+ vezes, pode fechar
+        if (status.processedLeads > 0 || pollCount > 3) {
+          console.log("⏹️ Sync não está rodando, fechando modal...", { pollCount, processedLeads: status.processedLeads });
+          clearInterval(interval);
+          pollingIntervalRef.current = null;
+          
+          // Aguardar 1.5s e fechar modal automaticamente
+          setTimeout(() => {
+            onClose();
+          }, 1500);
+        } else {
+          console.log("⏳ Aguardando sync iniciar (race condition)...", { pollCount });
+        }
       }
     }, 1000) as unknown as number;
 
@@ -148,10 +159,13 @@ export function CompleteSyncDialog({
 
     // Ao abrir, buscar status PRIMEIRO para decidir
     const initDialog = async () => {
+      console.log("🔍 Iniciando dialog - hasStartedSyncRef:", hasStartedSyncRef.current);
       const status = await fetchStatusOnce();
+      console.log("🔍 Status recebido no init:", { status, hasStartedSyncRef: hasStartedSyncRef.current });
       
       // Se status mostra running, iniciar polling
       if (status && status.isRunning) {
+        console.log("✅ Status mostra running, iniciando polling");
         startStatusPolling();
       }
       // Se hasStartedSyncRef é true mas status não mostra running ainda (race),
@@ -162,7 +176,16 @@ export function CompleteSyncDialog({
       }
       // Se não está rodando e não iniciamos ainda, iniciar novo sync
       else if (status && !status.isRunning && !hasStartedSyncRef.current) {
+        console.log("🚀 Iniciando novo sync completo...");
         await startCompleteSync();
+      } 
+      // Se não conseguimos buscar o status mas não iniciamos ainda, tentar iniciar
+      else if (!status && !hasStartedSyncRef.current) {
+        console.log("⚠️ Status null, tentando iniciar sync...");
+        await startCompleteSync();
+      }
+      else {
+        console.log("❓ Nenhuma condição atendida:", { status, hasStartedSyncRef: hasStartedSyncRef.current });
       }
     };
 
