@@ -19,6 +19,13 @@ export class SmartSyncService {
   constructor(fulfillmentService?: EuropeanFulfillmentService) {
     this.fulfillmentService = fulfillmentService || new EuropeanFulfillmentService();
   }
+
+  /**
+   * Configura o fulfillment service com autenticação
+   */
+  setFulfillmentService(fulfillmentService: EuropeanFulfillmentService) {
+    this.fulfillmentService = fulfillmentService;
+  }
   
   // Estado da sincronização completa progressiva
   private completeSyncStatus = {

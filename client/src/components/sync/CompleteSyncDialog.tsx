@@ -93,6 +93,7 @@ export function CompleteSyncDialog({
         : '/api/sync/complete-status';
       const response = await apiRequest(url, 'GET');
       const status = await response.json();
+      console.log("📊 Status recebido do polling:", status);
       processStatus(status);
       return status;
     } catch (error) {

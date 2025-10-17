@@ -1937,9 +1937,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         credentials.password
       );
 
-      // Criar smart sync service com o fulfillment service configurado
-      const { SmartSyncService } = await import("./smart-sync-service");
-      const smartSyncService = new SmartSyncService(fulfillmentService);
+      // Usar o singleton compartilhado do smart sync service
+      const { smartSyncService } = await import("./smart-sync-service");
+      
+      // Configurar o fulfillment service autenticado no singleton
+      smartSyncService.setFulfillmentService(fulfillmentService);
       
       // Iniciar sincronização completa progressiva de forma assíncrona
       smartSyncService.performCompleteSyncProgressive({ 
