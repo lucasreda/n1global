@@ -83,11 +83,15 @@ export default function Orders() {
 
   // Fetch integrations status to check if platform and warehouse are connected
   const { data: integrationsStatus } = useQuery({
-    queryKey: ['/api/onboarding/integrations-status'],
+    queryKey: ['/api/onboarding/integrations-status', selectedOperation],
     queryFn: async () => {
-      const response = await authenticatedApiRequest('GET', '/api/onboarding/integrations-status');
+      const url = selectedOperation 
+        ? `/api/onboarding/integrations-status?operationId=${selectedOperation}`
+        : '/api/onboarding/integrations-status';
+      const response = await authenticatedApiRequest('GET', url);
       return response.json();
     },
+    enabled: !!selectedOperation,
   });
 
   // Fetch operation details to get currency
