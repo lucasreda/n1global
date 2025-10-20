@@ -9,7 +9,7 @@ import { insertUserSchema, loginSchema, insertOrderSchema, insertProductSchema, 
 import { z } from "zod";
 import { db } from "./db";
 import { eq, and, sql, isNull, inArray, desc } from "drizzle-orm";
-import { EuropeanFulfillmentService } from "./fulfillment-service";
+// Removed EuropeanFulfillmentService static import to prevent global TLS disable
 import { ElogyService } from "./fulfillment-providers/elogy-service";
 import { FHBService } from "./fulfillment-providers/fhb-service";
 import { FulfillmentProviderFactory } from "./fulfillment-providers/fulfillment-factory";
@@ -1919,7 +1919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             eq(fulfillmentIntegrations.operationId, currentOperation.id),
-            eq(fulfillmentIntegrations.isActive, true)
+            eq(fulfillmentIntegrations.status, 'active')
           )
         );
       
@@ -1932,15 +1932,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Usar a primeira integração de fulfillment ativa encontrada
       const integration = fulfillmentIntegrationsList[0];
-      const credentials = integration.credentials as { email: string; password: string };
-      console.log(`📦 Warehouse selecionado: ${integration.provider} | Email: ${credentials.email} | OperationId: ${currentOperation.id} | IntegrationId: ${integration.id}`);
+      const credentials = integration.credentials as any;
+      console.log(`📦 Warehouse selecionado: ${integration.provider} | OperationId: ${currentOperation.id} | IntegrationId: ${integration.id}`);
 
-      // Criar fulfillment service com credenciais da integração
-      const { EuropeanFulfillmentService } = await import("./fulfillment-service");
-      const fulfillmentService = new EuropeanFulfillmentService(
-        credentials.email,
-        credentials.password
-      );
+      // Criar fulfillment service com credenciais da integração usando a Factory
+      const { FulfillmentProviderFactory } = await import("./fulfillment-providers/fulfillment-factory");
+      const fulfillmentService = await FulfillmentProviderFactory.createProvider(integration.provider as any, credentials);
 
       // Usar o singleton compartilhado do smart sync service
       const { smartSyncService } = await import("./smart-sync-service");
@@ -2360,6 +2357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (integration && integration.credentials) {
         // Testar conexão com as credenciais salvas
         const credentials = integration.credentials as any;
+        const { EuropeanFulfillmentService } = await import('./fulfillment-service');
         const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
         const testResult = await service.testConnection();
         
@@ -2397,6 +2395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("🧪 Testando credenciais...");
       // Test the new credentials first
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
       const service = new EuropeanFulfillmentService(email, password, apiUrl);
       const testResult = await service.testConnection();
       console.log("📊 Resultado do teste:", testResult);
@@ -2463,6 +2462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get countries
   app.get("/api/integrations/european-fulfillment/countries", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
       const service = new EuropeanFulfillmentService();
       const countries = await service.getCountries();
       res.json(countries);
@@ -2474,6 +2474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get stores
   app.get("/api/integrations/european-fulfillment/stores", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
       const service = new EuropeanFulfillmentService();
       const stores = await service.getStores();
       res.json(stores);
@@ -2503,6 +2504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Default to Italy if no country specified
       const country = (req.query.country as string) || "ITALY";
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
       const service = new EuropeanFulfillmentService();
       const leads = await service.getLeadsList(country);
       res.json(leads);
@@ -2515,6 +2517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
       const leadData = req.body;
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
       const service = new EuropeanFulfillmentService();
       const result = await service.createLead(leadData);
       res.json(result);
@@ -2566,6 +2569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get status from N1 Warehouse
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
       const service = new EuropeanFulfillmentService();
       const status = await service.getLeadStatus(lead.leadNumber);
       

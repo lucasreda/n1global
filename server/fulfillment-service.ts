@@ -3,8 +3,9 @@ import { randomUUID } from "crypto";
 import https from "https";
 // Removed unused imports
 
-// Disable SSL verification for development
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+// SECURITY: TLS verification is ENABLED for production security
+// If you need to disable TLS for local development with self-signed certs,
+// do it locally via environment variable, NOT in code
 
 interface EuropeanFulfillmentCredentials {
   email: string;
