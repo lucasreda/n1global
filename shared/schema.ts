@@ -5770,6 +5770,7 @@ export const pageModelV4Schema = z.object({
 export const integrationConfigs = pgTable("integration_configs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  operationId: varchar("operation_id").references(() => operations.id), // Links integration to specific operation
   integrationType: text("integration_type").notNull(), // 'operational_app'
   webhookUrl: text("webhook_url").notNull(),
   webhookSecret: text("webhook_secret").notNull(), // Encrypted secret for HMAC
