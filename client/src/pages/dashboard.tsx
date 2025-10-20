@@ -510,7 +510,7 @@ export default function Dashboard() {
               </div>
             </TooltipTrigger>
             {(!integrationsStatus?.hasPlatform || !integrationsStatus?.hasWarehouse) && (
-              <TooltipContent>
+              <TooltipContent className="max-w-xs">
                 <p>É necessário conectar pelo menos uma plataforma e um armazém para realizar a sincronização completa</p>
               </TooltipContent>
             )}
