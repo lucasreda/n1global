@@ -1912,23 +1912,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🔄 Iniciando sync completo para operação: ${currentOperation.name} (${currentOperation.id})`);
 
-      // Buscar credenciais do fulfillment integration desta operação
+      // Buscar credenciais do fulfillment integration desta operação (somente ativas)
       const fulfillmentIntegrationsList = await db
         .select()
         .from(fulfillmentIntegrations)
-        .where(eq(fulfillmentIntegrations.operationId, currentOperation.id));
+        .where(
+          and(
+            eq(fulfillmentIntegrations.operationId, currentOperation.id),
+            eq(fulfillmentIntegrations.isActive, true)
+          )
+        );
       
       if (fulfillmentIntegrationsList.length === 0) {
         return res.status(400).json({ 
           success: false,
-          message: "Nenhum armazém configurado para esta operação. Configure um armazém primeiro." 
+          message: "Nenhum armazém ATIVO configurado para esta operação. Configure um armazém primeiro." 
         });
       }
 
-      // Usar a primeira integração de fulfillment encontrada
+      // Usar a primeira integração de fulfillment ativa encontrada
       const integration = fulfillmentIntegrationsList[0];
       const credentials = integration.credentials as { email: string; password: string };
-      console.log(`📦 Usando integração: ${credentials.email} (Provider: ${integration.provider})`);
+      console.log(`📦 Warehouse selecionado: ${integration.provider} | Email: ${credentials.email} | OperationId: ${currentOperation.id} | IntegrationId: ${integration.id}`);
 
       // Criar fulfillment service com credenciais da integração
       const { EuropeanFulfillmentService } = await import("./fulfillment-service");
