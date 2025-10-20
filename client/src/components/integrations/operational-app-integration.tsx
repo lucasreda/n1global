@@ -10,9 +10,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, CheckCircle, XCircle, Copy, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useCurrentOperation } from "@/hooks/use-current-operation";
 
 export function OperationalAppIntegration() {
   const { toast } = useToast();
+  const { selectedOperation: operationId } = useCurrentOperation();
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [isActive, setIsActive] = useState(false);
@@ -21,7 +23,12 @@ export function OperationalAppIntegration() {
 
   // Fetch current config
   const { data: configData, isLoading } = useQuery<{ config: any }>({
-    queryKey: ["/api/integrations/operational-app"],
+    queryKey: ["/api/integrations/operational-app", operationId],
+    queryFn: async () => {
+      const res = await apiRequest(`/api/integrations/operational-app?operationId=${operationId}`, "GET");
+      return res.json();
+    },
+    enabled: !!operationId,
     refetchOnMount: true,
   });
 
@@ -30,11 +37,14 @@ export function OperationalAppIntegration() {
   // Save config mutation
   const saveMutation = useMutation({
     mutationFn: async (data: { webhookUrl: string; webhookSecret?: string; isActive: boolean }) => {
-      const res = await apiRequest("/api/integrations/operational-app", "POST", data);
+      const res = await apiRequest("/api/integrations/operational-app", "POST", {
+        ...data,
+        operationId,
+      });
       return res.json();
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/integrations/operational-app"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/operational-app", operationId] });
       
       if (data.secret) {
         setGeneratedSecret(data.secret);
@@ -89,8 +99,12 @@ export function OperationalAppIntegration() {
 
   // Fetch logs
   const { data: logsData } = useQuery<{ logs: any[] }>({
-    queryKey: ["/api/integrations/operational-app/logs"],
-    enabled: !!config,
+    queryKey: ["/api/integrations/operational-app/logs", operationId],
+    queryFn: async () => {
+      const res = await apiRequest(`/api/integrations/operational-app/logs?operationId=${operationId}`, "GET");
+      return res.json();
+    },
+    enabled: !!config && !!operationId,
   });
 
   const logs = logsData?.logs || [];
@@ -234,7 +248,9 @@ export function OperationalAppIntegration() {
             <div className="space-y-0.5">
               <Label className="text-gray-300">Status da Integração</Label>
               <p className="text-sm text-gray-400">
-                {isActive || config?.isActive ? "Ativa - Enviando webhooks" : "Inativa - Webhooks pausados"}
+                {isActive || config?.isActive 
+                  ? "Ativa - Enviando webhooks e emails" 
+                  : "Inativa - Webhooks e emails desativados"}
               </p>
             </div>
             <Switch

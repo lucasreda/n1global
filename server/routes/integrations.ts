@@ -13,16 +13,22 @@ export const integrationsRouter = Router();
 
 /**
  * GET /api/integrations/operational-app
- * Get operational app integration config
+ * Get operational app integration config for a specific operation
  */
 integrationsRouter.get('/operational-app', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
+    const operationId = req.query.operationId as string;
+
+    if (!operationId) {
+      return res.status(400).json({ message: 'operationId é obrigatório' });
+    }
 
     const [config] = await db
       .select({
         id: integrationConfigs.id,
         webhookUrl: integrationConfigs.webhookUrl,
+        operationId: integrationConfigs.operationId,
         isActive: integrationConfigs.isActive,
         createdAt: integrationConfigs.createdAt,
         updatedAt: integrationConfigs.updatedAt,
@@ -32,6 +38,7 @@ integrationsRouter.get('/operational-app', async (req: AuthRequest, res: Respons
       .where(
         and(
           eq(integrationConfigs.userId, userId),
+          eq(integrationConfigs.operationId, operationId),
           eq(integrationConfigs.integrationType, 'operational_app')
         )
       )
@@ -59,11 +66,15 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
   
   try {
     const userId = req.user!.id;
-    const { webhookUrl, webhookSecret, isActive } = req.body;
+    const { webhookUrl, webhookSecret, isActive, operationId } = req.body;
 
     // Validate inputs
     if (!webhookUrl) {
       return res.status(400).json({ message: 'URL do webhook é obrigatória' });
+    }
+
+    if (!operationId) {
+      return res.status(400).json({ message: 'operationId é obrigatório' });
     }
 
     // Validate URL format
@@ -81,13 +92,14 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
     // Generate secret if not provided
     const secret = webhookSecret || crypto.randomBytes(32).toString('hex');
 
-    // Check if config exists
+    // Check if config exists for this operation
     const [existing] = await db
       .select()
       .from(integrationConfigs)
       .where(
         and(
           eq(integrationConfigs.userId, userId),
+          eq(integrationConfigs.operationId, operationId),
           eq(integrationConfigs.integrationType, 'operational_app')
         )
       )
@@ -107,6 +119,7 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
         .returning({
           id: integrationConfigs.id,
           webhookUrl: integrationConfigs.webhookUrl,
+          operationId: integrationConfigs.operationId,
           isActive: integrationConfigs.isActive,
           createdAt: integrationConfigs.createdAt,
           updatedAt: integrationConfigs.updatedAt,
@@ -122,6 +135,7 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
         .insert(integrationConfigs)
         .values({
           userId,
+          operationId,
           integrationType: 'operational_app',
           webhookUrl,
           webhookSecret: secret,
@@ -130,6 +144,7 @@ integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Respon
         .returning({
           id: integrationConfigs.id,
           webhookUrl: integrationConfigs.webhookUrl,
+          operationId: integrationConfigs.operationId,
           isActive: integrationConfigs.isActive,
           createdAt: integrationConfigs.createdAt,
           updatedAt: integrationConfigs.updatedAt,
@@ -169,19 +184,25 @@ integrationsRouter.post('/operational-app/test', async (req: AuthRequest, res: R
 
 /**
  * GET /api/integrations/operational-app/logs
- * Get webhook logs
+ * Get webhook logs for a specific operation
  */
 integrationsRouter.get('/operational-app/logs', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
+    const operationId = req.query.operationId as string;
 
-    // Get user's config first
+    if (!operationId) {
+      return res.status(400).json({ message: 'operationId é obrigatório' });
+    }
+
+    // Get operation's config first
     const [config] = await db
       .select()
       .from(integrationConfigs)
       .where(
         and(
           eq(integrationConfigs.userId, userId),
+          eq(integrationConfigs.operationId, operationId),
           eq(integrationConfigs.integrationType, 'operational_app')
         )
       )
