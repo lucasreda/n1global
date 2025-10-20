@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { authenticatedApiRequest } from "@/lib/auth";
 import { useCurrentOperation, DSS_OPERATION_ID } from "@/hooks/use-current-operation";
@@ -12,6 +12,7 @@ import { Filter, Search, ChevronLeft, ChevronRight, Eye, Edit, RefreshCw, Zap } 
 import { cn, formatOperationCurrency } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OrderDetailsDialog } from "@/components/orders/OrderDetailsDialog";
+import { CompleteSyncDialog } from "@/components/sync/CompleteSyncDialog";
 
 export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -21,6 +22,9 @@ export default function Orders() {
   const [pageSize] = useState(15);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<any | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+  const [isSyncingInBackground, setIsSyncingInBackground] = useState(false);
+  const [currentSyncState, setCurrentSyncState] = useState(false);
   const { selectedOperation, isDssOperation } = useCurrentOperation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -117,33 +121,6 @@ export default function Orders() {
     console.log("Edit order:", orderId);
     // TODO: Implement order edit functionality
   };
-
-  // Mutation for combined Shopify + Carrier sync
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const response = await authenticatedApiRequest("POST", `/api/integrations/sync-all`, { 
-        operationId: selectedOperation 
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      console.log("✅ Sincronização completa:", data);
-      toast({
-        title: "Sincronização Concluída",
-        description: data.message || "Pedidos sincronizados com sucesso",
-      });
-      // Refresh orders list
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-    },
-    onError: (error: any) => {
-      console.error("❌ Erro na sincronização:", error);
-      toast({
-        title: "Erro na Sincronização",
-        description: error.message || "Falha ao sincronizar pedidos",
-        variant: "destructive",
-      });
-    }
-  });
 
   if (isLoading) {
     return (
@@ -261,25 +238,26 @@ export default function Orders() {
                       <Button 
                         variant="outline"
                         size="sm"
-                        onClick={() => syncMutation.mutate()}
+                        onClick={() => setIsSyncDialogOpen(true)}
                         disabled={
-                          syncMutation.isPending || 
                           !integrationsStatus?.hasPlatform || 
                           !integrationsStatus?.hasWarehouse
                         }
-                        className="bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap w-full"
+                        className={`bg-blue-900/30 border-blue-500/50 text-blue-300 hover:bg-blue-800/50 hover:text-blue-200 transition-colors disabled:opacity-50 whitespace-nowrap w-full ${
+                          isSyncingInBackground ? 'animate-pulse ring-2 ring-blue-500/50' : ''
+                        }`}
                         data-testid="button-sync-complete"
                       >
-                        {syncMutation.isPending ? (
+                        {isSyncingInBackground ? (
                           <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                         ) : (
                           <Zap className="w-4 h-4 mr-2" />
                         )}
                         <span className="hidden sm:inline">
-                          {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
+                          {isSyncingInBackground ? "Sincronizando..." : "Sync Completo"}
                         </span>
                         <span className="sm:hidden">
-                          {syncMutation.isPending ? "Sincronizando..." : "Sync Completo"}
+                          {isSyncingInBackground ? "Sincronizando..." : "Sync Completo"}
                         </span>
                       </Button>
                     </div>
@@ -680,6 +658,26 @@ export default function Orders() {
         open={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         operationCurrency={operationDetails?.currency || 'EUR'}
+      />
+
+      {/* Complete Sync Dialog */}
+      <CompleteSyncDialog 
+        isOpen={isSyncDialogOpen}
+        onClose={() => {
+          setIsSyncDialogOpen(false);
+        }}
+        onSyncStateChange={(isRunning) => {
+          setCurrentSyncState(isRunning);
+          if (!isRunning) {
+            setIsSyncingInBackground(false);
+          }
+        }}
+        onComplete={() => {
+          setIsSyncingInBackground(false);
+          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/sync/stats"] });
+        }}
+        operationId={selectedOperation}
       />
     </div>
   );
