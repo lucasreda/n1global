@@ -408,7 +408,7 @@ export function StatsCards({ metrics, isLoading, period = "30", currency = "EUR"
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500 text-xs">Carregando...</p>
+                    <p className="text-gray-500 text-xs">Nenhum Pedido Carregado</p>
                   </div>
                 )}
               </div>
