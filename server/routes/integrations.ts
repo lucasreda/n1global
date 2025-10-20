@@ -61,8 +61,12 @@ integrationsRouter.get('/operational-app', async (req: AuthRequest, res: Respons
  */
 integrationsRouter.post('/operational-app', async (req: AuthRequest, res: Response) => {
   console.log('🚀 POST /operational-app route hit!');
-  console.log('📦 Request body:', req.body);
-  console.log('👤 User:', req.user);
+  console.log('📦 Request (secret redacted):', { 
+    webhookUrl: req.body.webhookUrl,
+    operationId: req.body.operationId,
+    isActive: req.body.isActive 
+  });
+  console.log('👤 User:', req.user?.id);
   
   try {
     const userId = req.user!.id;

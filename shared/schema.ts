@@ -5777,7 +5777,10 @@ export const integrationConfigs = pgTable("integration_configs", {
   isActive: boolean("is_active").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // Ensure one config per user+operation+type combination
+  uniqueUserOperationType: unique().on(table.userId, table.operationId, table.integrationType),
+}));
 
 // Webhook logs table - tracks all webhook dispatches
 export const webhookLogs = pgTable("webhook_logs", {
