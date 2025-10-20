@@ -2460,10 +2460,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get countries
-  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/countries", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
+      const operationId = req.validatedOperationId!;
+      
+      // Load active integration credentials
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment"),
+          eq(fulfillmentIntegrations.status, "active")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(404).json({ message: "Integração European Fulfillment não configurada" });
+      }
+      
+      const credentials = integration.credentials as any;
       const { EuropeanFulfillmentService } = await import('./fulfillment-service');
-      const service = new EuropeanFulfillmentService();
+      const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
       const countries = await service.getCountries();
       res.json(countries);
     } catch (error) {
@@ -2472,10 +2490,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get stores
-  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
+      const operationId = req.validatedOperationId!;
+      
+      // Load active integration credentials
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment"),
+          eq(fulfillmentIntegrations.status, "active")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(404).json({ message: "Integração European Fulfillment não configurada" });
+      }
+      
+      const credentials = integration.credentials as any;
       const { EuropeanFulfillmentService } = await import('./fulfillment-service');
-      const service = new EuropeanFulfillmentService();
+      const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
       const stores = await service.getStores();
       res.json(stores);
     } catch (error) {
@@ -2484,15 +2520,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create store
-  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/stores", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
       const { name, link } = req.body;
+      const operationId = req.validatedOperationId!;
       
       if (!name || !link) {
         return res.status(400).json({ message: "Nome e link da loja são obrigatórios" });
       }
       
-      const result = await europeanFulfillmentService.createStore({ name, link });
+      // Load active integration credentials
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment"),
+          eq(fulfillmentIntegrations.status, "active")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(404).json({ message: "Integração European Fulfillment não configurada" });
+      }
+      
+      const credentials = integration.credentials as any;
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
+      const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
+      const result = await service.createStore({ name, link });
       res.json(result);
     } catch (error) {
       res.status(500).json({ message: "Erro ao criar loja" });
@@ -2500,12 +2555,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get leads list
-  app.get("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/integrations/european-fulfillment/leads", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
-      // Default to Italy if no country specified
+      const operationId = req.validatedOperationId!;
       const country = (req.query.country as string) || "ITALY";
+      
+      // Load active integration credentials
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment"),
+          eq(fulfillmentIntegrations.status, "active")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(404).json({ message: "Integração European Fulfillment não configurada" });
+      }
+      
+      const credentials = integration.credentials as any;
       const { EuropeanFulfillmentService } = await import('./fulfillment-service');
-      const service = new EuropeanFulfillmentService();
+      const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
       const leads = await service.getLeadsList(country);
       res.json(leads);
     } catch (error) {
@@ -2514,11 +2586,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create lead
-  app.post("/api/integrations/european-fulfillment/leads", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/integrations/european-fulfillment/leads", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
+      const operationId = req.validatedOperationId!;
       const leadData = req.body;
+      
+      // Load active integration credentials
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment"),
+          eq(fulfillmentIntegrations.status, "active")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(404).json({ message: "Integração European Fulfillment não configurada" });
+      }
+      
+      const credentials = integration.credentials as any;
       const { EuropeanFulfillmentService } = await import('./fulfillment-service');
-      const service = new EuropeanFulfillmentService();
+      const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
       const result = await service.createLead(leadData);
       res.json(result);
     } catch (error) {
@@ -2548,12 +2638,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/fulfillment-leads", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.post("/api/fulfillment-leads", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
+      const operationId = req.validatedOperationId!;
       const leadData = req.body;
       
-      // Try to send to N1 Warehouse
-      const result = await europeanFulfillmentService.createLead(leadData);
+      // Load active integration credentials
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment"),
+          eq(fulfillmentIntegrations.status, "active")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(404).json({ message: "Integração European Fulfillment não configurada" });
+      }
+      
+      const credentials = integration.credentials as any;
+      const { EuropeanFulfillmentService } = await import('./fulfillment-service');
+      const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
+      const result = await service.createLead(leadData);
       
       res.status(201).json(result);
     } catch (error) {
@@ -2561,16 +2669,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/fulfillment-leads/:id/status", authenticateToken, async (req: AuthRequest, res: Response) => {
+  app.get("/api/fulfillment-leads/:id/status", authenticateToken, operationAccess, async (req: AuthRequest, res: Response) => {
     try {
+      const operationId = req.validatedOperationId!;
+      
       const lead = await storage.getFulfillmentLead(req.params.id);
       if (!lead) {
         return res.status(404).json({ message: "Lead não encontrado" });
       }
 
-      // Get status from N1 Warehouse
+      // Load active integration credentials
+      const [integration] = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(and(
+          eq(fulfillmentIntegrations.operationId, operationId),
+          eq(fulfillmentIntegrations.provider, "european_fulfillment"),
+          eq(fulfillmentIntegrations.status, "active")
+        ))
+        .limit(1);
+      
+      if (!integration || !integration.credentials) {
+        return res.status(404).json({ message: "Integração European Fulfillment não configurada" });
+      }
+
+      const credentials = integration.credentials as any;
       const { EuropeanFulfillmentService } = await import('./fulfillment-service');
-      const service = new EuropeanFulfillmentService();
+      const service = new EuropeanFulfillmentService(credentials.email, credentials.password, credentials.apiUrl);
       const status = await service.getLeadStatus(lead.leadNumber);
       
       if (status) {

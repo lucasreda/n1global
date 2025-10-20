@@ -4,8 +4,17 @@ import https from "https";
 // Removed unused imports
 
 // SECURITY: TLS verification is ENABLED for production security
-// If you need to disable TLS for local development with self-signed certs,
-// do it locally via environment variable, NOT in code
+// Only disabled in development when ALLOW_INSECURE_TLS=true is set
+function createHttpsAgent(): https.Agent {
+  const allowInsecureTLS = process.env.ALLOW_INSECURE_TLS === 'true';
+  
+  if (allowInsecureTLS && process.env.NODE_ENV !== 'production') {
+    console.warn('⚠️ TLS verification disabled for development (ALLOW_INSECURE_TLS=true)');
+    return new https.Agent({ rejectUnauthorized: false });
+  }
+  
+  return new https.Agent({ rejectUnauthorized: true });
+}
 
 interface EuropeanFulfillmentCredentials {
   email: string;
@@ -113,9 +122,7 @@ class EuropeanFulfillmentService {
           email: this.credentials.email,
           password: this.credentials.password
         }),
-        agent: new https.Agent({
-          rejectUnauthorized: false // Allow self-signed certificates in development
-        })
+        agent: createHttpsAgent()
       });
 
       console.log("📡 Response status:", response.status);
@@ -164,9 +171,7 @@ class EuropeanFulfillmentService {
     const requestOptions: any = {
       method,
       headers,
-      agent: new https.Agent({
-        rejectUnauthorized: false // Allow self-signed certificates in development
-      })
+      agent: createHttpsAgent()
     };
 
     if (body && (method === "POST" || method === "PATCH" || method === "PUT")) {
