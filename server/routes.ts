@@ -1382,7 +1382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // New onboarding card endpoints
   app.get("/api/onboarding/integrations-status", authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
-      const operationId = req.headers['x-operation-id'] as string;
+      const operationId = (req.query.operationId as string) || (req.headers['x-operation-id'] as string);
       
       if (!operationId) {
         return res.json({
