@@ -320,25 +320,7 @@ ${operation.name}
    */
   static async dispatchOrderCreatedWebhook(orderId: string, userId: string): Promise<void> {
     try {
-      // Get active integration config for user
-      const [config] = await db
-        .select()
-        .from(integrationConfigs)
-        .where(
-          and(
-            eq(integrationConfigs.userId, userId),
-            eq(integrationConfigs.integrationType, 'operational_app'),
-            eq(integrationConfigs.isActive, true)
-          )
-        )
-        .limit(1);
-
-      if (!config) {
-        console.log('ℹ️ No active integration config found for user:', userId);
-        return;
-      }
-
-      // Get order details
+      // Get order details first to get operationId
       const [order] = await db
         .select()
         .from(orders)
@@ -347,6 +329,29 @@ ${operation.name}
 
       if (!order) {
         console.error('❌ Order not found:', orderId);
+        return;
+      }
+
+      if (!order.operationId) {
+        console.log('ℹ️ Order has no operationId, skipping webhook:', orderId);
+        return;
+      }
+
+      // Get active integration config for the specific operation
+      const [config] = await db
+        .select()
+        .from(integrationConfigs)
+        .where(
+          and(
+            eq(integrationConfigs.operationId, order.operationId),
+            eq(integrationConfigs.integrationType, 'operational_app'),
+            eq(integrationConfigs.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (!config) {
+        console.log('ℹ️ No active integration config found for operation:', order.operationId);
         return;
       }
 
