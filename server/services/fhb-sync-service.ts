@@ -128,7 +128,8 @@ export class FHBSyncService {
       ordersSkipped: 0
     };
     
-    const failedWindows: string[] = [];
+    let hadErrors = false;
+    const errorWindows: string[] = [];
     
     // Create overall sync log entry
     const [syncLog] = await db.insert(fhbSyncLogs).values({
@@ -170,17 +171,18 @@ export class FHBSyncService {
           // Fetch orders for this window
           const fetchResult = await this.fetchFHBOrders(fhbService, fromStr, toStr);
           
+          // Check if fetch had errors (API failures)
           if (!fetchResult.complete) {
-            console.error(`❌ Window ${windowNumber} incomplete: ${fetchResult.error}`);
-            failedWindows.push(`${fromStr} to ${toStr} (${fetchResult.error})`);
-            continue; // Skip processing this window
-          }
-          
-          const fhbOrders = fetchResult.orders;
-          console.log(`📦 Fetched ${fhbOrders.length} orders from window ${windowNumber}`);
-          
-          // Get operations using this FHB account
-          const accountOperations = await db.select()
+            console.error(`❌ Window ${windowNumber} had API error: ${fetchResult.error}`);
+            hadErrors = true;
+            errorWindows.push(`${fromStr} to ${toStr} (${fetchResult.error})`);
+          } else {
+            // Process orders only if fetch was successful
+            const fhbOrders = fetchResult.orders;
+            console.log(`📦 Fetched ${fhbOrders.length} orders from window ${windowNumber}`);
+            
+            // Get operations using this FHB account
+            const accountOperations = await db.select()
             .from(fulfillmentIntegrations)
             .innerJoin(operations, eq(fulfillmentIntegrations.operationId, operations.id))
             .where(
@@ -293,11 +295,14 @@ export class FHBSyncService {
             }
           }
           
-          console.log(`✅ Window ${windowNumber} completed: +${fhbOrders.length} orders processed`);
+            console.log(`✅ Window ${windowNumber} completed: +${fhbOrders.length} orders processed`);
+          }
           
         } catch (windowError: any) {
           console.error(`❌ Error in window ${windowNumber}:`, windowError);
-          failedWindows.push(`${fromStr} to ${toStr}`);
+          hadErrors = true;
+          errorWindows.push(`${fromStr} to ${toStr} (exception: ${windowError.message})`);
+          // Continue to next window even if this one failed
         }
         
         // Move to next window
@@ -307,8 +312,8 @@ export class FHBSyncService {
       
       const duration = Date.now() - startTime;
       
-      // Only mark as completed if ALL windows succeeded
-      if (failedWindows.length === 0) {
+      // Only mark as completed if NO errors occurred (API failures or exceptions)
+      if (!hadErrors) {
         // Mark initial sync as completed
         await db.update(fhbAccounts)
           .set({
@@ -337,7 +342,7 @@ export class FHBSyncService {
         console.log(`   ⏭️  Skipped: ${totalStats.ordersSkipped}`);
         console.log(`   ⏱️  Duration: ${(duration / 1000 / 60).toFixed(2)} minutes`);
       } else {
-        // Mark sync as failed due to partial window failures
+        // Mark sync as partial due to errors
         await db.update(fhbSyncLogs)
           .set({
             status: 'failed',
@@ -345,16 +350,16 @@ export class FHBSyncService {
             ordersCreated: totalStats.ordersCreated,
             ordersUpdated: totalStats.ordersUpdated,
             ordersSkipped: totalStats.ordersSkipped,
-            errorMessage: `${failedWindows.length} window(s) failed: ${failedWindows.join(', ')}`,
+            errorMessage: `${errorWindows.length} window(s) had errors: ${errorWindows.join(', ')}`,
             durationMs: duration,
             completedAt: new Date()
           })
           .where(eq(fhbSyncLogs.id, syncLog.id));
         
-        console.error(`❌ Initial sync FAILED for ${account.name}:`);
-        console.error(`   🚨 Failed Windows (${failedWindows.length}): ${failedWindows.join(', ')}`);
+        console.error(`⚠️ Initial sync PARTIAL for ${account.name}:`);
+        console.error(`   🚨 Windows with errors (${errorWindows.length}): ${errorWindows.join(', ')}`);
         console.error(`   📊 Partial Results - Processed: ${totalStats.ordersProcessed}, Created: ${totalStats.ordersCreated}`);
-        console.error(`   ⚠️  Account NOT marked as completed - will retry on next run`);
+        console.error(`   🔄 Will retry failed windows on next run`);
       }
       
     } catch (error: any) {
