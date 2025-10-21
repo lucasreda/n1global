@@ -113,7 +113,151 @@ export class FHBSyncService {
   }
   
   /**
+   * Process a window with automatic splitting if it hits the 99-page limit
+   * This ensures ALL orders are captured regardless of volume
+   */
+  private async processWindowWithAutoSplit(
+    fhbService: FHBService,
+    account: typeof fhbAccounts.$inferSelect,
+    windowStart: Date,
+    windowEnd: Date,
+    windowNumber: number,
+    totalStats: SyncStats,
+    depth: number = 0
+  ): Promise<{ success: boolean, error?: string }> {
+    const fromStr = windowStart.toISOString().split('T')[0];
+    const toStr = windowEnd.toISOString().split('T')[0];
+    const indent = '  '.repeat(depth);
+    
+    console.log(`${indent}📅 Window ${windowNumber}: ${fromStr} to ${toStr}`);
+    
+    try {
+      // Fetch orders for this window
+      const fetchResult = await this.fetchFHBOrders(fhbService, fromStr, toStr);
+      
+      // Check if fetch had errors (API failures)
+      if (!fetchResult.complete) {
+        console.error(`${indent}❌ Window ${windowNumber} had API error: ${fetchResult.error}`);
+        return { success: false, error: fetchResult.error };
+      }
+      
+      const fetchedOrders = fetchResult.orders;
+      console.log(`${indent}📦 Fetched ${fetchedOrders.length} orders`);
+      
+      // Check if we hit the page limit (99 pages = ~9900 orders)
+      if (fetchResult.hitPageLimit) {
+        console.log(`${indent}🔀 Window has more data - splitting into sub-windows...`);
+        
+        // Split window in half
+        const windowDuration = windowEnd.getTime() - windowStart.getTime();
+        const midPoint = new Date(windowStart.getTime() + windowDuration / 2);
+        
+        // Process first half
+        console.log(`${indent}  ↪️ Processing first half...`);
+        const firstHalf = await this.processWindowWithAutoSplit(
+          fhbService,
+          account,
+          windowStart,
+          midPoint,
+          windowNumber,
+          totalStats,
+          depth + 1
+        );
+        
+        // Process second half
+        console.log(`${indent}  ↪️ Processing second half...`);
+        const secondHalf = await this.processWindowWithAutoSplit(
+          fhbService,
+          account,
+          midPoint,
+          windowEnd,
+          windowNumber,
+          totalStats,
+          depth + 1
+        );
+        
+        // Both halves must succeed
+        if (!firstHalf.success || !secondHalf.success) {
+          return {
+            success: false,
+            error: firstHalf.error || secondHalf.error
+          };
+        }
+        
+        console.log(`${indent}✅ Split window processed successfully`);
+        return { success: true };
+      }
+      
+      // No split needed - process orders normally
+      for (const fhbOrder of fetchedOrders) {
+        totalStats.ordersProcessed++;
+        
+        try {
+          // Upsert to fhb_orders staging table
+          const existingFhbOrder = await db.select()
+            .from(fhbOrders)
+            .where(
+              and(
+                eq(fhbOrders.fhbAccountId, account.id),
+                eq(fhbOrders.fhbOrderId, fhbOrder.id)
+              )
+            )
+            .limit(1);
+          
+          if (existingFhbOrder.length > 0) {
+            // Update existing staging order and reset processed flag for re-linking
+            await db.update(fhbOrders)
+              .set({
+                variableSymbol: fhbOrder.variable_symbol,
+                status: fhbOrder.status,
+                tracking: fhbOrder.tracking,
+                value: fhbOrder.value.toString(),
+                recipient: fhbOrder.recipient,
+                items: fhbOrder.items,
+                rawData: fhbOrder,
+                processedToOrders: false, // Reset to re-link with new data
+                processedAt: null,
+                updatedAt: new Date()
+              })
+              .where(eq(fhbOrders.id, existingFhbOrder[0].id));
+            
+            totalStats.ordersUpdated++;
+          } else {
+            // Create new staging order
+            await db.insert(fhbOrders).values({
+              fhbAccountId: account.id,
+              fhbOrderId: fhbOrder.id,
+              variableSymbol: fhbOrder.variable_symbol,
+              status: fhbOrder.status,
+              tracking: fhbOrder.tracking,
+              value: fhbOrder.value.toString(),
+              recipient: fhbOrder.recipient,
+              items: fhbOrder.items,
+              rawData: fhbOrder,
+              processedToOrders: false, // Will be processed by linking worker
+              processedAt: null
+            });
+            
+            totalStats.ordersCreated++;
+          }
+        } catch (orderError: any) {
+          console.error(`${indent}❌ Error processing order ${fhbOrder.id}:`, orderError);
+          totalStats.ordersSkipped++;
+        }
+      }
+      
+      console.log(`${indent}✅ Window processed: ${totalStats.ordersCreated} created, ${totalStats.ordersUpdated} updated`);
+      return { success: true };
+      
+    } catch (error: any) {
+      console.error(`${indent}❌ Error processing window:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+  
+  /**
    * Perform 2-year backfill for a single account in 30-day windows
+   * Automatically splits windows that exceed the 99-page API limit
    */
   private async performInitialSync(
     account: typeof fhbAccounts.$inferSelect
@@ -162,90 +306,21 @@ export class FHBSyncService {
           today.getTime()
         ));
         
-        const fromStr = windowStart.toISOString().split('T')[0];
-        const toStr = windowEnd.toISOString().split('T')[0];
+        // Process window with automatic splitting
+        const result = await this.processWindowWithAutoSplit(
+          fhbService,
+          account,
+          windowStart,
+          windowEnd,
+          windowNumber,
+          totalStats
+        );
         
-        console.log(`📅 Window ${windowNumber}: ${fromStr} to ${toStr}`);
-        
-        try {
-          // Fetch orders for this window
-          const fetchResult = await this.fetchFHBOrders(fhbService, fromStr, toStr);
-          
-          // Check if fetch had errors (API failures)
-          if (!fetchResult.complete) {
-            console.error(`❌ Window ${windowNumber} had API error: ${fetchResult.error}`);
-            hadErrors = true;
-            errorWindows.push(`${fromStr} to ${toStr} (${fetchResult.error})`);
-          } else {
-            // Process orders only if fetch was successful
-            const fetchedOrders = fetchResult.orders;
-            console.log(`📦 Fetched ${fetchedOrders.length} orders from window ${windowNumber}`);
-            
-            // Save ALL orders to fhb_orders staging table (no filtering)
-            for (const fhbOrder of fetchedOrders) {
-              totalStats.ordersProcessed++;
-              
-              try {
-                // Upsert to fhb_orders staging table
-                const existingFhbOrder = await db.select()
-                  .from(fhbOrders)
-                  .where(
-                    and(
-                      eq(fhbOrders.fhbAccountId, account.id),
-                      eq(fhbOrders.fhbOrderId, fhbOrder.id)
-                    )
-                  )
-                  .limit(1);
-                
-                if (existingFhbOrder.length > 0) {
-                  // Update existing staging order and reset processed flag for re-linking
-                  await db.update(fhbOrders)
-                    .set({
-                      variableSymbol: fhbOrder.variable_symbol,
-                      status: fhbOrder.status,
-                      tracking: fhbOrder.tracking,
-                      value: fhbOrder.value.toString(),
-                      recipient: fhbOrder.recipient,
-                      items: fhbOrder.items,
-                      rawData: fhbOrder,
-                      processedToOrders: false, // Reset to re-link with new data
-                      processedAt: null,
-                      updatedAt: new Date()
-                    })
-                    .where(eq(fhbOrders.id, existingFhbOrder[0].id));
-                  
-                  totalStats.ordersUpdated++;
-                } else {
-                  // Create new staging order
-                  await db.insert(fhbOrders).values({
-                    fhbAccountId: account.id,
-                    fhbOrderId: fhbOrder.id,
-                    variableSymbol: fhbOrder.variable_symbol,
-                    status: fhbOrder.status,
-                    tracking: fhbOrder.tracking,
-                    value: fhbOrder.value.toString(),
-                    recipient: fhbOrder.recipient,
-                    items: fhbOrder.items,
-                    rawData: fhbOrder,
-                    processedToOrders: false
-                  });
-                  
-                  totalStats.ordersCreated++;
-                }
-              } catch (orderError: any) {
-                console.error(`❌ Error processing order ${fhbOrder.id}:`, orderError);
-                totalStats.ordersSkipped++;
-              }
-            }
-            
-            console.log(`✅ Window ${windowNumber} completed: +${fetchedOrders.length} orders processed`);
-          }
-          
-        } catch (windowError: any) {
-          console.error(`❌ Error in window ${windowNumber}:`, windowError);
+        if (!result.success) {
           hadErrors = true;
-          errorWindows.push(`${fromStr} to ${toStr} (exception: ${windowError.message})`);
-          // Continue to next window even if this one failed
+          const fromStr = windowStart.toISOString().split('T')[0];
+          const toStr = windowEnd.toISOString().split('T')[0];
+          errorWindows.push(`${fromStr} to ${toStr} (${result.error})`);
         }
         
         // Move to next window
@@ -467,19 +542,20 @@ export class FHBSyncService {
   }
   
   /**
-   * Fetch orders from FHB API with pagination
+   * Fetch orders from FHB API with pagination and automatic window splitting
    * Returns object with orders and completion status
-   * Note: Stops at 99 pages max - this is normal behavior for high-volume windows
+   * Note: Automatically detects when 99-page limit is hit and returns incomplete flag
    */
   private async fetchFHBOrders(
     fhbService: FHBService,
     from: string,
     to: string
-  ): Promise<{ orders: FHBOrder[], complete: boolean, error?: string }> {
+  ): Promise<{ orders: FHBOrder[], complete: boolean, error?: string, hitPageLimit: boolean }> {
     const allOrders: FHBOrder[] = [];
     let page = 1;
     let hasMore = true;
     const MAX_PAGES = 99;
+    let hitPageLimit = false;
     
     while (hasMore && page <= MAX_PAGES) {
       try {
@@ -502,17 +578,19 @@ export class FHBSyncService {
         return {
           orders: allOrders,
           complete: false,
-          error: `Failed to fetch page ${page}: ${error.message}`
+          error: `Failed to fetch page ${page}: ${error.message}`,
+          hitPageLimit: false
         };
       }
     }
     
-    // Reached page limit - this is normal for high-volume windows
-    if (page > MAX_PAGES) {
-      console.log(`📦 Fetched ${allOrders.length} orders (${MAX_PAGES} pages max per window)`);
+    // Check if we hit the page limit (indicates there might be more data)
+    if (page > MAX_PAGES && hasMore) {
+      hitPageLimit = true;
+      console.log(`⚠️ Hit ${MAX_PAGES}-page limit! Fetched ${allOrders.length} orders - window needs splitting`);
     }
     
-    return { orders: allOrders, complete: true };
+    return { orders: allOrders, complete: true, hitPageLimit };
   }
   
   /**
