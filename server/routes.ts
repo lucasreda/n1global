@@ -5038,8 +5038,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { operationId } = req.params;
       const { name, description, ownerId, country, currency, operationType, status, shopifyOrderPrefix } = req.body;
       
-      console.log('🔍 PUT /api/admin/operations - Body:', JSON.stringify({ name, description, ownerId, country, currency, operationType, status, shopifyOrderPrefix }, null, 2));
-      
       const updatedOperation = await adminService.updateOperation(operationId, {
         name,
         description,
