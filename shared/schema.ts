@@ -62,6 +62,10 @@ export const operations = pgTable("operations", {
   timezone: text("timezone").notNull().default("Europe/Madrid"), // IANA timezone e.g., "Europe/Madrid", "Europe/Rome"
   operationType: text("operation_type").notNull().default("Cash on Delivery"), // 'Cash on Delivery', 'Pagamento no Cartão'
   status: text("status").notNull().default("active"), // 'active', 'paused', 'archived'
+  
+  // Shopify order prefix for FHB multi-tenant filtering (e.g., "LOJA01", "PDREAMS")
+  shopifyOrderPrefix: text("shopify_order_prefix"), // Unique prefix for Shopify orders
+  
   settings: jsonb("settings"), // Operation-specific settings
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -293,13 +297,32 @@ export const googleAdsIntegrations = pgTable("google_ads_integrations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// FHB Accounts - Admin-level shared accounts (many operations : one FHB account)
+export const fhbAccounts = pgTable("fhb_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "FHB Account PT", "FHB Main"
+  appId: text("app_id").notNull(), // FHB App ID
+  secret: text("secret").notNull(), // FHB Secret
+  apiUrl: text("api_url").notNull().default("https://api.fhb.sk/v3"), // Production or sandbox
+  
+  status: text("status").notNull().default("active"), // 'active', 'inactive'
+  lastTestedAt: timestamp("last_tested_at"),
+  testResult: text("test_result"), // Last connection test result
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // European Fulfillment integration - per operation 
 export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   operationId: varchar("operation_id").notNull().references(() => operations.id),
   
-  provider: text("provider").notNull(), // 'european_fulfillment', 'elogy'
+  provider: text("provider").notNull(), // 'european_fulfillment', 'elogy', 'fhb'
   credentials: jsonb("credentials").notNull(), // Encrypted credentials
+  
+  // FHB-specific: reference to shared account
+  fhbAccountId: varchar("fhb_account_id").references(() => fhbAccounts.id),
   
   status: text("status").notNull().default("active"), // 'active', 'inactive', 'error'
   lastSyncAt: timestamp("last_sync_at"),
@@ -559,6 +582,25 @@ export const insertGoogleAdsIntegrationSchema = createInsertSchema(googleAdsInte
   createdAt: true,
   updatedAt: true,
 });
+
+// FHB Accounts schemas
+export const insertFhbAccountSchema = createInsertSchema(fhbAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastTestedAt: true,
+  testResult: true,
+});
+
+export const updateFhbAccountSchema = createInsertSchema(fhbAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
+export type InsertFhbAccount = z.infer<typeof insertFhbAccountSchema>;
+export type UpdateFhbAccount = z.infer<typeof updateFhbAccountSchema>;
+export type FhbAccount = typeof fhbAccounts.$inferSelect;
 
 // Fulfillment integration schemas
 export const insertFulfillmentIntegrationSchema = createInsertSchema(fulfillmentIntegrations).omit({

@@ -33,6 +33,7 @@ import affiliatePixelRoutes from "./affiliate-pixel-routes";
 import pageBuilderUploadRoutes from "./routes/page-builder-upload";
 import { integrationsRouter } from "./routes/integrations";
 import { WebhookService } from "./services/webhook-service";
+import { registerFhbAdminRoutes } from "./routes/fhb-admin-routes";
 import { ProprietaryBenchmarkingService } from "./proprietary-benchmarking-service";
 import { PerformancePredictionService } from "./performance-prediction-service";
 import { ActionableInsightsEngine } from "./actionable-insights-engine";
@@ -5069,6 +5070,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Erro ao desvincular produto" });
     }
   });
+
+  // FHB Admin Management Routes
+  registerFhbAdminRoutes(app, authenticateToken, requireSuperAdmin);
 
   // Integration Management Routes
   app.get("/api/admin/operations/:operationId/integrations", authenticateToken, requireSuperAdmin, async (req: AuthRequest, res: Response) => {

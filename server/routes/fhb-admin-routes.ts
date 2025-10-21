@@ -1,0 +1,246 @@
+// 🏦 FHB Admin Routes - Admin-level FHB account management
+import type { Express, Response } from "express";
+import { db } from "../db";
+import { fhbAccounts, insertFhbAccountSchema, updateFhbAccountSchema } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { FHBService } from "../fulfillment-providers/fhb-service";
+import type { AuthRequest } from "../auth-middleware";
+
+/**
+ * Middleware para verificar role de super admin
+ */
+const requireSuperAdmin = (req: AuthRequest, res: Response, next: Function) => {
+  if (!req.user || req.user.role !== 'super_admin') {
+    return res.status(403).json({ message: "Acesso negado: requer permissões de super administrador" });
+  }
+  next();
+};
+
+export function registerFhbAdminRoutes(app: Express, authenticateToken: any, requireSuperAdminMiddleware: any) {
+  // GET /api/admin/fhb-accounts - Listar todas as contas FHB
+  app.get("/api/admin/fhb-accounts", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log("📋 Admin: Listando contas FHB");
+      
+      const accounts = await db
+        .select()
+        .from(fhbAccounts)
+        .orderBy(fhbAccounts.createdAt);
+      
+      // Não retornar secrets sensíveis
+      const sanitizedAccounts = accounts.map(acc => ({
+        ...acc,
+        secret: '••••••••' // Ocultar secret
+      }));
+      
+      console.log(`✅ ${accounts.length} contas FHB encontradas`);
+      res.json(sanitizedAccounts);
+    } catch (error: any) {
+      console.error("❌ Erro ao listar contas FHB:", error);
+      res.status(500).json({ message: "Erro ao listar contas FHB" });
+    }
+  });
+
+  // GET /api/admin/fhb-accounts/:id - Buscar conta FHB específica
+  app.get("/api/admin/fhb-accounts/:id", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      const account = await db.query.fhbAccounts.findFirst({
+        where: eq(fhbAccounts.id, id)
+      });
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta FHB não encontrada" });
+      }
+      
+      // Ocultar secret
+      const sanitized = {
+        ...account,
+        secret: '••••••••'
+      };
+      
+      res.json(sanitized);
+    } catch (error: any) {
+      console.error("❌ Erro ao buscar conta FHB:", error);
+      res.status(500).json({ message: "Erro ao buscar conta FHB" });
+    }
+  });
+
+  // POST /api/admin/fhb-accounts - Criar nova conta FHB
+  app.post("/api/admin/fhb-accounts", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log("➕ Admin: Criando nova conta FHB");
+      
+      const validatedData = insertFhbAccountSchema.parse(req.body);
+      
+      const [newAccount] = await db
+        .insert(fhbAccounts)
+        .values(validatedData)
+        .returning();
+      
+      console.log(`✅ Conta FHB criada: ${newAccount.name} (${newAccount.id})`);
+      
+      // Ocultar secret na resposta
+      const sanitized = {
+        ...newAccount,
+        secret: '••••••••'
+      };
+      
+      res.status(201).json(sanitized);
+    } catch (error: any) {
+      console.error("❌ Erro ao criar conta FHB:", error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Erro ao criar conta FHB" });
+    }
+  });
+
+  // PUT /api/admin/fhb-accounts/:id - Atualizar conta FHB
+  app.put("/api/admin/fhb-accounts/:id", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      console.log(`✏️  Admin: Atualizando conta FHB ${id}`);
+      
+      const validatedData = updateFhbAccountSchema.parse(req.body);
+      
+      const [updatedAccount] = await db
+        .update(fhbAccounts)
+        .set({
+          ...validatedData,
+          updatedAt: new Date()
+        })
+        .where(eq(fhbAccounts.id, id))
+        .returning();
+      
+      if (!updatedAccount) {
+        return res.status(404).json({ message: "Conta FHB não encontrada" });
+      }
+      
+      console.log(`✅ Conta FHB atualizada: ${updatedAccount.name}`);
+      
+      // Ocultar secret na resposta
+      const sanitized = {
+        ...updatedAccount,
+        secret: '••••••••'
+      };
+      
+      res.json(sanitized);
+    } catch (error: any) {
+      console.error("❌ Erro ao atualizar conta FHB:", error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Dados inválidos", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Erro ao atualizar conta FHB" });
+    }
+  });
+
+  // DELETE /api/admin/fhb-accounts/:id - Deletar conta FHB
+  app.delete("/api/admin/fhb-accounts/:id", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      console.log(`🗑️  Admin: Deletando conta FHB ${id}`);
+      
+      // Verificar se alguma operação está usando esta conta
+      const { fulfillmentIntegrations } = await import("@shared/schema");
+      const operationsUsingAccount = await db
+        .select()
+        .from(fulfillmentIntegrations)
+        .where(eq(fulfillmentIntegrations.fhbAccountId, id));
+      
+      if (operationsUsingAccount.length > 0) {
+        return res.status(400).json({ 
+          message: `Não é possível deletar: ${operationsUsingAccount.length} operação(ões) usando esta conta`,
+          operationsCount: operationsUsingAccount.length
+        });
+      }
+      
+      const deleted = await db
+        .delete(fhbAccounts)
+        .where(eq(fhbAccounts.id, id))
+        .returning();
+      
+      if (deleted.length === 0) {
+        return res.status(404).json({ message: "Conta FHB não encontrada" });
+      }
+      
+      console.log(`✅ Conta FHB deletada: ${id}`);
+      res.json({ message: "Conta FHB deletada com sucesso" });
+    } catch (error: any) {
+      console.error("❌ Erro ao deletar conta FHB:", error);
+      res.status(500).json({ message: "Erro ao deletar conta FHB" });
+    }
+  });
+
+  // POST /api/admin/fhb-accounts/:id/test - Testar conexão com conta FHB
+  app.post("/api/admin/fhb-accounts/:id/test", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      console.log(`🔧 Admin: Testando conexão FHB ${id}`);
+      
+      const account = await db.query.fhbAccounts.findFirst({
+        where: eq(fhbAccounts.id, id)
+      });
+      
+      if (!account) {
+        return res.status(404).json({ message: "Conta FHB não encontrada" });
+      }
+      
+      // Criar serviço FHB temporário para teste
+      const fhbService = new FHBService({
+        appId: account.appId,
+        secret: account.secret,
+        apiUrl: account.apiUrl
+      });
+      
+      // Testar conexão
+      const testResult = await fhbService.testConnection();
+      
+      // Salvar resultado do teste
+      await db
+        .update(fhbAccounts)
+        .set({
+          lastTestedAt: new Date(),
+          testResult: testResult.connected ? 'success' : 'failed',
+          status: testResult.connected ? 'active' : 'inactive'
+        })
+        .where(eq(fhbAccounts.id, id));
+      
+      console.log(`${testResult.connected ? '✅' : '❌'} Teste de conexão: ${testResult.message}`);
+      
+      res.json({
+        connected: testResult.connected,
+        message: testResult.message,
+        testedAt: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error("❌ Erro ao testar conta FHB:", error);
+      
+      // Salvar resultado de erro
+      await db
+        .update(fhbAccounts)
+        .set({
+          lastTestedAt: new Date(),
+          testResult: 'error',
+          status: 'inactive'
+        })
+        .where(eq(fhbAccounts.id, req.params.id));
+      
+      res.status(500).json({ 
+        connected: false,
+        message: `Erro ao testar conexão: ${error.message}` 
+      });
+    }
+  });
+}
