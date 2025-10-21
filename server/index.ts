@@ -83,6 +83,10 @@ app.use((req, res, next) => {
   const { startFHBWorker } = await import('./workers/fhb-sync-worker');
   startFHBWorker();
   
+  // Start FHB linking worker
+  const { startFHBLinkingWorker } = await import('./workers/fhb-linking-worker');
+  startFHBLinkingWorker();
+  
   // Sistema de sincronização sob demanda configurado
   console.log('🔄 Sistema de sincronização sob demanda configurado (30min de intervalo)');
 

@@ -3,7 +3,7 @@
 // Operations filter orders by configured prefix
 
 import { db } from '../db';
-import { orders, fhbAccounts, fhbSyncLogs, operations, fulfillmentIntegrations } from '@shared/schema';
+import { orders, fhbAccounts, fhbSyncLogs, fhbOrders, operations, fulfillmentIntegrations } from '@shared/schema';
 import { eq, and, gte, inArray, sql } from 'drizzle-orm';
 import { FHBService } from '../fulfillment-providers/fhb-service';
 
@@ -83,11 +83,11 @@ export class FHBSyncService {
   }
   
   /**
-   * Initial Sync: 1 year historical backfill in 30-day windows
+   * Initial Sync: 2 years historical backfill in 30-day windows
    * Runs once per account to ensure complete order history
    */
   async syncInitial(): Promise<void> {
-    console.log('🚀 FHB Initial Sync started (1 year backfill)');
+    console.log('🚀 FHB Initial Sync started (2 years backfill)');
     
     const accountsNeedingInitialSync = await db.select()
       .from(fhbAccounts)
@@ -113,12 +113,12 @@ export class FHBSyncService {
   }
   
   /**
-   * Perform 1-year backfill for a single account in 30-day windows
+   * Perform 2-year backfill for a single account in 30-day windows
    */
   private async performInitialSync(
     account: typeof fhbAccounts.$inferSelect
   ): Promise<void> {
-    console.log(`🚀 Starting initial sync for account: ${account.name}`);
+    console.log(`🚀 Starting initial sync for account: ${account.name} (2 years backfill)`);
     
     const startTime = Date.now();
     let totalStats: SyncStats = {
@@ -147,13 +147,13 @@ export class FHBSyncService {
         apiUrl: account.apiUrl
       });
       
-      // Calculate 1 year back from today (365 days)
+      // Calculate 2 years back from today (730 days)
       const today = new Date();
-      const oneYearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+      const twoYearsAgo = new Date(today.getTime() - 730 * 24 * 60 * 60 * 1000);
       
-      // Build windows dynamically to cover exactly 365 days
+      // Build windows dynamically to cover exactly 730 days (24 windows of 30 days)
       const windowSizeDays = 30;
-      let windowStart = new Date(oneYearAgo);
+      let windowStart = new Date(twoYearsAgo);
       let windowNumber = 1;
       
       while (windowStart < today) {
@@ -178,124 +178,67 @@ export class FHBSyncService {
             errorWindows.push(`${fromStr} to ${toStr} (${fetchResult.error})`);
           } else {
             // Process orders only if fetch was successful
-            const fhbOrders = fetchResult.orders;
-            console.log(`📦 Fetched ${fhbOrders.length} orders from window ${windowNumber}`);
+            const fetchedOrders = fetchResult.orders;
+            console.log(`📦 Fetched ${fetchedOrders.length} orders from window ${windowNumber}`);
             
-            // Get operations using this FHB account
-            const accountOperations = await db.select()
-            .from(fulfillmentIntegrations)
-            .innerJoin(operations, eq(fulfillmentIntegrations.operationId, operations.id))
-            .where(
-              and(
-                eq(fulfillmentIntegrations.fhbAccountId, account.id),
-                eq(fulfillmentIntegrations.status, 'active')
-              )
-            );
-          
-          // Process each order
-          for (const fhbOrder of fhbOrders) {
-            totalStats.ordersProcessed++;
-            
-            try {
-              const operation = this.findOperationByPrefix(
-                fhbOrder.variable_symbol,
-                accountOperations.map(ao => ao.operations)
-              );
+            // Save ALL orders to fhb_orders staging table (no filtering)
+            for (const fhbOrder of fetchedOrders) {
+              totalStats.ordersProcessed++;
               
-              if (!operation) {
-                totalStats.ordersSkipped++;
-                continue;
-              }
-              
-              // Check if order already exists
-              const existingOrder = await db.select()
-                .from(orders)
-                .where(
-                  and(
-                    eq(orders.shopifyOrderNumber, fhbOrder.variable_symbol),
-                    eq(orders.operationId, operation.id)
+              try {
+                // Upsert to fhb_orders staging table
+                const existingFhbOrder = await db.select()
+                  .from(fhbOrders)
+                  .where(
+                    and(
+                      eq(fhbOrders.fhbAccountId, account.id),
+                      eq(fhbOrders.fhbOrderId, fhbOrder.id)
+                    )
                   )
-                )
-                .limit(1);
-              
-              if (existingOrder.length > 0) {
-                // Update existing order
-                const currentProviderData = existingOrder[0].providerData as any || {};
-                
-                await db.update(orders)
-                  .set({
-                    status: this.mapFHBStatus(fhbOrder.status),
-                    trackingNumber: fhbOrder.tracking,
-                    syncedFromFhb: true,
-                    lastSyncAt: new Date(),
-                    needsSync: false,
-                    providerData: {
-                      ...currentProviderData,
-                      fhb: {
-                        orderId: fhbOrder.id,
-                        status: fhbOrder.status,
-                        variableSymbol: fhbOrder.variable_symbol,
-                        tracking: fhbOrder.tracking,
-                        value: fhbOrder.value,
-                        updatedAt: new Date().toISOString()
-                      }
-                    }
-                  })
-                  .where(eq(orders.id, existingOrder[0].id));
-                
-                totalStats.ordersUpdated++;
-              } else {
-                // Create new order
-                const operationRecord = await db.select()
-                  .from(operations)
-                  .where(eq(operations.id, operation.id))
                   .limit(1);
                 
-                if (!operationRecord[0]) {
-                  totalStats.ordersSkipped++;
-                  continue;
-                }
-                
-                await db.insert(orders).values({
-                  id: `fhb_${fhbOrder.id}`,
-                  storeId: operationRecord[0].storeId,
-                  operationId: operation.id,
-                  dataSource: 'carrier',
-                  carrierImported: true,
-                  carrierOrderId: fhbOrder.id,
-                  shopifyOrderNumber: fhbOrder.variable_symbol,
-                  customerName: fhbOrder.recipient?.address?.name || 'Unknown',
-                  total: fhbOrder.value,
-                  status: this.mapFHBStatus(fhbOrder.status),
-                  trackingNumber: fhbOrder.tracking,
-                  provider: 'fhb',
-                  syncedFromFhb: true,
-                  lastSyncAt: new Date(),
-                  needsSync: false,
-                  providerData: {
-                    fhb: {
-                      orderId: fhbOrder.id,
-                      status: fhbOrder.status,
+                if (existingFhbOrder.length > 0) {
+                  // Update existing staging order and reset processed flag for re-linking
+                  await db.update(fhbOrders)
+                    .set({
                       variableSymbol: fhbOrder.variable_symbol,
-                      value: fhbOrder.value,
+                      status: fhbOrder.status,
+                      tracking: fhbOrder.tracking,
+                      value: fhbOrder.value.toString(),
                       recipient: fhbOrder.recipient,
                       items: fhbOrder.items,
-                      createdAt: fhbOrder.created_at
-                    }
-                  },
-                  orderDate: new Date(fhbOrder.created_at),
-                  createdAt: new Date(fhbOrder.created_at)
-                });
-                
-                totalStats.ordersCreated++;
+                      rawData: fhbOrder,
+                      processedToOrders: false, // Reset to re-link with new data
+                      processedAt: null,
+                      updatedAt: new Date()
+                    })
+                    .where(eq(fhbOrders.id, existingFhbOrder[0].id));
+                  
+                  totalStats.ordersUpdated++;
+                } else {
+                  // Create new staging order
+                  await db.insert(fhbOrders).values({
+                    fhbAccountId: account.id,
+                    fhbOrderId: fhbOrder.id,
+                    variableSymbol: fhbOrder.variable_symbol,
+                    status: fhbOrder.status,
+                    tracking: fhbOrder.tracking,
+                    value: fhbOrder.value.toString(),
+                    recipient: fhbOrder.recipient,
+                    items: fhbOrder.items,
+                    rawData: fhbOrder,
+                    processedToOrders: false
+                  });
+                  
+                  totalStats.ordersCreated++;
+                }
+              } catch (orderError: any) {
+                console.error(`❌ Error processing order ${fhbOrder.id}:`, orderError);
+                totalStats.ordersSkipped++;
               }
-            } catch (orderError: any) {
-              console.error(`❌ Error processing order ${fhbOrder.id}:`, orderError);
-              totalStats.ordersSkipped++;
             }
-          }
-          
-            console.log(`✅ Window ${windowNumber} completed: +${fhbOrders.length} orders processed`);
+            
+            console.log(`✅ Window ${windowNumber} completed: +${fetchedOrders.length} orders processed`);
           }
           
         } catch (windowError: any) {
@@ -427,123 +370,59 @@ export class FHBSyncService {
         throw new Error(`FHB API error: ${fetchResult.error}`);
       }
       
-      const fhbOrders = fetchResult.orders;
-      console.log(`📦 Fetched ${fhbOrders.length} orders from FHB`);
+      const fetchedOrders = fetchResult.orders;
+      console.log(`📦 Fetched ${fetchedOrders.length} orders from FHB`);
       
-      // Get operations using this FHB account
-      const accountOperations = await db.select()
-        .from(fulfillmentIntegrations)
-        .innerJoin(operations, eq(fulfillmentIntegrations.operationId, operations.id))
-        .where(
-          and(
-            eq(fulfillmentIntegrations.fhbAccountId, account.id),
-            eq(fulfillmentIntegrations.status, 'active')
-          )
-        );
-      
-      console.log(`🏢 ${accountOperations.length} operations using this FHB account`);
-      
-      // Process each FHB order
-      for (const fhbOrder of fhbOrders) {
+      // Save ALL orders to fhb_orders staging table (no filtering)
+      for (const fhbOrder of fetchedOrders) {
         stats.ordersProcessed++;
         
         try {
-          // Determine which operation this order belongs to based on prefix
-          const operation = this.findOperationByPrefix(
-            fhbOrder.variable_symbol,
-            accountOperations.map(ao => ao.operations)
-          );
-          
-          if (!operation) {
-            console.log(`⚠️ No operation found for order ${fhbOrder.variable_symbol}`);
-            stats.ordersSkipped++;
-            continue;
-          }
-          
-          // Check if order already exists by shopifyOrderNumber
-          const existingOrder = await db.select()
-            .from(orders)
+          // Upsert to fhb_orders staging table
+          const existingFhbOrder = await db.select()
+            .from(fhbOrders)
             .where(
               and(
-                eq(orders.shopifyOrderNumber, fhbOrder.variable_symbol),
-                eq(orders.operationId, operation.id)
+                eq(fhbOrders.fhbAccountId, account.id),
+                eq(fhbOrders.fhbOrderId, fhbOrder.id)
               )
             )
             .limit(1);
           
-          if (existingOrder.length > 0) {
-            // Update existing order
-            const currentProviderData = existingOrder[0].providerData as any || {};
-            
-            await db.update(orders)
+          if (existingFhbOrder.length > 0) {
+            // Update existing staging order and reset processed flag for re-linking
+            await db.update(fhbOrders)
               .set({
-                status: this.mapFHBStatus(fhbOrder.status),
-                trackingNumber: fhbOrder.tracking,
-                syncedFromFhb: true,
-                lastSyncAt: new Date(),
-                needsSync: false,
-                providerData: {
-                  ...currentProviderData,
-                  fhb: {
-                    orderId: fhbOrder.id,
-                    status: fhbOrder.status,
-                    variableSymbol: fhbOrder.variable_symbol,
-                    tracking: fhbOrder.tracking,
-                    value: fhbOrder.value,
-                    updatedAt: new Date().toISOString()
-                  }
-                }
+                variableSymbol: fhbOrder.variable_symbol,
+                status: fhbOrder.status,
+                tracking: fhbOrder.tracking,
+                value: fhbOrder.value.toString(),
+                recipient: fhbOrder.recipient,
+                items: fhbOrder.items,
+                rawData: fhbOrder,
+                processedToOrders: false, // Reset to re-link with new data
+                processedAt: null,
+                updatedAt: new Date()
               })
-              .where(eq(orders.id, existingOrder[0].id));
+              .where(eq(fhbOrders.id, existingFhbOrder[0].id));
             
             stats.ordersUpdated++;
-            console.log(`✅ Updated order ${fhbOrder.variable_symbol}`);
           } else {
-            // Create new order - need storeId from operation
-            const operationRecord = await db.select()
-              .from(operations)
-              .where(eq(operations.id, operation.id))
-              .limit(1);
-            
-            if (!operationRecord[0]) {
-              console.error(`❌ Operation ${operation.id} not found`);
-              stats.ordersSkipped++;
-              continue;
-            }
-            
-            await db.insert(orders).values({
-              id: `fhb_${fhbOrder.id}`,
-              storeId: operationRecord[0].storeId,
-              operationId: operation.id,
-              dataSource: 'carrier',
-              carrierImported: true,
-              carrierOrderId: fhbOrder.id,
-              shopifyOrderNumber: fhbOrder.variable_symbol,
-              customerName: fhbOrder.recipient?.address?.name || 'Unknown',
-              total: fhbOrder.value,
-              status: this.mapFHBStatus(fhbOrder.status),
-              trackingNumber: fhbOrder.tracking,
-              provider: 'fhb',
-              syncedFromFhb: true,
-              lastSyncAt: new Date(),
-              needsSync: false,
-              providerData: {
-                fhb: {
-                  orderId: fhbOrder.id,
-                  status: fhbOrder.status,
-                  variableSymbol: fhbOrder.variable_symbol,
-                  value: fhbOrder.value,
-                  recipient: fhbOrder.recipient,
-                  items: fhbOrder.items,
-                  createdAt: fhbOrder.created_at
-                }
-              },
-              orderDate: new Date(fhbOrder.created_at),
-              createdAt: new Date(fhbOrder.created_at)
+            // Create new staging order
+            await db.insert(fhbOrders).values({
+              fhbAccountId: account.id,
+              fhbOrderId: fhbOrder.id,
+              variableSymbol: fhbOrder.variable_symbol,
+              status: fhbOrder.status,
+              tracking: fhbOrder.tracking,
+              value: fhbOrder.value.toString(),
+              recipient: fhbOrder.recipient,
+              items: fhbOrder.items,
+              rawData: fhbOrder,
+              processedToOrders: false
             });
             
             stats.ordersCreated++;
-            console.log(`✨ Created order ${fhbOrder.variable_symbol}`);
           }
         } catch (orderError: any) {
           console.error(`❌ Error processing order ${fhbOrder.id}:`, orderError);
