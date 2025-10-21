@@ -129,7 +129,15 @@ async function processUnprocessedOrders() {
           );
           
           if (!operation) {
-            // No matching operation - skip but leave unprocessed for retry when config changes
+            // No matching operation - mark as processed to avoid infinite loop
+            // These can be reprocessed later via admin interface or when sync updates them
+            await db.update(fhbOrders)
+              .set({
+                processedToOrders: true,
+                processedAt: new Date()
+              })
+              .where(eq(fhbOrders.id, fhbOrder.id));
+            
             batchSkipped++;
             continue;
           }
