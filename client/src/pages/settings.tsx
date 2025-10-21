@@ -278,6 +278,8 @@ export default function Settings() {
     }
   };
 
+  console.log('🎨 Settings render - FHB Accounts:', fhbAccounts.length, 'Loading:', isLoadingFhb);
+
   return (
     <div className="space-y-6">
       <DashboardHeader 
