@@ -243,4 +243,51 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       });
     }
   });
+
+  // GET /api/admin/fhb-sync/status - Get sync status for dashboard
+  app.get("/api/admin/fhb-sync/status", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      console.log("📊 Admin: Getting FHB sync status");
+      
+      const { FHBSyncService } = await import("../services/fhb-sync-service");
+      const { getSyncStatus } = await import("../workers/fhb-sync-worker");
+      
+      const syncService = new FHBSyncService();
+      const accountStatus = await syncService.getSyncStatus();
+      const workerStatus = await getSyncStatus();
+      
+      res.json({
+        worker: workerStatus,
+        accounts: accountStatus
+      });
+    } catch (error: any) {
+      console.error("❌ Erro ao obter status de sincronização:", error);
+      res.status(500).json({ message: "Erro ao obter status de sincronização" });
+    }
+  });
+
+  // POST /api/admin/fhb-sync/trigger - Trigger manual sync
+  app.post("/api/admin/fhb-sync/trigger", authenticateToken, requireSuperAdminMiddleware, async (req: AuthRequest, res: Response) => {
+    try {
+      const { syncType } = req.body;
+      console.log(`🎯 Admin: Triggering manual ${syncType} sync`);
+      
+      const { triggerFastSync, triggerDeepSync } = await import("../workers/fhb-sync-worker");
+      
+      if (syncType === 'fast') {
+        // Don't await - return immediately and run in background
+        triggerFastSync().catch(err => console.error("Fast sync error:", err));
+        res.json({ message: "Fast sync iniciado em background" });
+      } else if (syncType === 'deep') {
+        // Don't await - return immediately and run in background
+        triggerDeepSync().catch(err => console.error("Deep sync error:", err));
+        res.json({ message: "Deep sync iniciado em background" });
+      } else {
+        res.status(400).json({ message: "Tipo de sync inválido. Use 'fast' ou 'deep'" });
+      }
+    } catch (error: any) {
+      console.error("❌ Erro ao disparar sincronização:", error);
+      res.status(500).json({ message: "Erro ao disparar sincronização" });
+    }
+  });
 }

@@ -79,6 +79,10 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
   
+  // Start FHB sync worker
+  const { startFHBWorker } = await import('./workers/fhb-sync-worker');
+  startFHBWorker();
+  
   // Sistema de sincronização sob demanda configurado
   console.log('🔄 Sistema de sincronização sob demanda configurado (30min de intervalo)');
 
