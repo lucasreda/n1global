@@ -422,8 +422,9 @@ export class FHBSyncService {
       // Fetch orders from FHB
       const fetchResult = await this.fetchFHBOrders(fhbService, fromStr, toStr);
       
+      // If fetch failed due to API error, mark sync as failed
       if (!fetchResult.complete) {
-        console.warn(`⚠️ FHB fetch incomplete for ${account.name}: ${fetchResult.error}`);
+        throw new Error(`FHB API error: ${fetchResult.error}`);
       }
       
       const fhbOrders = fetchResult.orders;
