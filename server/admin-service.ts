@@ -162,6 +162,7 @@ export class AdminService {
           currency: operations.currency,
           operationType: operations.operationType,
           status: operations.status,
+          shopifyOrderPrefix: operations.shopifyOrderPrefix,
           createdAt: operations.createdAt
         })
         .from(operations)
