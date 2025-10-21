@@ -301,6 +301,8 @@ export default function AdminOperations() {
         title: "Operação atualizada",
         description: "Os dados da operação foram atualizados com sucesso.",
       });
+      setShowEditModal(false);
+      setOperationToEdit(null);
     },
     onError: (error: Error) => {
       toast({
