@@ -65,7 +65,7 @@ export default function Settings() {
   };
 
   // Fetch FHB accounts
-  const { data: fhbAccounts = [], isLoading: isLoadingFhb } = useQuery({
+  const { data: fhbAccounts = [], isLoading: isLoadingFhb } = useQuery<any[]>({
     queryKey: ["/api/admin/fhb-accounts"],
   });
 

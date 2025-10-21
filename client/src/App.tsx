@@ -38,7 +38,6 @@ import AdminGlobal from "@/pages/admin/global";
 import AdminSettings from "@/pages/admin/settings";
 import AdminSupport from "@/pages/admin/support";
 import AdminRefundRequests from "@/pages/admin/refund-requests";
-import AdminFHBAccounts from "@/pages/AdminFHBAccounts";
 import CustomerSupport from "@/pages/customer-support";
 import CustomerSupportSettings from "@/pages/customer-support-settings";
 import { AdminLayout } from "@/components/admin/admin-layout";
@@ -262,7 +261,6 @@ function Router() {
         <Route path="/customer-support/settings" component={isAuthenticated ? CustomerSupportSettings : () => <NotFound />} />
         <Route path="/customer-support" component={isAuthenticated ? CustomerSupport : () => <NotFound />} />
         <Route path="/inside/settings" component={isSuperAdmin ? () => <AdminLayout><AdminSettings /></AdminLayout> : () => <NotFound />} />
-        <Route path="/inside/fhb-accounts" component={isSuperAdmin ? () => <AdminLayout><AdminFHBAccounts /></AdminLayout> : () => <NotFound />} />
         <Route path="/inside" component={isSuperAdmin ? () => <AdminLayout><AdminDashboard /></AdminLayout> : () => <NotFound />} />
         
         {/* Finance Routes */}
