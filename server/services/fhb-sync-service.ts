@@ -146,51 +146,70 @@ export class FHBSyncService {
       
       // Check if we hit the page limit (99 pages = ~9900 orders)
       if (fetchResult.hitPageLimit) {
-        console.log(`${indent}🔀 Window has more data - splitting into sub-windows...`);
-        
-        // Split window in half
-        const windowDuration = windowEnd.getTime() - windowStart.getTime();
-        const midPoint = new Date(windowStart.getTime() + windowDuration / 2);
-        
-        // Process first half
-        console.log(`${indent}  ↪️ Processing first half...`);
-        const firstHalf = await this.processWindowWithAutoSplit(
-          fhbService,
-          account,
-          windowStart,
-          midPoint,
-          windowNumber,
-          totalStats,
-          depth + 1
-        );
-        
-        // Process second half
-        console.log(`${indent}  ↪️ Processing second half...`);
-        const secondHalf = await this.processWindowWithAutoSplit(
-          fhbService,
-          account,
-          midPoint,
-          windowEnd,
-          windowNumber,
-          totalStats,
-          depth + 1
-        );
-        
-        // Both halves must succeed
-        if (!firstHalf.success || !secondHalf.success) {
-          return {
-            success: false,
-            error: firstHalf.error || secondHalf.error
-          };
+        // CRITICAL: Check if we're already at a single-day window
+        // If fromStr === toStr, we cannot split further - this prevents infinite recursion
+        if (fromStr === toStr) {
+          console.warn(`${indent}⚠️ Single-day overflow detected: ${fromStr} has >9,900 orders`);
+          console.warn(`${indent}   Processing first 9,900 orders, remaining will be skipped`);
+          console.warn(`${indent}   Consider contacting FHB for bulk export or API pagination improvement`);
+          
+          // Process the 9,900 orders we did fetch (this is not a failure)
+          // The orders are already in fetchedOrders, so we'll process them below
+          // This is logged as a warning but not an error - the sync continues
+        } else {
+          console.log(`${indent}🔀 Window has more data - splitting into sub-windows...`);
+          
+          // Split window in half
+          const windowDuration = windowEnd.getTime() - windowStart.getTime();
+          const midPoint = new Date(windowStart.getTime() + windowDuration / 2);
+          
+          // Process first half
+          console.log(`${indent}  ↪️ Processing first half...`);
+          const firstHalf = await this.processWindowWithAutoSplit(
+            fhbService,
+            account,
+            windowStart,
+            midPoint,
+            windowNumber,
+            totalStats,
+            depth + 1
+          );
+          
+          // Process second half
+          console.log(`${indent}  ↪️ Processing second half...`);
+          const secondHalf = await this.processWindowWithAutoSplit(
+            fhbService,
+            account,
+            midPoint,
+            windowEnd,
+            windowNumber,
+            totalStats,
+            depth + 1
+          );
+          
+          // Both halves must succeed
+          if (!firstHalf.success || !secondHalf.success) {
+            return {
+              success: false,
+              error: firstHalf.error || secondHalf.error
+            };
+          }
+          
+          console.log(`${indent}✅ Split window processed successfully`);
+          return { success: true };
         }
-        
-        console.log(`${indent}✅ Split window processed successfully`);
-        return { success: true };
       }
       
       // No split needed - process orders normally
       for (const fhbOrder of fetchedOrders) {
         totalStats.ordersProcessed++;
+        
+        // Skip orders with null ID (invalid data from FHB API)
+        if (!fhbOrder.id) {
+          console.warn(`${indent}⚠️ Skipping order with null ID (variable_symbol: ${fhbOrder.variable_symbol || 'unknown'})`);
+          totalStats.ordersSkipped++;
+          continue;
+        }
         
         try {
           // Upsert to fhb_orders staging table
@@ -451,6 +470,13 @@ export class FHBSyncService {
       // Save ALL orders to fhb_orders staging table (no filtering)
       for (const fhbOrder of fetchedOrders) {
         stats.ordersProcessed++;
+        
+        // Skip orders with null ID (invalid data from FHB API)
+        if (!fhbOrder.id) {
+          console.warn(`⚠️ Skipping order with null ID (variable_symbol: ${fhbOrder.variable_symbol || 'unknown'})`);
+          stats.ordersSkipped++;
+          continue;
+        }
         
         try {
           // Upsert to fhb_orders staging table
