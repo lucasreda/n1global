@@ -173,7 +173,9 @@ export class AdminService {
         query = query.where(sql`${operations.storeId} = ${storeId}`) as any;
       }
       
-      return await query;
+      const result = await query;
+      console.log('🔍 getAllOperations sample:', result[0]?.shopifyOrderPrefix);
+      return result;
     } catch (error) {
       console.error('❌ Error getting operations:', error);
       throw error;
