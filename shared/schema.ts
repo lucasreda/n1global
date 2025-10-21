@@ -343,6 +343,40 @@ export const fhbSyncLogs = pgTable("fhb_sync_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// FHB Orders Staging Table - raw FHB orders before processing to operations
+export const fhbOrders = pgTable("fhb_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fhbAccountId: varchar("fhb_account_id").notNull().references(() => fhbAccounts.id),
+  
+  // FHB order identifiers
+  fhbOrderId: text("fhb_order_id").notNull(), // FHB's internal order ID
+  variableSymbol: text("variable_symbol").notNull(), // Order number with prefix (e.g., "LOJA01-1234")
+  
+  // Order data
+  status: text("status").notNull(), // FHB status
+  tracking: text("tracking"), // Tracking number
+  value: decimal("value", { precision: 10, scale: 2 }), // Order value
+  
+  // Structured data
+  recipient: jsonb("recipient"), // Customer/recipient information
+  items: jsonb("items"), // Order items
+  rawData: jsonb("raw_data").notNull(), // Complete FHB order object
+  
+  // Processing tracking
+  processedToOrders: boolean("processed_to_orders").notNull().default(false),
+  processedAt: timestamp("processed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicates
+  uniqueFhbOrder: unique().on(table.fhbAccountId, table.fhbOrderId),
+  // Index for unprocessed orders
+  unprocessedIdx: index("fhb_orders_unprocessed_idx").on(table.processedToOrders),
+  // Index for variable symbol lookup
+  variableSymbolIdx: index("fhb_orders_variable_symbol_idx").on(table.variableSymbol),
+}));
+
 // European Fulfillment integration - per operation 
 export const fulfillmentIntegrations = pgTable("fulfillment_integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -631,6 +665,16 @@ export const updateFhbAccountSchema = createInsertSchema(fhbAccounts).omit({
 export type InsertFhbAccount = z.infer<typeof insertFhbAccountSchema>;
 export type UpdateFhbAccount = z.infer<typeof updateFhbAccountSchema>;
 export type FhbAccount = typeof fhbAccounts.$inferSelect;
+
+// FHB Orders schemas
+export const insertFhbOrderSchema = createInsertSchema(fhbOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFhbOrder = z.infer<typeof insertFhbOrderSchema>;
+export type FhbOrder = typeof fhbOrders.$inferSelect;
 
 // Fulfillment integration schemas
 export const insertFulfillmentIntegrationSchema = createInsertSchema(fulfillmentIntegrations).omit({
