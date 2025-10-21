@@ -253,12 +253,12 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       const { getSyncStatus } = await import("../workers/fhb-sync-worker");
       
       const syncService = new FHBSyncService();
-      const accountStatus = await syncService.getSyncStatus();
+      const syncStatus = await syncService.getSyncStatus();
       const workerStatus = await getSyncStatus();
       
       res.json({
         worker: workerStatus,
-        accounts: accountStatus
+        ...syncStatus // includes: accounts, pendingInitialCount, totalAccounts
       });
     } catch (error: any) {
       console.error("❌ Erro ao obter status de sincronização:", error);
@@ -272,9 +272,13 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
       const { syncType } = req.body;
       console.log(`🎯 Admin: Triggering manual ${syncType} sync`);
       
-      const { triggerFastSync, triggerDeepSync } = await import("../workers/fhb-sync-worker");
+      const { triggerInitialSync, triggerFastSync, triggerDeepSync } = await import("../workers/fhb-sync-worker");
       
-      if (syncType === 'fast') {
+      if (syncType === 'initial') {
+        // Don't await - return immediately and run in background
+        triggerInitialSync().catch(err => console.error("Initial sync error:", err));
+        res.json({ message: "Initial sync (1 year) iniciado em background. Isso pode levar vários minutos." });
+      } else if (syncType === 'fast') {
         // Don't await - return immediately and run in background
         triggerFastSync().catch(err => console.error("Fast sync error:", err));
         res.json({ message: "Fast sync iniciado em background" });
@@ -283,7 +287,7 @@ export function registerFhbAdminRoutes(app: Express, authenticateToken: any, req
         triggerDeepSync().catch(err => console.error("Deep sync error:", err));
         res.json({ message: "Deep sync iniciado em background" });
       } else {
-        res.status(400).json({ message: "Tipo de sync inválido. Use 'fast' ou 'deep'" });
+        res.status(400).json({ message: "Tipo de sync inválido. Use 'initial', 'fast' ou 'deep'" });
       }
     } catch (error: any) {
       console.error("❌ Erro ao disparar sincronização:", error);

@@ -1,14 +1,18 @@
 // 🤖 FHB Sync Worker - Automated synchronization with intelligent scheduling
-// Deep sync: 30 days, 2x daily (6h and 18h)
-// Fast sync: 10 days, every 30min
+// Priority: Initial (1 year) > Deep (30 days, 2x daily) > Fast (10 days, every 30min)
 
 import { FHBSyncService } from '../services/fhb-sync-service';
 
 const syncService = new FHBSyncService();
 
 // Track last execution times
+let lastInitialSync: Date | null = null;
 let lastFastSync: Date | null = null;
 let lastDeepSync: Date | null = null;
+
+// Reentrancy guard
+let isInitialRunning = false;
+let isSyncLoopRunning = false;
 
 /**
  * Check if it's time for deep sync (6h or 18h UTC)
@@ -48,13 +52,61 @@ function shouldRunFastSync(): boolean {
 }
 
 /**
+ * Check if initial sync is needed (highest priority)
+ * Only check every hour to avoid spamming DB
+ */
+function shouldRunInitialSync(): boolean {
+  if (!lastInitialSync) {
+    return true; // Always check on first run
+  }
+  
+  const now = new Date();
+  const hoursSinceLastCheck = (now.getTime() - lastInitialSync.getTime()) / (1000 * 60 * 60);
+  
+  // Check every hour for accounts needing initial sync
+  return hoursSinceLastCheck >= 1;
+}
+
+/**
  * Main sync loop - runs every minute to check if sync is needed
+ * Priority: Initial (1 year) > Deep (30 days) > Fast (10 days)
  */
 async function syncLoop() {
+  // Prevent concurrent executions
+  if (isSyncLoopRunning) {
+    console.log('⏭️  Sync loop already running, skipping...');
+    return;
+  }
+  
+  isSyncLoopRunning = true;
+  
   try {
     console.log('🔍 FHB Worker: Checking sync schedule...');
     
-    // Check if deep sync is needed (priority)
+    // Block deep/fast while initial sync is running
+    if (isInitialRunning) {
+      console.log('⏳ Initial sync in progress, skipping deep/fast syncs...');
+      return;
+    }
+    
+    // HIGHEST PRIORITY: Initial sync for accounts that haven't completed 1-year backfill
+    if (shouldRunInitialSync()) {
+      console.log('🔍 Checking for accounts needing initial sync...');
+      lastInitialSync = new Date();
+      isInitialRunning = true;
+      
+      try {
+        // syncInitial() will check if any accounts need it and handle gracefully
+        await syncService.syncInitial();
+      } finally {
+        isInitialRunning = false;
+      }
+      
+      // Skip other syncs this cycle (deep/fast will catch up on next cycles)
+      return;
+    }
+    
+    // SECOND PRIORITY: Deep sync (priority over fast)
     if (shouldRunDeepSync()) {
       console.log('🕐 Time for deep sync (6h or 18h UTC)');
       lastDeepSync = new Date();
@@ -63,7 +115,7 @@ async function syncLoop() {
       return;
     }
     
-    // Check if fast sync is needed
+    // THIRD PRIORITY: Fast sync
     if (shouldRunFastSync()) {
       console.log('⏰ Time for fast sync (30min interval)');
       lastFastSync = new Date();
@@ -75,6 +127,8 @@ async function syncLoop() {
     
   } catch (error: any) {
     console.error('❌ FHB Worker: Sync error:', error);
+  } finally {
+    isSyncLoopRunning = false;
   }
 }
 
@@ -83,12 +137,13 @@ async function syncLoop() {
  */
 export function startFHBWorker() {
   console.log('🚀 FHB Sync Worker started');
-  console.log('   ⚡ Fast sync: Every 30 minutes');
-  console.log('   🔄 Deep sync: 2x daily at 6h and 18h UTC');
+  console.log('   🚀 Initial sync: 1-year backfill (PRIORITY - runs first)');
+  console.log('   🔄 Deep sync: 30 days, 2x daily at 6h and 18h UTC');
+  console.log('   ⚡ Fast sync: 10 days, every 30 minutes');
   
-  // Run initial sync after 10 seconds (give server time to start)
+  // Run initial check after 10 seconds (give server time to start)
   setTimeout(() => {
-    console.log('🏁 Running initial sync...');
+    console.log('🏁 Running initial sync check...');
     syncLoop();
   }, 10000);
   
@@ -101,24 +156,53 @@ export function startFHBWorker() {
 /**
  * Manual trigger for testing (export for admin routes)
  */
+export async function triggerInitialSync() {
+  if (isInitialRunning) {
+    console.log('⚠️ Initial sync already running, skipping manual trigger');
+    return;
+  }
+  
+  console.log('🎯 Manual initial sync triggered');
+  isInitialRunning = true;
+  try {
+    await syncService.syncInitial();
+  } finally {
+    isInitialRunning = false;
+  }
+}
+
 export async function triggerFastSync() {
+  if (isInitialRunning) {
+    console.log('⚠️ Initial sync is running, cannot run fast sync');
+    return;
+  }
+  
   console.log('🎯 Manual fast sync triggered');
   await syncService.syncFast();
 }
 
 export async function triggerDeepSync() {
+  if (isInitialRunning) {
+    console.log('⚠️ Initial sync is running, cannot run deep sync');
+    return;
+  }
+  
   console.log('🎯 Manual deep sync triggered');
   await syncService.syncDeep();
 }
 
 export async function getSyncStatus() {
   return {
+    lastInitialSync,
     lastFastSync,
     lastDeepSync,
     nextFastSync: lastFastSync 
       ? new Date(lastFastSync.getTime() + 30 * 60 * 1000)
       : new Date(),
-    nextDeepSync: calculateNextDeepSync()
+    nextDeepSync: calculateNextDeepSync(),
+    nextInitialCheck: lastInitialSync
+      ? new Date(lastInitialSync.getTime() + 60 * 60 * 1000)
+      : new Date()
   };
 }
 
