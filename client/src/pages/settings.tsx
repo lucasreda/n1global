@@ -167,7 +167,18 @@ export default function Settings() {
 
   const handleUpdateFhb = () => {
     if (currentAccount) {
-      updateFhbMutation.mutate({ id: currentAccount.id, data: fhbFormData });
+      const updateData: any = {
+        name: fhbFormData.name,
+        appId: fhbFormData.appId,
+        apiUrl: fhbFormData.apiUrl,
+      };
+      
+      // Only include secret if it's not empty (user wants to change it)
+      if (fhbFormData.secret && fhbFormData.secret.trim() !== '') {
+        updateData.secret = fhbFormData.secret;
+      }
+      
+      updateFhbMutation.mutate({ id: currentAccount.id, data: updateData });
     }
   };
 
